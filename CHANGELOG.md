@@ -65,50 +65,110 @@ See `mcps/_index.md` for the canonical list + setup instructions. Run `bash mcps
 
 ---
 
-### What to do — if you're migrating from `chuycepeda/aios` or `sovrahq/internal-vault`
+### What to do — migration playbook (Claude-executable)
 
-> **This section is the migration playbook for existing AIOS users.** If you're new, skip to "What to do — first-time setup."
+> **For Claude running `/vault-update` or `/aios:update` against this CHANGELOG:** this entry IS the migration script. Walk the operator through it step by step in State → Ask → Act format. Hard preconditions short-circuit early; restart-required steps go LAST.
 
-**State:** your current `/aios:update` origin points at one of the two pre-extraction repos. Both repos continue to exist for now (will be archived only after migration confirmations come in). Your old vault content stays intact; only your **upstream infra pointer** changes.
+#### Step 0 — Hard precondition (skip rest if not applicable)
 
-**Ask:** before running anything, confirm — are you currently syncing from `chuycepeda/aios` or `sovrahq/internal-vault`? Check `~/obsidian/.vault-update` for the `repo=` line. If it shows one of those two URLs, proceed.
+**State:** the operator's `~/obsidian/.vault-update` `repo=` field. If it already points at `git@github.com:The-AIOS/aios.git` → skip the rest of this entry (operator already migrated). If it points at `chuycepeda/aios` or `sovrahq/internal-vault` → proceed.
+
+**Ask:** *"Your `.vault-update` shows you're syncing from `{old-repo}`. AIOS moved to `The-AIOS/aios` on 2026-05-21. Want me to walk you through the migration (~15 min, includes folder moves, plugin rename, and a Claude Code restart)?"*
+
+**Act:** if yes, proceed to Step 1.
+
+#### Step 1 — Update the upstream pointer
+
+**State:** `~/obsidian/.vault-update` + `~/obsidian/USER.md` `## Organization` section.
+
+**Ask:** *"I'll update your `.vault-update` `repo=` line to `git@github.com:The-AIOS/aios.git`, set `hash=initial` to force a full sync, and replace `USER.md` `## Organization` with the new `## Companies (mounted)` table. OK?"*
 
 **Act:**
 
-1. **Edit your `USER.md` → `## Organization` section.** Change the `Team repo:` line:
-
-   ```diff
-   - Team repo: git@github.com:sovrahq/internal-vault.git
-   + Team repo: git@github.com:The-AIOS/aios.git
+1. Rewrite `.vault-update` to:
    ```
-
-   (Or whichever URL you had — change the value, keep the key.)
-
-2. **Update `~/obsidian/.vault-update`** to point at the new origin:
-
-   ```diff
-   -repo=git@github.com:sovrahq/internal-vault.git
-   +repo=git@github.com:The-AIOS/aios.git
+   repo=git@github.com:The-AIOS/aios.git
    hash=initial
+   synced=never
    ```
+2. In `USER.md`, replace the entire `## Organization` block with a `## Companies (mounted)` section (table format) — use the operator's existing venture folder as the first row. See the new USER.md template in The-AIOS/aios for the schema.
 
-   Setting `hash=initial` forces a full sync on the next run (recommended for the migration — your local infra is from the pre-extraction era).
+#### Step 2 — Pull new infrastructure (Tier 1 sync)
 
-3. **Run `/aios:update`** in your `~/obsidian` Claude session. It will pull the entire new infrastructure from The-AIOS/aios as the canonical state.
+**State:** local infra still references the old structure (vault-commands plugin, vault/06 - agents/, vault/02 - templates/).
 
-4. **What you'll see during the update:**
-   - New top-level `agents/` directory (was `agents/` previously) — your custom agents in `my-agents/` are renamed to `custom/`
-   - New top-level `templates/` directory (was `templates/` previously)
-   - 5 new agents shipped (growth-companion, onboarding-aios, design-md-author, decision-journaler, crisis-mode)
-   - `/vault-commands:*` namespace renamed to `/aios:*` (matches the new public brand). `/company-sync` command renamed to `/aios:company` and substantially upgraded (multi-substrate, multi-company)
-   - `/housekeeping` gained Bucket 16 (Radar Health Audit) + Bucket 17 (CLAUDE.md + USER.md health check)
-   - Per-agent "See also" sections referencing Anthropic-official repos (financial-services, claude-for-legal, claude-code-security-review, etc.)
+**Ask:** *"Now I'll clone The-AIOS/aios to /tmp/, diff against your local, and replace Tier 1 paths (commands/, hooks/, mcps/, plugins/, skills/, templates/, agents/aios-*/, top-level docs). Your operator-specific extensions (anything under `custom/` in any layer) are preserved. Proceed?"*
 
-5. **Run `/housekeeping` once after the update** — Bucket 17 will surface any drift between your USER.md/CLAUDE.md and the new canonical state. Address whatever it flags before resuming normal work.
+**Act:** standard `/aios:update` Tier 1 flow — `git clone --depth=50 --single-branch git@github.com:The-AIOS/aios.git /tmp/vault-update-check`, diff, apply changes for each Tier 1 path. Skip every `custom/` subfolder (`agents/custom/`, `skills/custom/`, `commands/custom/`, `hooks/custom/`, `mcps/custom/`, `plugins/custom/`, `templates/custom/`) — those are operator-specific.
 
-6. **(Optional) Move your existing venture context.** If you had a venture mounted via the old `/company-sync` (now retired), you can either:
-   - Leave it as-is locally (vault folder remains valid)
-   - Migrate to the new `/aios:company` model via `/aios:company --create` against `The-AIOS/company-template` (separate repo, see Phase 1c below)
+#### Step 3 — Folder migration (promote templates + agents to top-level)
+
+**State:** operator's vault has `vault/02 - templates/`, `vault/06 - agents/` (legacy locations), plus `vault/03 - assets/`, `vault/04 - export/`, `vault/05 - backups/` (legacy numbering).
+
+**Ask:** *"AIOS now keeps templates and agents at the TOP LEVEL (infra), not inside vault/. I'll move your existing templates and agents to top-level folders, renumber vault subfolders to be continuous (00/01/02/03/04), and preserve your custom additions in `*/custom/`. This is reversible — I'll keep a backup. OK?"*
+
+**Act (in order):**
+
+1. **Templates migration** — `vault/02 - templates/{file}.md` → `templates/{file}.md`. If a file with the same name already exists at top-level templates/ (from the Tier 1 sync), MERGE: keep the new canonical version; if the operator's old version differs, ALSO copy to `templates/custom/{name}-legacy.md` for review.
+2. **Agents migration** — for each `vault/06 - agents/{name}.md`:
+   - If `{name}` matches a bundled agent in `agents/aios-*/`, **drop** the legacy copy (the bundle version is canonical now)
+   - If `{name}` is operator-custom (was in `vault/06 - agents/my-agents/`), move to `agents/custom/{name}.md`
+   - Otherwise, move to `agents/custom/{name}.md` and flag for review
+3. **Vault renumbering** — `git mv vault/03 - assets vault/02 - assets`, `git mv vault/04 - export vault/03 - export`, `git mv vault/05 - backups vault/04 - backups`. The old `vault/02 - templates/` and `vault/06 - agents/` are now empty — `rmdir`.
+4. **Sweep stale references** — `grep -rln 'vault/02 - templates\|vault/06 - agents\|vault/03 - assets\|vault/04 - export\|vault/05 - backups' --include='*.md' --exclude-dir=.git` and update each to the new paths. Same for non-prefixed `02 - templates/` / `06 - agents/`.
+
+#### Step 4 — Plugin marketplace rename (vault-commands → aios)
+
+**State:** `~/.claude/plugins/marketplaces/local/.claude-plugin/marketplace.json` + plugin directories + `~/.claude/settings.json` enabledPlugins reference `vault-commands@local`. The COMMAND namespace is currently `/vault-commands:*`.
+
+**Ask:** *"The plugin marketplace renames from `vault-commands` to `aios`. All your `/vault-commands:today` etc. become `/aios:today`. I'll update the manifest files, rename the plugin directories, update `~/.claude/settings.json` enabledPlugins, and update `~/obsidian/.claude/settings.local.json` permissions. You'll need to restart Claude Code at the end. Proceed?"*
+
+**Act:**
+
+1. **Rename plugin directories:**
+   ```bash
+   mv ~/.claude/plugins/marketplaces/local/plugins/vault-commands ~/.claude/plugins/marketplaces/local/plugins/aios
+   mv ~/.claude/plugins/cache/local/vault-commands ~/.claude/plugins/cache/local/aios
+   ```
+2. **Update marketplace.json + both plugin.json files** — change `"name": "vault-commands"` → `"name": "aios"`, update `source: "./plugins/aios"`. Three files total.
+3. **Update `~/.claude/settings.json`** — `"enabledPlugins"` key: rename `"vault-commands@local": true` → `"aios@local": true`.
+4. **Update `~/obsidian/.claude/settings.local.json`** — every `Skill(vault-commands:X)` permission → `Skill(aios:X)`.
+5. **Rename `commands/vault-update.md` → `commands/update.md`** — invokes cleanly as `/aios:update` instead of `/aios:vault-update`.
+
+#### Step 5 — Refresh Obsidian UI cache (optional but recommended)
+
+**State:** `vault/.obsidian/workspace.json` (gitignored, per-machine) may reference old paths (`04 - export/...`, `06 - agents/...`, `02 - templates/...`).
+
+**Ask:** *"Your Obsidian's workspace.json tab cache has stale paths from before the folder renumbering. I'll sed-replace the old paths with the new ones so tabs open correctly when you reopen Obsidian. OK?"*
+
+**Act:**
+
+```bash
+sed -i.bak \
+  -e 's|"04 - export/|"03 - export/|g' \
+  -e 's|"05 - backups/|"04 - backups/|g' \
+  -e 's|"06 - agents/|"agents/|g' \
+  -e 's|"02 - templates/|"templates/|g' \
+  vault/.obsidian/workspace.json && rm vault/.obsidian/workspace.json.bak
+```
+
+#### Step 6 — Final sanity check + RESTART REQUIRED
+
+**State:** all migration work landed but Claude Code's running session still has the OLD plugin loaded in memory.
+
+**Ask:** *"Last step — restart Claude Code so the renamed `/aios:*` plugin loads. Want me to commit + push your vault first?"*
+
+**Act:**
+
+1. Commit + push the operator's vault (their personal repo) with all the changes.
+2. **Tell the operator (don't try to do it for them):** *"Quit and restart Claude Code now. In your fresh session, try `/aios:today` to verify. Welcome to the new AIOS shape."*
+3. After their restart, suggest they run `/aios:housekeeping` — Bucket 17 (CLAUDE.md + USER.md health check) will surface any remaining drift.
+
+#### Step 7 — (Optional) Multi-company setup
+
+If the operator had a single company mounted via the old `/company-sync` (now retired), they can either:
+- Leave their existing venture folder as-is (it remains valid in the new shape)
+- Migrate to the new multi-company model via `/aios:company --create` against `The-AIOS/company-template` (see Phase 1c below). This gives them a proper venture-context repo at `{org}/venture-context` instead of the mixed sovrahq/internal-vault setup.
 
 ---
 
