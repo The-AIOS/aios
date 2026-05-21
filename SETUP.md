@@ -374,7 +374,7 @@ No platform-specific gotchas observed. Brew handles dependencies cleanly. If `cl
 
 **`aios:today` not found**
 → Restart Claude Code. Plugins load at session start.
-→ If still missing: `claude plugin marketplace add` + `claude plugin install vault-commands@local`.
+→ If still missing: `claude plugin marketplace add` + `claude plugin install aios@the-aios`.
 
 **Obsidian MCP not connecting**
 → `claude mcp list` to verify. Re-run the add command if missing.
@@ -383,4 +383,4 @@ No platform-specific gotchas observed. Brew handles dependencies cleanly. If `cl
 → MCP path must point to `~/obsidian/vault` (the vault directory), not `~/obsidian` (the repo root).
 
 **Edited a command but change isn't showing**
-→ Sync to cache: `claude plugin update vault-commands@local`
+→ Sync to cache: `claude plugin update aios@the-aios`

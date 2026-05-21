@@ -1,0 +1,155 @@
+name: validate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  structure:
+    name: Repo structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Required top-level files exist
+        run: |
+          set -e
+          for f in README.md CLAUDE.md SETUP.md TOOLS.md INTENT.md USER.md LICENSE NOTICE CHANGELOG.md; do
+            test -f "$f" || { echo "::error::Missing required file: $f"; exit 1; }
+          done
+          echo "OK: all required top-level files present"
+
+      - name: Required infra folders + custom/ subfolders exist
+        run: |
+          set -e
+          for layer in agents skills commands hooks mcps plugins templates; do
+            test -d "$layer" || { echo "::error::Missing infra layer: $layer/"; exit 1; }
+            test -d "$layer/custom" || { echo "::error::Missing custom/ subfolder: $layer/custom/"; exit 1; }
+          done
+          echo "OK: all 7 infra layers have custom/ subfolders"
+
+      - name: Agent bundles exist with README.md + top-level registry
+        run: |
+          set -e
+          test -f "agents/_index.md" || { echo "::error::Missing canonical registry: agents/_index.md"; exit 1; }
+          for bundle in aios-sales aios-strategy aios-finance-legal aios-engineering aios-communication aios-personal; do
+            test -d "agents/$bundle" || { echo "::error::Missing agent bundle: agents/$bundle/"; exit 1; }
+            test -f "agents/$bundle/README.md" || { echo "::error::Missing bundle README: agents/$bundle/README.md"; exit 1; }
+          done
+          echo "OK: all 6 agent bundles present with README.md, and agents/_index.md is in place"
+
+  manifests:
+    name: Plugin manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: marketplace.json + plugin.json parse as valid JSON
+        run: |
+          set -e
+          python3 -c "import json; json.load(open('commands/marketplace.json'))" && echo "OK: marketplace.json"
+          python3 -c "import json; json.load(open('commands/plugin.json'))" && echo "OK: plugin.json"
+
+      - name: Manifest versions match
+        run: |
+          set -e
+          MP_VERSION=$(python3 -c "import json; d=json.load(open('commands/marketplace.json')); print(d['plugins'][0]['version'])")
+          PL_VERSION=$(python3 -c "import json; print(json.load(open('commands/plugin.json'))['version'])")
+          if [ "$MP_VERSION" != "$PL_VERSION" ]; then
+            echo "::error::Version mismatch — marketplace.json says $MP_VERSION, plugin.json says $PL_VERSION"
+            exit 1
+          fi
+          echo "OK: both manifests on version $MP_VERSION"
+
+      - name: Manifest names match expected (aios @ the-aios)
+        run: |
+          set -e
+          MP_NAME=$(python3 -c "import json; print(json.load(open('commands/marketplace.json'))['name'])")
+          PL_NAME=$(python3 -c "import json; print(json.load(open('commands/plugin.json'))['name'])")
+          PLUGIN_NAME=$(python3 -c "import json; print(json.load(open('commands/marketplace.json'))['plugins'][0]['name'])")
+          [ "$MP_NAME" = "the-aios" ] || { echo "::error::marketplace.json name should be 'the-aios', got '$MP_NAME'"; exit 1; }
+          [ "$PL_NAME" = "aios" ] || { echo "::error::plugin.json name should be 'aios', got '$PL_NAME'"; exit 1; }
+          [ "$PLUGIN_NAME" = "aios" ] || { echo "::error::marketplace plugin entry should be 'aios', got '$PLUGIN_NAME'"; exit 1; }
+          echo "OK: manifest naming is aios @ the-aios"
+
+  frontmatter:
+    name: YAML frontmatter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: All command + agent + skill files have parseable frontmatter
+        run: |
+          python3 <<'PY'
+          import sys, yaml, glob
+
+          failures = []
+          patterns = [
+              "commands/*.md",
+              "agents/aios-*/*.md",
+              "skills/*/SKILL.md",
+              "templates/*.md",
+          ]
+
+          for pat in patterns:
+              for path in glob.glob(pat):
+                  if path.endswith("_index.md"):
+                      continue
+                  with open(path) as f:
+                      content = f.read()
+                  if not content.startswith("---\n"):
+                      continue
+                  try:
+                      end = content.index("\n---\n", 4)
+                      fm = content[4:end]
+                      yaml.safe_load(fm)
+                  except (ValueError, yaml.YAMLError) as e:
+                      failures.append(f"{path}: {e}")
+
+          if failures:
+              print("::error::Frontmatter parse failures:")
+              for f in failures:
+                  print(f"  - {f}")
+              sys.exit(1)
+          total = sum(len(glob.glob(p)) for p in patterns)
+          print(f"OK: frontmatter validated across {total} files")
+          PY
+
+  drift:
+    name: Migration drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No references to retired vault-commands@local naming
+        run: |
+          set -e
+          if grep -rln "vault-commands@local\|aios@local\b" \
+            --include="*.md" --include="*.json" --include="*.yml" --include="*.yaml" \
+            --exclude="CHANGELOG.md" --exclude="HISTORY-PRE-*.md" \
+            --exclude-dir=.git --exclude-dir=vault --exclude-dir=.github .; then
+            echo "::error::Retired slug found outside CHANGELOG/history files (see grep output above)"
+            exit 1
+          fi
+          echo "OK: no stale vault-commands@local or aios@local references"
+
+      - name: No references to retired folder paths
+        run: |
+          set -e
+          if grep -rln "vault/06 - agents\|vault/02 - templates" \
+            --include="*.md" --include="*.json" --include="*.yml" --include="*.yaml" \
+            --exclude="CHANGELOG.md" --exclude="HISTORY-PRE-*.md" \
+            --exclude-dir=.git --exclude-dir=vault --exclude-dir=.github .; then
+            echo "::error::Retired folder path found outside CHANGELOG/history files (see grep output above)"
+            exit 1
+          fi
+          echo "OK: no stale vault/06 - agents or vault/02 - templates references"
