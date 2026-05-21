@@ -18,11 +18,14 @@ updated: '2026-05-21'
 | Folder | What | Upstream | License |
 |---|---|---|---|
 | [`skills/aios/`](./aios/) | AIOS-bundled skills (16) — high-signal coding/Obsidian/meta after the 2026-05-21 audit. See "What got pruned" below for what was removed. | This framework | GPL-2.0-or-later |
-| [`skills/anthropic/`](./anthropic/) | Anthropic's example skills (12) — skill-creator, claude-api, mcp-builder, frontend-design, canvas-design, theme-factory, doc-coauthoring, internal-comms, web-artifacts-builder, webapp-testing, algorithmic-art, slack-gif-creator | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
+| [`skills/anthropic/`](./anthropic/) | Anthropic's example skills (11) — skill-creator, claude-api, mcp-builder, frontend-design, theme-factory, doc-coauthoring, internal-comms, web-artifacts-builder, webapp-testing, algorithmic-art, slack-gif-creator | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
 | [`skills/superpowers/`](./superpowers/) | Core software-engineering workflows (14) — TDD, debugging, code review, plans, brainstorming, worktrees, subagent dispatching | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
 | [`skills/custom/`](./custom/) | Your own skill extensions — survive `/aios:update` | Operator | Operator's choice |
 
-> **Note on Anthropic's document skills (`docx`, `pdf`, `pptx`, `xlsx`)**: these are *not* vendored here because Anthropic ships them under a proprietary license that prohibits redistribution. Operators get them via Claude Code's plugin marketplace: `claude plugin install document-skills@anthropic-agent-skills`. Already enabled in this framework's default `~/.claude/settings.json`.
+> **Note on skills available via Anthropic's plugin route** — operators get these via Claude Code's plugin marketplace: `claude plugin install document-skills@anthropic-agent-skills` (already enabled in this framework's default `~/.claude/settings.json`):
+>
+> - **`docx`, `pdf`, `pptx`, `xlsx`** — *not* vendored here because Anthropic ships them under a proprietary license that prohibits redistribution.
+> - **`canvas-design`** — Apache 2.0 but ships with 5.5 MB of curated fonts (81 font files for poster/design variety). Not bundled by us to keep the framework lean (would have added ~29% to repo size); operators who need it get full quality via the plugin.
 
 ---
 
@@ -36,7 +39,6 @@ Apache-2.0 licensed example skills from Anthropic's official repo. Covers creati
 | `claude-api` | Building/debugging/optimizing apps that use the Claude API or Anthropic SDK |
 | `mcp-builder` | Creating high-quality MCP servers in Python (FastMCP) or Node/TypeScript |
 | `frontend-design` | Distinctive, production-grade frontend interfaces that avoid generic AI aesthetics |
-| `canvas-design` | Beautiful posters, designs, visual art in `.png` and `.pdf` |
 | `theme-factory` | Apply themed colors/fonts to artifacts (slides, docs, landing pages) |
 | `doc-coauthoring` | Structured workflow for co-authoring documentation with users |
 | `internal-comms` | Status reports, leadership updates, FAQs, incident reports — company-standard formats |
