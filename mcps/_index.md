@@ -21,6 +21,25 @@ This is the **canonical list** referenced by `CLAUDE.md` → MCP Policy. When yo
 
 ¹ **Playwright is setup-only — not a registered MCP server.** It's a *capability layer* (saved browser auth via Chrome cookie extraction in `cookie_import.py`) that Python scripts consume on demand. There is no `server.py`, no `claude mcp add` step. Listed in this table for bundling completeness, but consumption is `Bash(python script.py)`, not MCP tools. See [`playwright-mcp/README.md`](playwright-mcp/README.md) and [`plugins/aios/commands/mcps-setup.md`](../plugins/aios/commands/mcps-setup.md) Playwright section.
 
+## Source attribution
+
+MCPs come from two places: **vendored** from an upstream open-source repo (we track upstream HEAD via `.upstream-sync`) or **AIOS-built** in this framework. `/aios:housekeeping` Bucket 18 checks each vendored MCP's upstream for new commits since last sync.
+
+| MCP | Origin | Upstream | License |
+|---|---|---|---|
+| Google Workspace | vendored | [taylorwilsdon/google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp) | MIT |
+| Slack | vendored | [jtalk22/slack-mcp-server](https://github.com/jtalk22/slack-mcp-server) | MIT |
+| Atlassian | vendored | [sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian) | MIT |
+| GitHub | vendored (Anthropic) | [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers) → `src/github` | MIT |
+| NotebookLM | vendored | [teng-lin/notebooklm-py](https://github.com/teng-lin/notebooklm-py) | MIT |
+| Stitch | npm proxy | `@_davideast/stitch-mcp` (auto-updates via `npx`) | — |
+| Nano Banana | AIOS-built | — | GPL-2.0-or-later |
+| PDF Generator | AIOS-built | — | GPL-2.0-or-later |
+| Spotify DJ | AIOS-built | — | GPL-2.0-or-later |
+| Playwright | AIOS-built | — | GPL-2.0-or-later |
+
+Each vendored MCP has a `.upstream-sync` file in its folder recording `repo=`, `hash=`, `date=` (and optional `subdir=` for monorepo subdirs). When `/aios:housekeeping` Bucket 18 runs, it compares each recorded hash against the upstream's current HEAD and surfaces drift with the commit list since last sync. MCP updates often require dependency bumps + restart — Bucket 18 flags these explicitly.
+
 ## Setup (all MCPs at once)
 
 ```bash

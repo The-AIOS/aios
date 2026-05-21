@@ -442,36 +442,50 @@ Comprehensive integrity check of the two operating files that govern every sessi
 
 #### Bucket 18: Upstream source freshness (NEW)
 
-`skills/` is **source-grouped** — bundled framework skills live at `skills/aios/`, while vendored skills from upstream repos live at `skills/<source>/` (e.g., `skills/superpowers/`, `skills/df-claude-skills/`). Each source has an upstream URL declared in `skills/_index.md` "Source folders" table. This bucket checks each upstream for new commits since the last sync.
+The framework vendors content from upstream repos in two places: **skills** (source-grouped — `skills/aios/`, `skills/superpowers/`, `skills/anthropic/`, etc.) and **MCPs** (each `mcps/<name>-mcp/` may be vendored from an upstream repo). Each vendored folder ships with a `.upstream-sync` file declaring `repo=<github-url>`, `hash=<short-sha>`, `date=<last-sync>`, and optionally `subdir=<path-within-repo>` (for monorepo subdirs) and `note=<human-context>`. This bucket walks all `.upstream-sync` files in the framework, queries each upstream for its current HEAD, and surfaces drift.
 
-**The principle:** vendoring upstream skills only adds value if we actually track their evolution. Otherwise we ship stale forks while better versions exist publicly. Bucket 18 surfaces freshness signals so operators can choose to update.
+**The principle:** vendoring upstream content only adds value if we actually track its evolution. Otherwise we ship stale forks while better versions exist publicly. Bucket 18 surfaces freshness signals so operators can choose to update.
 
-**Detection:**
+**Detection (one pass, both surfaces):**
 
-1. **Parse `skills/_index.md`** — extract the "Source folders" table. For each row that has an upstream URL (skips `skills/aios/` and `skills/custom/` which have no external upstream).
-2. **For each upstream source:**
-   - Read the local "last sync hash" from `skills/<source>/.upstream-sync` (a small file like `repo=github.com/obra/superpowers\nhash={short-sha}\ndate=2026-05-21`). If missing, treat as "never synced" — capture current upstream HEAD as the baseline (no proposal generated this round).
-   - Query the upstream: `gh api repos/<org>/<repo>/commits/HEAD --jq '.sha'` for the current HEAD.
+1. **Scan for `.upstream-sync`** — `find skills mcps -name '.upstream-sync' -not -path '*/custom/*'` returns every vendored source folder.
+2. **For each `.upstream-sync` found:**
+   - Parse `repo=`, `hash=`, `date=`, optional `subdir=`, optional `note=`.
+   - Query the upstream: `gh api "repos/<org>/<repo>/commits/HEAD" --jq '.sha'` → current upstream HEAD.
    - Compare local vs upstream hash. If equal → mark `current`. If different → mark `behind`.
-3. **For `behind` sources** — fetch the commit list since local hash via `gh api "repos/<org>/<repo>/compare/<local>...HEAD" --jq '.commits[] | .commit.message'` for change summary (top 5 commits).
-4. **For each modified skill in the upstream:** diff against local. Show per-skill what changed (added/modified/deleted). Operator chooses per-skill: pull / skip / mark-divergent (we intentionally forked it).
+3. **For `behind` sources** — fetch the commit list since local hash:
+   ```bash
+   gh api "repos/<org>/<repo>/compare/<local>...HEAD" --jq '.commits[] | .commit.message'
+   ```
+   Show top 5 commit messages for change summary. If a `subdir=` is set, additionally filter the diff to that path: `gh api "repos/<org>/<repo>/compare/<local>...HEAD" --jq '.files[] | select(.filename | startswith("<subdir>/")) | .filename'` — operator sees only changes relevant to the vendored subset.
+4. **For each modified file in the upstream:** propose per-file actions: pull / skip / mark-divergent (we intentionally forked it).
 
 **Proposal table format:**
 
-| # | Source | Status | Behind by | Action |
-|---|---|---|---|---|
-| 18.1 | `skills/superpowers/` | 🟡 behind | 7 commits | [ ] review changes |
-| 18.2 | `skills/df-claude-skills/` | 🟢 current | — | — |
+| # | Source | Type | Status | Behind by | Action |
+|---|---|---|---|---|---|
+| 18.1 | `skills/superpowers/` | skill | 🟡 behind | 7 commits | [ ] review changes |
+| 18.2 | `skills/anthropic/` | skill | 🟢 current | — | — |
+| 18.3 | `mcps/atlassian-mcp/` | mcp | 🟡 behind | 23 commits since 2026-05-21 | [ ] review (may require deps + restart) |
+| 18.4 | `mcps/github-mcp/` | mcp | 🟢 current | — | — |
 
-**For approved pulls:**
+**For approved pulls (skills):**
 - Update `skills/<source>/.upstream-sync` with new hash + date
-- Apply the diff via `git mv` / `Write` for each changed skill
-- If a skill was deleted upstream — propose deleting locally OR moving to `skills/aios/` if you want to keep maintaining it
+- Apply the diff via `git mv` / `Write` for each changed file
 - Surface license/attribution requirements (LICENSE files in upstream — copy if changed)
 
-**Cadence:** monthly minimum, or weekly if you're actively pulling from a fast-moving upstream like obra/superpowers.
+**For approved pulls (MCPs — extra care vs skills):**
+- MCP code changes often touch `package.json` / `pyproject.toml` — propose dependency updates alongside source updates
+- After applying, **flag restart-required**: the MCP server is a long-running subprocess held in memory by Claude Code (per `feedback_settings_read_semantics.md`); operator must `claude mcp restart <name>` or restart Claude Code entirely for code changes to take effect
+- If upstream introduces breaking changes (renamed tools, changed schemas), surface them prominently — these affect every command/agent that calls the MCP
+- Update `mcps/<name>-mcp/.upstream-sync` after successful pull
 
-**Why this bucket exists:** the 2026-05-21 skills reorg made source attribution durable (`skills/<source>/<skill>/` instead of flat). The reorg only pays off if we close the loop — staying current with upstream. Without this bucket, the source folders become museum pieces. With it, AIOS becomes an active integrator of best-in-class skills across the ecosystem.
+**AIOS-built MCPs (no `.upstream-sync` file):**
+Some MCPs are AIOS-built, not vendored — `nano-banana-mcp`, `pdf-generator-mcp`, `spotify-dj-mcp`, `playwright-mcp`. These have no upstream to track; skip them. Same for npm-proxy MCPs like `stitch-mcp` (auto-updated via npm at install time, no vendoring).
+
+**Cadence:** monthly minimum, or weekly if you're actively pulling from a fast-moving upstream like `obra/superpowers` or `modelcontextprotocol/servers`.
+
+**Why this bucket exists:** the 2026-05-21 skills reorg + MCP attribution sweep made source tracking durable (vendored content lives at `<layer>/<source>/<thing>/` with a `.upstream-sync` manifest). The reorg only pays off if we close the loop — staying current with upstream. Without this bucket, the source folders become museum pieces. With it, AIOS becomes an active integrator of best-in-class skills + MCPs across the ecosystem.
 
 ### Phase 2 — Present the packet
 

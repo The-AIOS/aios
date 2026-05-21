@@ -1,0 +1,5 @@
+repo=https://github.com/modelcontextprotocol/servers
+hash=b1e1eb1
+date=2026-05-21
+subdir=src/github
+note=Anthropic's official MCP server. Vendored from monorepo subdir: src/github
