@@ -183,8 +183,8 @@ Read `~/.claude/settings.json` (global) and the project's `.claude/settings.loca
 
 The `commands/` repo-root folder is the source of truth. Two derived locations must stay in sync — the plugin marketplace and the runtime cache:
 
-- `~/.claude/plugins/marketplaces/local/plugins/vault-commands/commands/{name}.md`
-- `~/.claude/plugins/cache/local/vault-commands/unknown/commands/{name}.md`
+- `~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{name}.md`
+- `~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/{name}.md`
 
 **Scan:** for each `commands/{name}.md` in the repo, `diff` against both derived locations. Surface any drift:
 
@@ -193,7 +193,7 @@ The `commands/` repo-root folder is the source of truth. Two derived locations m
 - **Marketplace/cache file exists, repo file missing** → command was deleted in `commands/` but stale copy lingers in plugin paths
 
 **Auto-apply candidates** (low-stakes, deterministic):
-- Repo → marketplace + cache copy when repo is the only authoritative source. Use `cp ~/obsidian/commands/{name}.md ~/.claude/plugins/marketplaces/local/.../commands/` and the equivalent for cache. Confirm post-copy that all 3 files match (`diff -q`).
+- Repo → marketplace + cache copy when repo is the only authoritative source. Use `cp ~/obsidian/commands/{name}.md ~/.claude/plugins/marketplaces/the-aios/.../commands/` and the equivalent for cache. Confirm post-copy that all 3 files match (`diff -q`).
 
 **Propose-only candidates** (need user judgment):
 - Plugin paths have content the repo doesn't — possible accidental delete, or in-progress refactor. Ask before removing.

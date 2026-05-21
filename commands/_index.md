@@ -11,8 +11,8 @@ type: index
 # Vault Commands — Index
 
 > Source of truth for all 24 vault command files. Synced to plugin marketplace + cache.
-> Marketplace: `~/.claude/plugins/marketplaces/local/plugins/vault-commands/commands/`
-> Cache: `~/.claude/plugins/cache/local/vault-commands/unknown/commands/`
+> Marketplace: `~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/`
+> Cache: `~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/`
 
 ---
 

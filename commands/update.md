@@ -26,14 +26,20 @@ Files where the team version is always correct. Overwrite without merge.
 - `CHEATSHEET.md` (repo root — day-to-day operating index)
 - `TOOLS.md` (repo root — human-facing guide to all vault capabilities)
 - `CHANGELOG.md` (repo root)
+- `LICENSE` (repo root — GPL v2+ canonical text from gnu.org)
+- `NOTICE` (repo root — AIOS contributors copyright + grant)
+- `FORTRESS.md` (repo root — two-machine operator setup guide)
+- `HISTORY-PRE-2026-05-21.md` (repo root — pre-extraction lineage pointer; cosmetic to ship but harmless)
 - `.gitignore` (repo root — single source of hygiene for the whole repo, including secret-leak patterns)
-- `templates/*` (all template files)
-- `skills/*` (all skills — full folder replace. 66 reusable capabilities including Obsidian, Karpathy coding, etc.)
-- `hooks/*` (pipeline executor, markitdown converter, claude-identity wrappers, repo root)
-- `.obsidian/snippets/*` (CSS fixes)
-- `mcps/*` (vendored MCP servers — code + README)
-- `agents/aios-*/` (bundled agent definitions — 6 bundles: sales, strategy, finance-legal, engineering, communication, personal — skip `agents/custom/` which holds operator-specific extensions)
-- `plugins/*` (self-contained plugins — full folder replace per plugin)
+- `templates/aios-*` and `templates/*.md` at top level (NEVER overwrite `templates/custom/` — operator-specific extensions)
+- `skills/*` EXCEPT `skills/custom/` (full folder replace for bundled skills; preserve operator extensions)
+- `hooks/*` EXCEPT `hooks/custom/` (pipeline executor, markitdown converter, claude-identity wrappers)
+- `vault/.obsidian/*.json` (Obsidian config baseline — app.json, appearance.json, backlink.json, community-plugins.json, core-plugins.json, daily-notes.json, graph.json, hotkeys.json; NEVER touch `vault/.obsidian/workspace.json` which is per-machine UI state and gitignored)
+- `vault/.obsidian/snippets/*` (CSS fixes)
+- `mcps/*` EXCEPT `mcps/custom/` (vendored MCP servers — code + README; preserve operator-installed MCPs)
+- `agents/aios-*/` (bundled agent definitions — 6 bundles: sales, strategy, finance-legal, engineering, communication, personal — NEVER overwrite `agents/custom/` which holds operator-specific extensions)
+- `plugins/*` EXCEPT `plugins/custom/` (self-contained plugins — full folder replace per plugin; preserve operator plugins)
+- `commands/aios-*` and `commands/*.md` at top level EXCEPT `commands/custom/` (canonical slash commands; preserve operator commands)
 
 ### Tier 2: Suggest (show diff, user picks)
 Files the user may have personalized. Show per-section diffs, let them cherry-pick.
@@ -227,8 +233,8 @@ Apply changes to today.md? [all / pick numbers / skip]
 7. To apply a **changed section**: use `mcp__obsidian__patch_note` with the local section content as `oldString` and remote section content as `newString`
 8. After applying, if the command file changed, sync to plugin pipeline:
    ```bash
-   cp "commands/{file}" ~/.claude/plugins/marketplaces/local/plugins/vault-commands/commands/{file}
-   cp "commands/{file}" ~/.claude/plugins/cache/local/vault-commands/unknown/commands/{file}
+   cp "commands/{file}" ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{file}
+   cp "commands/{file}" ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/{file}
    ```
 
 ### 5. Process Tier 3 (Flag)
@@ -252,8 +258,8 @@ For each template that changed in Tier 1:
 **After all Tier 2 command changes are applied**, ensure the full plugin pipeline is current:
 ```bash
 # Sync ALL command files to both plugin locations (not just changed ones — ensures consistency)
-cp ~/obsidian/commands/*.md ~/.claude/plugins/marketplaces/local/plugins/vault-commands/commands/
-cp ~/obsidian/commands/*.md ~/.claude/plugins/cache/local/vault-commands/unknown/commands/
+cp ~/obsidian/commands/*.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
+cp ~/obsidian/commands/*.md ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
 ```
 
 Update `.vault-update` (repo root) with new HEAD hash and today's date.

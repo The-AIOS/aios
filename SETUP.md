@@ -170,24 +170,24 @@ npx @jtalk22/slack-mcp --setup
 
 The pipeline executor (`hooks/pipeline-executor.py`) pre-loads Google Calendar, Tasks, and Slack data for `/today` and `/close-day`. It runs via `uv run` with inline dependencies — no installation step. Just needs `uv` (listed in prerequisites).
 
-### 6. vault-commands plugin
+### 6. aios plugin
 
 ```bash
-mkdir -p ~/.claude/plugins/marketplaces/local/plugins
-mkdir -p ~/.claude/plugins/marketplaces/local/.claude-plugin
+mkdir -p ~/.claude/plugins/marketplaces/the-aios/plugins
+mkdir -p ~/.claude/plugins/marketplaces/the-aios/.claude-plugin
 
-mkdir -p ~/.claude/plugins/marketplaces/local/plugins/vault-commands/commands
+mkdir -p ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands
 cp ~/obsidian/commands/*.md \
-  ~/.claude/plugins/marketplaces/local/plugins/vault-commands/commands/
+  ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
 
 cp ~/obsidian/commands/marketplace.json \
-  ~/.claude/plugins/marketplaces/local/.claude-plugin/marketplace.json
+  ~/.claude/plugins/marketplaces/the-aios/.claude-plugin/marketplace.json
 
-claude plugin marketplace add ~/.claude/plugins/marketplaces/local/
-claude plugin install vault-commands@local
+claude plugin marketplace add ~/.claude/plugins/marketplaces/the-aios/
+claude plugin install aios@the-aios
 ```
 
-Add `"vault-commands@local": true` to `enabledPlugins` in `~/.claude/settings.json`.
+Add `"aios@the-aios": true` to `enabledPlugins` in `~/.claude/settings.json`.
 
 ### 7. Calendar folder
 

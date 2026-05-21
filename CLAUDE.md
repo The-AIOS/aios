@@ -234,22 +234,14 @@ Project notes in `vault/00 - notes/projects/` use a prefix that indicates the pr
 After any session that produces meaningful work or insight:
 
 1. **Snapshot before editing (mandatory)** — before modifying any observed context file, archive the previous version to `vault/00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-{filename}.md` (create the monthly subfolder if needed). This preserves the evolution of observations and feeds `/trace` and `/drift`. **Skip stub files** — if an observed file contains only frontmatter and seed text, there is nothing to archive. Start snapshotting once content is real.
-2. **Update `session-insights.md`** — this is an observation buffer, not a log. Scan existing entries first:
-   - This session **reinforces** an Emerging insight → move it to Reinforced with the new date
-   - This session **contradicts** an existing insight → remove it
-   - A **Reinforced** insight has clear evidence now → route it to its target observed file, remove from session-insights
-   - This session produced a **new** pattern-level observation → add to Emerging with date and evidence
-   - **Adding forces reviewing** — scan for stale items and make room. Keep Emerging ≤10, Reinforced ≤5.
-   - Snapshot only when the document actually changes (not every session).
-   - Session summaries belong in the daily note — session-insights holds only the distilled observations.
-3. **Update other observed context files when warranted** — not every session produces new observations, but never skip this check for speed. The observed context is the compound value of the vault. Update when a relevant pattern emerges that wasn't understood before:
-   - New behavioral pattern confirmed (2+ sessions) → `patterns.md`
-   - New preference discovered → `preferences.md`
-   - Strategic insight about ventures → `business.md`
-   - How the ecosystem connects → `ecosystem.md`
-   - Growth moment or avoidance pattern → `growth.md`
-   - New identity / background information → `profile.md`
-4. **"What was most useful?" (substantive sessions only)** — before committing, if the session was substantive (>30 minutes, produced meaningful work), ask: **"What was most useful for you in this session?"** One question. Short answer. Log it in session-insights.md. This trains both the user's and the AI's understanding of what creates value. Skip for quick fixes.
+2. **Update `session-insights.md`** — scan existing entries first (see § III for the two-stage buffer rules):
+   - Session **reinforces** an Emerging insight → move to Reinforced with new date
+   - Session **contradicts** an existing insight → remove
+   - A **Reinforced** insight has clear evidence → route to its target observed file, remove from buffer
+   - Session produced a **new** pattern-level observation → add to Emerging with date + evidence
+   - **Adding forces reviewing.** Keep Emerging ≤10, Reinforced ≤5. Snapshot only when content actually changes. Session summaries → daily note, not here.
+3. **Update other observed context files when warranted** — never skip this check for speed; the observed context is the compound value of the vault. See § III Observed Context Rules for the file/trigger map. Update when a pattern emerges that wasn't understood before.
+4. **"What was most useful?" (substantive sessions only)** — before committing, if the session was substantive (>30 minutes, produced meaningful work), ask: **"What was most useful for you in this session?"** One question. Short answer. Log it in session-insights.md. Trains both the user and the AI on what creates value. Skip for quick fixes.
 5. **Commit and push** the vault:
    ```bash
    cd ~/obsidian && git add -A && git commit -m "Session {date}: {brief description}" && git push
@@ -265,46 +257,43 @@ Never end a session with uncommitted vault changes.
 
 ### Observed Context Rules
 
-These rules govern when and how to update the observed context files. Read them carefully — the goal is truth, not flattery.
+Goal: truth, not flattery. Update each file when its trigger fires:
 
-**`profile.md`** — update when you observe a consistent personality trait that wasn't captured before. Require at least 2 sessions of evidence before adding. Describe what you observe, not what the person wants to hear.
+| File | Trigger | How |
+|------|---------|-----|
+| `profile.md` | Consistent personality trait observed (require 2+ sessions evidence) | Describe what you observe, not what flatters |
+| `patterns.md` | Session-insight reaches Reinforced (2+ sessions). Or direct with `(new — date)` tag if pattern is strong enough | Be specific: *"When X, tends to Y."* Tendencies, not absolutes. Note exceptions |
+| `preferences.md` | Strong like/dislike about working together discovered | **Immediately** — don't wait. Operational; changes every future session |
+| `business.md` | Strategic insight about their ventures | Distinguish stated vs inferred. Flag tensions, not just confirmations |
+| `ecosystem.md` | Venture relationship shifts OR new connection clear | This file is the map, not the territory — update when the map needs redrawing |
+| `growth.md` | Growth happening OR avoided — **the most important observed file** | See `growth.md` rules ↓ |
+| `session-insights.md` | Every meaningful session | Buffer (not log/diary). See two-stage rules ↓ |
+| `antifragile.md` | User corrects you OR you catch your own mistake | **Immediately** at the moment. See triggers ↓ |
 
-**`patterns.md`** — route here when a session-insights entry reaches Reinforced status (2+ sessions of evidence). Can also add directly with a `(new — date)` tag if the pattern is strong enough to track immediately — but prefer the session-insights buffer for observations needing confirmation. Be specific: "When faced with X, tends to Y." Patterns are tendencies, not absolutes. Note exceptions.
-
-**`preferences.md`** — update immediately when you discover a strong like or dislike about how to work together. Operational — they change how every future session runs. Don't wait until end of session.
-
-**`business.md`** — update when a strategic insight emerges about their ventures. Distinguish clearly: what they've stated directly vs. what you're inferring. Flag tensions you notice, not just confirmations.
-
-**`ecosystem.md`** — update when the relationship between ventures shifts, or a new connection becomes clear. This file is about the map, not the territory — update when the map needs redrawing.
-
-**`growth.md`** — update when you observe growth happening or growth being avoided. The most important observed file.
-- Be honest. Softening to uselessness defeats the purpose. Radical Candor: care personally AND challenge directly — not Ruinous Empathy.
+**`growth.md` rules:**
+- Be honest. Softening to uselessness defeats the purpose. Radical Candor (care personally AND challenge directly) — not Ruinous Empathy.
 - Frame with high expectations: *"I'm noting this because I have high expectations and I know you can work with it."*
 - Be specific. *"Tends to avoid operational work"* is useful. *"Sometimes gets busy"* is not.
-- Use NVC-clean language: observation, not evaluation. What happened, not what it means about the person.
-- Note evidence (which sessions showed this) and timeline (when it first appeared).
+- NVC-clean: observation, not evaluation. What happened, not what it means about the person.
+- Note evidence (which sessions) + timeline (when first appeared).
 
-**`session-insights.md`** — observation buffer, not a log, not a diary. Two stages:
-- **Emerging:** single-session observations, persisting until reinforced or stale
-- **Reinforced:** 2+ sessions of evidence, ready to route to target observed file
+**`session-insights.md` two-stage buffer:**
+- **Emerging:** single-session observations, persisting until reinforced or stale.
+- **Reinforced:** 2+ sessions of evidence, ready to route to target observed file.
 
-Update every meaningful session. Check existing entries before adding — reinforcement is as valuable as new capture. When a Reinforced insight is routed to its target file, remove it from here. Stay compact (~5 reinforced + ~10 emerging). Adding forces reviewing.
+Check existing entries before adding — reinforcement is as valuable as new capture. When a Reinforced insight routes to its target, remove from here. Stay compact (~5 reinforced + ~10 emerging). Adding forces reviewing.
 
-**`antifragile.md`** — write here immediately when:
-1. **The user corrects you** — "don't do this again", "that was wrong", "you keep making this mistake", "remember this." Primary trigger. Don't wait until end of session — write the rule the moment the correction happens.
-2. **You catch your own mistake** — something broke, got skipped, silently failed. The fix isn't just correcting the output but changing how the system works.
+**`antifragile.md` triggers:**
+1. **User corrects you** (*"don't do this again", "that was wrong", "remember this"*). Primary trigger. Write the rule the moment correction happens — don't wait until session end.
+2. **You catch your own mistake** — something broke, got skipped, silently failed. The fix isn't correcting output; it's changing how the system works.
 
-**System mindset for entries:** don't just name the failure. Ask: *"Was the decision process flawed, or was this good decision-making that produced a bad outcome?"* Diagnose the system, not the symptom. Avoid the resulting fallacy — bad outcomes don't always mean bad decisions.
-
-Format: what happened, why it broke, the system fix, category. Don't log every small mistake — log the ones that reveal systemic fragility. Never delete entries — if a rule becomes obsolete, add a new one that supersedes it. The evolution is the value.
-
-The only observed file where Claude writes about Claude. The goal: never make the same system-level mistake twice.
+**System mindset:** don't just name the failure. Ask: *"Was the decision process flawed, or good decision-making that produced a bad outcome?"* Diagnose the system, not the symptom. Avoid the resulting fallacy — bad outcomes don't always mean bad decisions. Format: what happened, why it broke, system fix, category. Don't log every small mistake — log the systemic ones. Never delete entries; supersede with new ones. Evolution is the value. (The only observed file where Claude writes about Claude.)
 
 **What NOT to do:**
-- Don't route single-session observations directly to `patterns.md` or `profile.md` — capture them as Emerging in `session-insights.md` first. Exceptions: `preferences.md` (immediate) and `antifragile.md` (write on correction).
+- Don't route single-session observations directly to `patterns.md` / `profile.md` — Emerging in `session-insights.md` first. Exceptions: `preferences.md` (immediate) + `antifragile.md` (write on correction).
 - Don't overwrite genuine observations with more comfortable versions.
 - Don't speculate without marking it: *"seems to be..."* not *"always..."*
-- Don't duplicate what's already captured — enrich or deepen, don't repeat.
+- Don't duplicate — enrich/deepen, don't repeat.
 
 ---
 
@@ -417,12 +406,12 @@ See `vault/00 - notes/context/observed/vault-routine.md` for recommended cadence
 | Location | Purpose |
 |---|---|
 | `commands/` (repo root) | **Source of truth** — edit here |
-| `~/.claude/plugins/marketplaces/local/plugins/vault-commands/commands/` | Marketplace source — copy from source |
-| `~/.claude/plugins/cache/local/vault-commands/unknown/commands/` | **Plugin cache** — what Claude actually reads at runtime |
+| `~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/` | Marketplace source — copy from source |
+| `~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/` | **Plugin cache** — what Claude actually reads at runtime (`0.1.0` is the plugin's declared version in `plugin.json`) |
 
 When a command is edited, all three must stay in sync. Workflow: edit in `commands/` → copy to marketplace source → copy to cache. Or manual:
 ```bash
-claude plugin update vault-commands@local
+claude plugin update aios@the-aios
 ```
 
 ### Hooks · Skills · Plugins
@@ -448,7 +437,7 @@ The vault ships bundled MCP servers at `mcps/`. **`mcps/_index.md` is the canoni
 - **Bundled equivalent exists in `mcps/_index.md`** → use the bundled MCP. Do NOT use the claude.ai-hosted version (`mcp__claude_ai_*`). Alert the user to disable the claude.ai connector.
 - **No bundled equivalent yet** → claude.ai-hosted version is acceptable, but flag the service as a bundling candidate in `mcps/_index.md` and warn: *"this integration will break if you switch Anthropic accounts; we should bundle it."*
 
-**Why.** claude.ai-hosted MCPs are bound to the active Anthropic account's OAuth grant. When users switch accounts — rate-limit management, multi-tenant setups, org vs personal — those integrations disappear mid-session and anything depending on them breaks silently. Bundled MCPs live in the vault, sync via git, authenticate independently, and survive every account switch.
+**Why.** claude.ai-hosted MCPs are bound to the active Anthropic OAuth grant — switching accounts (rate limits, multi-tenant, org vs personal) silently breaks them mid-session. Bundled MCPs sync via git, authenticate independently, and survive every account switch.
 
 **Adding a new MCP:** follow the pattern in `mcps/_index.md` → "Adding a new MCP." Vendor in `mcps/{name}-mcp/` with its own README + auth instructions, add an install block to `mcps/setup.sh`, register via `claude mcp add`, and update `mcps/_index.md`. Claude Code plugins (`~/.claude/plugins/`) are the secondary option when a local server isn't available.
 

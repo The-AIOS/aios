@@ -117,23 +117,38 @@ See `mcps/_index.md` for the canonical list + setup instructions. Run `bash mcps
 3. **Vault renumbering** — `git mv vault/03 - assets vault/02 - assets`, `git mv vault/04 - export vault/03 - export`, `git mv vault/05 - backups vault/04 - backups`. The old `vault/02 - templates/` and `vault/06 - agents/` are now empty — `rmdir`.
 4. **Sweep stale references** — `grep -rln 'vault/02 - templates\|vault/06 - agents\|vault/03 - assets\|vault/04 - export\|vault/05 - backups' --include='*.md' --exclude-dir=.git` and update each to the new paths. Same for non-prefixed `02 - templates/` / `06 - agents/`.
 
-#### Step 4 — Plugin marketplace rename (vault-commands → aios)
+#### Step 4 — Plugin marketplace rename + versioning (vault-commands@local → aios@the-aios + version 0.1.0)
 
-**State:** `~/.claude/plugins/marketplaces/local/.claude-plugin/marketplace.json` + plugin directories + `~/.claude/settings.json` enabledPlugins reference `vault-commands@local`. The COMMAND namespace is currently `/vault-commands:*`.
+**State:** `~/.claude/plugins/marketplaces/local/.claude-plugin/marketplace.json` + plugin directories + `~/.claude/settings.json` enabledPlugins reference `vault-commands@local`. The marketplace is named `local`, the plugin has no declared version (cache dir = `unknown`), and the command namespace is `/vault-commands:*`.
 
-**Ask:** *"The plugin marketplace renames from `vault-commands` to `aios`. All your `/vault-commands:today` etc. become `/aios:today`. I'll update the manifest files, rename the plugin directories, update `~/.claude/settings.json` enabledPlugins, and update `~/obsidian/.claude/settings.local.json` permissions. You'll need to restart Claude Code at the end. Proceed?"*
+**Ask:** *"Three renames in one step: plugin `vault-commands` → `aios`, marketplace `local` → `the-aios`, and add `version: 0.1.0` so the cache stops landing under `/unknown/`. All your `/vault-commands:today` etc. become `/aios:today`, and the plugin reference becomes `aios@the-aios`. I'll update all manifests, rename the directories, update `~/.claude/settings.json` (enabledPlugins + extraKnownMarketplaces), and update `~/obsidian/.claude/settings.local.json` permissions. Restart required at the end. Proceed?"*
 
 **Act:**
 
-1. **Rename plugin directories:**
+1. **Rename marketplace + plugin directories + purge stale cache:**
    ```bash
-   mv ~/.claude/plugins/marketplaces/local/plugins/vault-commands ~/.claude/plugins/marketplaces/local/plugins/aios
-   mv ~/.claude/plugins/cache/local/vault-commands ~/.claude/plugins/cache/local/aios
+   mv ~/.claude/plugins/marketplaces/local ~/.claude/plugins/marketplaces/the-aios
+   mv ~/.claude/plugins/marketplaces/the-aios/plugins/vault-commands ~/.claude/plugins/marketplaces/the-aios/plugins/aios
+   rm -rf ~/.claude/plugins/cache/local  # rebuilds at new path on next plugin reload
    ```
-2. **Update marketplace.json + both plugin.json files** — change `"name": "vault-commands"` → `"name": "aios"`, update `source: "./plugins/aios"`. Three files total.
-3. **Update `~/.claude/settings.json`** — `"enabledPlugins"` key: rename `"vault-commands@local": true` → `"aios@local": true`.
-4. **Update `~/obsidian/.claude/settings.local.json`** — every `Skill(vault-commands:X)` permission → `Skill(aios:X)`.
-5. **Rename `commands/vault-update.md` → `commands/update.md`** — invokes cleanly as `/aios:update` instead of `/aios:vault-update`.
+2. **Update `marketplace.json`** at `~/.claude/plugins/marketplaces/the-aios/.claude-plugin/marketplace.json`:
+   - `"name": "local"` → `"name": "the-aios"`
+   - Plugin entry: `"name": "vault-commands"` → `"name": "aios"`, add `"version": "0.1.0"`, update `"source": "./plugins/aios"`.
+3. **Update `plugin.json`** at `~/.claude/plugins/marketplaces/the-aios/plugins/aios/.claude-plugin/plugin.json`:
+   - `"name": "vault-commands"` → `"name": "aios"`
+   - Add `"version": "0.1.0"`
+4. **Update `~/.claude/settings.json`:**
+   - `enabledPlugins`: `"vault-commands@local": true` → `"aios@the-aios": true`
+   - `extraKnownMarketplaces`: rename key `"local"` → `"the-aios"`, update `source.path` to `/Users/{you}/.claude/plugins/marketplaces/the-aios`
+5. **Update `~/obsidian/.claude/settings.local.json`** — every `Skill(vault-commands:X)` permission → `Skill(aios:X)`.
+6. **Rename `commands/vault-update.md` → `commands/update.md`** — invokes cleanly as `/aios:update` instead of `/aios:vault-update`.
+7. **Populate the new cache** with the renamed source-of-truth commands:
+   ```bash
+   mkdir -p ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands
+   cp ~/obsidian/commands/*.md ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
+   cp ~/obsidian/commands/*.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
+   rm -f ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{company-sync,vault-update}.md  # remove stale renamed-away files
+   ```
 
 #### Step 5 — Refresh Obsidian UI cache (optional but recommended)
 
