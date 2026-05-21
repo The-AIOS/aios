@@ -1,0 +1,24 @@
+{
+  "name": "aios",
+  "version": "0.1.0",
+  "description": "AIOS framework commands — daily ritual, strategic reviews, insight mining, accountability, multi-company mounting",
+  "author": {
+    "name": "Chuy Cepeda",
+    "email": "chuy@sovra.io"
+  },
+  "license": "GPL-2.0-or-later",
+  "homepage": "https://github.com/The-AIOS/aios#readme",
+  "repository": "https://github.com/The-AIOS/aios",
+  "keywords": [
+    "claude-code",
+    "aios",
+    "obsidian",
+    "personal-os",
+    "knowledge-management",
+    "agentic-workflow",
+    "daily-rituals",
+    "second-brain",
+    "productivity",
+    "ai-coworker"
+  ]
+}
