@@ -1,0 +1,172 @@
+gmail:
+  core:
+    - search_gmail_messages
+    - get_gmail_message_content
+    - get_gmail_messages_content_batch
+    - send_gmail_message
+
+  extended:
+    - get_gmail_attachment_content
+    - get_gmail_thread_content
+    - modify_gmail_message_labels
+    - list_gmail_labels
+    - manage_gmail_label
+    - draft_gmail_message
+    - list_gmail_filters
+    - manage_gmail_filter
+
+  complete:
+    - get_gmail_threads_content_batch
+    - batch_modify_gmail_message_labels
+    - start_google_auth
+
+drive:
+  core:
+    - search_drive_files
+    - get_drive_file_content
+    - get_drive_file_download_url
+    - create_drive_file
+    - create_drive_folder
+    - import_to_google_doc
+    - get_drive_shareable_link
+  extended:
+    - list_drive_items
+    - copy_drive_file
+    - update_drive_file
+    - manage_drive_access
+    - set_drive_file_permissions
+  complete:
+    - get_drive_file_permissions
+    - check_drive_file_public_access
+
+calendar:
+  core:
+    - list_calendars
+    - get_events
+    - manage_event
+  extended:
+    - query_freebusy
+  complete: []
+
+docs:
+  core:
+    - get_doc_content
+    - create_doc
+    - modify_doc_text
+  extended:
+    - export_doc_to_pdf
+    - search_docs
+    - find_and_replace_doc
+    - list_docs_in_folder
+    - insert_doc_elements
+    - update_paragraph_style
+    - get_doc_as_markdown
+    - list_document_comments
+    - manage_document_comment
+  complete:
+    - insert_doc_image
+    - update_doc_headers_footers
+    - batch_update_doc
+    - inspect_doc_structure
+    - create_table_with_data
+    - debug_table_structure
+
+sheets:
+  core:
+    - create_spreadsheet
+    - read_sheet_values
+    - modify_sheet_values
+  extended:
+    - list_spreadsheets
+    - get_spreadsheet_info
+    - format_sheet_range
+  complete:
+    - create_sheet
+    - list_spreadsheet_comments
+    - manage_spreadsheet_comment
+    - manage_conditional_formatting
+
+chat:
+  core:
+    - send_message
+    - get_messages
+    - search_messages
+    - create_reaction
+  extended:
+    - list_spaces
+    - download_chat_attachment
+  complete: []
+
+forms:
+  core:
+    - create_form
+    - get_form
+  extended:
+    - list_form_responses
+  complete:
+    - set_publish_settings
+    - get_form_response
+    - batch_update_form
+
+slides:
+  core:
+    - create_presentation
+    - get_presentation
+  extended:
+    - batch_update_presentation
+    - get_page
+    - get_page_thumbnail
+  complete:
+    - list_presentation_comments
+    - manage_presentation_comment
+
+tasks:
+  core:
+    - get_task
+    - list_tasks
+    - manage_task
+  extended: []
+  complete:
+    - list_task_lists
+    - get_task_list
+    - manage_task_list
+
+contacts:
+  core:
+    - search_contacts
+    - get_contact
+    - list_contacts
+    - manage_contact
+  extended:
+    - list_contact_groups
+    - get_contact_group
+  complete:
+    - manage_contacts_batch
+    - manage_contact_group
+
+search:
+  core:
+    - search_custom
+  extended: []
+  complete:
+    - get_search_engine_info
+
+appscript:
+  core:
+    - list_script_projects
+    - get_script_project
+    - get_script_content
+    - create_script_project
+    - update_script_content
+    - run_script_function
+    - generate_trigger_code
+  extended:
+    - manage_deployment
+    - list_deployments
+    - delete_script_project
+    - list_versions
+    - create_version
+    - get_version
+    - list_script_processes
+    - get_script_metrics
+  complete: []

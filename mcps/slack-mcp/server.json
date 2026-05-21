@@ -1,0 +1,53 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.jtalk22/slack-mcp-server",
+  "title": "Slack MCP Server",
+  "description": "Claude-first Slack MCP for self-host or managed Cloud, with Gemini CLI, deployment review, and secure-default HTTP.",
+  "websiteUrl": "https://mcp.revasserlabs.com",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/jtalk22/slack-mcp-server/main/docs/assets/icon-512.png",
+      "mimeType": "image/png",
+      "sizes": [
+        "512x512"
+      ]
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/jtalk22/slack-mcp-server",
+    "source": "github"
+  },
+  "version": "3.2.5",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.revasserlabs.com/oauth/mcp"
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@jtalk22/slack-mcp",
+      "version": "3.2.5",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Slack xoxc- token from browser session",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "SLACK_TOKEN"
+        },
+        {
+          "description": "Slack xoxd- cookie from browser session",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "SLACK_COOKIE"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,189 @@
+# CHEATSHEET.md — How to Operate
+
+> Quick-reference for new AIOS users. Scan to find what you need; click through to the deeper doc when you want context.
+>
+> **First-week instinct:** don't try to use every command on day 1. Master §1 + §2 (launch + daily loop). Add the rest when you feel the need for it.
+
+---
+
+## §1 — Start here (operating Claude in the vault)
+
+How to launch, name, and resume sessions.
+
+| You want to... | Command | Notes |
+|---|---|---|
+| Launch a session in the vault | `cd ~/obsidian && claude` | Loads CLAUDE.md + USER.md + observed context |
+| Open a named worker session | `spawn <name> "<task>"` | New terminal tab/window, named identity, task pre-loaded |
+| Open a named session, no task | `spawn <name>` | Sends `"Start session."` as the first prompt |
+| Spawn an ad-hoc worker (no name) | `spawn` | Generates a memorable adj-animal handle (e.g. `amber-otter`) + prints a tip surfacing available specific agents. Great when you want a fresh session and don't need a meaningful name yet. |
+| Resume a named worker | `spawn <name>` again | Wrapper detects existing session, reattaches |
+| Resume any past session | `claude --resume` | Pick from the list of recent sessions |
+| Install the spawn wrapper | `bash ~/obsidian/hooks/claude-identity/install-wrappers.sh` | One-time setup. Idempotent — safe to re-run. |
+| Run Claude without spawn | `claude --remote-control --name <name>` | Bypasses wrapper; not recommended |
+
+**Why use `spawn` over raw `claude`:** the wrapper sets `$CLAUDE_AGENT_NAME` so CLAUDE.md can match an agent profile (`vault/06 - agents/<name>.md`), greet you in character, and route close-session reports back to the right project. Raw `claude` works but loses the identity-aware behavior.
+
+**Where session transcripts live:** `~/.claude/projects/<vault-path-slug>/*.jsonl` — one file per session. Useful when you want to grep across past conversations.
+
+See: [SETUP.md](./SETUP.md) for first-machine install · [CLAUDE.md](./CLAUDE.md) → § Spawning Sessions for the full wrapper spec.
+
+---
+
+## §2 — The Daily Loop
+
+The minimum every-day rhythm. **`/today` is the orchestrator** — running it closes the compound loop even if you forgot the steps in between.
+
+| Command | When | What it does |
+|---|---|---|
+| **`/today`** | Every morning | **Required.** Loads context + pulls calendar/tasks/Slack + writes today's plan. **Checks the previous daily note for `## Close of Day`** — if missing, auto-invokes `/close-day` first. **Checks vault-update freshness** — surfaces a callout if the shared template/team repo has new infra. Commits + pushes the plan. |
+| `/close-day` | Every evening, OR auto-invoked by `/today` next morning | Captures Close of Day (verdict, shipped, decisions, carries, observed patterns) and routes signals to observed-context + project notes. Skip-tolerant — `/today` catches missing close-day. |
+| `/aios:update` | When `/today` surfaces a BEHIND callout | Pulls fresh infra from the shared template/team repo. On-demand, not scheduled. |
+
+**Why this is the compound loop, mechanically:** yesterday's close-day routes signals to the right files (growth.md, session-insights.md, project notes, antifragile.md). Today's `/today` reads those refreshed files. The system gets smarter because the routing happened — observed-context grew, patterns confirmed, project state advanced. **You only need to remember `/today`** — it's the heartbeat that keeps everything else honest. Forget `/close-day`? `/today` catches it. Forget `/aios:update`? `/today` reminds you.
+
+**At session end**, tell Claude to commit and push the vault. The AI handles the syntax; you name the intent ("commit and push", "ship it"). The vault is only as portable and safe as its last push.
+
+See: [CLAUDE.md](./CLAUDE.md) → § II. Rituals · `commands/today.md` · `commands/close-day.md` · `commands/aios:update.md`
+
+---
+
+## §3 — The Capture Loops (when something happens)
+
+Where does X go when you notice it? One row per signal type.
+
+| What just happened | Where it goes | How |
+|---|---|---|
+| **Idea** (worth keeping but not actioning) | Daily note Parking lot → eventually `vault/00 - notes/ideas/` | Add to today's Parking lot. Run `/graduate` periodically to promote the best ones to permanent notes. |
+| **Reflection** (longer thought, deserves its own page) | `vault/00 - notes/reflections/<slug>.md` | Just write it. Use `/ideas` if you want Claude to suggest framing/structure first. |
+| **Growth signal** (you avoided something, or you shifted) | `vault/00 - notes/context/observed/growth.md` | Don't write directly. Mention it in conversation; `/close-day` or session-end ritual routes it. |
+| **Decision** (a real choice with reasoning) | Today's daily note Decision Journal | Add during `/close-day` if it's substantial. Major decisions get reasoning + confidence + revisit-date. |
+| **Pattern correction** (Claude did something wrong, fix forever) | `vault/00 - notes/context/observed/antifragile.md` | The moment correction happens — don't wait for end of session. Adds a numbered entry. |
+| **Insight to test** (might be true, not sure yet) | `vault/00 - notes/context/observed/session-insights.md` → Emerging | Two-stage buffer: Emerging → Reinforced → routed to target file. CLAUDE.md § III explains the lifecycle. |
+
+**Rule of thumb:** if you're unsure where it goes, write it in the daily note and let `/close-day` route it. The daily note is the safest fallback.
+
+See: [CLAUDE.md](./CLAUDE.md) → § Observed Context Rules · `commands/graduate.md` · `commands/ideas.md`
+
+---
+
+## §4 — The Export Loops (when you need a shareable artifact)
+
+Generate the shareable thing.
+
+| You want... | Command | Output location |
+|---|---|---|
+| **Weekly summary** (the week's narrative + PDF) | `/weekly-learnings` | `vault/01 - calendar/<YYYY-MM>/<YYYY>-W<NN>-summary.md` + `vault/04 - export/reports/weekly/Week<NN>-AI-OS.{html,pdf}` |
+| **Monthly learnings** (insights distilled across the period) | `/learned` | `vault/01 - calendar/<YYYY-MM>/learned-<period>.md` + optional branded PDF in `vault/04 - export/reports/learned/` |
+| **Role activity report** (for stakeholders) | `/role-report` | `vault/04 - export/reports/role/<period>-role-report.{html,pdf}` |
+
+**All three commands accept a period argument** — a named period (`month`, `Q1 2026`, `March`, `last 3 months`, `this week`) or an explicit date range (`2026-03-01 to 2026-03-28`). Run without arguments and each picks a sensible default + asks for confirmation. `/weekly-learnings` additionally auto-fires monthly/quarterly/semester/year reports on the last Friday of each period — no argument needed.
+
+See: [TOOLS.md](./TOOLS.md) · `commands/weekly-learnings.md` · `commands/learned.md`
+
+---
+
+## §5 — Make it yours (personalization)
+
+The substrate is shared; the personalization is yours.
+
+| Surface | What it controls | Edit it when... |
+|---|---|---|
+| **`USER.md`** → `## Identity` | Named sessions and their greeting styles | You want a different greeting tone, or you add a second machine |
+| **`USER.md`** → `## Sources` | Where Claude pulls data (Google accounts, Slack workspace, Growth routines) | First-week setup; revisit when sources change |
+| **`USER.md`** → `## Command personalizations` → `### /<command>` | Override any command's default behavior — adds rules, changes section order, adapts logic | A command does almost-what-you-want, except for one thing |
+| **`INTENT.md`** → `## Autonomy levels` | Per-domain trust: `autonomous` / `draft` / `ask` | When you notice the AI is ready for more trust (or you want to pull back) |
+| **`vault/00 - notes/context/declared/about_me.md`** | Who you are, what you build, what you don't negotiate | First-week priority. Even 5 bullets transforms output quality. |
+| **`vault/00 - notes/context/declared/working_style.md`** | How you think, decide, prefer to work | Same — first week. Compound returns weekly. |
+
+**Starter override pattern:** open `USER.md`, find `### /<command>`, add a rule under a bold sub-heading. Claude reads it before every run of that command. Common first overrides: customize `/today` Evening — Grow routines, add growth routines under Sources, set up Slack triage rules in `### /close-day`.
+
+**Promotion path:** if a rule in your USER.md proves useful enough that it should be default for everyone, `/housekeeping` Bucket 13 surfaces it as a "promotion candidate" — propose moving it from `USER.md` → `commands/<name>.md` for everyone. That's the upstream feedback loop.
+
+### Don't touch — these get overwritten by `/aios:update`
+
+The shared template ships infra that's the same for every user. Editing these locally means your edits vanish on the next `/aios:update` pull.
+
+**Touch-not (shared template):**
+- Root-level docs: `README.md`, `START-HERE.md`, `SETUP.md`, `TOOLS.md`, `CLAUDE.md`, `CHEATSHEET.md`, `INTENT.md` template
+- `commands/` — vault commands
+- `hooks/` — pipeline scripts + identity wrappers
+- `mcps/` — bundled MCP servers
+- `skills/` — reusable skill capabilities
+- `plugins/` — bundled plugins
+- `vault/02 - templates/` — file templates
+
+**Yours to edit (personal layer):**
+- `USER.md` (never synced — your personalization)
+- `INTENT.md` (your trust contract — the template ships defaults, your edits stay)
+- `vault/00 - notes/context/declared/*` — `about_me.md`, `working_style.md`, `personal_voice.md` (first-week priority)
+- `vault/00 - notes/context/observed/*` — Claude writes these; you read + occasionally correct
+- `vault/00 - notes/projects/*` — your projects
+- `vault/01 - calendar/*` — daily notes, weekly plans
+- `vault/06 - agents/my-agents/*` — your personal agents (override shared agents of the same name)
+- `vault/00 - notes/ideas/`, `vault/00 - notes/reflections/`, `vault/04 - export/writing/` — your content
+
+**If you want to upstream a change** to a touch-not file (improvement worth sharing with everyone), the path is: prototype it in USER.md → let it stabilize 60+ days → `/housekeeping` Bucket 13 surfaces it as a promotion candidate → propose it for `commands/<name>.md` or the relevant shared file. That's how end-user discoveries flow back into the template.
+
+See: [CLAUDE.md](./CLAUDE.md) → § I. Operating Principles · [INTENT.md](./INTENT.md) template
+
+---
+
+## §6 — Multi-account quota management
+
+Anthropic rate limits are per-account (5h sliding window + 7d budget). Multiple accounts multiply throughput. Two switching modes — pick the one that fits the situation.
+
+### Soft switch (when you're at the keyboard)
+
+```bash
+claude-switch <email>     # jump directly to a specific account
+claude-switch             # rotate to next account in USER.md list
+```
+
+You decide *when* the switch happens. No mid-conversation surprise. Use this when:
+- You're starting a long session and want to commit to one account
+- A quota warning fired and you want to control the cutover before it forces itself
+- You want to verify the switch landed cleanly (the wrapper confirms post-switch)
+
+### Auto-switch (when you're away)
+
+The watcher hook (`hooks/claude-identity/`) monitors quota usage. When the active account crosses ~95%, it auto-rotates to the next account in the USER.md list. Sessions resume on the new account; long-running work continues uninterrupted.
+
+Beautiful when:
+- An overnight agent session is running and you're asleep
+- A long task is mid-execution and you can't manually intervene
+
+Anxiety-inducing when:
+- You're actively typing and the switch happens mid-thought
+
+**Rule of thumb:** **soft-switch when you're at the keyboard, auto-switch when you're away.** Run a soft-switch at the start of an active session to lock in a known account; let auto-switch be the safety net for unattended work.
+
+### Setup
+
+```yaml
+# In USER.md
+## Anthropic accounts
+1. `primary@example.com` — main account
+2. `overflow@example.com` — overflow account
+3. `agent@example.com` — overnight/agent account
+```
+
+Rotation order = list order. `claude-switch` (no args) walks the list. `claude-switch <email>` jumps to a specific entry.
+
+**Important:** no `claude.ai`-hosted MCPs on any account — they break on switch. Use bundled `mcps/*` only. See [CLAUDE.md](./CLAUDE.md) → § MCP Policy.
+
+---
+
+## When you get stuck
+
+| Symptom | Try this first |
+|---|---|
+| Claude doesn't know who you are | Fill `vault/00 - notes/context/declared/about_me.md` + `working_style.md` |
+| Command does almost-what-I-want | Add an override in `USER.md` → `### /<command>` |
+| Session feels slow / context-bloated | Start a fresh session — pre-loaded context will pick up the latest snapshots |
+| Quota warning while typing | `claude-switch <next-account-email>` immediately, before auto-switch fires |
+| A command edit isn't taking effect | The runtime cache might be stale — see `/housekeeping` Bucket 11 (plugin cache verification) |
+| Lost track of where something lives | This file is the index. `TOOLS.md` is the deeper catalog. |
+
+---
+
+*This file is the operating index. The deeper docs (CLAUDE.md, SETUP.md, TOOLS.md, INTENT.md, USER.md) carry the substance. Use this to find the right surface fast.*

@@ -1,56 +1,57 @@
-# Per-user runtime state — never commit
-mcps/*/auth/
-mcps/*/credentials.json
-mcps/*/token.json
-mcps/*/.env
+# === Root gitignore — applies across the whole AI-OS ===
+# Keep this file as the single source of hygiene. Nested .gitignore files
+# are only needed when a subdir has rules that genuinely can't live here.
 
-# OS noise
+# OS
 .DS_Store
 Thumbs.db
+Desktop.ini
+._*
 
 # Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
-.venv/
-venv/
-.pytest_cache/
+**/.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+**/*.egg-info/
 
 # Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.npm/
+**/node_modules/
+**/package-lock.json
 
-# Editors / IDEs
+# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 
-# Logs
-*.log
-logs/
+# Env + secrets — broad patterns prevent future leaks of OAuth / API keys
+**/.env
+**/.env.local
+**/auth/
+**/token.json
+**/credentials.json
+**/*oauth*.json
+**/*secret*.json
+**/*.key
+**/auth_link.html
+spotify-cache.json
 
-# Build outputs
-dist/
-build/
-.next/
-out/
+# Runtime artifacts (regenerated each session)
+hooks/pipeline-executor.log
+**/.DS_Store
 
-# Local config (per-user)
-.env
-.env.local
-*.local
+# Intentionally bundled shared OAuth app credentials (private repos only).
+# Before shipping AI-OS as a public/open repo, rotate the client secret and
+# remove this exception so each user creates their own OAuth app.
+!mcps/google-workspace-mcp/oauth.json
 
-# OAuth state (per-user, never share)
-~/.aios/
-~/.config/aios/
+# Obsidian workspace state (per-machine UI layout)
+vault/.obsidian/workspace.json
 
-# Vault-specific (when vault content lives alongside)
-vault/05 - backups/
-.obsidian/workspace*
-.obsidian/cache
+# Google OAuth credentials — never commit; file ships as template, operator overwrites with real values locally
+mcps/google-workspace-mcp/oauth.json
+
+# Other credential files that should stay local
+mcps/*/auth/*.json
+mcps/*/storage_state.json
+mcps/*/cookies.json
+.slack-mcp-tokens.json

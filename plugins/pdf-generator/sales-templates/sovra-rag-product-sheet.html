@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SovraRAG — Asistente Inteligente para tu Organización</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Figtree:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: A4; margin: 0; }
+  body { font-family: 'Figtree', -apple-system, sans-serif; color: #1a1a2e; background: #f8f9fa; font-size: 10pt; line-height: 1.5; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 210mm; height: 297mm; padding: 16mm 22mm 14mm 22mm; page-break-after: always; position: relative; overflow: hidden; }
+  .page:last-child { page-break-after: avoid; }
+
+  .hero { display: flex; align-items: center; gap: 12pt; margin-bottom: 6pt; }
+  .hero-logo { width: 40pt; height: 40pt; flex-shrink: 0; }
+  .hero-text h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24pt; font-weight: 800; color: #0a0915; letter-spacing: -0.5pt; line-height: 1.1; }
+  .hero-text h1 .product-accent { color: #06b6d4; }
+  .hero-text .tagline { font-size: 10pt; font-weight: 600; color: #06b6d4; margin-top: 1pt; }
+
+  .traction-bar { display: flex; gap: 0; margin: 6pt 0; background: #0a0915; border-radius: 8px; overflow: hidden; }
+  .traction-item { flex: 1; padding: 7pt 10pt; text-align: center; border-right: 1px solid #1a1728; }
+  .traction-item:last-child { border-right: none; }
+  .traction-item .t-value { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16pt; font-weight: 800; color: #fff; line-height: 1.1; }
+  .traction-item .t-label { font-size: 6.5pt; color: rgba(255,255,255,0.6); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3pt; margin-top: 1pt; }
+
+  .divider { height: 3px; background: linear-gradient(90deg, #06b6d4, #22d3ee, #0099ff, #8b5cf6); border: none; margin: 8pt 0; border-radius: 2px; }
+  .divider-thin { height: 1px; background: #e5e7eb; border: none; margin: 6pt 0; }
+
+  h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12pt; font-weight: 700; color: #0a0915; margin-bottom: 4pt; }
+  h2 .accent { color: #06b6d4; }
+  h3 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 9pt; font-weight: 700; color: #0a0915; margin: 4pt 0 2pt 0; }
+  p { margin-bottom: 3pt; color: #374151; }
+
+  .capabilities-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5pt; margin: 5pt 0; }
+  .cap-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6pt 7pt; border-top: 2px solid #06b6d4; }
+  .cap-card .cap-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 7.5pt; font-weight: 700; color: #06b6d4; margin-bottom: 1pt; }
+  .cap-card .cap-desc { font-size: 7pt; color: #555; line-height: 1.3; }
+
+  .problem-solution { display: grid; grid-template-columns: 1fr 1fr; gap: 6pt; margin: 5pt 0; }
+  .ps-col { border-radius: 8px; padding: 6pt 8pt; font-size: 8pt; }
+  .ps-col.problem { background: #fef2f2; border: 1px solid #fca5a5; }
+  .ps-col.solution { background: #ecfeff; border: 1px solid #67e8f9; }
+  .ps-col .ps-label { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 3pt; }
+  .ps-col.problem .ps-label { color: #b91c1c; }
+  .ps-col.solution .ps-label { color: #0e7490; }
+  .ps-col ul { list-style: none; padding: 0; }
+  .ps-col li { padding: 1pt 0 1pt 10pt; position: relative; color: #374151; line-height: 1.35; font-size: 7pt; }
+  .ps-col.problem li::before { content: "\2715"; position: absolute; left: 0; color: #ef4444; font-weight: 700; font-size: 6.5pt; }
+  .ps-col.solution li::before { content: "\2192"; position: absolute; left: 0; color: #06b6d4; font-weight: 600; }
+
+  .steps-row { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 0; align-items: center; margin: 5pt 0; }
+  .step { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6pt 8pt; text-align: center; }
+  .step .step-num { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14pt; font-weight: 800; color: #06b6d4; line-height: 1; }
+  .step .step-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 7.5pt; font-weight: 700; color: #0a0915; margin-top: 2pt; }
+  .step .step-desc { font-size: 6.5pt; color: #666; margin-top: 1pt; line-height: 1.3; }
+  .step-arrow { font-size: 14pt; color: #06b6d4; font-weight: 700; text-align: center; padding: 0 4pt; }
+
+  .use-cases-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5pt; margin: 5pt 0; }
+  .uc-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6pt 7pt; }
+  .uc-card .uc-name { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 7.5pt; font-weight: 700; color: #06b6d4; margin-bottom: 2pt; }
+  .uc-card .uc-desc { font-size: 6.5pt; color: #666; line-height: 1.3; }
+
+  .cta-bar { background: #06b6d4; border-radius: 8px; padding: 9pt 14pt; display: flex; align-items: center; justify-content: space-between; margin-top: 6pt; }
+  .cta-bar .cta-text { color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 10pt; font-weight: 700; }
+  .cta-bar .cta-sub { color: rgba(255,255,255,0.8); font-size: 7.5pt; margin-top: 1pt; }
+  .cta-bar .cta-link { color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11pt; font-weight: 700; text-decoration: none; }
+
+  .footer { position: absolute; bottom: 10mm; left: 22mm; right: 22mm; font-size: 6.5pt; color: #999; border-top: 1px solid #e5e7eb; padding-top: 4pt; display: flex; justify-content: space-between; }
+  .footer a { color: #06b6d4; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: SOVRA RAG PRODUCT SHEET -->
+<div class="page">
+  <div class="hero">
+    <svg class="hero-logo" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="120" rx="20" fill="#06b6d4"/>
+      <g transform="translate(12, 12) scale(0.083)">
+        <path fill="#fff" d="M801.88,842.78c-8.1,47.41-30.86,89.85-63.42,122.39-41.2,41.2-98.19,66.73-161.09,66.73-125.41,0-227.2-101.41-227.74-226.71v-271.76h146.2v277.65c0,45.09,36.52,81.62,81.54,81.62,22.56,0,42.97-9.12,57.73-23.89,7.41-7.41,13.38-16.22,17.52-26.01h149.27Z"/>
+        <path fill="#fff" d="M805.17,349.63v271.82h-146.18v-277.65c0-45.09-36.52-81.62-81.62-81.62-22.54,0-42.89,9.12-57.67,23.89-7.39,7.39-13.35,16.18-17.46,25.96h-149.32c8.08-47.39,30.83-89.77,63.44-122.39,41.18-41.2,98.12-66.73,161.01-66.73,125.49,0,227.2,101.41,227.8,226.71Z"/>
+        <path fill="#fff" d="M1031.89,577.44c0,125.41-101.35,227.12-226.73,227.74h-271.75v-146.15h277.65c45.02,0,81.62-36.52,81.62-81.6,0-22.56-9.12-42.97-23.95-57.73-7.41-7.41-16.2-13.38-25.98-17.5v-149.3c47.44,8.1,89.83,30.86,122.4,63.44,41.26,41.26,66.73,98.19,66.73,161.09Z"/>
+        <path fill="#fff" d="M621.39,349.63v146.2h-277.67c-45.02,0-81.6,36.52-81.6,81.62,0,22.54,9.17,42.95,23.95,57.73,7.39,7.39,16.18,13.37,25.96,17.48v149.25c-47.41-8.08-89.85-30.83-122.4-63.44-41.2-41.2-66.71-98.14-66.71-161.01,0-125.43,101.41-227.27,226.71-227.82h271.76Z"/>
+      </g>
+    </svg>
+    <div class="hero-text">
+      <h1>Sovra<span class="product-accent">RAG</span> &mdash; Tu Agente de IA</h1>
+      <div class="tagline">Asistente Inteligente para tu Organizaci&oacute;n</div>
+    </div>
+  </div>
+
+  <div class="traction-bar">
+    <div class="traction-item">
+      <div class="t-value">7+</div>
+      <div class="t-label">Proyectos en producci&oacute;n</div>
+    </div>
+    <div class="traction-item">
+      <div class="t-value">Multi</div>
+      <div class="t-label">Idioma (ES/EN/PT-BR)</div>
+    </div>
+    <div class="traction-item">
+      <div class="t-value">24/7</div>
+      <div class="t-label">Atenci&oacute;n automatizada</div>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin: 6pt 0;">
+    <div style="display: inline-flex; align-items: center; justify-content: center; width: 64pt; height: 64pt; background-color: #06b6d4; border-radius: 16px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 8V4H8"></path>
+        <rect width="16" height="12" x="4" y="8" rx="2"></rect>
+        <path d="M2 14h2"></path>
+        <path d="M20 14h2"></path>
+        <path d="M15 13v2"></path>
+        <path d="M9 13v2"></path>
+      </svg>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="problem-solution">
+    <div class="ps-col problem">
+      <div class="ps-label">Sin SovraRAG</div>
+      <ul>
+        <li>Ciudadanos no encuentran informaci&oacute;n de servicios y tr&aacute;mites</li>
+        <li>Call centers saturados con preguntas repetitivas</li>
+        <li>Informaci&oacute;n dispersa en PDFs, portales y documentos internos</li>
+        <li>Manuales est&aacute;ticos que nadie consulta</li>
+        <li>Sin atenci&oacute;n fuera de horario laboral</li>
+      </ul>
+    </div>
+    <div class="ps-col solution">
+      <div class="ps-label">Con SovraRAG</div>
+      <ul>
+        <li>Asistente conversacional que responde con la informaci&oacute;n de tu organizaci&oacute;n</li>
+        <li>Respuestas precisas basadas en documentos reales, no alucinaciones</li>
+        <li>Asistente interactivo que reemplaza la dependencia de manuales — ayuda de manera inteligente, en el momento</li>
+        <li>Indexa autom&aacute;ticamente PDFs, p&aacute;ginas web, Confluence y APIs</li>
+        <li>Disponible 24/7 en tu sitio web, portal o WhatsApp</li>
+      </ul>
+    </div>
+  </div>
+
+  <hr class="divider-thin">
+
+  <h2><span class="accent">Capacidades</span> de la plataforma</h2>
+
+  <div class="capabilities-grid">
+    <div class="cap-card">
+      <div class="cap-title">Chat con IA + RAG</div>
+      <div class="cap-desc">B&uacute;squeda sem&aacute;ntica sobre tus documentos. Respuestas en streaming con contexto real de tu organizaci&oacute;n.</div>
+    </div>
+    <div class="cap-card">
+      <div class="cap-title">Panel de Administraci&oacute;n</div>
+      <div class="cap-desc">Dashboard de uso, configuraci&oacute;n de colores/marca, gesti&oacute;n de documentos, evaluaci&oacute;n de calidad de respuestas.</div>
+    </div>
+    <div class="cap-card">
+      <div class="cap-title">Multi-Fuente</div>
+      <div class="cap-desc">Conecta PDFs, DOCX, Confluence, APIs y p&aacute;ginas web. Sincronizaci&oacute;n autom&aacute;tica con pipeline async.</div>
+    </div>
+    <div class="cap-card">
+      <div class="cap-title">Marca Personalizada</div>
+      <div class="cap-desc">Colores configurables desde el admin. Detecta tema claro/oscuro autom&aacute;ticamente. Tu marca, no la nuestra.</div>
+    </div>
+    <div class="cap-card">
+      <div class="cap-title">WhatsApp (opcional)</div>
+      <div class="cap-desc">Integraci&oacute;n con Twilio. Historial por n&uacute;mero. Mismo motor de respuestas en el canal que tus usuarios ya usan.</div>
+    </div>
+    <div class="cap-card">
+      <div class="cap-title">Battle-Tested</div>
+      <div class="cap-desc">7+ proyectos en producci&oacute;n real. Evaluaci&oacute;n continua de calidad de respuestas. Dise&ntilde;ado para no inventar — si no sabe, lo dice.</div>
+    </div>
+  </div>
+
+  <hr class="divider-thin">
+
+  <h2><span class="accent">Implementaci&oacute;n</span> en 3 pasos</h2>
+
+  <div class="steps-row">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-title">Configura</div>
+      <div class="step-desc">Sube tus documentos, conecta tus fuentes y personaliza colores y marca en minutos.</div>
+    </div>
+    <div class="step-arrow">&rarr;</div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-title">Indexa</div>
+      <div class="step-desc">El pipeline autom&aacute;tico procesa, fragmenta y vectoriza tu contenido para b&uacute;squeda sem&aacute;ntica.</div>
+    </div>
+    <div class="step-arrow">&rarr;</div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-title">Despliega</div>
+      <div class="step-desc">Widget en tu sitio web, portal de gobierno o WhatsApp. Listo para atender ciudadanos 24/7.</div>
+    </div>
+  </div>
+
+  <hr class="divider-thin">
+
+  <h2>Casos de <span class="accent">uso</span></h2>
+
+  <div class="use-cases-grid">
+    <div class="uc-card">
+      <div class="uc-name">Gobierno</div>
+      <div class="uc-desc">Gu&iacute;a ciudadana para tr&aacute;mites, requisitos y horarios. Reduce carga en ventanillas y call centers.</div>
+    </div>
+    <div class="uc-card">
+      <div class="uc-name">Empresa</div>
+      <div class="uc-desc">Soporte interno y externo. Base de conocimiento t&eacute;cnica, manuales, pol&iacute;ticas y procedimientos accesibles por chat.</div>
+    </div>
+    <div class="uc-card">
+      <div class="uc-name">Educaci&oacute;n</div>
+      <div class="uc-desc">Asistente para estudiantes sobre planes de estudio, procesos administrativos y documentaci&oacute;n institucional.</div>
+    </div>
+  </div>
+
+  <div class="cta-bar">
+    <div>
+      <div class="cta-text">Tu informaci&oacute;n, accesible para todos, siempre</div>
+      <div class="cta-sub">Agenda una demo con tu contenido real.</div>
+    </div>
+    <a href="https://sovra.io" class="cta-link">sovra.io &rarr;</a>
+  </div>
+
+  <div class="footer">
+    <span>SovraRAG &mdash; Asistente Inteligente para tu Organizaci&oacute;n &middot; Conf&iacute;a una vez. &Uacute;salo siempre.</span>
+    <span><a href="https://sovra.io">sovra.io</a> &middot; contacto@sovra.io</span>
+  </div>
+</div>
+
+</body>
+</html>

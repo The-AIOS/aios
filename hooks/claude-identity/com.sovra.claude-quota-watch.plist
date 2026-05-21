@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  com.sovra.claude-quota-watch.plist — launchd agent.
+
+  SAFETY-NET watcher. Fast-path swap detection lives in _cache.py: the
+  statusLine pipe writes the rate-limit cache several times per turn and
+  fires `_watch.py` in the background (rate-limited to 30s) whenever the
+  cache changes. This launchd entry is the safety net for sessions where
+  the statusLine pipe is broken or absent — fires every 30 minutes.
+
+  The watcher reads ~/.claude/rate-limit-cache.json and rotates accounts
+  via `claude-switch` when the 5h or 7d quota crosses its threshold.
+
+  Install:
+    cp ~/obsidian/hooks/claude-identity/com.sovra.claude-quota-watch.plist \
+       ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.sovra.claude-quota-watch.plist
+
+  Manual trigger / debug:
+    launchctl start com.sovra.claude-quota-watch
+    tail -f ~/.claude/quota-watch.log
+
+  Unload:
+    launchctl unload ~/Library/LaunchAgents/com.sovra.claude-quota-watch.plist
+
+  Notes:
+    - Runs under your user session, not as root.
+    - Path is hardcoded to ~/obsidian/hooks/... via HOME env. If your vault
+      lives elsewhere, either symlink ~/obsidian → your path, or edit the
+      ProgramArguments command below.
+    - StandardOut/StandardError stream to ~/.claude/quota-watch-launchd.log
+      for debugging (separate from the script's own quota-watch.log).
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.sovra.claude-quota-watch</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>"$HOME/obsidian/hooks/claude-identity/claude-identity.sh" watch</string>
+    </array>
+
+    <!-- Fire every 30 minutes as a safety net. Fast-path detection runs
+         from the statusLine pipe via _cache.py kicking _watch.py whenever
+         the cache changes. A 60-second interval here pinned the machine
+         awake during sleep (constant DarkWake → "Sleep Service Back to
+         Sleep" cycles); 1800s lets the Mac actually sleep clean. -->
+    <key>StartInterval</key>
+    <integer>1800</integer>
+
+    <!-- Run once immediately when the agent loads, then on the interval. -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/com.sovra.claude-quota-watch.out</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/com.sovra.claude-quota-watch.err</string>
+</dict>
+</plist>

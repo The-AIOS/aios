@@ -1,0 +1,21 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "local",
+  "description": "Local custom plugins for personal workflows",
+  "owner": {
+    "name": "Chuy Cepeda",
+    "email": "chuy@sovra.io"
+  },
+  "plugins": [
+    {
+      "name": "vault-commands",
+      "description": "Obsidian vault commands for daily planning, strategic reviews, insight mining, and accountability",
+      "author": {
+        "name": "Chuy Cepeda",
+        "email": "chuy@sovra.io"
+      },
+      "source": "./plugins/vault-commands",
+      "category": "productivity"
+    }
+  ]
+}

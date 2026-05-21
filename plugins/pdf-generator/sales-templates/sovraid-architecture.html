@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SovraID — Arquitectura y Seguridad</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @page { size: A4; margin: 0; }
+
+  body { font-family: 'Figtree', -apple-system, sans-serif; color: #1a1a2e; background: #f8f9fa; font-size: 10pt; line-height: 1.5; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 210mm; height: 297mm; padding: 16mm 22mm 14mm 22mm; position: relative; overflow: hidden; }
+
+  .hero { display: flex; align-items: center; gap: 12pt; margin-bottom: 6pt; }
+  .hero-logo { width: 40pt; height: 40pt; flex-shrink: 0; }
+  .hero-text h1 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 24pt; font-weight: 800; color: #0a0915; letter-spacing: -0.5pt; line-height: 1.1; }
+  .hero-text h1 .product-accent { color: #22c55e; }
+  .hero-text .tagline { font-size: 10pt; font-weight: 600; color: #22c55e; margin-top: 1pt; }
+
+  .divider { height: 3px; background: linear-gradient(90deg, #22c55e, #0099ff, #8b5cf6); border: none; margin: 8pt 0; border-radius: 2px; }
+  .divider-thin { height: 1px; background: #e5e7eb; border: none; margin: 6pt 0; }
+
+  h2 { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 12pt; font-weight: 700; color: #0a0915; margin-bottom: 4pt; }
+  h2 .accent { color: #22c55e; }
+  p { margin-bottom: 3pt; color: #374151; }
+
+  .arch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5pt; margin: 5pt 0; }
+  .arch-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6pt 7pt; border-top: 2px solid #22c55e; }
+  .arch-card.blue { border-top-color: #0099ff; }
+  .arch-card.purple { border-top-color: #8b5cf6; }
+  .arch-card.orange { border-top-color: #f97316; }
+  .arch-card .a-label { font-size: 6pt; font-weight: 700; color: #22c55e; text-transform: uppercase; letter-spacing: 0.5pt; margin-bottom: 1pt; }
+  .arch-card .a-label.blue { color: #0099ff; }
+  .arch-card .a-label.purple { color: #8b5cf6; }
+  .arch-card .a-label.orange { color: #f97316; }
+  .arch-card .a-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 8pt; font-weight: 700; color: #0a0915; margin-bottom: 2pt; }
+  .arch-card .a-tech { font-family: 'JetBrains Mono', monospace; font-size: 6.5pt; color: #22c55e; margin-bottom: 2pt; }
+  .arch-card .a-desc { font-size: 6.5pt; color: #555; line-height: 1.3; }
+
+  .security-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5pt; margin: 5pt 0; }
+  .sec-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6pt 7pt; }
+  .sec-card .s-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 7.5pt; font-weight: 700; color: #22c55e; margin-bottom: 2pt; }
+  .sec-card .s-desc { font-size: 6.5pt; color: #555; line-height: 1.3; }
+
+  .traction-bar { display: flex; gap: 0; margin: 6pt 0; background: #0a0915; border-radius: 8px; overflow: hidden; }
+  .traction-item { flex: 1; padding: 7pt 8pt; text-align: center; border-right: 1px solid #1a1728; }
+  .traction-item:last-child { border-right: none; }
+  .traction-item .t-value { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14pt; font-weight: 800; color: #fff; line-height: 1.1; }
+  .traction-item .t-label { font-size: 6pt; color: rgba(255,255,255,0.6); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3pt; margin-top: 1pt; }
+
+  .flow-row { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 0; align-items: center; margin: 5pt 0; }
+  .flow-step { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6pt 8pt; text-align: center; }
+  .flow-step .f-num { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14pt; font-weight: 800; color: #22c55e; line-height: 1; }
+  .flow-step .f-title { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 7.5pt; font-weight: 700; color: #0a0915; margin-top: 2pt; }
+  .flow-step .f-desc { font-size: 6.5pt; color: #666; margin-top: 1pt; line-height: 1.3; }
+  .flow-arrow { font-size: 14pt; color: #22c55e; font-weight: 700; text-align: center; padding: 0 4pt; }
+
+  .cta-bar { background: #22c55e; border-radius: 8px; padding: 8pt 14pt; display: flex; align-items: center; justify-content: space-between; margin-top: 6pt; }
+  .cta-bar .cta-text { color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 9pt; font-weight: 700; }
+  .cta-bar .cta-sub { color: rgba(255,255,255,0.8); font-size: 7pt; margin-top: 1pt; }
+  .cta-bar .cta-link { color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 10pt; font-weight: 700; text-decoration: none; }
+
+  .footer { position: absolute; bottom: 10mm; left: 22mm; right: 22mm; font-size: 6.5pt; color: #999; border-top: 1px solid #e5e7eb; padding-top: 4pt; display: flex; justify-content: space-between; }
+  .footer a { color: #22c55e; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="hero">
+    <svg class="hero-logo" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <rect width="120" height="120" rx="20" fill="#22c55e"/>
+      <g transform="translate(12, 12) scale(0.083)">
+        <path fill="#fff" d="M801.88,842.78c-8.1,47.41-30.86,89.85-63.42,122.39-41.2,41.2-98.19,66.73-161.09,66.73-125.41,0-227.2-101.41-227.74-226.71v-271.76h146.2v277.65c0,45.09,36.52,81.62,81.54,81.62,22.56,0,42.97-9.12,57.73-23.89,7.41-7.41,13.38-16.22,17.52-26.01h149.27Z"/>
+        <path fill="#fff" d="M805.17,349.63v271.82h-146.18v-277.65c0-45.09-36.52-81.62-81.62-81.62-22.54,0-42.89,9.12-57.67,23.89-7.39,7.39-13.35,16.18-17.46,25.96h-149.32c8.08-47.39,30.83-89.77,63.44-122.39,41.18-41.2,98.12-66.73,161.01-66.73,125.49,0,227.2,101.41,227.8,226.71Z"/>
+        <path fill="#fff" d="M1031.89,577.44c0,125.41-101.35,227.12-226.73,227.74h-271.75v-146.15h277.65c45.02,0,81.62-36.52,81.62-81.6,0-22.56-9.12-42.97-23.95-57.73-7.41-7.41-16.2-13.38-25.98-17.5v-149.3c47.44,8.1,89.83,30.86,122.4,63.44,41.26,41.26,66.73,98.19,66.73,161.09Z"/>
+        <path fill="#fff" d="M621.39,349.63v146.2h-277.67c-45.02,0-81.6,36.52-81.6,81.62,0,22.54,9.17,42.95,23.95,57.73,7.39,7.39,16.18,13.37,25.96,17.48v149.25c-47.41-8.08-89.85-30.83-122.4-63.44-41.2-41.2-66.71-98.14-66.71-161.01,0-125.43,101.41-227.27,226.71-227.82h271.76Z"/>
+      </g>
+    </svg>
+    <div class="hero-text">
+      <h1>Sovra<span class="product-accent">ID</span></h1>
+      <div class="tagline">Arquitectura y Seguridad</div>
+    </div>
+  </div>
+
+  <p style="font-size: 8.5pt; color: #555; margin-bottom: 4pt;">Servicio multi-tenant de identidad auto-soberana (SSI) para emisi&oacute;n y verificaci&oacute;n de credenciales verificables v&iacute;a protocolo WACI. Construido sobre NestJS con el framework QuarkID/Extrimian.</p>
+
+  <div class="traction-bar">
+    <div class="traction-item">
+      <div class="t-value">W3C</div>
+      <div class="t-label">Verifiable Credentials</div>
+    </div>
+    <div class="traction-item">
+      <div class="t-value">DID</div>
+      <div class="t-label">did:quarkid</div>
+    </div>
+    <div class="traction-item">
+      <div class="t-value">SSI</div>
+      <div class="t-label">Self-Sovereign Identity</div>
+    </div>
+    <div class="traction-item">
+      <div class="t-value">MCP</div>
+      <div class="t-label">AI-Ready</div>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin: 4pt 0;">
+    <img src="https://sovra.io/images/framer/HUbsiAYJvdEGstK16BVU01IuQU.png" alt="SovraID Credential Card" style="height: 60pt; object-fit: contain;">
+    <div style="margin-top: 3pt; display: flex; justify-content: center; align-items: center; gap: 12pt; opacity: 0.5;">
+      <img src="https://www.gstatic.com/devrel-devsite/prod/v0e0f589edd85502a40d78d7d0825db8ea5ef3b99ab4070381ee86977c9168730/cloud/images/cloud-logo.svg" alt="Google Cloud" style="height: 14pt;">
+      <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 8pt; font-weight: 700; color: #e0234e;">NestJS</span>
+      <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 8pt; font-weight: 700; color: #47A248;">MongoDB</span>
+      <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 8pt; font-weight: 700; color: #8b5cf6;">QuarkID</span>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <h2>Componentes de <span class="accent">Arquitectura</span></h2>
+
+  <div class="arch-grid">
+    <div class="arch-card">
+      <div class="a-label">Core</div>
+      <div class="a-title">Agente SSI Multi-Tenant</div>
+      <div class="a-tech">NestJS &middot; @extrimian/agent</div>
+      <div class="a-desc">Servicio central de identidad. Emisi&oacute;n, verificaci&oacute;n y revocaci&oacute;n de credenciales verificables W3C. Un agente por tenant (gobierno/instituci&oacute;n).</div>
+    </div>
+    <div class="arch-card blue">
+      <div class="a-label blue">Identidad</div>
+      <div class="a-title">DID + Resolución</div>
+      <div class="a-tech" style="color: #0099ff;">did:quarkid &middot; DID Resolver</div>
+      <div class="a-desc">Identificadores descentralizados. Resoluci&oacute;n de DIDs, registro en blockchain, m&uacute;ltiples m&eacute;todos soportados.</div>
+    </div>
+    <div class="arch-card purple">
+      <div class="a-label purple">Credenciales</div>
+      <div class="a-title">VC Core + Verificador</div>
+      <div class="a-tech" style="color: #8b5cf6;">@extrimian/vc-core &middot; vc-verifier</div>
+      <div class="a-desc">Emisi&oacute;n y verificaci&oacute;n de credenciales W3C. Presentaciones verificables via protocolo WACI (DIDComm).</div>
+    </div>
+    <div class="arch-card">
+      <div class="a-label">Seguridad</div>
+      <div class="a-title">Key Management</div>
+      <div class="a-tech">Google Cloud KMS &middot; Secret Manager</div>
+      <div class="a-desc">Gesti&oacute;n de claves criptogr&aacute;ficas en hardware seguro de Google. Secretos y credenciales nunca en c&oacute;digo.</div>
+    </div>
+    <div class="arch-card blue">
+      <div class="a-label blue">Base de datos</div>
+      <div class="a-title">Almacenamiento</div>
+      <div class="a-tech" style="color: #0099ff;">MongoDB Atlas</div>
+      <div class="a-desc">Base de datos NoSQL escalable. Almacenamiento de agentes, credenciales, presentaciones y configuraciones por tenant.</div>
+    </div>
+    <div class="arch-card orange">
+      <div class="a-label orange">AI-Ready</div>
+      <div class="a-title">MCP Server</div>
+      <div class="a-tech" style="color: #f97316;">@modelcontextprotocol/sdk</div>
+      <div class="a-desc">Servidor MCP que permite a agentes AI (Claude) emitir, verificar y gestionar credenciales via lenguaje natural.</div>
+    </div>
+  </div>
+
+  <hr class="divider-thin">
+
+  <h2>Flujo de <span class="accent">Credenciales</span></h2>
+
+  <div class="flow-row">
+    <div class="flow-step">
+      <div class="f-num">1</div>
+      <div class="f-title">Emisi&oacute;n</div>
+      <div class="f-desc">El gobierno emite una credencial verificable al ciudadano via WACI.</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="f-num">2</div>
+      <div class="f-title">Almacenamiento</div>
+      <div class="f-desc">El ciudadano guarda la credencial en su SovraWallet. &Eacute;l controla sus datos.</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-step">
+      <div class="f-num">3</div>
+      <div class="f-title">Verificaci&oacute;n</div>
+      <div class="f-desc">Cualquier entidad puede verificar la credencial sin contactar al emisor.</div>
+    </div>
+  </div>
+
+  <hr class="divider-thin">
+
+  <h2><span class="accent">Seguridad</span> y est&aacute;ndares</h2>
+
+  <div class="security-grid">
+    <div class="sec-card">
+      <div class="s-title">Criptograf&iacute;a</div>
+      <div class="s-desc">Google Cloud KMS para gesti&oacute;n de claves. Firmas BBS+ para privacidad selectiva. Secretos en Secret Manager, nunca en c&oacute;digo.</div>
+    </div>
+    <div class="sec-card">
+      <div class="s-title">Multi-tenancy</div>
+      <div class="s-desc">Un agente SSI por tenant (gobierno/instituci&oacute;n). Aislamiento completo de datos, claves y configuraciones entre tenants.</div>
+    </div>
+    <div class="sec-card">
+      <div class="s-title">Est&aacute;ndares W3C</div>
+      <div class="s-desc">Verifiable Credentials, Decentralized Identifiers, DIDComm/WACI. Interoperabilidad con cualquier sistema compatible.</div>
+    </div>
+    <div class="sec-card">
+      <div class="s-title">Ambientes</div>
+      <div class="s-desc">Dev, Sandbox, Staging, Producci&oacute;n. Cada ambiente con sus propias claves, bases de datos y configuraci&oacute;n aislada.</div>
+    </div>
+  </div>
+
+  <div class="cta-bar">
+    <div>
+      <div class="cta-text">Identidad verificable para gobiernos e instituciones</div>
+      <div class="cta-sub">Emite credenciales W3C en minutos. Agenda una demo.</div>
+    </div>
+    <a href="https://sovra.io" class="cta-link">sovra.io &rarr;</a>
+  </div>
+
+  <div class="footer">
+    <span>SovraID &mdash; Arquitectura y Seguridad &middot; Self-Sovereign Identity as a Service</span>
+    <span><a href="https://sovra.io">sovra.io</a> &middot; sales@sovra.io</span>
+  </div>
+</div>
+
+</body>
+</html>

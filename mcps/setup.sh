@@ -1,0 +1,137 @@
+#!/bin/bash
+# MCP Setup — creates virtual environments and installs dependencies for all bundled MCPs.
+# Run once after cloning, or after vault-update adds a new MCP.
+# Usage: bash mcps/setup.sh
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+echo "Setting up MCPs in $SCRIPT_DIR..."
+echo ""
+# NOTE: intentionally no `set -e` — each MCP block is independent. One failure
+# shouldn't kill the rest. Errors are surfaced per block.
+
+# --- Google Workspace MCP (Python) ---
+if [ -d "$SCRIPT_DIR/google-workspace-mcp" ] && [ ! -d "$SCRIPT_DIR/google-workspace-mcp/.venv" ]; then
+  echo "→ google-workspace-mcp..."
+  (cd "$SCRIPT_DIR/google-workspace-mcp" && python3 -m venv .venv && .venv/bin/pip install -e . -q) \
+    && echo "  ✓ installed" \
+    || echo "  ✗ failed — check google-workspace-mcp/README.md"
+fi
+
+# --- Slack MCP (Node/NPM — invoked via npx at runtime, no install needed) ---
+if [ -d "$SCRIPT_DIR/slack-mcp" ]; then
+  echo "→ slack-mcp..."
+  if ! command -v npx >/dev/null 2>&1; then
+    echo "  ⚠ npx not found — install Node.js first"
+  else
+    npx -y @jtalk22/slack-mcp --version >/dev/null 2>&1 \
+      && echo "  ✓ ready (invoked via npx @jtalk22/slack-mcp at runtime)" \
+      || echo "  ✓ ready (will install on first invocation)"
+  fi
+fi
+
+# --- NotebookLM MCP ---
+if [ -d "$SCRIPT_DIR/notebooklm-mcp" ] && [ ! -d "$SCRIPT_DIR/notebooklm-mcp/.venv" ]; then
+  echo "→ notebooklm-mcp..."
+  cd "$SCRIPT_DIR/notebooklm-mcp"
+  python3 -m venv .venv
+  .venv/bin/pip install notebooklm-py playwright -q
+  .venv/bin/playwright install chromium 2>/dev/null
+  .venv/bin/notebooklm skill install 2>/dev/null || true
+  echo "  ✓ installed (authenticate: ~/obsidian/mcps/notebooklm-mcp/.venv/bin/notebooklm login)"
+fi
+
+# --- Playwright MCP ---
+if [ -d "$SCRIPT_DIR/playwright-mcp" ] && [ ! -d "$SCRIPT_DIR/playwright-mcp/.venv" ]; then
+  echo "→ playwright-mcp..."
+  cd "$SCRIPT_DIR/playwright-mcp"
+  python3 -m venv .venv
+  .venv/bin/pip install playwright browser-cookie3 -q
+  .venv/bin/playwright install chromium 2>/dev/null
+  echo "  ✓ installed (chromium bundled)"
+fi
+
+# --- Atlassian MCP (vendored via pipx/uvx) ---
+if [ -d "$SCRIPT_DIR/atlassian-mcp" ]; then
+  echo "→ atlassian-mcp..."
+  if ! command -v uvx >/dev/null 2>&1 && ! command -v pipx >/dev/null 2>&1; then
+    echo "  ⚠ neither uvx nor pipx found — install one (brew install uv or brew install pipx), then re-run"
+  else
+    if command -v uvx >/dev/null 2>&1; then
+      uvx --help mcp-atlassian >/dev/null 2>&1 || uvx mcp-atlassian --help >/dev/null 2>&1 || true
+      echo "  ✓ ready (invoked via uvx mcp-atlassian at runtime)"
+    else
+      pipx install mcp-atlassian --force 2>/dev/null
+      echo "  ✓ installed via pipx"
+    fi
+  fi
+fi
+
+# --- GitHub MCP (vendored via npx, no install needed) ---
+if [ -d "$SCRIPT_DIR/github-mcp" ]; then
+  echo "→ github-mcp..."
+  if ! command -v npx >/dev/null 2>&1; then
+    echo "  ⚠ npx not found — install Node.js first"
+  else
+    npx -y @modelcontextprotocol/server-github --help >/dev/null 2>&1 || true
+    echo "  ✓ ready (invoked via npx @modelcontextprotocol/server-github at runtime)"
+  fi
+fi
+
+# --- Nano Banana MCP (Gemini image gen) ---
+if [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && [ ! -d "$SCRIPT_DIR/nano-banana-mcp/.venv" ]; then
+  echo "→ nano-banana-mcp..."
+  cd "$SCRIPT_DIR/nano-banana-mcp"
+  python3 -m venv .venv
+  .venv/bin/pip install google-genai mcp -q
+  echo "  ✓ installed (requires GEMINI_API_KEY — see README)"
+fi
+
+# --- PDF Generator MCP ---
+if [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && [ ! -d "$SCRIPT_DIR/pdf-generator-mcp/.venv" ]; then
+  echo "→ pdf-generator-mcp..."
+  cd "$SCRIPT_DIR/pdf-generator-mcp"
+  python3 -m venv .venv
+  .venv/bin/pip install mcp -q
+  command -v pandoc >/dev/null 2>&1 || echo "  ⚠ pandoc not found — brew install pandoc"
+  [ -d "/Applications/Google Chrome.app" ] || echo "  ⚠ Google Chrome not found — install from https://google.com/chrome"
+  echo "  ✓ installed (requires pandoc + Chrome)"
+fi
+
+# --- Spotify DJ MCP ---
+if [ -d "$SCRIPT_DIR/spotify-dj-mcp" ] && [ ! -d "$SCRIPT_DIR/spotify-dj-mcp/.venv" ]; then
+  echo "→ spotify-dj-mcp..."
+  cd "$SCRIPT_DIR/spotify-dj-mcp"
+  python3 -m venv .venv
+  .venv/bin/pip install spotipy mcp -q
+  echo "  ✓ installed (requires Spotify Dev app + SPOTIFY_CLIENT_ID/SECRET — see README)"
+fi
+
+# --- Stitch MCP (Google AI-native design — runs via npx, no install needed) ---
+if [ -d "$SCRIPT_DIR/stitch-mcp" ]; then
+  echo "→ stitch-mcp..."
+  if ! command -v npx >/dev/null 2>&1; then
+    echo "  ⚠ npx not found — install Node.js first"
+  else
+    npx -y @_davideast/stitch-mcp --version >/dev/null 2>&1 \
+      && echo "  ✓ ready (invoked via npx @_davideast/stitch-mcp proxy at runtime; requires STITCH_API_KEY — see README)" \
+      || echo "  ✓ ready (will install on first invocation)"
+  fi
+fi
+
+echo ""
+echo "All MCPs installed. Recommended: ask Claude to run \`/mcps-setup\` — it walks"
+echo "you through tokens + register + verify for each MCP in a guided flow."
+echo ""
+echo "Manual auth steps per MCP (if you prefer):"
+echo "  • pdf-generator    : no auth (works immediately — just register)"
+echo "  • google-workspace : uvx workspace-mcp (opens browser on first call)"
+echo "  • slack            : npx -y @jtalk22/slack-mcp --refresh-tokens  (extracts from Chrome; posts AS YOU)"
+echo "  • notebooklm       : ~/obsidian/mcps/notebooklm-mcp/.venv/bin/notebooklm login"
+echo "  • github           : export GITHUB_TOKEN (Personal Access Token)"
+echo "  • atlassian        : export ATLASSIAN_URL / ATLASSIAN_USERNAME / ATLASSIAN_API_TOKEN"
+echo "  • nano-banana      : export GEMINI_API_KEY (requires Cloud Billing enabled — ~\$0.04/image)"
+echo "  • spotify-dj       : export SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET (Developer app)"
+echo "  • stitch           : export STITCH_API_KEY (create at stitch.withgoogle.com)"
+echo "  • playwright       : per-service browser-state login, see playwright-mcp/README.md"
+echo ""
+echo "Register each with: claude mcp add {name} -- {command}  (see each README)"
