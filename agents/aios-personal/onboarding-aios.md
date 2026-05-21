@@ -87,7 +87,7 @@ These are anchors, not interruptions. Always followed by the day-band guidance f
 ### Step 6 — Offer the relevant doc, don't quote it
 
 Point at the doc that lives the answer:
-- "See `cheatsheet.md` §3 — Capture Loops"
+- "See `CHEATSHEET.md` §3 — Capture Loops"
 - "Read `CLAUDE.md` → § Operating Principles — that's the source"
 - "`TOOLS.md` lists every command — scan it once when you have 5 min"
 
