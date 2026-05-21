@@ -19,7 +19,6 @@ updated: '2026-05-21'
 |---|---|---|---|
 | [`skills/aios/`](./aios/) | AIOS-bundled skills (49) — domain-specific, design, engineering, security, finance, etc. | This framework | GPL-2.0-or-later |
 | [`skills/superpowers/`](./superpowers/) | Core software-engineering workflows (14) — TDD, debugging, code review, plans, brainstorming, worktrees, subagent dispatching | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
-| [`skills/df-claude-skills/`](./df-claude-skills/) | Code-quality skills (2) — codebase audit, documentation expert | [fernandezdiegoh/df-claude-skills](https://github.com/fernandezdiegoh/df-claude-skills) | MIT |
 | [`skills/custom/`](./custom/) | Your own skill extensions — survive `/aios:update` | Operator | Operator's choice |
 
 ---
@@ -44,15 +43,6 @@ Core software-engineering disciplines. Many of these reference each other (e.g.,
 | `using-git-worktrees` | Feature isolation, parallel work |
 | `using-superpowers` | Established at session start — how to find/use skills |
 | `writing-skills` | Creating new skills or modifying existing ones |
-
----
-
-## df-claude-skills (fernandezdiegoh/df-claude-skills)
-
-| Skill | When to use |
-|-------|-------------|
-| `codebase-audit` | Full architecture / security / tech-debt audit |
-| `documentation-expert` | Audit, create, and improve project documentation |
 
 ---
 
