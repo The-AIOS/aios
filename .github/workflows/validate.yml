@@ -124,6 +124,81 @@ jobs:
           print(f"OK: frontmatter validated across {total} files")
           PY
 
+  personal-content:
+    name: Personal-content guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: PR adds no personal vault content
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -e
+          ADDED=$(git diff --name-status "$BASE_SHA".."$HEAD_SHA" | awk '$1=="A"{print $2}')
+          BAD=$(echo "$ADDED" | grep -E '^vault/' | grep -v '\.gitkeep$' | grep -v '^vault/\.obsidian/' || true)
+          if [ -n "$BAD" ]; then
+            echo "::error::PR adds personal vault content. Operator data belongs in your own private vault, not the framework:"
+            echo "$BAD" | sed 's/^/  - /'
+            echo ""
+            echo "Only .gitkeep (folder scaffolding) and vault/.obsidian/* (shared workspace config) are allowed under vault/."
+            exit 1
+          fi
+          echo "OK: no personal vault content added"
+
+      - name: USER.md + INTENT.md still have EXAMPLE ONLY markers
+        run: |
+          set -e
+          for f in USER.md INTENT.md; do
+            if ! grep -q "EXAMPLE ONLY" "$f"; then
+              echo "::error::$f no longer contains 'EXAMPLE ONLY' markers — looks like real personal data was committed. The framework ships templates; operators fill them in their own private vault."
+              exit 1
+            fi
+          done
+          echo "OK: USER.md + INTENT.md still template-shaped"
+
+      - name: No real OAuth credential files in mcps/
+        run: |
+          set -e
+          REAL_OAUTH=$(find mcps -name "oauth.json" 2>/dev/null || true)
+          if [ -n "$REAL_OAUTH" ]; then
+            echo "::error::Real OAuth credential file(s) found in mcps/:"
+            echo "$REAL_OAUTH" | sed 's/^/  - /'
+            echo "Only *.template files belong in the repo. Real credentials are operator-specific and must stay local (gitignored)."
+            exit 1
+          fi
+          echo "OK: no real OAuth files in mcps/"
+
+      - name: No Playwright session cookies committed
+        run: |
+          set -e
+          REAL_COOKIES=$(find mcps/playwright-mcp/auth -name "*.json" 2>/dev/null || true)
+          if [ -n "$REAL_COOKIES" ]; then
+            echo "::error::Playwright auth cookies found in mcps/playwright-mcp/auth/:"
+            echo "$REAL_COOKIES" | sed 's/^/  - /'
+            echo "Session cookies are per-operator and per-service. They don't belong in the framework."
+            exit 1
+          fi
+          echo "OK: no Playwright cookies committed"
+
+      - name: No infra files reference personal-vault content
+        run: |
+          set -e
+          # Per the 'infra never links to personal' rule: commands/, agents/, hooks/,
+          # mcps/, plugins/, templates/, skills/, and root docs should never reference
+          # personal-vault notes like [[ai-os]], chuy-*, or paths under operator-specific dirs.
+          if grep -rln -E '\[\[(ai-os|chuy-|advisory-[a-z]+)\]\]' \
+            --include="*.md" --include="*.yml" --include="*.yaml" --include="*.json" \
+            --exclude-dir=.git --exclude-dir=.github --exclude-dir=vault --exclude="HISTORY-PRE-*.md" --exclude="CHANGELOG.md" .; then
+            echo "::error::Infra file references personal-vault notes — those wikilinks won't resolve in other operators' vaults"
+            exit 1
+          fi
+          echo "OK: no infra→personal-vault wikilinks"
+
   drift:
     name: Migration drift
     runs-on: ubuntu-latest
