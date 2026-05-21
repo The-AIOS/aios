@@ -1,0 +1,121 @@
+{
+  "collapse-filter": true,
+  "search": "",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": true,
+  "showOrphans": true,
+  "collapse-color-groups": false,
+  "colorGroups": [
+    {
+      "query": "path:\"00 - notes/context/declared/about_business\"",
+      "color": {
+        "a": 1,
+        "rgb": 2715903
+      }
+    },
+    {
+      "query": "path:\"00 - notes/context/ventures\"",
+      "color": {
+        "a": 1,
+        "rgb": 2715903
+      }
+    },
+    {
+      "query": "path:\"00 - notes/context/declared\"",
+      "color": {
+        "a": 1,
+        "rgb": 16766464
+      }
+    },
+    {
+      "query": "path:\"00 - notes/context/observed\"",
+      "color": {
+        "a": 1,
+        "rgb": 16747109
+      }
+    },
+    {
+      "query": "path:\"00 - notes/projects\"",
+      "color": {
+        "a": 1,
+        "rgb": 4390769
+      }
+    },
+    {
+      "query": "path:\"00 - notes/ideas\"",
+      "color": {
+        "a": 1,
+        "rgb": 16748800
+      }
+    },
+    {
+      "query": "path:\"00 - notes/reflections\"",
+      "color": {
+        "a": 1,
+        "rgb": 15876863
+      }
+    },
+    {
+      "query": "path:\"00 - notes/logs/observed-snapshots\"",
+      "color": {
+        "a": 1,
+        "rgb": 16747109
+      }
+    },
+    {
+      "query": "path:\"00 - notes/logs\"",
+      "color": {
+        "a": 1,
+        "rgb": 16747109
+      }
+    },
+    {
+      "query": "path:\"01 - calendar\"",
+      "color": {
+        "a": 1,
+        "rgb": 4244735
+      }
+    },
+    {
+      "query": "path:\"02 - templates\"",
+      "color": {
+        "a": 1,
+        "rgb": 15360610
+      }
+    },
+    {
+      "query": "path:\"05 - mcps\"",
+      "color": {
+        "a": 1,
+        "rgb": 10253813
+      }
+    },
+    {
+      "query": "path:\"06 - backups/claude/vault-commands\"",
+      "color": {
+        "a": 1,
+        "rgb": 10253813
+      }
+    },
+    {
+      "query": "path:\"06 - backups\"",
+      "color": {
+        "a": 1,
+        "rgb": 9479342
+      }
+    }
+  ],
+  "collapse-display": false,
+  "showArrow": false,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 1,
+  "lineSizeMultiplier": 1,
+  "collapse-forces": false,
+  "centerStrength": 0.518713248970312,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 250,
+  "scale": 0.1481421025025056,
+  "close": true
+}
