@@ -17,7 +17,7 @@ updated: '2026-05-21'
 
 | Folder | What | Upstream | License |
 |---|---|---|---|
-| [`skills/aios/`](./aios/) | AIOS-bundled skills (48) — domain-specific, design, engineering, security, finance, healthcare, Obsidian-flavored | This framework | GPL-2.0-or-later |
+| [`skills/aios/`](./aios/) | AIOS-bundled skills (16) — high-signal coding/Obsidian/meta after the 2026-05-21 audit. See "What got pruned" below for what was removed. | This framework | GPL-2.0-or-later |
 | [`skills/anthropic/`](./anthropic/) | Anthropic's example skills (12) — skill-creator, claude-api, mcp-builder, frontend-design, canvas-design, theme-factory, doc-coauthoring, internal-comms, web-artifacts-builder, webapp-testing, algorithmic-art, slack-gif-creator | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
 | [`skills/superpowers/`](./superpowers/) | Core software-engineering workflows (14) — TDD, debugging, code review, plans, brainstorming, worktrees, subagent dispatching | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
 | [`skills/custom/`](./custom/) | Your own skill extensions — survive `/aios:update` | Operator | Operator's choice |
@@ -72,25 +72,41 @@ Core software-engineering disciplines. Many of these reference each other (e.g.,
 
 ## AIOS-bundled (this framework)
 
-49 skills across coding, design, engineering, security, finance, healthcare, and Obsidian-specific patterns. Browse `skills/aios/` for the full list.
+13 high-signal skills, post-2026-05-21 pruning. The bundle targets *load-bearing operator workflows* — daily reference + Obsidian power-user + meta — not generic technical reference (that's Claude's training).
 
-Headline grouping:
+**Coding & API**
+- `karpathy-coding` — behavioral rules for any coding session (think before, simplicity, surgical changes)
+- `architecture-patterns` — Clean / Hexagonal / DDD when designing systems
+- `api-design-principles` — REST + GraphQL design
+- `error-handling-patterns` — error design across languages
+- `database-migration` — zero-downtime migration patterns
 
-**Engineering**
-- `karpathy-coding` · `code-review-excellence` · `architecture-decision-records` · `architecture-patterns` · `api-design-principles` · `error-handling-patterns` · `git-advanced-workflows`
-- `database-migration` · `python-{design-patterns,error-handling,project-structure,testing-patterns}` · `modern-javascript-patterns` · `next-best-practices` · `nextjs-app-router-patterns` · `react-state-management`
+**Stack-specific consolidated**
+- `python-best-practices` — design patterns + error handling + project structure + pytest, with deep references
+- `react-nextjs-patterns` — App Router + RSC + state management, with deep references
+- `tailwind-design-system` — Tailwind v4 system patterns
 
-**Design**
-- `frontend-design` · `design-system-patterns` · `visual-design-foundations` · `interaction-design` · `tailwind-design-system` · `responsive-design` · `accessibility-compliance` · `web-component-design` · `web-design-guidelines` · `data-storytelling` · `kpi-dashboard-design`
+**Obsidian (vault power-user)**
+- `obsidian-markdown` — wikilinks, embeds, callouts, properties
+- `obsidian-bases` — `.base` files with views, filters, formulas
+- `obsidian-cli` — read/write/search via CLI
+- `json-canvas` — `.canvas` files with nodes/edges/groups
 
-**Security**
-- `sast-configuration` · `secrets-management` · `stride-analysis-patterns` · `security-requirement-extraction` · `threat-mitigation-mapping` · `pci-compliance`
+**Meta**
+- `prompt-engineering-patterns` — production LLM prompting
+- `data-presentation` — storytelling + dashboard design (consolidated)
 
-**Finance / Strategy**
-- `billing-automation` · `cost-optimization` · `competitive-landscape` · `market-sizing-analysis` · `startup-financial-modeling` · `startup-metrics-framework` · `risk-metrics-calculation` · `team-composition-analysis` · `employment-contract-templates`
+**Compliance**
+- `accessibility-compliance` — WCAG 2.2 audits
+- `pci-compliance` — payment-card data handling
 
-**Obsidian / Content / Misc**
-- `obsidian-markdown` · `obsidian-bases` · `obsidian-cli` · `json-canvas` · `defuddle` · `explain-code` · `prompt-engineering-patterns`
+## What got pruned (2026-05-21)
+
+26 skills removed in one sweep — they were either zero-value (CLI wrappers like `defuddle`), generic web content Claude already knows (`modern-javascript-patterns`, `git-advanced-workflows`, ADR docs), duplicates of upstream sources (`interaction-design`, `visual-design-foundations`, `web-component-design`, `responsive-design`, `design-system-patterns` — anthropic/frontend-design + canvas-design + theme-factory cover these), or framework-shaped knowledge better invoked through agents (`competitive-landscape`, `market-sizing-analysis`, `startup-financial-modeling`, `risk-metrics-calculation`, etc. — Porter's Five Forces and SaaS metrics are training knowledge, not opinion). Removed:
+
+`defuddle` · `explain-code` · `web-design-guidelines` · `code-review-excellence` (superpowers covers) · `git-advanced-workflows` · `modern-javascript-patterns` · `architecture-decision-records` · `interaction-design` · `visual-design-foundations` · `design-system-patterns` · `web-component-design` · `responsive-design` · `competitive-landscape` · `market-sizing-analysis` · `startup-financial-modeling` · `startup-metrics-framework` · `risk-metrics-calculation` · `billing-automation` · `cost-optimization` · `team-composition-analysis` · `employment-contract-templates` · `sast-configuration` · `secrets-management` · `security-requirement-extraction` · `stride-analysis-patterns` · `threat-mitigation-mapping`
+
+Their content lives in git history if anything needs to come back. 9 others (python-*, next/react-*, data-*) folded into 3 consolidated meta-skills with `references/*.md` preserving deep content.
 
 ---
 
