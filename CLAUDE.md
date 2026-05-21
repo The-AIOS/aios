@@ -438,7 +438,7 @@ claude plugin update vault-commands@local
 | `plugins/` | Claude Code plugins | Auto-loaded when enabled in settings | Add folder, enable in settings |
 | `agents/` | Task agents in 6 bundles (`aios-sales/`, `aios-strategy/`, `aios-finance-legal/`, `aios-engineering/`, `aios-communication/`, `aios-personal/`) + `custom/` for operator extensions | Spawned via `spawn {name}` or `/agent {name}` — glob match across all bundles | Add `{name}.md` to the relevant bundle folder (or `custom/` for your own) from `[[agent-template]]` |
 
-**Custom/ + company namespacing** _(2026-05-21)_: `agents/custom/`, `skills/custom/`, `commands/custom/` hold operator extensions — survive `/aios:update`; same-name custom items override bundled. Company-distributed infra (via `/aios:company`) lands at `{dir}/{company-name}/` (e.g., `agents/sovra/`).
+**Custom/ + company namespacing** _(2026-05-21)_: all 7 infra layers (`agents/`, `skills/`, `commands/`, `hooks/`, `mcps/`, `plugins/`, `templates/`) support a `custom/` subfolder for operator extensions — survive `/aios:update`; custom overrides bundled. Company-distributed infra (via `/aios:company --sync`) lands at `{layer}/{company}/` across the same 7 layers (e.g., `agents/sovra/`, `templates/acme/`) — namespaced by company, never collides with `custom/` or `aios-*/`.
 
 ### MCP Policy — Prefer Bundled, Avoid claude.ai-Hosted
 
