@@ -9,7 +9,7 @@
 
 ## 2026-05-21 — Initial public release: AIOS extracted from chuycepeda/obsidian
 
-`hash: 3120add`
+`hash: 71ae219`
 
 ### What this entry is
 
