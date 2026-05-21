@@ -114,7 +114,7 @@ Beyond context, a company can distribute **its own infra** to operators who moun
 | Template folder | Lands at (operator's vault) | Use case |
 |---|---|---|
 | `agents/` | `agents/{company}/` | Company-specific agents (e.g. `acme-board-prep`, `acme-onboarding`) |
-| `commands/` | `commands/{company}/` | Company-specific slash commands (operator invokes as `/aios:{company}-{name}`) |
+| `plugins/<plugin>/` | `plugins/{company}/<plugin>/` | Company-distributed Claude Code plugins (each plugin a self-contained bundle — operator invokes its commands as `/<plugin>:<name>`, registered in the operator's marketplace at sync time) |
 | `hooks/` | `hooks/{company}/` | Company-specific event hooks (e.g. UserPromptSubmit injectors) |
 | `mcps/` | `mcps/{company}/` | Company-internal MCP servers (CRM, billing, internal tools) |
 | `skills/` | `skills/{company}/` | Company-specific Agent Skills |
@@ -434,7 +434,7 @@ The previous `/company-sync` was a single-company command using `USER.md → ## 
 
 ## See also
 
-- `commands/collaborate.md` — adjacent primitive (shared co-creation surfaces)
-- `commands/aios:update.md` — sync the AIOS framework itself
+- `plugins/aios/commands/collaborate.md` — adjacent primitive (shared co-creation surfaces)
+- `plugins/aios/commands/update.md` — sync the AIOS framework itself
 - The-AIOS/company-template — the canonical scaffold repo
 - `vault/00 - notes/context/ventures/` — where mounted companies land

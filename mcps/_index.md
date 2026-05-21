@@ -19,7 +19,7 @@ This is the **canonical list** referenced by `CLAUDE.md` → MCP Policy. When yo
 | PDF Generator | `pdf-generator-mcp/` | pandoc (md → HTML) + Chrome (HTML → PDF) | None (local binaries) |
 | Spotify DJ | `spotify-dj-mcp/` | Playback control (play, pause, next, volume, search) | Spotify Dev app + OAuth |
 
-¹ **Playwright is setup-only — not a registered MCP server.** It's a *capability layer* (saved browser auth via Chrome cookie extraction in `cookie_import.py`) that Python scripts consume on demand. There is no `server.py`, no `claude mcp add` step. Listed in this table for bundling completeness, but consumption is `Bash(python script.py)`, not MCP tools. See [`playwright-mcp/README.md`](playwright-mcp/README.md) and [`commands/mcps-setup.md`](../commands/mcps-setup.md) Playwright section.
+¹ **Playwright is setup-only — not a registered MCP server.** It's a *capability layer* (saved browser auth via Chrome cookie extraction in `cookie_import.py`) that Python scripts consume on demand. There is no `server.py`, no `claude mcp add` step. Listed in this table for bundling completeness, but consumption is `Bash(python script.py)`, not MCP tools. See [`playwright-mcp/README.md`](playwright-mcp/README.md) and [`plugins/aios/commands/mcps-setup.md`](../plugins/aios/commands/mcps-setup.md) Playwright section.
 
 ## Setup (all MCPs at once)
 

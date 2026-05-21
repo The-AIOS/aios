@@ -111,4 +111,4 @@ updated: '2026-03-28'
 |-------|-------------|-------------|
 | `sovra-web-design`¹ | Sovra brand tokens — colors, typography, sections, animations | Building or reviewing any sovra.io page |
 
-¹ **`sovra-web-design` is venture-flavored — Sovra-specific brand tokens at the shared infrastructure layer.** Same pattern as `plugins/pdf-generator/` (see `plugins/_index.md`). Future cleanup: relocate to `vault/00 - notes/context/ventures/sovra/skills/sovra-web-design/` so the shared `skills/` folder stays venture-agnostic. Marked as TODO, not action this round — the relocation requires coordinated path updates wherever the skill is referenced.
+¹ **`sovra-web-design` is venture-flavored — Sovra-specific brand tokens at the shared infrastructure layer.** Same problem as the now-relocated `plugins/pdf-generator/` (moved to operator-vault as `plugins/sovra/pdf-generator/` per the company-namespace convention). Future cleanup: relocate to `skills/sovra/web-design/` in the operator's vault so the shared `skills/` folder stays venture-agnostic. Marked as TODO, not action this round — the relocation requires coordinated path updates wherever the skill is referenced.

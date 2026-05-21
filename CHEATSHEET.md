@@ -43,7 +43,7 @@ The minimum every-day rhythm. **`/today` is the orchestrator** — running it cl
 
 **At session end**, tell Claude to commit and push the vault. The AI handles the syntax; you name the intent ("commit and push", "ship it"). The vault is only as portable and safe as its last push.
 
-See: [CLAUDE.md](./CLAUDE.md) → § II. Rituals · `commands/today.md` · `commands/close-day.md` · `commands/aios:update.md`
+See: [CLAUDE.md](./CLAUDE.md) → § II. Rituals · `plugins/aios/commands/today.md` · `plugins/aios/commands/close-day.md` · `plugins/aios/commands/update.md`
 
 ---
 
@@ -62,7 +62,7 @@ Where does X go when you notice it? One row per signal type.
 
 **Rule of thumb:** if you're unsure where it goes, write it in the daily note and let `/close-day` route it. The daily note is the safest fallback.
 
-See: [CLAUDE.md](./CLAUDE.md) → § Observed Context Rules · `commands/graduate.md` · `commands/ideas.md`
+See: [CLAUDE.md](./CLAUDE.md) → § Observed Context Rules · `plugins/aios/commands/graduate.md` · `plugins/aios/commands/ideas.md`
 
 ---
 
@@ -78,7 +78,7 @@ Generate the shareable thing.
 
 **All three commands accept a period argument** — a named period (`month`, `Q1 2026`, `March`, `last 3 months`, `this week`) or an explicit date range (`2026-03-01 to 2026-03-28`). Run without arguments and each picks a sensible default + asks for confirmation. `/weekly-learnings` additionally auto-fires monthly/quarterly/semester/year reports on the last Friday of each period — no argument needed.
 
-See: [TOOLS.md](./TOOLS.md) · `commands/weekly-learnings.md` · `commands/learned.md`
+See: [TOOLS.md](./TOOLS.md) · `plugins/aios/commands/weekly-learnings.md` · `plugins/aios/commands/learned.md`
 
 ---
 

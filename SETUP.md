@@ -176,13 +176,13 @@ The pipeline executor (`hooks/pipeline-executor.py`) pre-loads Google Calendar, 
 mkdir -p ~/.claude/plugins/marketplaces/the-aios/.claude-plugin
 mkdir -p ~/.claude/plugins/marketplaces/the-aios/plugins/aios/{commands,.claude-plugin}
 
-cp ~/obsidian/commands/*.md \
+cp ~/obsidian/plugins/aios/commands/*.md \
   ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
 
-cp ~/obsidian/commands/marketplace.json \
+cp ~/obsidian/.claude-plugin/marketplace.json \
   ~/.claude/plugins/marketplaces/the-aios/.claude-plugin/marketplace.json
 
-cp ~/obsidian/commands/plugin.json \
+cp ~/obsidian/plugins/aios/.claude-plugin/plugin.json \
   ~/.claude/plugins/marketplaces/the-aios/plugins/aios/.claude-plugin/plugin.json
 
 claude plugin marketplace add ~/.claude/plugins/marketplaces/the-aios/

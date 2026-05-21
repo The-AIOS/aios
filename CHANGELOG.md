@@ -150,6 +150,41 @@ See `mcps/_index.md` for the canonical list + setup instructions. Run `bash mcps
    rm -f ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{company-sync,vault-update}.md  # remove stale renamed-away files
    ```
 
+#### Step 4b — Canonical plugin layout (commands/ → plugins/aios/commands/)
+
+**State:** plugin source still lives in top-level `commands/` folder in your personal vault. Marketplace manifest at `commands/marketplace.json`. Plugin manifest at `commands/plugin.json`. Doesn't match Anthropic's canonical Claude Code plugin layout (cf. [claude-for-legal](https://github.com/anthropics/claude-for-legal), [claude-plugins-official](https://github.com/anthropics/claude-code-plugins)).
+
+**Ask:** *"AIOS is moving its plugin source to the canonical Anthropic layout: `commands/` becomes `plugins/aios/commands/`, manifests move to `.claude-plugin/marketplace.json` (root) and `plugins/aios/.claude-plugin/plugin.json`. This makes us tooling-compatible with the broader Claude Code plugin ecosystem. I'll git-mv your files (history preserved), update the runtime cache, and clean up. Proceed?"*
+
+**Act (in your personal vault):**
+
+1. **Restructure source-of-truth folders:**
+   ```bash
+   cd ~/obsidian
+   mkdir -p .claude-plugin plugins/aios/.claude-plugin
+   git mv commands/marketplace.json .claude-plugin/marketplace.json
+   git mv commands/plugin.json plugins/aios/.claude-plugin/plugin.json
+   git mv commands/*.md plugins/aios/commands/  # ALL .md files
+   git mv commands/custom plugins/aios/commands/custom
+   rmdir commands
+   ```
+2. **Enrich `.claude-plugin/marketplace.json`** with the canonical fields (these are advisory; the existing entry already works):
+   - `displayName: "AIOS — Daily Ritual & Strategic OS"` (shown in plugin lists)
+   - `license: "GPL-2.0-or-later"` · `repository`, `homepage` (GitHub URL) · `keywords` (10 discovery tags)
+3. **Update runtime cache** to mirror the new source layout:
+   ```bash
+   cp ~/obsidian/.claude-plugin/marketplace.json ~/.claude/plugins/marketplaces/the-aios/.claude-plugin/marketplace.json
+   cp ~/obsidian/plugins/aios/.claude-plugin/plugin.json ~/.claude/plugins/marketplaces/the-aios/plugins/aios/.claude-plugin/plugin.json
+   cp ~/obsidian/plugins/aios/commands/*.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
+   cp ~/obsidian/plugins/aios/commands/*.md ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
+   ```
+4. **Remove Sovra-branded `plugins/pdf-generator/` from framework** (if it leaked in from an older sync — it's now operator-vault-only, namespaced as `plugins/sovra/pdf-generator/` per the company-namespacing convention):
+   ```bash
+   # Only in framework repo (The-AIOS/aios) — NOT in operator vault
+   # In operator vault, IF you have it, rename:
+   cd ~/obsidian && [ -d plugins/pdf-generator ] && git mv plugins/pdf-generator plugins/sovra/pdf-generator
+   ```
+
 #### Step 5 — Refresh Obsidian UI cache (optional but recommended)
 
 **State:** `vault/.obsidian/workspace.json` (gitignored, per-machine) may reference old paths (`04 - export/...`, `06 - agents/...`, `02 - templates/...`).

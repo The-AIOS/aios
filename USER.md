@@ -53,7 +53,7 @@ ssh my-server "osascript -e 'tell application \"Terminal\" to do script \"cd ~/o
 | *acme-co* | *github* | *`git@github.com:acme-co/venture-context.git`* | *`vault/00 - notes/context/ventures/acme-co/`* | *2026-05-21* |
 | *client-bravo* | *drive* | *`https://drive.google.com/drive/folders/...`* | *`vault/00 - notes/context/ventures/client-bravo/`* | *2026-05-20* |
 
-> **Substrate** = `github` (recommended for code-adjacent companies) or `drive` (recommended for non-coder collaborators). See `commands/company.md` for the full adapter list.
+> **Substrate** = `github` (recommended for code-adjacent companies) or `drive` (recommended for non-coder collaborators). See `plugins/aios/commands/company.md` for the full adapter list.
 > **Source** = the GitHub repo URL or Drive folder URL. Read-only; permissions live on GitHub/Drive.
 > **Venture folder** = where the company's context mirrors into your vault (auto-derived from company name).
 > **Last sync** = updated by `/aios:company --sync {name}` (or `--sync-all`).

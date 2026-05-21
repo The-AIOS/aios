@@ -28,11 +28,18 @@ jobs:
       - name: Required infra folders + custom/ subfolders exist
         run: |
           set -e
-          for layer in agents skills commands hooks mcps plugins templates; do
+          # Framework-level infra layers (shared resources, not plugin-scoped)
+          for layer in agents skills hooks mcps templates; do
             test -d "$layer" || { echo "::error::Missing infra layer: $layer/"; exit 1; }
             test -d "$layer/custom" || { echo "::error::Missing custom/ subfolder: $layer/custom/"; exit 1; }
           done
-          echo "OK: all 7 infra layers have custom/ subfolders"
+          # plugins/ holds Claude Code plugins (the aios slash-command plugin + operator custom/ + company-namespaced)
+          test -d plugins || { echo "::error::Missing plugins/ folder"; exit 1; }
+          test -d plugins/custom || { echo "::error::Missing plugins/custom/ subfolder for operator extensions"; exit 1; }
+          test -d plugins/aios || { echo "::error::Missing plugins/aios/ — the bundled aios plugin"; exit 1; }
+          test -d plugins/aios/commands || { echo "::error::Missing plugins/aios/commands/ — the aios plugin's slash commands"; exit 1; }
+          test -d plugins/aios/commands/custom || { echo "::error::Missing plugins/aios/commands/custom/ for operator command extensions"; exit 1; }
+          echo "OK: framework infra layers + plugins structure intact"
 
       - name: Agent bundles exist with README.md + top-level registry
         run: |
@@ -53,14 +60,14 @@ jobs:
       - name: marketplace.json + plugin.json parse as valid JSON
         run: |
           set -e
-          python3 -c "import json; json.load(open('commands/marketplace.json'))" && echo "OK: marketplace.json"
-          python3 -c "import json; json.load(open('commands/plugin.json'))" && echo "OK: plugin.json"
+          python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))" && echo "OK: marketplace.json"
+          python3 -c "import json; json.load(open('plugins/aios/.claude-plugin/plugin.json'))" && echo "OK: plugin.json"
 
       - name: Manifest versions match
         run: |
           set -e
-          MP_VERSION=$(python3 -c "import json; d=json.load(open('commands/marketplace.json')); print(d['plugins'][0]['version'])")
-          PL_VERSION=$(python3 -c "import json; print(json.load(open('commands/plugin.json'))['version'])")
+          MP_VERSION=$(python3 -c "import json; d=json.load(open('.claude-plugin/marketplace.json')); print(d['plugins'][0]['version'])")
+          PL_VERSION=$(python3 -c "import json; print(json.load(open('plugins/aios/.claude-plugin/plugin.json'))['version'])")
           if [ "$MP_VERSION" != "$PL_VERSION" ]; then
             echo "::error::Version mismatch — marketplace.json says $MP_VERSION, plugin.json says $PL_VERSION"
             exit 1
@@ -70,9 +77,9 @@ jobs:
       - name: Manifest names match expected (aios @ the-aios)
         run: |
           set -e
-          MP_NAME=$(python3 -c "import json; print(json.load(open('commands/marketplace.json'))['name'])")
-          PL_NAME=$(python3 -c "import json; print(json.load(open('commands/plugin.json'))['name'])")
-          PLUGIN_NAME=$(python3 -c "import json; print(json.load(open('commands/marketplace.json'))['plugins'][0]['name'])")
+          MP_NAME=$(python3 -c "import json; print(json.load(open('.claude-plugin/marketplace.json'))['name'])")
+          PL_NAME=$(python3 -c "import json; print(json.load(open('plugins/aios/.claude-plugin/plugin.json'))['name'])")
+          PLUGIN_NAME=$(python3 -c "import json; print(json.load(open('.claude-plugin/marketplace.json'))['plugins'][0]['name'])")
           [ "$MP_NAME" = "the-aios" ] || { echo "::error::marketplace.json name should be 'the-aios', got '$MP_NAME'"; exit 1; }
           [ "$PL_NAME" = "aios" ] || { echo "::error::plugin.json name should be 'aios', got '$PL_NAME'"; exit 1; }
           [ "$PLUGIN_NAME" = "aios" ] || { echo "::error::marketplace plugin entry should be 'aios', got '$PLUGIN_NAME'"; exit 1; }
@@ -94,7 +101,7 @@ jobs:
 
           failures = []
           patterns = [
-              "commands/*.md",
+              "plugins/aios/commands/*.md",
               "agents/aios-*/*.md",
               "skills/*/SKILL.md",
               "templates/*.md",

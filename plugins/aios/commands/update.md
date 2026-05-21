@@ -38,12 +38,13 @@ Files where the team version is always correct. Overwrite without merge.
 - `vault/.obsidian/snippets/*` (CSS fixes)
 - `mcps/*` EXCEPT `mcps/custom/` (vendored MCP servers — code + README; preserve operator-installed MCPs)
 - `agents/aios-*/` (bundled agent definitions — 6 bundles: sales, strategy, finance-legal, engineering, communication, personal — NEVER overwrite `agents/custom/` which holds operator-specific extensions)
-- `plugins/*` EXCEPT `plugins/custom/` (self-contained plugins — full folder replace per plugin; preserve operator plugins)
-- `commands/aios-*` and `commands/*.md` at top level EXCEPT `commands/custom/` (canonical slash commands; preserve operator commands)
+- `plugins/aios/**` (the bundled aios plugin — full folder replace EXCEPT `plugins/aios/commands/custom/`, which holds operator commands and survives updates)
+- `plugins/*` at top level EXCEPT `plugins/custom/`, `plugins/aios/`, and `plugins/<company>/` paths (other bundled plugins; preserve operator + company-namespaced plugins)
+- `.claude-plugin/marketplace.json` (marketplace manifest)
 
 ### Tier 2: Suggest (show diff, user picks)
 Files the user may have personalized. Show per-section diffs, let them cherry-pick.
-- `commands/*` (all command files, repo root)
+- `plugins/aios/commands/*` (the slash commands inside the aios plugin)
 - `CLAUDE.md` (vault-level instructions)
 
 ### Tier 3: Flag (advisory only)
@@ -170,7 +171,10 @@ git -C /tmp/vault-update-check diff {stored_hash}..HEAD --name-only -- \
   "mcps/" \
   "plugins/" \
   "agents/" \
-  "commands/"
+  ".claude-plugin/" \
+  "LICENSE" \
+  "NOTICE" \
+  "FORTRESS.md"
 ```
 
 **Note:** `README.md` and `SETUP.md` live at the repo root (not inside `vault/`). Adjust read/write paths accordingly — these are not Obsidian notes, use `Read`/`Write` tools, not `mcp__obsidian__*`.
@@ -233,8 +237,8 @@ Apply changes to today.md? [all / pick numbers / skip]
 7. To apply a **changed section**: use `mcp__obsidian__patch_note` with the local section content as `oldString` and remote section content as `newString`
 8. After applying, if the command file changed, sync to plugin pipeline:
    ```bash
-   cp "commands/{file}" ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{file}
-   cp "commands/{file}" ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/{file}
+   cp "plugins/aios/commands/{file}" ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{file}
+   cp "plugins/aios/commands/{file}" ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/{file}
    ```
 
 ### 5. Process Tier 3 (Flag)
@@ -258,8 +262,8 @@ For each template that changed in Tier 1:
 **After all Tier 2 command changes are applied**, ensure the full plugin pipeline is current:
 ```bash
 # Sync ALL command files to both plugin locations (not just changed ones — ensures consistency)
-cp ~/obsidian/commands/*.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
-cp ~/obsidian/commands/*.md ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
+cp ~/obsidian/plugins/aios/commands/*.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
+cp ~/obsidian/plugins/aios/commands/*.md ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
 ```
 
 Update `.vault-update` (repo root) with new HEAD hash and today's date.

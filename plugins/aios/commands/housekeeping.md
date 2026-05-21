@@ -181,26 +181,26 @@ Read `~/.claude/settings.json` (global) and the project's `.claude/settings.loca
 
 #### Bucket 11: Plugin cache verification (NEW)
 
-The `commands/` repo-root folder is the source of truth. Two derived locations must stay in sync — the plugin marketplace and the runtime cache:
+The `plugins/aios/commands/` repo folder is the source of truth. Two derived locations must stay in sync — the plugin marketplace and the runtime cache:
 
 - `~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{name}.md`
 - `~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/{name}.md`
 
-**Scan:** for each `commands/{name}.md` in the repo, `diff` against both derived locations. Surface any drift:
+**Scan:** for each `plugins/aios/commands/{name}.md` in the repo, `diff` against both derived locations. Surface any drift:
 
 - **Repo file present, marketplace/cache file missing** → command was added but never synced
-- **Files exist in all 3 but content differs** → command was edited in `commands/` (or somewhere) but not propagated
-- **Marketplace/cache file exists, repo file missing** → command was deleted in `commands/` but stale copy lingers in plugin paths
+- **Files exist in all 3 but content differs** → command was edited in source but not propagated
+- **Marketplace/cache file exists, repo file missing** → command was deleted in source but stale copy lingers in plugin paths
 
 **Auto-apply candidates** (low-stakes, deterministic):
-- Repo → marketplace + cache copy when repo is the only authoritative source. Use `cp ~/obsidian/commands/{name}.md ~/.claude/plugins/marketplaces/the-aios/.../commands/` and the equivalent for cache. Confirm post-copy that all 3 files match (`diff -q`).
+- Repo → marketplace + cache copy when repo is the only authoritative source. Use `cp ~/obsidian/plugins/aios/commands/{name}.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/` and the equivalent for cache. Confirm post-copy that all 3 files match (`diff -q`).
 
 **Propose-only candidates** (need user judgment):
 - Plugin paths have content the repo doesn't — possible accidental delete, or in-progress refactor. Ask before removing.
 
-**Evidence discipline:** show the actual `diff -q` output per drifted command. "`commands/today.md` differs from cache" is more useful than "today is out of sync."
+**Evidence discipline:** show the actual `diff -q` output per drifted command. "`plugins/aios/commands/today.md` differs from cache" is more useful than "today is out of sync."
 
-**Why this matters:** the plugin cache is what Claude actually reads at runtime. Drift between repo and cache means edits to `commands/*.md` don't take effect — silent breakage, hard to debug.
+**Why this matters:** the plugin cache is what Claude actually reads at runtime. Drift between source and cache means edits to `plugins/aios/commands/*.md` don't take effect — silent breakage, hard to debug.
 
 #### Bucket 12: Antifragile compact + promotion (NEW — extends Bucket 9)
 

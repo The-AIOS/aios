@@ -337,11 +337,18 @@ vault/
 ├── 03 - assets/
 ├── 04 - export/
 ├── 05 - backups/                    ← User backups (empty by default)
-agents/                              ← Pre-built task agents in 6 bundles + custom/ (top-level infra, not in vault/)
-commands/                            ← Vault command files (source of truth)
+.claude-plugin/                      ← Marketplace manifest (top-level infra, not in vault/)
+plugins/                             ← Claude Code plugins
+│   ├── aios/                        ← The aios plugin (source of truth)
+│   │   ├── .claude-plugin/plugin.json
+│   │   └── commands/                ← 24 /aios:* slash commands
+│   ├── custom/                      ← operator plugin extensions
+│   └── <company>/                   ← company-namespaced plugins (via /aios:company --sync)
+agents/                              ← Pre-built task agents in 6 bundles + custom/
 mcps/                                ← Vendored MCP servers
 hooks/                               ← Pipeline scripts + claude-identity wrappers
 skills/                              ← Skills (auto-loaded at session start)
+templates/                           ← Reference templates + custom/
 ```
 
 ### Index Maintenance
@@ -405,7 +412,7 @@ See `vault/00 - notes/context/observed/vault-routine.md` for recommended cadence
 
 | Location | Purpose |
 |---|---|
-| `commands/` (repo root) | **Source of truth** — edit here |
+| `plugins/aios/commands/` (repo root) | **Source of truth** — edit here |
 | `~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/` | Marketplace source — copy from source |
 | `~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/` | **Plugin cache** — what Claude actually reads at runtime (`0.1.0` is the plugin's declared version in `plugin.json`) |
 
