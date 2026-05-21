@@ -97,7 +97,7 @@ The substrate is shared; the personalization is yours.
 
 **Starter override pattern:** open `USER.md`, find `### /<command>`, add a rule under a bold sub-heading. Claude reads it before every run of that command. Common first overrides: customize `/today` Evening — Grow routines, add growth routines under Sources, set up Slack triage rules in `### /close-day`.
 
-**Promotion path:** if a rule in your USER.md proves useful enough that it should be default for everyone, `/housekeeping` Bucket 13 surfaces it as a "promotion candidate" — propose moving it from `USER.md` → `commands/<name>.md` for everyone. That's the upstream feedback loop.
+**Promotion path:** if a rule in your USER.md proves useful enough that it should be default for everyone, `/housekeeping` Bucket 13 surfaces it as a "promotion candidate" — propose moving it from `USER.md` → `plugins/aios/commands/<name>.md` for everyone. That's the upstream feedback loop.
 
 ### Don't touch — these get overwritten by `/aios:update`
 
@@ -105,12 +105,14 @@ The shared template ships infra that's the same for every user. Editing these lo
 
 **Touch-not (shared template):**
 - Root-level docs: `README.md`, `START-HERE.md`, `SETUP.md`, `TOOLS.md`, `CLAUDE.md`, `CHEATSHEET.md`, `INTENT.md` template
-- `commands/` — vault commands
+- `plugins/aios/commands/` — the bundled aios plugin's slash commands
+- `.claude-plugin/marketplace.json` — marketplace manifest
+- `plugins/aios/.claude-plugin/plugin.json` — aios plugin manifest
 - `hooks/` — pipeline scripts + identity wrappers
 - `mcps/` — bundled MCP servers
 - `skills/` — reusable skill capabilities
-- `plugins/` — bundled plugins
 - `templates/` — file templates
+- `plugins/<other-bundled>/` — any other bundled plugins (currently just `aios`)
 
 **Yours to edit (personal layer):**
 - `USER.md` (never synced — your personalization)
@@ -119,10 +121,11 @@ The shared template ships infra that's the same for every user. Editing these lo
 - `vault/00 - notes/context/observed/*` — Claude writes these; you read + occasionally correct
 - `vault/00 - notes/projects/*` — your projects
 - `vault/01 - calendar/*` — daily notes, weekly plans
-- `agents/my-agents/*` — your personal agents (override shared agents of the same name)
+- `agents/custom/*` — your personal agents (override shared agents of the same name)
+- `plugins/custom/<your-plugin>/` — your own Claude Code plugins (with their own commands, agents, skills)
 - `vault/00 - notes/ideas/`, `vault/00 - notes/reflections/`, `vault/03 - export/writing/` — your content
 
-**If you want to upstream a change** to a touch-not file (improvement worth sharing with everyone), the path is: prototype it in USER.md → let it stabilize 60+ days → `/housekeeping` Bucket 13 surfaces it as a promotion candidate → propose it for `commands/<name>.md` or the relevant shared file. That's how end-user discoveries flow back into the template.
+**If you want to upstream a change** to a touch-not file (improvement worth sharing with everyone), the path is: prototype it in USER.md → let it stabilize 60+ days → `/housekeeping` Bucket 13 surfaces it as a promotion candidate → propose it for `plugins/aios/commands/<name>.md` or the relevant shared file. That's how end-user discoveries flow back into the template.
 
 See: [CLAUDE.md](./CLAUDE.md) → § I. Operating Principles · [INTENT.md](./INTENT.md) template
 

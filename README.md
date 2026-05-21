@@ -209,24 +209,31 @@ The AI doesn't just remember. It connects. And sometimes, what it connects chang
 │   │   ├── reflections/     ← Book study notes, deep dives, conversation transcripts
 │   │   └── logs/            ← Activity logs, role logs, observed context snapshots
 │   ├── 01 - calendar/       ← Daily plans + weekly reviews (auto-generated)
-│   ├── 02 - templates/      ← Starting templates for context, projects, agents, ventures
-│   ├── 03 - assets/
-│   ├── 04 - export/         ← Writing drafts, proposals, research, social content, PDFs
-│   ├── 05 - backups/        ← User backups (empty by default)
-│   └── 06 - agents/         ← 22 pre-built task agents + my-agents/ for your own
-├── commands/                 ← 24 vault command files (source of truth)
-├── mcps/                     ← Vendored MCP servers (10 bundled — see mcps/_index.md for the canonical list)
-├── hooks/                    ← Pipeline executor for /today and /close-day, plus claude-identity quota autopilot (multi-account rotation, macOS)
-├── skills/                   ← 60 curated skills (workflows, strategy, design, engineering, security)
-├── START-HERE.md             ← First-time orientation (what is this, two-step setup, what compounds over time)
-├── CLAUDE.md                 ← How Claude works with this vault (behavioral rules, session rituals, agentic culture)
-├── INTENT.md                 ← Trust contract (autonomy levels, tradeoffs, escalation triggers, anti-values)
-├── USER.md                   ← Your personal config (identity, sources, organization, command overrides)
-├── README.md                 ← This file (overview + setup pointer + commands menu)
-├── SETUP.md                  ← Step-by-step install (Claude reads this when you say "set up my AI-OS")
-├── CHEATSHEET.md             ← Day-to-day operating index (launch/spawn, daily loop, capture/export, personalization, multi-account switching)
-├── TOOLS.md                  ← Human-readable menu of every command, agent, skill, MCP, and standalone tool
-└── CHANGELOG.md              ← What changed in shared infra, when, and what to do (read by /aios:update)
+│   ├── 02 - assets/         ← Vault-internal assets
+│   ├── 03 - export/         ← Writing drafts, proposals, research, social content, PDFs
+│   └── 04 - backups/        ← User backups (empty by default)
+├── .claude-plugin/
+│   └── marketplace.json     ← Marketplace manifest (the-aios marketplace)
+├── plugins/
+│   ├── aios/                ← THE aios plugin (24 /aios:* slash commands)
+│   │   ├── .claude-plugin/plugin.json
+│   │   └── commands/        ← The 24 commands (source of truth)
+│   ├── custom/              ← Your own plugins survive /aios:update
+│   └── <company>/<plugin>/  ← Company-distributed plugins (via /aios:company --sync)
+├── agents/                  ← 28 pre-built task agents across 6 bundles + custom/
+├── skills/                  ← 66 curated skills (workflows, strategy, design, engineering, security)
+├── hooks/                   ← Pipeline executor for /today and /close-day, plus claude-identity quota autopilot (multi-account rotation, macOS)
+├── mcps/                    ← Vendored MCP servers (10 bundled — see mcps/_index.md for the canonical list)
+├── templates/               ← Starting templates for context, projects, agents, ventures
+├── START-HERE.md            ← First-time orientation (what is this, two-step setup, what compounds over time)
+├── CLAUDE.md                ← How Claude works with this vault (behavioral rules, session rituals, agentic culture)
+├── INTENT.md                ← Trust contract (autonomy levels, tradeoffs, escalation triggers, anti-values)
+├── USER.md                  ← Your personal config (identity, sources, organization, command overrides)
+├── README.md                ← This file (overview + setup pointer + commands menu)
+├── SETUP.md                 ← Step-by-step install (Claude reads this when you say "set up my AI-OS")
+├── CHEATSHEET.md            ← Day-to-day operating index (launch/spawn, daily loop, capture/export, personalization, multi-account switching)
+├── TOOLS.md                 ← Human-readable menu of every command, agent, skill, MCP, and standalone tool
+└── CHANGELOG.md             ← What changed in shared infra, when, and what to do (read by /aios:update)
 ```
 
 **Architecture principle:** Everything shared lives in the repo and is identical for all users. Everything personal lives in `USER.md`, `INTENT.md` (your content), `vault/00 - notes/context/declared/`, and `vault/00 - notes/context/observed/`. No surgical merges needed — ever.

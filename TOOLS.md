@@ -184,4 +184,32 @@ Setup is opt-in and walks through `/aios:update` — see the `2026-04-25 — hoo
 
 ---
 
+## Using AIOS with other LLMs
+
+The canonical surface is Claude Code (this framework is named for Anthropic's plugin model — `.claude-plugin/`, `aios@the-aios`). But the *content* of the system is plain markdown, deliberately LLM-agnostic.
+
+**Commands** live at `plugins/aios/commands/*.md` as readable markdown — no Claude-Code-specific syntax inside, just instructions. Any LLM that can read files from disk can use them.
+
+**For Gemini CLI / Cursor / Cline / other agentic IDEs:**
+- Point the LLM at `plugins/aios/commands/` as the command source folder. Most IDE-integrated agents allow custom command directories via config — set yours there.
+- For one-off use, paste a command's content into the conversation: "follow the instructions in `plugins/aios/commands/today.md`, treating my vault root as `~/obsidian/`."
+- The plugin manifests (`.claude-plugin/marketplace.json`, `plugins/aios/.claude-plugin/plugin.json`) are Claude Code's plugin-loader scaffolding — other LLMs ignore them. They don't interfere.
+- Skills (`skills/*/SKILL.md`) follow [Anthropic's open Skills spec](https://github.com/anthropics/skills) — already cross-LLM compatible.
+- MCPs (`mcps/`) are protocol-level, not Claude-specific. Any MCP-capable LLM (Claude, Gemini via custom adapters, Cursor) can connect to them.
+
+**What's Claude-specific:**
+- `spawn` wrapper (uses `claude --remote-control --name`) — operator launch glue, not framework logic
+- `/aios:*` slash invocation (Claude Code's `<plugin>:<command>` syntax) — other LLMs invoke by reading the command file directly
+- Plugin marketplace + cache paths (`~/.claude/plugins/...`) — Claude Code runtime, not framework state
+
+**What's portable:**
+- Every command's logic (instructions, MCP calls, file edits, decision rules)
+- Every skill's SKILL.md
+- Every template, every agent definition
+- Every observed-context routing rule
+
+If you're using a non-Claude LLM, your daily ritual is: read `plugins/aios/commands/today.md` (or whichever command you want) → execute its steps → use whatever filesystem-access primitives your LLM provides instead of Claude Code's tools. The structure transfers.
+
+---
+
 *This file ships with the vault. When you run `/aios:update`, you get the latest tools automatically.*

@@ -172,7 +172,7 @@ To set up: in any Claude session, say *"set up the quota autopilot"*. Claude rea
 
 - **For setup issues** — re-read `SETUP.md` or ask Claude `"What went wrong with my setup?"`
 - **For vault structure questions** — read `CLAUDE.md` (Claude reads this every session — you can too)
-- **For command behavior** — read `commands/{command-name}.md` for any command
+- **For command behavior** — read `plugins/aios/commands/{command-name}.md` for any command
 - **For day-to-day operating** — `CHEATSHEET.md` is the scannable index for launching sessions, the daily loop, capture/export shortcuts, personalization, multi-account quota management
 - **For deep system understanding** — `TOOLS.md` is the human-readable map of every tool, command, agent, and MCP
 
@@ -207,7 +207,7 @@ Don't try to use everything at once. The system is designed to reveal itself gra
 - **Week 2-4:** add `/aios:7plan` Mondays, `/aios:drift` mid-week, `/aios:weekly-learnings` Fridays.
 - **Month 2+:** discover the strategic commands (`/aios:emerge`, `/aios:connect`, `/aios:ghost`) as you need them.
 
-For the philosophy underneath, see [README.md](./README.md). For the full command menu, see [TOOLS.md](./TOOLS.md). For specific command behavior, read the `.md` file for that command in `commands/`.
+For the philosophy underneath, see [README.md](./README.md). For the full command menu, see [TOOLS.md](./TOOLS.md). For specific command behavior, read the `.md` file for that command in `plugins/aios/commands/`.
 
 Welcome.
 

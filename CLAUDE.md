@@ -416,7 +416,7 @@ See `vault/00 - notes/context/observed/vault-routine.md` for recommended cadence
 | `~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/` | Marketplace source — copy from source |
 | `~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/` | **Plugin cache** — what Claude actually reads at runtime (`0.1.0` is the plugin's declared version in `plugin.json`) |
 
-When a command is edited, all three must stay in sync. Workflow: edit in `commands/` → copy to marketplace source → copy to cache. Or manual:
+When a command is edited, all three must stay in sync. Workflow: edit in `plugins/aios/commands/` → copy to marketplace source → copy to cache. Or manual:
 ```bash
 claude plugin update aios@the-aios
 ```
@@ -427,14 +427,16 @@ claude plugin update aios@the-aios
 
 | Folder | What | When Claude uses it | How to add |
 |---|---|---|---|
-| `commands/` | Vault commands (/today, /close-day, etc.) | Invoked via `/aios:{name}` | Add `{name}.md`, sync 3 locations |
+| `plugins/aios/commands/` | The aios plugin's slash commands (`/aios:today`, `/aios:close-day`, etc.) | Invoked via `/aios:{name}` | Add `{name}.md`, sync 3 locations |
 | `skills/` | Reusable capabilities (coding, design, docs, Obsidian, planning) + `skills/custom/` for operator extensions | Auto-loaded at session start. Describe what you need — Claude matches. | Add folder with `SKILL.md` (in canonical `skills/` or in `skills/custom/`) |
 | `hooks/` | Pipeline scripts (executor, markitdown) + `claude-identity/` wrappers (`install-wrappers.sh` / `.ps1`) | Called by commands; wrappers installed via the install scripts | Add `.py`, document in `_index.md` |
 | `mcps/` | Bundled MCP servers — see `mcps/_index.md` for the canonical list | Auto-connected via `settings.json` | Add folder, register in settings |
-| `plugins/` | Claude Code plugins | Auto-loaded when enabled in settings | Add folder, enable in settings |
+| `plugins/` | Claude Code plugins — `aios` (bundled) + `custom/<your-plugin>/` (operator) + `<company>/<plugin>/` (company-namespaced) | Auto-loaded when enabled in settings | Add folder under `plugins/custom/<name>/` with `.claude-plugin/plugin.json` |
 | `agents/` | Task agents in 6 bundles (`aios-sales/`, `aios-strategy/`, `aios-finance-legal/`, `aios-engineering/`, `aios-communication/`, `aios-personal/`) + `custom/` for operator extensions | Spawned via `spawn {name}` or `/agent {name}` — glob match across all bundles | Add `{name}.md` to the relevant bundle folder (or `custom/` for your own) from `[[agent-template]]` |
 
-**Custom/ + company namespacing** _(2026-05-21)_: all 7 infra layers (`agents/`, `skills/`, `commands/`, `hooks/`, `mcps/`, `plugins/`, `templates/`) support a `custom/` subfolder for operator extensions — survive `/aios:update`; custom overrides bundled. Company-distributed infra (via `/aios:company --sync`) lands at `{layer}/{company}/` across the same 7 layers (e.g., `agents/sovra/`, `templates/acme/`) — namespaced by company, never collides with `custom/` or `aios-*/`.
+**Custom/ + company namespacing** _(updated 2026-05-21)_: framework-level layers (`agents/`, `skills/`, `hooks/`, `mcps/`, `templates/`) each have a `custom/` subfolder for single-file operator extensions — survive `/aios:update`; custom overrides bundled. The `plugins/` layer follows the canonical Claude Code convention instead: each plugin is a self-contained folder. Operator-built plugins go in `plugins/custom/<your-plugin>/` (NOT inside the `aios` plugin). Company-distributed infra (via `/aios:company --sync`) lands at `{layer}/{company}/` for single-file layers and `plugins/{company}/<plugin-name>/` for plugins (e.g., `agents/sovra/`, `templates/acme/`, `plugins/sovra/pdf-generator/`) — namespaced by company, never collides with `custom/` or `aios-*/`.
+
+**Operator custom slash commands:** the canonical extension point is your OWN plugin, not a `custom/` subfolder inside `aios`. To add a `/my-stuff:my-command`, create `plugins/custom/my-stuff/` with its own `.claude-plugin/plugin.json` + `commands/my-command.md`, then register it in `.claude-plugin/marketplace.json`. Same pattern as company-distributed plugins, just locally owned.
 
 ### MCP Policy — Prefer Bundled, Avoid claude.ai-Hosted
 

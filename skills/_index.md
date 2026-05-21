@@ -107,8 +107,7 @@ updated: '2026-03-28'
 
 ## Venture-flavored skills
 
-| Skill | Description | When to use |
-|-------|-------------|-------------|
-| `sovra-web-design`¹ | Sovra brand tokens — colors, typography, sections, animations | Building or reviewing any sovra.io page |
+The framework ships only venture-agnostic skills. Company-specific skills live in operator vaults under `skills/<company>/<skill-name>/` — same convention as `agents/<company>/`, `templates/<company>/`, `plugins/<company>/<plugin>/`.
 
-¹ **`sovra-web-design` is venture-flavored — Sovra-specific brand tokens at the shared infrastructure layer.** Same problem as the now-relocated `plugins/pdf-generator/` (moved to operator-vault as `plugins/sovra/pdf-generator/` per the company-namespace convention). Future cleanup: relocate to `skills/sovra/web-design/` in the operator's vault so the shared `skills/` folder stays venture-agnostic. Marked as TODO, not action this round — the relocation requires coordinated path updates wherever the skill is referenced.
+Examples (in chuy's personal vault, not in framework):
+- `skills/sovra/web-design/` — Sovra brand tokens, typography, sections, animations
