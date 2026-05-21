@@ -124,8 +124,8 @@ jobs:
           print(f"OK: frontmatter validated across {total} files")
           PY
 
-  personal-content:
-    name: Personal-content guard
+  personalization:
+    name: Personalization guard
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -150,7 +150,7 @@ jobs:
           fi
           echo "OK: no personal vault content added"
 
-      - name: USER.md + INTENT.md still have EXAMPLE ONLY markers
+      - name: USER.md + INTENT.md still template-shaped (EXAMPLE ONLY markers present)
         run: |
           set -e
           for f in USER.md INTENT.md; do
@@ -161,36 +161,13 @@ jobs:
           done
           echo "OK: USER.md + INTENT.md still template-shaped"
 
-      - name: No real OAuth credential files in mcps/
-        run: |
-          set -e
-          REAL_OAUTH=$(find mcps -name "oauth.json" 2>/dev/null || true)
-          if [ -n "$REAL_OAUTH" ]; then
-            echo "::error::Real OAuth credential file(s) found in mcps/:"
-            echo "$REAL_OAUTH" | sed 's/^/  - /'
-            echo "Only *.template files belong in the repo. Real credentials are operator-specific and must stay local (gitignored)."
-            exit 1
-          fi
-          echo "OK: no real OAuth files in mcps/"
-
-      - name: No Playwright session cookies committed
-        run: |
-          set -e
-          REAL_COOKIES=$(find mcps/playwright-mcp/auth -name "*.json" 2>/dev/null || true)
-          if [ -n "$REAL_COOKIES" ]; then
-            echo "::error::Playwright auth cookies found in mcps/playwright-mcp/auth/:"
-            echo "$REAL_COOKIES" | sed 's/^/  - /'
-            echo "Session cookies are per-operator and per-service. They don't belong in the framework."
-            exit 1
-          fi
-          echo "OK: no Playwright cookies committed"
-
-      - name: No infra files reference personal-vault content
+      - name: No infra files reference personal-vault notes
         run: |
           set -e
           # Per the 'infra never links to personal' rule: commands/, agents/, hooks/,
           # mcps/, plugins/, templates/, skills/, and root docs should never reference
-          # personal-vault notes like [[ai-os]], chuy-*, or paths under operator-specific dirs.
+          # personal-vault notes like [[ai-os]], [[chuy-*]], [[advisory-*]] — those
+          # wikilinks resolve only in the author's vault, not in other operators'.
           if grep -rln -E '\[\[(ai-os|chuy-|advisory-[a-z]+)\]\]' \
             --include="*.md" --include="*.yml" --include="*.yaml" --include="*.json" \
             --exclude-dir=.git --exclude-dir=.github --exclude-dir=vault --exclude="HISTORY-PRE-*.md" --exclude="CHANGELOG.md" .; then
@@ -198,6 +175,63 @@ jobs:
             exit 1
           fi
           echo "OK: no infra→personal-vault wikilinks"
+
+  credentials:
+    name: Credentials guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: No credential-shaped files in tree (secrets, tokens, cookies, OAuth, certs, keys)
+        run: |
+          set -e
+          # Pattern-based scan for files that look like real credentials. The framework
+          # ships only *.template files; real credentials are operator-specific and must
+          # stay gitignored. This is a path/filename check — content-based secret detection
+          # is handled by GitHub Push Protection at push time (layered defense).
+          #
+          # Categories covered:
+          # - Cryptographic keys: *.key, *.pem, *.pfx, *.p12, *.cer, *.crt
+          # - Token/credential files: token.json, credentials.json, *-tokens.json
+          # - Secret-named JSON: *secret*.json, *credentials*.json, *oauth*.json
+          # - Environment files: .env, .env.local
+          # - Browser session state: storage_state.json, cookies.json, **/auth/*.json
+          # - Spotify/Slack/etc. cache: *spotify*cache*.json, *.slack-tokens.json
+          # - OAuth callback artifacts: auth_link.html
+          FOUND=$(
+            {
+              find . -type f \( \
+                -name "*.key" -o \
+                -name "*.pem" -o \
+                -name "*.pfx" -o \
+                -name "*.p12" -o \
+                -name "*.cer" -o \
+                -name "*.crt" -o \
+                -name "token.json" -o \
+                -name "credentials.json" -o \
+                -name ".env" -o \
+                -name ".env.local" -o \
+                -name "storage_state.json" -o \
+                -name "cookies.json" -o \
+                -name "auth_link.html" -o \
+                -name "*-tokens.json" -o \
+                -name ".slack-mcp-tokens.json" -o \
+                -name "spotify-cache.json" \
+              \) -not -path "./.git/*" -not -path "./vault/.obsidian/*" 2>/dev/null
+              find . -type f -name "*oauth*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
+              find . -type f -name "*secret*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
+              find . -type f -name "*credentials*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
+              find . -type f -path "*/auth/*.json" -not -path "./.git/*" 2>/dev/null
+            } | sort -u
+          )
+          if [ -n "$FOUND" ]; then
+            echo "::error::Credential-shaped files found in tree. Only *.template files ship; real credentials must stay gitignored:"
+            echo "$FOUND" | sed 's/^/  - /'
+            echo ""
+            echo "If these are legitimate (e.g., a *.key file that's actually not a credential), add the specific path to an allowlist in this workflow. If they're real credentials: 'git rm --cached <file>', verify .gitignore covers them, rotate the leaked credential immediately, and recommit without the file."
+            exit 1
+          fi
+          echo "OK: no credential-shaped files in tree"
 
   drift:
     name: Migration drift
