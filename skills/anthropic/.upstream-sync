@@ -1,0 +1,4 @@
+repo=https://github.com/anthropics/skills
+hash=690f15c
+date=2026-05-21
+note=Vendored Apache-2.0 licensed skills only (12 of 17). Skipped: docx, pdf, pptx, xlsx (proprietary — available via document-skills@anthropic-agent-skills plugin); brand-guidelines (Anthropic-specific brand).

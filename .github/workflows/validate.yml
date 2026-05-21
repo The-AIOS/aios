@@ -114,14 +114,14 @@ jobs:
           for dir in skills/*/; do
             name=$(basename "$dir")
             case "$name" in
-              aios|superpowers|custom) ;;
-              *) FOUND+=$'\n  - skills/'"$name"'/  (expected: aios/, superpowers/, or custom/ — vendoring a new upstream? add it to the allowlist in this workflow + document in skills/_index.md)' ;;
+              aios|anthropic|superpowers|custom) ;;
+              *) FOUND+=$'\n  - skills/'"$name"'/  (expected: aios/, anthropic/, superpowers/, or custom/ — vendoring a new upstream? add it to the allowlist in this workflow + document in skills/_index.md)' ;;
             esac
           done
 
           # skills/ at depth 2 — block known company prefixes that might sneak in under a source folder
           shopt -s nullglob
-          for source_folder in skills/aios skills/superpowers; do
+          for source_folder in skills/aios skills/anthropic skills/superpowers; do
             for company_prefix in sovra acme chuycepeda chuy zineb sarah; do
               for dir in "$source_folder/$company_prefix"/ "$source_folder/$company_prefix-"*/; do
                 [ -d "$dir" ] && FOUND+=$'\n  - '"$dir"'  (company-namespaced skill — relocate to operator vault under skills/'"$company_prefix"'/)'
