@@ -34,7 +34,7 @@ def generate_image(
 
     Args:
         prompt: Natural-language description of the desired image.
-        output_path: Where to save the PNG. Defaults to ~/obsidian/vault/03 - assets/generated/{timestamp}.png
+        output_path: Where to save the PNG. Defaults to ~/aios/vault/03 - assets/generated/{timestamp}.png
         aspect_ratio: One of "1:1", "16:9", "9:16", "4:3", "3:4". Default "1:1".
 
     Returns:

@@ -65,7 +65,7 @@ Present a summary in the response:
 - {Brief note on what was skipped and why}
 ```
 
-Then commit and push: `cd ~/obsidian && git add -A && git commit -m "Graduate ideas {date}" && git push`
+Then commit and push: `cd ~/aios && git add -A && git commit -m "Graduate ideas {date}" && git push`
 
 ## Rules
 

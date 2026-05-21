@@ -1,113 +1,95 @@
 ---
 tags: [skills, index, ai-os]
 created: '2026-03-20'
-updated: '2026-03-28'
+updated: '2026-05-21'
 ---
-# Skills — 60 Curated Skills
+# Skills — Source-grouped Registry
 
-> Skills are specialized prompt files that extend Claude's capabilities. Each skill is a `SKILL.md` file in its own folder. Claude loads them when the task matches.
+> Skills are specialized prompt files (`SKILL.md` in their own folder) that extend Claude's capabilities. Claude loads them when the task matches the skill's description.
 >
-> **Path pattern:** `skills/{skill-name}/SKILL.md`
+> **Path pattern:** `skills/<source>/<skill-name>/SKILL.md`
+>
+> Skills are grouped by their upstream origin so `/aios:housekeeping` can check each source for updates, and operators can see at a glance which skills came from where.
 
 ---
 
-## Superpowers (Core Workflows)
+## Source folders
 
-| Skill | Description | When to use |
-|-------|-------------|-------------|
-| `brainstorming` | Explore intent, requirements, design before implementation | Before any creative work — features, components, functionality |
-| `writing-plans` | Comprehensive implementation plans for multi-step tasks | Before touching code on non-trivial tasks |
-| `executing-plans` | Execute plans with review checkpoints | Implementation sessions with batched review |
-| `dispatching-parallel-agents` | One agent per independent problem domain | 2+ independent concurrent tasks |
-| `subagent-driven-development` | Dispatch fresh subagent per task with two-stage review | Plans with independent tasks in current session |
-| `test-driven-development` | Write test first, watch it fail, write minimal code | Before writing implementation code |
-| `systematic-debugging` | Find root cause before fixes — no random patches | Before proposing fixes for any bug |
-| `explain-code` | Explain code with visual diagrams and analogies | Teaching, onboarding, "how does this work?" |
-| `requesting-code-review` | Dispatch code-reviewer subagent to catch issues | Before merging, after completing features |
-| `receiving-code-review` | Process feedback with technical rigor, not blind agreement | When receiving review comments |
-| `finishing-a-development-branch` | Guide merge/PR/cleanup decisions | When implementation is complete and tests pass |
-| `verification-before-completion` | Run verification before claiming work is done | Before committing or creating PRs |
-| `using-git-worktrees` | Isolated git worktrees with smart directory selection | Feature isolation, parallel work |
-| `using-superpowers` | Discover and invoke available skills | Start of any conversation (meta-skill) |
-| `writing-skills` | Create, edit, verify skills with TDD for process docs | Creating or editing skills |
+| Folder | What | Upstream | License |
+|---|---|---|---|
+| [`skills/aios/`](./aios/) | AIOS-bundled skills (49) — domain-specific, design, engineering, security, finance, etc. | This framework | GPL-2.0-or-later |
+| [`skills/superpowers/`](./superpowers/) | Core software-engineering workflows (14) — TDD, debugging, code review, plans, brainstorming, worktrees, subagent dispatching | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
+| [`skills/df-claude-skills/`](./df-claude-skills/) | Code-quality skills (2) — codebase audit, documentation expert | [fernandezdiegoh/df-claude-skills](https://github.com/fernandezdiegoh/df-claude-skills) | MIT |
+| [`skills/custom/`](./custom/) | Your own skill extensions — survive `/aios:update` | Operator | Operator's choice |
 
-## Strategy & Business
+---
 
-| Skill | Description | When to use |
-|-------|-------------|-------------|
-| `competitive-landscape` | Porter's Five Forces, Blue Ocean, positioning maps | Competitor analysis, market positioning |
-| `market-sizing-analysis` | TAM/SAM/SOM using top-down, bottom-up, value theory | Market opportunity sizing, investor decks |
-| `startup-financial-modeling` | 3-5 year financial projections, revenue models, scenario planning | Financial forecasts, burn rate, runway |
-| `startup-metrics-framework` | SaaS metrics — MRR, ARR, CAC, LTV, burn multiple, Rule of 40 | Unit economics, investor reporting |
-| `data-storytelling` | Transform data into narratives with setup→conflict→resolution | Executive presentations, data reports |
-| `kpi-dashboard-design` | KPI selection, visualization patterns, strategic/tactical metrics | Business dashboards, metric design |
-| `cost-optimization` | Cloud cost rightsizing, tagging, reserved instances | Reducing infrastructure costs |
-| `team-composition-analysis` | Team structures, hiring plans, compensation, equity | Org design, hiring plans |
-| `employment-contract-templates` | Employment contracts, offer letters, HR policies | Drafting agreements, HR |
-| `billing-automation` | Recurring billing, invoicing, dunning, proration, tax | Subscription billing |
-| `risk-metrics-calculation` | VaR, CVaR, Sharpe, Sortino, drawdown analysis | Portfolio risk, risk monitoring |
+## Superpowers (obra/superpowers)
 
-## Design & Frontend
+Core software-engineering disciplines. Many of these reference each other (e.g., `requesting-code-review` dispatches via `subagent-driven-development`).
 
-| Skill | Description | When to use |
-|-------|-------------|-------------|
-| `frontend-design` | Production-grade frontend interfaces, avoids generic AI aesthetics | Web components, pages, applications |
-| `tailwind-design-system` | Design systems with Tailwind CSS v4, tokens, component libraries | Component libraries, design standardization |
-| `responsive-design` | Container queries, fluid typography, adaptive layouts | Building responsive interfaces |
-| `interaction-design` | Microinteractions, motion, transitions, user feedback | UI polish, loading states, delightful UX |
-| `visual-design-foundations` | Typography, color theory, spacing systems, iconography | Design tokens, style guides |
-| `design-system-patterns` | Scalable design systems with tokens, theming, component arch | Theme switching, component libraries |
-| `web-component-design` | React/Vue/Svelte component patterns, composition | UI component libraries |
-| `web-design-guidelines` | Review UI code for Web Interface Guidelines compliance | UI review, UX review |
-| `accessibility-compliance` | WCAG 2.2 compliance, ARIA patterns, assistive tech | Accessibility audits, inclusive UX |
+| Skill | When to use |
+|-------|-------------|
+| `brainstorming` | Before any creative work — features, components, functionality |
+| `writing-plans` | Before touching code on multi-step tasks |
+| `executing-plans` | Implementation sessions with batched review |
+| `dispatching-parallel-agents` | 2+ independent concurrent tasks |
+| `subagent-driven-development` | Plans with independent tasks in current session |
+| `test-driven-development` | Before writing implementation code |
+| `systematic-debugging` | Before proposing fixes for any bug |
+| `requesting-code-review` | Before merging, after completing features |
+| `receiving-code-review` | When receiving review comments |
+| `finishing-a-development-branch` | When implementation is complete and tests pass |
+| `verification-before-completion` | Before committing or creating PRs |
+| `using-git-worktrees` | Feature isolation, parallel work |
+| `using-superpowers` | Established at session start — how to find/use skills |
+| `writing-skills` | Creating new skills or modifying existing ones |
 
-## Engineering (General)
+---
 
-| Skill | Description | When to use |
-|-------|-------------|-------------|
-| `api-design-principles` | RESTful design, versioning, pagination, error handling | API design, endpoint planning |
-| `architecture-decision-records` | Structured ADRs for architectural choices | Documenting technical decisions |
-| `architecture-patterns` | Microservices, event-driven, CQRS, hexagonal | System design, architecture reviews |
-| `code-review-excellence` | Structured code review with security, performance, patterns | Reviewing PRs, code quality |
-| `codebase-audit` | Full codebase health assessment | Technical debt, architecture audit |
-| `documentation-expert` | Technical writing, API docs, READMEs, runbooks | Writing or improving docs |
-| `error-handling-patterns` | Error hierarchies, recovery, retry, circuit breakers | Robust error handling |
-| `git-advanced-workflows` | Rebasing, cherry-picking, bisect, reflog recovery | Advanced git operations |
-| `modern-javascript-patterns` | ES2024+, async patterns, modules, performance | Modern JS development |
-| `prompt-engineering-patterns` | Structured prompting, chain-of-thought, few-shot | Better AI interactions |
-| `database-migration` | Schema evolution, zero-downtime migrations, rollback | Database changes |
-| `secrets-management` | Vault, env vars, rotation, CI/CD secrets | Secure credential handling |
+## df-claude-skills (fernandezdiegoh/df-claude-skills)
 
-## Python
+| Skill | When to use |
+|-------|-------------|
+| `codebase-audit` | Full architecture / security / tech-debt audit |
+| `documentation-expert` | Audit, create, and improve project documentation |
 
-| Skill | Description | When to use |
-|-------|-------------|-------------|
-| `python-design-patterns` | Factory, strategy, observer, decorator in Python | Python architecture |
-| `python-testing-patterns` | Pytest, fixtures, mocking, property-based testing | Python test suites |
-| `python-error-handling` | Exception hierarchies, context managers, retry patterns | Robust Python error handling |
-| `python-project-structure` | Package layout, pyproject.toml, src layout | New Python projects |
+---
 
-## Next.js / React
+## AIOS-bundled (this framework)
 
-| Skill | Description | When to use |
-|-------|-------------|-------------|
-| `next-best-practices` | App Router, server components, data fetching, caching | Next.js development |
-| `nextjs-app-router-patterns` | Route groups, parallel routes, intercepting routes | Advanced Next.js routing |
-| `react-state-management` | Context, Zustand, Jotai, server state patterns | React state architecture |
+49 skills across coding, design, engineering, security, finance, healthcare, and Obsidian-specific patterns. Browse `skills/aios/` for the full list.
 
-## Security
+Headline grouping:
 
-| Skill | Description | When to use |
-|-------|-------------|-------------|
-| `security-requirement-extraction` | STRIDE-based security requirements from specs | Security planning |
-| `stride-analysis-patterns` | Threat modeling with STRIDE methodology | Threat analysis |
-| `threat-mitigation-mapping` | Map threats to mitigations with coverage tracking | Security architecture |
-| `sast-configuration` | Static analysis tool setup and tuning | Code security scanning |
-| `pci-compliance` | PCI DSS requirements, SAQ selection, evidence | Payment compliance |
+**Engineering**
+- `karpathy-coding` · `code-review-excellence` · `architecture-decision-records` · `architecture-patterns` · `api-design-principles` · `error-handling-patterns` · `git-advanced-workflows`
+- `database-migration` · `python-{design-patterns,error-handling,project-structure,testing-patterns}` · `modern-javascript-patterns` · `next-best-practices` · `nextjs-app-router-patterns` · `react-state-management`
 
-## Venture-flavored skills
+**Design**
+- `frontend-design` · `design-system-patterns` · `visual-design-foundations` · `interaction-design` · `tailwind-design-system` · `responsive-design` · `accessibility-compliance` · `web-component-design` · `web-design-guidelines` · `data-storytelling` · `kpi-dashboard-design`
 
-The framework ships only venture-agnostic skills. Company-specific skills live in operator vaults under `skills/<company>/<skill-name>/` — same convention as `agents/<company>/`, `templates/<company>/`, `plugins/<company>/<plugin>/`.
+**Security**
+- `sast-configuration` · `secrets-management` · `stride-analysis-patterns` · `security-requirement-extraction` · `threat-mitigation-mapping` · `pci-compliance`
 
-Examples (in chuy's personal vault, not in framework):
-- `skills/sovra/web-design/` — Sovra brand tokens, typography, sections, animations
+**Finance / Strategy**
+- `billing-automation` · `cost-optimization` · `competitive-landscape` · `market-sizing-analysis` · `startup-financial-modeling` · `startup-metrics-framework` · `risk-metrics-calculation` · `team-composition-analysis` · `employment-contract-templates`
+
+**Obsidian / Content / Misc**
+- `obsidian-markdown` · `obsidian-bases` · `obsidian-cli` · `json-canvas` · `defuddle` · `explain-code` · `prompt-engineering-patterns`
+
+---
+
+## Adding skills
+
+**New AIOS-bundled skill** — drop into `skills/aios/<skill-name>/SKILL.md`, add to this index.
+
+**Vendor a skill from a new upstream** — create `skills/<source-name>/`, copy the SKILL.md under it preserving attribution, add a new row to "Source folders" above with the upstream URL + license.
+
+**Your own personal skill** — `skills/custom/<skill-name>/SKILL.md`. Survives `/aios:update`. Never gets overwritten.
+
+---
+
+## Upstream freshness
+
+`/aios:housekeeping` includes a bucket that checks each upstream-sourced skill folder for new commits at the upstream repo. If updates exist, you get a summary of what changed and the choice to pull/cherry-pick.

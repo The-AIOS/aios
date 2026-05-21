@@ -4,7 +4,7 @@ tags:
   - command
   - daily
 description: Generate a grounded daily plan from recent notes, open threads, and priorities
-allowed-tools: mcp__obsidian__*, mcp__google-workspace__*, mcp__google-workspace-personal__*, Read, Bash(cd ~/obsidian && git:*), Bash(gh:*), Bash(date:*), Bash(uv run ~/obsidian/hooks/pipeline-executor.py:*)
+allowed-tools: mcp__obsidian__*, mcp__google-workspace__*, mcp__google-workspace-personal__*, Read, Bash(cd ~/aios && git:*), Bash(gh:*), Bash(date:*), Bash(uv run ~/aios/hooks/pipeline-executor.py:*)
 ---
 
 # /today — Daily Plan
@@ -13,13 +13,13 @@ You are generating today's daily plan for the vault owner by reading their Obsid
 
 ## Pre-loaded API data
 
-Message 1a runs `uv run ~/obsidian/hooks/pipeline-executor.py --command today` which pre-loads Google Calendar events (all configured accounts), Google Tasks (open), and Slack unreads. The output starts with `# Pre-loaded API Data`.
+Message 1a runs `uv run ~/aios/hooks/pipeline-executor.py --command today` which pre-loads Google Calendar events (all configured accounts), Google Tasks (open), and Slack unreads. The output starts with `# Pre-loaded API Data`.
 
 **DO NOT call Google Calendar, Google Tasks, or Slack APIs.** The data is in the executor output. Use it directly for the Calendar section, task merging, Horizon, and Slack triage.
 
 **If the executor output shows `❌ FAILED` for a specific source:** tell the user what failed and how to fix it (the error message includes the fix). Use the data that did load. Do not call failed APIs yourself.
 
-**If the executor crashes entirely:** the output will say `❌ Pipeline executor crashed`. Tell the user to check `~/obsidian/hooks/pipeline-executor.log`. Do not attempt to call the APIs yourself.
+**If the executor crashes entirely:** the output will say `❌ Pipeline executor crashed`. Tell the user to check `~/aios/hooks/pipeline-executor.log`. Do not attempt to call the APIs yourself.
 
 ## Progress tracking
 
@@ -37,10 +37,10 @@ Mark each task `in_progress` when you start it and `completed` when done.
 
 ### Message 1a — Bootstrap (one parallel batch)
 Fire these calls in **one message**:
-- `Bash(uv run ~/obsidian/hooks/pipeline-executor.py --command today)` — **runs the pipeline executor.** Pre-loads Google Calendar, Tasks, and Slack data. Output is the `# Pre-loaded API Data` section. If it fails, the output will say what went wrong.
+- `Bash(uv run ~/aios/hooks/pipeline-executor.py --command today)` — **runs the pipeline executor.** Pre-loads Google Calendar, Tasks, and Slack data. Output is the `# Pre-loaded API Data` section. If it fails, the output will say what went wrong.
 - `Bash(date +"%A, %B %d, %Y")` — **derive the weekday explicitly.** Store this and reference it throughout (day-specific logic like Wednesday drift check, Friday learnings). Never guess the weekday from context.
-- `Bash(cfg=~/obsidian/.vault-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && echo "vault-update: unreachable" || { [ "$h" = "$r" ] && echo "vault-update: synced" || echo "vault-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "vault-update: no-config"; fi)` — **infrastructure freshness check.** Reads `.vault-update`, asks team repo for current HEAD via `git ls-remote`, compares hashes. Returns one of: `synced` (no action), `BEHIND ...` (team repo has new commits), `unreachable` (network/auth issue), `no-config` (no Organization in USER.md). Surface the result per § Vault-update freshness rendering below.
-- `Bash(prev=$(find ~/obsidian/vault/01\ -\ calendar -maxdepth 2 -type f 2>/dev/null | grep -E '/[0-9]{4}-[0-9]{2}-[0-9]{2}\.md$' | grep -v "$(date +%Y-%m-%d)" | sort -r | head -1); if [ -z "$prev" ]; then echo "close-day-precondition: no-prior-note"; elif grep -q "^## Close of Day" "$prev" 2>/dev/null; then echo "close-day-precondition: closed ($(basename "$prev" .md))"; else echo "close-day-precondition: MISSING ($(basename "$prev" .md)) — must run /close-day first"; fi)` — **close-day precondition check.** Detects whether the most recent daily note BEFORE today has the `## Close of Day` heading. Returns one of: `closed (date)` (previous note closed — proceed normally), `MISSING (date)` (skipped close-day — guard fires per § Close-of-day precondition rendering below, BEFORE Message 1b runs), `no-prior-note` (first run / fresh vault — proceed normally).
+- `Bash(cfg=~/aios/.vault-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && echo "vault-update: unreachable" || { [ "$h" = "$r" ] && echo "vault-update: synced" || echo "vault-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "vault-update: no-config"; fi)` — **infrastructure freshness check.** Reads `.vault-update`, asks team repo for current HEAD via `git ls-remote`, compares hashes. Returns one of: `synced` (no action), `BEHIND ...` (team repo has new commits), `unreachable` (network/auth issue), `no-config` (no Organization in USER.md). Surface the result per § Vault-update freshness rendering below.
+- `Bash(prev=$(find ~/aios/vault/01\ -\ calendar -maxdepth 2 -type f 2>/dev/null | grep -E '/[0-9]{4}-[0-9]{2}-[0-9]{2}\.md$' | grep -v "$(date +%Y-%m-%d)" | sort -r | head -1); if [ -z "$prev" ]; then echo "close-day-precondition: no-prior-note"; elif grep -q "^## Close of Day" "$prev" 2>/dev/null; then echo "close-day-precondition: closed ($(basename "$prev" .md))"; else echo "close-day-precondition: MISSING ($(basename "$prev" .md)) — must run /close-day first"; fi)` — **close-day precondition check.** Detects whether the most recent daily note BEFORE today has the `## Close of Day` heading. Returns one of: `closed (date)` (previous note closed — proceed normally), `MISSING (date)` (skipped close-day — guard fires per § Close-of-day precondition rendering below, BEFORE Message 1b runs), `no-prior-note` (first run / fresh vault — proceed normally).
 - `Read` → `USER.md` (if it exists — for Sources config, `### /today` command personalizations, and organization settings)
 - `Read` → `INTENT.md` (if it exists — for autonomy levels, focus weighting, parked item suppression, tradeoff rules)
 - `mcp__obsidian__read_note` → `00 - notes/projects/_index.md`
@@ -138,7 +138,7 @@ From the data already loaded — process everything in memory:
 - Write the daily note (preserving user edits if note already exists — keep checked items, meeting notes, user-added subtasks)
 
 ### Message 3 — Commit + push
-- `cd ~/obsidian && git add -A && git commit -m "Daily plan {date}" && git push`
+- `cd ~/aios && git add -A && git commit -m "Daily plan {date}" && git push`
 
 ## First run handling
 
@@ -290,7 +290,7 @@ After writing the Radar table, scan the past 7 daily notes (`vault/01 - calendar
   	- [ ] blocked by API integration
   		- [ ] Complete API setup _(suggested)_
   ```
-- After writing the note, commit and push: `cd ~/obsidian && git add -A && git commit -m "Daily plan {date}" && git push`
+- After writing the note, commit and push: `cd ~/aios && git add -A && git commit -m "Daily plan {date}" && git push`
 
 ## Command Discovery Engine
 

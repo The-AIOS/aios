@@ -12,13 +12,13 @@ How to launch, name, and resume sessions.
 
 | You want to... | Command | Notes |
 |---|---|---|
-| Launch a session in the vault | `cd ~/obsidian && claude` | Loads CLAUDE.md + USER.md + observed context |
+| Launch a session in the vault | `cd ~/aios && claude` | Loads CLAUDE.md + USER.md + observed context |
 | Open a named worker session | `spawn <name> "<task>"` | New terminal tab/window, named identity, task pre-loaded |
 | Open a named session, no task | `spawn <name>` | Sends `"Start session."` as the first prompt |
 | Spawn an ad-hoc worker (no name) | `spawn` | Generates a memorable adj-animal handle (e.g. `amber-otter`) + prints a tip surfacing available specific agents. Great when you want a fresh session and don't need a meaningful name yet. |
 | Resume a named worker | `spawn <name>` again | Wrapper detects existing session, reattaches |
 | Resume any past session | `claude --resume` | Pick from the list of recent sessions |
-| Install the spawn wrapper | `bash ~/obsidian/hooks/claude-identity/install-wrappers.sh` | One-time setup. Idempotent — safe to re-run. |
+| Install the spawn wrapper | `bash ~/aios/hooks/claude-identity/install-wrappers.sh` | One-time setup. Idempotent — safe to re-run. |
 | Run Claude without spawn | `claude --remote-control --name <name>` | Bypasses wrapper; not recommended |
 
 **Why use `spawn` over raw `claude`:** the wrapper sets `$CLAUDE_AGENT_NAME` so CLAUDE.md can match an agent profile (`agents/<name>.md`), greet you in character, and route close-session reports back to the right project. Raw `claude` works but loses the identity-aware behavior.

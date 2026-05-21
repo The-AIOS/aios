@@ -193,7 +193,7 @@ The `plugins/aios/commands/` repo folder is the source of truth. Two derived loc
 - **Marketplace/cache file exists, repo file missing** → command was deleted in source but stale copy lingers in plugin paths
 
 **Auto-apply candidates** (low-stakes, deterministic):
-- Repo → marketplace + cache copy when repo is the only authoritative source. Use `cp ~/obsidian/plugins/aios/commands/{name}.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/` and the equivalent for cache. Confirm post-copy that all 3 files match (`diff -q`).
+- Repo → marketplace + cache copy when repo is the only authoritative source. Use `cp ~/aios/plugins/aios/commands/{name}.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/` and the equivalent for cache. Confirm post-copy that all 3 files match (`diff -q`).
 
 **Propose-only candidates** (need user judgment):
 - Plugin paths have content the repo doesn't — possible accidental delete, or in-progress refactor. Ask before removing.
@@ -440,6 +440,39 @@ Comprehensive integrity check of the two operating files that govern every sessi
 
 **Why this bucket exists:** CLAUDE.md and USER.md are the two highest-blast-radius files in the system. Bucket 13 already covered USER.md drift; Bucket 17 extends to CLAUDE.md + comprehensive cross-file checks (path consistency, ref resolution, section completeness, personal-slug leakage). The 2026-05-21 leakage cleanup (`813aa68`, `679843a`) caught 11 canonical files with personal-slug refs that had silently shipped — this bucket prevents that recurrence by running the check proactively, not reactively.
 
+#### Bucket 18: Upstream source freshness (NEW)
+
+`skills/` is **source-grouped** — bundled framework skills live at `skills/aios/`, while vendored skills from upstream repos live at `skills/<source>/` (e.g., `skills/superpowers/`, `skills/df-claude-skills/`). Each source has an upstream URL declared in `skills/_index.md` "Source folders" table. This bucket checks each upstream for new commits since the last sync.
+
+**The principle:** vendoring upstream skills only adds value if we actually track their evolution. Otherwise we ship stale forks while better versions exist publicly. Bucket 18 surfaces freshness signals so operators can choose to update.
+
+**Detection:**
+
+1. **Parse `skills/_index.md`** — extract the "Source folders" table. For each row that has an upstream URL (skips `skills/aios/` and `skills/custom/` which have no external upstream).
+2. **For each upstream source:**
+   - Read the local "last sync hash" from `skills/<source>/.upstream-sync` (a small file like `repo=github.com/obra/superpowers\nhash={short-sha}\ndate=2026-05-21`). If missing, treat as "never synced" — capture current upstream HEAD as the baseline (no proposal generated this round).
+   - Query the upstream: `gh api repos/<org>/<repo>/commits/HEAD --jq '.sha'` for the current HEAD.
+   - Compare local vs upstream hash. If equal → mark `current`. If different → mark `behind`.
+3. **For `behind` sources** — fetch the commit list since local hash via `gh api "repos/<org>/<repo>/compare/<local>...HEAD" --jq '.commits[] | .commit.message'` for change summary (top 5 commits).
+4. **For each modified skill in the upstream:** diff against local. Show per-skill what changed (added/modified/deleted). Operator chooses per-skill: pull / skip / mark-divergent (we intentionally forked it).
+
+**Proposal table format:**
+
+| # | Source | Status | Behind by | Action |
+|---|---|---|---|---|
+| 18.1 | `skills/superpowers/` | 🟡 behind | 7 commits | [ ] review changes |
+| 18.2 | `skills/df-claude-skills/` | 🟢 current | — | — |
+
+**For approved pulls:**
+- Update `skills/<source>/.upstream-sync` with new hash + date
+- Apply the diff via `git mv` / `Write` for each changed skill
+- If a skill was deleted upstream — propose deleting locally OR moving to `skills/aios/` if you want to keep maintaining it
+- Surface license/attribution requirements (LICENSE files in upstream — copy if changed)
+
+**Cadence:** monthly minimum, or weekly if you're actively pulling from a fast-moving upstream like obra/superpowers.
+
+**Why this bucket exists:** the 2026-05-21 skills reorg made source attribution durable (`skills/<source>/<skill>/` instead of flat). The reorg only pays off if we close the loop — staying current with upstream. Without this bucket, the source folders become museum pieces. With it, AIOS becomes an active integrator of best-in-class skills across the ecosystem.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:
@@ -464,6 +497,7 @@ Categorize all findings into one review table:
 - Missed reports: {N} proposals
 - Radar health audit: {N} proposals
 - CLAUDE.md + USER.md health check: {N} proposals
+- Upstream source freshness: {N} sources behind, {M} sources current
 
 ### 🟢 Auto-applied (no approval needed)
 {Low-stakes mechanical fixes — link adds where unambiguous, snapshot timestamp updates, obvious [x] marks}
@@ -519,7 +553,7 @@ Write a log to `00 - notes/logs/command-logs/housekeeping-{YYYY-MM-DD}.md` with:
 Commit and push:
 
 ```bash
-cd ~/obsidian && git add -A && git commit -m "Housekeeping {date}" && git push
+cd ~/aios && git add -A && git commit -m "Housekeeping {date}" && git push
 ```
 
 ## Rules

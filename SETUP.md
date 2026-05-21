@@ -13,7 +13,7 @@ Set up my AI-OS from https://github.com/The-AIOS/aios
 ```
 
 Claude reads this file and handles everything:
-1. **Clones** the repo to `~/obsidian`
+1. **Clones** the repo to `~/aios`
 2. **Installs** MCPs, plugins, and CLI tools (auto-detects what's already installed)
 3. **Creates a private repo** for your vault (`gh repo create --private`) and switches the remote — your personal content never goes back to the shared repo
 4. **Configures** `USER.md` with your sources, organization, and identity
@@ -123,7 +123,7 @@ claude
 The Obsidian MCP lets Claude read and write your vault notes directly.
 
 ```bash
-claude mcp add obsidian -- npx -y @mauricio.wolff/mcp-obsidian@latest ~/obsidian/vault
+claude mcp add obsidian -- npx -y @mauricio.wolff/mcp-obsidian@latest ~/aios/vault
 ```
 
 ### 2. Google Workspace MCP (optional but recommended)
@@ -131,7 +131,7 @@ claude mcp add obsidian -- npx -y @mauricio.wolff/mcp-obsidian@latest ~/obsidian
 Enables Google Calendar, Tasks, Drive, Docs, Sheets, and Slides access. The OAuth app credentials are **bundled in the repo** at `mcps/google-workspace-mcp/oauth.json`.
 
 ```bash
-cd ~/obsidian
+cd ~/aios
 CLIENT_ID=$(python3 -c "import json; print(json.load(open('mcps/google-workspace-mcp/oauth.json'))['client_id'])")
 CLIENT_SECRET=$(python3 -c "import json; print(json.load(open('mcps/google-workspace-mcp/oauth.json'))['client_secret'])")
 
@@ -141,7 +141,7 @@ claude mcp add google-workspace \
   -e MCP_SINGLE_USER_MODE=true \
   -e USER_GOOGLE_EMAIL="you@company.io" \
   -e WORKSPACE_MCP_CREDENTIALS_DIR="$HOME/.google_workspace_mcp/credentials" \
-  -- uv run --directory ~/obsidian/mcps/google-workspace-mcp python -m main --single-user --permissions \
+  -- uv run --directory ~/aios/mcps/google-workspace-mcp python -m main --single-user --permissions \
   drive:full sheets:full slides:full docs:full calendar:full tasks:full
 ```
 
@@ -161,8 +161,8 @@ Claude uses `gh` directly — it's a CLI tool, not an MCP.
 Provides `conversations_unreads` — used by the pipeline executor for daily triage.
 
 ```bash
-cd ~/obsidian/mcps/slack-mcp && npm install --production
-claude mcp add slack-local -- node ~/obsidian/mcps/slack-mcp/src/server.js
+cd ~/aios/mcps/slack-mcp && npm install --production
+claude mcp add slack-local -- node ~/aios/mcps/slack-mcp/src/server.js
 npx @jtalk22/slack-mcp --setup
 ```
 
@@ -176,13 +176,13 @@ The pipeline executor (`hooks/pipeline-executor.py`) pre-loads Google Calendar, 
 mkdir -p ~/.claude/plugins/marketplaces/the-aios/.claude-plugin
 mkdir -p ~/.claude/plugins/marketplaces/the-aios/plugins/aios/{commands,.claude-plugin}
 
-cp ~/obsidian/plugins/aios/commands/*.md \
+cp ~/aios/plugins/aios/commands/*.md \
   ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
 
-cp ~/obsidian/.claude-plugin/marketplace.json \
+cp ~/aios/.claude-plugin/marketplace.json \
   ~/.claude/plugins/marketplaces/the-aios/.claude-plugin/marketplace.json
 
-cp ~/obsidian/plugins/aios/.claude-plugin/plugin.json \
+cp ~/aios/plugins/aios/.claude-plugin/plugin.json \
   ~/.claude/plugins/marketplaces/the-aios/plugins/aios/.claude-plugin/plugin.json
 
 claude plugin marketplace add ~/.claude/plugins/marketplaces/the-aios/
@@ -194,7 +194,7 @@ Add `"aios@the-aios": true` to `enabledPlugins` in `~/.claude/settings.json`.
 ### 7. Calendar folder
 
 ```bash
-mkdir -p ~/obsidian/vault/01\ -\ calendar/$(date +%Y-%m)
+mkdir -p ~/aios/vault/01\ -\ calendar/$(date +%Y-%m)
 ```
 
 ### 8. Create your private repo and switch remote
@@ -202,7 +202,7 @@ mkdir -p ~/obsidian/vault/01\ -\ calendar/$(date +%Y-%m)
 Your vault should live in your own private repo — not the shared team repo. Claude does this automatically during setup. Manual:
 
 ```bash
-cd ~/obsidian
+cd ~/aios
 gh repo create {your-username}/obsidian --private --source=. --push
 ```
 
@@ -214,7 +214,7 @@ The bundled `spawn` shell function lets you open a named worker session with one
 
 **macOS / Linux:**
 ```bash
-bash ~/obsidian/hooks/claude-identity/install-wrappers.sh
+bash ~/aios/hooks/claude-identity/install-wrappers.sh
 source ~/.zshrc   # or ~/.bashrc
 ```
 
@@ -250,7 +250,7 @@ Hard preconditions:
 
 ### 1. Open Obsidian
 
-Add the vault folder: `~/obsidian/vault` (Obsidian → Open another vault → Open folder as vault)
+Add the vault folder: `~/aios/vault` (Obsidian → Open another vault → Open folder as vault)
 
 ### 2. Fill in USER.md
 
@@ -380,7 +380,7 @@ No platform-specific gotchas observed. Brew handles dependencies cleanly. If `cl
 → `claude mcp list` to verify. Re-run the add command if missing.
 
 **Commands writing to wrong folder**
-→ MCP path must point to `~/obsidian/vault` (the vault directory), not `~/obsidian` (the repo root).
+→ MCP path must point to `~/aios/vault` (the vault directory), not `~/aios` (the repo root).
 
 **Edited a command but change isn't showing**
 → Sync to cache: `claude plugin update aios@the-aios`

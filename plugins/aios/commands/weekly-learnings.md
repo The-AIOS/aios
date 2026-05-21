@@ -4,7 +4,7 @@ tags:
   - command
   - weekly
 description: Compile the week's insights from daily notes into a single writing-ready summary
-allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/obsidian && git:*), Bash(ls:*), Bash(cat:*), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*)
+allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/aios && git:*), Bash(ls:*), Bash(cat:*), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*)
 ---
 
 # /weekly-learnings — Weekly Summary
@@ -389,7 +389,7 @@ Gather numbers from these sources in order:
 4. **Observed context** — `00 - notes/context/observed/growth.md` for growth edge count, `patterns.md` for behavioral pattern count.
 5. **Prior period's HTML/PDF — MANDATORY, never estimate.** The prior HTML lives at `vault/03 - export/reports/weekly/Week{N-1}-AI-OS.html` — grep it directly. If only the PDF exists, extract text first:
    ```bash
-   pdftotext "$HOME/obsidian/vault/03 - export/reports/weekly/Week{N-1}-AI-OS.pdf" /tmp/w{N-1}-content.txt
+   pdftotext "$HOME/aios/vault/03 - export/reports/weekly/Week{N-1}-AI-OS.pdf" /tmp/w{N-1}-content.txt
    ```
    Use this for EVERY number in the "Previous Period" column — both the narrative compare block on page 1 AND the compound curve table on page 3. If the prior file doesn't exist, flag "Prior period data not available — comparison column skipped" rather than invent. **Known failure mode (2026-04-22 cascade fix):** past runs invented prior-period numbers, producing false decline narratives — W16 reported W15 = ~12 when actual was 25; W15 reported W14 = ~18 when actual was ~29; W14 reported W13 = ~25 when actual was 10. Three weeks of fiction before correction. Never estimate prior numbers.
 6. **Session insights** — `00 - notes/context/observed/session-insights.md` for the period's key learnings.
@@ -407,7 +407,7 @@ For the current period's people-equivalent row, **count** from the week's actual
 2. Write to `/tmp/weekly-stats-W{N}.html` (or `M{N}`, `Q{N}`, `H{N}`, `Y{YYYY}` for bigger periods).
 3. **Always save HTML to vault** (the editable source):
 ```bash
-cp /tmp/weekly-stats-W{N}.html "$HOME/obsidian/vault/03 - export/reports/weekly/Week{N}-AI-OS.html"
+cp /tmp/weekly-stats-W{N}.html "$HOME/aios/vault/03 - export/reports/weekly/Week{N}-AI-OS.html"
 ```
 
 4. **Ask: "Want the PDF version too?"** If yes:
@@ -415,7 +415,7 @@ cp /tmp/weekly-stats-W{N}.html "$HOME/obsidian/vault/03 - export/reports/weekly/
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --headless \
   --no-pdf-header-footer \
-  --print-to-pdf="$HOME/obsidian/vault/03 - export/reports/weekly/Week{N}-AI-OS.pdf" \
+  --print-to-pdf="$HOME/aios/vault/03 - export/reports/weekly/Week{N}-AI-OS.pdf" \
   /tmp/weekly-stats-W{N}.html
 ```
 

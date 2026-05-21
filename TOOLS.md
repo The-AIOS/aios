@@ -162,9 +162,9 @@ Rotates between two or more Anthropic accounts when the 5h or 7d rate limit near
 
 ```bash
 # inspect / rotate manually (after first-time setup)
-~/obsidian/hooks/claude-identity/claude-identity.sh whoami    # current + next in rotation
-~/obsidian/hooks/claude-identity/claude-identity.sh switch    # rotate to the next account
-~/obsidian/hooks/claude-identity/claude-identity.sh list      # all accounts + saved-state
+~/aios/hooks/claude-identity/claude-identity.sh whoami    # current + next in rotation
+~/aios/hooks/claude-identity/claude-identity.sh switch    # rotate to the next account
+~/aios/hooks/claude-identity/claude-identity.sh list      # all accounts + saved-state
 ```
 
 Setup is opt-in and walks through `/aios:update` — see the `2026-04-25 — hooks/claude-identity` entry in `CHANGELOG.md` for the interactive walkthrough (your Claude session asks how many accounts you have, captures each, customizes the launchd Label, wires statusLine). Full reference + lessons learned in `hooks/claude-identity/README.md`. Hard preconditions: macOS + ≥ 2 Anthropic accounts.
@@ -192,7 +192,7 @@ The canonical surface is Claude Code (this framework is named for Anthropic's pl
 
 **For Gemini CLI / Cursor / Cline / other agentic IDEs:**
 - Point the LLM at `plugins/aios/commands/` as the command source folder. Most IDE-integrated agents allow custom command directories via config — set yours there.
-- For one-off use, paste a command's content into the conversation: "follow the instructions in `plugins/aios/commands/today.md`, treating my vault root as `~/obsidian/`."
+- For one-off use, paste a command's content into the conversation: "follow the instructions in `plugins/aios/commands/today.md`, treating my vault root as `~/aios/`."
 - The plugin manifests (`.claude-plugin/marketplace.json`, `plugins/aios/.claude-plugin/plugin.json`) are Claude Code's plugin-loader scaffolding — other LLMs ignore them. They don't interfere.
 - Skills (`skills/*/SKILL.md`) follow [Anthropic's open Skills spec](https://github.com/anthropics/skills) — already cross-LLM compatible.
 - MCPs (`mcps/`) are protocol-level, not Claude-specific. Any MCP-capable LLM (Claude, Gemini via custom adapters, Cursor) can connect to them.

@@ -31,7 +31,7 @@ The user provides one of:
 **File conversion (MarkItDown):**
 For non-markdown files, convert first using the MarkItDown wrapper:
 ```bash
-python3 ~/obsidian/hooks/markitdown-convert.py <input_file> /tmp/ingest-source.md
+python3 ~/aios/hooks/markitdown-convert.py <input_file> /tmp/ingest-source.md
 ```
 Then read the converted markdown. Supported formats: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), images (with OCR), audio (with transcription), HTML, CSV, JSON, XML, ZIP, YouTube URLs, EPUB.
 

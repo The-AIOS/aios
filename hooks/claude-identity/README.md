@@ -64,12 +64,12 @@ Multi-account Claude Code identity manager + quota autopilot. One tool that:
 > 1. **macOS only.** The autopilot uses `security` (Keychain), `launchctl`, `~/Library/LaunchAgents/`, and `osascript` — all macOS-specific. If `uname -s` ≠ `Darwin`, tell the user: *"This autopilot is macOS-only — it relies on Keychain Services and launchd. The scripts are now in your repo but won't run on Linux/Windows. Skipping setup."* Then **skip the rest of setup entirely**.
 > 2. **≥ 2 Anthropic accounts.** This autopilot only brings value with multiple accounts in rotation. If step 1 (below) establishes the user has fewer than 2, **skip steps 2 through 7 entirely** — the scripts stay dormant in their repo until they configure ≥ 2 accounts in `USER.md`. Don't try to run capture, plist install, or statusLine wire on a single-account user.
 
-Paths below assume the vault is at `~/obsidian`. If you cloned elsewhere, either symlink `~/obsidian → /your/path` or substitute the full path.
+Paths below assume the vault is at `~/aios`. If you cloned elsewhere, either symlink `~/aios → /your/path` or substitute the full path.
 
 ### 1. Configure Anthropic accounts in USER.md (interactive)
 
 **State to detect:**
-- Read `~/obsidian/USER.md` (or wherever the user's `USER.md` lives — it's at the repo root of their local clone).
+- Read `~/aios/USER.md` (or wherever the user's `USER.md` lives — it's at the repo root of their local clone).
 - Look for `## Anthropic accounts (quota management)` section. Parse any existing `N. \`email\`` lines.
 
 **If the section already has ≥ 2 accounts:** show the list and ask: *"You already have {N} accounts configured: {list}. Add more, replace the list, or skip this step?"* Take action accordingly. If they say skip, move to step 2.
@@ -111,11 +111,11 @@ Confirm what was written: *"Added {N} accounts to USER.md → ## Anthropic accou
 >
 > *Want to do this now, or skip and capture all accounts manually later?"*
 
-If user wants to skip: tell them they can run `~/obsidian/hooks/claude-identity/claude-identity.sh switch --capture` after each `/login` later. Move on.
+If user wants to skip: tell them they can run `~/aios/hooks/claude-identity/claude-identity.sh switch --capture` after each `/login` later. Move on.
 
 If user goes through the flow: after each `/login` confirmation, run:
 ```bash
-~/obsidian/hooks/claude-identity/claude-identity.sh switch --capture
+~/aios/hooks/claude-identity/claude-identity.sh switch --capture
 ```
 Verify the capture succeeded with `claude-identity.sh list`. Repeat for each account.
 
@@ -137,8 +137,8 @@ Pick the matching rc file (`~/.zshrc` for zsh, `~/.bashrc` for bash). Read it. C
 cat >> ~/.zshrc <<'EOF'
 
 # claude-identity quota autopilot
-claude-whoami() { ~/obsidian/hooks/claude-identity/claude-identity.sh whoami; }
-claude-switch() { ~/obsidian/hooks/claude-identity/claude-identity.sh switch "$@"; }
+claude-whoami() { ~/aios/hooks/claude-identity/claude-identity.sh whoami; }
+claude-switch() { ~/aios/hooks/claude-identity/claude-identity.sh switch "$@"; }
 EOF
 ```
 
@@ -180,7 +180,7 @@ To change the org name: copy the bundled plist to `~/Library/LaunchAgents/com.{o
 
 ```bash
 # (Claude runs these — substituting {org})
-cp ~/obsidian/hooks/claude-identity/com.{org}.claude-quota-watch.plist \
+cp ~/aios/hooks/claude-identity/com.{org}.claude-quota-watch.plist \
    ~/Library/LaunchAgents/com.{org}.claude-quota-watch.plist
 # (to set a custom org name) edit the Label inside the copied plist
 launchctl load ~/Library/LaunchAgents/com.{org}.claude-quota-watch.plist
@@ -210,8 +210,8 @@ python3 - <<'PY'
 import json, os
 p = os.path.expanduser("~/.claude/settings.json")
 d = json.load(open(p)) if os.path.exists(p) else {}
-cache_cmd = os.path.expanduser("~/obsidian/hooks/claude-identity/claude-identity.sh") + " cache"
-default_statusline = "python3 " + os.path.expanduser("~/obsidian/hooks/claude-identity/context-monitor.py")
+cache_cmd = os.path.expanduser("~/aios/hooks/claude-identity/claude-identity.sh") + " cache"
+default_statusline = "python3 " + os.path.expanduser("~/aios/hooks/claude-identity/context-monitor.py")
 existing = d.get("statusLine", {}).get("command", "") or default_statusline
 d["statusLine"] = {
     "type": "command",
@@ -229,8 +229,8 @@ python3 - <<'PY'
 import json, os
 p = os.path.expanduser("~/.claude/settings.json")
 d = json.load(open(p)) if os.path.exists(p) else {}
-cache_cmd = os.path.expanduser("~/obsidian/hooks/claude-identity/claude-identity.sh") + " cache"
-default_statusline = "python3 " + os.path.expanduser("~/obsidian/hooks/claude-identity/context-monitor.py")
+cache_cmd = os.path.expanduser("~/aios/hooks/claude-identity/claude-identity.sh") + " cache"
+default_statusline = "python3 " + os.path.expanduser("~/aios/hooks/claude-identity/context-monitor.py")
 d["statusLine"] = {
     "type": "command",
     "command": f"bash -c 'tee >({cache_cmd} > /dev/null) | {default_statusline}'"
@@ -250,7 +250,7 @@ Then say: *"Done. statusLine is wired. Now: close this Claude Code session and r
 After relaunching Claude Code, paste these into your shell:
 
 ```bash
-~/obsidian/hooks/claude-identity/claude-identity.sh list   # all accounts saved ✓
+~/aios/hooks/claude-identity/claude-identity.sh list   # all accounts saved ✓
 launchctl list | grep claude-quota-watch                   # com.{org}.claude-quota-watch present
 cat ~/.claude/rate-limit-cache.json                        # 5h/7d snapshot — should populate within seconds
 tail -3 ~/.claude/quota-watch.log                          # 1-min cadence ticks

@@ -45,7 +45,7 @@ pipx install mcp-atlassian
 **Use the wrapper script** — it reads env vars at launch so secrets never land in `~/.claude.json`:
 
 ```bash
-claude mcp add atlassian -- ~/obsidian/mcps/atlassian-mcp/run.sh
+claude mcp add atlassian -- ~/aios/mcps/atlassian-mcp/run.sh
 ```
 
 (The wrapper is `mcps/atlassian-mcp/run.sh` — it checks for the three env vars and calls `uvx mcp-atlassian` with them. DO NOT pass the token directly as an arg to `claude mcp add` — it gets stored in plaintext in your config.)

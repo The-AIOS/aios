@@ -26,12 +26,12 @@
 # ============================================================================
 # INSTALL ON A NEW MACHINE (macOS)
 # ============================================================================
-# All paths assume the vault is at ~/obsidian. Adjust if cloned elsewhere.
+# All paths assume the vault is at ~/aios. Adjust if cloned elsewhere.
 #
 # Step 1 — shell aliases. Add to ~/.zshrc (or ~/.bashrc):
 #
-#   claude-whoami() { ~/obsidian/hooks/claude-identity/claude-identity.sh whoami; }
-#   claude-switch() { ~/obsidian/hooks/claude-identity/claude-identity.sh switch "$@"; }
+#   claude-whoami() { ~/aios/hooks/claude-identity/claude-identity.sh whoami; }
+#   claude-switch() { ~/aios/hooks/claude-identity/claude-identity.sh switch "$@"; }
 #
 # Step 2 — populate USER.md → ## Anthropic accounts with a numbered list:
 #
@@ -57,7 +57,7 @@
 #   import json, os
 #   p = os.path.expanduser("~/.claude/settings.json")
 #   d = json.load(open(p)) if os.path.exists(p) else {}
-#   cmd = os.path.expanduser("~/obsidian/hooks/claude-identity/claude-identity.sh") + " cache"
+#   cmd = os.path.expanduser("~/aios/hooks/claude-identity/claude-identity.sh") + " cache"
 #   existing = d.get("statusLine", {}).get("command", "") \
 #              or "python3 ~/.claude/scripts/context-monitor.py"  # or your own
 #   d["statusLine"] = {"type": "command",
@@ -67,7 +67,7 @@
 #
 # Step 5 — load the launchd agent (runs `watch` every 10 min, swaps when near cap):
 #
-#   cp ~/obsidian/hooks/claude-identity/com.sovra.claude-quota-watch.plist ~/Library/LaunchAgents/
+#   cp ~/aios/hooks/claude-identity/com.sovra.claude-quota-watch.plist ~/Library/LaunchAgents/
 #   launchctl load ~/Library/LaunchAgents/com.sovra.claude-quota-watch.plist
 #
 # Verify: `claude-whoami` works, `claude mcp list` unchanged, after a few
@@ -103,7 +103,7 @@
 
 set -euo pipefail
 
-USER_MD="${USER_MD_PATH:-$HOME/obsidian/USER.md}"
+USER_MD="${USER_MD_PATH:-$HOME/aios/USER.md}"
 CLAUDE_JSON="$HOME/.claude.json"
 IDENTITIES_DIR="$HOME/.claude/identities"
 KEYCHAIN_SERVICE="Claude Code-credentials"

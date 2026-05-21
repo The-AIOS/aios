@@ -47,7 +47,7 @@ First run opens a browser for OAuth. Token cached at `~/.claude/spotify-cache.js
 ## Register with Claude Code
 
 ```bash
-claude mcp add spotify-dj -- ~/obsidian/mcps/spotify-dj-mcp/.venv/bin/python ~/obsidian/mcps/spotify-dj-mcp/server.py
+claude mcp add spotify-dj -- ~/aios/mcps/spotify-dj-mcp/.venv/bin/python ~/aios/mcps/spotify-dj-mcp/server.py
 ```
 
 Tools appear as `mcp__spotify-dj__*`.

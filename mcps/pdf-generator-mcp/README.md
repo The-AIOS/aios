@@ -7,7 +7,7 @@ Bundled MCP that converts markdown or HTML to a branded PDF via the standard vau
 - `markdown_to_pdf(markdown, output_path?, theme?)` — converts markdown to PDF, saves to disk, returns path.
 - `html_to_pdf(html, output_path?)` — converts HTML directly to PDF (useful when you already have a styled template).
 
-Output defaults to `~/obsidian/vault/03 - export/generated/{timestamp}.pdf`.
+Output defaults to `~/aios/vault/03 - export/generated/{timestamp}.pdf`.
 
 ## Example usage
 
@@ -42,7 +42,7 @@ None. Local binaries only.
 ## Register with Claude Code
 
 ```bash
-claude mcp add pdf-generator -- ~/obsidian/mcps/pdf-generator-mcp/.venv/bin/python ~/obsidian/mcps/pdf-generator-mcp/server.py
+claude mcp add pdf-generator -- ~/aios/mcps/pdf-generator-mcp/.venv/bin/python ~/aios/mcps/pdf-generator-mcp/server.py
 ```
 
 Tools appear as `mcp__pdf-generator__markdown_to_pdf` and `mcp__pdf-generator__html_to_pdf`.

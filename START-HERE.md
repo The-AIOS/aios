@@ -53,7 +53,7 @@ SETUP + `/cold-start-interview` wire all three layers — you don't have to thin
 Open any terminal. Type:
 
 ```
-cd ~/obsidian && claude
+cd ~/aios && claude
 ```
 
 Then in Claude:
@@ -63,7 +63,7 @@ Set up my AI-OS from https://github.com/The-AIOS/aios
 ```
 
 Claude reads `SETUP.md` and handles the rest:
-- Clones the AIOS framework to `~/obsidian` (if you haven't yet)
+- Clones the AIOS framework to `~/aios` (if you haven't yet)
 - Installs MCPs, plugins, and CLI tools (auto-detects what's already installed)
 - Creates **your** private GitHub repo for personal content and switches `origin` to it
 - Tracks the AIOS framework via `.vault-update` so `/aios:update` can pull future updates
@@ -76,7 +76,7 @@ You confirm decisions. Claude executes.
 
 ### Step 2 — Run `/cold-start-interview` (15-25 minutes)
 
-Once SETUP completes, the system has the *infrastructure*. Now it needs *you*. Open a fresh Claude session in `~/obsidian` and run:
+Once SETUP completes, the system has the *infrastructure*. Now it needs *you*. Open a fresh Claude session in `~/aios` and run:
 
 ```
 /aios:cold-start-interview

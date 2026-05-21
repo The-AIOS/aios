@@ -4,7 +4,7 @@ tags:
   - command
   - monthly
 description: Compact previous month's logs — digest + zip snapshots and role logs
-allowed-tools: mcp__obsidian__*, Bash(cd ~/obsidian && git:*), Bash(zip:*), Bash(rm:*), Bash(ls:*), Bash(mkdir:*), Read
+allowed-tools: mcp__obsidian__*, Bash(cd ~/aios && git:*), Bash(zip:*), Bash(rm:*), Bash(ls:*), Bash(mkdir:*), Read
 argument-hint: "[YYYY-MM] (optional — defaults to previous month)"
 ---
 
@@ -104,7 +104,7 @@ Individual snapshot and role-log files accumulate daily. This command:
    - Role logs: {N} files → digest + zip
    - Space saved estimate
 
-6. **Commit and push**: `cd ~/obsidian && git add -A && git commit -m "Compact {target-month} logs" && git push`
+6. **Commit and push**: `cd ~/aios && git add -A && git commit -m "Compact {target-month} logs" && git push`
 
 ## End state
 

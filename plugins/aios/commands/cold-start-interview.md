@@ -12,7 +12,7 @@ argument-hint: "(no arguments — fully interactive)"
 
 A 15-25 minute interview that turns a freshly-cloned AIOS template into your personalized vault. Walks you through identity (`USER.md`), declared context (`about_me`, `personal_voice`, `working_style`, `INTENT.md`), bundle install choices (which of the 6 agent bundles you need), MCP setup, optional Anthropic plugins, and your first `/today` run.
 
-> **When to run:** immediately after `git clone git@github.com:The-AIOS/aios.git ~/obsidian` (or equivalent). Run once. If you skip it, the system still works — you'll just spend more time figuring things out yourself.
+> **When to run:** immediately after `git clone git@github.com:The-AIOS/aios.git ~/aios` (or equivalent). Run once. If you skip it, the system still works — you'll just spend more time figuring things out yourself.
 
 ## Detection
 

@@ -4,14 +4,14 @@ tags:
   - command
   - daily
 description: End-of-session capture — detects vault vs project terminal, writes to the right place
-allowed-tools: mcp__obsidian__*, Bash(cd ~/obsidian && git:*), Bash(pwd), Bash(ls *), Bash(cat *), Read
+allowed-tools: mcp__obsidian__*, Bash(cd ~/aios && git:*), Bash(pwd), Bash(ls *), Bash(cat *), Read
 ---
 
 # /close-session — Session Capture
 
 You are running a session capture. This command auto-detects where you're running and behaves accordingly:
 
-- **Mode A (vault session):** You're in `~/obsidian` or Obsidian MCP is available → append a session block to today's daily note
+- **Mode A (vault session):** You're in `~/aios` or Obsidian MCP is available → append a session block to today's daily note
 - **Mode B (project terminal):** You're in a code repo → write a session report file locally for `/close-day` to pick up
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /close-session` for any user overrides.
@@ -20,7 +20,7 @@ You are running a session capture. This command auto-detects where you're runnin
 
 Run `pwd` to check the current working directory.
 
-- If cwd is `~/obsidian` (or any path containing `/obsidian`) **OR** the `mcp__obsidian__read_note` tool is available → **Mode A**
+- If cwd is `~/aios` (or any path containing `/obsidian`) **OR** the `mcp__obsidian__read_note` tool is available → **Mode A**
 - Otherwise → **Mode B**
 
 Announce the detected mode: "Detected: **vault session** — writing to daily note" or "Detected: **project terminal** ({project name}) — writing session report"
@@ -74,7 +74,7 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
 
 9. Commit and push:
    ```bash
-   cd ~/obsidian && git add -A && git commit -m "Session {date}: {topic}" && git push
+   cd ~/aios && git add -A && git commit -m "Session {date}: {topic}" && git push
    ```
 
 ### Session block format (Mode A)

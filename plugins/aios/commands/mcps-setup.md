@@ -18,7 +18,7 @@ You are walking the user through setting up the bundled MCPs in this vault. The 
 
 - **One MCP at a time.** Don't dump 10 URLs on the user. Serialize.
 - **Always ask "want this?" per MCP.** Every MCP section opens with an opt-in question: "Do you want [service] for [purpose]? (y/skip)". Never assume — a user may not use Atlassian, may not care about music control, may not need design tools. Respect their time; don't walk them through tokens they'll never use.
-- **"Already working" means the BUNDLED version is working — not a remote equivalent.** When checking `claude mcp list`, treat an MCP as "already working" ONLY if the bundled entry (e.g., `atlassian: ~/obsidian/mcps/atlassian-mcp/run.sh ✓ Connected`) is shown. A `claude.ai Atlassian` entry shown as ✓ Connected does NOT count — that's the remote-hosted one we're replacing. The policy is **local over remote**: bundled authenticates independently of the Anthropic OAuth grant, survives account switches, and lives in the vault. Always proceed with setup if only the remote variant is active, and at the end instruct the user to disable it at claude.ai → Connectors.
+- **"Already working" means the BUNDLED version is working — not a remote equivalent.** When checking `claude mcp list`, treat an MCP as "already working" ONLY if the bundled entry (e.g., `atlassian: ~/aios/mcps/atlassian-mcp/run.sh ✓ Connected`) is shown. A `claude.ai Atlassian` entry shown as ✓ Connected does NOT count — that's the remote-hosted one we're replacing. The policy is **local over remote**: bundled authenticates independently of the Anthropic OAuth grant, survives account switches, and lives in the vault. Always proceed with setup if only the remote variant is active, and at the end instruct the user to disable it at claude.ai → Connectors.
 - **Validate before trusting.** After each token, make a real API call to that service. If it fails, surface the exact error and let them retry.
 - **Never echo tokens back.** When the user pastes a value, treat it as opaque. Confirm receipt by counting characters (`"token accepted — 40 chars"`), not by printing it.
 - **Write the token to `~/.zshrc` atomically.** Use the marker-block pattern (see below) so re-running this command regenerates the block without duplicating vars.
@@ -54,7 +54,7 @@ Run `bash mcps/setup.sh` — idempotent. Installs Python venvs for the MCPs that
 ### 2. Inventory: what's already bundled and working?
 
 - `claude mcp list` → parse output carefully:
-  - **BUNDLED entries** look like `atlassian: ~/obsidian/mcps/atlassian-mcp/run.sh - ✓ Connected` — local paths pointing into the vault
+  - **BUNDLED entries** look like `atlassian: ~/aios/mcps/atlassian-mcp/run.sh - ✓ Connected` — local paths pointing into the vault
   - **REMOTE entries** look like `claude.ai Atlassian: https://mcp.atlassian.com/v1/mcp - ✓ Connected` — URLs into Anthropic-hosted or vendor-hosted services
   - Only BUNDLED ✓ counts as "already working" for this command's purposes. Remote ✓ means "still needs bundling" — treat it as NOT working.
 - `source ~/.zshrc 2>/dev/null && env | grep -E "^(GEMINI_API_KEY|GITHUB_TOKEN|ATLASSIAN|SLACK_XOXB|SPOTIFY|STITCH_API_KEY)"` → which env vars are set (only show names + lengths, never values)
@@ -88,7 +88,7 @@ Tell the user:
 
 - **Ask first:** "Want PDF generation (markdown → branded PDF, HTML → PDF via Chrome headless)? No auth needed, works immediately. (y/skip)"
 - No tokens. Just verify pandoc + Chrome are present.
-- Register: `claude mcp add pdf-generator -- ~/obsidian/mcps/pdf-generator-mcp/.venv/bin/python ~/obsidian/mcps/pdf-generator-mcp/server.py`
+- Register: `claude mcp add pdf-generator -- ~/aios/mcps/pdf-generator-mcp/.venv/bin/python ~/aios/mcps/pdf-generator-mcp/server.py`
 - Validate: confirm ✓ Connected in `claude mcp list`. That's it.
 
 ### GitHub
@@ -107,7 +107,7 @@ Tell the user:
 - **Guidance:** "Click 'Create API key'. Pick a Google Cloud project (or let Google create one). Copy the `AIza...` key. **Important:** image generation requires billing enabled on that Cloud project — go to console.cloud.google.com → your project → Billing → link a billing account. Free tier has 0 image quota. Cost is ~$0.04/image."
 - **Env var:** `GEMINI_API_KEY`
 - **Validation:** `curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=<token>" | jq '.models[0].name'` — should return a model name, not an error.
-- **Register:** `claude mcp add nano-banana -- ~/obsidian/mcps/nano-banana-mcp/.venv/bin/python ~/obsidian/mcps/nano-banana-mcp/server.py`
+- **Register:** `claude mcp add nano-banana -- ~/aios/mcps/nano-banana-mcp/.venv/bin/python ~/aios/mcps/nano-banana-mcp/server.py`
 
 ### Atlassian (Jira + Confluence)
 
@@ -117,7 +117,7 @@ Tell the user:
 - **Env vars:** `ATLASSIAN_URL` (e.g., `https://yourco.atlassian.net` — **verify the exact subdomain** — yourco vs yourco + "hq" or similar can bite you), `ATLASSIAN_USERNAME` (your login email), `ATLASSIAN_API_TOKEN` (scoped or classic).
 - **Common gotcha:** the `ATLASSIAN_URL` must match your workspace's actual subdomain exactly. An incorrect URL returns HTTP 401 "Client must be authenticated" — which looks like an auth failure, but is actually "workspace doesn't exist at this URL." First step when debugging 401: re-check the URL by opening it in a browser and seeing if your Atlassian home loads.
 - **Validation:** `curl -s -u "<user>:<token>" "<url>/rest/api/3/myself" | jq .emailAddress` — should return their email.
-- **Register via wrapper** (keeps token out of `~/.claude.json`): `claude mcp add atlassian -- ~/obsidian/mcps/atlassian-mcp/run.sh`
+- **Register via wrapper** (keeps token out of `~/.claude.json`): `claude mcp add atlassian -- ~/aios/mcps/atlassian-mcp/run.sh`
 
 ### Slack
 
@@ -164,7 +164,7 @@ Creates a dedicated Slack app. Messages post AS THE BOT, not as the user. Requir
 - **Guidance:** "Create a new app. Redirect URI must be exactly `http://127.0.0.1:8888/callback`. Enable the Web API. Copy both Client ID and Client Secret."
 - **Env vars:** `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `SPOTIFY_REDIRECT_URI` (default `http://127.0.0.1:8888/callback`).
 - **Validation:** client credentials flow — `curl -s -X POST https://accounts.spotify.com/api/token -d "grant_type=client_credentials&client_id=<id>&client_secret=<secret>"` — should return an access_token.
-- **Register:** `claude mcp add spotify-dj -- ~/obsidian/mcps/spotify-dj-mcp/.venv/bin/python ~/obsidian/mcps/spotify-dj-mcp/server.py`
+- **Register:** `claude mcp add spotify-dj -- ~/aios/mcps/spotify-dj-mcp/.venv/bin/python ~/aios/mcps/spotify-dj-mcp/server.py`
 
 ### Stitch (Google AI-native design → code)
 
@@ -187,7 +187,7 @@ Creates a dedicated Slack app. Messages post AS THE BOT, not as the user. Requir
 
 - **Ask first:** "Want NotebookLM MCP (turn vault content, research, or links into audio overviews / podcasts)? (y/skip)"
 - No token here either. Needs `notebooklm login` which opens a browser.
-- After deps installed: `source ~/obsidian/mcps/notebooklm-mcp/.venv/bin/activate && notebooklm login`
+- After deps installed: `source ~/aios/mcps/notebooklm-mcp/.venv/bin/activate && notebooklm login`
 - Already registered via skill install during `setup.sh`.
 
 ### Playwright (browser-auth capability — NOT a registered MCP)
@@ -198,14 +198,14 @@ Creates a dedicated Slack app. Messages post AS THE BOT, not as the user. Requir
 - Uses the same extract-from-Chrome pattern as `slack-mcp` — no separate login flow, no magic links, no per-site quirks.
 - **Instruct the user:** sign in to Substack, LinkedIn, and X/Twitter in Chrome (web versions). Then run:
   ```
-  ~/obsidian/mcps/playwright-mcp/.venv/bin/python ~/obsidian/mcps/playwright-mcp/cookie_import.py
+  ~/aios/mcps/playwright-mcp/.venv/bin/python ~/aios/mcps/playwright-mcp/cookie_import.py
   ```
 - First run triggers macOS Keychain prompt — tell the user to click **"Always Allow"**.
 - Script writes `auth/substack.json`, `auth/linkedin.json`, `auth/x.json` (all gitignored).
 - **X caveat:** cookies log you in but Twitter's bot-detection blocks heavy interaction from Playwright. For reading timeline / loading pages it works; for posting tweets, needs `pip install playwright-stealth` (install only when X auto-posting becomes needed).
 - Script validates critical session cookie per site (`substack.sid`, `li_at`, `auth_token`) — will warn if missing, telling the user they may not be fully logged in.
 - Adding a new site: edit `SITES` dict at top of `cookie_import.py`, add `("sitename", (["domain.com"], "session_cookie_name"))`, re-run.
-- **Consumption pattern (no MCP tools):** Claude (or you) writes Python scripts that `import playwright`, load the relevant `auth/{site}.json` as `storage_state`, and drive the browser. Examples in `mcps/playwright-mcp/README.md`. Invocation is `Bash(~/obsidian/mcps/playwright-mcp/.venv/bin/python script.py)`, NOT a registered MCP tool. **Setup ends with `cookie_import.py`. There is no Register step.**
+- **Consumption pattern (no MCP tools):** Claude (or you) writes Python scripts that `import playwright`, load the relevant `auth/{site}.json` as `storage_state`, and drive the browser. Examples in `mcps/playwright-mcp/README.md`. Invocation is `Bash(~/aios/mcps/playwright-mcp/.venv/bin/python script.py)`, NOT a registered MCP tool. **Setup ends with `cookie_import.py`. There is no Register step.**
 
 ---
 

@@ -318,7 +318,7 @@ mini-spawn() {
     local session_name=$1
     local task=$2
     ssh -i ~/.ssh/agent_fortress <agent_user>@mini \
-        "osascript -e 'tell application \"Terminal\" to do script \"cd ~/obsidian && spawn $session_name\"'" &
+        "osascript -e 'tell application \"Terminal\" to do script \"cd ~/aios && spawn $session_name\"'" &
     echo "Session '$session_name' spawned on mini"
 }
 
@@ -350,7 +350,7 @@ You're running on the operator's primary computer. Your role is interactive part
 **At session start (every session):**
 
 1. Run `echo $CLAUDE_AGENT_NAME` — this is your identity. Compare to USER.md `## Identity` table.
-2. Read `~/obsidian/CLAUDE.md` end-to-end (it's small).
+2. Read `~/aios/CLAUDE.md` end-to-end (it's small).
 3. Read the user's `USER.md` (the personalization surface) and `INTENT.md` (autonomy levels).
 4. Read declared context (`vault/00 - notes/context/declared/`) and observed context (`vault/00 - notes/context/observed/`).
 5. Greet the operator by name (read from `about_me.md` — never hardcode).
@@ -385,7 +385,7 @@ You're running on the agent host. Your role is to ship work autonomously, commit
 **At session start (every session):**
 
 1. Run `echo $CLAUDE_AGENT_NAME` — this is your identity (typically the coordinator name, e.g., the operator's choice for their mini's primary session).
-2. Pull the latest vault: `cd ~/obsidian && git pull origin main` (this gets the main's latest commits, including overnight queues set by the main).
+2. Pull the latest vault: `cd ~/aios && git pull origin main` (this gets the main's latest commits, including overnight queues set by the main).
 3. Read `CLAUDE.md`, `USER.md`, `INTENT.md`, declared/observed context — same as the main.
 4. Read the *latest* daily note (`vault/01 - calendar/{YYYY-MM}/`). Look for a `## Mini overnight (Handoff)` section — that's your work order for the shift.
 5. Greet the operator (if they're online via Remote Control) or proceed silently if it's an overnight cron-triggered run.

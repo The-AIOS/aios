@@ -195,7 +195,7 @@ spawn() {
   cat > "$launcher" <<LAUNCHER
 #!/bin/zsh
 [ -f ~/.zshrc ] && source ~/.zshrc
-cd ~/obsidian 2>/dev/null
+cd ~/aios 2>/dev/null
 _claude_with_respawn '$name' 'Read $task_file and follow the instructions inside.'
 LAUNCHER
   chmod +x "$launcher"

@@ -6,7 +6,7 @@
 
 ## What moves here from chuy's vault
 
-| Source path in `~/obsidian` | Destination in `The-AIOS/aios` |
+| Source path in `~/aios` | Destination in `The-AIOS/aios` |
 |------------------------------|-------------------------------|
 | `commands/` | `commands/` |
 | `hooks/` | `hooks/` |
@@ -25,7 +25,7 @@ Everything personal: vault content (notes, projects, ideas, reflections, daily n
 ## Phase 0 cleanup that lands BEFORE this repo is filled
 
 To avoid migrating broken or Sovra-specific content:
-1. Hardcoded `~/obsidian` paths → path-config-driven (17 surfaces; 13 commands + 4 hooks)
+1. Hardcoded `~/aios` paths → path-config-driven (17 surfaces; 13 commands + 4 hooks)
 2. `com.sovra.claude-quota-watch.plist` → generic-named plist
 3. `mcps/playwright-mcp/auth/*.json` → gitignored, removed from tracking
 4. Sovra-flavored content (`ventures/sovra/`, `skills/sovra-web-design/`, sovra-branded `pdf-generator/` templates, `about_business.md` template, `agents/company-analyst.md`, `vault/.obsidian/snippets/sovra-colors.css`) → moves to company-scope, not product

@@ -4,7 +4,7 @@ tags:
   - command
   - weekly
 description: Weekly strategic plan across all ventures based on what's most alive right now
-allowed-tools: mcp__obsidian__*, mcp__google-workspace__*, mcp__google-workspace-personal__*, Read, Bash(cd ~/obsidian && git:*)
+allowed-tools: mcp__obsidian__*, mcp__google-workspace__*, mcp__google-workspace-personal__*, Read, Bash(cd ~/aios && git:*)
 ---
 
 # /7plan — Weekly Strategic Plan
@@ -63,7 +63,7 @@ From the data already loaded — process everything in memory:
    - If no → commit directly. `/today` will create each day's note fresh each morning.
 
 ### Message 4 — Commit + push
-- `cd ~/obsidian && git add -A && git commit -m "Weekly plan W{WW}" && git push`
+- `cd ~/aios && git add -A && git commit -m "Weekly plan W{WW}" && git push`
 
 ## Output
 
@@ -112,7 +112,7 @@ Present in the response AND write to `01 - calendar/{YYYY-MM}/{YYYY}-W{WW}-plan.
 
 ## Daily Notes Generation (optional — only if user says yes)
 
-Create a daily note for each weekday (Mon–Fri) using `mcp__obsidian__write_note`. Saturday/Sunday only if they have events or tasks. **Cross-month weeks:** if the week spans two months (e.g. Mar 30 – Apr 5), ensure the next month's calendar folder exists before writing — use `Bash(mkdir -p ~/obsidian/vault/01\ -\ calendar/{YYYY-MM})` for the new month.
+Create a daily note for each weekday (Mon–Fri) using `mcp__obsidian__write_note`. Saturday/Sunday only if they have events or tasks. **Cross-month weeks:** if the week spans two months (e.g. Mar 30 – Apr 5), ensure the next month's calendar folder exists before writing — use `Bash(mkdir -p ~/aios/vault/01\ -\ calendar/{YYYY-MM})` for the new month.
 
 **Before creating a daily note, check if it already exists.** If it does, **skip it** — don't overwrite. `/today` will handle updates each morning. Only create notes for days that don't have one yet.
 

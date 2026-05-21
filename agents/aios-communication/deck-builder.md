@@ -55,7 +55,7 @@ Read in order:
 Before outlining content, surface the design intent. Don't assume.
 
 **Search the vault for design docs:**
-- `find ~/obsidian/vault -name 'design.md' -o -name '*-design.md'` — the Google Labs `design.md` convention. Any matches are candidates.
+- `find ~/aios/vault -name 'design.md' -o -name '*-design.md'` — the Google Labs `design.md` convention. Any matches are candidates.
 - Also scan `vault/00 - notes/context/declared/` and `vault/00 - notes/context/ventures/*/` for design-system documents (any `.md` whose body describes brand colors, fonts, layout primitives).
 
 **Search Drive for existing decks** (via `search_drive_files`):

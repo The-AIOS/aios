@@ -4,7 +4,7 @@ tags:
   - command
   - on-demand
 description: Distill the period's learnings into a reflective report with optional branded PDF — from observed context, daily notes, and growth edges
-allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/obsidian && git:*), Bash(ls *), Bash(cat *), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*)
+allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/aios && git:*), Bash(ls *), Bash(cat *), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*)
 argument-hint: "period (e.g. 'month', 'March', 'Q1 2026', 'this week', '2026-03-01 to 2026-03-28')"
 ---
 
@@ -275,8 +275,8 @@ Write the HTML to `/tmp/learned-{period}.html`, then:
 
 1. **Always save HTML to vault** (the editable source):
 ```bash
-mkdir -p ~/obsidian/vault/04\ -\ export/reports/learned
-cp /tmp/learned-{period}.html "$HOME/obsidian/vault/03 - export/reports/learned/{period}-learned.html"
+mkdir -p ~/aios/vault/04\ -\ export/reports/learned
+cp /tmp/learned-{period}.html "$HOME/aios/vault/03 - export/reports/learned/{period}-learned.html"
 ```
 
 2. **Ask: "Want the PDF version too?"** If yes:
@@ -284,7 +284,7 @@ cp /tmp/learned-{period}.html "$HOME/obsidian/vault/03 - export/reports/learned/
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --headless \
   --no-pdf-header-footer \
-  --print-to-pdf="$HOME/obsidian/vault/03 - export/reports/learned/{period}-learned.pdf" \
+  --print-to-pdf="$HOME/aios/vault/03 - export/reports/learned/{period}-learned.pdf" \
   /tmp/learned-{period}.html
 ```
 

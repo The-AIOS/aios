@@ -51,7 +51,7 @@ Playwright uses **browser storage state** to authenticate. We extract cookies fr
 Make sure you're signed in to Substack, LinkedIn, and X/Twitter in **Chrome** (web, not desktop apps). Then:
 
 ```bash
-~/obsidian/mcps/playwright-mcp/.venv/bin/python ~/obsidian/mcps/playwright-mcp/cookie_import.py
+~/aios/mcps/playwright-mcp/.venv/bin/python ~/aios/mcps/playwright-mcp/cookie_import.py
 ```
 
 This reads cookies for all supported sites, validates the critical session cookie is present, and writes Playwright storage_state JSON files to `auth/<site>.json`.

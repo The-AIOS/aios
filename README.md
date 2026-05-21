@@ -126,7 +126,7 @@ Claude clones the framework, installs MCPs, configures your private vault, and w
 
 ### Step 2 — `/aios:cold-start-interview` (~20 min)
 
-After SETUP completes, open a fresh Claude session in `~/obsidian` and run:
+After SETUP completes, open a fresh Claude session in `~/aios` and run:
 
 ```
 /aios:cold-start-interview
@@ -197,7 +197,7 @@ The AI doesn't just remember. It connects. And sometimes, what it connects chang
 ## Vault Architecture
 
 ```
-~/obsidian/
+~/aios/
 ├── vault/
 │   ├── 00 - notes/
 │   │   ├── context/

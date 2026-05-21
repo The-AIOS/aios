@@ -108,13 +108,24 @@ jobs:
             esac
           done
 
-          # skills/ — 66+ framework skills; can't enumerate. Instead deny common company-shaped
-          # names: anything starting with a known venture prefix, or a single-word lowercase
-          # folder that we know maps to a company. Maintained as we discover new leaks.
+          # skills/ — source-grouped. Allowed: aios/, superpowers/, df-claude-skills/, custom/
+          # Anything else at depth 1 is either a new upstream source (update this allowlist + skills/_index.md)
+          # or a company namespace that shouldn't be in the framework.
+          for dir in skills/*/; do
+            name=$(basename "$dir")
+            case "$name" in
+              aios|superpowers|df-claude-skills|custom) ;;
+              *) FOUND+=$'\n  - skills/'"$name"'/  (expected: aios/, superpowers/, df-claude-skills/, or custom/ — vendoring a new upstream? add it to the allowlist in this workflow + document in skills/_index.md)' ;;
+            esac
+          done
+
+          # skills/ at depth 2 — block known company prefixes that might sneak in under a source folder
           shopt -s nullglob
-          for company_prefix in sovra acme chuycepeda chuy zineb sarah; do
-            for dir in "skills/$company_prefix"/ "skills/$company_prefix-"*/; do
-              [ -d "$dir" ] && FOUND+=$'\n  - '"$dir"'  (skills/'"$company_prefix"'*/ — company-namespaced; relocate to operator vault under skills/'"$company_prefix"'/)'
+          for source_folder in skills/aios skills/superpowers skills/df-claude-skills; do
+            for company_prefix in sovra acme chuycepeda chuy zineb sarah; do
+              for dir in "$source_folder/$company_prefix"/ "$source_folder/$company_prefix-"*/; do
+                [ -d "$dir" ] && FOUND+=$'\n  - '"$dir"'  (company-namespaced skill — relocate to operator vault under skills/'"$company_prefix"'/)'
+              done
             done
           done
           shopt -u nullglob
@@ -194,7 +205,7 @@ jobs:
           patterns = [
               "plugins/aios/commands/*.md",
               "agents/aios-*/*.md",
-              "skills/*/SKILL.md",
+              "skills/*/*/SKILL.md",
               "templates/*.md",
           ]
 
@@ -360,3 +371,15 @@ jobs:
             exit 1
           fi
           echo "OK: no stale vault/06 - agents or vault/02 - templates references"
+
+      - name: No references to retired ~/obsidian path (canonical install is ~/aios)
+        run: |
+          set -e
+          if grep -rln "~/obsidian\|/Users/.*/obsidian\|\$HOME/obsidian" \
+            --include="*.md" --include="*.py" --include="*.sh" --include="*.json" --include="*.yml" --include="*.yaml" \
+            --exclude="CHANGELOG.md" --exclude="HISTORY-PRE-*.md" \
+            --exclude-dir=.git --exclude-dir=vault --exclude-dir=.github .; then
+            echo "::error::Retired ~/obsidian path reference found. Canonical install location is ~/aios (framework brand). Update any hardcoded paths in the offending files."
+            exit 1
+          fi
+          echo "OK: no ~/obsidian hardcoded paths — framework is install-path-agnostic with ~/aios canonical default"

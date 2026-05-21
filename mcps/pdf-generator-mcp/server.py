@@ -44,7 +44,7 @@ def markdown_to_pdf(
 
     Args:
         markdown: The markdown content to convert.
-        output_path: Where to save the PDF. Defaults to ~/obsidian/vault/04 - export/generated/{timestamp}.pdf
+        output_path: Where to save the PDF. Defaults to ~/aios/vault/04 - export/generated/{timestamp}.pdf
         title: Optional title used in pandoc's HTML <title> tag.
 
     Returns:
@@ -76,7 +76,7 @@ def html_to_pdf(html: str, output_path: str | None = None) -> dict:
 
     Args:
         html: The full HTML document (with inline CSS, fonts, etc.) to render.
-        output_path: Where to save the PDF. Defaults to ~/obsidian/vault/04 - export/generated/{timestamp}.pdf
+        output_path: Where to save the PDF. Defaults to ~/aios/vault/04 - export/generated/{timestamp}.pdf
 
     Returns:
         Dict with keys: path (str), size_bytes (int).

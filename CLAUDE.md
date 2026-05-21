@@ -244,7 +244,7 @@ After any session that produces meaningful work or insight:
 4. **"What was most useful?" (substantive sessions only)** — before committing, if the session was substantive (>30 minutes, produced meaningful work), ask: **"What was most useful for you in this session?"** One question. Short answer. Log it in session-insights.md. Trains both the user and the AI on what creates value. Skip for quick fixes.
 5. **Commit and push** the vault:
    ```bash
-   cd ~/obsidian && git add -A && git commit -m "Session {date}: {brief description}" && git push
+   cd ~/aios && git add -A && git commit -m "Session {date}: {brief description}" && git push
    ```
 
 Never end a session with uncommitted vault changes.
@@ -467,11 +467,11 @@ Every note Claude generates must use `[[wiki-links]]` for project names, context
 
 After any session that modifies vault notes, commit and push:
 ```bash
-cd ~/obsidian && git add -A && git commit -m "Session {date}: {description}" && git push
+cd ~/aios && git add -A && git commit -m "Session {date}: {description}" && git push
 ```
 The vault is only as portable and safe as its last push.
 
-> **Path convention:** the vault is expected to live at `~/obsidian`. All commands, MCPs, and git operations reference this path. If the vault is elsewhere, create a symlink: `ln -s /actual/path ~/obsidian`.
+> **Path convention:** the vault is expected to live at `~/aios`. All commands, MCPs, and git operations reference this path. If the vault is elsewhere, create a symlink: `ln -s /actual/path ~/aios`.
 
 **Format:** [Conventional Commits](https://www.conventionalcommits.org) — `<type>(<scope>): <description>` (subject < 72 chars, imperative, no period). Types: `feat` · `fix` · `docs` · `refactor` · `perf` · `test` · `chore` · `build` · `ci` · `style`. Body explains WHY + references PR/issue numbers. Footer carries Co-Authored-By + BREAKING CHANGE.
 

@@ -37,7 +37,7 @@
 
 *"tell server to spawn X":*
 ```
-ssh my-server "osascript -e 'tell application \"Terminal\" to do script \"cd ~/obsidian && spawn SESSION_NAME\"'"
+ssh my-server "osascript -e 'tell application \"Terminal\" to do script \"cd ~/aios && spawn SESSION_NAME\"'"
 ```
 
 ## Companies (mounted)

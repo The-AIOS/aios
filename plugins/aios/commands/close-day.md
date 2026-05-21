@@ -4,7 +4,7 @@ tags:
   - command
   - daily
 description: End-of-day review — capture what shipped, what grew, and what carries forward
-allowed-tools: mcp__obsidian__*, mcp__google-workspace__*, mcp__google-workspace-personal__*, Read, Bash(cd ~/obsidian && git:*), Bash(uv run ~/obsidian/hooks/pipeline-executor.py:*)
+allowed-tools: mcp__obsidian__*, mcp__google-workspace__*, mcp__google-workspace-personal__*, Read, Bash(cd ~/aios && git:*), Bash(uv run ~/aios/hooks/pipeline-executor.py:*)
 ---
 
 # /close-day — End of Day Review
@@ -13,7 +13,7 @@ You are running the user's end-of-day review by reading their vault and capturin
 
 ## Pre-loaded API data
 
-Step 1 runs `uv run ~/obsidian/hooks/pipeline-executor.py --command close-day` which pre-loads Google Calendar events **with attachments** (today + next 7 days for cross-check), Google Tasks (open), and Slack unreads + daily recap.
+Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which pre-loads Google Calendar events **with attachments** (today + next 7 days for cross-check), Google Tasks (open), and Slack unreads + daily recap.
 
 **DO NOT call Google Calendar `get_events`, `list_tasks`, or Slack APIs.** The data is in the executor output.
 
@@ -24,8 +24,8 @@ Step 1 runs `uv run ~/obsidian/hooks/pipeline-executor.py --command close-day` w
 ## Steps
 
 1. **Run executor + read vault** — fire these in **one parallel batch**:
-   - `Bash(uv run ~/obsidian/hooks/pipeline-executor.py --command close-day)` — pre-loads Calendar (detailed, with attachments), Calendar next 7 days, Tasks, Slack
-   - `Bash(cfg=~/obsidian/.vault-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && echo "vault-update: unreachable" || { [ "$h" = "$r" ] && echo "vault-update: synced" || echo "vault-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "vault-update: no-config"; fi)` — **infrastructure freshness check** (mirror of `/today`'s morning check). Render per § Vault-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before sarah's overnight queue (or first thing tomorrow)".
+   - `Bash(uv run ~/aios/hooks/pipeline-executor.py --command close-day)` — pre-loads Calendar (detailed, with attachments), Calendar next 7 days, Tasks, Slack
+   - `Bash(cfg=~/aios/.vault-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && echo "vault-update: unreachable" || { [ "$h" = "$r" ] && echo "vault-update: synced" || echo "vault-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "vault-update: no-config"; fi)` — **infrastructure freshness check** (mirror of `/today`'s morning check). Render per § Vault-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before sarah's overnight queue (or first thing tomorrow)".
    - `Read` → `USER.md` (for dev project paths, growth routines, session cascade, organization, and `### /close-day` command personalizations)
    - `Read` → `INTENT.md` (if it exists — for focus alignment check, parked item handling in carries)
    - Read the daily note to close: list files in `01 - calendar/{YYYY-MM}/`, pick the **most recent `YYYY-MM-DD.md`** (exclude weekly plans like `W{N}-plan.md`). If it's after midnight and no note exists for today, the most recent note is yesterday's — close that one. If it already has a `## Close of Day` section, update it (merge new info, don't duplicate). **Always tell the user which date you're closing:** "Closing {date}."
@@ -198,7 +198,7 @@ Then continue with agent session reports.
 
 Check for close-session reports from agent/spawned sessions. These follow the same pattern as dev session reports but originate from `spawn` or `/agent` workflows.
 
-**Where to look:** Agent sessions spawned at the vault root write their close-session reports to `~/obsidian/.claude/session-report-{YYYY-MM-DD}.md` (same directory, possibly multiple reports if several agents ran). Use `Read` with absolute path. Also check for any session reports in Dev project paths that mention an agent name from `agents/_index.md` (canonical registry across all bundles) or `agents/custom/_index.md`.
+**Where to look:** Agent sessions spawned at the vault root write their close-session reports to `~/aios/.claude/session-report-{YYYY-MM-DD}.md` (same directory, possibly multiple reports if several agents ran). Use `Read` with absolute path. Also check for any session reports in Dev project paths that mention an agent name from `agents/_index.md` (canonical registry across all bundles) or `agents/custom/_index.md`.
 
 **For each agent report found:**
 - Route output the same way as dev session reports (shipped → Shipped, pendientes → Carries, notes → Learned)
@@ -502,7 +502,7 @@ If any unchecked, complete it now before commit.
 ### Commit and push
 
 ```bash
-cd ~/obsidian && git add -A && git commit -m "Close day {date}" && git push
+cd ~/aios && git add -A && git commit -m "Close day {date}" && git push
 ```
 
 ## Rules

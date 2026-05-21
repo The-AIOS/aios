@@ -132,7 +132,7 @@ Show only the **What changed** and **Action required** sections from each entry 
 
 After showing changelog entries, copy the full CHANGELOG.md into the vault:
 ```bash
-cp /tmp/vault-update-check/CHANGELOG.md ~/obsidian/vault/06\ -\ backups/CHANGELOG.md
+cp /tmp/vault-update-check/CHANGELOG.md ~/aios/vault/06\ -\ backups/CHANGELOG.md
 ```
 This makes the changelog visible inside Obsidian for reference.
 
@@ -262,8 +262,8 @@ For each template that changed in Tier 1:
 **After all Tier 2 command changes are applied**, ensure the full plugin pipeline is current:
 ```bash
 # Sync ALL command files to both plugin locations (not just changed ones — ensures consistency)
-cp ~/obsidian/plugins/aios/commands/*.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
-cp ~/obsidian/plugins/aios/commands/*.md ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
+cp ~/aios/plugins/aios/commands/*.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
+cp ~/aios/plugins/aios/commands/*.md ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
 ```
 
 Update `.vault-update` (repo root) with new HEAD hash and today's date.

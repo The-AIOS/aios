@@ -37,7 +37,7 @@ if [ -d "$SCRIPT_DIR/notebooklm-mcp" ] && [ ! -d "$SCRIPT_DIR/notebooklm-mcp/.ve
   .venv/bin/pip install notebooklm-py playwright -q
   .venv/bin/playwright install chromium 2>/dev/null
   .venv/bin/notebooklm skill install 2>/dev/null || true
-  echo "  ✓ installed (authenticate: ~/obsidian/mcps/notebooklm-mcp/.venv/bin/notebooklm login)"
+  echo "  ✓ installed (authenticate: ~/aios/mcps/notebooklm-mcp/.venv/bin/notebooklm login)"
 fi
 
 # --- Playwright MCP ---
@@ -126,7 +126,7 @@ echo "Manual auth steps per MCP (if you prefer):"
 echo "  • pdf-generator    : no auth (works immediately — just register)"
 echo "  • google-workspace : uvx workspace-mcp (opens browser on first call)"
 echo "  • slack            : npx -y @jtalk22/slack-mcp --refresh-tokens  (extracts from Chrome; posts AS YOU)"
-echo "  • notebooklm       : ~/obsidian/mcps/notebooklm-mcp/.venv/bin/notebooklm login"
+echo "  • notebooklm       : ~/aios/mcps/notebooklm-mcp/.venv/bin/notebooklm login"
 echo "  • github           : export GITHUB_TOKEN (Personal Access Token)"
 echo "  • atlassian        : export ATLASSIAN_URL / ATLASSIAN_USERNAME / ATLASSIAN_API_TOKEN"
 echo "  • nano-banana      : export GEMINI_API_KEY (requires Cloud Billing enabled — ~\$0.04/image)"

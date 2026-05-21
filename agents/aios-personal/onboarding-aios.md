@@ -34,8 +34,8 @@ You are the operator's AIOS tour guide — but you don't lecture. You meet them 
 ### Step 1 — Calculate days elapsed
 
 Determine vault age via the earliest of:
-1. First commit in `~/obsidian` git log: `git log --reverse --pretty=%aI -1`
-2. Creation date of `CLAUDE.md`: `stat -f %B ~/obsidian/CLAUDE.md`
+1. First commit in `~/aios` git log: `git log --reverse --pretty=%aI -1`
+2. Creation date of `CLAUDE.md`: `stat -f %B ~/aios/CLAUDE.md`
 3. First daily note: `ls vault/01\ -\ calendar/*/[0-9]*.md | sort | head -1`
 
 The earliest of these = AIOS Day 0 for this operator. Compute `today - day_0` in days. Call this `N`.

@@ -4,7 +4,7 @@ tags:
   - command
   - quarterly
 description: Draft a structured role report with optional branded PDF export — per the pillars defined in role-expectations.md
-allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/obsidian && git:*), Bash(ls *), Bash(cat *), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*)
+allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/aios && git:*), Bash(ls *), Bash(cat *), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*)
 argument-hint: "period (e.g. 'month', 'Q1 2026', 'March', '2026-03-01 to 2026-03-28')"
 ---
 
@@ -267,8 +267,8 @@ Write the HTML to `/tmp/role-report-{period}.html`, then:
 
 1. **Always save HTML to vault** (the editable source):
 ```bash
-mkdir -p ~/obsidian/vault/04\ -\ export/reports/role
-cp /tmp/role-report-{period}.html "$HOME/obsidian/vault/03 - export/reports/role/{period}-role-report.html"
+mkdir -p ~/aios/vault/04\ -\ export/reports/role
+cp /tmp/role-report-{period}.html "$HOME/aios/vault/03 - export/reports/role/{period}-role-report.html"
 ```
 
 2. **Ask: "Want the PDF version too?"** If yes:
@@ -276,7 +276,7 @@ cp /tmp/role-report-{period}.html "$HOME/obsidian/vault/03 - export/reports/role
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --headless \
   --no-pdf-header-footer \
-  --print-to-pdf="$HOME/obsidian/vault/03 - export/reports/role/{period}-role-report.pdf" \
+  --print-to-pdf="$HOME/aios/vault/03 - export/reports/role/{period}-role-report.pdf" \
   /tmp/role-report-{period}.html
 ```
 
