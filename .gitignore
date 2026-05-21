@@ -23,10 +23,10 @@ Desktop.ini
 .vscode/
 .idea/
 
-# Env + secrets — broad patterns prevent future leaks of OAuth / API keys
+# Env + secrets — credential-file patterns only (not folder names — MCP source
+# code uses auth/ folders for authentication MODULES which must stay tracked)
 **/.env
 **/.env.local
-**/auth/
 **/token.json
 **/credentials.json
 **/*oauth*.json
@@ -34,24 +34,16 @@ Desktop.ini
 **/*.key
 **/auth_link.html
 spotify-cache.json
+**/storage_state.json
+**/cookies.json
+.slack-mcp-tokens.json
+
+# Specific credential files (operator-local; ship as .template instead)
+mcps/google-workspace-mcp/oauth.json
 
 # Runtime artifacts (regenerated each session)
 hooks/pipeline-executor.log
 **/.DS_Store
 
-# Intentionally bundled shared OAuth app credentials (private repos only).
-# Before shipping AI-OS as a public/open repo, rotate the client secret and
-# remove this exception so each user creates their own OAuth app.
-!mcps/google-workspace-mcp/oauth.json
-
 # Obsidian workspace state (per-machine UI layout)
 vault/.obsidian/workspace.json
-
-# Google OAuth credentials — never commit; file ships as template, operator overwrites with real values locally
-mcps/google-workspace-mcp/oauth.json
-
-# Other credential files that should stay local
-mcps/*/auth/*.json
-mcps/*/storage_state.json
-mcps/*/cookies.json
-.slack-mcp-tokens.json
