@@ -35,10 +35,11 @@ jobs:
           done
           # plugins/ holds Claude Code plugins (the aios slash-command plugin + operator custom/ + company-namespaced)
           test -d plugins || { echo "::error::Missing plugins/ folder"; exit 1; }
-          test -d plugins/custom || { echo "::error::Missing plugins/custom/ subfolder for operator extensions"; exit 1; }
+          test -d plugins/custom || { echo "::error::Missing plugins/custom/ for operator-built plugins (their own plugins, not nested inside aios)"; exit 1; }
           test -d plugins/aios || { echo "::error::Missing plugins/aios/ — the bundled aios plugin"; exit 1; }
           test -d plugins/aios/commands || { echo "::error::Missing plugins/aios/commands/ — the aios plugin's slash commands"; exit 1; }
-          test -d plugins/aios/commands/custom || { echo "::error::Missing plugins/aios/commands/custom/ for operator command extensions"; exit 1; }
+          # NOTE: no plugins/aios/commands/custom/ — operator custom commands go in their own plugin under plugins/custom/<name>/, not nested inside the aios plugin (canonical Claude Code convention)
+          test ! -d plugins/aios/commands/custom || { echo "::error::plugins/aios/commands/custom/ exists but shouldn't — operator-custom slash commands belong in plugins/custom/<your-plugin>/commands/, not nested inside the bundled aios plugin"; exit 1; }
           echo "OK: framework infra layers + plugins structure intact"
 
       - name: Agent bundles exist with README.md + top-level registry
