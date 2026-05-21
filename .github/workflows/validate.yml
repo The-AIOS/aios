@@ -40,7 +40,14 @@ jobs:
           test -d plugins/aios/commands || { echo "::error::Missing plugins/aios/commands/ — the aios plugin's slash commands"; exit 1; }
           # NOTE: no plugins/aios/commands/custom/ — operator custom commands go in their own plugin under plugins/custom/<name>/, not nested inside the aios plugin (canonical Claude Code convention)
           test ! -d plugins/aios/commands/custom || { echo "::error::plugins/aios/commands/custom/ exists but shouldn't — operator-custom slash commands belong in plugins/custom/<your-plugin>/commands/, not nested inside the bundled aios plugin"; exit 1; }
-          echo "OK: framework infra layers + plugins structure intact"
+          # Plugin manifest co-location (canonical Claude Code convention)
+          test -f .claude-plugin/marketplace.json || { echo "::error::Missing .claude-plugin/marketplace.json at repo root — the marketplace manifest must live here, not in commands/"; exit 1; }
+          test -f plugins/aios/.claude-plugin/plugin.json || { echo "::error::Missing plugins/aios/.claude-plugin/plugin.json — plugin manifest must be co-located with plugin source"; exit 1; }
+          test ! -f commands/marketplace.json || { echo "::error::commands/marketplace.json exists but shouldn't — manifest moved to .claude-plugin/marketplace.json at repo root (canonical location)"; exit 1; }
+          test ! -f commands/plugin.json || { echo "::error::commands/plugin.json exists but shouldn't — manifest moved to plugins/aios/.claude-plugin/plugin.json (co-located with plugin source)"; exit 1; }
+          # No top-level commands/ folder — moved into plugins/aios/commands/ during 2026-05-21 canonical refactor
+          test ! -d commands || { echo "::error::Top-level commands/ folder exists but shouldn't — slash commands now live at plugins/aios/commands/ as part of the aios plugin"; exit 1; }
+          echo "OK: framework infra layers + plugins structure intact + manifests co-located"
 
       - name: Framework purity — no company-namespaced folders in infra layers
         run: |
