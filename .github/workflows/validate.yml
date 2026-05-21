@@ -42,6 +42,93 @@ jobs:
           test ! -d plugins/aios/commands/custom || { echo "::error::plugins/aios/commands/custom/ exists but shouldn't — operator-custom slash commands belong in plugins/custom/<your-plugin>/commands/, not nested inside the bundled aios plugin"; exit 1; }
           echo "OK: framework infra layers + plugins structure intact"
 
+      - name: Framework purity — no company-namespaced folders in infra layers
+        run: |
+          set -e
+          # Principle: framework infra ships only bundled paths + custom/ scaffolds.
+          # Anything else is company namespace (sovra/, acme/, etc.) — those belong in
+          # operator vaults under <layer>/<company>/ via /aios:company --sync, or in
+          # a company-template repo, NEVER in this framework bundle.
+          #
+          # Each layer below has an allowlist of bundled folder names. Anything else
+          # at depth 1 fails the check, with the error pointing at the canonical fix.
+
+          FOUND=""
+
+          # agents/ — allowed: aios-{sales,strategy,finance-legal,engineering,communication,personal} + custom
+          for dir in agents/*/; do
+            name=$(basename "$dir")
+            case "$name" in
+              aios-sales|aios-strategy|aios-finance-legal|aios-engineering|aios-communication|aios-personal|custom) ;;
+              *) FOUND="$FOUND
+  - agents/$name/  (expected: aios-* bundle or custom/)" ;;
+            esac
+          done
+
+          # plugins/ — allowed: aios + custom
+          for dir in plugins/*/; do
+            name=$(basename "$dir")
+            case "$name" in
+              aios|custom) ;;
+              *) FOUND="$FOUND
+  - plugins/$name/  (expected: aios/ or custom/)" ;;
+            esac
+          done
+
+          # hooks/ — allowed: claude-identity + custom (files are layer-level; only subfolders checked)
+          for dir in hooks/*/; do
+            name=$(basename "$dir")
+            case "$name" in
+              claude-identity|custom) ;;
+              *) FOUND="$FOUND
+  - hooks/$name/  (expected: claude-identity/ or custom/)" ;;
+            esac
+          done
+
+          # mcps/ — allowed: *-mcp (suffix convention) + custom
+          for dir in mcps/*/; do
+            name=$(basename "$dir")
+            case "$name" in
+              custom) ;;
+              *-mcp) ;;
+              *) FOUND="$FOUND
+  - mcps/$name/  (expected: *-mcp/ or custom/)" ;;
+            esac
+          done
+
+          # templates/ — allowed: custom (templates themselves are .md files at layer level)
+          for dir in templates/*/; do
+            name=$(basename "$dir")
+            case "$name" in
+              custom) ;;
+              *) FOUND="$FOUND
+  - templates/$name/  (templates are .md files at layer level; only custom/ subfolder allowed)" ;;
+            esac
+          done
+
+          # skills/ — 66+ framework skills; can't enumerate. Instead deny common company-shaped
+          # names: anything starting with a known venture prefix, or a single-word lowercase
+          # folder that we know maps to a company. Maintained as we discover new leaks.
+          for company_prefix in sovra acme chuycepeda chuy zineb sarah; do
+            for dir in "skills/$company_prefix"/ "skills/$company_prefix-"*/; do
+              [ -d "$dir" ] && FOUND="$FOUND
+  - $dir  (skills/$company_prefix*/ — company-namespaced; relocate to operator vault under skills/$company_prefix/)"
+            done
+          done
+
+          if [ -n "$FOUND" ]; then
+            echo "::error::Company-namespaced content found in framework infra layers:"
+            echo "$FOUND"
+            echo ""
+            echo "Framework infra ships only operator-agnostic, bundled content. Company-specific paths belong in:"
+            echo "  - operator vaults under <layer>/<company>/ (synced via /aios:company)"
+            echo "  - or a company-template repo (distributed via /aios:company --sync)"
+            echo ""
+            echo "If you're adding a NEW bundled framework path that legitimately doesn't fit the allowlist (e.g., a new agent bundle), update this workflow's allowlist in the same PR."
+            exit 1
+          fi
+          echo "OK: framework infra layers contain only bundled paths + custom/ scaffolds"
+
       - name: Agent bundles exist with README.md + top-level registry
         run: |
           set -e
