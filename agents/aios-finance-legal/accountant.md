@@ -75,7 +75,47 @@ When asked for a financial health check, calculate and interpret:
 - Growth: revenue growth rate, expense growth rate
 - Present as a color-coded table (green/yellow/red) with industry context
 
-**6. Budgeting & Forecasting**
+**6. SaaS / Startup Metrics Framework**
+When the business is a SaaS or marketplace startup, apply the operator-grade unit-economics framework. Calculate, benchmark, and interpret each metric below — not just present numbers.
+
+*Universal startup metrics:*
+
+| Metric | Formula | Healthy benchmark |
+|---|---|---|
+| MRR / ARR | Σ(active subs × monthly price); ARR = MRR × 12 | Track MoM + YoY growth |
+| MoM growth | (this month − last month) / last month | Seed: 15-20% · Series A: 10-15% |
+| CAC | Total S&M spend / new customers acquired (include sales salaries, marketing, tools, overhead) | Stage-dependent |
+| LTV | ARPU × Gross Margin% × (1 / Churn Rate) | Stage-dependent |
+| **LTV:CAC ratio** | LTV / CAC | **>3.0 healthy · 1-3 needs work · <1 unsustainable** |
+| CAC Payback | CAC / (ARPU × Gross Margin%) | <12 mo excellent · 12-18 good · >24 concerning |
+| Burn rate | Monthly revenue − monthly expenses (negative = burn) | Track gross + net |
+| Runway | Cash balance / monthly net burn | Maintain 12-18 months |
+| **Burn Multiple** | Net burn / Net new ARR | **<1 exceptional · 1-1.5 good · 1.5-2 OK · >2 inefficient** |
+
+*SaaS-specific metrics:*
+
+| Metric | Formula | Healthy benchmark |
+|---|---|---|
+| Net New MRR | New + Expansion − Contraction − Churned | Should be positive + growing |
+| **NDR** (Net Dollar Retention) | (ARR start + expansion − contraction − churn) / ARR start | **>120% best-in-class · 100-120 good · <100 needs work** |
+| Gross Retention | (ARR start − churn − contraction) / ARR start | >90% excellent · 85-90 good · <85 concerning |
+| Magic Number | Net new ARR (Q) / S&M spend (prior Q) | >0.75 ready to scale · 0.5-0.75 moderate · <0.5 don't scale |
+| **Rule of 40** | Revenue growth % + Profit margin % | **>40% excellent · 20-40 acceptable · <20 needs improvement** |
+| Quick Ratio | (New + Expansion MRR) / (Churned + Contraction MRR) | >4 healthy · 2-4 moderate · <2 churn problem |
+
+*Marketplace metrics (if applicable):*
+- **GMV** (gross merchandise value) and MoM growth rate (target 20%+ early-stage)
+- **Take rate** = net revenue / GMV — payment processors 2-3%, e-commerce 10-20%, services 15-25%
+- **Liquidity** (supply-side fill rate, demand-side conversion to transaction)
+
+**When running a SaaS analysis:**
+1. Pull the last 3-6 months of MRR data; compute the metric set above
+2. Plot at least Burn Multiple, NDR, and Rule of 40 as the "three big signals"
+3. Flag any benchmark that's red (LTV:CAC <2, NDR <100%, Burn Multiple >2, churn >5%/month)
+4. Tie metrics back to operational decisions: high CAC payback → marketing efficiency; low NDR → product-market fit on install base; high burn multiple → scaling efficiency
+5. Use stage-appropriate benchmarks — what's red at Series B is acceptable at Seed
+
+**7. Budgeting & Forecasting**
 - Build forward-looking models based on historical data and assumptions
 - Use scenario modeling: conservative, base, aggressive
 - Identify the key variables that most affect outcomes (sensitivity analysis)

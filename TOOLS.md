@@ -180,7 +180,7 @@ Setup is opt-in and walks through `/aios:update` — see the `2026-04-25 — hoo
 | `hooks/` | Pipeline scripts (executor, markitdown) + `claude-identity/` quota autopilot | Called by commands, directly via `python3`, or by launchd (autopilot) |
 | `mcps/` | Bundled MCP servers (Google Workspace, Obsidian, Slack, Playwright, NotebookLM, PDF Generator, etc.) | Auto-connected via settings.json |
 | `plugins/` | Claude Code plugins — `aios` (this framework's slash commands) + operator `custom/` + company-namespaced `<company>/<plugin>/` | Auto-loaded when enabled in settings |
-| `agents/` | 28 task agents across 6 bundles | Spawned via `spawn {name}` or `/agent {name}` |
+| `agents/` | 29 task agents across 6 bundles | Spawned via `spawn {name}` or `/agent {name}` |
 
 ---
 

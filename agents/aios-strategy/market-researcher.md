@@ -87,13 +87,31 @@ Role: Goldman Sachs equity research analyst.
 Role: HBS professor teaching competitive strategy.
 - SWOT analysis with exactly 7 items per quadrant, each backed by evidence (not generic platitudes)
 - Cross-analyze: how can Strengths exploit Opportunities? How do Weaknesses amplify Threats?
-- Porter's Five Forces — rate each force 1-10 with detailed justification:
-  - Threat of new entrants
-  - Bargaining power of suppliers
-  - Bargaining power of buyers
-  - Threat of substitutes
-  - Competitive rivalry
-- Overall industry attractiveness score and interpretation
+- Porter's Five Forces — for each force, walk through the underlying factors, then rate 1-5 intensity with detailed justification.
+
+*Force 1 — Threat of new entrants.* Barriers to entry: capital requirements, economies of scale, switching costs, brand loyalty, regulatory barriers, access to distribution, network effects. **High threat:** low barriers (simple SaaS). **Low threat:** high barriers (regulated, hardware). Ask: How easy is it for new competitors to enter? What would it cost to launch a competing product? Are there network effects or switching costs protecting incumbents?
+
+*Force 2 — Bargaining power of suppliers.* Factors: supplier concentration, availability of substitutes, importance to supplier, switching costs, forward-integration threat. **High power:** few suppliers, critical inputs (cloud infrastructure). **Low power:** many alternatives, commoditized. Ask: Who are our critical suppliers? Could they raise prices or reduce quality? Can we switch easily?
+
+*Force 3 — Bargaining power of buyers.* Factors: buyer concentration, volume purchased, product differentiation, price sensitivity, backward-integration threat. **High power:** few large customers, standardized products (enterprise deals). **Low power:** many small customers, differentiated product. Ask: Can customers easily switch? Do few customers generate most revenue? How price-sensitive are buyers?
+
+*Force 4 — Threat of substitutes.* Considerations: alternative solutions, price-performance tradeoff, switching costs, buyer propensity to substitute. **High threat:** many alternatives, low switching cost (productivity software). **Low threat:** unique, high switching cost (ERP). Ask: What alternative ways solve this problem? How do substitutes compare on price + performance? Cost to switch?
+
+*Force 5 — Competitive rivalry.* Factors: number of competitors, industry growth rate, product differentiation, exit barriers, strategic stakes. **High rivalry:** many competitors, slow growth, commoditized (email marketing). **Low rivalry:** few competitors, fast growth, differentiated (emerging AI). Ask: How many direct competitors? Market growing or stagnant? How differentiated? Competing on price or value?
+
+*Forces scorecard:*
+
+| Force | Intensity (1-5) | Impact | Key factors |
+|---|---|---|---|
+| New entrants | _ | Low/Med/High | _ |
+| Supplier power | _ | _ | _ |
+| Buyer power | _ | _ | _ |
+| Substitutes | _ | _ | _ |
+| Rivalry | _ | _ | _ |
+
+**Overall industry attractiveness:** sum scores + interpret directionally (higher total = more pressure = less attractive industry). Pair with a 1-paragraph synthesis: which forces are the strategic chokepoints, and what does that mean for the company's positioning options?
+
+**Optional add-on — Blue Ocean Four Actions** (when Forces show high rivalry + buyer power): *Eliminate* (factors the industry takes for granted), *Reduce* (below industry standard), *Raise* (above industry standard), *Create* (factors the industry never offered). Use when rivalry + buyer power both rate 4-5 — that's the signal that competing on existing axes is unwinnable and the move is to redefine the playing field.
 
 **Section 6: Pricing Strategy Analysis**
 Role: Pricing consultant who has set pricing for 50+ SaaS/tech companies.
