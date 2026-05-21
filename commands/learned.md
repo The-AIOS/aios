@@ -103,7 +103,7 @@ Distill the period's learnings into a reflective report — what was understood,
 
 ## Branded PDF Export
 
-When the user says yes to PDF export, generate a branded HTML report. Always generate **both** HTML and PDF. Save both to `vault/04 - export/reports/learned/` (create the folder if it doesn't exist).
+When the user says yes to PDF export, generate a branded HTML report. Always generate **both** HTML and PDF. Save both to `vault/03 - export/reports/learned/` (create the folder if it doesn't exist).
 
 The design is reflective/editorial — lighter than role-report's operational dark theme.
 
@@ -276,7 +276,7 @@ Write the HTML to `/tmp/learned-{period}.html`, then:
 1. **Always save HTML to vault** (the editable source):
 ```bash
 mkdir -p ~/obsidian/vault/04\ -\ export/reports/learned
-cp /tmp/learned-{period}.html "$HOME/obsidian/vault/04 - export/reports/learned/{period}-learned.html"
+cp /tmp/learned-{period}.html "$HOME/obsidian/vault/03 - export/reports/learned/{period}-learned.html"
 ```
 
 2. **Ask: "Want the PDF version too?"** If yes:
@@ -284,7 +284,7 @@ cp /tmp/learned-{period}.html "$HOME/obsidian/vault/04 - export/reports/learned/
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --headless \
   --no-pdf-header-footer \
-  --print-to-pdf="$HOME/obsidian/vault/04 - export/reports/learned/{period}-learned.pdf" \
+  --print-to-pdf="$HOME/obsidian/vault/03 - export/reports/learned/{period}-learned.pdf" \
   /tmp/learned-{period}.html
 ```
 

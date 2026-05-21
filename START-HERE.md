@@ -188,7 +188,7 @@ Once `/today` is running smoothly, here's the order things tend to come online:
 2. **Weekly rhythm** — `/7plan` Monday, `/weekly-learnings` Friday (week 2)
 3. **Mount your company(ies)** — `/company` to mount any venture-context repos relevant to your work (week 1)
 4. **First personal venture** (if you have one outside any mounted company) — copy `templates/about_venture-template.md` into `vault/00 - notes/context/ventures/{your-venture-name}/about_venture.md`
-5. **First project** — copy `vault/02 - templates/project-template.md` into `vault/00 - notes/projects/{project-name}.md` (week 2-3)
+5. **First project** — copy `templates/project-template.md` into `vault/00 - notes/projects/{project-name}.md` (week 2-3)
 6. **Observed context fills in** — `session-insights.md`, `patterns.md`, `growth.md` (organic, weeks 2-4)
 7. **First strategic command** — `/drift` (Wednesday), `/emerge` (mid-month), `/ideas` (when curious) (month 1)
 8. **First content** — `/ghost` to draft in your voice, `/learned` to distill insights into publish-ready content (month 2+)

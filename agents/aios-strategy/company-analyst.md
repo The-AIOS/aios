@@ -58,7 +58,7 @@ Read the user's declared context (`about_me.md`, `about_business.md`) to frame a
 ## Output format
 - Structure with clear sections matching the framework above
 - Lead with the story — the frameworks come after the narrative earns them
-- Save analysis to `vault/04 - export/sovra/research/{company}-analysis.md` (or appropriate subfolder)
+- Save analysis to `vault/03 - export/sovra/research/{company}-analysis.md` (or appropriate subfolder)
 - Close-session report: company analyzed, key insights, parallels to user's ventures
 
 ## Constraints

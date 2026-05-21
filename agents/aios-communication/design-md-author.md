@@ -147,7 +147,7 @@ who it's for, what feeling it should produce>
 **File destinations:**
 - **Venture/company design.md** → `vault/00 - notes/context/ventures/{company}/design.md` (gets pushed to `{org}/venture-context` via `/company`)
 - **Personal design.md** → `vault/00 - notes/context/declared/design.md` (or the chuycepeda-design.md equivalent if that's the operator's pattern)
-- **Product design.md** → `vault/04 - export/{project}/design.md` (artifact for shipping)
+- **Product design.md** → `vault/03 - export/{project}/design.md` (artifact for shipping)
 - **For Stitch upload** → `.stitch/DESIGN.md` (per `stitch::manage-design-system` skill convention)
 
 ### Step 4 — Validate

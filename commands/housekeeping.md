@@ -68,7 +68,7 @@ Scan every `_index.md` file in the vault. For each one:
 - `00 - notes/context/observed/_index.md`
 - `00 - notes/context/ventures/_index.md`
 - `00 - notes/logs/_index.md`
-- `02 - templates/_index.md`
+- `templates/_index.md`
 - `04 - export/_index.md` + subfolders
 - `agents/_index.md` (canonical registry) + `agents/custom/_index.md`
 
@@ -242,7 +242,7 @@ Read `USER.md` and propose updates where the file has aged into one of these deb
 
 #### Bucket 14: Missed reports audit (NEW)
 
-Walk `vault/04 - export/reports/` and detect period-reports that should exist but don't. **Audit-only** — delegates generation to the canonical commands (`/weekly-learnings`, `/learned`, `/role-report`). This bucket detects gaps + proposes the command invocations to fill them; it doesn't re-implement the generators.
+Walk `vault/03 - export/reports/` and detect period-reports that should exist but don't. **Audit-only** — delegates generation to the canonical commands (`/weekly-learnings`, `/learned`, `/role-report`). This bucket detects gaps + proposes the command invocations to fill them; it doesn't re-implement the generators.
 
 **Detection window** (defaults):
 - Weekly: last 4 closed weeks (Mon-Sun fully in the past)
@@ -253,16 +253,16 @@ Older gaps are silently skipped — assume intentional cadence choice. User can 
 
 **Audit checks per closed week** (W{N}):
 - `01 - calendar/{YYYY-MM}/{YYYY}-W{NN}-summary.md` exists?
-- `vault/04 - export/reports/weekly/Week{N}-AI-OS.html` exists?
+- `vault/03 - export/reports/weekly/Week{N}-AI-OS.html` exists?
 - If either is missing AND the week has at least 3 daily notes → propose `/weekly-learnings <week-id>` (one run generates both summary.md + HTML).
 
 **Audit checks per closed month:**
-- `vault/04 - export/reports/monthly/Month{N}-AI-OS-{Month}.html` exists? → propose `/weekly-learnings month <Month>`
-- `vault/04 - export/reports/role/{Month}-{Year}-role-report.html` exists? (only check if `vault/00 - notes/context/declared/role-expectations.md` exists in this vault) → propose `/role-report <Month> <Year>`
-- `vault/04 - export/reports/learned/{Month}-{Year}-learned.html` exists? (only check if at least one `/learned` HTML has been generated before in this vault — proves the user uses this cadence) → propose `/learned month <Month> <Year>`
+- `vault/03 - export/reports/monthly/Month{N}-AI-OS-{Month}.html` exists? → propose `/weekly-learnings month <Month>`
+- `vault/03 - export/reports/role/{Month}-{Year}-role-report.html` exists? (only check if `vault/00 - notes/context/declared/role-expectations.md` exists in this vault) → propose `/role-report <Month> <Year>`
+- `vault/03 - export/reports/learned/{Month}-{Year}-learned.html` exists? (only check if at least one `/learned` HTML has been generated before in this vault — proves the user uses this cadence) → propose `/learned month <Month> <Year>`
 
 **Audit checks per closed quarter / semester / year** (most recent only):
-- `Q{N}-AI-OS.html`, `H{N}-AI-OS.html`, `Year-AI-OS-{Year}.html` in `vault/04 - export/reports/weekly/` → propose `/weekly-learnings quarter` / `semester` / `year` for the missing periods.
+- `Q{N}-AI-OS.html`, `H{N}-AI-OS.html`, `Year-AI-OS-{Year}.html` in `vault/03 - export/reports/weekly/` → propose `/weekly-learnings quarter` / `semester` / `year` for the missing periods.
 
 **Skip rules (the cadence is the user's call):**
 - Pre-vault-adoption periods (before earliest existing report OR earliest daily note) → out of scope. Don't propose reports for weeks/months when the vault didn't exist yet.
@@ -403,8 +403,8 @@ Comprehensive integrity check of the two operating files that govern every sessi
 
 **A. CLAUDE.md health (universal infra — affects every operator):**
 
-1. **Wiki-link resolution** — for every `[[link]]` in CLAUDE.md, verify the target exists somewhere reachable (in `agents/`, `commands/`, `hooks/`, `vault/02 - templates/`, `vault/00 - notes/context/`, etc.). Flag broken links.
-2. **Path references** — grep for hardcoded paths (`vault/06 - agents/...`, `06 - agents/...`, `my-agents/...`, etc.) that may be stale post-restructure. Compare against current filesystem.
+1. **Wiki-link resolution** — for every `[[link]]` in CLAUDE.md, verify the target exists somewhere reachable (in `agents/`, `commands/`, `hooks/`, `templates/`, `vault/00 - notes/context/`, etc.). Flag broken links.
+2. **Path references** — grep for hardcoded paths (`agents/...`, `agents/...`, `my-agents/...`, etc.) that may be stale post-restructure. Compare against current filesystem.
 3. **Section completeness** — required sections present? `# Mandatory First Action`, `## Identity & Greeting`, `## Spawning Sessions`, `## I. Operating Principles`, `## II. Rituals`, `## III. Self-Update`, `## IV. Vault Map`, `## V. Infrastructure`, `## VI. Discipline`. Flag missing.
 4. **Personal-slug leakage** — grep for patterns that look operator-specific (`chuycepeda-*`, `sovra-*`, real-person names) that shouldn't be in canonical infra. Flag for de-personalization.
 5. **Index consistency** — `## IV. Vault Map → Index Maintenance` lists folders with `_index.md` files. Verify each listed folder actually has its `_index.md`. Flag mismatches.
@@ -426,7 +426,7 @@ Comprehensive integrity check of the two operating files that govern every sessi
 | # | File | Issue | Severity | Recommended fix |
 |---|---|---|---|---|
 | 17.1 | CLAUDE.md:497 | Wiki-link `[[advisory-jane-doe]]` doesn't resolve (example only, OK to leave) | low | leave |
-| 17.2 | CLAUDE.md:382 | Path `vault/06 - agents/` is stale (post-restructure now `agents/`) | high | [ ] update path |
+| 17.2 | CLAUDE.md:382 | Path `agents/` is stale (post-restructure now `agents/`) | high | [ ] update path |
 | 17.3 | USER.md:74 | `chuycepeda@gmail.com` listed as Personal email — verify still active | low | [ ] confirm |
 | 17.4 | USER.md:134 | `### /old-command` personalization has no matching `commands/old-command.md` | medium | [ ] remove orphan personalization |
 

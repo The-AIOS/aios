@@ -21,7 +21,7 @@ How to launch, name, and resume sessions.
 | Install the spawn wrapper | `bash ~/obsidian/hooks/claude-identity/install-wrappers.sh` | One-time setup. Idempotent — safe to re-run. |
 | Run Claude without spawn | `claude --remote-control --name <name>` | Bypasses wrapper; not recommended |
 
-**Why use `spawn` over raw `claude`:** the wrapper sets `$CLAUDE_AGENT_NAME` so CLAUDE.md can match an agent profile (`vault/06 - agents/<name>.md`), greet you in character, and route close-session reports back to the right project. Raw `claude` works but loses the identity-aware behavior.
+**Why use `spawn` over raw `claude`:** the wrapper sets `$CLAUDE_AGENT_NAME` so CLAUDE.md can match an agent profile (`agents/<name>.md`), greet you in character, and route close-session reports back to the right project. Raw `claude` works but loses the identity-aware behavior.
 
 **Where session transcripts live:** `~/.claude/projects/<vault-path-slug>/*.jsonl` — one file per session. Useful when you want to grep across past conversations.
 
@@ -72,9 +72,9 @@ Generate the shareable thing.
 
 | You want... | Command | Output location |
 |---|---|---|
-| **Weekly summary** (the week's narrative + PDF) | `/weekly-learnings` | `vault/01 - calendar/<YYYY-MM>/<YYYY>-W<NN>-summary.md` + `vault/04 - export/reports/weekly/Week<NN>-AI-OS.{html,pdf}` |
-| **Monthly learnings** (insights distilled across the period) | `/learned` | `vault/01 - calendar/<YYYY-MM>/learned-<period>.md` + optional branded PDF in `vault/04 - export/reports/learned/` |
-| **Role activity report** (for stakeholders) | `/role-report` | `vault/04 - export/reports/role/<period>-role-report.{html,pdf}` |
+| **Weekly summary** (the week's narrative + PDF) | `/weekly-learnings` | `vault/01 - calendar/<YYYY-MM>/<YYYY>-W<NN>-summary.md` + `vault/03 - export/reports/weekly/Week<NN>-AI-OS.{html,pdf}` |
+| **Monthly learnings** (insights distilled across the period) | `/learned` | `vault/01 - calendar/<YYYY-MM>/learned-<period>.md` + optional branded PDF in `vault/03 - export/reports/learned/` |
+| **Role activity report** (for stakeholders) | `/role-report` | `vault/03 - export/reports/role/<period>-role-report.{html,pdf}` |
 
 **All three commands accept a period argument** — a named period (`month`, `Q1 2026`, `March`, `last 3 months`, `this week`) or an explicit date range (`2026-03-01 to 2026-03-28`). Run without arguments and each picks a sensible default + asks for confirmation. `/weekly-learnings` additionally auto-fires monthly/quarterly/semester/year reports on the last Friday of each period — no argument needed.
 
@@ -110,7 +110,7 @@ The shared template ships infra that's the same for every user. Editing these lo
 - `mcps/` — bundled MCP servers
 - `skills/` — reusable skill capabilities
 - `plugins/` — bundled plugins
-- `vault/02 - templates/` — file templates
+- `templates/` — file templates
 
 **Yours to edit (personal layer):**
 - `USER.md` (never synced — your personalization)
@@ -119,8 +119,8 @@ The shared template ships infra that's the same for every user. Editing these lo
 - `vault/00 - notes/context/observed/*` — Claude writes these; you read + occasionally correct
 - `vault/00 - notes/projects/*` — your projects
 - `vault/01 - calendar/*` — daily notes, weekly plans
-- `vault/06 - agents/my-agents/*` — your personal agents (override shared agents of the same name)
-- `vault/00 - notes/ideas/`, `vault/00 - notes/reflections/`, `vault/04 - export/writing/` — your content
+- `agents/my-agents/*` — your personal agents (override shared agents of the same name)
+- `vault/00 - notes/ideas/`, `vault/00 - notes/reflections/`, `vault/03 - export/writing/` — your content
 
 **If you want to upstream a change** to a touch-not file (improvement worth sharing with everyone), the path is: prototype it in USER.md → let it stabilize 60+ days → `/housekeeping` Bucket 13 surfaces it as a promotion candidate → propose it for `commands/<name>.md` or the relevant shared file. That's how end-user discoveries flow back into the template.
 

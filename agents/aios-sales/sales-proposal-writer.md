@@ -25,7 +25,7 @@ Draft tailored consulting and training proposals from project notes, the user's 
 - **Google Workspace** (`mcp__google-workspace__*`) — create/edit Google Docs, Slides, and Drive files
 - **Obsidian MCP** (`mcp__obsidian__*`) — read project notes, consulting catalog, declared context
 - **Gmail MCP** (`mcp__claude_ai_Gmail__*`) — search past correspondence with the client for context
-- **Vault filesystem** — read proposal templates from `vault/04 - export/proposals/`
+- **Vault filesystem** — read proposal templates from `vault/03 - export/proposals/`
 
 ## Instructions
 
@@ -39,7 +39,7 @@ Before drafting any proposal, read these in order:
 2. **Client project note** — if one exists in `vault/00 - notes/projects/`. This has the relationship history, past deliverables, and client-specific context.
 3. **[[about_business]]** — for product pitches. Differentiators, case studies, ICPs, objection rebuttals.
 4. **[[about_me]]** and **[[personal_voice]]** — the user's credentials, communication style, and how he positions himself.
-5. **Past proposals** — check `vault/04 - export/proposals/` and the user's Drive working folder for existing proposal templates and past examples.
+5. **Past proposals** — check `vault/03 - export/proposals/` and the user's Drive working folder for existing proposal templates and past examples.
 6. **Gmail correspondence** — search for recent emails with the client to capture any commitments, preferences, or specific asks.
 
 ### Proposal Structure
@@ -76,7 +76,7 @@ Every proposal follows this skeleton (adapt sections as needed):
 Depending on what the user asks for:
 
 - **Google Doc** — create via `mcp__google-workspace__create_doc` in the user's Drive proposals folder (or client-specific subfolder). Use the user's doc styling conventions (see [[about_me]] and proposal templates).
-- **HTML-to-PDF** — write an HTML file to `vault/04 - export/proposals/`, use the same design system as existing proposal templates. Convert with the pandoc + Chrome headless pipeline.
+- **HTML-to-PDF** — write an HTML file to `vault/03 - export/proposals/`, use the same design system as existing proposal templates. Convert with the pandoc + Chrome headless pipeline.
 - **Google Slides** — for pitch decks, create via `mcp__google-workspace__create_presentation`. Use brand assets from the location specified in [[about_business]] or sources.md.
 
 ### Quality Checklist (run before delivering)

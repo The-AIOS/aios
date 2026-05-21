@@ -30,7 +30,7 @@ Self-contained HTML templates for Sovra-branded documents. Same approach used in
 1. **Read `STYLE-REFERENCE.md`** for design rules (colors, fonts, components)
 2. **Scan `sales-templates/`** to pick the best layout for the content type
 3. **Generate styled HTML** using `base.html` components and the chosen template as reference
-4. **Save output** to `vault/04 - export/{document-name}.html`
+4. **Save output** to `vault/03 - export/{document-name}.html`
 5. **Convert to PDF** via browser print (Cmd+P) or `python to_pdf.py`
 
 ## What's inside

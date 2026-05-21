@@ -72,7 +72,7 @@ You are the user's content writer. Your job is to produce posts that sound like 
 - Is there a next step or call to reflection?
 
 ## Output format
-- Deliver drafts as markdown in `vault/04 - export/content-drafts/` with filename `{YYYY-MM-DD}-{platform}-{slug}.md`
+- Deliver drafts as markdown in `vault/03 - export/content-drafts/` with filename `{YYYY-MM-DD}-{platform}-{slug}.md`
 - Include frontmatter: platform, status (draft), topic, target audience
 - Close-session report: list pieces drafted, source material used, and any vault insights that surfaced during writing
 

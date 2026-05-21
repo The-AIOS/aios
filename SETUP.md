@@ -264,7 +264,7 @@ Add the vault folder: `~/obsidian/vault` (Obsidian → Open another vault → Op
 
 ### 3. Tell Claude about yourself
 
-Fill in your declared context. Templates for all files are in `vault/02 - templates/`.
+Fill in your declared context. Templates for all files are in `templates/`.
 
 ```
 vault/00 - notes/context/declared/
@@ -279,13 +279,13 @@ Start with `about_me.md` — even 5 bullet points make a huge difference.
 
 **Set up your ventures:** Each venture gets a folder in `vault/00 - notes/context/ventures/`:
 1. Create subfolder: `ventures/{venture-name}/`
-2. Create `about_venture.md` inside it (use `vault/02 - templates/about_venture-template.md`)
+2. Create `about_venture.md` inside it (use `templates/about_venture-template.md`)
 3. Add deep-dive files as needed (positioning, personas, pricing, GTM)
 4. Update `about_business.md` with a summary entry pointing to the venture folder
 
 ### 4. Create your projects
 
-Each project is a note in `vault/00 - notes/projects/`. Ask Claude: *"Create a project note for [name]"* or copy from `vault/02 - templates/project-template.md`. Projects bridge your external tools (GitHub, Monday, Google Tasks) to your daily plan.
+Each project is a note in `vault/00 - notes/projects/`. Ask Claude: *"Create a project note for [name]"* or copy from `templates/project-template.md`. Projects bridge your external tools (GitHub, Monday, Google Tasks) to your daily plan.
 
 ### 5. Run your first command
 

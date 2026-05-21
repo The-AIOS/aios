@@ -7,7 +7,7 @@ Bundled MCP that converts markdown or HTML to a branded PDF via the standard vau
 - `markdown_to_pdf(markdown, output_path?, theme?)` — converts markdown to PDF, saves to disk, returns path.
 - `html_to_pdf(html, output_path?)` — converts HTML directly to PDF (useful when you already have a styled template).
 
-Output defaults to `~/obsidian/vault/04 - export/generated/{timestamp}.pdf`.
+Output defaults to `~/obsidian/vault/03 - export/generated/{timestamp}.pdf`.
 
 ## Example usage
 

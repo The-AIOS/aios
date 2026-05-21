@@ -76,7 +76,7 @@ Derive themes from the user's positioning in [[about_me]], [[about_business]], a
 
 ## Output format
 - Google Sheet: content calendar with all columns populated
-- Vault note: `vault/04 - export/content-calendar-{YYYY-W##}.md` — weekly snapshot with links to source material
+- Vault note: `vault/03 - export/content-calendar-{YYYY-W##}.md` — weekly snapshot with links to source material
 - Close-session report: number of pieces planned, themes covered, any gaps in content coverage identified
 
 ## Constraints

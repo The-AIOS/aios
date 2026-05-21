@@ -92,7 +92,7 @@ Structure the report as:
 - News from industries the organization doesn't serve
 
 ## Output format
-- Write intelligence reports to `vault/04 - export/brand-intel/` with filename `{YYYY-MM-DD}-brand-intel.md`
+- Write intelligence reports to `vault/03 - export/brand-intel/` with filename `{YYYY-MM-DD}-brand-intel.md`
 - Include frontmatter: date, urgency_items (count), content_triggers (count)
 - For urgent items: post a summary to Slack (channel TBD by the user) with key finding + recommended action
 - Close-session report: number of findings by category, top 3 most actionable items, any content triggers passed to [[content-scheduler]]

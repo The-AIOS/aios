@@ -13,8 +13,8 @@
 | `mcps/` | `mcps/` |
 | `plugins/` | `plugins/` (core engine only — Sovra-flavored skin stays in company-scope) |
 | `skills/` | `skills/` (excluding `sovra-web-design/` which is Sovra-specific) |
-| `vault/02 - templates/` | `templates/` (top-level, promoted from vault/) |
-| `vault/06 - agents/` (shared agents only — NOT `my-agents/`) | `agents/` (top-level, promoted from vault/) |
+| `templates/` | `templates/` (top-level, promoted from vault/) |
+| `agents/` (shared agents only — NOT `my-agents/`) | `agents/` (top-level, promoted from vault/) |
 | `CLAUDE.md` | `CLAUDE.md` (after stripping chuy-specific examples) |
 | `CHANGELOG.md` | `CHANGELOG.md` (with header note about pre-extraction history) |
 
@@ -28,7 +28,7 @@ To avoid migrating broken or Sovra-specific content:
 1. Hardcoded `~/obsidian` paths → path-config-driven (17 surfaces; 13 commands + 4 hooks)
 2. `com.sovra.claude-quota-watch.plist` → generic-named plist
 3. `mcps/playwright-mcp/auth/*.json` → gitignored, removed from tracking
-4. Sovra-flavored content (`ventures/sovra/`, `skills/sovra-web-design/`, sovra-branded `pdf-generator/` templates, `about_business.md` template, `vault/06 - agents/company-analyst.md`, `vault/.obsidian/snippets/sovra-colors.css`) → moves to company-scope, not product
+4. Sovra-flavored content (`ventures/sovra/`, `skills/sovra-web-design/`, sovra-branded `pdf-generator/` templates, `about_business.md` template, `agents/company-analyst.md`, `vault/.obsidian/snippets/sovra-colors.css`) → moves to company-scope, not product
 5. Sovra mentions in shared docs/registries → genericized
 
 ## After this repo is filled

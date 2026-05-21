@@ -27,7 +27,7 @@ Files where the team version is always correct. Overwrite without merge.
 - `TOOLS.md` (repo root — human-facing guide to all vault capabilities)
 - `CHANGELOG.md` (repo root)
 - `.gitignore` (repo root — single source of hygiene for the whole repo, including secret-leak patterns)
-- `02 - templates/*` (all template files)
+- `templates/*` (all template files)
 - `skills/*` (all skills — full folder replace. 66 reusable capabilities including Obsidian, Karpathy coding, etc.)
 - `hooks/*` (pipeline executor, markitdown converter, claude-identity wrappers, repo root)
 - `.obsidian/snippets/*` (CSS fixes)
@@ -42,13 +42,13 @@ Files the user may have personalized. Show per-section diffs, let them cherry-pi
 
 ### Tier 3: Flag (advisory only)
 Detect when a template evolved but the user's filled-in version is missing new sections. No files touched — just a heads-up.
-- Compare `02 - templates/about_me-template.md` sections → `00 - notes/context/declared/about_me.md`
-- Compare `02 - templates/about_business-template.md` sections → `00 - notes/context/declared/about_business.md`
-- Compare `02 - templates/working_style-template.md` sections → `00 - notes/context/declared/working_style.md`
-- Compare `02 - templates/personal_voice-template.md` sections → `00 - notes/context/declared/personal_voice.md`
-- Compare `02 - templates/role-expectations-template.md` sections → `00 - notes/context/declared/role-expectations.md`
+- Compare `templates/about_me-template.md` sections → `00 - notes/context/declared/about_me.md`
+- Compare `templates/about_business-template.md` sections → `00 - notes/context/declared/about_business.md`
+- Compare `templates/working_style-template.md` sections → `00 - notes/context/declared/working_style.md`
+- Compare `templates/personal_voice-template.md` sections → `00 - notes/context/declared/personal_voice.md`
+- Compare `templates/role-expectations-template.md` sections → `00 - notes/context/declared/role-expectations.md`
 - Compare `USER.md` (team template) sections → user's `USER.md` (flag new sections the user doesn't have yet)
-- Compare `02 - templates/project-template.md` sections → any project note (general advisory)
+- Compare `templates/project-template.md` sections → any project note (general advisory)
 
 ## Tracker file
 
@@ -157,7 +157,7 @@ git -C /tmp/vault-update-check diff {stored_hash}..HEAD --name-only -- \
   "CHANGELOG.md" \
   "CLAUDE.md" \
   ".gitignore" \
-  "vault/02 - templates/" \
+  "templates/" \
   "skills/" \
   "hooks/" \
   "vault/.obsidian/snippets/" \

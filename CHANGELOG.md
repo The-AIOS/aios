@@ -97,8 +97,8 @@ See `mcps/_index.md` for the canonical list + setup instructions. Run `bash mcps
 3. **Run `/aios:update`** in your `~/obsidian` Claude session. It will pull the entire new infrastructure from The-AIOS/aios as the canonical state.
 
 4. **What you'll see during the update:**
-   - New top-level `agents/` directory (was `vault/06 - agents/` previously) — your custom agents in `my-agents/` are renamed to `custom/`
-   - New top-level `templates/` directory (was `vault/02 - templates/` previously)
+   - New top-level `agents/` directory (was `agents/` previously) — your custom agents in `my-agents/` are renamed to `custom/`
+   - New top-level `templates/` directory (was `templates/` previously)
    - 5 new agents shipped (growth-companion, onboarding-aios, design-md-author, decision-journaler, crisis-mode)
    - `/vault-commands:*` namespace renamed to `/aios:*` (matches the new public brand). `/company-sync` command renamed to `/aios:company` and substantially upgraded (multi-substrate, multi-company)
    - `/housekeeping` gained Bucket 16 (Radar Health Audit) + Bucket 17 (CLAUDE.md + USER.md health check)
@@ -147,7 +147,7 @@ See `commands/company.md` for the full subcommand surface (`--create`, `--mount`
 These are the structural improvements that landed in the 2026-05-21 cutover. Each is documented separately in its own changelog entry below — this initial entry is the umbrella.
 
 1. **Multi-company model** — new `/aios:company` (multi-substrate, multi-company) replaces the older single-company `/company-sync`. `USER.md` shifts from a single `## Organization` block to a `## Companies (mounted)` table that holds N rows.
-2. **Agents restructured into 6 plugin bundles** at top-level `agents/` (was flat at `vault/06 - agents/`). Per-bundle README scoping. Operator extensions in `agents/custom/`.
+2. **Agents restructured into 6 plugin bundles** at top-level `agents/` (was flat at `agents/`). Per-bundle README scoping. Operator extensions in `agents/custom/`.
 3. **5 new agents:** growth-companion, onboarding-aios, design-md-author, decision-journaler, crisis-mode — all in `aios-personal/` and `aios-communication/`.
 4. **Anthropic-official integration** — every agent that has an authoritative Anthropic-shipped specialist references it via `## See also` (anthropics/financial-services, claude-for-legal, claude-code-security-review, etc.). Reference, don't bundle — keeps AIOS lean while making Anthropic's deeper layers discoverable.
 5. **design.md spec adopted** — `design-md-author` agent generates design.md per [Google's design.md spec](https://github.com/google-labs-code/design.md) (14.5K⭐). References VoltAgent/awesome-design-md (82K⭐) for inspiration.

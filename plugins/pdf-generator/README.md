@@ -10,7 +10,7 @@ The fastest way to create a branded PDF from any markdown content:
 ### 1. Prepare your markdown
 Place your source `.md` file in the vault assets folder:
 ```
-vault/03 - assets/your-document.md
+vault/02 - assets/your-document.md
 ```
 
 ### 2. Ask Claude to generate the HTML
@@ -18,7 +18,7 @@ Open a Claude Code session at the vault root and run:
 ```
 Based on the sales-templates in plugins/pdf-generator/sales-templates/,
 choose the best template to present this markdown:
-'vault/03 - assets/your-document.md'
+'vault/02 - assets/your-document.md'
 
 The audience is [describe who will read this and what they expect].
 ```
@@ -27,7 +27,7 @@ Claude will:
 - Read `STYLE-REFERENCE.md` for design rules
 - Scan the 19 sales templates to pick the best layout for your content
 - Generate a styled HTML file using `base.html` components
-- Save it to `vault/04 - export/your-document.html`
+- Save it to `vault/03 - export/your-document.html`
 
 ### 3. Convert to PDF
 
@@ -103,7 +103,7 @@ These are the 19 templates Claude chooses from based on your content type:
 - **Be specific about the audience** — Claude picks a different layout for an IT team than for executives
 - **Long documents work** — Claude will paginate across multiple A4 pages automatically
 - **Iterate** — If the first version isn't right, ask Claude to adjust specific sections
-- **Output goes to `vault/04 - export/`** — all generated HTML lives there
+- **Output goes to `vault/03 - export/`** — all generated HTML lives there
 
 ## Relationship to web-site repo
 

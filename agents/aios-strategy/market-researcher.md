@@ -162,7 +162,7 @@ After completing all 11 sections:
 
 ## Output format
 - Primary deliverable: Google Doc in the venture's Drive folder (e.g., `~/cowork/{Venture}/research/`)
-- If no Drive folder is appropriate, export to `vault/04 - export/`
+- If no Drive folder is appropriate, export to `vault/03 - export/`
 - Close-session report: "Completed 11-section market research for {topic}. Key finding: {one sentence}. Report: {Google Doc link}"
 - Update the relevant project note in the vault with a link to the report
 

@@ -95,7 +95,7 @@ Draft a structured narrative report per the pillars defined in `role-expectation
 
 ## Branded PDF Export
 
-When the user says yes to PDF export, generate a branded HTML report. Always generate **both** the HTML and the PDF. Save both to `vault/04 - export/reports/role/` (create the folder if it doesn't exist).
+When the user says yes to PDF export, generate a branded HTML report. Always generate **both** the HTML and the PDF. Save both to `vault/03 - export/reports/role/` (create the folder if it doesn't exist).
 
 The design system and full HTML template are embedded below — no external template file needed.
 
@@ -268,7 +268,7 @@ Write the HTML to `/tmp/role-report-{period}.html`, then:
 1. **Always save HTML to vault** (the editable source):
 ```bash
 mkdir -p ~/obsidian/vault/04\ -\ export/reports/role
-cp /tmp/role-report-{period}.html "$HOME/obsidian/vault/04 - export/reports/role/{period}-role-report.html"
+cp /tmp/role-report-{period}.html "$HOME/obsidian/vault/03 - export/reports/role/{period}-role-report.html"
 ```
 
 2. **Ask: "Want the PDF version too?"** If yes:
@@ -276,7 +276,7 @@ cp /tmp/role-report-{period}.html "$HOME/obsidian/vault/04 - export/reports/role
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --headless \
   --no-pdf-header-footer \
-  --print-to-pdf="$HOME/obsidian/vault/04 - export/reports/role/{period}-role-report.pdf" \
+  --print-to-pdf="$HOME/obsidian/vault/03 - export/reports/role/{period}-role-report.pdf" \
   /tmp/role-report-{period}.html
 ```
 
