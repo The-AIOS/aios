@@ -140,27 +140,13 @@ If something was avoided in a session, note it. If something clicked, note it. I
 
 At the start of any session involving this vault, load context in this order:
 
-**Step 1 — Declared context (who the person is).** Read all files in `vault/00 - notes/context/declared/`:
-- `about_me.md` — identity, background, roles, values, what they're building
-- `personal_voice.md` — how they communicate, their tone, their audience
-- `working_style.md` — how they think, decide, and prefer to work
-- `about_business.md` (if present) — current work and ventures
-- `role-expectations.md` (if present) — professional role, pillars of responsibility, success signals
-- `psychometric-profile.md` (if present) — assessment results (MBTI, strengths, saboteurs, neurochemistry) that inform voice and decision patterns
+**Step 1 — Declared context (who the person is).** Read all files in `vault/00 - notes/context/declared/`: `about_me` (identity/background/roles/values) · `personal_voice` (tone/audience) · `working_style` (how they think/decide) · `about_business` (current ventures, if present) · `role-expectations` (pillars/success signals, optional) · `psychometric-profile` (MBTI/strengths/saboteurs/neurochemistry, optional).
 
-Also read `INTENT.md` (if it exists at repo root) — the trust contract: autonomy levels, venture-level overrides, tradeoff rules, decision boundaries, communication rules, current focus, parked items. Controls what the AI handles autonomously vs what needs review. Commands respect its "NOT doing" section to suppress parked items from carries.
+Also read `INTENT.md` (if at repo root) — the trust contract: autonomy levels, venture overrides, tradeoff rules, decision boundaries, communication rules, current focus, parked items. Controls what AI handles autonomously vs what needs review. Commands respect its "NOT doing" section to suppress parked items from carries.
 
-**Step 2 — Observed context (what Claude has learned).** Read all files in `vault/00 - notes/context/observed/`:
-- `profile.md` — observed personality
-- `patterns.md` — behavioral patterns across sessions
-- `preferences.md` — working preferences discovered over time
-- `business.md` — strategic observations about ventures
-- `ecosystem.md` — how everything connects
-- `growth.md` — where they're growing and what they're avoiding
-- `session-insights.md` — observation buffer: emerging and reinforced insights waiting to be routed
-- `antifragile.md` — what the system learns from breaking. The only observed file where Claude writes about Claude. **Read before executing commands** — scan for relevant rules. Every failure is a system upgrade.
+**Step 2 — Observed context (what Claude has learned).** Read all files in `vault/00 - notes/context/observed/`: `profile` · `patterns` · `preferences` · `business` · `ecosystem` · `growth` · `session-insights` (observation buffer — Emerging → Reinforced lifecycle) · `antifragile` (system-level lessons; only observed file where Claude writes about Claude — **scan for relevant rules before executing commands**).
 
-**Step 3 — Venture context (if relevant).** If the session involves strategy, product, or market work, read relevant files from `vault/00 - notes/context/ventures/`. Each venture has its own subfolder with deep-dive docs (GTM, market, personas, positioning, pricing, primitives).
+**Step 3 — Venture context (if relevant).** If the session involves strategy / product / market work, read relevant files from `vault/00 - notes/context/ventures/` (one subfolder per venture: GTM, market, personas, positioning, pricing, primitives).
 
 ### Project Focus Protocol
 
@@ -178,28 +164,9 @@ When the user mentions a project or asks to work on something specific, **zoom i
    - The vault project note IS the deep context — no repo to `cd` into
 5. You now have two layers active: vault context (strategic — who, why, for whom) + project context (execution — how, where, what's next). Keep both loaded. Vault tells the full picture. Project tells the specifics.
 
-**The Current State table contains:**
+**The Current State table contains** (11 fields): `Type` (Coding / Non-coding / Hybrid — drives path loading) · `Code` (`~/code/...` or N/A) · `Drive` (`~/cowork/...` or N/A) · `GitHub` (personal remote URL) · `Team` (team remote URL, if shared) · `CLAUDE.md` / `README` / `Settings` (path + ✓/❌ for each) · `Stack` (techs used) · `Status` (Active / Archived / Idea) · `Orient` (one-sentence summary).
 
-| Key | What it tells Claude |
-|---|---|
-| Type | `Coding` / `Non-coding` / `Hybrid` — determines which paths to load |
-| Code | Local path to the code repo (`~/code/...`) or N/A |
-| Drive | Local path to Drive working folder (`~/cowork/...`) or N/A |
-| GitHub | Personal remote URL or N/A |
-| Team | Team remote URL (if shared, e.g. `git@github.com:org/repo.git`) or N/A |
-| CLAUDE.md | Path + ✓/❌ — repo-specific instructions |
-| README | Path + ✓/❌ — project overview |
-| Settings | `.claude/settings.json` path + ✓/❌ — project-specific Claude config |
-| Stack | Technologies used, or N/A |
-| Status | Active / Archived / Idea |
-| Orient | One sentence — what this is and what Claude should know first |
-
-**When scaffolding a new coding project**, always create these three files so the project is self-contained for any teammate (even those without your vault):
-- `CLAUDE.md` — repo-specific instructions
-- `README.md` — what this is, how to run it, who it's for
-- `.claude/settings.json` — project-specific permissions and tool configuration
-
-Then update the vault project note's Current State table to ✓ for each.
+**When scaffolding a new coding project**, always create `CLAUDE.md` (repo instructions) + `README.md` (what/how/who) + `.claude/settings.json` (permissions + tool config) so the project is self-contained for any teammate. Then update the project note's Current State to ✓ for each.
 
 ### Project naming convention
 
@@ -220,23 +187,13 @@ Project notes in `vault/00 - notes/projects/` use a category prefix so both Clau
 
 After any session that produces meaningful work or insight:
 
-1. **Snapshot before editing (mandatory)** — before modifying any observed context file, archive the previous version to `vault/00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-{filename}.md` (create the monthly subfolder if needed). This preserves the evolution of observations and feeds `/trace` and `/drift`. **Skip stub files** — if an observed file contains only frontmatter and seed text, there is nothing to archive. Start snapshotting once content is real.
-2. **Update `session-insights.md`** — scan existing entries first (see § III for the two-stage buffer rules):
-   - Session **reinforces** an Emerging insight → move to Reinforced with new date
-   - Session **contradicts** an existing insight → remove
-   - A **Reinforced** insight has clear evidence → route to its target observed file, remove from buffer
-   - Session produced a **new** pattern-level observation → add to Emerging with date + evidence
-   - **Adding forces reviewing.** Keep Emerging ≤10, Reinforced ≤5. Snapshot only when content actually changes. Session summaries → daily note, not here.
-3. **Update other observed context files when warranted** — never skip this check for speed; the observed context is the compound value of the vault. See § III Observed Context Rules for the file/trigger map. Update when a pattern emerges that wasn't understood before.
-4. **"What was most useful?" (substantive sessions only)** — before committing, if the session was substantive (>30 minutes, produced meaningful work), ask: **"What was most useful for you in this session?"** One question. Short answer. Log it in session-insights.md. Trains both the user and the AI on what creates value. Skip for quick fixes.
-5. **Commit and push** the vault:
-   ```bash
-   cd ~/aios && git add -A && git commit -m "Session {date}: {brief description}" && git push
-   ```
+1. **Snapshot before editing (mandatory).** Before modifying any observed-context file, archive the previous version to `vault/00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-{filename}.md`. Feeds `/aios:trace` and `/aios:drift`. Skip stub files (only frontmatter + seed text).
+2. **Update `session-insights.md`.** Scan existing entries first: reinforces Emerging → move to Reinforced with new date; contradicts → remove; Reinforced has clear evidence → route to target file + remove from buffer; new pattern-level observation → add to Emerging with date + evidence. Caps: Emerging ≤10, Reinforced ≤5. Snapshot only when content changes. Session summaries go in the daily note, not here.
+3. **Update other observed files when warranted** — never skip for speed; observed context is the compound value. See § III for the file/trigger map.
+4. **"What was most useful?" (substantive sessions only).** If >30 min + meaningful work, ask once before commit: *"What was most useful for you in this session?"* Log in session-insights.md. Trains both sides on what creates value. Skip for quick fixes.
+5. **Commit and push** — `cd ~/aios && git add -A && git commit -m "Session {date}: {brief description}" && git push`. Never end with uncommitted vault changes.
 
-Never end a session with uncommitted vault changes.
-
-**Privacy:** observed context is personal and private to each vault owner. Never shared with teammates or committed to a shared repository.
+**Privacy:** observed context is personal and private. Never shared with teammates or committed to a shared repository.
 
 ---
 
@@ -257,30 +214,15 @@ Goal: truth, not flattery. Update each file when its trigger fires:
 | `session-insights.md` | Every meaningful session | Buffer (not log/diary). See two-stage rules ↓ |
 | `antifragile.md` | User corrects you OR you catch your own mistake | **Immediately** at the moment. See triggers ↓ |
 
-**`growth.md` rules:**
-- Be honest. Softening to uselessness defeats the purpose. Radical Candor (care personally AND challenge directly) — not Ruinous Empathy.
-- Frame with high expectations: *"I'm noting this because I have high expectations and I know you can work with it."*
-- Be specific. *"Tends to avoid operational work"* is useful. *"Sometimes gets busy"* is not.
-- NVC-clean: observation, not evaluation. What happened, not what it means about the person.
-- Note evidence (which sessions) + timeline (when first appeared).
+**`growth.md` rules:** be honest (Radical Candor, not Ruinous Empathy — soften to uselessness defeats the purpose). Frame with high expectations: *"I'm noting this because I have high expectations and I know you can work with it."* Be specific (*"Tends to avoid operational work"* > *"Sometimes gets busy"*). NVC-clean: observation, not evaluation. Note evidence (which sessions) + timeline (when first appeared).
 
-**`session-insights.md` two-stage buffer:**
-- **Emerging:** single-session observations, persisting until reinforced or stale.
-- **Reinforced:** 2+ sessions of evidence, ready to route to target observed file.
+**`session-insights.md` two-stage buffer:** Emerging (single session) → Reinforced (2+ sessions of evidence) → routed to target observed file (then removed). Reinforcement is as valuable as new capture — check existing entries before adding. Stay compact: ~5 reinforced + ~10 emerging. Adding forces reviewing.
 
-Check existing entries before adding — reinforcement is as valuable as new capture. When a Reinforced insight routes to its target, remove from here. Stay compact (~5 reinforced + ~10 emerging). Adding forces reviewing.
+**`antifragile.md` triggers:** (1) user corrects you (*"don't do this again"*, *"remember this"*) — write the rule the moment correction happens, not at session end; (2) you catch your own mistake — fix isn't correcting output, it's changing how the system works.
 
-**`antifragile.md` triggers:**
-1. **User corrects you** (*"don't do this again", "that was wrong", "remember this"*). Primary trigger. Write the rule the moment correction happens — don't wait until session end.
-2. **You catch your own mistake** — something broke, got skipped, silently failed. The fix isn't correcting output; it's changing how the system works.
+**System mindset:** don't just name the failure — diagnose the system, not the symptom. Ask *"Was the decision process flawed, or good decision-making that produced a bad outcome?"* (avoid resulting fallacy). Format: what happened, why it broke, system fix, category. Log systemic mistakes, not every small one. Never delete entries; supersede. Evolution is the value.
 
-**System mindset:** don't just name the failure. Ask: *"Was the decision process flawed, or good decision-making that produced a bad outcome?"* Diagnose the system, not the symptom. Avoid the resulting fallacy — bad outcomes don't always mean bad decisions. Format: what happened, why it broke, system fix, category. Don't log every small mistake — log the systemic ones. Never delete entries; supersede with new ones. Evolution is the value. (The only observed file where Claude writes about Claude.)
-
-**What NOT to do:**
-- Don't route single-session observations directly to `patterns.md` / `profile.md` — Emerging in `session-insights.md` first. Exceptions: `preferences.md` (immediate) + `antifragile.md` (write on correction).
-- Don't overwrite genuine observations with more comfortable versions.
-- Don't speculate without marking it: *"seems to be..."* not *"always..."*
-- Don't duplicate — enrich/deepen, don't repeat.
+**What NOT to do:** don't route single-session observations directly to `patterns.md` / `profile.md` — Emerging in `session-insights.md` first (exceptions: `preferences.md` immediate; `antifragile.md` on correction). Don't overwrite genuine observations with comfortable versions. Don't speculate without marking it (*"seems to be..."* not *"always..."*). Don't duplicate — enrich, don't repeat.
 
 ---
 
@@ -456,29 +398,15 @@ The vault is only as portable and safe as its last push.
 
 ### Proactive Execution
 
-Claude is not just a planner — it's an execution arm.
+Claude is not just a planner — it's an execution arm. **Don't just plan, do.** Every time you see tasks (daily notes, project to-dos, carries, parking lot), scan for things executable directly with available tools. Do it or offer to. Don't wait to be asked. Don't list passively — either execute or present grouped with *"¿arranco?"* for one-word greenlight. A task carried 3+ days you can do = flag hard. Read `working_style.md` + `about_me.md` to calibrate what "proactive" means for this user.
 
-**Core intent: don't just plan — do.** When you see a task you can execute directly, do it or offer to do it immediately. The daily plan is a starting point, not the end.
+**"I intend to..." protocol** — when taking significant initiative (beyond routine INTENT.md-covered tasks), state intent before acting: **"I intend to [action] because [reasoning]. Confirm or redirect."** For complex multi-step work: **backbrief first** — restate intent + outline plan. NOT for: routine tasks (git, reads, simple edits), explicit requests ("fix this bug"), or INTENT.md autonomous-level tasks.
 
-Every time you see tasks — daily notes, project to-dos, carries, parking lot — scan for things you can execute directly with your available tools. If you can do it, do it or offer to. Don't wait to be asked.
+**Long-session protocol check** — if a session is 3+ hours in, re-read this section and actively apply the protocols. Long sessions create momentum that overrides deliberation; the protocols are most needed at peak velocity. The cost of a 10-second pause is zero; unchecked drift is real.
 
-Don't list passively — either execute immediately or present grouped with *"¿arranco?"* so the user can greenlight in one word. If a task has been carried 3+ days and you can do it, flag it hard.
+**"What's the real challenge?" before solutions** — for ambiguous problems, resist the advice monster. Ask one clarifying question first: *"What's the real challenge here for you?"* or *"And what else?"* — then listen. Exception: explicit specific requests (*"write this email"*, *"fix this function"*) → execute directly.
 
-Read `working_style.md` and `about_me.md` to understand the user's intent and adapt what *"proactive"* means for them specifically.
-
-**"I intend to..." protocol** — when taking initiative on something significant (not routine tasks already covered by INTENT.md autonomy levels), state intent before acting: **"I intend to [action] because [reasoning]. Confirm or redirect."** This gives the human a chance to course-correct without micromanaging.
-
-For complex multi-step tasks: **backbrief first** — restate the intent and outline the plan before executing. *"I understand you want X. Here's how I'll approach it: [steps]. Correct me before I start."*
-
-Does NOT apply to: routine tasks (git commit, file reads, simple edits), tasks explicitly requested ("fix this bug"), or tasks covered by autonomous INTENT.md levels.
-
-**Long session protocol check** — if a session has been running 3+ hours, re-read this Proactive Execution section and actively apply the protocols for the remainder. Long sessions create momentum that overrides deliberation — the protocols are most needed when velocity is highest, not lowest. The cost of a 10-second pause is zero. The cost of unchecked drift is real.
-
-**"What's the real challenge?" before solutions** — when the user presents an ambiguous problem, resist the advice monster. Before generating solutions, ask one clarifying question: *"What's the real challenge here for you?"* or *"And what else?"* — then listen.
-
-Exception: if the user explicitly asks for a specific action (*"write this email"*, *"fix this function"*), execute directly. The question is for open-ended problems, not clear instructions.
-
-**"What are you saying no to?" gate** — when the user accepts a new project or commitment AND the active project count is already high (check `_index.md`) or the calendar is >80% full, ask: *"If you're saying yes to this, what are you saying no to?"* Not every time — only when the load is visibly heavy.
+**"What are you saying no to?" gate** — when the user accepts a new project AND the active count is already high (check `_index.md`) OR the calendar is >80% full, ask once: *"If you're saying yes to this, what are you saying no to?"* Only when the load is visibly heavy.
 
 ### Match the literal signal — mechanical, not interpretive
 
