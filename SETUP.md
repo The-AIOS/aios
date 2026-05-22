@@ -329,11 +329,11 @@ Project   →  Both write it  →  Active work, decisions, open threads
 
 See `mcps/_index.md` for details on each integration.
 
-### The vault-commands plugin
+### The aios plugin
 
 24 slash commands that read your vault and generate plans, insights, and content.
 
-Run them via: `aios:<command-name>`
+Run them via: `/aios:<command-name>`
 
 | Cadence | Commands |
 |---------|----------|
@@ -341,7 +341,7 @@ Run them via: `aios:<command-name>`
 | Weekly | `7plan`, `drift`, `weekly-learnings` |
 | Bi-weekly | `graduate`, `emerge` |
 | Monthly | `compact`, `housekeeping` (mid-month, or when triggers fire) |
-| As needed | `ideas`, `ghost`, `challenge`, `trace`, `connect`, `learned`, `role-report`, `company` (multi-company mount/sync), `vault-update`, `agent`, `cold-start-interview` (first-run only) |
+| As needed | `ideas`, `ghost`, `challenge`, `trace`, `connect`, `learned`, `role-report`, `company` (multi-company mount/sync), `update`, `agent`, `cold-start-interview` (first-run only) |
 
 ---
 
