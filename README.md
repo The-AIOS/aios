@@ -200,6 +200,28 @@ The AI doesn't just remember. It connects. And sometimes, what it connects chang
 
 ---
 
+## Extend your AIOS — bring your company, your team, your tools
+
+The framework ships canonical infrastructure (commands, agents, skills, MCPs, hooks, plugins, templates) that's identical for every operator. **What makes the framework yours is the extension layer.** Two patterns, both first-class:
+
+**`custom/`** — your personal extensions. Every infra layer has a `custom/` subfolder reserved for *your* additions: agents you build, skills you write, plugins you scaffold, hooks you wire, templates you author, MCPs you vendor. The framework's `/aios:update` never touches anything inside `custom/` — your extensions survive every framework update. Build whatever you need; AIOS just absorbs it.
+
+**`<company>/` namespacing** — venture-distributed infrastructure. When you mount a company via [`/aios:company`](./plugins/aios/commands/company.md), the AIOS nests its agents, skills, plugins, hooks, MCPs, and templates under that company's namespace — `agents/<company>/`, `skills/<company>/`, `plugins/<company>/<plugin>/`, etc. Onboard a teammate to your shared company context **in one prompt**: they run `/aios:company --mount {your-repo-url}` and inherit the entire infrastructure layer your team has built. Same canonical architecture, multiplied by every company you mount.
+
+```
+agents/    skills/    plugins/    hooks/    mcps/    templates/
+    ↓          ↓          ↓          ↓          ↓          ↓
+  aios-*    aios/      aios/      *.py     *-mcp/    *.md       ← framework (always shipped)
+  custom/   custom/    custom/    custom/  custom/   custom/    ← your personal layer
+  <co>/     <co>/      <co>/<p>/  <co>/    <co>/     <co>/      ← every mounted company's layer
+```
+
+Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) — collaborative spaces (Drive folders, GitHub repos, local sync folders) get scaffolded with the same `space-<collaborator>` project-note pattern and mirror into your daily ritual. Different scope, same extensibility principle.
+
+> **Want to onboard your team in one prompt?** See [The-AIOS/company-template](https://github.com/The-AIOS/company-template) — the canonical scaffold for a venture-context repo. Includes 10 context files (positioning, personas, primitives, gtm, offerings, pricing, culture, design, brand, about-venture) plus 6 optional infra folders (agents/ · plugins/ · hooks/ · mcps/ · skills/ · templates/) ready to receive your team's contributions. One mount, one prompt, every teammate's Claude session inherits the full context layer.
+
+---
+
 ## Repository Architecture
 
 ```
