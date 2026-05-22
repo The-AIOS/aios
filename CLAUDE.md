@@ -11,11 +11,7 @@ Read this file first. Then follow the Session Start Ritual.
 
 ## Mandatory First Action
 
-> **Before anything else, run:**
-> ```
-> echo $CLAUDE_AGENT_NAME
-> ```
-> The output is your identity. Check `USER.md` (if it exists in this directory) for identity mappings — it tells you which names are primary sessions and how to greet. If no `USER.md` exists, treat any non-empty name as a spawned worker and empty as a plain CLI session.
+> **Before anything else, run** `echo $CLAUDE_AGENT_NAME`. The output is your identity. Check `USER.md` (if present) for identity mappings — which names are primary sessions and how to greet. If no `USER.md`: any non-empty name = spawned worker; empty = plain CLI session.
 
 ---
 
@@ -35,20 +31,13 @@ If `USER.md` exists, read it. It contains:
 **If you are a spawned worker** (name doesn't match a primary session in USER.md and is not empty):
 
 1. Your session name is your role (e.g. `accountant`, `lawyer`, `code-review`, `writing`).
-2. **Agent matching** (try in order):
-   - **Exact match:** glob `agents/**/{name}.md` — first match wins. `agents/custom/{name}.md` always takes precedence over bundled ones (operator extensions override). If two bundles ship an agent with the same name, the wrapper warns and lists matches.
-   - **Fuzzy match:** No exact file → read `agents/_index.md` (canonical registry across all bundles) and `agents/custom/_index.md` (if it exists), scan both registry tables. Compare session name against agent names, purposes, domains, and match keywords. Pick the closest match if confidence is high. Tell the user which agent was matched and why.
+2. **Agent matching** (in order):
+   - **Exact:** glob `agents/**/{name}.md` — first match wins. `agents/custom/{name}.md` always overrides bundled. Wrapper warns on collisions across bundles.
+   - **Fuzzy:** no exact file → read `agents/_index.md` (canonical registry) + `agents/custom/_index.md` if present; match session name against agent names/purposes/keywords; pick closest; tell user which matched and why.
    - **No match:** No close agent found → general-purpose worker with session name as role context.
-3. **Greet by name with a contextual message based on your role.** Not a fixed greeting — natural, reflecting what your role does. Examples:
-   - `accountant` → "Hey [name] — your accountant is here. Got numbers to crunch, invoices to review, or financial questions? Let's get into it."
-   - `lawyer` → "Counsel is in, [name]. What legal question or document do you need me to look at?"
-   - `code-review` → "Code reviewer ready. Point me at the PR or branch you want reviewed, [name]."
-   - `writing` → "Writer's room is open, [name]. What are we drafting today?"
-   - *(`[name]` = read the actual name from `about_me.md` — never hardcode.)*
-   - Any other name → generate a greeting that fits the role name naturally.
-4. After greeting, proceed with the full Session Start Ritual so you have the vault's full picture.
-5. **When the task is done:** offer to capture the work. If running at the vault root, offer to update today's daily note with what was shipped. If the user declines or is done, run `/close-session` so `/close-day` can pick up the report.
-   - **Proactive close — don't wait for the user to remember.** When you believe the assigned task is complete (deliverable shipped, clear stopping point reached, or the user signals satisfaction), proactively offer: *"I think we're done with [X] — should I update the daily note and run `/close-session`?"* New users without ritual discipline benefit most here — silent idle = lost work. The compounding loop (agent → close-session → close-day → daily note + project notes) only fires if step 2 happens. Don't let it stall.
+3. **Greet by name with a contextual message that fits the role** — natural prose, not a fixed line. Example: `lawyer` → *"Counsel is in, [name]. What legal question or document do you need me to look at?"* (`[name]` = read from `about_me.md`; never hardcode). Adapt the shape for any role name.
+4. After greeting, proceed with the full Session Start Ritual.
+5. **When the task is done:** proactively offer to update the daily note + run `/close-session` once the deliverable's shipped or the user signals satisfaction. Don't wait for them to remember — silent idle = lost work; the agent → close-session → close-day → daily-note compounding loop only fires if step 2 happens.
 
 ---
 
@@ -214,20 +203,18 @@ Then update the vault project note's Current State table to ✓ for each.
 
 ### Project naming convention
 
-Project notes in `vault/00 - notes/projects/` use a prefix that indicates the project's *category* — so both Claude sessions reading the file index and humans navigating the graph can tell what kind of project they're looking at at a glance:
+Project notes in `vault/00 - notes/projects/` use a category prefix so both Claude and humans can tell the project's kind at a glance:
 
-- **`<venture>-*`** — scoped to one venture/company (`acme-ops`, `acme-product`)
-- **`space-*`** — shared substrate with external collaborator(s) (`space-partner-org`)
-- **`advisory-*`** — paid time-bound advisory engagement (`advisory-client-name`)
-- **`personal-*`** — personal life infrastructure outside any venture (`personal-finances`, `personal-health`)
-- **`experiment-*`** — exploratory, low-commitment (`experiment-new-tool`)
-- **`infra-*`** — substrate serving multiple projects (`infra-fortress`)
+- `<venture>-*` — scoped to one venture/company (`acme-ops`)
+- `space-*` — shared substrate with external collaborator(s) (`space-partner-org`)
+- `advisory-*` — paid time-bound advisory engagement (`advisory-client-name`)
+- `personal-*` — personal life infrastructure outside any venture (`personal-finances`)
+- `experiment-*` — exploratory, low-commitment (`experiment-new-tool`)
+- `infra-*` — substrate serving multiple projects (`infra-fortress`)
 
-**Bare-named exception (rare):** creative products with their own publishable brand identity — e.g. `the-amplifier`, `philosopher-oracle`. The bare name must be a brand, not a generic description.
+**Bare-named exception (rare):** creative products with their own publishable brand identity (`the-amplifier`, `philosopher-oracle`) — must be a brand, not a generic description.
 
-**Selection rule:** when multiple prefixes fit, pick the most specific aspect of the project's identity. *Lifecycle ≠ category:* the `status:` frontmatter field (`active` / `maintenance` / `archived`) handles lifecycle independently from the prefix.
-
-**Adoption:** forward-only. Existing projects rename only during major restructures. `/housekeeping` surfaces naming-convention drift; it does not auto-rename.
+**Rules:** when multiple prefixes fit, pick the most specific. Lifecycle ≠ category — the `status:` frontmatter (`active` / `maintenance` / `archived`) handles lifecycle independently. Adoption is forward-only; existing files rename only during major restructures. `/aios:housekeeping` surfaces drift; never auto-renames.
 
 ### Session End
 
@@ -311,7 +298,7 @@ When the operator asks *"where is X documented?"* — route by role, not by read
 | `CLAUDE.md` (this file) | Behavioral contract — session rituals, agentic culture, 10 principles | Claude every session (auto-loaded) | *"How does Claude work with the vault?"* / when explaining behavior |
 | [`CHEATSHEET.md`](./CHEATSHEET.md) | Day-to-day operating index — launch, daily loop, capture/export, personalization | Operator daily | *"Which command do I use for X?"* / *"How do I customize Y?"* |
 | [`TOOLS.md`](./TOOLS.md) | Full menu of commands + agents + skills + MCPs + standalone tools | Operator looking for capability | *"Is there a tool for X?"* / *"What can AIOS do?"* |
-| [`FORTRESS.md`](./FORTRESS.md) | Two-machine architecture (MacBook + Mac mini), defensive layers (network isolation, SSH hardening, recovery), 24/7 agent host | Advanced operator with a second machine | *"How do I run agents 24/7?"* / *"How do I secure this?"* / *"My Mac mini..."* |
+| [`FORTRESS.md`](./FORTRESS.md) | Two-machine architecture (MacBook + Mac mini), 6 defensive layers, 24/7 agent host | Advanced operator with second machine | *"How do I run agents 24/7?"* / *"My Mac mini..."* |
 
 **Plus 2 operator-owned files** (Claude reads them every session for personalization context):
 
@@ -328,50 +315,26 @@ When the operator asks *"where is X documented?"* — route by role, not by read
 vault/
 ├── 00 - notes/
 │   ├── context/
-│   │   ├── declared/        ← What the owner tells Claude (fill these in)
-│   │   │   ├── about_me.md
-│   │   │   ├── personal_voice.md
-│   │   │   ├── working_style.md
-│   │   │   ├── about_business.md
-│   │   │   ├── role-expectations.md       ← (optional)
-│   │   │   └── psychometric-profile.md    ← (optional)
-│   │   ├── observed/        ← What Claude observes (updated by Claude)
-│   │   │   ├── profile.md
-│   │   │   ├── patterns.md
-│   │   │   ├── preferences.md
-│   │   │   ├── business.md
-│   │   │   ├── ecosystem.md
-│   │   │   ├── growth.md
-│   │   │   ├── session-insights.md
-│   │   │   ├── antifragile.md
-│   │   │   └── vault-routine.md           ← When to run which commands
-│   │   └── ventures/        ← Deep venture reference docs (subfolders per venture)
-│   ├── projects/            ← One note per active project
-│   ├── ideas/               ← Permanent notes (from /graduate)
-│   ├── reflections/         ← Book study notes and deep dives
-│   └── logs/                ← Activity logs + observed-context snapshots
-│       ├── observed-snapshots/{YYYY-MM}/  ← Archived observed context
-│       └── role-logs/{YYYY-MM}/           ← Role activity logs (from /close-day)
-├── 01 - calendar/
-│   └── {YYYY-MM}/
-│       ├── {YYYY-MM-DD}.md          ← Daily plan + close-day
-│       └── {YYYY}-W{WW}-*.md        ← Weekly plan + summary
-├── 02 - assets/                     ← Images, PDFs, attachments referenced by notes
-├── 03 - export/                     ← Output destination for /role-report, /weekly-learnings, /ingest exports, talks, writing pipeline (1-drafts/ → 2-ready/ → 3-published/)
-└── 04 - backups/                    ← User backups (empty by default)
-templates/                           ← Reference templates (top-level infra, not in vault/)
-.claude-plugin/                      ← Marketplace manifest (top-level infra, not in vault/)
-plugins/                             ← Claude Code plugins
-│   ├── aios/                        ← The aios plugin (source of truth)
-│   │   ├── .claude-plugin/plugin.json
-│   │   └── commands/                ← 24 /aios:* slash commands
-│   ├── custom/                      ← operator plugin extensions
-│   └── <company>/                   ← company-namespaced plugins (via /aios:company --sync)
-agents/                              ← Pre-built task agents in 6 bundles + custom/
-mcps/                                ← Vendored MCP servers
-hooks/                               ← Pipeline scripts + claude-identity wrappers
-skills/                              ← Skills (auto-loaded at session start)
-templates/                           ← Reference templates + custom/
+│   │   ├── declared/   ← owner-authored: about_me, personal_voice, working_style, about_business + optional role-expectations, psychometric-profile
+│   │   ├── observed/   ← Claude-authored: profile, patterns, preferences, business, ecosystem, growth, session-insights, antifragile, vault-routine
+│   │   └── ventures/   ← deep venture reference docs (one subfolder per venture)
+│   ├── projects/       ← one note per active project
+│   ├── ideas/          ← permanent notes (from /graduate)
+│   ├── reflections/    ← book study notes + deep dives
+│   └── logs/           ← activity logs + observed-context snapshots ({YYYY-MM}/ subfolders)
+├── 01 - calendar/{YYYY-MM}/    ← {YYYY-MM-DD}.md daily + {YYYY}-W{WW}-*.md weekly
+├── 02 - assets/        ← images, PDFs, attachments
+├── 03 - export/        ← /role-report, /weekly-learnings, /ingest, talks, writing pipeline (1-drafts/ → 2-ready/ → 3-published/)
+└── 04 - backups/
+
+(top-level infra — outside vault/)
+.claude-plugin/marketplace.json   ← marketplace manifest
+plugins/                          ← Claude Code plugins: aios/ (canonical, source of truth) · custom/ (operator) · <company>/ (via /aios:company --sync)
+agents/                           ← 28 task agents in 6 bundles + custom/ + <company>/
+skills/                           ← aios/ · anthropic/ · superpowers/ · custom/
+hooks/                            ← pipeline executor + markitdown + claude-identity wrappers
+mcps/                             ← 10 vendored MCP servers (custom/ for operator)
+templates/                        ← reference templates + custom/
 ```
 
 ### Index Maintenance
@@ -388,7 +351,7 @@ Rules:
 - New command → add placeholder `### /{command}` to `USER.md` under `## Command personalizations`
 - Update the `updated` date in the index frontmatter when modifying it
 
-**Venture → about_business.md sync:** when you create or modify any `about_venture.md` file inside `vault/00 - notes/context/ventures/*/`, update the corresponding entry in `vault/00 - notes/context/declared/about_business.md`. If the venture doesn't have an entry yet, add one. If the one-liner or category changed, update it. Vault hygiene, like index maintenance.
+**Venture → about_business.md sync:** when modifying any `about_venture.md` under `vault/00 - notes/context/ventures/*/`, update the matching entry in `about_business.md` (add if missing, refresh if one-liner/category changed). Vault hygiene, like index maintenance.
 
 ### Project Note Hygiene
 
@@ -423,26 +386,15 @@ Custom slash commands invoked via `aios:<name>`.
 
 **Monthly:** `compact` (digest + archive previous month's snapshots and role logs)
 
-**As needed:** `ideas` · `ghost` · `challenge` · `trace` · `connect` · `learned` · `housekeeping` · `role-report` · `company` (multi-substrate, multi-company; subcommands `--create`, `--mount`, `--sync`, `--sync-all`, `--status`, `--invite`, `--dry-run`) · `vault-update` · `mcps-setup` · `ingest` · `agent` · `collaborate` (substrate-pluggable shared spaces — Drive/GitHub/local; subcommands `--add-project`, `--status`, `--dry-run`)
+**As needed:** `ideas` · `ghost` · `challenge` · `trace` · `connect` · `learned` · `housekeeping` · `role-report` · `update` · `mcps-setup` · `ingest` · `agent` · `company` (multi-substrate, multi-company; subcommands `--create` / `--mount` / `--sync` / `--sync-all` / `--status` / `--invite` / `--dry-run`) · `collaborate` (substrate-pluggable shared spaces — Drive/GitHub/local; subcommands `--add-project` / `--status` / `--dry-run`)
 
 See `vault/00 - notes/context/observed/vault-routine.md` for recommended cadence.
 
 ### Personalization (USER.md is the user-facing surface)
 
-**Users should NOT edit command files.** All personalization goes in `USER.md` → `## Command personalizations`. Each command has a `### /command-name` section — Claude reads it before executing. USER.md survives `/aios:update`; command files get overwritten.
+**Users should NOT edit command files.** All personalization goes in `USER.md` → `## Command personalizations` (each command has a `### /command-name` section, read before executing). USER.md is operator-personal and **never overwritten** by `/aios:update`.
 
-**Command files** live in three places (managed by Claude, not the user):
-
-| Location | Purpose |
-|---|---|
-| `plugins/aios/commands/` (repo root) | **Source of truth** — edit here |
-| `~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/` | Marketplace source — copy from source |
-| `~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/` | **Plugin cache** — what Claude actually reads at runtime (`0.1.0` is the plugin's declared version in `plugin.json`) |
-
-When a command is edited, all three must stay in sync. Workflow: edit in `plugins/aios/commands/` → copy to marketplace source → copy to cache. Or manual:
-```bash
-claude plugin update aios@the-aios
-```
+**Command-file editing has 3 sync locations** (managed by Claude, not the operator): `plugins/aios/commands/` (source of truth) → `~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/` (marketplace) → `~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/` (runtime cache). Convenience refresh: `claude plugin update aios@the-aios`.
 
 ### Hooks · Skills · Plugins
 
@@ -457,9 +409,9 @@ claude plugin update aios@the-aios
 | `plugins/` | Claude Code plugins — `aios` (bundled) + `custom/<your-plugin>/` (operator) + `<company>/<plugin>/` (company-namespaced) | Auto-loaded when enabled in settings | Add folder under `plugins/custom/<name>/` with `.claude-plugin/plugin.json` |
 | `agents/` | Task agents in 6 bundles (`aios-sales/`, `aios-strategy/`, `aios-finance-legal/`, `aios-engineering/`, `aios-communication/`, `aios-personal/`) + `custom/` for operator extensions | Spawned via `spawn {name}` or `/agent {name}` — glob match across all bundles | Add `{name}.md` to the relevant bundle folder (or `custom/` for your own) from `[[agent-template]]` |
 
-**Custom/ + company namespacing**: framework-level layers (`agents/`, `skills/`, `hooks/`, `mcps/`, `templates/`) each have a `custom/` subfolder for single-file operator extensions — survive `/aios:update`; custom overrides bundled. The `plugins/` layer follows the canonical Claude Code convention instead: each plugin is a self-contained folder. Operator-built plugins go in `plugins/custom/<your-plugin>/` (NOT inside the `aios` plugin). Company-distributed infra (via `/aios:company --sync`) lands at `{layer}/{company}/` for single-file layers and `plugins/{company}/<plugin-name>/` for plugins (e.g., `agents/acme-co/`, `templates/acme-co/`, `plugins/acme-co/board-prep/`) — namespaced by company, never collides with `custom/` or `aios-*/`.
+**Custom/ + company namespacing:** every framework layer has a `custom/` subfolder for operator extensions (single files, survive `/aios:update`, override bundled). `plugins/` follows Anthropic's plugin convention (each plugin is a self-contained folder; operator-built plugins go in `plugins/custom/<your-plugin>/`, NOT inside `aios/`). Company-distributed infra (via `/aios:company --sync`) lands at `{layer}/{company}/` (single-file layers) or `plugins/{company}/<plugin>/` (plugin layer) — namespaced by company, never collides with `custom/` or `aios-*/`.
 
-**Operator custom slash commands:** the canonical extension point is your OWN plugin, not a `custom/` subfolder inside `aios`. To add a `/my-stuff:my-command`, create `plugins/custom/my-stuff/` with its own `.claude-plugin/plugin.json` + `commands/my-command.md`, then register it in `.claude-plugin/marketplace.json`. Same pattern as company-distributed plugins, just locally owned.
+**Operator slash commands** go in your OWN plugin, never inside `aios`. To add `/my-stuff:my-command`: create `plugins/custom/my-stuff/` with `.claude-plugin/plugin.json` + `commands/my-command.md`, register in `.claude-plugin/marketplace.json`. Same shape as company-distributed plugins, locally owned.
 
 ### MCP Policy — Prefer Bundled, Avoid claude.ai-Hosted
 

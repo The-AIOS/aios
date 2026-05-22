@@ -16,6 +16,8 @@ allowed-tools: >-
 
 You are syncing this person's vault infrastructure with the framework's source of truth. Read the framework upstream URL from `.vault-update` at the repo root (the canonical source). If `.vault-update` doesn't exist OR is missing the `repo=` field, default to `git@github.com:The-AIOS/aios.git` (the canonical framework upstream) and ask the user to confirm before proceeding. Also read `USER.md` → `### /aios:update` for command personalizations. This covers commands, templates, settings, and docs — NOT personal content.
 
+> ⚠️ **Operator-personal files are NEVER overwritten by this command.** Hard denylist — `/aios:update` MUST refuse to write to any of these, regardless of tier classification: `USER.md`, `INTENT.md`, `SARAH.md`, anything under `vault/00 - notes/{context,projects,ideas,reflections,logs}/`, anything under `vault/01 - calendar/`, `vault/02 - assets/`, `vault/03 - export/`, `vault/04 - backups/`, all `{layer}/custom/` folders, all `{layer}/<company>/` folders, `.vault-update`, `.claude/settings.json`, `.claude/settings.local.json`. These files ship as templates from the framework but the operator's instance is their source-of-truth. Template evolution surfaces as Tier 3 advisory only — section-by-section nudges, never file replacement. See `antifragile.md` #55 for the system-level lesson on path-identity vs content-identity.
+
 ## When to use
 
 When notified that the team repo has new commits (e.g., `/today` flags BEHIND in the morning, or you see a CHANGELOG update). Pulls the latest shared infrastructure from The-AIOS/aios with three-tier sync (Replace / Suggest / Flag) so personalization survives.

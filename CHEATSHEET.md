@@ -131,6 +131,25 @@ See: [CLAUDE.md](./CLAUDE.md) → § I. Operating Principles · [INTENT.md](./IN
 
 ---
 
+## §5.5 — Tracker map (where each sync command pulls from)
+
+Two sync commands, two tracker shapes. Knowing this prevents the "where is this command looking?" confusion.
+
+| Command | Pulls FROM | Source of truth (URL) | Tracker file(s) | What it syncs |
+|---|---|---|---|---|
+| `/aios:update` | `The-AIOS/aios` (framework canonical) | `.vault-update` at repo root → `repo=` field | **One file**: `.vault-update` (with `repo=`, `hash=`, `synced=`) | Bundled framework infra — commands, agents, skills, hooks, MCPs, templates, root docs |
+| `/aios:company` | Per-company venture-context repos (one per mounted company) | `USER.md` → `## Companies (mounted)` table → `Source` column per row | **N files** — one `.{company}-sync` tracker INSIDE each venture folder (e.g., `vault/00 - notes/context/ventures/sovra/.sovra-sync`) | Per-company venture-context content (positioning, primitives, gtm, pricing) + optional company-distributed infra (`agents/{company}/`, `plugins/{company}/`, etc.) |
+
+**Why the asymmetry:**
+- The framework is **universal** — one upstream for everyone. Single tracker, single repo.
+- Companies are **operator-specific** — each operator mounts 0, 1, or many. Per-company trackers + USER.md table to enumerate them.
+
+**Read order when troubleshooting "why isn't this syncing":**
+1. For framework updates: cat `.vault-update` → check `repo=` matches expected; check `hash=` vs `git ls-remote {repo} HEAD`
+2. For company updates: read `USER.md` → `## Companies (mounted)` → for the company in question, find its `Venture folder` → cat the `.{company}-sync` file in there
+
+---
+
 ## §6 — Multi-account quota management
 
 Anthropic rate limits are per-account (5h sliding window + 7d budget). Multiple accounts multiply throughput. Two switching modes — pick the one that fits the situation.
