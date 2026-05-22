@@ -272,7 +272,7 @@ Write the HTML to `/tmp/role-report-{period}.html`, then:
 
 1. **Always save HTML to vault** (the editable source):
 ```bash
-mkdir -p ~/aios/vault/04\ -\ export/reports/role
+mkdir -p ~/aios/vault/03\ -\ export/reports/role
 cp /tmp/role-report-{period}.html "$HOME/aios/vault/03 - export/reports/role/{period}-role-report.html"
 ```
 

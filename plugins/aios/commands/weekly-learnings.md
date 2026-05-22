@@ -412,8 +412,11 @@ For the current period's people-equivalent row, **count** from the week's actual
 2. Write to `/tmp/weekly-stats-W{N}.html` (or `M{N}`, `Q{N}`, `H{N}`, `Y{YYYY}` for bigger periods).
 3. **Always save HTML to vault** (the editable source):
 ```bash
+mkdir -p ~/aios/vault/03\ -\ export/reports/weekly
 cp /tmp/weekly-stats-W{N}.html "$HOME/aios/vault/03 - export/reports/weekly/Week{N}-AI-OS.html"
 ```
+
+For monthly / quarterly / semester / yearly reports, swap `weekly` for `monthly` in the `mkdir` + `cp` paths (per § Output paths below).
 
 4. **Ask: "Want the PDF version too?"** If yes:
 ```bash

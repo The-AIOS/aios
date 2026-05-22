@@ -280,7 +280,7 @@ Write the HTML to `/tmp/learned-{period}.html`, then:
 
 1. **Always save HTML to vault** (the editable source):
 ```bash
-mkdir -p ~/aios/vault/04\ -\ export/reports/learned
+mkdir -p ~/aios/vault/03\ -\ export/reports/learned
 cp /tmp/learned-{period}.html "$HOME/aios/vault/03 - export/reports/learned/{period}-learned.html"
 ```
 
