@@ -284,7 +284,7 @@ After writing the Radar table, scan the past 7 daily notes (`vault/01 - calendar
 - Active project = `status: active` in its project note frontmatter
 - Rhythm-block presence = the project's `[[wiki-link]]` OR a clearly-routed task line tagged `_(project-slug)_` appearing in any of the last 7 daily notes' Morning / Afternoon / Evening blocks (not the Radar table itself, not the Parking lot, not the Carries forward — those don't count as Rhythm presence)
 
-**Exemption — watch-mode projects:** active projects whose single priority is explicitly "watch / await external response" (e.g. waiting Mario's review, watching for Anthropic follow-up, awaiting Zi's response, blocker: external) are exempt from the nudge. Their priority IS the watch posture; they don't need a Rhythm window. Detection: project note's Active priority section contains "watch" / "waiting" / "blocker: external" language. When uncertain, ask Chuy inline.
+**Exemption — watch-mode projects:** active projects whose single priority is explicitly "watch / await external response" (e.g. awaiting a partner's review, waiting on a counterparty's reply, blocker: external) are exempt from the nudge. Their priority IS the watch posture; they don't need a Rhythm window. Detection: project note's Active priority section contains "watch" / "waiting" / "blocker: external" language. When uncertain, ask the operator inline.
 
 **Cap nudges at 3 per day** — surface the longest-Radar-only-stretches first. More than 3 = noise; user starts skipping.
 
