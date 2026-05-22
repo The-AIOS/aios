@@ -59,7 +59,7 @@ Present in the response only (no file written):
 
 ## Save to vault
 
-After generating the report, write it to `00 - notes/logs/command-logs/ideas-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["ideas", "vault-command"], "created": "{today}"}`. Then commit and push.
+After generating the report, write it to `00 - notes/logs/command-logs/ideas-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["ideas", "aios-command"], "created": "{today}"}`. Then commit and push.
 
 ## Rules
 

@@ -55,7 +55,7 @@ The user provides a topic. Track how thinking about it evolved across the vault.
 
 ## Save to vault
 
-After generating the report, write it to `00 - notes/logs/command-logs/trace-{topic}-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["trace", "vault-command"], "created": "{today}"}`. Then commit and push.
+After generating the report, write it to `00 - notes/logs/command-logs/trace-{topic}-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["trace", "aios-command"], "created": "{today}"}`. Then commit and push.
 
 ## Rules
 - Only meaningful mentions, not every passing reference

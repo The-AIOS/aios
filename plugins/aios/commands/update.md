@@ -213,7 +213,7 @@ For each changed Tier 1 file:
 
 4. Present each file's changes as a numbered list:
 ```
-### commands/today.md — 2 changes
+### plugins/aios/commands/today.md — 2 changes
 
 1. NEW section: `## Meeting Notes Routing`
    {show content}

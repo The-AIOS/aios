@@ -56,7 +56,7 @@ The user will provide a position to challenge. Build the strongest possible coun
 
 ## Save to vault
 
-After generating the report, write it to `00 - notes/logs/command-logs/challenge-{topic}-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["challenge", "vault-command"], "created": "{today}"}`. Then commit and push.
+After generating the report, write it to `00 - notes/logs/command-logs/challenge-{topic}-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["challenge", "aios-command"], "created": "{today}"}`. Then commit and push.
 
 ## Rules
 - Steel-man BOTH sides

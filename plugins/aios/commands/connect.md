@@ -51,7 +51,7 @@ Find surprising connections between seemingly unrelated notes in the vault.
 
 ## Save to vault
 
-After generating the report, write it to `00 - notes/logs/command-logs/connect-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["connect", "vault-command"], "created": "{today}"}`. Then commit and push.
+After generating the report, write it to `00 - notes/logs/command-logs/connect-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["connect", "aios-command"], "created": "{today}"}`. Then commit and push.
 
 ## Rules
 - Only genuinely surprising connections — not obvious ones

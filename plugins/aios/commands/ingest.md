@@ -1,9 +1,11 @@
 ---
-name: ingest
+tags:
+  - aios
+  - command
+  - on-demand
 description: Process a source into the vault — extract, file, cross-reference, log
-version: 1.0.0
-allowed-tools:
-  Read, Write, Edit, Bash, Grep, Glob, mcp__obsidian__read_note, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__search_notes, mcp__obsidian__list_directory, WebFetch, WebSearch
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, mcp__obsidian__read_note, mcp__obsidian__write_note, mcp__obsidian__patch_note, mcp__obsidian__search_notes, mcp__obsidian__list_directory, WebFetch, WebSearch
+argument-hint: "<path-or-url-or-pasted-text>"
 ---
 
 # /ingest — Process a Source Into the Vault

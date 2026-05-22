@@ -56,7 +56,7 @@ You are scanning the user's vault to find what's being quietly avoided or neglec
 
 ## Save to vault
 
-After generating the report, write it to `00 - notes/logs/command-logs/drift-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["drift", "vault-command"], "created": "{today}"}`. Then commit and push.
+After generating the report, write it to `00 - notes/logs/command-logs/drift-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["drift", "aios-command"], "created": "{today}"}`. Then commit and push.
 
 ## Rules
 - Be direct but respectful. The value is honesty.

@@ -71,7 +71,7 @@ Rules for the table:
 
 ## Save to vault
 
-After generating the report, write it to `00 - notes/logs/command-logs/emerge-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["emerge", "vault-command", "patterns"], "created": "{today}"}`. Then commit and push.
+After generating the report, write it to `00 - notes/logs/command-logs/emerge-{YYYY-MM-DD}.md` using `mcp__obsidian__write_note` with frontmatter `{"tags": ["emerge", "aios-command", "patterns"], "created": "{today}"}`. Then commit and push.
 
 ## Contradiction scan
 

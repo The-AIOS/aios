@@ -361,7 +361,7 @@ Synthesize a ≤100-word behavioral rule from the pattern description + the sour
 
 Detect the **"Radar-but-not-Rhythm"** drift pattern: projects that are `status: active` (so they surface on the daily Radar) but haven't actually appeared in any Rhythm block over a meaningful window. These projects collect "awareness" without execution — the operator nods at them daily but never schedules a window. Over time, this is how active drifts into not-actually-active without anyone naming it.
 
-**The principle:** awareness without execution is drift. `/today`'s Radar→Rhythm nudge (see `commands/today.md` § Radar→Rhythm nudge) catches 7-day-old gaps at the daily level. This bucket catches the *systemic* version: projects that have been Radar-only for **30+ days**, which signals either (a) the project should be honestly demoted to `status: maintenance`, or (b) the operator needs to re-commit by scheduling a window or a re-orientation session.
+**The principle:** awareness without execution is drift. `/today`'s Radar→Rhythm nudge (see `plugins/aios/commands/today.md` § Radar→Rhythm nudge) catches 7-day-old gaps at the daily level. This bucket catches the *systemic* version: projects that have been Radar-only for **30+ days**, which signals either (a) the project should be honestly demoted to `status: maintenance`, or (b) the operator needs to re-commit by scheduling a window or a re-orientation session.
 
 **Detection (scan in this order):**
 
@@ -428,7 +428,7 @@ Comprehensive integrity check of the two operating files that govern every sessi
 | 17.1 | CLAUDE.md:497 | Wiki-link `[[advisory-jane-doe]]` doesn't resolve (example only, OK to leave) | low | leave |
 | 17.2 | CLAUDE.md:382 | Path `agents/` is stale (post-restructure now `agents/`) | high | [ ] update path |
 | 17.3 | USER.md:74 | `chuycepeda@gmail.com` listed as Personal email — verify still active | low | [ ] confirm |
-| 17.4 | USER.md:134 | `### /old-command` personalization has no matching `commands/old-command.md` | medium | [ ] remove orphan personalization |
+| 17.4 | USER.md:134 | `### /old-command` personalization has no matching `plugins/aios/commands/old-command.md` | medium | [ ] remove orphan personalization |
 
 **Severity levels:**
 
