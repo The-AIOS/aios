@@ -24,9 +24,9 @@ If you want to make the most of AI without losing what makes you irreplaceable �
 
 Each stage builds on the last. Each next stage returns ~10× the leverage.
 
-- **Automate — *Gain speed, do faster*.** Daily plans, drafts, syntheses — 30 minutes becomes 30 seconds. *Week 1.*
-- **Amplify — *Gain bandwidth, do more*.** Agents draft proposals, write in your voice, research while you sleep — you stop being the bottleneck. *Month 1.*
-- **Agency — *Gain autonomy, do agentic*.** AI co-workers act on your behalf with judgment, within trust boundaries you've defined. *Quarter 1, deepening across years.*
+- **Week 1: Automate — *Gain speed, do faster*.** Daily plans, drafts, syntheses — 30 minutes becomes 30 seconds.
+- **Week 2: Amplify — *Gain bandwidth, do more*.** Agents draft proposals, write in your voice, research while you sleep — you stop being the bottleneck.
+- **Month 1: Agency — *Gain autonomy, do agentic*.** AI co-workers act on your behalf with judgment, within trust boundaries you've defined.
 
 ---
 
