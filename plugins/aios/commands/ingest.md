@@ -43,7 +43,6 @@ python3 ~/aios/hooks/markitdown-convert.py <input_file> /tmp/ingest-source.md
 Then read the converted markdown. Supported formats: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), images (with OCR), audio (with transcription), HTML, CSV, JSON, XML, ZIP, YouTube URLs, EPUB.
 
 **Routing by source type:**
-- GitHub repo URL (e.g. `github.com/{org}/{repo}`) → if DeepWiki MCP is connected, prefer it (`mcp__deepwiki__*`) for richer structured docs + auto-generated architecture diagrams; fall back to `WebFetch` if not connected
 - URL → `WebFetch` to retrieve content
 - PDF/Word/Excel/PowerPoint/EPUB → MarkItDown conversion → read markdown
 - Image → MarkItDown (OCR + EXIF) → read markdown
