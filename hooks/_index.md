@@ -1,24 +1,30 @@
 ---
 tags: [hooks, index]
 created: '2026-03-28'
-updated: '2026-05-18'  # ← inject-datetime added
+updated: '2026-05-21'
 ---
 # Hooks
 
-> Scripts that run as part of vault commands OR as Claude Code event hooks. Vault-command hooks installed to `~/.claude/hooks/` during setup. Event hooks (UserPromptSubmit, SessionStart, etc.) referenced from `.claude/settings.json`.
+> Scripts that run as part of vault commands OR as Claude Code event hooks. Vault-command hooks invoked from command files. Event hooks (UserPromptSubmit + statusLine) wired in `~/.claude/settings.json` per [SETUP.md §10](../SETUP.md).
 
 ## Vault-command hooks
 
 | Hook | Used by | What it does |
 |------|---------|-------------|
-| `pipeline-executor.py` | `/today`, `/close-day` | Pre-loads Google Calendar, Tasks, and Slack data in one batch. Commands read the output instead of calling APIs individually. |
-| `claude-identity/` | launchd + Claude Code statusLine | Multi-account quota autopilot. Rotates Anthropic accounts when the 5h/7d rate limit nears the cap, then resumes any active sessions on the new account. See `claude-identity/README.md` for setup. |
+| `pipeline-executor.py` | `/today`, `/close-day` | Pre-loads Google Calendar, Tasks, and Slack data in one batch. Commands read the output instead of calling APIs individually. Runs via `uv run` with inline deps. |
+| `markitdown-convert.py` | `/ingest` + standalone | Converts any file (PDF, Word, Excel, PowerPoint, images, audio, YouTube, EPUB, HTML, CSV, JSON, XML, ZIP) → clean markdown. Wraps Microsoft's MarkItDown library. Standalone: `python3 ~/aios/hooks/markitdown-convert.py <file>`. |
+| `claude-identity/` | launchd + statusLine | Multi-account quota autopilot. Rotates Anthropic accounts when the 5h/7d rate limit nears the cap; resumes active sessions on the new account. See `claude-identity/README.md`. macOS-only; ≥ 2 Anthropic accounts required. |
 
 ## Claude Code event hooks
 
 | Hook | Event | What it does |
 |------|-------|-------------|
 | `inject-datetime.sh` (`.ps1`) | `UserPromptSubmit` | Injects current system date/time/timezone into Claude's context before each prompt. Eliminates the "Claude infers time from conversational context instead of checking system clock" failure mode. See `antifragile.md` 2026-05-18 entry. Cross-platform: `.sh` for macOS/Linux, `.ps1` for Windows. |
+| `claude-identity/claude-identity.sh cache \| context-monitor.py` | `statusLine` | Writes rate-limit cache on every Claude turn (feeds the autopilot's fast-path quota detector) + powers the context-monitor status display. Wired in `~/.claude/settings.json` `statusLine.command`. |
+
+## Operator extensions
+
+- `custom/` — your own hooks (survive `/aios:update`). Documented in `custom/_index.md` with the registry table format.
 
 **Wiring:** event hooks are wired in `.claude/settings.json` (project-level) or `~/.claude/settings.json` (user-level). The vault ships a project-level `.claude/settings.json` that wires `inject-datetime.sh` to `UserPromptSubmit`. On Windows, replace `bash` with `pwsh -File` in the command path.
 

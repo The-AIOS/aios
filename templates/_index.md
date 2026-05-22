@@ -21,22 +21,35 @@ Templates for the standard files used across the vault. Each template includes s
 
 ## Current Templates
 
+### Identity & context (declared context)
+
 | Template | Target location | What it creates |
 |----------|----------------|----------------|
-| [[about_me-template]] | `context/declared/about_me.md` | Identity, background, roles, and values |
-| [[about_business-template]] | `context/declared/about_business.md` | Ventures, products, team, and strategy |
-| [[personal_voice-template]] | `context/declared/personal_voice.md` | Communication style, tone, and audience |
-| [[working_style-template]] | `context/declared/working_style.md` | Decision-making, preferences, and rhythms |
-| [[role-expectations-template]] | `context/declared/role-expectations.md` | Professional role, pillars, and success signals |
-| [[project-template]] | `notes/projects/{project}.md` | Active project tracking note |
-| [[role-log-template]] | `notes/logs/role-logs/{date}.md` | Daily role activity log |
-| ~~`sources-template.md`~~ | _(Moved to USER.md → ## Sources)_ | Sources config now lives in USER.md |
-| [[session-reporting-template]] | _(deprecated — use `/close-session`)_ | Replaced by `/close-session` Mode B |
-| [[thinker-reflection-template]] | `notes/reflections/{thinker}-{topic}.md` | Single thinker conversation from Philosopher Oracle |
-| [[symposium-reflection-template]] | `notes/reflections/symposium-{topic}.md` | Multi-thinker symposium from Philosopher Oracle |
-| [[about_venture-template]] | `context/ventures/{venture}/about_venture.md` | Venture overview — one-liner, category, thesis, products, traction |
-| [[agent-template]] | `06 - agents/my-agents/{name}.md` | Specialized task agent — purpose, tools, instructions, constraints |
-| [[meeting-prep-template]] | `04 - export/meetings/{YYYY-MM-DD}-{slug}-prep.md` | High-stakes meeting prep — disambiguation, two-path flow (demo vs discovery), materials checklist, post-call routing |
+| [[about_me-template]] | `vault/00 - notes/context/declared/about_me.md` | Identity, background, roles, and values |
+| [[about_business-template]] | `vault/00 - notes/context/declared/about_business.md` | Ventures, products, team, and strategy |
+| [[personal_voice-template]] | `vault/00 - notes/context/declared/personal_voice.md` | Communication style, tone, and audience |
+| [[working_style-template]] | `vault/00 - notes/context/declared/working_style.md` | Decision-making, preferences, and rhythms |
+| [[role-expectations-template]] | `vault/00 - notes/context/declared/role-expectations.md` | Professional role, pillars, and success signals |
+| [[about_venture-template]] | `vault/00 - notes/context/ventures/{venture}/about_venture.md` | Venture overview — one-liner, category, thesis, products, traction |
+
+### Operational
+
+| Template | Target location | What it creates |
+|----------|----------------|----------------|
+| [[project-template]] | `vault/00 - notes/projects/{project}.md` | Active project tracking note |
+| [[role-log-template]] | `vault/00 - notes/logs/role-logs/{date}.md` | Daily role activity log |
+| [[meeting-prep-template]] | `vault/03 - export/meetings/{YYYY-MM-DD}-{slug}-prep.md` | High-stakes meeting prep — disambiguation, two-path flow (demo vs discovery), materials checklist, post-call routing |
+| [[agent-template]] | `agents/custom/{name}.md` | Specialized task agent — purpose, tools, instructions, constraints |
+
+### Operator extensions
+
+- `custom/` — your own templates (survive `/aios:update`). Documented in `custom/_index.md`.
+
+### Retired / migrated
+
+- `sources-template.md` — replaced by USER.md `## Sources` section
+- `session-reporting-template.md` — replaced by `/close-session` (the command IS the report)
+- `thinker-reflection-template.md` + `symposium-reflection-template.md` — Philosopher-Oracle templates; operator-specific, now live in operator-vault `templates/custom/` (not bundled)
 
 ---
 
