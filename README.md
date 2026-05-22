@@ -114,7 +114,7 @@ The philosophy: don't optimize for smooth sessions. A session where the plan bre
 
 ## What's Inside
 
-Once set up, your vault comes with **24 commands, 41 bundled skills (+ more via Anthropic plugin marketplace), 29 agents across 6 bundles, 10 bundled MCPs, and standalone tools** — all accessible by describing what you need. See **[TOOLS.md](TOOLS.md)** for the full menu of everything your vault can do.
+Once set up, your vault comes with **24 commands, task agents across 6 bundles, bundled skills across 4 source folders, bundled MCPs, and standalone tools** — all accessible by describing what you need. See **[TOOLS.md](TOOLS.md)** for the full menu of everything your vault can do.
 
 ---
 
@@ -200,11 +200,11 @@ The AI doesn't just remember. It connects. And sometimes, what it connects chang
 
 ---
 
-## Vault Architecture
+## Repository Architecture
 
 ```
 ~/aios/
-├── vault/
+├── vault/                   ← Your operator content (notes, calendar, exports, backups)
 │   ├── 00 - notes/
 │   │   ├── context/
 │   │   │   ├── declared/    ← You write: identity, voice, working style, business, role, psychometrics
@@ -220,25 +220,26 @@ The AI doesn't just remember. It connects. And sometimes, what it connects chang
 │   └── 04 - backups/        ← User backups (empty by default)
 ├── .claude-plugin/
 │   └── marketplace.json     ← Marketplace manifest (the-aios marketplace)
-├── plugins/
-│   ├── aios/                ← THE aios plugin (24 /aios:* slash commands)
+├── plugins/                 ← Claude Code plugins
+│   ├── aios/                ← THE aios plugin (/aios:* slash commands)
 │   │   ├── .claude-plugin/plugin.json
-│   │   └── commands/        ← The 24 commands (source of truth)
+│   │   └── commands/        ← The slash commands (source of truth)
 │   ├── custom/              ← Your own plugins survive /aios:update
 │   └── <company>/<plugin>/  ← Company-distributed plugins (via /aios:company --sync)
-├── agents/                  ← 29 pre-built task agents across 6 bundles + custom/
-├── skills/                  ← 41 bundled skills across 4 source folders (aios · anthropic · superpowers · custom)
-├── hooks/                   ← Pipeline executor for /today and /close-day, plus claude-identity quota autopilot (multi-account rotation, macOS)
-├── mcps/                    ← Vendored MCP servers (10 bundled — see mcps/_index.md for the canonical list)
+├── agents/                  ← Pre-built task agents across 6 bundles (sales · strategy · finance-legal · engineering · communication · personal) + custom/
+├── skills/                  ← Skills across 4 source folders (aios · anthropic · superpowers · custom)
+├── hooks/                   ← Pipeline executor (/today, /close-day) + claude-identity quota autopilot (multi-account rotation, macOS)
+├── mcps/                    ← Vendored MCP servers — see mcps/_index.md for the canonical list
 ├── templates/               ← Starting templates for context, projects, agents, ventures
-├── START-HERE.md            ← First-time orientation (what is this, two-step setup, what compounds over time)
+├── START-HERE.md            ← First-time orientation (what is this, what to do post-clone)
 ├── CLAUDE.md                ← How Claude works with this vault (behavioral rules, session rituals, agentic culture)
-├── INTENT.md                ← Trust contract (autonomy levels, tradeoffs, escalation triggers, anti-values)
-├── USER.md                  ← Your personal config (identity, sources, organization, command overrides)
-├── README.md                ← This file (overview + setup pointer + commands menu)
+├── INTENT.md                ← Trust contract (autonomy levels, tradeoffs, escalation triggers)
+├── USER.md                  ← Your personal config (identity, sources, mounted companies, command overrides)
+├── README.md                ← This file (value-prop + framework overview)
 ├── SETUP.md                 ← Step-by-step install (Claude reads this when you say "set up my AI-OS")
-├── CHEATSHEET.md            ← Day-to-day operating index (launch/spawn, daily loop, capture/export, personalization, multi-account switching)
-├── TOOLS.md                 ← Human-readable menu of every command, agent, skill, MCP, and standalone tool
+├── CHEATSHEET.md            ← Day-to-day operating index (launch/spawn, daily loop, capture/export, personalization)
+├── TOOLS.md                 ← Full menu of every command, agent, skill, MCP, and standalone tool
+├── FORTRESS.md              ← Advanced: two-machine architecture for 24/7 autonomous agents
 └── CHANGELOG.md             ← What changed in shared infra, when, and what to do (read by /aios:update)
 ```
 
@@ -268,18 +269,7 @@ Same infrastructure for everyone. Personalized surface for each person. Policy: 
 
 See `mcps/_index.md` for the canonical list, auth requirements, and add-a-new-MCP pattern.
 
-### Available (remote — no local bundle, OAuth on first use)
-
-Use these only if you need them — each one is bound to your active Anthropic account, so switching accounts breaks them mid-session. The MCP Policy (see `CLAUDE.md`) prefers bundled equivalents whenever one exists.
-
-| Integration | What it connects |
-|---|---|
-| **Monday** | Boards, items, deals |
-| **Figma** | Pull designs, generate code from mockups |
-| **Vercel** | Deployments, projects, previews |
-| **Supabase** | SQL queries, Postgres management |
-
-Remote MCPs are hosted by third parties. Call any tool and approve the OAuth prompt — no setup needed.
+> **Looking for an integration that's not bundled** (Monday, Figma, Vercel, Supabase, etc.)? Those exist as claude.ai-hosted remote connectors — operators install them via the Claude UI, separately from the framework. The MCP Policy (see [`CLAUDE.md`](./CLAUDE.md) → § MCP Policy) prefers bundled equivalents when one exists, since claude.ai-hosted MCPs break on account switch. If a service you need has no bundled equivalent, that's a bundling candidate — flag it in [`mcps/_index.md`](./mcps/_index.md).
 
 ---
 
