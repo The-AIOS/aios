@@ -215,9 +215,13 @@ No overrides — use default behavior.
 
 No overrides — reads `## Companies (mounted)` section above.
 
-### /vault-update
+### /aios:update
 
 No overrides — reads `.vault-update` tracker at repo root.
+
+### /mcps-setup
+
+No overrides — use default behavior.
 
 ### /ingest
 
