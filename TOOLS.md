@@ -1,223 +1,216 @@
 # TOOLS.md — What Your Vault Can Do
 
-> Everything here is available to you right now. You don't need to memorize commands or file paths — just describe what you want and your Claude session will use the right tool. This file is your menu.
+> Everything here is available right now. You don't need to memorize commands or file paths — just describe what you want and your Claude session will pick the right tool. This file is the menu, sorted alphabetically for fast lookup.
 
 ---
 
 ## Commands
 
-Say `/aios:{name}` or just ask for what you need — Claude matches intent to command.
+Say `/aios:{name}` or just describe what you need. Claude matches intent to command.
 
-| Command | What it does | When to use |
-|---------|-------------|-------------|
-| `/today` | Generate today's daily plan from vault context | Every morning |
-| `/close-day` | End-of-day review + capture what happened | Every evening |
-| `/close-session` | Lightweight session capture | When finishing a work session |
-| `/7plan` | Weekly strategic plan across all ventures | Sunday/Monday |
-| `/weekly-learnings` | Compile the week's insights + branded PDF | Friday |
-| `/drift` | Honest check — what's being quietly avoided? | Mid-week or when something feels off |
-| `/graduate` | Promote half-formed ideas from daily notes to permanent notes | Every 2 weeks |
-| `/emerge` | Surface patterns implied by the vault but never written | Every 2 weeks |
-| `/compact` | Digest + zip previous month's snapshots and logs | First of the month |
-| `/ideas` | Grounded idea report — things to build, write, explore | When you need inspiration |
-| `/ghost` | Answer a question in the vault owner's voice | When drafting content or proposals |
-| `/challenge` | Steel-man — argue against your current thinking | Before big decisions |
-| `/trace` | Track how thinking about an idea evolved over time | When revisiting a topic |
-| `/connect` | Find unexpected bridges between unrelated domains | When projects feel siloed |
-| `/learned` | Distill insights into a publish-ready report + PDF | After a rich period |
-| `/housekeeping` | Vault housekeeping — proposals to merge, archive, drop carries, refresh indexes, repair links | Monthly, or when the vault feels heavy (carries ×15+, projects 12+, stale snapshots) |
-| `/role-report` | Quarterly report based on your role pillars | Quarterly |
-| `/ingest` | Process any source into the vault — extract, file, cross-reference | When you find something worth keeping |
-| `/agent` | Load an agent's expertise into the current session | When you need a specialist |
-| `/collaborate` | Scaffold a shared Collaboration Space (Drive/GitHub/local) — `--add-project`, `--status`, `--dry-run` | When you want to share work with one or more collaborators on a substrate-pluggable foundation |
-| `/company` | Mount/sync company venture-context (multi-substrate, multi-company). Subcommands: `--create`, `--mount`, `--sync`, `--sync-all`, `--status`, `--invite`, `--dry-run` | Weekly (`--sync-all`) |
-| `/cold-start-interview` | First-touch setup for a freshly-cloned AIOS vault — walks identity, context, MCPs, agent bundles, optional plugins, first /today | One-shot (or revisit-able) |
-| `/aios:update` | Pull latest AIOS framework updates from The-AIOS/aios | When notified |
-| `/mcps-setup` | Guided MCP setup — tokens + zshrc + register + verify | First-time setup or when adding a new MCP |
+| Command | What it does | When to use | Output |
+|---------|-------------|-------------|--------|
+| `/aios:7plan` | Weekly strategic plan across all ventures | Sunday or Monday morning | Weekly plan note + daily notes Mon–Fri |
+| `/aios:agent` | Load a specialist's expertise into the current session | When you need a focused hat for the current convo | Persona engaged inline (no new tab) |
+| `/aios:challenge` | Steel-man the opposite of your current thinking | Before big decisions or commitments | Counter-argument + decision-influencing read |
+| `/aios:close-day` | End-of-day review + capture what shipped | Every evening | Close-of-day block appended to today's daily note + project updates routed |
+| `/aios:close-session` | Lightweight session capture | When finishing a focused work session mid-day | Session report saved to `.claude/session-report-{date}.md` |
+| `/aios:cold-start-interview` | First-touch setup for a freshly-cloned vault | Once, right after `git clone` (re-runnable per section) | USER.md + INTENT.md + declared context + bundle/MCP install choices |
+| `/aios:collaborate` | Scaffold a shared Collaboration Space (Drive / GitHub / local) | When sharing work with one or more collaborators | Mounted space + first project + router note. Subcommands: `--add-project`, `--status`, `--dry-run` |
+| `/aios:compact` | Digest + zip last month's snapshots and logs | First of the month | Monthly digest file + archived snapshots/role-logs |
+| `/aios:company` | Mount or sync company venture-context (multi-substrate, multi-company) | Weekly (`--sync-all`); on first mount; when scaffolding a new venture | Mounted venture folders at `vault/00 - notes/context/ventures/{name}/`. Subcommands: `--create`, `--mount`, `--sync`, `--sync-all`, `--status`, `--invite`, `--dry-run` |
+| `/aios:connect` | Find unexpected bridges between unrelated vault domains | When projects feel siloed | Cross-reference report with project links |
+| `/aios:drift` | Honest check — what's being quietly avoided? | Mid-week or when something feels off | Avoidance audit with named carries + parking-lot review |
+| `/aios:emerge` | Surface patterns implied by the vault but never written | Every 2 weeks | Pattern proposals to route into observed context |
+| `/aios:ghost` | Answer a question in the vault owner's voice | When drafting content, proposals, or pitches | Voice-matched draft response |
+| `/aios:graduate` | Promote half-formed ideas from daily notes to permanent notes | Every 2 weeks | New entries in `vault/00 - notes/ideas/` |
+| `/aios:housekeeping` | Vault hygiene — merges, archives, carry drops, index refresh, link repair, upstream-sync freshness | Monthly, or when vault feels heavy (carries ×15+, projects 12+, stale snapshots) | Proposals table; operator approves before writes |
+| `/aios:ideas` | Grounded idea report — things to build, write, explore | When you need inspiration grounded in your context | Ranked idea list with source attribution |
+| `/aios:ingest` | Process any source (URL, PDF, transcript, paste) into the vault | When you find something worth keeping | Summary page at `reflections/ingests/` + cross-references + action items in project notes |
+| `/aios:learned` | Distill insights into a publish-ready report | After a substantive period worth reflecting on | HTML + PDF at `vault/03 - export/reports/learned/` |
+| `/aios:mcps-setup` | Guided MCP setup — tokens, registration, verification | First-time setup or when adding a new MCP | Each MCP registered in `~/.claude/settings.json` + smoke-tested |
+| `/aios:role-report` | Period report based on your role pillars | Monthly or quarterly | HTML + PDF at `vault/03 - export/reports/role/` |
+| `/aios:today` | Generate today's daily plan from full vault context | Every morning | Daily note at `vault/01 - calendar/{YYYY-MM}/{YYYY-MM-DD}.md` |
+| `/aios:trace` | Track how thinking about an idea evolved over time | When revisiting a topic | Timeline of belief shifts with source snippets |
+| `/aios:update` | Pull latest AIOS framework updates from `The-AIOS/aios` | When CHANGELOG flags new entries to consume | Updated framework files + State→Ask→Act walkthrough per pending entry |
+| `/aios:weekly-learnings` | Compile the week's insights into a branded report | Friday | HTML + PDF at `vault/03 - export/reports/weekly/Week{N}-AI-OS.{html,pdf}` |
+
+**Operator extensions:** your own `/<plugin>:{command}` lives in your own plugin at `plugins/custom/<your-plugin>/commands/`. See [CHEATSHEET.md](./CHEATSHEET.md) → Personalization for the pattern.
+
+**Daily rhythm at a glance:**
+- **Morning:** `/aios:today`
+- **End of work session:** `/aios:close-session` (optional)
+- **Evening:** `/aios:close-day`
+- **Weekly:** `/aios:7plan` (Mon) · `/aios:weekly-learnings` (Fri)
+- **Bi-weekly:** `/aios:drift` · `/aios:graduate` · `/aios:emerge`
+- **Monthly:** `/aios:compact` · `/aios:housekeeping`
+- **Quarterly:** `/aios:role-report`
 
 ---
 
 ## Agents
 
-Say `spawn {name}` to launch a dedicated session, or `/agent {name}` to wear the hat yourself.
+Say `spawn {name}` to launch a named tab dedicated to that role, or `/agent {name}` to wear the hat in the current session.
 
-| Agent | What it does | Example |
-|-------|-------------|---------|
-| `sales-lead-hunter` | Explore leads, qualify, score, draft outreach | "spawn sales-lead-hunter" |
-| `sales-proposal-writer` | Draft proposals from project notes + catalog | "spawn sales-proposal-writer" |
-| `sales-crm-updater` | Sync deal updates to Monday/CRM | "spawn sales-crm-updater" |
-| `market-researcher` | McKinsey-style market intelligence analysis | "spawn market-researcher" |
-| `accountant` | Financial analysis, bookkeeping, tax prep | "spawn accountant" |
-| `lawyer` | Legal review, contract analysis, compliance | "spawn lawyer" |
-| `consultant` | Strategic advisory, frameworks, recommendations | "spawn consultant" |
-| `technical-cofounder` | Build products end-to-end — discovery → shipping | "spawn technical-cofounder" |
-| `code-reviewer` | Review code for security, quality, patterns | "spawn code-reviewer" |
-| `code-documenter` | Generate/update README, CLAUDE.md, inline docs | "spawn code-documenter" |
-| `bug-triager` | Classify issues by severity, suggest priority | "spawn bug-triager" |
-| `content-writer` | Draft posts for LinkedIn, X, Substack in your voice | "spawn content-writer" |
-| `content-scheduler` | Plan and queue content calendar from vault insights | "spawn content-scheduler" |
-| `brand-monitor` | Track mentions, competitors, industry news | "spawn brand-monitor" |
-| `meeting-prepper` | Prepare context-rich briefings for meetings | "spawn meeting-prepper" |
-| `report-drafter` | Draft status reports and board updates | "spawn report-drafter" |
-| `email-drafter` | Draft professional emails matching voice + context | "spawn email-drafter" |
-| `invoice-tracker` | Track pending invoices, flag overdue | "spawn invoice-tracker" |
-| `compliance-checker` | Review documents against legal/regulatory requirements | "spawn compliance-checker" |
-| `study-buddy` | Pre-read chapters, prepare briefs, facilitate study | "spawn study-buddy" |
-| `journal-prompter` | Generate reflection prompts from sessions + patterns | "spawn journal-prompter" |
-| `company-analyst` | Acquired-style deep dives — history, strategy, moat | "spawn company-analyst" |
+| Agent | What it does | Bundle |
+|-------|-------------|--------|
+| `accountant` | Financial analysis, bookkeeping, tax prep, SaaS metrics | finance-legal |
+| `brand-monitor` | Track mentions, competitors, industry news | communication |
+| `bug-triager` | Classify issues by severity, propose priority | engineering |
+| `code-documenter` | Generate/update README, CLAUDE.md, inline docs | engineering |
+| `code-reviewer` | Review code for security, quality, patterns | engineering |
+| `company-analyst` | Acquired-style deep dives — history, strategy, moat | strategy |
+| `compliance-checker` | Review documents against legal/regulatory requirements | finance-legal |
+| `consultant` | Strategic advisory, frameworks, recommendations | strategy |
+| `content-scheduler` | Plan and queue content calendar from vault insights | communication |
+| `content-writer` | Draft posts for LinkedIn, X, Substack in your voice | communication |
+| `email-drafter` | Draft professional emails matching voice + context | communication |
+| `invoice-tracker` | Track pending invoices, flag overdue | finance-legal |
+| `journal-prompter` | Generate reflection prompts from sessions + patterns | personal |
+| `lawyer` | Legal review, contract analysis, compliance | finance-legal |
+| `market-researcher` | McKinsey-style market intelligence (Porter's Five Forces, etc.) | strategy |
+| `meeting-prepper` | Prepare context-rich briefings for meetings | communication |
+| `onboarding-aios` | Knows the whole AIOS map; walks you through it when lost | personal |
+| `report-drafter` | Draft status reports and board updates | communication |
+| `sales-crm-updater` | Sync deal updates to Monday/CRM | sales |
+| `sales-lead-hunter` | Explore leads, qualify, score, draft outreach | sales |
+| `sales-proposal-writer` | Draft proposals from project notes + catalog | sales |
+| `security-engineer` | Threat modeling, secure-code review, incident response | engineering |
+| `study-buddy` | Pre-read chapters, prepare briefs, facilitate study | personal |
+| `technical-cofounder` | Build products end-to-end — discovery → shipping | engineering |
 
-> **Personal agents** live in `06 - agents/my-agents/`. Create yours — same format, same matching.
+**By bundle:** see `agents/_index.md` for the canonical registry (6 bundles + `custom/`). Operator-built agents live at `agents/custom/{name}.md` and survive `/aios:update`. Company-distributed agents land at `agents/{company}/` via `/aios:company --sync`.
+
+**Example:** `spawn lawyer "review NDA at ~/code/contracts/2026-03-mutual-nda.docx"` opens a new tab with the lawyer hat pre-loaded and the task primed as the first prompt.
 
 ---
 
 ## Skills
 
-Skills auto-load — you don't invoke them directly. Just describe what you want and Claude uses the right skill. Here are the ones worth knowing about:
+Skills auto-load — you don't invoke them by name. Describe what you want and Claude picks the right one.
 
-### Coding & Engineering
-| Skill | What to say |
-|-------|-------------|
-| `karpathy-coding` | "Follow Karpathy's principles" — think before coding, simplicity first, surgical changes, goal-driven |
+### Coding & engineering
+| Skill | Trigger phrase |
+|-------|---------------|
 | `code-review-excellence` | "Review this code thoroughly" |
-| `test-driven-development` | "Let's write tests first" |
+| `karpathy-coding` | "Follow Karpathy's principles" — think before coding, simplicity first, surgical changes |
 | `systematic-debugging` | "Help me debug this systematically" |
+| `test-driven-development` | "Let's write tests first" |
 
-### Content & Design
-| Skill | What to say |
-|-------|-------------|
-| `frontend-design` | "Build a landing page / component / dashboard" |
+### Content & design
+| Skill | Trigger phrase |
+|-------|---------------|
+| `brand-guidelines` | "Apply brand styling to this" |
 | `canvas-design` | "Create a poster / visual design" |
 | `doc-coauthoring` | "Let's co-write this document" |
-| `brand-guidelines` | "Apply brand styling to this" |
+| `frontend-design` | "Build a landing page / component / dashboard" |
 
-### Documents & Files
-| Skill | What to say |
-|-------|-------------|
-| `pdf` | "Create a PDF" / "Fill this PDF form" / "Merge these PDFs" |
+### Documents & files
+| Skill | Trigger phrase |
+|-------|---------------|
 | `docx` | "Create a Word document" / "Edit this .docx" |
+| `pdf` | "Create a PDF" / "Fill this PDF form" / "Merge these PDFs" |
 | `pptx` | "Create a presentation" / "Edit these slides" |
 | `xlsx` | "Create a spreadsheet" / "Analyze this Excel file" |
 
-### Obsidian-Specific
-| Skill | What to say |
-|-------|-------------|
-| `obsidian-markdown` | "Write proper Obsidian markdown" — wikilinks, callouts, properties |
-| `obsidian-bases` | "Create a Bases view for my projects" |
-| `json-canvas` | "Create a visual canvas / diagram / map" |
-| `obsidian-cli` | "Open this note in Obsidian" / "Run an Obsidian command" |
+### Obsidian-specific
+| Skill | Trigger phrase |
+|-------|---------------|
 | `defuddle` | "Clean this web page into markdown" |
+| `json-canvas` | "Create a visual canvas / diagram / map" |
+| `obsidian-bases` | "Create a Bases view for my projects" |
+| `obsidian-cli` | "Open this note in Obsidian" / "Run an Obsidian command" |
+| `obsidian-markdown` | "Write proper Obsidian markdown" — wikilinks, callouts, properties |
 
-### Planning & Process
-| Skill | What to say |
-|-------|-------------|
+### Planning & process
+| Skill | Trigger phrase |
+|-------|---------------|
 | `brainstorming` | "Let's brainstorm before building" |
-| `writing-plans` | "Help me plan the implementation" |
 | `executing-plans` | "Execute this plan with checkpoints" |
 | `verification-before-completion` | "Verify everything works before we ship" |
+| `writing-plans` | "Help me plan the implementation" |
 
-> **Bundled skills across 4 source folders** — `skills/aios/` (AIOS-built) · `skills/anthropic/` (vendored from anthropics/skills) · `skills/superpowers/` (vendored from obra/superpowers) · `skills/custom/` (your own). Plus more via Anthropic's `document-skills@anthropic-agent-skills` plugin (canvas-design, docx, pdf, pptx, xlsx, etc. — not bundled here because they're either proprietary or asset-heavy). Browse `skills/` for the full list of bundled ones.
+**Source folders:** `skills/aios/` (AIOS-built) · `skills/anthropic/` (vendored from `anthropics/skills`) · `skills/superpowers/` (vendored from `obra/superpowers`) · `skills/custom/` (your own — survives `/aios:update`). Browse `skills/_index.md` for the full registry. Additional skills (canvas-design, docx, pdf, pptx, xlsx) ship via Anthropic's `document-skills@anthropic-agent-skills` plugin — install via `/plugin install`.
 
 ---
 
-## Standalone Tools
+## Standalone tools
 
-These run from the terminal, independent of any command or skill.
+These run independently from the terminal — no command or skill required.
 
-### MarkItDown — Convert any file to markdown
+### `claude-identity` — multi-account quota autopilot (macOS)
 
-Converts PDF, Word, Excel, PowerPoint, images, audio, YouTube, EPUB → clean markdown.
-
-```bash
-# Basic usage
-python3 hooks/markitdown-convert.py input.pdf                    # prints to stdout
-python3 hooks/markitdown-convert.py input.pdf output.md          # saves to file
-
-# Examples
-python3 hooks/markitdown-convert.py quarterly-report.pdf report.md
-python3 hooks/markitdown-convert.py client-deck.pptx slides.md
-python3 hooks/markitdown-convert.py meeting-recording.mp3 transcript.md
-python3 hooks/markitdown-convert.py budget.xlsx data.md
-```
-
-Or just tell your Claude: **"convert this PDF to markdown"** — it knows about markitdown.
-
-Also integrated into `/ingest`: say `/ingest myfile.pdf` and the conversion happens automatically.
-
-### Pipeline Executor — Pre-load Calendar + Tasks + Slack
-
-Used internally by `/today` and `/close-day`. You don't need to run it manually, but you can:
+Rotates between two or more Anthropic accounts when the 5h or 7d rate limit nears the cap, then respawns active sessions on the new account so transcripts continue uninterrupted. A launchd agent watches every 60 seconds.
 
 ```bash
-uv run hooks/pipeline-executor.py --command today      # loads Calendar, Tasks, Slack
-uv run hooks/pipeline-executor.py --command close-day   # loads Calendar (detailed), Tasks, Slack
-```
-
-### PDF Generator — Branded reports
-
-Used by `/weekly-learnings`, `/learned`, `/role-report` to generate branded PDFs. The pipeline: markdown → HTML (with inline CSS) → Chrome headless → PDF.
-
-### Claude-Identity — Multi-account quota autopilot (macOS only)
-
-Rotates between two or more Anthropic accounts when the 5h or 7d rate limit nears the cap, then respawns active Claude Code sessions on the new account so transcripts continue uninterrupted. A launchd agent watches every 60 seconds; you don't need to run anything once it's loaded.
-
-```bash
-# inspect / rotate manually (after first-time setup)
 ~/aios/hooks/claude-identity/claude-identity.sh whoami    # current + next in rotation
 ~/aios/hooks/claude-identity/claude-identity.sh switch    # rotate to the next account
 ~/aios/hooks/claude-identity/claude-identity.sh list      # all accounts + saved-state
 ```
 
-Setup is opt-in and walks through `/aios:update` — see the `2026-04-25 — hooks/claude-identity` entry in `CHANGELOG.md` for the interactive walkthrough (your Claude session asks how many accounts you have, captures each, customizes the launchd Label, wires statusLine). Full reference + lessons learned in `hooks/claude-identity/README.md`. Hard preconditions: macOS + ≥ 2 Anthropic accounts.
+Setup is opt-in and walked through by `/aios:cold-start-interview` + the SETUP.md §11 split-install flow. Hard prerequisites: macOS + ≥ 2 Anthropic accounts. Full reference: `hooks/claude-identity/README.md`.
+
+### `markitdown` — convert any file to markdown
+
+Converts PDF, Word, Excel, PowerPoint, images, audio (with transcription), YouTube URLs, EPUB, HTML, CSV, JSON, XML, ZIP → clean markdown.
+
+```bash
+python3 ~/aios/hooks/markitdown-convert.py input.pdf              # prints to stdout
+python3 ~/aios/hooks/markitdown-convert.py input.pdf output.md    # saves to file
+python3 ~/aios/hooks/markitdown-convert.py meeting.mp3 transcript.md
+python3 ~/aios/hooks/markitdown-convert.py budget.xlsx data.md
+```
+
+Or just say *"convert this PDF to markdown"* — Claude knows. Also integrated into `/aios:ingest` automatically.
+
+### `pdf-generator` — branded PDFs from markdown or HTML
+
+Powers the branded reports from `/aios:weekly-learnings`, `/aios:learned`, `/aios:role-report`. Available as a bundled MCP (`mcp__pdf-generator__markdown_to_pdf` and `mcp__pdf-generator__html_to_pdf`). Pipeline: markdown → HTML (with inline CSS) → Chrome headless → PDF.
+
+### `pipeline-executor` — Calendar + Tasks + Slack pre-loader
+
+Used internally by `/aios:today` and `/aios:close-day` to batch-load Google Calendar, Tasks, and Slack data in one call. You don't need to run it manually, but you can:
+
+```bash
+uv run ~/aios/hooks/pipeline-executor.py --command today       # for /today shape
+uv run ~/aios/hooks/pipeline-executor.py --command close-day   # for /close-day shape
+```
 
 ---
 
-## Infrastructure Map
+## Infrastructure map
+
+Where everything lives:
 
 | Folder | What's inside | How it's used |
 |--------|--------------|---------------|
-| `plugins/aios/commands/` | 24 vault commands inside the `aios` plugin | Invoked via `/aios:{name}` |
-| `skills/` | Bundled skills across 4 source folders (aios · anthropic · superpowers · custom) | Auto-loaded by Claude Code at session start |
-| `hooks/` | Pipeline scripts (executor, markitdown) + `claude-identity/` quota autopilot | Called by commands, directly via `python3`, or by launchd (autopilot) |
-| `mcps/` | Bundled MCP servers (Google Workspace, Obsidian, Slack, Playwright, NotebookLM, PDF Generator, etc.) | Auto-connected via settings.json |
-| `plugins/` | Claude Code plugins — `aios` (this framework's slash commands) + operator `custom/` + company-namespaced `<company>/<plugin>/` | Auto-loaded when enabled in settings |
-| `agents/` | Task agents across 6 bundles (sales · strategy · finance-legal · engineering · communication · personal) + custom/ | Spawned via `spawn {name}` or `/agent {name}` |
+| `agents/` | Task agents in 6 bundles (`aios-sales/` · `aios-strategy/` · `aios-finance-legal/` · `aios-engineering/` · `aios-communication/` · `aios-personal/`) + `agents/custom/` (operator) + `agents/{company}/` (company-distributed) | Spawned via `spawn {name}` or invoked via `/aios:agent {name}` |
+| `hooks/` | Pipeline scripts (`pipeline-executor.py`, `markitdown-convert.py`) + `claude-identity/` quota autopilot + event hooks (`inject-datetime`) | Called by commands, by `launchd` (autopilot), or via `python3` directly |
+| `mcps/` | Bundled MCP servers — Google Workspace, Slack, GitHub, Atlassian, NotebookLM, Playwright, Stitch, Nano Banana, PDF Generator, Spotify DJ | Auto-connected via `~/.claude/settings.json` after `/aios:mcps-setup` |
+| `plugins/` | Claude Code plugins — `plugins/aios/` (this framework) + `plugins/custom/<your-plugin>/` (operator) + `plugins/<company>/<plugin>/` (company-distributed) | Auto-loaded when enabled in `~/.claude/settings.json` |
+| `skills/` | Skills in 4 source folders — `aios/` · `anthropic/` · `superpowers/` · `custom/` | Auto-loaded by Claude Code at session start |
+| `templates/` | Reference templates for vault scaffolding + `templates/custom/` for operator extensions | Copied by commands and operators as starting points |
+
+---
+
+## Advanced — two-machine architecture
+
+If you want 24/7 autonomous agents — overnight shifts, scheduled cron agents, work continuing while you're away — AIOS ships a two-machine architecture pattern: a primary MacBook + an always-on Mac mini. Six defensive layers (network isolation, ecosystem lockdown, SSH hardening, permission gates, one-way data flow, recovery mechanisms).
+
+📘 **See [`FORTRESS.md`](./FORTRESS.md)** for the full setup — Claude reads it end-to-end and walks both machines through the configuration. Hard prerequisites: macOS on both, second machine on AC power with stable network.
 
 ---
 
 ## Using AIOS with other LLMs
 
-The canonical surface is Claude Code (this framework is named for Anthropic's plugin model — `.claude-plugin/`, `aios@the-aios`). But the *content* of the system is plain markdown, deliberately LLM-agnostic.
+The canonical surface is Claude Code (the framework is named for Anthropic's plugin model). But the *content* is plain markdown — LLM-agnostic by design.
 
-**Commands** live at `plugins/aios/commands/*.md` as readable markdown — no Claude-Code-specific syntax inside, just instructions. Any LLM that can read files from disk can use them.
+**Portable across LLMs:** every command's instructions (in `plugins/aios/commands/*.md`), every skill's `SKILL.md` (follows [Anthropic's open Skills spec](https://github.com/anthropics/skills)), every template, every agent definition, every observed-context routing rule. MCPs (`mcps/`) are protocol-level — any MCP-capable LLM connects directly.
 
-**For Gemini CLI / Cursor / Cline / other agentic IDEs:**
-- Point the LLM at `plugins/aios/commands/` as the command source folder. Most IDE-integrated agents allow custom command directories via config — set yours there.
-- For one-off use, paste a command's content into the conversation: "follow the instructions in `plugins/aios/commands/today.md`, treating my vault root as `~/aios/`."
-- The plugin manifests (`.claude-plugin/marketplace.json`, `plugins/aios/.claude-plugin/plugin.json`) are Claude Code's plugin-loader scaffolding — other LLMs ignore them. They don't interfere.
-- Skills (`skills/*/SKILL.md`) follow [Anthropic's open Skills spec](https://github.com/anthropics/skills) — already cross-LLM compatible.
-- MCPs (`mcps/`) are protocol-level, not Claude-specific. Any MCP-capable LLM (Claude, Gemini via custom adapters, Cursor) can connect to them.
+**Claude-specific (replaceable):** `spawn` wrapper (uses `claude --remote-control --name`), the `/aios:*` slash invocation syntax (Claude Code's `<plugin>:<command>` convention), plugin marketplace + cache paths (`~/.claude/plugins/...`).
 
-**What's Claude-specific:**
-- `spawn` wrapper (uses `claude --remote-control --name`) — operator launch glue, not framework logic
-- `/aios:*` slash invocation (Claude Code's `<plugin>:<command>` syntax) — other LLMs invoke by reading the command file directly
-- Plugin marketplace + cache paths (`~/.claude/plugins/...`) — Claude Code runtime, not framework state
-
-**What's portable:**
-- Every command's logic (instructions, MCP calls, file edits, decision rules)
-- Every skill's SKILL.md
-- Every template, every agent definition
-- Every observed-context routing rule
-
-If you're using a non-Claude LLM, your daily ritual is: read `plugins/aios/commands/today.md` (or whichever command you want) → execute its steps → use whatever filesystem-access primitives your LLM provides instead of Claude Code's tools. The structure transfers.
+**For Gemini CLI / Cursor / Cline / other agentic IDEs:** point your LLM at `plugins/aios/commands/` as a custom command directory (most IDE-integrated agents allow this in config). For one-off use, paste a command's content into the conversation: *"follow the instructions in `plugins/aios/commands/today.md`, treating my vault root as `~/aios/`."* The structure transfers; only the invocation syntax changes.
 
 ---
 
-## Advanced setup — two-machine architecture
-
-If you want 24/7 autonomous agents — overnight shifts, scheduled cron agents, work continuing while you're away from the keyboard — AIOS ships a complete two-machine architecture pattern: a primary MacBook (day-to-day driver) + a Mac mini (always-on agent host). Six defensive layers: network isolation, ecosystem lockdown, SSH hardening, permission gates, one-way data flow, recovery mechanisms.
-
-📘 **See [`FORTRESS.md`](./FORTRESS.md)** for the full setup manual — Claude reads it end-to-end and walks both machines through the configuration. Hard prerequisites: macOS on both, second machine on AC power with stable network.
-
----
-
-*This file ships with the vault. When you run `/aios:update`, you get the latest tools automatically.*
+*This file ships with the framework. When you run `/aios:update`, you get the latest tools automatically.*
