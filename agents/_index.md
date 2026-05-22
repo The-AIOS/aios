@@ -130,7 +130,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | [[study-buddy]] | Pre-read chapters, prepare briefs, facilitate study sessions | study, chapter, book, learning session | on-demand |
 | [[journal-prompter]] | Generate reflection prompts from sessions + patterns | reflect, journal, prompts, introspection | on-demand |
 | [[growth-companion]] | Listen + witness + surface growth from observed context. Anti-sycophancy. | vent, frustrated, stuck, heavy day, growth check | on-demand |
-| [[onboarding-aios]] | Day-N AIOS orientation: surfaces relevant cheatsheet + commands + milestones | onboarding, getting started, day N, compound effect, AIOS guide | on-demand |
+| [[onboarding-aios]] | Standing AIOS orientation companion — knows the org/repo/CHEATSHEET/FORTRESS/USER.md map, self-update loop, semantic invocation for "lost" moments | I'm lost, where do I start, what is this, how does this work, what should I try next, what am I missing, onboarding, getting started, day N, compound effect, AIOS guide | on-demand (anytime) |
 | [[decision-journaler]] | Proactive Decision Journal — inversion + pre-mortem + tradeoff scoring | decision, deciding, dilemma, weighing, pre-mortem | on-demand |
 | [[crisis-mode]] | Heavy-day emergency handler — stabilize, triage, sequence response, route to specialist, bridge to growth-companion when stable | emergency, crisis, urgent, panic, fire, breach, lawsuit, threat | on-demand |
 

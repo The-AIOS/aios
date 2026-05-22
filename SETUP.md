@@ -12,34 +12,52 @@ Open any terminal with Claude Code and say:
 Set up my AI-OS from https://github.com/The-AIOS/aios
 ```
 
-Claude reads this file and handles everything:
-1. **Clones** the repo to `~/aios`
-2. **Installs** MCPs, plugins, and CLI tools (auto-detects what's already installed)
-3. **Creates a private repo** for your vault (`gh repo create --private`) and switches the remote — your personal content never goes back to the shared repo
-4. **Configures** `USER.md` with your sources, organization, and identity
-5. **Pushes** to your new private remote
+Claude reads this file and walks you through the full onboarding — clone → install → personalize → orient → optional company + collaboration → first daily plan. Each step is interactive; you confirm decisions, Claude executes.
 
-You confirm decisions. Claude executes.
+**The end-to-end flow:**
 
-**What Claude auto-detects:**
+1. **Clone** the repo to `~/aios` and create your private vault repo (`gh repo create {your-username}/obsidian --private`) — your personal content never goes back to the shared framework
+2. **Install MCP dependencies** via `bash mcps/setup.sh` (creates venvs, installs Python/Node deps for every bundled MCP)
+3. **Guided MCP auth** via `/aios:mcps-setup` (one MCP at a time — asks "want this?", walks you through tokens, registers with `claude mcp add`, verifies the connection works)
+4. **Personalize via `/aios:cold-start-interview`** — 15-25 min interactive interview: identity (USER.md), declared context (`about_me`, `personal_voice`, `working_style`), trust contract (`INTENT.md`), bundle install choices, optional Anthropic plugins. This is where the vault becomes *yours*.
+5. **Spawn the onboarding companion**: `/agent onboarding-aios` — wears the AIOS-orientation hat. Knows the whole map: org profile, README, SETUP, CHEATSHEET, FORTRESS, START-HERE, USER.md personalization power, the self-update loop, where to look when lost. Invoke anytime later by saying *"I'm lost"* / *"what should I try next"* / *"remind me how this fits together"*.
+6. **(Optional) Mount or create a company** via `/aios:company` — if you have a venture-context repo or want to scaffold one (GitHub recommended ✅, see the command's substrate selector)
+7. **(Optional) Set up a collaboration space** via `/aios:collaborate` — if you have a known shared space (Drive folder, GitHub repo, local sync folder) to mount or scaffold
+8. **First `/aios:today`** — the proof point. Reads everything you just configured, pulls your Calendar + Tasks + Slack, and generates a grounded plan for the rest of today. From here, the daily ritual takes over.
+
+**What Claude auto-detects** (saves asking):
 - Git identity from `~/.gitconfig` or local repo config
 - GitHub username from `gh auth status`
 - SSH keys from `~/.ssh/`
 - Already-installed MCPs, CLI tools, and plugins
 - Bundled OAuth credentials for Google Workspace
 
-**What Claude asks you (only if needed):**
+**What Claude asks you** (only if needed):
 - Your Google email (for Calendar/Tasks/Drive)
-- Which task sources you use (GitHub Issues, etc.)
+- Which task sources you use (GitHub Issues, Linear, Monday, etc.)
 - What to name your private vault repo (defaults to `{username}/obsidian`)
+- Substrate choices when running `/company` or `/collaborate`
+
+**If you ever feel lost during or after setup** — say *"I'm lost"* or *"where do I start"* and Claude routes to the [[onboarding-aios]] agent automatically. That agent is your standing companion for orientation throughout the framework's lifetime.
 
 ---
 
 ## Prerequisites
 
-Pick your OS path. Each installs the same toolchain (Node, Git, GitHub CLI, Python, uv, Obsidian, Claude Code CLI). After this section the Claude-driven flow is OS-agnostic.
+Pick your OS path. Each installs the same toolchain (Node, Git, GitHub CLI, Python, uv, Obsidian, Antigravity IDE, Claude Code CLI). After this section the Claude-driven flow is OS-agnostic.
 
 > **Already have Claude Code CLI working?** Skip ahead to **[The Setup](#the-setup-claude-driven)** above.
+
+### Two apps you'll use daily — both required
+
+The AIOS is *one filesystem, two surfaces*. Install both:
+
+| App | Role | Why |
+|---|---|---|
+| **[Obsidian](https://obsidian.md/)** | User-friendly *note reading* | Beautiful read of your vault — daily notes, project notes, observed context, reflections. Wikilinks resolve, graph view shows connections, the markdown structure compounds visually. You think + reflect here. |
+| **[Antigravity IDE](https://antigravity.dev/)** | User-friendly *file editing + agent spawning* | Bundles Claude Code natively — agents run in IDE terminals (one per spawn), Obsidian vault opens as a project, file edits + git ops feel native. You execute + ship here. Use VS Code as the alternative if you prefer it; Antigravity is just batteries-included. |
+
+You don't pick one — you run them side-by-side. Obsidian on the left for context, Antigravity IDE on the right for execution. Same vault, both windows.
 
 ### macOS (~5 min)
 
@@ -49,19 +67,22 @@ Pick your OS path. Each installs the same toolchain (Node, Git, GitHub CLI, Pyth
 
 # 2. Toolchain
 brew install node git gh python uv
-brew install --cask obsidian
 
-# 3. Claude Code CLI
+# 3. The two daily apps (see "Two apps you'll use daily" above)
+brew install --cask obsidian
+# Download Antigravity IDE from https://antigravity.dev (no brew cask yet — drag .dmg to Applications)
+
+# 4. Claude Code CLI
 npm install -g @anthropic-ai/claude-code
 
-# 4. Auth (each opens a browser tab)
+# 5. Auth (each opens a browser tab)
 gh auth login
 claude
 ```
 
 ### Windows (~15-20 min)
 
-**Workflow target:** VS Code (with its integrated PowerShell terminal) + Obsidian open side-by-side. Or **Antigravity** IDE — it bundles Claude Code natively if you want fewer moving parts. **Avoid** plain `cmd` and Obsidian terminal plugins (polyipseity is unreliable on Windows).
+**Workflow target:** Antigravity IDE (Claude Code bundled — recommended) + Obsidian open side-by-side. VS Code works as an alternative IDE. **Avoid** plain `cmd` and Obsidian terminal plugins (polyipseity is unreliable on Windows).
 
 ```powershell
 # Open PowerShell (not cmd). Run as your user — only escalate if winget refuses.
@@ -71,8 +92,11 @@ winget install OpenJS.NodeJS.LTS
 winget install Git.Git
 winget install GitHub.cli
 winget install Python.Python.3.12
-winget install Microsoft.VisualStudioCode    # or download Antigravity: https://antigravity.dev
+
+# 2. The two daily apps (Obsidian + IDE — see "Two apps you'll use daily" above)
 winget install Obsidian.Obsidian
+# For Antigravity IDE (recommended — Claude Code bundled): download from https://antigravity.dev
+# For VS Code as the IDE alternative: winget install Microsoft.VisualStudioCode
 
 # 2. uv (Python package runner — vendored MCPs need it)
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
@@ -105,7 +129,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # 3. Claude Code CLI
 sudo npm install -g @anthropic-ai/claude-code
 
-# 4. Obsidian — download the AppImage from https://obsidian.md/download
+# 4. The two daily apps (see "Two apps you'll use daily" above)
+# Obsidian — download the AppImage from https://obsidian.md/download
+# Antigravity IDE (recommended, Claude Code bundled) — https://antigravity.dev
+#   or VS Code as the alternative: sudo snap install code --classic
 
 # 5. Auth
 gh auth login

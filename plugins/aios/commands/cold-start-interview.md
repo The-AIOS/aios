@@ -129,7 +129,12 @@ The AIOS bundles 10 MCPs. Operator picks which to set up now vs defer:
 9. **PDF Generator** — branded report export (always-on)
 10. **Spotify DJ** — lifestyle (optional)
 
-For each: confirm install + run the auth flow inline. `bash mcps/setup.sh` handles bulk install; per-MCP auth flows are documented in each `mcps/{name}-mcp/README.md`.
+**Two-phase install** — works best done in this order:
+
+1. **Bulk dependencies:** `bash mcps/setup.sh` — creates venvs, installs Python/Node deps for every bundled MCP. Idempotent; safe to re-run.
+2. **Guided auth + register:** `/aios:mcps-setup` — the canonical command for per-MCP token + zshrc + `claude mcp add` + verify. Asks "want this?" per MCP, never assumes. Use this rather than walking each `mcps/{name}-mcp/README.md` by hand.
+
+After this step the MCP-tooling layer is operational — Claude can read your Calendar, post to Slack as you, query GitHub PRs, render PDFs, generate images, etc.
 
 ### Step 7 — Stitch optional integration (UI builders only)
 
@@ -190,21 +195,84 @@ Based on what the operator told us in Steps 2-4, suggest plugins from Anthropic'
 
 Operator picks which to install now vs defer. None are required.
 
-### Step 9 — Run your first `/today`
+### Step 9 — Wear the onboarding hat (`/agent onboarding-aios`)
+
+Before the first `/today`, put the orientation companion in front of the operator so they understand *where they are* and *what they have*:
 
 ```
-Setup complete. Time to feel the compound.
+You're set up. Before we run your first plan — let me put on the
+"onboarding companion" hat so you understand the whole map.
+
+In the next message I'll switch hats with /agent onboarding-aios.
+That agent knows the full AIOS structure: the org (The-AIOS),
+this repo's README + CHEATSHEET + FORTRESS + START-HERE, USER.md
+personalization power, the self-update loop via /today and
+/close-session, the org's SECURITY/CONTRIBUTING playbooks. It's
+your standing companion for orientation — anytime later you
+feel lost, just say "I'm lost" or "what should I try next" and
+Claude routes here.
+
+OK to switch hats? (yes / skip — I'll explore solo)
+```
+
+If yes → invoke `/agent onboarding-aios` and let it do the full orientation walk. The operator now has the AIOS mental map in conversation.
+
+### Step 10 — (Optional) Mount or create a company
+
+After the orientation walk:
+
+```
+You're operator-ready. Two optional setups before your first /today:
+
+1. Companies — do you have a venture-context repo / Drive folder
+   to mount? Or want to scaffold a new one? /company handles both.
+   GitHub substrate is highly recommended ✅ (see /company docs).
+
+   Examples: your own venture, a client you work with, your
+   employer's shared context.
+
+   Want to set up a company now? (yes / not yet)
+```
+
+If yes → invoke `/aios:company` (no args — it routes to create or mount based on what the operator says). If not yet → continue.
+
+### Step 11 — (Optional) Set up a collaboration space
+
+```
+2. Collaboration — do you have a shared/collaborative space to
+   mount or create? /collaborate scaffolds a substrate-pluggable
+   shared workspace (Drive for non-coders, GitHub for code-adjacent,
+   local folder for testing) and mirrors it into your vault.
+
+   Examples: a partner-org Drive, a co-founder's GitHub repo, a
+   local sync folder you share with a teammate.
+
+   Want to set up a collaboration space now? (yes / not yet)
+```
+
+If yes → invoke `/aios:collaborate`. If not yet → continue.
+
+### Step 12 — Run your first `/today`
+
+```
+Everything compounds from here. Time to feel it.
 
 In the next message, run:  /aios:today
 
-It'll read everything we just configured, pull your calendar + tasks + 
-Slack, propose a plan for the rest of today, and surface the daily 
-ritual that anchors the system.
+It'll read everything we just configured, pull your calendar + tasks +
+Slack, propose a plan for the rest of today, and surface the daily
+ritual that anchors the system. After today, the loop is:
+  - morning  →  /aios:today
+  - evening  →  /aios:close-day
+  - sessions →  /aios:close-session
+
+That loop is what makes Claude get smarter about YOU over time.
+Skip it and the system never compounds.
 
 Welcome to AIOS. 🌊
 ```
 
-### Step 10 — Suggest spawning [[onboarding-aios]] in a week
+### Step 13 — Schedule the Day-7 check-in
 
 After the operator finishes their first `/today`, surface:
 
