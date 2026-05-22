@@ -234,3 +234,7 @@ No overrides — use default behavior.
 ### /collaborate
 
 No overrides — use default behavior. (Spec runs end-to-end as documented; configure here only if you want to override the `/spaces/` Drive default, change the adjective-animal name suggester, or pre-set a substrate preference for new spaces.)
+
+### /cold-start-interview
+
+No overrides — use default behavior. (Re-runnable per section; configure here if you want to skip specific steps, defer the psychometric-profile graduation indefinitely, or change the welcome framing.)
