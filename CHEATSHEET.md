@@ -18,7 +18,8 @@ How to launch, name, and resume sessions.
 | Spawn an ad-hoc worker (no name) | `spawn` | Generates a memorable adj-animal handle (e.g. `amber-otter`) + prints a tip surfacing available specific agents. Great when you want a fresh session and don't need a meaningful name yet. |
 | Resume a named worker | `spawn <name>` again | Wrapper detects existing session, reattaches |
 | Resume any past session | `claude --resume` | Pick from the list of recent sessions |
-| Install the spawn wrapper | `bash ~/aios/hooks/claude-identity/install-wrappers.sh` | One-time setup. Idempotent — safe to re-run. |
+| Kill a spawned worker cleanly | `spawn-kill <name>` | Atomic process-group kill + closes the Terminal window (macOS). Avoids orphan Claude processes + Terminal's "terminate?" modal. Doesn't affect IDE-integrated terminals (the IDE manages those). |
+| Install the spawn wrapper | `bash ~/aios/hooks/claude-identity/install-wrappers.sh` | One-time setup. Idempotent — safe to re-run. Installs `spawn`, `spawn-kill`, `buddai`, `_claude_with_respawn`. |
 | Run Claude without spawn | `claude --remote-control --name <name>` | Bypasses wrapper; not recommended |
 
 **Why use `spawn` over raw `claude`:** the wrapper sets `$CLAUDE_AGENT_NAME` so CLAUDE.md can match an agent profile (`agents/<name>.md`), greet you in character, and route close-session reports back to the right project. Raw `claude` works but loses the identity-aware behavior.

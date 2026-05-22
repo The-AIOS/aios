@@ -49,6 +49,8 @@ The `spawn` wrapper is the canonical way to launch a named worker session — it
 
 **When the user asks to spawn with a task** (*"spawn an agent to review Q1 financials"*), match intent to an agent name, then pass the full task as the second argument: `spawn accountant "Help me analyze Q1 financials"`. The session receives identity + first assignment in one shot.
 
+**Killing a spawned worker:** `spawn-kill {name}` — atomic process-group kill that takes down the respawn loop + claude + descendants in one step, then closes the Terminal window (macOS). Use this instead of SIGTERM (the respawn loop catches SIGTERM and re-launches claude — defeating the kill) or Cmd+W (triggers Terminal's "terminate running processes?" modal + risks orphaning claude to launchd).
+
 For full cross-platform behavior (IDE-integrated tabs, Windows Terminal handling, respawn loop, parallel-spawn lock), see [`SETUP.md`](./SETUP.md) → **Spawn wrapper** section.
 
 If `USER.md` has a `## Remote machines` section, also check for remote spawn patterns (e.g. SSH to other machines).

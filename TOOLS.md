@@ -83,6 +83,8 @@ Say `spawn {name}` to launch a named tab dedicated to that role, or `/agent {nam
 
 **Example:** `spawn lawyer "review NDA at ~/code/contracts/2026-03-mutual-nda.docx"` opens a new tab with the lawyer hat pre-loaded and the task primed as the first prompt.
 
+**Killing a spawned worker:** `spawn-kill {name}` cleanly terminates the worker — atomic process-group kill + closes the Terminal window (macOS). Avoids the orphan-Claude + "terminate?" modal pitfalls of SIGTERM or Cmd+W. Both `spawn` and `spawn-kill` are installed by `hooks/claude-identity/install-wrappers.sh`.
+
 ---
 
 ## Skills
