@@ -154,6 +154,20 @@ From the data already loaded — process everything in memory:
 | ×10+, stale tag (no activity on blocker for 30+ days) | 🔴 escalate — retag or park | (same — stale ≠ fresh) |
 
 Place triage decisions at the top of Parking lot, not buried in Rhythm.
+
+- **Target-aware carry display** (opt-in). Carries can optionally include a `target:` metadata field — the actual deadline, distinct from the carry's age. Format: `_(carried ×N, target: 2026-05-15)_` or `_(carried ×N, target: 2026-W19)_`. When rendering:
+  - **`target:` present + PAST target** → display `🔴 X days past target — {task} _(carried ×N, target: ...)_` — count days from target, not creation. Real urgency.
+  - **`target:` present + BEFORE target** → display `📅 due in X days — {task} _(carried ×N, target: ...)_` — informational, **no escalation regardless of carry count**. The item is on schedule per its own deadline.
+  - **`target:` absent** → display `_(carried ×N, no target)_` neutrally — escalation rules above (×3 ⚠️, ×6 ask reason, ×10+ force decide) apply to explicit-target items only, not raw age.
+
+  Add `target:` only when there's a real deadline (external commitment, dependency, calendar event, scheduled W-plan slot). Don't invent fake deadlines.
+
+- **Horizon hiding** (>14 days). Long-horizon `waiting-on-date` carries should NOT clutter daily notes when their target is far out — they belong in project notes + `_index.md` snapshots only, re-entering the daily flow as the date approaches:
+  - **`target` ≤ 14 days out** → carry surfaces in daily note Parking lot (or Rhythm if the date matches today/this-week)
+  - **`target` > 14 days out** → carry is **hidden from daily notes entirely**. The item stays alive in: (1) the relevant project note's to-do list, (2) the project's `_index.md` snapshot. It re-enters the daily note flow when the target crosses the 14-day horizon.
+  - **`/close-day` companion rule**: when triaging carries, if a carry has `waiting-on-date: YYYY-MM-DD` with target >14 days out, route it to the project note's to-do list (not "Carries forward" in the daily note). The carry is "filed" rather than "carried" — same persistence, different surface.
+
+- **Window-cadence carries are not drift.** Carries with the triad — explicit far-out `target` + tagged reason (e.g. `blocked-on-X-with-energy`) + window-cadence pacing (recurring slots toward the target, e.g. Fri/Sat 6 hrs/wk toward a Q3 ship) — are properly paced, NOT drift. Count is the audit trail of windows-not-yet-used. Display neutrally: `_(carried ×N, target: YYYY-Qn, sequenced via {window})`. NO 🎯 / 🔴 / decide-or-park language. NO growth-edge invocation. The carry-without-deciding escalation applies to UNTAGGED, no-target, no-window carries only.
 - **Stale project snapshot refresh:** For any project flagged as stale in Message 1b (snapshot >7 days old), read just the `## To-Dos` section from the project note and update the `_index.md` snapshot. This prevents to-dos from going invisible in untouched projects.
 - Count streaks (consecutive days of study, writing, shipping)
 - Count drift counters (days an item has been carried)
@@ -163,6 +177,11 @@ Place triage decisions at the top of Parking lot, not buried in Rhythm.
 - Identify the **one thing to ship**
 - Sort all tasks into energy blocks: Morning (create), Afternoon (operate), Evening (grow)
 - Write the daily note (preserving user edits if note already exists — keep checked items, meeting notes, user-added subtasks)
+- **Post-write clean pass** (run silently before commit; fix issues, don't ask):
+  1. **Dedup across sections.** Scan Rhythm + Parking + Horizon + Sarah-results (if present) + Energy note for the same task appearing in more than one place. Match by core task name (ignore emojis, source tags, carry counts). If a task is in Rhythm AND Parking → keep only Rhythm. If a review item is in Sarah's results AND Parking → keep only the Rhythm/Evening placement.
+  2. **Drop check.** Re-count unique unchecked `- [ ]` items from the previous note. Count unique items placed in today's note. If `previous_unique > today_placed`, something was dropped — find it and add to Parking before committing.
+  3. **Review items.** Every "needs review" flag (📋, `→ review`, `/tmp/...` file reference) should have a corresponding task in Rhythm or Evening. If absent, add one.
+  4. Note any fixes inline in the commit message: `Daily plan {date} (clean pass: merged X, restored Y)`.
 
 ### Message 3 — Commit + push
 - `cd ~/aios && git add -A && git commit -m "Daily plan {date}" && git push`
@@ -335,27 +354,24 @@ One command suggestion per day, placed after the daily opener as a blockquote. N
 
 These take priority when the vault signals something specific:
 
-| Condition | Suggest | Example line |
-|-----------|---------|-------------|
-| 7+ days since last `/7plan` | `/7plan` | "No weekly plan in 8 days. The week is steering you." |
-| 14+ daily notes, no `/graduate` run | `/graduate` | "14 days of ideas piling up. Promote the best ones." |
-| 14+ daily notes, no `/emerge` run | `/emerge` | "The vault knows things you haven't written yet." |
-| Growth edges changed in last 3 days | `/trace` | "Your growth edge shifted. See how the thinking evolved." |
-| 5+ active projects with overlapping themes | `/connect` | "15 projects, some rhyming. Find the bridge." |
-| Strong content in recent daily notes | `/learned` | "This week's insights are publish-ready. Distill them." |
-| Big decision mentioned in daily note or project | `/challenge` | "Steel-man your thinking before you commit." |
-| Content/writing task in today's plan | `/ghost` | "Need to write in your voice? Let the vault do it." |
-| 15th of the month (default mid-month rhythm) | `/housekeeping` | "Mid-month. Time to tidy the vault." |
-| Parking-lot carries > 15 items | `/housekeeping` | "{N} open carries. The vault is heavy — merge / drop / reassign." |
-| Active project count > 12 | `/housekeeping` | "{N} active projects. Worth a merge/archive pass?" |
-| 3+ project snapshots stale > 14 days | `/housekeeping` | "3 snapshots haven't been touched in 2 weeks." |
-| `/close-day` project-hygiene nudge fired 3+ times in a week | `/housekeeping` | "Project notes trending long. Housekeeping?" |
-| Orphaned notes growing OR broken wiki-links detected | `/housekeeping` | "Vault link health — some notes are islands." |
-| Role log has 2+ weeks of entries | `/role-report` | "Enough data for a role report. Draft one." |
-| 1st of the month (and previous month has uncompacted logs) | `/compact` | "New month. Compact last month's snapshots — digest + zip." |
-| Any mounted-company tracker > 7 days stale (per USER.md `## Companies (mounted)`) | `/company --sync {name}` or `/company --sync-all` | "Context for {N} mounted compan{y/ies} stale > 7 days. 30 seconds to refresh." |
-| `.aios-update` synced date > 14 days ago | `/aios:update` | "Team shipped updates 2 weeks ago. Check what's new." |
-| INTENT.md `Updated:` date > 14 days ago | nudge (not a command) | "Your intent hasn't been updated in {N} days. Has your trust level changed? Review INTENT.md." |
+| Condition | Suggest |
+|-----------|---------|
+| 7+ days since last `/7plan` | `/7plan` |
+| 14+ daily notes, no `/graduate` run | `/graduate` |
+| 14+ daily notes, no `/emerge` run | `/emerge` |
+| Growth edges changed in last 3 days | `/trace` |
+| 5+ active projects with overlapping themes | `/connect` |
+| Strong content in recent daily notes | `/learned` |
+| Big decision mentioned in daily note or project | `/challenge` |
+| Content/writing task in today's plan | `/ghost` |
+| `/housekeeping` triggers (any of): 15th of month · parking-lot carries >15 · active projects >12 · 3+ snapshots stale >14 days · project-hygiene nudge fired 3+/wk · orphaned notes or broken wiki-links | `/housekeeping` |
+| Role log has 2+ weeks of entries | `/role-report` |
+| 1st of the month + previous month has uncompacted logs | `/compact` |
+| Any mounted-company tracker >7 days stale | `/aios:company --sync {name}` (or `--sync-all`) |
+| `.aios-update` synced date >14 days ago | `/aios:update` |
+| INTENT.md `Updated:` date >14 days ago | (nudge only, not a command — *"Has your trust level changed? Review INTENT.md."*) |
+
+Example phrasing should be specific to today's vault state — never generic. *"Day 5 of sales-materials avoidance — /drift will name what you're avoiding"* beats *"Try /drift."*
 
 ### Rules for suggestions
 - **One per day, max.** Never two.
