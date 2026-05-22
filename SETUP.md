@@ -7,12 +7,15 @@ Get the full system running in under 10 minutes.
 > 2. Clone to `~/aios` (default) and create private GitHub repo `{username}/aios` (or whatever the operator names it) — see "The Setup" §1 below
 > 3. Bulk MCP deps: `bash mcps/setup.sh`
 > 4. Guided MCP auth: invoke `/aios:mcps-setup`
-> 5. Personalize: invoke `/aios:cold-start-interview` — this is the longest interactive step (15-25 min); follow the command's own Steps 0-13
-> 6. Wear the hat: `/agent onboarding-aios` (orientation companion)
-> 7. Optional: `/aios:company` (mount/create venture-context) + `/aios:collaborate` (shared space)
-> 8. First `/aios:today` (the proof point)
+> 5. Install the **spawn wrapper** — `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (or `.ps1` on Windows), then re-source the shell rc
+> 6. Wire the **universal hooks** to `~/.claude/settings.json`: `UserPromptSubmit` → `inject-datetime` (real clock in every prompt) + `statusLine` → `claude-identity.sh cache | context-monitor.py` (rate-limit cache writer + context display). See §10 below for exact JSON.
+> 7. (Optional, multi-account macOS) — install the **launchd quota-watch agent**: `cp ~/aios/hooks/claude-identity/com.aios.claude-quota-watch.plist ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/com.aios.claude-quota-watch.plist`
+> 8. Personalize: invoke `/aios:cold-start-interview` (15-25 min interactive; follow its Steps 0-13)
+> 9. Wear the hat: `/agent onboarding-aios` (orientation companion)
+> 10. Optional: `/aios:company` (mount/create venture-context) + `/aios:collaborate` (shared space)
+> 11. First `/aios:today` (the proof point)
 >
-> **Defaults to pick without asking** (unless operator overrides): vault path = `~/aios/`, private repo name = `{username}/aios`, substrate for company = GitHub. **Always confirm**: the Google email, which task sources (Slack/GitHub/Linear/Monday), MCP-by-MCP installs (let `/aios:mcps-setup` handle the per-MCP "want this?" pattern). Show diffs before writing to `USER.md` / `INTENT.md` / `vault/00 - notes/context/declared/*`.
+> **Defaults to pick without asking** (unless operator overrides): vault path = `~/aios/`, private repo name = `{username}/aios`, substrate for company = GitHub, wrappers + hooks A+B always install (no opt-out — they're load-bearing). **Always confirm**: the Google email, which task sources (Slack/GitHub/Linear/Monday), MCP-by-MCP installs (let `/aios:mcps-setup` handle the per-MCP "want this?" pattern), launchd quota-watch (only if multi-account macOS). Show diffs before writing to `USER.md` / `INTENT.md` / `vault/00 - notes/context/declared/*` / `~/.claude/settings.json`.
 >
 > **If operator gets lost mid-setup:** route to `/agent onboarding-aios` — that agent knows the full doc map.
 
@@ -275,17 +278,66 @@ What gets installed:
 
 After install, run `spawn SESSION_NAME [TASK]` from any Claude Code session.
 
-### 10. Quota autopilot (optional, macOS only — needs ≥ 2 Anthropic accounts)
+### 10. Wire the universal hooks (required — runs every operator)
 
-If you run two or more Anthropic accounts to manage the 5h/7d rate limits, the bundled `hooks/claude-identity/` autopilot rotates between them automatically. When the active account nears the cap, it swaps to the next account in your `USER.md` rotation list and respawns active Claude Code sessions on the new account so transcripts continue uninterrupted. The launchd agent does the watching; you don't have to run anything once it's loaded.
+Two hooks every operator needs, regardless of OS or account count. Add them to `~/.claude/settings.json` (Claude does this for you during setup — shown here for transparency):
 
-The autopilot **builds on top of the spawn wrapper** (section 9) — the wrapper handles the in-place respawn; the autopilot is the Mac-only watcher that decides when to swap.
+**Hook A — `inject-datetime` UserPromptSubmit hook** (eliminates the "Claude infers wrong weekday/time from conversation" failure mode — see `antifragile.md` 2026-05-18). Adds a `<system-time>` block to every user prompt so Claude reads the real clock.
 
-The full setup walkthrough lives in **`hooks/claude-identity/README.md` → `## Setup`** — 7 interactive steps your Claude session can walk you through (configure accounts in USER.md, capture identities, customize the launchd plist, wire the cache writer to your statusLine, verify). Just say *"set up the quota autopilot"* in any Claude Code session and Claude reads the README and walks you through it. Same flow runs automatically when `/aios:update` first surfaces this feature.
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash ~/aios/hooks/inject-datetime.sh" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Windows operators use `pwsh -File "$HOME\aios\hooks\inject-datetime.ps1"` instead.
+
+**Hook B — `claude-identity` statusLine** (writes the rate-limit cache on every Claude turn — feeds the fast-path quota detector used by the autopilot in §11, and powers the context-monitor status display). Add to `~/.claude/settings.json`:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bash -c 'tee >($HOME/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | python3 $HOME/aios/hooks/claude-identity/context-monitor.py'"
+  }
+}
+```
+
+**Verify both fired:** open a fresh Claude Code session, type *"what's today's date?"* — Claude should reply with the actual current date (proves the UserPromptSubmit hook ran). Check the statusLine at the bottom of the terminal — it should show context usage + quota state (proves the statusLine command ran).
+
+If either hook silently failed: re-read the settings.json and confirm the `hooks.UserPromptSubmit` array + `statusLine.command` are exactly as above. Common gotcha: an existing settings.json with `hooks: {}` empty object — merge the array in, don't replace the empty value at the wrong nesting level.
+
+### 11. Quota autopilot (optional, macOS only — needs ≥ 2 Anthropic accounts)
+
+If you run two or more Anthropic accounts to manage the 5h/7d rate limits, the bundled `hooks/claude-identity/` autopilot rotates between them automatically. When the active account nears the cap, it swaps to the next account in your `USER.md` rotation list and respawns active Claude Code sessions on the new account so transcripts continue uninterrupted.
+
+The autopilot **builds on top of the spawn wrapper + universal hooks** (sections 9 + 10) — the wrapper handles the in-place respawn; the statusLine hook (10B) writes the rate-limit cache on every Claude turn; the launchd agent (this section) is the safety-net watcher that fires every 30 minutes in case the statusLine pipe is broken.
+
+**Install the launchd agent** (one-time):
+
+```bash
+cp ~/aios/hooks/claude-identity/com.aios.claude-quota-watch.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.aios.claude-quota-watch.plist
+
+# Verify loaded:
+launchctl list | grep com.aios.claude-quota-watch
+```
+
+**Then run the configuration walkthrough.** The full walkthrough lives in **`hooks/claude-identity/README.md` → `## Setup`** — 7 interactive steps your Claude session walks you through: configure accounts in USER.md, capture identities, verify the launchd agent, verify the statusLine writes, run a swap dry-run. Just say *"set up the quota autopilot"* in any Claude Code session.
 
 Hard preconditions:
-- **macOS only.** Uses Keychain Services and launchd. On Linux/Windows the autopilot stays dormant; the spawn wrapper from section 9 still works on all platforms.
-- **≥ 2 Anthropic accounts.** A single-account setup gets no value from the autopilot.
+- **macOS only.** Uses Keychain Services and launchd. On Linux/Windows the autopilot stays dormant; the spawn wrapper from section 9 + the universal hooks from section 10 still work on all platforms.
+- **≥ 2 Anthropic accounts.** A single-account setup gets no value from the autopilot — skip this section entirely.
 
 ---
 
