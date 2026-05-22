@@ -87,15 +87,20 @@ claude mcp add google-workspace \
 
 ## Bundling candidates (not yet bundled)
 
-Services where teammates currently rely on claude.ai-hosted connectors. These should be bundled next to keep account-switch resilience. If you hit one of these, add it to this section and plan the bundle:
+Services where teammates currently rely on claude.ai-hosted connectors OR external services that would extend AIOS capability if bundled. Add to this section when a gap surfaces; plan the bundle when an operator hits the pain.
 
-- (Currently empty — all known services are bundled. Add here when a new claude.ai-hosted MCP is needed by the team.)
+- **DeepWiki** ([deepwiki.com](https://deepwiki.com)) — converts any GitHub URL into structured documentation with auto-generated architecture diagrams. Higher-fidelity than `WebFetch` for repo URLs. Already wired as the preferred path in `/aios:ingest` for GitHub URLs (falls back to `WebFetch` if not connected). Bundle when external operators start ingesting repo URLs regularly.
+- **Firecrawl** ([firecrawl.dev](https://firecrawl.dev)) — web scraping at scale with site-crawl + deep-research modes. Closes the gap between single-page `WebFetch` and full-site capture (competitor research, market research, deep documentation harvesting). Bundle when `/aios:7plan` or venture research starts hitting multi-page sites.
+- **Chrome DevTools MCP** — inspect performance traces, network requests, console errors against a live browser. Complements `Playwright MCP` (which handles automation/screenshots). Bundle when frontend operators start using AIOS for perf debugging.
 
 ## Reviewed, intentionally not bundled
 
 - **AgentFetch** — Playwright MCP covers every use case (browser automation + content extraction). No gap to fill.
 - **Context Mode** — CLAUDE.md's Session Start Ritual and context hierarchy already do this work. No gap to fill.
 - **Monday.com** — dropped from the stack (2026-04-21). No replacement needed.
+- **RTK (output compression)** — third-party tool to compress long command outputs before they enter context. Wait until a specific high-volume command (heavy `git log`, `pytest -v`, ingest pipelines) repeatedly burns context — operators add at that point, not framework-bundled.
+- **Claude Code Channels (Telegram / Discord plugin)** — text-a-running-session from anywhere. Useful for travel weeks + oncall. Operator-installs via `~/.claude/plugins/`; not framework-bundled because it's identity-tied (each operator's own Telegram/Discord credentials).
+- **Claude in Chrome extension** — controls browser tabs with inherited login state. Useful but it's a Claude.ai-side feature, not something we vendor. Operators enable it from claude.ai independently.
 
 ## Adding a new MCP
 
