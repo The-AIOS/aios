@@ -140,11 +140,11 @@ If something was avoided in a session, note it. If something clicked, note it. I
 
 At the start of any session involving this vault, load context in this order:
 
-**Step 1 — Declared context (who the person is).** Read all files in `vault/00 - notes/context/declared/`: `about_me` (identity/background/roles/values) · `personal_voice` (tone/audience) · `working_style` (how they think/decide) · `about_business` (current ventures, if present) · `role-expectations` (pillars/success signals, optional) · `psychometric-profile` (MBTI/strengths/saboteurs/neurochemistry, optional).
+**Step 1 — Declared context (who the person is).** Read **every file** in `vault/00 - notes/context/declared/` (operators can add their own; never assume the list is fixed). The framework ships these 5 canonical templates: `about_me` (identity / background / roles / values), `personal_voice` (tone / audience), `working_style` (how they think / decide), `about_business` (current ventures), `role-expectations` (pillars / success signals). Operators commonly add others — `psychometric-profile` (MBTI / strengths / saboteurs / neurochemistry), `thinker-collaborations`, etc. — read all of them.
 
 Also read `INTENT.md` (if at repo root) — the trust contract: autonomy levels, venture overrides, tradeoff rules, decision boundaries, communication rules, current focus, parked items. Controls what AI handles autonomously vs what needs review. Commands respect its "NOT doing" section to suppress parked items from carries.
 
-**Step 2 — Observed context (what Claude has learned).** Read all files in `vault/00 - notes/context/observed/`: `profile` · `patterns` · `preferences` · `business` · `ecosystem` · `growth` · `session-insights` (observation buffer — Emerging → Reinforced lifecycle) · `antifragile` (system-level lessons; only observed file where Claude writes about Claude — **scan for relevant rules before executing commands**).
+**Step 2 — Observed context (what Claude has learned).** Read **every file** in `vault/00 - notes/context/observed/`. The framework ships these 9 canonical templates: `profile`, `patterns`, `preferences`, `business`, `ecosystem`, `growth`, `session-insights` (Emerging → Reinforced lifecycle), `antifragile` (system-level lessons — the only observed file where Claude writes about Claude; **scan for relevant rules before executing commands**), `vault-routine` (cadence map). Operators may have added more — read all.
 
 **Step 3 — Venture context (if relevant).** If the session involves strategy / product / market work, read relevant files from `vault/00 - notes/context/ventures/` (one subfolder per venture: GTM, market, personas, positioning, pricing, primitives).
 
