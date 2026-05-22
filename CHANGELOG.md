@@ -7,6 +7,59 @@
 
 ---
 
+## 2026-05-21 (evening) — Path portability: ~/aios canonical + auto-symlink fallback
+
+`hash: b165c08`
+
+### State
+
+The framework's 20+ infrastructure files (commands, MCPs, hooks, agents, READMEs) reference `~/aios/` as the canonical install path. Existing operators (Chuy, Sarah, Zineb, Sovra teammates) run from `~/obsidian/` per the pre-extraction convention. Without a redirect, the next `/aios:today` would fail trying to read `~/aios/vault/01 - calendar/...` that doesn't exist on disk.
+
+### Ask
+
+If `~/aios` does not exist on this machine, ask the operator:
+
+> *"I see this vault is at `~/obsidian/`. The framework now expects `~/aios/`. I'll create a symlink `~/aios → ~/obsidian` — non-destructive, reversible, and zero risk to your Obsidian app workspace state, git remote name, open files, or any scripts still referencing `~/obsidian/`. OK to proceed?"*
+
+If `~/aios` already exists and points to this install → silent pass, no action.
+If `~/aios` already exists and points elsewhere (conflict) → surface the conflict and let the operator resolve before continuing. Never auto-resolve.
+
+### Act
+
+After the operator confirms, run the OS-appropriate command:
+
+**macOS / Linux / WSL / Git Bash:**
+```bash
+ln -s "$HOME/obsidian" "$HOME/aios" && ls -la "$HOME/aios" | head -1
+```
+
+**Windows PowerShell** (requires Developer Mode or admin — one-time Win 10+ toggle):
+```powershell
+New-Item -ItemType SymbolicLink -Path "$HOME\aios" -Target "$HOME\obsidian"
+```
+
+**Windows CMD fallback** (no admin needed; directory junction; same-volume only):
+```cmd
+mklink /J "%USERPROFILE%\aios" "%USERPROFILE%\obsidian"
+```
+
+Then verify:
+```bash
+test -e "$HOME/aios/vault/01 - calendar" && echo "✓ symlink resolves — ~/aios → ~/obsidian"
+```
+
+If verification passes → done. The operator continues normal flow; every framework reference to `~/aios/...` now resolves to their actual `~/obsidian/` vault.
+
+### Why symlink, not `mv ~/obsidian ~/aios`
+
+The `mv` would force a coordinated rename across: Obsidian app workspace.json + plugin data caches, git remote name (`chuycepeda/obsidian` would mismatch the local path), open files / in-flight syncs, IDE bookmarks, and any script still referencing `~/obsidian/`. Too risky for what is fundamentally a path-resolution problem. The symlink solves the resolution problem with zero side effects and stays reversible (`rm ~/aios` undoes it).
+
+### Going forward
+
+Operators cloning the framework fresh land at `~/aios/` natively (no symlink needed). `SETUP.md → § Path portability` and `/aios:cold-start-interview` (Pre-step) auto-create the symlink for anyone who clones to a different path. The symlink convention is the framework's install-anywhere fallback, of which today's `~/obsidian → ~/aios` migration is the largest case.
+
+---
+
 ## 2026-05-21 — Initial public release: AIOS extracted from chuycepeda/obsidian
 
 `hash: 71ae219`
