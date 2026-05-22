@@ -283,7 +283,7 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 └── CHANGELOG.md             ← What changed in shared infra, when, and what to do (read by /aios:update)
 ```
 
-**Architecture principle:** every infra layer follows the same three-tier extension pattern — `framework` (always shipped, identical for everyone) + `custom/` (your personal layer, survives `/aios:update`) + `<company>/` (every mounted company's layer, synced via `/aios:company`). The personalization that makes the framework *yours* — identity, voice, working style, trust contract, mounted companies — lives in `USER.md`, `INTENT.md`, and `vault/00 - notes/context/declared/`. The personalization that emerges from how you actually work — patterns, growth edges, antifragile rules — lives in `vault/00 - notes/context/observed/`, written by Claude over time. No surgical merges needed — ever.
+**Architecture principle:** Everything shared lives in the repo and is identical for all users. Everything personal lives in `USER.md` (your command personalizations), `INTENT.md` (your autonomy rules), and `vault/` (your daily life content).
 
 ---
 
