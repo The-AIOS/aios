@@ -11,6 +11,11 @@ allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/aios && git:*), Bash(ls:
 
 Consolidate the week's daily notes and sessions into one summary.
 
+## When to use
+
+Every Friday afternoon to compile the week's insights from daily notes into a single writing-ready summary + branded PDF. The capture-loop's weekly compounding step — feeds blog posts, newsletter material, quarterly reviews.
+
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /weekly-learnings` for any user overrides (author block, footer text, etc.). Apply them to the steps below.

@@ -12,6 +12,11 @@ argument-hint: "period (e.g. 'month', 'Q1 2026', 'March', '2026-03-01 to 2026-03
 
 Draft a structured narrative report per the pillars defined in `role-expectations.md`, synthesized from role logs, daily notes, and observed context. Optionally export as a branded PDF.
 
+## When to use
+
+Quarterly (or per the operator's role-expectations cadence) to draft a structured report against the pillars of responsibility declared in `role-expectations.md`. Output is a polished doc suitable for sharing with a manager, board, or stakeholders.
+
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /role-report` for any user overrides. Apply them to the steps below.

@@ -12,6 +12,11 @@ argument-hint: "[YYYY-MM] (optional — defaults to previous month)"
 
 You are compacting the previous month's log files to keep the vault clean over time.
 
+## When to use
+
+First of the month to digest + archive the previous month's snapshots and role logs. Frees up working memory while preserving the historical layer.
+
+
 ## How it works
 
 Individual snapshot and role-log files accumulate daily. This command:
@@ -118,6 +123,13 @@ logs/role-logs/2026-01/
 ├── 2026-01-role-digest.md
 └── 2026-01-role-logs.zip
 ```
+
+## Output
+
+- Compacted month digest at `vault/00 - notes/logs/digest-{YYYY-MM}.md` summarizing the month's activity
+- Original snapshots zipped to `vault/04 - backups/archive-{YYYY-MM}.zip`
+- Cleared `observed-snapshots/{YYYY-MM}/` + `role-logs/{YYYY-MM}/` (only after successful zip + digest write)
+- Close-session: "Compacted {month}: {N} snapshots archived, {N} role logs digested, working memory freed."
 
 ## Rules
 

@@ -427,7 +427,7 @@ Comprehensive integrity check of the two operating files that govern every sessi
 |---|---|---|---|---|
 | 17.1 | CLAUDE.md:497 | Wiki-link `[[advisory-jane-doe]]` doesn't resolve (example only, OK to leave) | low | leave |
 | 17.2 | CLAUDE.md:382 | Path `agents/` is stale (post-restructure now `agents/`) | high | [ ] update path |
-| 17.3 | USER.md:74 | `chuycepeda@gmail.com` listed as Personal email — verify still active | low | [ ] confirm |
+| 17.3 | USER.md:74 | `{operator-personal}@example.com` listed as Personal email — verify still active | low | [ ] confirm |
 | 17.4 | USER.md:134 | `### /old-command` personalization has no matching `plugins/aios/commands/old-command.md` | medium | [ ] remove orphan personalization |
 
 **Severity levels:**

@@ -12,6 +12,11 @@ argument-hint: "period (e.g. 'month', 'March', 'Q1 2026', 'this week', '2026-03-
 
 Distill the period's learnings into a reflective report — what was understood, what shifted, what compounded. Reads from observed context, daily notes, growth edges, and patterns. Optionally exports as a branded PDF.
 
+## When to use
+
+After a substantive period (week / month / quarter) to distill insights into a publish-ready report. Output doubles as the source for blog posts, newsletter material, or quarterly reviews.
+
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /learned` for any user overrides. Apply them to the steps below.

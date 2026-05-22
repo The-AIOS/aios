@@ -11,6 +11,11 @@ allowed-tools: mcp__obsidian__*, Read
 
 You are mining the user's vault for implicit patterns and unwritten ideas.
 
+## When to use
+
+Every 2 weeks (bi-weekly cadence) to surface ideas that the vault implies but never wrote down — patterns living in the overlap of multiple projects/notes/sessions. The compounding self-awareness command.
+
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /emerge` for any user overrides. Also read `INTENT.md` (if it exists) — don't propose agents or ideas for items in "Explicitly NOT doing".

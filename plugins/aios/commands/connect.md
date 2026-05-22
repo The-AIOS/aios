@@ -11,6 +11,11 @@ allowed-tools: mcp__obsidian__*, Read
 
 Find surprising connections between seemingly unrelated notes in the vault.
 
+## When to use
+
+Periodically (monthly is a good cadence) to find unexpected bridges between unrelated domains in the vault — patterns that only emerge when you see *everything* at once. Most valuable when you have multiple ventures or projects that feel siloed.
+
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /connect` for any user overrides. Apply them to the steps below.

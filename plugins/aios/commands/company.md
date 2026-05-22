@@ -13,6 +13,11 @@ argument-hint: "optional: --create | --mount {url} | --sync {name} | --sync-all 
 
 Mount your company's shared business context (positioning, market docs, brand, primitives, operating manual) into your personal vault. Substrate-pluggable: GitHub repo, Google Drive folder, or future adapters. Supports **multiple** mounted companies (e.g., consulting firm + product venture).
 
+## When to use
+
+When mounting an existing company's venture-context repo into your vault, or scaffolding a new one. Substrate-pluggable (GitHub recommended ✅, Drive supported). Run `--sync-all` weekly to keep all mounted companies current.
+
+
 ## Mental model
 
 This command is structurally different from `/collaborate`:
@@ -67,7 +72,7 @@ Claude routes to `/company` when the user says things like:
 | Company | Substrate | Source | Venture folder | Last sync |
 |---|---|---|---|---|
 | sovra | github | git@github.com:sovrahq/venture-context.git | vault/00 - notes/context/ventures/sovra/ | 2026-05-21 |
-| chuycepeda | github | git@github.com:chuycepeda/venture-context.git | vault/00 - notes/context/ventures/chuycepeda/ | 2026-05-21 |
+| acme-co | github | git@github.com:acme-co/venture-context.git | vault/00 - notes/context/ventures/acme-co/ | 2026-05-21 |
 | acme-co | drive | https://drive.google.com/drive/folders/... | vault/00 - notes/context/ventures/acme-co/ | 2026-05-19 |
 ```
 
@@ -142,7 +147,7 @@ This is the canonical substrate for venture-context. `/company --create` default
 
 **Configuration:**
 - **Source format:** `git@github.com:{org}/{repo-name}.git`
-- **Recommended repo name:** `{org}/venture-context` (e.g., `chuycepeda/venture-context`, `sovrahq/venture-context`)
+- **Recommended repo name:** `{org}/venture-context` (e.g., `acme-co/venture-context`, `my-startup/venture-context`)
 - **Visibility:** private by default; operator decides who has push access
 - **Sync mechanism:** `git clone --depth=50 --single-branch` into `/tmp/company-sync-{name}/`, diff against last hash in `.{name}-sync` tracker, apply changes
 - **Tracker file:** `.{company}-sync` in the venture folder (e.g., `.sovra-sync`)
@@ -205,7 +210,7 @@ Ask: *"Substrate? (github / drive)"*
 ### Step 2 — Remote location
 
 **GitHub:**
-- *"GitHub org or account?"* (e.g., `sovrahq`, `chuycepeda`)
+- *"GitHub org or account?"* (e.g., `acme-co`, `my-startup`)
 - *"Repo name? (default: `venture-context`)"* (press enter for default)
 - *"Visibility? (private / public)"* (default: private)
 
@@ -382,7 +387,7 @@ Iterate over every row in USER.md `## Companies (mounted)` and run `--sync {name
 ```
 Sync summary:
 - sovra: ✅ 3 files updated
-- chuycepeda: ✅ current (no changes)
+- acme-co: ✅ current (no changes)
 - acme-co: ⚠️ access denied (check permissions)
 ```
 
@@ -396,7 +401,7 @@ Read-only. Output:
 | Company | Substrate | Last sync | Drift | Files |
 |---|---|---|---|---|
 | sovra | github | 2 days ago | 3 commits behind | 12 |
-| chuycepeda | github | today | current | 11 |
+| acme-co | github | today | current | 11 |
 | acme-co | drive | 5 days ago | 2 files modified | 14 |
 ```
 

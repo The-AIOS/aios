@@ -12,6 +12,11 @@ allowed-tools: mcp__obsidian__*, Read
 
 The user will provide a position to challenge. Build the strongest possible counter-argument using evidence from the vault.
 
+## When to use
+
+When the operator has formed a position, decision, or thesis and wants to genuinely stress-test it — not validation, adversarial thinking in service of clarity. Before big decisions, when conviction feels too easy, when assumptions need pressure.
+
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /challenge` for any user overrides. Apply them to the steps below.

@@ -11,6 +11,11 @@ allowed-tools: mcp__obsidian__*, Read
 
 Scan recent daily notes for ideas worth their own note, then create standalone files for each.
 
+## When to use
+
+Every 2 weeks (or whenever the daily-note parking lot feels heavy) to promote half-formed ideas into standalone permanent notes. The capture-loop's compounding step.
+
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /graduate` for any user overrides. Apply them to the steps below.

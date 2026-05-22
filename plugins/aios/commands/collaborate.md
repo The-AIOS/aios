@@ -12,6 +12,11 @@ argument-hint: "optional: --add-project | --status | --dry-run | space name"
 
 Create a shared knowledge space with one or more collaborators. Scaffolds a substrate-pluggable folder containing `collaborate.md` (operating protocol), `README.md` (welcome page), and a first collaborative project. Creates a router project note in the personal vault that points to the shared space as source of truth.
 
+## When to use
+
+When you want to share work with one or more collaborators on a substrate-pluggable foundation — Drive for non-coders, GitHub for code-adjacent, local folder for testing. Scaffolds a content-identical mirror in your vault so daily routing still works.
+
+
 ## Mental model
 
 The hierarchy:
@@ -618,6 +623,13 @@ Quick reference for any AI session — yours, your collaborators', or future —
 - collaborate: {URL}
 - {one link per active project's substrate folder}
 ```
+
+## Output
+
+- **Scaffolded space** on the chosen substrate (Drive folder / GitHub repo / local folder) with `collaborate.md` declaring mount instructions any future AI session reads
+- **Router project note** in the personal vault under `vault/00 - notes/projects/space-<collaborator>.md` pointing at the substrate
+- **USER.md update** registering the new collaboration in the `## Collaboration spaces` section
+- **Close-session report:** "Scaffolded collaboration space '<name>' on <substrate>. Linked to project <slug>. Substrate URL: <link>."
 
 ## Rules
 

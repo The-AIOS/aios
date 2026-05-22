@@ -11,6 +11,11 @@ allowed-tools: mcp__obsidian__*, Read
 
 Scan the user's full vault and generate a grounded idea report based on actual patterns, interests, and open threads.
 
+## When to use
+
+When you need inspiration — a grounded report of things to build, write, explore, or connect, all traced back to vault evidence. Run when feeling creatively blocked or before strategic planning.
+
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /ideas` for any user overrides. Apply them to the steps below.

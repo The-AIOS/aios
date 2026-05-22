@@ -11,6 +11,11 @@ allowed-tools: mcp__obsidian__*, Read
 
 You are scanning the user's vault to find what's being quietly avoided or neglected.
 
+## When to use
+
+Mid-week or when something feels off — the avoidance detector. Honest scan of what's being quietly avoided based on gaps in notes. Trust this one to surface things you've been not-naming.
+
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /drift` for any user overrides. Also read `INTENT.md` (if it exists) — items in "Explicitly NOT doing" are intentionally parked, not drifting. Don't flag them.

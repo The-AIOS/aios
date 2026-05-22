@@ -16,6 +16,11 @@ allowed-tools: >-
 
 You are syncing this person's vault infrastructure with the team's source of truth. Read `USER.md` → `## Organization` → **Team repo** to find the repo URL, and `### /aios:update` for command personalizations. If no Organization section exists, tell the user to configure it in USER.md. This covers commands, templates, settings, and docs — NOT personal content.
 
+## When to use
+
+When notified that the team repo has new commits (e.g., `/today` flags BEHIND in the morning, or you see a CHANGELOG update). Pulls the latest shared infrastructure from The-AIOS/aios with three-tier sync (Replace / Suggest / Flag) so personalization survives.
+
+
 ## Three sync tiers
 
 ### Tier 1: Replace (team wins)

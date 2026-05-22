@@ -14,6 +14,11 @@ allowed-tools: >-
 
 You are walking the user through setting up the bundled MCPs in this vault. The goal: get every MCP they need working, end-to-end, without them having to figure out which tokens, which URLs, which commands. You handle all of it conversationally.
 
+## When to use
+
+First-time setup of the bundled MCPs, or when adding a new MCP. Walks you through tokens + zshrc + register + verify, one MCP at a time with opt-in per MCP. Always say 'want this?' — never assume the operator needs every integration.
+
+
 ## Guiding principles
 
 - **One MCP at a time.** Don't dump 10 URLs on the user. Serialize.

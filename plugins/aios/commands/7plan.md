@@ -11,6 +11,11 @@ allowed-tools: mcp__obsidian__*, mcp__google-workspace__*, mcp__google-workspace
 
 You are generating the user's weekly strategic plan by reading their full vault context.
 
+## When to use
+
+Sunday or Monday morning to draft the week's strategic plan across all active ventures + projects + commitments. Reads observed context, project state, and calendar to surface what matters most this week. The compass-set for the week.
+
+
 ## Progress tracking
 
 Before doing anything else, create a task list so the user can see where you are. Use `TaskCreate` for each step:

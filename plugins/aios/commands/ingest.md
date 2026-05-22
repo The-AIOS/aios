@@ -14,6 +14,11 @@ You are ingesting a new source into the vault. The source can be anything: an ar
 
 Read `USER.md` → `### /ingest` for command personalizations.
 
+## When to use
+
+When you find a source worth keeping — article, PDF, video transcript, voice memo, meeting notes, report, Slack thread, research paper, URL. The command reads it, extracts the key information, integrates it into the existing vault, and cross-references aggressively. A single source might touch 5-15 vault files — the bookkeeping is the LLM's job.
+
+
 ## The Principle
 
 > "Instead of just retrieving from raw documents at query time, the LLM incrementally builds and maintains a persistent wiki. When you add a new source, the LLM doesn't just index it for later retrieval. It reads it, extracts the key information, and integrates it into the existing wiki — updating entity pages, revising topic summaries, noting where new data contradicts old claims." — Karpathy, LLM Wiki
@@ -134,6 +139,16 @@ Append to today's daily note (if it exists) or note for `/close-day`:
 - Contradictions: {none / listed}
 - Action items: {count} added to project notes
 ```
+
+## Output
+
+- **Summary page** at `00 - notes/reflections/ingests/{slug}.md` (or `00 - notes/ideas/{slug}.md` for half-formed thoughts, or directly into a project note for project-specific sources)
+- **Updated project notes** with to-dos, session-note entries, or status updates based on connections found
+- **Updated context files** (`business.md`, `ecosystem.md`, observed context) when warranted — pattern-level only
+- **Contradictions flagged** as `> ⚠️ Contradiction:` callouts in the relevant files (don't auto-resolve — flag for user decision)
+- **Updated `_index.md`** in the destination folder
+- **Daily-note log entry** under "Ingested:" so the day's close-day picks it up
+
 
 ## Rules
 

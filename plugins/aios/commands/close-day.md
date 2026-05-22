@@ -11,6 +11,11 @@ allowed-tools: mcp__obsidian__*, mcp__google-workspace__*, mcp__google-workspace
 
 You are running the user's end-of-day review by reading their vault and capturing what happened.
 
+## When to use
+
+Every evening at the end of the working day. Captures what shipped, routes session insights to observed context (so Claude actually gets smarter), closes the carry-loop so nothing falls through, and surfaces drift before it becomes invisible. The system's nervous-system command.
+
+
 ## Pre-loaded API data
 
 Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which pre-loads Google Calendar events **with attachments** (today + next 7 days for cross-check), Google Tasks (open), and Slack unreads + daily recap.

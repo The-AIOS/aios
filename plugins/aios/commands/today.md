@@ -11,6 +11,11 @@ allowed-tools: mcp__obsidian__*, mcp__google-workspace__*, mcp__google-workspace
 
 You are generating today's daily plan for the vault owner by reading their Obsidian vault.
 
+## When to use
+
+Every morning as the foundational ritual. Reads vault context + Calendar + Tasks + Slack and generates today's plan — personalized to your energy, your projects, your trust contract. The heartbeat of the daily loop.
+
+
 ## Pre-loaded API data
 
 Message 1a runs `uv run ~/aios/hooks/pipeline-executor.py --command today` which pre-loads Google Calendar events (all configured accounts), Google Tasks (open), and Slack unreads. The output starts with `# Pre-loaded API Data`.

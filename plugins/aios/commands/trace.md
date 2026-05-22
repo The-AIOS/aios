@@ -12,6 +12,11 @@ allowed-tools: mcp__obsidian__*, Read
 
 The user provides a topic. Track how thinking about it evolved across the vault.
 
+## When to use
+
+When revisiting a topic and you want to see how your thinking has evolved — across daily notes, reflections, and projects. Especially valuable on Day 90+ when there's enough vault density for the trace to show real evolution (not just one mention).
+
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /trace` for any user overrides. Apply them to the steps below.

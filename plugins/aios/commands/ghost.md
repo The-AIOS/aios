@@ -12,6 +12,11 @@ argument-hint: "question to answer in the user's voice"
 
 Answer the provided question as the user would, drawing from their vault.
 
+## When to use
+
+When drafting content, proposals, posts, or replies and you want a first draft that already sounds like you. The output is draft material — always review before sending.
+
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /ghost` for any user overrides. Also read `INTENT.md` (if it exists) — communication rules inform voice calibration.

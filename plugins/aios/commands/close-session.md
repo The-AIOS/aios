@@ -16,6 +16,11 @@ You are running a session capture. This command auto-detects where you're runnin
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /close-session` for any user overrides.
 
+## When to use
+
+When finishing a focused work session — agent session, dev session, ad-hoc spawn. Lightweight capture that bridges back to the daily note + project notes. Feeds the next /close-day. Run it whenever the work has a clear stopping point.
+
+
 ## Mode detection
 
 Run `pwd` to check the current working directory.

@@ -14,6 +14,11 @@ A 15-25 minute interview that turns a freshly-cloned AIOS template into your per
 
 > **When to run:** immediately after `git clone git@github.com:The-AIOS/aios.git ~/aios` (or equivalent). Run once. If you skip it, the system still works — you'll just spend more time figuring things out yourself.
 
+## When to use
+
+Immediately after the first clone of an AIOS vault — turns the freshly-cloned template into the operator's personalized vault. 15-25 minute interactive interview walking through identity (USER.md), declared context, INTENT.md, bundles, MCPs. Run once; re-runnable to revisit specific sections.
+
+
 ## Detection
 
 The command is safe to run multiple times — it detects what's already configured and skips. But the most useful first invocation is on a vault where:

@@ -36,7 +36,7 @@ You are the design.md scaffolder. You don't invent a design system — you extra
 Before asking anything, look for existing material:
 
 1. **For a venture/company design.md:** read `vault/00 - notes/context/ventures/{company}/design.md` if it exists, and any `brand.md` for asset URLs
-2. **For personal design.md:** read `vault/00 - notes/context/declared/personal_voice.md` (voice + tone signals) and any chuycepeda-design.md / similar personal brand doc
+2. **For personal design.md:** read `vault/00 - notes/context/declared/personal_voice.md` (voice + tone signals) and any {operator}-design.md / similar personal brand doc
 3. **For a product design.md:** read the relevant project note in `vault/00 - notes/projects/{project}.md`
 
 If existing context found, propose: *"I see you have {X}. Want me to extract design.md tokens from there first, then we refine together?"* — vs starting from blank.
@@ -146,7 +146,7 @@ who it's for, what feeling it should produce>
 
 **File destinations:**
 - **Venture/company design.md** → `vault/00 - notes/context/ventures/{company}/design.md` (gets pushed to `{org}/venture-context` via `/company`)
-- **Personal design.md** → `vault/00 - notes/context/declared/design.md` (or the chuycepeda-design.md equivalent if that's the operator's pattern)
+- **Personal design.md** → `vault/00 - notes/context/declared/design.md` (or the {operator}-design.md equivalent if that's the operator's pattern)
 - **Product design.md** → `vault/03 - export/{project}/design.md` (artifact for shipping)
 - **For Stitch upload** → `.stitch/DESIGN.md` (per `stitch::manage-design-system` skill convention)
 
