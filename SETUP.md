@@ -162,11 +162,13 @@ claude
 
 ---
 
-## Path portability — install anywhere
+## Path portability (fallback for non-default installs)
 
-The framework's commands, hooks, and MCPs reference `~/aios/` throughout. If you cloned to a different path (`~/code/aios`, `~/Documents/the-aios`, `/Users/you/projects/aios`, etc.), Claude creates a one-time symlink so every `~/aios/...` reference resolves to your actual install location.
+**Default and recommended: clone to `~/aios/`.** Everything in the framework — commands, hooks, MCPs, agents, READMEs — references `~/aios/` as the canonical install path. If you can clone there, do.
 
-**Auto-detect** — Claude runs this at SETUP §1: if the cloned repo path ≠ `~/aios/`, create the symlink for you.
+**If you can't** (corporate machine restricts home-folder layout, you already have a different convention, you're trying the framework from `/tmp/...`, etc.), Claude creates a one-time symlink so the hardcoded references still resolve. This is a fallback, not an equal alternative — pick the default unless you have a specific reason.
+
+**Auto-detect** — Claude runs this at SETUP §1 and again at the top of `/aios:cold-start-interview`: if the cloned repo path ≠ `~/aios/`, create the symlink for you.
 
 **Manual** (if you ever need to redo it):
 
