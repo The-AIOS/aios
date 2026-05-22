@@ -66,7 +66,7 @@ Claude reads `SETUP.md` and handles the rest:
 - Clones the AIOS framework to `~/aios` (if you haven't yet)
 - Installs MCPs, plugins, and CLI tools (auto-detects what's already installed)
 - Creates **your** private GitHub repo for personal content and switches `origin` to it
-- Tracks the AIOS framework via `.vault-update` so `/aios:update` can pull future updates
+- Tracks the AIOS framework via `.aios-update` so `/aios:update` can pull future updates
 - Configures `USER.md` skeleton — `/cold-start-interview` fills it in next
 - Pushes your personal vault to your new private remote
 

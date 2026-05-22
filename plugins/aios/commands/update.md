@@ -14,9 +14,9 @@ allowed-tools: >-
 
 # /aios:update — Team Infrastructure Sync
 
-You are syncing this person's vault infrastructure with the framework's source of truth. Read the framework upstream URL from `.vault-update` at the repo root (the canonical source). If `.vault-update` doesn't exist OR is missing the `repo=` field, default to `git@github.com:The-AIOS/aios.git` (the canonical framework upstream) and ask the user to confirm before proceeding. Also read `USER.md` → `### /aios:update` for command personalizations. This covers commands, templates, settings, and docs — NOT personal content.
+You are syncing this person's vault infrastructure with the framework's source of truth. Read the framework upstream URL from `.aios-update` at the repo root (the canonical source). If `.aios-update` doesn't exist OR is missing the `repo=` field, default to `git@github.com:The-AIOS/aios.git` (the canonical framework upstream) and ask the user to confirm before proceeding. Also read `USER.md` → `### /aios:update` for command personalizations. This covers commands, templates, settings, and docs — NOT personal content.
 
-> ⚠️ **Operator-personal files are NEVER overwritten by this command.** Hard denylist — `/aios:update` MUST refuse to write to any of these, regardless of tier classification: `USER.md`, `INTENT.md`, `SARAH.md`, anything under `vault/00 - notes/{context,projects,ideas,reflections,logs}/`, anything under `vault/01 - calendar/`, `vault/02 - assets/`, `vault/03 - export/`, `vault/04 - backups/`, all `{layer}/custom/` folders, all `{layer}/<company>/` folders, `.vault-update`, `.claude/settings.json`, `.claude/settings.local.json`. These files ship as templates from the framework but the operator's instance is their source-of-truth. Template evolution surfaces as Tier 3 advisory only — section-by-section nudges, never file replacement. See `antifragile.md` #55 for the system-level lesson on path-identity vs content-identity.
+> ⚠️ **Operator-personal files are NEVER overwritten by this command.** Hard denylist — `/aios:update` MUST refuse to write to any of these, regardless of tier classification: `USER.md`, `INTENT.md`, `SARAH.md`, anything under `vault/00 - notes/{context,projects,ideas,reflections,logs}/`, anything under `vault/01 - calendar/`, `vault/02 - assets/`, `vault/03 - export/`, `vault/04 - backups/`, all `{layer}/custom/` folders, all `{layer}/<company>/` folders, `.aios-update`, `.claude/settings.json`, `.claude/settings.local.json`. These files ship as templates from the framework but the operator's instance is their source-of-truth. Template evolution surfaces as Tier 3 advisory only — section-by-section nudges, never file replacement. See `antifragile.md` #55 for the system-level lesson on path-identity vs content-identity.
 
 ## When to use
 
@@ -66,7 +66,7 @@ Detect when a template evolved but the user's filled-in version is missing new s
 
 ## Tracker file
 
-Read `.vault-update` from the repo root.
+Read `.aios-update` from the repo root.
 
 ```
 repo={team repo URL from USER.md}
@@ -80,7 +80,7 @@ If the file doesn't exist, create it with `repo=git@github.com:The-AIOS/aios.git
 
 ### 1. Clone and check for changes
 
-Read the framework upstream URL from `.vault-update` (`repo=` field). Fallback: if absent, default to `git@github.com:The-AIOS/aios.git` and ask the user to confirm.
+Read the framework upstream URL from `.aios-update` (`repo=` field). Fallback: if absent, default to `git@github.com:The-AIOS/aios.git` and ask the user to confirm.
 
 ```bash
 rm -rf /tmp/vault-update-check && git clone --depth=50 --single-branch {team_repo_url} /tmp/vault-update-check 2>&1
@@ -267,7 +267,7 @@ cp ~/aios/plugins/aios/commands/*.md ~/.claude/plugins/marketplaces/the-aios/plu
 cp ~/aios/plugins/aios/commands/*.md ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
 ```
 
-Update `.vault-update` (repo root) with new HEAD hash and today's date.
+Update `.aios-update` (repo root) with new HEAD hash and today's date.
 
 ```bash
 rm -rf /tmp/vault-update-check
@@ -320,4 +320,4 @@ These two commands are complementary:
 - **/company** — mounts and syncs company narrative, positioning, branding, design.md, CLAUDE.md operating manual, and business context. Multi-substrate, multi-company. Run before creating company content.
 - **vault-update** — syncs infrastructure: commands, templates, settings, docs. Run when the team ships tooling improvements.
 
-`/aios:update` syncs the framework infra (commands, templates, hooks, etc.) from the framework upstream tracked in `.vault-update`. `/aios:company` mounts COMPANY venture-context from the per-company repos tracked in `USER.md → ## Companies (mounted)`. Different layers, different trackers, never conflated. Running one does not affect the other.
+`/aios:update` syncs the framework infra (commands, templates, hooks, etc.) from the framework upstream tracked in `.aios-update`. `/aios:company` mounts COMPANY venture-context from the per-company repos tracked in `USER.md → ## Companies (mounted)`. Different layers, different trackers, never conflated. Running one does not affect the other.

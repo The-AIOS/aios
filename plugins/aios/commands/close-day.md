@@ -30,7 +30,7 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
 
 1. **Run executor + read vault** — fire these in **one parallel batch**:
    - `Bash(uv run ~/aios/hooks/pipeline-executor.py --command close-day)` — pre-loads Calendar (detailed, with attachments), Calendar next 7 days, Tasks, Slack
-   - `Bash(cfg=~/aios/.vault-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && echo "vault-update: unreachable" || { [ "$h" = "$r" ] && echo "vault-update: synced" || echo "vault-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "vault-update: no-config"; fi)` — **infrastructure freshness check** (mirror of `/today`'s morning check). Render per § Vault-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before sarah's overnight queue (or first thing tomorrow)".
+   - `Bash(cfg=~/aios/.aios-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && echo "vault-update: unreachable" || { [ "$h" = "$r" ] && echo "vault-update: synced" || echo "vault-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "vault-update: no-config"; fi)` — **infrastructure freshness check** (mirror of `/today`'s morning check). Render per § Vault-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before sarah's overnight queue (or first thing tomorrow)".
    - `Read` → `USER.md` (for dev project paths, growth routines, session cascade, organization, and `### /close-day` command personalizations)
    - `Read` → `INTENT.md` (if it exists — for focus alignment check, parked item handling in carries)
    - Read the daily note to close: list files in `01 - calendar/{YYYY-MM}/`, pick the **most recent `YYYY-MM-DD.md`** (exclude weekly plans like `W{N}-plan.md`). If it's after midnight and no note exists for today, the most recent note is yesterday's — close that one. If it already has a `## Close of Day` section, update it (merge new info, don't duplicate). **Always tell the user which date you're closing:** "Closing {date}."
@@ -61,7 +61,7 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
 
 ## Vault-update freshness rendering
 
-Apply the result from step 1's `.vault-update` check (BEHIND / synced / unreachable / no-config):
+Apply the result from step 1's `.aios-update` check (BEHIND / synced / unreachable / no-config):
 
 - **`synced`** → silent. No surface in the close-of-day section.
 - **`BEHIND`** → surface as a callout at the top of the `## Close of Day` block, before the verdict line: `> 🆕 **Vault-update pending** — local hash `{h}`, team repo `{r}`. Run `/aios:update` before sarah's overnight queue (or first thing tomorrow morning) so fresh commands/templates land in her shift.` This is consequential at close-day specifically because sarah's queue is generated FROM your local state — stale local = stale handoff.

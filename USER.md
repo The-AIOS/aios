@@ -217,7 +217,7 @@ No overrides — reads `## Companies (mounted)` section above.
 
 ### /aios:update
 
-No overrides — reads `.vault-update` tracker at repo root.
+No overrides — reads `.aios-update` tracker at repo root.
 
 ### /mcps-setup
 
