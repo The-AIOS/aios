@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - on-demand
 description: Vault housekeeping — proposals to merge, archive, drop carries, refresh indexes, repair links, tidy antifragile, verify plugin cache, audit permissions

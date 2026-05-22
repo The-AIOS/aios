@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - on-demand
 argument-hint: "<position to challenge>"

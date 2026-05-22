@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - daily
 description: End-of-day review — capture what shipped, what grew, and what carries forward

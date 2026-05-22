@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - biweekly
 description: Surface ideas never explicitly written but strongly implied by patterns across notes

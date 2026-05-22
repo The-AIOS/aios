@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - weekly
 description: Identify topics, projects, or commitments being quietly avoided based on gaps in notes

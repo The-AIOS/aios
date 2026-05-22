@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - on-demand
 description: Load an agent's expertise into the current session (temporary hat), list agents, or schedule agents

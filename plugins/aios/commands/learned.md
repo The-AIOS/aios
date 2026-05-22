@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - on-demand
 description: Distill the period's learnings into a reflective report with optional branded PDF — from observed context, daily notes, and growth edges

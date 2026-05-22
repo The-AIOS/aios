@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - weekly
 description: Compile the week's insights from daily notes into a single writing-ready summary

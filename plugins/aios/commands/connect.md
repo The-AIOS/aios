@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - on-demand
 description: Surface unexpected bridges between unrelated domains in the vault

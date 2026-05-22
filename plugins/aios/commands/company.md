@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - sync
   - on-demand
@@ -47,7 +47,7 @@ Claude routes to `/company` when the user says things like:
 | Invocation | What it does |
 |---|---|
 | `/company` | Default interactive flow — detect mounted companies → offer create / mount / sync / sync-all |
-| `/company --create` | Scaffold a new company-template (interview-driven) into a new remote (GitHub or Drive) and register in USER.md |
+| `/company --create` | Scaffold a new company-template (interview-driven) into a new remote — defaults to GitHub (highly recommended ✅), Drive as fallback. Registers in USER.md |
 | `/company --mount {url}` | Register an existing company repo/folder in USER.md (teammate onboarding to someone else's company) |
 | `/company --sync {name}` | Pull latest from one mounted company |
 | `/company --sync-all` | Pull latest from all mounted companies |
@@ -126,26 +126,44 @@ Beyond context, a company can distribute **its own infra** to operators who moun
 
 ## Substrate adapters
 
-`/company` reuses the substrate-adapter pattern from `/collaborate`. v1 ships:
+`/company` reuses the substrate-adapter pattern from `/collaborate`. v1 ships two: **GitHub** (highly recommended) and **Google Drive**. Future adapters (Notion, Confluence, etc.) register following the same shape.
 
-### GitHub adapter (default)
+### GitHub adapter — **highly recommended** ✅
 
+This is the canonical substrate for venture-context. `/company --create` defaults to GitHub and only falls back to Drive when the operator explicitly requests it (e.g., non-coder collaborators who don't have GitHub access).
+
+**Why GitHub is preferred:**
+- **Structural fidelity** — venture-context ships markdown files with YAML frontmatter, `_index.md` registries, folder hierarchy. Git preserves all of this *byte-identical*. Drive doesn't (see frontmatter caveat below).
+- **Versioning + history** — every change is a commit. `/company --sync` knows exactly what changed since last sync via `git diff`. Drive has no equivalent.
+- **Matches the AIOS folder convention** — `agents/{company}/`, `templates/{company}/`, `plugins/{company}/<plugin>/`, etc. — these only work cleanly when the source is git-versioned with the same structure.
+- **Same upstream pattern as the framework + skills + MCPs** — Bucket 18's `.upstream-sync` freshness check applies identically. Drift, pull, diff — one mental model across surfaces.
+- **Diff-driven collaboration** — teammates can PR changes to the venture-context; you review before pulling.
+- **Auth + permissions** — granular access control via GitHub teams/collaborators; out-of-the-box CI on the venture-context repo if needed.
+
+**Configuration:**
 - **Source format:** `git@github.com:{org}/{repo-name}.git`
 - **Recommended repo name:** `{org}/venture-context` (e.g., `chuycepeda/venture-context`, `sovrahq/venture-context`)
-- **Visibility:** private by default; operator decides who has push access (out of AIOS scope)
+- **Visibility:** private by default; operator decides who has push access
 - **Sync mechanism:** `git clone --depth=50 --single-branch` into `/tmp/company-sync-{name}/`, diff against last hash in `.{name}-sync` tracker, apply changes
 - **Tracker file:** `.{company}-sync` in the venture folder (e.g., `.sovra-sync`)
 
-### Google Drive adapter
+### Google Drive adapter — supported, choose when needed
 
+Pick Drive only when there's a real constraint pushing you there — most often when stakeholders editing the venture-context don't have GitHub access or fluency, or when the venture content already lives in Drive and migration costs more than it's worth.
+
+**Known caveats:**
+- **Frontmatter doesn't survive round-trip** (per `/collaborate` pilot 2026-05-09): YAML frontmatter gets stripped or reformatted when files round-trip through Drive's docs format. For Drive-substrate companies, frontmatter must be parsed by convention (first paragraph) rather than literal YAML — limits which framework features work cleanly.
+- **No git diff** — sync compares `last_modified_iso` per file instead of commit hashes; can't show "what changed."
+- **Folder structure conventions** are operator-enforced, not git-enforced — easier to drift.
+
+**Configuration:**
 - **Source format:** Drive folder URL (e.g., `https://drive.google.com/drive/folders/...`)
-- **Frontmatter caveat (per `/collaborate` pilot 2026-05-09):** YAML frontmatter doesn't survive Drive round-trip. For Drive-substrate companies, frontmatter is parsed by convention (first paragraph) rather than literal YAML.
 - **Sync mechanism:** list folder via Google Workspace MCP, fetch each `.md` file as Doc → markdown, compare to local
 - **Tracker file:** `.{company}-sync` with `last_modified_iso` instead of `hash`
 
-### Future adapters
+### During `--create` — substrate selection prompt
 
-Notion, Confluence, etc. — register adapters following the same shape: source URL detection → fetch → diff → apply.
+The interview asks: *"Which substrate? (1) **GitHub — highly recommended** ✅ (preserves YAML frontmatter, gives you version history, supports the full company-distributed infra layers from the AIOS folder convention). (2) Google Drive (only choose this if stakeholders editing the venture-context don't use GitHub)."* Default = GitHub unless the operator explicitly picks Drive. If they pick Drive, restate the frontmatter caveat + structural limitations before confirming, so the choice is informed.
 
 ## Default flow — `/company` (no args)
 

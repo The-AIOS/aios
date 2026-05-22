@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - on-demand
 description: Scaffold a shared Collaboration Space (collab folder + first project) and create a router project note in the personal vault. Substrate-pluggable — any substrate with an active adapter and MCP/CLI on the machine can host a space. Subcommands for add-project, status, dry-run.

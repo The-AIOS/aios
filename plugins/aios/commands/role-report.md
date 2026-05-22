@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - quarterly
 description: Draft a structured role report with optional branded PDF export — per the pillars defined in role-expectations.md

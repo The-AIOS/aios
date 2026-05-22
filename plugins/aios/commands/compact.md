@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - monthly
 description: Compact previous month's logs — digest + zip snapshots and role logs

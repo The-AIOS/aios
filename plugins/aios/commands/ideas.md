@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - on-demand
 description: Scan the vault and generate a full idea report — things to build, write, explore, and connect

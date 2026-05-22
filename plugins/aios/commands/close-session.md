@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - daily
 description: End-of-session capture — detects vault vs project terminal, writes to the right place

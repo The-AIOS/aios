@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - daily
 description: Generate a grounded daily plan from recent notes, open threads, and priorities

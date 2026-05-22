@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - weekly
 description: Weekly strategic plan across all ventures based on what's most alive right now

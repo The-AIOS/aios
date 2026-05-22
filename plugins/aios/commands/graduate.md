@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - biweekly
 description: Promote half-formed ideas from recent daily notes into standalone permanent notes

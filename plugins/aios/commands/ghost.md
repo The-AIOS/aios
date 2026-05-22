@@ -1,6 +1,6 @@
 ---
 tags:
-  - vault-commands
+  - aios
   - command
   - on-demand
 description: Answer a question the way the user would — using their voice, beliefs, and vault as source material
