@@ -207,7 +207,11 @@ Don't try to use everything at once. The system is designed to reveal itself gra
 - **Week 2-4:** add `/aios:7plan` Mondays, `/aios:drift` mid-week, `/aios:weekly-learnings` Fridays.
 - **Month 2+:** discover the strategic commands (`/aios:emerge`, `/aios:connect`, `/aios:ghost`) as you need them.
 
-For the philosophy underneath, see [README.md](./README.md). For the full command menu, see [TOOLS.md](./TOOLS.md). For specific command behavior, read the `.md` file for that command in `plugins/aios/commands/`.
+For the philosophy underneath, see [README.md](./README.md). For the full command menu, see [TOOLS.md](./TOOLS.md). For day-to-day operating reference, see [CHEATSHEET.md](./CHEATSHEET.md). For specific command behavior, read the `.md` file for that command in `plugins/aios/commands/`.
+
+**When you want more (advanced):** [FORTRESS.md](./FORTRESS.md) — two-machine architecture for running 24/7 autonomous agents on a Mac mini alongside your MacBook. Skip this until you have a real need; the single-machine setup compounds beautifully without it.
+
+**When you feel lost (anytime):** spawn `/agent onboarding-aios` — that agent knows the full AIOS map (this file, README, SETUP, CLAUDE, CHEATSHEET, TOOLS, FORTRESS, the org's CONTRIBUTING/SECURITY, the self-update loop) and walks you through it without lecturing. Standing companion for Day 1 through Year 1+.
 
 Welcome.
 

@@ -359,6 +359,18 @@ Hard preconditions:
 - **macOS only.** Uses Keychain Services and launchd. On Linux/Windows the autopilot stays dormant; the spawn wrapper + universal hooks still work on all platforms.
 - **≥ 2 Anthropic accounts.** A single-account setup gets no value — skip this section entirely.
 
+### 12. Advanced — two-machine architecture (optional, power users)
+
+If you want **24/7 autonomous agents** running overnight or while you're away — a Mac mini as always-on agent host alongside your MacBook as day-to-day driver — see [`FORTRESS.md`](./FORTRESS.md). That doc walks both machines through:
+
+- **Network isolation** — agent host firewalled, no public ingress
+- **SSH hardening** — key-only access, mesh routing via Tailscale
+- **One-way data flow** — main reads from mini, mini never writes back to main's identity
+- **Permission gates** — granular per-tool auth at the agent layer
+- **Recovery mechanisms** — backup paths if either machine is compromised
+
+Claude reads `FORTRESS.md` end-to-end and configures both machines. Hard preconditions: macOS on both, Mac mini on AC power with stable network, willingness to keep the secondary machine on 24/7. Skip if you don't need 24/7 agents — the spawn wrapper (§9) + autopilot (§11) handle the single-machine case beautifully.
+
 ---
 
 ## After Setup

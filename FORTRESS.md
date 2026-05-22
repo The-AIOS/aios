@@ -580,4 +580,12 @@ The fortress design ensures step 5 is rarely needed — the firewall + identity 
 
 - Security sources: CrowdStrike, Palo Alto Networks, Snyk Labs, MITRE ATLAS, Microsoft Security, Cisco, Trend Micro, Aikido Security, drduh macOS Security Guide
 - Substack source (background reading): `chuycepeda.substack.com/p/the-fortress-how-to-run-ai-agents`
-- Related infrastructure files in this repo: `CLAUDE.md` (session start ritual), `USER.md` (per-user identity + sources), `INTENT.md` (autonomy levels + decision boundaries), `SETUP.md` (general AIOS setup)
+- Related infrastructure files in this repo:
+  - [`README.md`](./README.md) — framework value-prop + philosophy (read first if FORTRESS landed you here cold)
+  - [`SETUP.md`](./SETUP.md) — general AIOS setup (single-machine; complete this BEFORE extending to two machines)
+  - [`START-HERE.md`](./START-HERE.md) — post-clone walkthrough for new operators
+  - [`CLAUDE.md`](./CLAUDE.md) — behavioral contract for Claude every session
+  - [`TOOLS.md`](./TOOLS.md) — full menu of commands/agents/skills/MCPs available across both machines
+  - [`CHEATSHEET.md`](./CHEATSHEET.md) — day-to-day operating index
+  - [`USER.md`](./USER.md) — per-machine identity + sources (each machine gets its own entry in `## Identity`)
+  - [`INTENT.md`](./INTENT.md) — autonomy levels + decision boundaries (likely different per machine — the mini may run more autonomously than the main)

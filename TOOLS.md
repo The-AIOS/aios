@@ -212,4 +212,12 @@ If you're using a non-Claude LLM, your daily ritual is: read `plugins/aios/comma
 
 ---
 
+## Advanced setup — two-machine architecture
+
+If you want 24/7 autonomous agents — overnight shifts, scheduled cron agents, work continuing while you're away from the keyboard — AIOS ships a complete two-machine architecture pattern: a primary MacBook (day-to-day driver) + a Mac mini (always-on agent host). Six defensive layers: network isolation, ecosystem lockdown, SSH hardening, permission gates, one-way data flow, recovery mechanisms.
+
+📘 **See [`FORTRESS.md`](./FORTRESS.md)** for the full setup manual — Claude reads it end-to-end and walks both machines through the configuration. Hard prerequisites: macOS on both, second machine on AC power with stable network.
+
+---
+
 *This file ships with the vault. When you run `/aios:update`, you get the latest tools automatically.*

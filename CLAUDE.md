@@ -299,6 +299,29 @@ Check existing entries before adding — reinforcement is as valuable as new cap
 
 ## IV. Vault Map
 
+### Documentation map (the 7 framework docs)
+
+When the operator asks *"where is X documented?"* — route by role, not by reading every doc:
+
+| Doc | Role | Who reads it | When to point operator there |
+|---|---|---|---|
+| [`README.md`](./README.md) | Value-prop + philosophy (3 stages, compound effect, 5 distinctions) | First-time visitor deciding if AIOS fits | *"Is this for me?"* / *"What does AIOS actually do?"* |
+| [`SETUP.md`](./SETUP.md) | Install instructions + the canonical 11-step setup flow | New operator + Claude executing setup | *"How do I install?"* / *"Claude, set up my AI-OS"* |
+| [`START-HERE.md`](./START-HERE.md) | Post-clone walkthrough — what to do in the first 24 hours | New operator just past `git clone` | *"I just cloned, what now?"* |
+| `CLAUDE.md` (this file) | Behavioral contract — session rituals, agentic culture, 10 principles | Claude every session (auto-loaded) | *"How does Claude work with the vault?"* / when explaining behavior |
+| [`CHEATSHEET.md`](./CHEATSHEET.md) | Day-to-day operating index — launch, daily loop, capture/export, personalization | Operator daily | *"Which command do I use for X?"* / *"How do I customize Y?"* |
+| [`TOOLS.md`](./TOOLS.md) | Full menu of commands + agents + skills + MCPs + standalone tools | Operator looking for capability | *"Is there a tool for X?"* / *"What can AIOS do?"* |
+| [`FORTRESS.md`](./FORTRESS.md) | Two-machine architecture (MacBook + Mac mini), defensive layers (network isolation, SSH hardening, recovery), 24/7 agent host | Advanced operator with a second machine | *"How do I run agents 24/7?"* / *"How do I secure this?"* / *"My Mac mini..."* |
+
+**Plus 2 operator-owned files** (Claude reads them every session for personalization context):
+
+| File | Role |
+|---|---|
+| [`USER.md`](./USER.md) | Operator's personalization: identity, sources, organization, command overrides |
+| [`INTENT.md`](./INTENT.md) | Trust contract: autonomy levels per domain, what Claude does autonomously vs draft-only |
+
+**Rule:** when the operator gets disoriented (*"I'm lost"* / *"what is this?"*), invoke [`/agent onboarding-aios`](./agents/aios-personal/onboarding-aios.md) — that agent knows the whole map and walks them through it without lecturing.
+
 ### Structure
 
 ```
