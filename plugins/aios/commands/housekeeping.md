@@ -413,7 +413,7 @@ Comprehensive integrity check of the two operating files that govern every sessi
 **B. USER.md health (operator personalization — operator-specific):**
 
 1. **Identity table — session names match real practice** — read `## Identity` table, cross-check against recent daily notes' "Agent work" entries and session reports. If a listed identity has zero sessions in 30+ days, flag for review.
-2. **Sources sections filled, not template placeholders** — verify `## Organization`, `## Sources → Google accounts`, `## Sources → Communication`, `## Sources → Growth routines` have real values (not `{your-email}` / `{team-repo-url}` / etc).
+2. **Sources sections filled, not template placeholders** — verify `## Companies (mounted)`, `## Sources → Google accounts`, `## Sources → Communication`, `## Sources → Growth routines` have real values (not `{your-email}` / `{team-repo-url}` / etc).
 3. **Anthropic accounts rotation** — verify `## Anthropic accounts` has at least one real entry and the format is parseable by `claude-switch`.
 4. **Companies (mounted)** — once `/company` v2 ships: verify each row in `## Companies (mounted)` resolves to an actual venture folder + tracker file. Flag mismatches.
 5. **Command personalizations consistency** — for each `### /{command}` section under `## Command personalizations`, verify the command file exists in `commands/`. Flag orphan personalizations (command was deleted but personalization remains).

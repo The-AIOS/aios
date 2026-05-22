@@ -14,7 +14,7 @@ allowed-tools: >-
 
 # /aios:update — Team Infrastructure Sync
 
-You are syncing this person's vault infrastructure with the team's source of truth. Read `USER.md` → `## Organization` → **Team repo** to find the repo URL, and `### /aios:update` for command personalizations. If no Organization section exists, tell the user to configure it in USER.md. This covers commands, templates, settings, and docs — NOT personal content.
+You are syncing this person's vault infrastructure with the framework's source of truth. Read the framework upstream URL from `.vault-update` at the repo root (the canonical source). If `.vault-update` doesn't exist OR is missing the `repo=` field, default to `git@github.com:The-AIOS/aios.git` (the canonical framework upstream) and ask the user to confirm before proceeding. Also read `USER.md` → `### /aios:update` for command personalizations. This covers commands, templates, settings, and docs — NOT personal content.
 
 ## When to use
 
@@ -72,13 +72,13 @@ hash={last synced commit hash}
 synced={date of last sync}
 ```
 
-If the file doesn't exist, create it with the repo URL (from USER.md `## Organization`) and set hash to `initial` (forces a full comparison).
+If the file doesn't exist, create it with `repo=git@github.com:The-AIOS/aios.git` (the canonical framework upstream — ask the user to confirm if they sync from a fork) and set `hash=initial` (forces a full comparison).
 
 ## Steps
 
 ### 1. Clone and check for changes
 
-Read the team repo URL from `USER.md` → `## Organization` → **Team repo**.
+Read the framework upstream URL from `.vault-update` (`repo=` field). Fallback: if absent, default to `git@github.com:The-AIOS/aios.git` and ask the user to confirm.
 
 ```bash
 rm -rf /tmp/vault-update-check && git clone --depth=50 --single-branch {team_repo_url} /tmp/vault-update-check 2>&1
@@ -134,13 +134,6 @@ Proceeding with file-by-file review...
 ```
 
 Show only the **What changed** and **Action required** sections from each entry — skip **Why** and **FYI** for brevity during sync (the full details are in CHANGELOG.md in the team repo).
-
-After showing changelog entries, copy the full CHANGELOG.md into the vault:
-```bash
-mkdir -p ~/aios/vault/04\ -\ backups
-cp /tmp/vault-update-check/CHANGELOG.md ~/aios/vault/04\ -\ backups/CHANGELOG.md
-```
-This makes the changelog visible inside Obsidian for reference.
 
 If any changelog entries have **Action required** items, collect them from ALL new entries (not just the latest — a teammate who hasn't synced in 2 weeks may have 3+ entries worth of actions). Aggregate and **deduplicate** — if multiple entries say "migrate project notes to Current State table," list it once.
 
@@ -325,4 +318,4 @@ These two commands are complementary:
 - **/company** — mounts and syncs company narrative, positioning, branding, design.md, CLAUDE.md operating manual, and business context. Multi-substrate, multi-company. Run before creating company content.
 - **vault-update** — syncs infrastructure: commands, templates, settings, docs. Run when the team ships tooling improvements.
 
-They share the same repo (from USER.md `## Organization`) but track separate hashes and touch different files. Running one does not affect the other's tracker.
+`/aios:update` syncs the framework infra (commands, templates, hooks, etc.) from the framework upstream tracked in `.vault-update`. `/aios:company` mounts COMPANY venture-context from the per-company repos tracked in `USER.md → ## Companies (mounted)`. Different layers, different trackers, never conflated. Running one does not affect the other.
