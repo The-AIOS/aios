@@ -494,7 +494,7 @@ cd ~/aios && git add -A && git commit -m "Session {date}: {description}" && git 
 ```
 The vault is only as portable and safe as its last push.
 
-> **Path convention:** the vault is expected to live at `~/aios`. All commands, MCPs, and git operations reference this path. If the vault is elsewhere, create a symlink: `ln -s /actual/path ~/aios`.
+> **Path convention:** the framework expects to live at `~/aios`. Commands, MCPs, hooks, and git operations all reference this path. `/aios:cold-start-interview` auto-creates a symlink if you cloned elsewhere; see SETUP.md → § Path portability for the manual cross-platform commands if you ever need to redo it.
 
 **Format:** [Conventional Commits](https://www.conventionalcommits.org) — `<type>(<scope>): <description>` (subject < 72 chars, imperative, no period). Types: `feat` · `fix` · `docs` · `refactor` · `perf` · `test` · `chore` · `build` · `ci` · `style`. Body explains WHY + references PR/issue numbers. Footer carries Co-Authored-By + BREAKING CHANGE.
 

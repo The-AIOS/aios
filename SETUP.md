@@ -35,7 +35,7 @@ Claude reads this file and walks you through the full onboarding — clone → i
 
 **The end-to-end flow:**
 
-1. **Clone** the repo to `~/aios` and create your private vault repo (`gh repo create {your-username}/aios --private` — matches the local path; renameable later) — your personal content never goes back to the shared framework
+1. **Clone** the repo to `~/aios` and create your private vault repo (`gh repo create {your-username}/aios --private` — matches the local path; renameable later) — your personal content never goes back to the shared framework. **If you cloned elsewhere**, Claude creates a `~/aios` symlink to the actual install path (see § Path portability below) so every framework reference resolves cleanly.
 2. **Install MCP dependencies** via `bash mcps/setup.sh` (creates venvs, installs Python/Node deps for every bundled MCP)
 3. **Guided MCP auth** via `/aios:mcps-setup` (one MCP at a time — asks "want this?", walks you through tokens, registers with `claude mcp add`, verifies the connection works)
 4. **Personalize via `/aios:cold-start-interview`** — 15-25 min interactive interview: identity (USER.md), declared context (`about_me`, `personal_voice`, `working_style`), trust contract (`INTENT.md`), bundle install choices, optional Anthropic plugins. This is where the vault becomes *yours*.
@@ -159,6 +159,31 @@ claude
 ```
 
 (For Fedora/Arch/etc., swap the package manager — the package names are the same.)
+
+---
+
+## Path portability — install anywhere
+
+The framework's commands, hooks, and MCPs reference `~/aios/` throughout. If you cloned to a different path (`~/code/aios`, `~/Documents/the-aios`, `/Users/you/projects/aios`, etc.), Claude creates a one-time symlink so every `~/aios/...` reference resolves to your actual install location.
+
+**Auto-detect** — Claude runs this at SETUP §1: if the cloned repo path ≠ `~/aios/`, create the symlink for you.
+
+**Manual** (if you ever need to redo it):
+
+```bash
+# macOS / Linux / WSL / Git Bash — works everywhere
+ln -s "$(pwd)" ~/aios
+
+# Windows PowerShell (requires Developer Mode OR admin — one-time Win 10+ toggle)
+New-Item -ItemType SymbolicLink -Path "$HOME\aios" -Target (Get-Location).Path
+
+# Windows CMD fallback (no admin needed; directory junction; same volume only)
+mklink /J "%USERPROFILE%\aios" "%CD%"
+```
+
+**Why a symlink and not config-driven paths:** the symlink is a single filesystem-level redirect that costs zero code changes. The framework's 20+ hardcoded `~/aios/` references "just work" once `~/aios` resolves to your actual install. Power users who later move the install only need to update the symlink, not edit code.
+
+**Verify it worked:** `ls -la ~/aios` should show the symlink arrow pointing at your real install path. If you see actual files instead of an arrow, you may have cloned directly to `~/aios/` — that's fine; no symlink needed.
 
 ---
 

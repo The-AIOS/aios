@@ -32,6 +32,45 @@ If all of those are TRUE → fresh vault → run the full interview. If some are
 
 ## Steps
 
+### Pre-step — Path portability check (silent, runs before welcome)
+
+Before the welcome message, run this check **once** to ensure the framework's hardcoded `~/aios/` references resolve to the actual install:
+
+```bash
+# Resolve the actual repo path (cold-start-interview runs from the cloned repo root)
+INSTALL_PATH="$(pwd)"
+CANONICAL="$HOME/aios"
+
+if [ "$INSTALL_PATH" = "$CANONICAL" ]; then
+  echo "path-portability: already at ~/aios — no action needed"
+elif [ -L "$CANONICAL" ] && [ "$(readlink "$CANONICAL")" = "$INSTALL_PATH" ]; then
+  echo "path-portability: symlink already points to this install — ok"
+elif [ -e "$CANONICAL" ]; then
+  echo "path-portability: CONFLICT — ~/aios exists and points elsewhere. Operator must resolve before continuing."
+else
+  ln -s "$INSTALL_PATH" "$CANONICAL" && echo "path-portability: created ~/aios → $INSTALL_PATH"
+fi
+```
+
+**On CONFLICT** (the `~/aios` path exists and points elsewhere): surface this to the operator immediately and ask whether to back up the existing path (`mv ~/aios ~/aios.backup-$(date +%Y%m%d)`) or skip the symlink (operator commits to running the framework from a non-default path, knowing some references will need manual translation). **Default: do not auto-resolve conflicts** — operator decides.
+
+**On Windows PowerShell** (where `ln -s` isn't available natively), use:
+```powershell
+$Install = (Get-Location).Path
+$Canonical = "$HOME\aios"
+if ((Test-Path $Canonical) -and -not (Get-Item $Canonical).Attributes.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
+  Write-Host "path-portability: CONFLICT — $Canonical exists as a real folder"
+} elseif (-not (Test-Path $Canonical)) {
+  # Try symlink first (needs Developer Mode); fall back to junction
+  try { New-Item -ItemType SymbolicLink -Path $Canonical -Target $Install -ErrorAction Stop | Out-Null }
+  catch { cmd /c mklink /J "$Canonical" "$Install" }
+}
+```
+
+After this check passes, proceed to the welcome message below.
+
+---
+
 ### Step 0 — Welcome + framing
 
 ```
