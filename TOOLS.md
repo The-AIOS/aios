@@ -115,7 +115,7 @@ Skills auto-load — you don't invoke them directly. Just describe what you want
 | `executing-plans` | "Execute this plan with checkpoints" |
 | `verification-before-completion` | "Verify everything works before we ship" |
 
-> **66 skills total.** Browse `skills/` for the full list. Each has a `SKILL.md` describing what it does.
+> **41 bundled skills** across 4 source folders (`skills/aios/` 16 · `skills/anthropic/` 11 · `skills/superpowers/` 14 · `skills/custom/` for your own). Plus more via Anthropic's `document-skills@anthropic-agent-skills` plugin (canvas-design, docx, pdf, pptx, xlsx, etc. — not bundled here because they're either proprietary or asset-heavy). Browse `skills/` for the full list of bundled ones.
 
 ---
 
@@ -176,7 +176,7 @@ Setup is opt-in and walks through `/aios:update` — see the `2026-04-25 — hoo
 | Folder | What's inside | How it's used |
 |--------|--------------|---------------|
 | `plugins/aios/commands/` | 24 vault commands inside the `aios` plugin | Invoked via `/aios:{name}` |
-| `skills/` | 66 reusable agent capabilities | Auto-loaded by Claude Code at session start |
+| `skills/` | 41 bundled skills across 4 source folders (aios · anthropic · superpowers · custom) | Auto-loaded by Claude Code at session start |
 | `hooks/` | Pipeline scripts (executor, markitdown) + `claude-identity/` quota autopilot | Called by commands, directly via `python3`, or by launchd (autopilot) |
 | `mcps/` | Bundled MCP servers (Google Workspace, Obsidian, Slack, Playwright, NotebookLM, PDF Generator, etc.) | Auto-connected via settings.json |
 | `plugins/` | Claude Code plugins — `aios` (this framework's slash commands) + operator `custom/` + company-namespaced `<company>/<plugin>/` | Auto-loaded when enabled in settings |

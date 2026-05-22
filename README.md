@@ -114,7 +114,7 @@ The philosophy: don't optimize for smooth sessions. A session where the plan bre
 
 ## What's Inside
 
-Once set up, your vault comes with **24 commands, 66 skills, 22 agents, and standalone tools** — all accessible by describing what you need. See **[TOOLS.md](TOOLS.md)** for the full menu of everything your vault can do.
+Once set up, your vault comes with **24 commands, 41 bundled skills (+ more via Anthropic plugin marketplace), 29 agents across 6 bundles, 10 bundled MCPs, and standalone tools** — all accessible by describing what you need. See **[TOOLS.md](TOOLS.md)** for the full menu of everything your vault can do.
 
 ---
 
@@ -226,8 +226,8 @@ The AI doesn't just remember. It connects. And sometimes, what it connects chang
 │   │   └── commands/        ← The 24 commands (source of truth)
 │   ├── custom/              ← Your own plugins survive /aios:update
 │   └── <company>/<plugin>/  ← Company-distributed plugins (via /aios:company --sync)
-├── agents/                  ← 28 pre-built task agents across 6 bundles + custom/
-├── skills/                  ← 66 curated skills (workflows, strategy, design, engineering, security)
+├── agents/                  ← 29 pre-built task agents across 6 bundles + custom/
+├── skills/                  ← 41 bundled skills across 4 source folders (aios · anthropic · superpowers · custom)
 ├── hooks/                   ← Pipeline executor for /today and /close-day, plus claude-identity quota autopilot (multi-account rotation, macOS)
 ├── mcps/                    ← Vendored MCP servers (10 bundled — see mcps/_index.md for the canonical list)
 ├── templates/               ← Starting templates for context, projects, agents, ventures
