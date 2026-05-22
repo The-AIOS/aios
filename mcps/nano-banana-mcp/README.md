@@ -8,7 +8,7 @@ Single tool: `generate_image(prompt, output_path?, aspect_ratio?)` — generates
 
 - **Model:** `gemini-2.5-flash-image` (Nano Banana, released Aug 2025)
 - **Aspect ratios:** `1:1`, `16:9`, `9:16`, `4:3`, `3:4`
-- **Output:** PNG, saved to `output_path` (default: `~/aios/03 - assets/generated/{timestamp}.png`)
+- **Output:** PNG, saved to `output_path` (default: `~/aios/vault/02 - assets/generated/{timestamp}.png`)
 
 ## Setup
 

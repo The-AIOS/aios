@@ -17,7 +17,7 @@ Ask Claude naturally — it drives the browser with your saved auth:
 ```
 "Publish the next post to Substack using my saved auth — title and body from this markdown file"
 "Cross-post it to LinkedIn and X"
-"Take mobile + desktop screenshots of this URL and save them to 03 - assets/"
+"Take mobile + desktop screenshots of this URL and save them to 02 - assets/"
 "Scrape the latest 5 titles from my LinkedIn feed and summarize the themes"
 "Check analytics on my last tweet and return the engagement numbers"
 "Verify this URL loads clean, no console errors, screenshot if anything breaks"

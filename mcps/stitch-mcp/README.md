@@ -37,7 +37,7 @@ Ask Claude naturally — it picks the right tool:
 "Generate a desktop landing page with a hero, three feature cards, and a pricing table — Linear-like feel"
 "Make three onboarding screens: welcome, create account, import existing"
 "Turn the screens from my current Stitch project into real HTML I can drop into my repo"
-"Pull the screenshot for a given screen ID and save it to 03 - assets/"
+"Pull the screenshot for a given screen ID and save it to 02 - assets/"
 "Seed a new project with the Stripe DESIGN.md, then generate a pricing page in that style"
 "Generate a dashboard layout with sidebar nav, top bar, and a grid of stat cards"
 ```

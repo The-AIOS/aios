@@ -2,14 +2,14 @@
 tags:
   - template
   - meeting-prep
-target: 04 - export/meetings/{YYYY-MM-DD}-{slug}-prep.md
+target: 03 - export/meetings/{YYYY-MM-DD}-{slug}-prep.md
 created: '2026-04-23'
 updated: '2026-05-09'
 ---
 
 # Meeting Prep Template
 
-> Copy this file, rename to `{YYYY-MM-DD}-{slug}-prep.md` (date = meeting date, slug = primary contact or company), move to `04 - export/meetings/`, and fill in placeholders. Delete unused sections — not every meeting needs every block.
+> Copy this file, rename to `{YYYY-MM-DD}-{slug}-prep.md` (date = meeting date, slug = primary contact or company), move to `03 - export/meetings/`, and fill in placeholders. Delete unused sections — not every meeting needs every block.
 
 ## Naming convention
 - **Date prefix** is the meeting date (not creation date) — so files sort chronologically when scanning "what's next."

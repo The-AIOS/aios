@@ -18,7 +18,7 @@ if not API_KEY:
     print("ERROR: GEMINI_API_KEY env var not set. Get one at https://aistudio.google.com/apikey", file=sys.stderr)
     sys.exit(1)
 
-DEFAULT_OUTPUT_DIR = Path.home() / "obsidian" / "vault" / "03 - assets" / "generated"
+DEFAULT_OUTPUT_DIR = Path.home() / "aios" / "vault" / "02 - assets" / "generated"
 
 mcp = FastMCP("nano-banana")
 client = genai.Client(api_key=API_KEY)
@@ -34,7 +34,7 @@ def generate_image(
 
     Args:
         prompt: Natural-language description of the desired image.
-        output_path: Where to save the PNG. Defaults to ~/aios/vault/03 - assets/generated/{timestamp}.png
+        output_path: Where to save the PNG. Defaults to ~/aios/vault/02 - assets/generated/{timestamp}.png
         aspect_ratio: One of "1:1", "16:9", "9:16", "4:3", "3:4". Default "1:1".
 
     Returns:

@@ -137,7 +137,8 @@ Show only the **What changed** and **Action required** sections from each entry 
 
 After showing changelog entries, copy the full CHANGELOG.md into the vault:
 ```bash
-cp /tmp/vault-update-check/CHANGELOG.md ~/aios/vault/06\ -\ backups/CHANGELOG.md
+mkdir -p ~/aios/vault/04\ -\ backups
+cp /tmp/vault-update-check/CHANGELOG.md ~/aios/vault/04\ -\ backups/CHANGELOG.md
 ```
 This makes the changelog visible inside Obsidian for reference.
 
