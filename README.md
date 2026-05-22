@@ -243,16 +243,34 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 ├── .claude-plugin/
 │   └── marketplace.json     ← Marketplace manifest (the-aios marketplace)
 ├── plugins/                 ← Claude Code plugins
-│   ├── aios/                ← THE aios plugin (/aios:* slash commands)
+│   ├── aios/                ← framework: the aios plugin (/aios:* slash commands)
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── commands/        ← The slash commands (source of truth)
-│   ├── custom/              ← Your own plugins survive /aios:update
-│   └── <company>/<plugin>/  ← Company-distributed plugins (via /aios:company --sync)
-├── agents/                  ← Pre-built task agents across 6 bundles (sales · strategy · finance-legal · engineering · communication · personal) + custom/
-├── skills/                  ← Skills across 4 source folders (aios · anthropic · superpowers · custom)
-├── hooks/                   ← Pipeline executor (/today, /close-day) + claude-identity quota autopilot (multi-account rotation, macOS)
-├── mcps/                    ← Vendored MCP servers — see mcps/_index.md for the canonical list
+│   ├── custom/              ← your personal extensions (survive /aios:update)
+│   └── <company>/<plugin>/  ← company-distributed (via /aios:company --sync)
+├── agents/                  ← Task agents
+│   ├── aios-*/              ← framework: 6 bundles (sales · strategy · finance-legal · engineering · communication · personal)
+│   ├── custom/              ← your personal extensions
+│   └── <company>/           ← company-distributed
+├── skills/                  ← Skills (auto-loaded by Claude Code)
+│   ├── aios/                ← framework: AIOS-built
+│   ├── anthropic/           ← framework: vendored from anthropics/skills (Apache-2.0)
+│   ├── superpowers/         ← framework: vendored from obra/superpowers (MIT)
+│   ├── custom/              ← your personal extensions
+│   └── <company>/           ← company-distributed
+├── hooks/                   ← Pipeline scripts + statusLine + UserPromptSubmit
+│   ├── *.{py,sh,ps1}        ← framework: pipeline-executor, markitdown, inject-datetime
+│   ├── claude-identity/     ← framework: quota autopilot (multi-account rotation, macOS)
+│   ├── custom/              ← your personal extensions
+│   └── <company>/           ← company-distributed
+├── mcps/                    ← Vendored MCP servers
+│   ├── *-mcp/               ← framework: 10 bundled (see mcps/_index.md for the canonical list)
+│   ├── custom/              ← your personal extensions
+│   └── <company>/           ← company-distributed
 ├── templates/               ← Starting templates for context, projects, agents, ventures
+│   ├── *.md                 ← framework-bundled templates
+│   ├── custom/              ← your personal templates
+│   └── <company>/           ← company-distributed
 ├── START-HERE.md            ← First-time orientation (what is this, what to do post-clone)
 ├── CLAUDE.md                ← How Claude works with this vault (behavioral rules, session rituals, agentic culture)
 ├── INTENT.md                ← Trust contract (autonomy levels, tradeoffs, escalation triggers)
@@ -265,7 +283,7 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 └── CHANGELOG.md             ← What changed in shared infra, when, and what to do (read by /aios:update)
 ```
 
-**Architecture principle:** Everything shared lives in the repo and is identical for all users. Everything personal lives in `USER.md`, `INTENT.md` (your content), `vault/00 - notes/context/declared/`, and `vault/00 - notes/context/observed/`. No surgical merges needed — ever.
+**Architecture principle:** every infra layer follows the same three-tier extension pattern — `framework` (always shipped, identical for everyone) + `custom/` (your personal layer, survives `/aios:update`) + `<company>/` (every mounted company's layer, synced via `/aios:company`). The personalization that makes the framework *yours* — identity, voice, working style, trust contract, mounted companies — lives in `USER.md`, `INTENT.md`, and `vault/00 - notes/context/declared/`. The personalization that emerges from how you actually work — patterns, growth edges, antifragile rules — lives in `vault/00 - notes/context/observed/`, written by Claude over time. No surgical merges needed — ever.
 
 ---
 
