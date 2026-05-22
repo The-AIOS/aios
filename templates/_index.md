@@ -30,6 +30,7 @@ Templates for the standard files used across the vault. Each template includes s
 | [[personal_voice-template]] | `vault/00 - notes/context/declared/personal_voice.md` | Communication style, tone, and audience |
 | [[working_style-template]] | `vault/00 - notes/context/declared/working_style.md` | Decision-making, preferences, and rhythms |
 | [[role-expectations-template]] | `vault/00 - notes/context/declared/role-expectations.md` | Professional role, pillars, and success signals |
+| [[psychometric-profile-template]] | `vault/00 - notes/context/declared/psychometric-profile.md` | **Optional but high-leverage** — assessment-based self-knowledge (MBTI / Strengths / Saboteurs / Neurochemistry / etc.). Even 1-2 lenses + a synthesis paragraph dramatically calibrate the AI's voice, framing, and nudges. |
 | [[about_venture-template]] | `vault/00 - notes/context/ventures/{venture}/about_venture.md` | Venture overview — one-liner, category, thesis, products, traction |
 
 ### Operational
