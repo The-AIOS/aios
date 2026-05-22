@@ -81,6 +81,18 @@ _claude_with_respawn() {
   # is portable across both shells.
   local -a resume_args
   [ -n "$initial_sid" ] && resume_args=(--resume "$initial_sid")
+
+  # Optional model override via $CLAUDE_MODEL env var. Default behavior
+  # (when unset): claude CLI reads ~/.claude/settings.json `model` key. But
+  # if the operator wants the 1M-context variant or a non-default model
+  # (e.g. sonnet for cheap sessions), they `export CLAUDE_MODEL=...` in
+  # their shell rc and every spawned worker picks it up. Examples:
+  #   export CLAUDE_MODEL='claude-opus-4-7[1m]'   # 1M context Opus
+  #   export CLAUDE_MODEL='claude-sonnet-4-6'     # cheaper sessions
+  #   export CLAUDE_MODEL='opus'                  # alias for latest Opus
+  local -a model_args
+  [ -n "$CLAUDE_MODEL" ] && model_args=(--model "$CLAUDE_MODEL")
+
   export CLAUDE_AGENT_NAME="$name"
   export CLAUDE_RESPAWN_CAPABLE=1
   local marker="/tmp/swap-respawn-$name.flag"
@@ -89,9 +101,9 @@ _claude_with_respawn() {
 
   while true; do
     if [ -n "$bootstrap" ]; then
-      claude "${resume_args[@]}" --remote-control --name "$name" "$bootstrap"
+      claude "${model_args[@]}" "${resume_args[@]}" --remote-control --name "$name" "$bootstrap"
     else
-      claude "${resume_args[@]}" --remote-control --name "$name"
+      claude "${model_args[@]}" "${resume_args[@]}" --remote-control --name "$name"
     fi
     local exit_code=$?
 
@@ -126,7 +138,7 @@ _claude_with_respawn() {
     consecutive_failures=$((consecutive_failures + 1))
     echo ""
     echo "⚠️  Claude exited with code $exit_code (no swap marker)."
-    echo "    Last command: claude ${resume_args[*]} --remote-control --name $name"
+    echo "    Last command: claude ${model_args[*]} ${resume_args[*]} --remote-control --name $name"
     echo "    Likely: auth issue, malformed session-id, network, or transient error."
     echo "    Consecutive failures: $consecutive_failures"
     echo ""

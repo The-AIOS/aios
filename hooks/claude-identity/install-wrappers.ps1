@@ -102,8 +102,12 @@ function Invoke-ClaudeWithRespawn {
     $sidFile = Join-Path $env:TEMP "swap-respawn-$Name.session"
     $resumeArgs = @()
     if ($InitialSessionId) { $resumeArgs = @('--resume', $InitialSessionId) }
+    # Optional model override via $env:CLAUDE_MODEL — see install-wrappers.sh
+    # comment for the rationale (1M context Opus, cheaper sonnet, alias, etc.)
+    $modelArgs = @()
+    if ($env:CLAUDE_MODEL) { $modelArgs = @('--model', $env:CLAUDE_MODEL) }
     while ($true) {
-        $claudeArgs = @() + $resumeArgs + @('--remote-control', '--name', $Name)
+        $claudeArgs = @() + $modelArgs + $resumeArgs + @('--remote-control', '--name', $Name)
         if ($BootstrapFile -and (Test-Path $BootstrapFile)) {
             $claudeArgs += "Read $BootstrapFile and follow the instructions inside."
         }

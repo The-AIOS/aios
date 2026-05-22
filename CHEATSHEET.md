@@ -19,6 +19,7 @@ How to launch, name, and resume sessions.
 | Resume a named worker | `spawn <name>` again | Wrapper detects existing session, reattaches |
 | Resume any past session | `claude --resume` | Pick from the list of recent sessions |
 | Kill a spawned worker cleanly | `spawn-kill <name>` | Atomic process-group kill + closes the Terminal window (macOS). Avoids orphan Claude processes + Terminal's "terminate?" modal. Doesn't affect IDE-integrated terminals (the IDE manages those). |
+| Pin model used by every spawn | `export CLAUDE_MODEL='claude-opus-4-7[1m]'` in `~/.zshrc` | Wrapper passes `--model` to every spawned Claude. Examples: `claude-opus-4-7[1m]` (1M context Opus), `claude-sonnet-4-6` (cheaper), `opus` (alias for latest). Unset = fall back to `~/.claude/settings.json` model key. |
 | Install the spawn wrapper | `bash ~/aios/hooks/claude-identity/install-wrappers.sh` | One-time setup. Idempotent — safe to re-run. Installs `spawn`, `spawn-kill`, `buddai`, `_claude_with_respawn`. |
 | Run Claude without spawn | `claude --remote-control --name <name>` | Bypasses wrapper; not recommended |
 
