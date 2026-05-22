@@ -356,10 +356,10 @@ vault/
 │   └── {YYYY-MM}/
 │       ├── {YYYY-MM-DD}.md          ← Daily plan + close-day
 │       └── {YYYY}-W{WW}-*.md        ← Weekly plan + summary
-├── 02 - templates/
-├── 03 - assets/
-├── 04 - export/
-├── 05 - backups/                    ← User backups (empty by default)
+├── 02 - assets/                     ← Images, PDFs, attachments referenced by notes
+├── 03 - export/                     ← Output destination for /role-report, /weekly-learnings, /ingest exports, talks, writing pipeline (1-drafts/ → 2-ready/ → 3-published/)
+└── 04 - backups/                    ← User backups (empty by default)
+templates/                           ← Reference templates (top-level infra, not in vault/) — was vault/02 - templates/ pre-2026-05-21
 .claude-plugin/                      ← Marketplace manifest (top-level infra, not in vault/)
 plugins/                             ← Claude Code plugins
 │   ├── aios/                        ← The aios plugin (source of truth)

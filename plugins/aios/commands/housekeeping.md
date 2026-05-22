@@ -69,7 +69,7 @@ Scan every `_index.md` file in the vault. For each one:
 - `00 - notes/context/ventures/_index.md`
 - `00 - notes/logs/_index.md`
 - `templates/_index.md`
-- `04 - export/_index.md` + subfolders
+- `03 - export/_index.md` + subfolders
 - `agents/_index.md` (canonical registry) + `agents/custom/_index.md`
 
 Also refresh project snapshots in `00 - notes/projects/_index.md` — cross-check against each active project note's `## To-Dos`, `## Current State`, and last 7 days of daily notes. Update context paragraphs that have drifted.
