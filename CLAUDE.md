@@ -359,7 +359,7 @@ vault/
 ├── 02 - assets/                     ← Images, PDFs, attachments referenced by notes
 ├── 03 - export/                     ← Output destination for /role-report, /weekly-learnings, /ingest exports, talks, writing pipeline (1-drafts/ → 2-ready/ → 3-published/)
 └── 04 - backups/                    ← User backups (empty by default)
-templates/                           ← Reference templates (top-level infra, not in vault/) — was vault/02 - templates/ pre-2026-05-21
+templates/                           ← Reference templates (top-level infra, not in vault/)
 .claude-plugin/                      ← Marketplace manifest (top-level infra, not in vault/)
 plugins/                             ← Claude Code plugins
 │   ├── aios/                        ← The aios plugin (source of truth)
@@ -457,7 +457,7 @@ claude plugin update aios@the-aios
 | `plugins/` | Claude Code plugins — `aios` (bundled) + `custom/<your-plugin>/` (operator) + `<company>/<plugin>/` (company-namespaced) | Auto-loaded when enabled in settings | Add folder under `plugins/custom/<name>/` with `.claude-plugin/plugin.json` |
 | `agents/` | Task agents in 6 bundles (`aios-sales/`, `aios-strategy/`, `aios-finance-legal/`, `aios-engineering/`, `aios-communication/`, `aios-personal/`) + `custom/` for operator extensions | Spawned via `spawn {name}` or `/agent {name}` — glob match across all bundles | Add `{name}.md` to the relevant bundle folder (or `custom/` for your own) from `[[agent-template]]` |
 
-**Custom/ + company namespacing** _(updated 2026-05-21)_: framework-level layers (`agents/`, `skills/`, `hooks/`, `mcps/`, `templates/`) each have a `custom/` subfolder for single-file operator extensions — survive `/aios:update`; custom overrides bundled. The `plugins/` layer follows the canonical Claude Code convention instead: each plugin is a self-contained folder. Operator-built plugins go in `plugins/custom/<your-plugin>/` (NOT inside the `aios` plugin). Company-distributed infra (via `/aios:company --sync`) lands at `{layer}/{company}/` for single-file layers and `plugins/{company}/<plugin-name>/` for plugins (e.g., `agents/acme-co/`, `templates/acme-co/`, `plugins/acme-co/board-prep/`) — namespaced by company, never collides with `custom/` or `aios-*/`.
+**Custom/ + company namespacing**: framework-level layers (`agents/`, `skills/`, `hooks/`, `mcps/`, `templates/`) each have a `custom/` subfolder for single-file operator extensions — survive `/aios:update`; custom overrides bundled. The `plugins/` layer follows the canonical Claude Code convention instead: each plugin is a self-contained folder. Operator-built plugins go in `plugins/custom/<your-plugin>/` (NOT inside the `aios` plugin). Company-distributed infra (via `/aios:company --sync`) lands at `{layer}/{company}/` for single-file layers and `plugins/{company}/<plugin-name>/` for plugins (e.g., `agents/acme-co/`, `templates/acme-co/`, `plugins/acme-co/board-prep/`) — namespaced by company, never collides with `custom/` or `aios-*/`.
 
 **Operator custom slash commands:** the canonical extension point is your OWN plugin, not a `custom/` subfolder inside `aios`. To add a `/my-stuff:my-command`, create `plugins/custom/my-stuff/` with its own `.claude-plugin/plugin.json` + `commands/my-command.md`, then register it in `.claude-plugin/marketplace.json`. Same pattern as company-distributed plugins, just locally owned.
 
