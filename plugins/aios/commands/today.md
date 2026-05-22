@@ -142,15 +142,18 @@ From the data already loaded — process everything in memory:
 - Use the project snapshots from `_index.md`: **active** → extract to-dos for Rhythm + Radar. **idea** → Radar bottom. **archived/deprioritized** → skip or minimal mention.
 - **If first run** (no project notes exist) and kickstart sources are configured: offer to import projects from external sources. Wait for user approval before creating.
 - **INTENT.md parked items check:** Before processing carries, read INTENT.md `## Explicitly NOT doing`. Any carried item that matches a parked entry is **removed entirely** — no carry, no count, no mention, no escalation. This runs BEFORE the carry logic below.
-- Extract carry-forwards: all unchecked `- [ ]` items from the **most recent daily note** (loaded in Message 1b — NOT yesterday's date, but the actual last note found). Search **ALL sections** — Rhythm, Parking lot, Horizon, Carries forward, AND the Close of Day `### Carries forward` subsection (inside `## Close of Day`). These are two different locations: the plan's carries and the close-day's carries. Both must be scanned. **Dedup across sections:** the same item often appears in both Rhythm/Evening and Parking lot (e.g. Boundless in Evening Grow AND in Parking lot as a forced decision). Match by core task name (ignore emojis, prefixes like 🔴, time slots, decision prompts, source tags). Keep the highest carry count and the most actionable version. Track carry count: if an item already shows `_(carried ×N)_`, increment N. **ZERO TOLERANCE for dropped items:** every unique unchecked item from the previous note must appear somewhere in today's note (Rhythm, Parking lot, or Horizon). After placing all items, do a final count: if `previous_unique_carries > today_carries`, something was dropped — find it and add it. Nothing gets silently dropped — if the most recent note is 3 days ago, those carries still surface.
-- **Smart carry triage** — a carried item without a decision is just guilt on a list. Apply thresholds. **Check for a `reason:` tag before escalating** — carry format is `_(carried ×N, reason: {tag})_` where `{tag}` is one of: `strategic-deferral`, `blocked-on-{who}`, `needs-challenge`, `waiting-on-date`. A tagged reason means the user has already triaged this carry — respect it, don't re-escalate on count alone.
-  - **×1-2:** Normal — show in Rhythm or Parking lot as usual. No reason tag needed yet.
-  - **×3-5:** Flag with ⚠️ — still alive but needs attention. Reason tag optional.
-  - **×6-9 without reason:** **Ask for reason, don't force a decision yet:** "⚠️ {task} carried ×{N}, no reason tagged. Pick: `strategic-deferral` / `blocked-on-{who}` / `needs-challenge` / `waiting-on-date` / `park`. Close-day will lock it in."
-  - **×6-9 with reason:** Keep in Parking lot, show reason tag. No escalation needed — the reason explains why it's still alive.
-  - **×10+ with stale reason** (e.g. `blocked-on-X` but no activity on X for 30+ days) OR **×10+ no reason after being asked:** **Escalate hard:** "🔴 {task} carried ×{N}, reason `{tag}` stale / missing. Either the reason is wrong (retag) or this should park. No more silent carries."
-  - **×10+ with fresh reason:** Respect it. A ×17 tagged `strategic-deferral` that INTENT.md confirms as a parked focus is intentional prioritization, not avoidance. Show as `_(carried ×17, strategic-deferral)_` without escalation icon.
-  - Place triage decisions at the top of Parking lot, not buried in Rhythm. The user should see them immediately.
+- **Extract carry-forwards: ZERO TOLERANCE for dropped items.** Scan all unchecked `- [ ]` across ALL sections of the most-recent daily note — Rhythm, Parking lot, Horizon, Carries forward, AND the Close of Day `### Carries forward` subsection. Dedup by core task name (ignore emojis, time slots, source tags); keep highest carry count + most actionable version. After writing today's note, verify: every unique unchecked item from the previous note must appear somewhere (Rhythm / Parking lot / Horizon). If `previous_unique_carries > today_carries`, find what dropped and add it. Carries that have been silent 3+ days still surface.
+- **Smart carry triage** — a carry without a decision is guilt on a list. Carry format: `_(carried ×N, reason: {tag})_` where tag ∈ `strategic-deferral` / `blocked-on-{who}` / `needs-challenge` / `waiting-on-date`. A tagged carry has been triaged — respect it; count alone doesn't escalate.
+
+| Count | No reason tag | With reason tag |
+|---|---|---|
+| ×1-2 | Normal — show in Rhythm or Parking lot | (n/a — no tag yet) |
+| ×3-5 | ⚠️ flag — still alive, needs attention | OK — show tag |
+| ×6-9 | **Ask** inline: pick a tag (close-day locks in) | OK — keep in Parking lot |
+| ×10+ | 🔴 **Escalate** — retag or park, no more silent carries | Respect (incl. ×17 strategic-deferral) — show tag, no escalation icon |
+| ×10+, stale tag (no activity on blocker for 30+ days) | 🔴 escalate — retag or park | (same — stale ≠ fresh) |
+
+Place triage decisions at the top of Parking lot, not buried in Rhythm.
 - **Stale project snapshot refresh:** For any project flagged as stale in Message 1b (snapshot >7 days old), read just the `## To-Dos` section from the project note and update the `_index.md` snapshot. This prevents to-dos from going invisible in untouched projects.
 - Count streaks (consecutive days of study, writing, shipping)
 - Count drift counters (days an item has been carried)
@@ -292,29 +295,29 @@ After writing the Radar table, scan the past 7 daily notes (`vault/01 - calendar
 ```
 
 ## Rules
-- **Payload discipline:** Never read a full file when a section suffices. For daily notes, search for the heading you need (`### Carries forward`, `### Evening — Grow`, `- [ ]`) then read from that offset. For observed context, split batches and use `limit` per file. For project context, use `_index.md` snapshots — only drill into a note when the snapshot lacks detail. **Safety guarantee:** carry-forward extraction must search for ALL unchecked items across ALL sections (Rhythm, Parking lot, Horizon, Carries forward, AND the Close of Day carries subsection), not just one heading. If smart read returns suspiciously few carries (0 items from a note that had 15+ tasks), fall back to full read — never silently return empty carries. **After writing the note, verify:** count unchecked items from previous note vs placed items in today's note. If any are missing, append them to Horizon before committing.
-- **NEVER use the Agent tool.** Use direct tool calls only — `Read`, `mcp__obsidian__*`, etc. Agents are heavyweight subprocesses that add minutes of latency and can silently block.
-- **NEVER call Google Calendar, Tasks, or Slack APIs.** The pipeline executor pre-loads this data. If it's missing or failed, tell the user to fix the executor — don't call the APIs yourself.
-- **Never re-read files.** All vault data is loaded in Messages 1a+1b. Message 2 is pure analysis + write. No additional Read or MCP read calls after Message 1b.
-- **Minimize tool-call messages.** Target: 4 messages total — (1a) bootstrap, (1b) vault reads, (2) analyze + write note, (3) commit. Every additional round-trip adds ~5-10s of latency. The entire command should complete in under 60 seconds.
-- The daily opener must be grounded in observed context — never generic. If it could apply to anyone, it's not good enough.
-- **"Today I ship" is sacred.** One deliverable. Not two, not "make progress on." One thing that's done by end of day. If the user's day has 3+ competing priorities, name the ONE and explicitly note what's deferred: "Today I ship X. NOT Y or Z — those are tomorrow." The deferral is the discipline.
-- **Rhythm sections: 3-5 items each for Morning and Afternoon, adaptive to calendar density.** Heavy meeting day → lean toward 3. Open blocks → up to 5. Overflow goes to Parking lot. The day must feel achievable, not overwhelming.
-- Evening — Grow is always present. If the user has growth routines configured in USER.md Sources, show them with streak counters. If not, plant the seed — don't force it.
-- Be specific, not aspirational. "Finalize GDrive folder structure and commit" not "Work on Drive organization."
-- Surface unresolved items from previous days — don't let things drift silently
+
+**Performance:**
+- **Payload discipline:** never read a full file when a section suffices. Daily notes: `Grep` for the heading (`### Carries forward`, `### Evening — Grow`, `- [ ]`) then read from offset. Observed context: `limit` per file. Project context: use `_index.md` snapshots first; drill into a note only if the snapshot lacks detail.
+- **Never re-read files** after Message 1b. Message 2 is pure analysis + write.
+- **Target: 4 messages total** — bootstrap, vault reads, analyze + write, commit. Under 60s end-to-end.
+- **NEVER use the Agent tool.** Direct tool calls only (`Read`, `mcp__obsidian__*`, etc.) — Agents add minutes of latency.
+- **NEVER call Google Calendar / Tasks / Slack APIs.** Pre-loaded by the pipeline executor. If it failed, tell the user to fix it — don't fall back to API calls.
+
+**Content discipline:**
+- **Daily opener:** grounded in observed context, never generic. If it could apply to anyone, rewrite.
+- **"Today I ship" is sacred:** one deliverable, not "make progress on." If the day has 3+ competing priorities, name the ONE explicitly + note what's deferred ("Today I ship X. NOT Y or Z."). The deferral IS the discipline.
+- **Rhythm: 3-5 items each Morning/Afternoon**, adaptive to calendar density. Heavy meeting day → 3. Open blocks → up to 5. Overflow → Parking lot. The day must feel achievable.
+- **Evening — Grow is always present.** Growth routines from USER.md Sources with streak counters; if none configured, plant the seed gently.
+- **Specific, not aspirational.** "Finalize GDrive folder structure and commit" beats "Work on Drive organization."
 - **Keep it to one screen.** If today's plan needs scrolling, it's too much.
-- Use `[[wiki-links]]` for any project names mentioned.
-- Source tags: _(project)_, _(carried ×N, reason: {tag})_, _(google tasks)_, _(suggested)_, _(overdue task)_
-- **Carry-reason tags** (set by close-day, displayed by today): `strategic-deferral` (important but not now), `blocked-on-{who}` (waiting on external), `needs-challenge` (should I push harder?), `waiting-on-date` (time-gated). Once tagged, count alone stops triggering escalation.
-- **🤖 Proactive execution labels:** When writing tasks in Rhythm, Parking lot, or Horizon, add a 🤖 emoji before any task that Claude can execute directly with available tools (send messages, write docs, update boards, research, etc.). **Agent matching:** if the agents index was loaded (Message 1a), match delegatable tasks against the agent registry by domain + keywords. Annotate matched tasks with the agent: `🤖 {task} _(→ agent: [[sales-lead-hunter]])_`. After the Energy note, add a one-liner: `🤖 **{N} tasks agents can handle** — say "go" to spawn them, pick specific ones, or /agent {name} to wear the hat yourself.` This makes the proactive execution visible without cluttering the note with a separate section.
-- **Show dependency trees.** When a task is blocked, nest the blocker underneath it with indentation. The reader should see what unblocks what at a glance. Example:
-  ```
-  - [ ] Ship feature _(project)_
-  	- [ ] blocked by API integration
-  		- [ ] Complete API setup _(suggested)_
-  ```
-- After writing the note, commit and push: `cd ~/aios && git add -A && git commit -m "Daily plan {date}" && git push`
+
+**Conventions:**
+- `[[wiki-links]]` for any project names mentioned.
+- Source tags: `_(project)_`, `_(carried ×N, reason: {tag})_`, `_(google tasks)_`, `_(suggested)_`, `_(overdue task)_`.
+- Carry-reason tags: `strategic-deferral` (important but not now), `blocked-on-{who}` (external), `needs-challenge` (should I push harder?), `waiting-on-date` (time-gated). Once tagged, count alone stops escalating.
+- **🤖 Proactive execution:** prefix tasks Claude can execute with available tools. Match against `agents/_index.md` (loaded in Message 1a) by domain + keywords; annotate `🤖 {task} _(→ agent: [[agent-name]])_`. After Energy note, add: `🤖 **{N} tasks agents can handle** — say "go" to spawn them, pick specific ones, or /agent {name} to wear the hat.`
+- **Dependency trees:** when a task is blocked, nest the blocker beneath it with indentation.
+- **After writing, commit + push** — `cd ~/aios && git add -A && git commit -m "Daily plan {date}" && git push`.
 
 ## Command Discovery Engine
 
