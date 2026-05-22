@@ -23,8 +23,8 @@ Desktop.ini
 .vscode/
 .idea/
 
-# Env + secrets — credential-file patterns only (not folder names — MCP source
-# code uses auth/ folders for authentication MODULES which must stay tracked)
+# Env + secrets — credential-file patterns only (NOT broad folder names;
+# MCP source code uses auth/ folders for authentication MODULES which must stay tracked)
 **/.env
 **/.env.local
 **/token.json
@@ -37,13 +37,16 @@ spotify-cache.json
 **/storage_state.json
 **/cookies.json
 .slack-mcp-tokens.json
-
-# Specific credential files (operator-local; ship as .template instead)
-mcps/google-workspace-mcp/oauth.json
+# Playwright browser-auth cookie stores (session credentials per service)
+mcps/playwright-mcp/auth/*.json
 
 # Runtime artifacts (regenerated each session)
 hooks/pipeline-executor.log
 **/.DS_Store
+
+# OAuth credentials NEVER tracked — operators copy oauth.json.template → oauth.json
+# with their own Google Cloud Console credentials (which stay local).
+mcps/google-workspace-mcp/oauth.json
 
 # Obsidian workspace state (per-machine UI layout)
 vault/.obsidian/workspace.json
