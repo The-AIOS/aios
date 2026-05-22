@@ -67,8 +67,8 @@
 #
 # Step 5 — load the launchd agent (runs `watch` every 10 min, swaps when near cap):
 #
-#   cp ~/aios/hooks/claude-identity/com.sovra.claude-quota-watch.plist ~/Library/LaunchAgents/
-#   launchctl load ~/Library/LaunchAgents/com.sovra.claude-quota-watch.plist
+#   cp ~/aios/hooks/claude-identity/com.aios.claude-quota-watch.plist ~/Library/LaunchAgents/
+#   launchctl load ~/Library/LaunchAgents/com.aios.claude-quota-watch.plist
 #
 # Verify: `claude-whoami` works, `claude mcp list` unchanged, after a few
 # minutes `~/.claude/rate-limit-cache.json` appears and stays fresh as you use

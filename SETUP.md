@@ -2,6 +2,20 @@
 
 Get the full system running in under 10 minutes.
 
+> **Reading this as Claude?** Operator said *"set up my AI-OS from this repo"* or similar. You're the executor. The flow:
+> 1. Confirm Prerequisites are installed (Obsidian + Antigravity IDE/VS Code + Node/Git/gh/Python/uv/Claude Code) — if not, walk OS-specific block from "Prerequisites" §
+> 2. Clone to `~/aios` (default) and create private GitHub repo `{username}/aios` (or whatever the operator names it) — see "The Setup" §1 below
+> 3. Bulk MCP deps: `bash mcps/setup.sh`
+> 4. Guided MCP auth: invoke `/aios:mcps-setup`
+> 5. Personalize: invoke `/aios:cold-start-interview` — this is the longest interactive step (15-25 min); follow the command's own Steps 0-13
+> 6. Wear the hat: `/agent onboarding-aios` (orientation companion)
+> 7. Optional: `/aios:company` (mount/create venture-context) + `/aios:collaborate` (shared space)
+> 8. First `/aios:today` (the proof point)
+>
+> **Defaults to pick without asking** (unless operator overrides): vault path = `~/aios/`, private repo name = `{username}/aios`, substrate for company = GitHub. **Always confirm**: the Google email, which task sources (Slack/GitHub/Linear/Monday), MCP-by-MCP installs (let `/aios:mcps-setup` handle the per-MCP "want this?" pattern). Show diffs before writing to `USER.md` / `INTENT.md` / `vault/00 - notes/context/declared/*`.
+>
+> **If operator gets lost mid-setup:** route to `/agent onboarding-aios` — that agent knows the full doc map.
+
 ---
 
 ## The Setup (Claude-Driven)
@@ -16,7 +30,7 @@ Claude reads this file and walks you through the full onboarding — clone → i
 
 **The end-to-end flow:**
 
-1. **Clone** the repo to `~/aios` and create your private vault repo (`gh repo create {your-username}/obsidian --private`) — your personal content never goes back to the shared framework
+1. **Clone** the repo to `~/aios` and create your private vault repo (`gh repo create {your-username}/aios --private` — matches the local path; renameable later) — your personal content never goes back to the shared framework
 2. **Install MCP dependencies** via `bash mcps/setup.sh` (creates venvs, installs Python/Node deps for every bundled MCP)
 3. **Guided MCP auth** via `/aios:mcps-setup` (one MCP at a time — asks "want this?", walks you through tokens, registers with `claude mcp add`, verifies the connection works)
 4. **Personalize via `/aios:cold-start-interview`** — 15-25 min interactive interview: identity (USER.md), declared context (`about_me`, `personal_voice`, `working_style`), trust contract (`INTENT.md`), bundle install choices, optional Anthropic plugins. This is where the vault becomes *yours*.
@@ -35,7 +49,7 @@ Claude reads this file and walks you through the full onboarding — clone → i
 **What Claude asks you** (only if needed):
 - Your Google email (for Calendar/Tasks/Drive)
 - Which task sources you use (GitHub Issues, Linear, Monday, etc.)
-- What to name your private vault repo (defaults to `{username}/obsidian`)
+- What to name your private vault repo (defaults to `{username}/aios` — matches the local path `~/aios/`; pick a different name if you prefer, e.g., `{username}/vault` or `{username}/my-aios`)
 - Substrate choices when running `/company` or `/collaborate`
 
 **If you ever feel lost during or after setup** — say *"I'm lost"* or *"where do I start"* and Claude routes to the [[onboarding-aios]] agent automatically. That agent is your standing companion for orientation throughout the framework's lifetime.
@@ -230,8 +244,10 @@ Your vault should live in your own private repo — not the shared team repo. Cl
 
 ```bash
 cd ~/aios
-gh repo create {your-username}/obsidian --private --source=. --push
+gh repo create {your-username}/aios --private --source=. --push
 ```
+
+> **Naming:** `{username}/aios` matches the local path `~/aios/` and the framework brand. Alternatives if you prefer: `{username}/vault`, `{username}/my-aios`, or anything else — Claude defaults to `{username}/aios` unless you say otherwise.
 
 This creates a private GitHub repo, sets it as your remote, and pushes. From here on, your content never goes back to the AIOS framework. `/aios:update` pulls AIOS framework updates from `The-AIOS/aios`; `/company` pulls company venture-context from each mounted company's repo — but you push only to your private personal vault.
 
@@ -247,7 +263,7 @@ source ~/.zshrc   # or ~/.bashrc
 
 **Windows (PowerShell):**
 ```powershell
-pwsh -File ~\obsidian\hooks\claude-identity\install-wrappers.ps1
+pwsh -File ~\aios\hooks\claude-identity\install-wrappers.ps1
 . $PROFILE
 ```
 
