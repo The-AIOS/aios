@@ -58,13 +58,29 @@ WAIT for confirmation before proceeding.
 Walk through `USER.md` section by section:
 
 1. **Identity table** — ask the operator's primary session name (default: `claude` or `assistant`; power users pick something custom)
-2. **Anthropic accounts** — ask for primary email; mention optional secondary for quota rotation
+2. **Anthropic accounts** — ask for primary email AND the multi-account question:
+
+   > *"Quick gentle question — do you use (or plan to use) more than one Anthropic account to manage the 5h/7d rate limits? (yes / no — single account)"*
+
+   - **If no** → record primary email only. No autopilot setup needed; skip the quota-autopilot deferred-capture path entirely.
+   - **If yes** (macOS only) → record primary + secondary emails in USER.md `## Anthropic accounts`, and **drop the deferred-capture marker** so the first `/today` surfaces it as a task:
+     ```bash
+     # File-system install (safe to run here — no auth cycling):
+     cp ~/aios/hooks/claude-identity/com.aios.claude-quota-watch.plist ~/Library/LaunchAgents/ 2>/dev/null
+     launchctl load ~/Library/LaunchAgents/com.aios.claude-quota-watch.plist 2>/dev/null
+     mkdir -p ~/aios/vault && touch ~/aios/vault/.pending-quota-autopilot-capture
+     ```
+     Then tell the operator: *"Got it. I installed the watcher; the per-account login/Keychain capture happens during your first `/today` — running it now would interrupt this session. It'll be a 5-min task there, easy to skip and carry forward if you're not ready."*
+   - **If yes but not macOS** → record emails for documentation but note: *"Autopilot is macOS-only (uses Keychain + launchd). On your platform the spawn wrapper still respawns sessions cleanly; you just won't get auto-rotation across accounts."*
+
 3. **Organization → migrated to ## Companies (mounted)** — defer to Step 5 below
 4. **Sources → Google accounts** — ask for primary Google email (Calendar + Tasks + Drive + Gmail)
 5. **Sources → Communication** — Slack workspace? Gmail? GitHub username?
 6. **Sources → Growth routines** — does the operator have a Reading or Writing routine they want to track? Defer; can configure later.
 
 Edit USER.md inline as the operator answers. Show the diff before applying.
+
+**Rule for this whole step:** one question at a time. The operator should feel walked by the hand, not interrogated. Use sensible defaults. Defer any action that involves cycling Claude's auth (the multi-account capture is the canonical example — always deferred to `/today`).
 
 ### Step 2 — Declared context (4 files, fast pass)
 

@@ -41,6 +41,7 @@ Fire these calls in **one message**:
 - `Bash(date +"%A, %B %d, %Y")` — **derive the weekday explicitly.** Store this and reference it throughout (day-specific logic like Wednesday drift check, Friday learnings). Never guess the weekday from context.
 - `Bash(cfg=~/aios/.vault-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && echo "vault-update: unreachable" || { [ "$h" = "$r" ] && echo "vault-update: synced" || echo "vault-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "vault-update: no-config"; fi)` — **infrastructure freshness check.** Reads `.vault-update`, asks team repo for current HEAD via `git ls-remote`, compares hashes. Returns one of: `synced` (no action), `BEHIND ...` (team repo has new commits), `unreachable` (network/auth issue), `no-config` (no Organization in USER.md). Surface the result per § Vault-update freshness rendering below.
 - `Bash(prev=$(find ~/aios/vault/01\ -\ calendar -maxdepth 2 -type f 2>/dev/null | grep -E '/[0-9]{4}-[0-9]{2}-[0-9]{2}\.md$' | grep -v "$(date +%Y-%m-%d)" | sort -r | head -1); if [ -z "$prev" ]; then echo "close-day-precondition: no-prior-note"; elif grep -q "^## Close of Day" "$prev" 2>/dev/null; then echo "close-day-precondition: closed ($(basename "$prev" .md))"; else echo "close-day-precondition: MISSING ($(basename "$prev" .md)) — must run /close-day first"; fi)` — **close-day precondition check.** Detects whether the most recent daily note BEFORE today has the `## Close of Day` heading. Returns one of: `closed (date)` (previous note closed — proceed normally), `MISSING (date)` (skipped close-day — guard fires per § Close-of-day precondition rendering below, BEFORE Message 1b runs), `no-prior-note` (first run / fresh vault — proceed normally).
+- `Bash([ -f ~/aios/vault/.pending-quota-autopilot-capture ] && echo "pending-setup: quota-autopilot-capture" || echo "pending-setup: none")` — **deferred-setup check.** SETUP §11 leaves this marker when the operator opted into multi-account autopilot but the capture dance (login/logout/Keychain) was deferred (running it during setup would have broken that session). If marker present → surface as the FIRST task in today's Rhythm (see § Pending-setup rendering below). Operator can complete it today or carry forward; the daily plan tolerates either choice.
 - `Read` → `USER.md` (if it exists — for Sources config, `### /today` command personalizations, and organization settings)
 - `Read` → `INTENT.md` (if it exists — for autonomy levels, focus weighting, parked item suppression, tradeoff rules)
 - `mcp__obsidian__read_note` → `00 - notes/projects/_index.md`
@@ -66,6 +67,20 @@ This gives you: USER.md personalizations, the actual weekday, what sources are c
   > *Some prompts may reference older context if the previous note is from days ago — answer to the best of memory; close-day is forgiving."*
   
   Then invoke `Skill(aios:close-day)` and **wait for it to complete.** /close-day naturally picks "the most recent daily note that doesn't have ## Close of Day" — which is the same note this guard detected. After /close-day finishes (the previous note now has the heading + the cascade landed), proceed with Message 1b. **Do not skip** — the cascade is critical for /today's accuracy. /today's value compounds on cascade integrity; without it, AIOS stops compounding (carries don't reach project-notes, snapshots stale, observed context never receives the day's insights, self-update integrity breaks).
+
+**Pending-setup rendering (handled in synthesis, Message 2):**
+
+When the deferred-setup check returns `pending-setup: quota-autopilot-capture` → add a **🔧 Pending setup** task as the FIRST item in the Rhythm section (above all other deliverables). Frame it as a deliberate task with two options, not a blocker:
+
+> *"🔧 **Pending setup — Quota autopilot capture** (multi-account login dance). During your setup, we installed the file-system pieces (launchd agent, plist) but deferred the per-account login/logout/Keychain capture because running it during setup would have broken that session. This is the safer moment.*
+> 
+> *Two options:*
+> - *(A) Do it now (~5 min) — I'll walk you through `hooks/claude-identity/README.md` § Setup: login per account → Keychain capture → swap-back to primary → verify via `claude-switch`. Marker auto-removes when done.*
+> - *(B) Carry forward — keep the marker for tomorrow's /today. Stays surfaced until completed."*
+
+Operator picks one. If A → invoke the autopilot setup walkthrough (Skill or direct read of `hooks/claude-identity/README.md` § Setup). On completion, delete the marker: `Bash(rm -f ~/aios/vault/.pending-quota-autopilot-capture)`. If B → leave the marker, render it as a top-of-Rhythm item every subsequent /today run.
+
+**Why this pattern (briefly):** the autopilot's safety-net launchd watcher + statusLine cache writer work the moment the universal hooks are installed — they don't require capture. Capture only unlocks the AUTO-SWAP step (rotating Anthropic accounts when one nears its cap). Until capture, the watcher logs "no rotation configured" benignly. So the deferred-capture pattern is functionally safe: the operator's autopilot is half-built, watching but not swapping, until they choose to complete capture.
 
 If USER.md has no `## Sources` section, use defaults: vault projects only (no API data without sources config).
 
