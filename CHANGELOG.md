@@ -747,37 +747,69 @@ The onboarding-aios agent will detect this is a returning-operator (sees old dai
 
 ---
 
-#### Phase 8.6 — Venture-context mount (REQUIRED if you came from a team-vault distribution)
+#### Phase 8.6 — Venture-context mount (conditional — content-driven detection)
 
-**State:** Pre-extraction, venture content (positioning, gtm, pricing, primitives, sales templates, venture-specific agents like `lawyerAR`) shipped INSIDE the team-vault repo (`sovrahq/internal-vault`, `chuycepeda/aios`, or any other team-distribution clone you started from). Post-extraction, venture content lives in its own per-venture repo (`{org}/{venture}-context`) and gets mounted into your vault as a namespaced bundle under `{layer}/{venture}/`.
+**State:** Pre-extraction, venture content (positioning, gtm, pricing, primitives, sales templates, venture-specific agents like `lawyerAR`) sometimes shipped INSIDE a team-vault repo (e.g. `sovrahq/internal-vault` bundled Sovra). Post-extraction, venture content lives in its own per-venture repo (`{org}/{venture}-context`) and gets mounted into the vault as a namespaced bundle under `{layer}/{venture}/`. The mount step is what keeps that content synced with canonical going forward.
 
-Without this mount step, your venture content **still works** — Phase 0 marked `vault/` as sacred, so your old static venture files survive intact. But: it's now a **frozen snapshot** of what shipped with the legacy team-vault. Future updates to positioning, pricing, new agents like `lawyerAR`, brand-spec revisions — none of those reach you until you mount. And Phase 2.5 preserved your legacy venture agents at `agents/custom/{...}/` defensively — those will silently drift from the canonical `agents/{venture}/{...}/` until you mount and resolve the duplicates.
+**Crucial distinction — this phase is for VAULTS WITH VENTURE CONTENT, not for any specific lineage:**
+- A **team-vault clone** (Diego from `sovrahq/internal-vault`) carries bundled Sovra content from before extraction → has unmounted venture content → needs mount
+- A **personal-template clone** (Zineb from `chuycepeda/aios`) is a clean personal vault with no bundled company → no venture content to mount → this phase no-ops
+- A multi-machine operator's second clone with no bundled venture → no-ops
 
-**Detect:** does your `USER.md` have an `## Organization` (or post-Phase-6 `## Companies (mounted)`) section pointing at a team-vault repo URL like `sovrahq/internal-vault` or `chuycepeda/aios`? Or did this migration originate from the 🚚 WE MOVED redirect in one of those team-vault repos? If yes, this phase applies.
+Mounting is per-vault, per-venture, and **per operator's intent**. Personal vaults stay personal. Don't mount company infra into a personal vault.
 
-**Ask:**
-> *"You came from a team-vault distribution that bundled venture content. To stay synced with current canonical (positioning, pricing, new agents, brand updates), mount the venture-context repo as a namespaced bundle. Each venture you had bundled needs one `/aios:company --mount` invocation. Tell me which venture-context repos to mount — common ones include `git@github.com:sovrahq/sovra-context.git` (Sovra), `git@github.com:chuycepeda/chuycepeda-context.git` (ChuyCepeda). Multiple are fine — mount each one. After each mount, the `onboarding-{venture}` agent auto-fires and walks you through what landed."*
+**Detect (content-driven, lineage-blind):**
 
-**Act:** Per venture the operator names, run:
+```bash
+cd "$HOME/aios"
+VENTURES_DIR="vault/00 - notes/context/ventures"
+
+UNMOUNTED=()
+if [ -d "$VENTURES_DIR" ]; then
+  find "$VENTURES_DIR" -mindepth 1 -maxdepth 1 -type d | while read v; do
+    name=$(basename "$v")
+    # A venture is "mounted" iff a sync tracker exists at .{name}-sync
+    if [ ! -f ".${name}-sync" ]; then
+      files=$(find "$v" -type f -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+      [ "$files" -gt 0 ] && echo "$name"
+    fi
+  done > /tmp/aios-unmounted-ventures.txt
+fi
+
+if [ ! -s /tmp/aios-unmounted-ventures.txt ]; then
+  echo "✓ No unmounted venture content detected. Phase 8.6 skipped — this vault has no company infra to sync."
+  exit 0
+fi
+
+echo "⚠ Unmounted venture content detected (will drift from canonical):"
+cat /tmp/aios-unmounted-ventures.txt | sed 's/^/  - /'
+```
+
+If the script prints "✓ No unmounted venture content detected" → **skip this phase entirely**. Operator has nothing to mount. Personal-template lineage operators will see this skip — that's the correct behavior.
+
+**Ask (only if unmounted ventures were detected):**
+> *"Your vault has unmounted venture content at `vault/00 - notes/context/ventures/{venture}/` for: `{list-from-detection}`. This content is currently a frozen snapshot from before the framework extraction. To keep it synced with canonical going forward, mount each venture via `/aios:company --mount <venture-context-url>`. Tell me the venture-context repo URL for each venture you want to sync (e.g. `git@github.com:sovrahq/sovra-context.git` for Sovra). If you don't want any of these synced (e.g. you no longer work on that venture), I can leave the frozen snapshot in place — it'll keep working, just won't get updates."*
+
+**Act:** Per venture the operator names with its URL, run:
 
 ```bash
 /aios:company --mount <venture-context-url>
 ```
 
 `/aios:company --mount`:
-- Clones the venture-context repo under `vault/00 - notes/context/ventures/{venture}/`
+- Clones the venture-context repo under `vault/00 - notes/context/ventures/{venture}/` (merges with operator's pre-existing content per its own conflict-resolution)
 - Cascades any shipped infra into namespaced locations: `agents/{venture}/`, `plugins/{venture}/`, `templates/{venture}/`, etc.
-- Writes a per-venture tracker (e.g. `.sovra-sync`) so `/today` can later detect upstream changes
+- Writes a per-venture tracker (`.{venture}-sync`) so `/today` can later detect upstream changes
 - Auto-fires the bundle's `onboarding-{venture}` agent for the HR-Day-1 welcome
 - Surfaces any `agents/custom/{...}/{name}.md` files that now duplicate canonical `agents/{venture}/{...}/{name}.md` — operator decides per-file (keep custom if forked, delete custom if redundant)
 
 **Verification:**
 ```bash
-# Each mounted venture should have a tracker + a bundle folder
+# For each mounted venture, both should exist
 ls .{venture}-sync && ls "vault/00 - notes/context/ventures/{venture}" | head -5
 ```
 
-**If skipped:** later runs of `/today` will scan mounted ventures and call out unmounted ones with: *"⚠️ You have legacy venture content at `vault/00 - notes/context/ventures/{venture}/` but no `.{venture}-sync` tracker — this content is frozen at the team-vault snapshot. Run `/aios:company --mount <url>` to stay synced with the canonical."*
+**If the operator declines to mount a detected venture:** the frozen content stays in place. `/today` will not re-prompt every day; the operator can mount later via `/aios:company --mount` whenever they're ready. The phase's job is to surface the choice, not force it.
 
 ---
 
