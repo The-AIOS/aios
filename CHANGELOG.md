@@ -40,7 +40,39 @@ For an existing operator, this means **infrastructure has moved** but **content 
 
 ### Ask + Act — by phase
 
-Each phase is **State → Ask → Act**. Run them in order. Phases are short on purpose — easier to verify between, easier to recover if interrupted.
+Each phase is **State → Ask → Act**. Phases are short on purpose — easier to verify between, easier to recover if interrupted.
+
+**Execution order (load-bearing — follow this sequence, not the phase numbers):**
+
+The phase numbers below are logical groupings (e.g., "Phase 3 = wrappers"). The actual execution order has a few inversions because some phases depend on the framework cascade (Phase 5) having landed canonical files first:
+
+```
+Phase 0  (Safety snapshot — MANDATORY first)
+  ↓
+Phase 1  (Path canonical: ~/aios symlink)
+  ↓
+Phase 2  (Tracker rename + repoint at The-AIOS/aios)
+  ↓
+Phase 2.5 (Vault structure normalization — moves operator extensions to {layer}/custom/, deletes legacy framework dirs)
+  ↓
+Phase 5  (Framework cascade via /aios:update — brings canonical files into the vault)
+  ↓
+Phase 3  (Spawn wrappers — re-install using the NOW-canonical install-wrappers.sh from Phase 5)
+  ↓
+Phase 4  (Plugin cache invalidation — uses the NOW-canonical aios@the-aios plugin source)
+  ↓
+Phase 6  (USER.md schema migration: ## Organization → ## Companies (mounted))
+  ↓
+Phase 7  (Vault scaffold restoration — empty subfolder placeholders)
+  ↓
+Phase 8  (Auto-memory namespace + path cleanup)
+  ↓
+Phase 9  (Discovery surface awareness — informational)
+  ↓
+LAST     (Restart Claude Code for plugin daemon reload)
+```
+
+The Claude session executing this playbook MUST follow the execution-order arrows, not the phase-number sequence. If you skip the ordering (e.g., run Phase 3 wrappers before Phase 5 framework cascade), you'll install the OLD wrapper script and have to reinstall after the cascade overwrites it — wasted work, possible confusion.
 
 ---
 
@@ -99,17 +131,32 @@ If any step surfaces a warning, **stop and resolve before continuing**. Operator
 **Act:**
 
 ```bash
-# Detect current vault path
-[ -e "$HOME/aios/vault/01 - calendar" ] && echo "✓ ~/aios already resolves" && exit 0
+# Detect current vault path — check the common locations
+VAULT_PATH=""
+[ -e "$HOME/aios/vault/01 - calendar" ] && VAULT_PATH="$HOME/aios"
+[ -z "$VAULT_PATH" ] && [ -e "$HOME/obsidian/vault/01 - calendar" ] && VAULT_PATH="$HOME/obsidian"
 
-# Create symlink (macOS / Linux / WSL / Git Bash)
-if [ -e "$HOME/obsidian/vault/01 - calendar" ]; then
-  ln -s "$HOME/obsidian" "$HOME/aios"
-  echo "✓ ~/aios → ~/obsidian symlink created"
-else
-  echo "⚠️  Neither ~/aios nor ~/obsidian found — operator must point me at the actual vault path"
+# Fallback: scan common alternative locations
+[ -z "$VAULT_PATH" ] && for try in "$HOME/code/internal-vault" "$HOME/internal-vault" "$HOME/code/aios" "$HOME/Documents/aios" "$HOME/Documents/obsidian"; do
+  [ -e "$try/vault/01 - calendar" ] && VAULT_PATH="$try" && break
+done
+
+# If still not found, ASK the operator for the path
+if [ -z "$VAULT_PATH" ]; then
+  echo "⚠️  Could not detect your vault root automatically."
+  echo "    Tried: ~/aios, ~/obsidian, ~/code/internal-vault, ~/internal-vault, ~/code/aios, ~/Documents/aios, ~/Documents/obsidian"
+  echo "    Stop here. Tell Claude where your vault lives, then re-run this phase pointing at the right path."
   exit 1
 fi
+
+echo "✓ Detected vault root: $VAULT_PATH"
+
+# If already at ~/aios → silent pass
+[ "$VAULT_PATH" = "$HOME/aios" ] && echo "✓ ~/aios already resolves" && exit 0
+
+# Otherwise create the symlink
+ln -s "$VAULT_PATH" "$HOME/aios"
+echo "✓ ~/aios → $VAULT_PATH symlink created"
 
 # Verify
 test -e "$HOME/aios/vault/01 - calendar" && echo "✓ ~/aios resolves to vault content"
@@ -155,7 +202,143 @@ test ! -f .vault-update && echo "✓ old tracker gone"
 
 ---
 
+#### Phase 2.5 — Vault structure normalization (CRITICAL — preserves operator extensions)
+
+**State:** Pre-extraction framework had infrastructure folders **inside** `vault/` with numeric prefixes:
+
+| Old location (legacy) | New location (canonical) | What's there |
+|---|---|---|
+| `commands/` (top-level) | `plugins/aios/commands/` | slash command specs |
+| `vault/02 - templates/` | `templates/` (top-level) | reference templates |
+| `vault/06 - agents/` | `agents/` (top-level) | task agents |
+| `vault/03 - assets/` | `vault/02 - assets/` (renumbered) | operator assets |
+| `vault/04 - export/` | `vault/03 - export/` (renumbered) | exported artifacts |
+| `vault/05 - logs/` (if existed) | `vault/00 - notes/logs/` | activity logs + snapshots |
+
+Phase 5 (`/aios:update`) lands the new locations but does NOT delete the old ones. Without explicit handling, the operator's working tree ends up with BOTH layouts in parallel — confused, possibly broken (commands at `commands/` collide with `plugins/aios/commands/`), AND any operator extensions (custom agents, custom templates) at old locations would be orphaned.
+
+**Crucial: operator extensions get preserved**. The operator may have added their own agents at `vault/06 - agents/my-agent.md` or templates at `vault/02 - templates/my-template.md`. These must move into `{layer}/custom/` at the new top-level — never just deleted.
+
+**Ask:**
+> *"Your vault has the legacy framework layout (commands at top-level, agents + templates inside vault/, assets/export numbered differently). Phase 5 will land the new canonical layout at the new locations, but the OLD locations stay unless we clean them up. Before Phase 5 runs:*
+>
+> *1. I'll scan the OLD locations for any files that look like operator extensions (not framework canonicals).*
+> *2. I'll MOVE those to the new canonical extension paths (`agents/custom/`, `templates/custom/`, etc.).*
+> *3. The OLD folders themselves get deleted — Phase 5's `/aios:update` will populate the new top-level locations with the canonical content.*
+>
+> *Phase 0's safety tag is your recovery if anything looks wrong. Want me to walk through what I'd move first (show diff) before applying? (yes / just-do-it-the-defaults-are-safe)"*
+
+**Act:**
+
+```bash
+cd "$HOME/aios"
+
+# --- A. Inventory operator extensions in legacy locations ---
+
+# Agents — anything in vault/06 - agents/ that's NOT a framework canonical (the bundled aios-*
+# agents). Operator extensions get moved to agents/custom/. Framework canonicals get deleted
+# (Phase 5 will bring the new versions in their new home).
+LEGACY_AGENTS="vault/06 - agents"
+LEGACY_TEMPLATES="vault/02 - templates"
+
+# Helper: is this a framework canonical (ship in The-AIOS/aios's bundled set)?
+#   We define "canonical" generously — any agent whose filename starts with the bundle prefixes
+#   we know shipped in the OLD framework. Anything else = operator extension.
+#   Concretely the old framework's canonical agents lived at vault/06 - agents/ and the file
+#   names were things like sales-lead-hunter.md, content-writer.md, etc. We treat ALL of these
+#   as candidates for preservation since we can't auto-distinguish operator additions reliably.
+#   When in doubt → preserve. Operator can clean up extras post-migration.
+
+mkdir -p agents/custom templates/custom
+
+if [ -d "$LEGACY_AGENTS" ]; then
+  echo "Found legacy agents at: $LEGACY_AGENTS"
+  # Move ALL .md files (preserve generously; operator cleans up later if redundant)
+  find "$LEGACY_AGENTS" -maxdepth 1 -name "*.md" | while read f; do
+    base=$(basename "$f")
+    mv "$f" "agents/custom/$base"
+    echo "  → agents/custom/$base"
+  done
+  # Move any subfolders (custom bundles, my-agents/, etc.)
+  for sub in "$LEGACY_AGENTS"/*/; do
+    [ -d "$sub" ] || continue
+    name=$(basename "$sub")
+    mv "$sub" "agents/custom/$name"
+    echo "  → agents/custom/$name/"
+  done
+  rmdir "$LEGACY_AGENTS" 2>/dev/null && echo "✓ $LEGACY_AGENTS removed (empty after move)"
+fi
+
+if [ -d "$LEGACY_TEMPLATES" ]; then
+  echo "Found legacy templates at: $LEGACY_TEMPLATES"
+  find "$LEGACY_TEMPLATES" -maxdepth 1 -name "*.md" | while read f; do
+    base=$(basename "$f")
+    mv "$f" "templates/custom/$base"
+    echo "  → templates/custom/$base"
+  done
+  for sub in "$LEGACY_TEMPLATES"/*/; do
+    [ -d "$sub" ] || continue
+    name=$(basename "$sub")
+    mv "$sub" "templates/custom/$name"
+    echo "  → templates/custom/$name/"
+  done
+  rmdir "$LEGACY_TEMPLATES" 2>/dev/null && echo "✓ $LEGACY_TEMPLATES removed"
+fi
+
+# --- B. Delete the top-level legacy `commands/` directory ---
+# All command specs are now under plugins/aios/commands/. The OLD top-level commands/ folder
+# has nothing the operator should preserve — these are framework canonicals only, and the
+# new locations come via /aios:update.
+if [ -d "commands" ] && [ ! -d "plugins/aios/commands" ]; then
+  echo "Removing legacy top-level commands/ (will be replaced via /aios:update)"
+  rm -rf commands
+  echo "✓ legacy commands/ removed"
+fi
+
+# --- C. Renumber vault asset + export folders ---
+# vault/03 - assets/ → vault/02 - assets/  (move only if no destination yet)
+if [ -d "vault/03 - assets" ] && [ ! -d "vault/02 - assets" ]; then
+  mv "vault/03 - assets" "vault/02 - assets"
+  echo "✓ vault/03 - assets/ → vault/02 - assets/"
+fi
+# vault/04 - export/ → vault/03 - export/
+if [ -d "vault/04 - export" ] && [ ! -d "vault/03 - export" ]; then
+  mv "vault/04 - export" "vault/03 - export"
+  echo "✓ vault/04 - export/ → vault/03 - export/"
+fi
+# vault/05 - logs/ → vault/00 - notes/logs/
+if [ -d "vault/05 - logs" ]; then
+  mkdir -p "vault/00 - notes/logs"
+  mv "vault/05 - logs"/* "vault/00 - notes/logs/" 2>/dev/null || true
+  rmdir "vault/05 - logs" 2>/dev/null && echo "✓ vault/05 - logs/ → vault/00 - notes/logs/"
+fi
+```
+
+**Important — what survives + what gets discarded:**
+
+- ✅ **Operator agents** (any `.md` files in `vault/06 - agents/`) → moved to `agents/custom/`
+- ✅ **Operator templates** (in `vault/02 - templates/`) → moved to `templates/custom/`
+- ✅ **Operator assets + exports** — renumbered folders, content intact
+- ✅ **Operator logs** in `vault/05 - logs/` → folded into `vault/00 - notes/logs/`
+- ❌ **Legacy framework agents/templates** at OLD locations — got moved to `custom/` defensively. After Phase 5 lands the canonical new framework agents (which include the originals updated), operator can compare `agents/custom/{old-name}.md` vs `agents/aios-*/{updated-name}.md` and delete the redundant `custom/` copy if it's a duplicate.
+- ❌ **Top-level `commands/`** — deleted unconditionally (operator never edits these; they're framework canonical, now at `plugins/aios/commands/`)
+
+If at any point this phase looks risky to apply mass-wise, the operator can also do it incrementally per directory. Phase 0's safety tag is the fallback.
+
+**Verification:**
+```bash
+test ! -d "vault/02 - templates" && echo "✓ legacy templates dir gone"
+test ! -d "vault/06 - agents" && echo "✓ legacy agents dir gone"
+test ! -d "commands" && echo "✓ legacy top-level commands/ gone"
+test -d "agents/custom" && echo "✓ agents/custom/ exists (preserved operator extensions if any)"
+test -d "templates/custom" && echo "✓ templates/custom/ exists"
+```
+
+---
+
 #### Phase 3 — Spawn wrappers + universal hooks (re-install)
+
+> **Important ordering note:** Phase 3 runs AFTER Phase 5 brings the canonical `hooks/claude-identity/install-wrappers.sh` into the operator's vault. Running it before Phase 5 would install the OLD wrapper script. The migration's Phase 5 → Phase 3 ordering ensures the operator installs the canonical wrapper exactly once.
 
 **State:** Pre-extraction wrappers shipped under a different path + lacked the `--model` flag injection, the `pgrep -xq` IDE-detection fix, and the `spawn-kill` pgrep-tolerance update. The current canonical installer is `hooks/claude-identity/install-wrappers.sh` — idempotent, timestamped-backup, auto-rollback on failure.
 
