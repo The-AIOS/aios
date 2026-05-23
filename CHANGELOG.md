@@ -159,16 +159,29 @@ source /tmp/aios-migration-state.env  # picks up VAULT_PATH from Phase 0
 
 # If already at ~/aios → silent pass
 [ "$VAULT_PATH" = "$HOME/aios" ] && echo "✓ ~/aios already resolves" && exit 0
-
-# Otherwise create the symlink
-ln -s "$VAULT_PATH" "$HOME/aios"
-echo "✓ ~/aios → $VAULT_PATH symlink created"
-
-# Verify
-test -e "$HOME/aios/vault/01 - calendar" && echo "✓ ~/aios resolves to vault content"
 ```
 
-(Windows users: see SETUP.md → "Path portability" for the `mklink /J` directory junction equivalent.)
+Then run the OS-appropriate symlink command:
+
+**macOS / Linux / WSL / Git Bash:**
+```bash
+ln -s "$VAULT_PATH" "$HOME/aios" && ls -la "$HOME/aios" | head -1
+```
+
+**Windows PowerShell** (requires Developer Mode — one-time Win 10+ toggle):
+```powershell
+New-Item -ItemType SymbolicLink -Path "$HOME\aios" -Target $VAULT_PATH
+```
+
+**Windows CMD fallback** (no admin needed; directory junction; same-volume only):
+```cmd
+mklink /J "%USERPROFILE%\aios" "<your VAULT_PATH>"
+```
+
+Verify (any shell):
+```bash
+test -e "$HOME/aios/vault/01 - calendar" && echo "✓ ~/aios resolves to vault content"
+```
 
 ---
 
@@ -181,14 +194,12 @@ test -e "$HOME/aios/vault/01 - calendar" && echo "✓ ~/aios resolves to vault c
 
 **Act:**
 
+**macOS / Linux / WSL / Git Bash:**
 ```bash
 cd "$HOME/aios"
 
 # Rename + repoint
-if [ -f ".vault-update" ]; then
-  mv .vault-update .aios-update
-  echo "✓ .vault-update → .aios-update"
-fi
+[ -f ".vault-update" ] && mv .vault-update .aios-update && echo "✓ .vault-update → .aios-update"
 
 # Rewrite the repo URL + reset hash to 'initial'
 cat > .aios-update << EOF
@@ -200,7 +211,24 @@ echo "✓ .aios-update repointed at The-AIOS/aios"
 cat .aios-update
 ```
 
-**Verification:**
+**Windows PowerShell:**
+```powershell
+Set-Location "$HOME\aios"
+
+# Rename + repoint
+if (Test-Path .vault-update) { Move-Item .vault-update .aios-update }
+
+# Rewrite tracker
+@"
+repo=git@github.com:The-AIOS/aios.git
+hash=initial
+synced=$(Get-Date -Format 'yyyy-MM-dd')
+"@ | Set-Content -Path .aios-update -Encoding UTF8 -NoNewline
+Write-Host "✓ .aios-update repointed at The-AIOS/aios"
+Get-Content .aios-update
+```
+
+**Verification (any shell):**
 ```bash
 grep -q "github.com:The-AIOS/aios" .aios-update && echo "✓ tracker repointed"
 test ! -f .vault-update && echo "✓ old tracker gone"
@@ -357,6 +385,40 @@ fi
 
 **Operator content posture**: this phase treats EVERY file inside the renumbered vault folders as operator content. No files get deleted, even on collision — they get *surfaced* for operator review. The safety tag from Phase 0 is your insurance if the merge result is wrong. Subfolders (operator-custom organization) survive the move because `cp -Rn` is recursive.
 
+**Windows PowerShell equivalent** (for operators using PowerShell instead of Git Bash):
+
+```powershell
+# Move operator extensions to {layer}/custom/ — preserves files; per-file ErrorAction so
+# filename collisions don't halt the move, allowing later inspection.
+New-Item -ItemType Directory -Force -Path "agents/custom","templates/custom" | Out-Null
+
+if (Test-Path "vault/02 - templates") {
+  Get-ChildItem "vault/02 - templates" -File -Filter *.md | Move-Item -Destination "templates/custom/"
+  Get-ChildItem "vault/02 - templates" -Directory | Move-Item -Destination "templates/custom/"
+  Remove-Item "vault/02 - templates" -Recurse -ErrorAction SilentlyContinue
+}
+if (Test-Path "vault/06 - agents") {
+  Get-ChildItem "vault/06 - agents" -File -Filter *.md | Move-Item -Destination "agents/custom/"
+  Get-ChildItem "vault/06 - agents" -Directory | Move-Item -Destination "agents/custom/"
+  Remove-Item "vault/06 - agents" -Recurse -ErrorAction SilentlyContinue
+}
+if (Test-Path "commands") { Remove-Item "commands" -Recurse -Force }
+
+# Vault folder renumbering — surgical: only move if destination empty, otherwise merge
+function Surgical-Move($src, $dst) {
+  if (-not (Test-Path $src)) { return }
+  if (-not (Test-Path $dst)) {
+    Move-Item $src $dst
+  } else {
+    Copy-Item "$src\*" $dst -Recurse -Force:$false -ErrorAction SilentlyContinue
+    $remaining = (Get-ChildItem $src -File -Recurse).Count
+    if ($remaining -eq 0) { Remove-Item $src -Recurse } else { Write-Warning "$src still has $remaining files — review collisions manually" }
+  }
+}
+Surgical-Move "vault/03 - assets" "vault/02 - assets"
+Surgical-Move "vault/04 - export" "vault/03 - export"
+```
+
 **Important — what survives + what gets discarded:**
 
 - ✅ **Operator agents** (any `.md` files in `vault/06 - agents/`) → moved to `agents/custom/`
@@ -390,11 +452,20 @@ test -d "templates/custom" && echo "✓ templates/custom/ exists"
 
 **Act:**
 
+**macOS / Linux / WSL / Git Bash:**
 ```bash
 bash "$HOME/aios/hooks/claude-identity/install-wrappers.sh"
 
 # Verify in interactive zsh (wrappers load on shell startup)
 zsh -i -c 'type spawn spawn-kill _claude_with_respawn 2>&1 | head -3'
+```
+
+**Windows PowerShell** (Zineb's path — uses the `.ps1` installer that ships alongside the `.sh`):
+```powershell
+& "$HOME\aios\hooks\claude-identity\install-wrappers.ps1"
+
+# Verify (wrappers load in PowerShell profile after install)
+powershell -NoProfile -Command "Get-Command spawn,spawn-kill 2>&1 | Select Name,CommandType"
 ```
 
 **Universal event hooks** (UserPromptSubmit, etc.) are wired via `~/aios/.claude/settings.json`. If your `.claude/settings.json` was committed in the old framework, it's now operator-personal (per the new `.claude/` denylist). Verify the hooks paths still resolve at `~/aios/hooks/...`. The installer doesn't touch `.claude/settings.json` — that's operator-personal.
@@ -716,340 +787,3 @@ Operator content is sacred. The migration is repointing infrastructure, not rewr
 - ✅ `.claude/` — fully operator-personal; never touched
 - ✅ Any `agents/{company}/`, `plugins/{company}/`, etc. company-namespaced infra — preserved (and now formally part of the `/aios:company --sync` distribution model)
 
-### FYI — for the curious
-
-The pre-extraction history of the framework lives in [chuycepeda/obsidian](https://github.com/chuycepeda/obsidian) (where it evolved March-May 2026). [chuycepeda/aios](https://github.com/chuycepeda/aios) and [sovrahq/internal-vault](https://github.com/sovrahq/internal-vault) were the operator-template and team-vault distribution surfaces respectively; both are frozen at the 2026-05-21 extraction point and now point at this canonical CHANGELOG entry as their forwarding address. The full extraction story is captured in the framework's `HISTORY-PRE-2026-05-21.md` (if you want the narrative arc) and in this CHANGELOG's first two entries (the path-portability and initial-release entries).
-
-If anything in this migration surprised you, broke, or felt rough — that's exactly the feedback the post-extraction framework needs. File at [The-AIOS/aios/issues](https://github.com/The-AIOS/aios/issues) and reference this CHANGELOG entry's hash.
-
----
-
-## 2026-05-21 (evening) — Path portability: ~/aios canonical + auto-symlink fallback
-
-`hash: b165c08`
-
-### State
-
-The framework's 20+ infrastructure files (commands, MCPs, hooks, agents, READMEs) reference `~/aios/` as the canonical install path. Existing operators (Chuy, Sarah, Zineb, Sovra teammates) run from `~/obsidian/` per the pre-extraction convention. Without a redirect, the next `/aios:today` would fail trying to read `~/aios/vault/01 - calendar/...` that doesn't exist on disk.
-
-### Ask
-
-If `~/aios` does not exist on this machine, ask the operator:
-
-> *"I see this vault is at `~/obsidian/`. The framework now expects `~/aios/`. I'll create a symlink `~/aios → ~/obsidian` — non-destructive, reversible, and zero risk to your Obsidian app workspace state, git remote name, open files, or any scripts still referencing `~/obsidian/`. OK to proceed?"*
-
-If `~/aios` already exists and points to this install → silent pass, no action.
-If `~/aios` already exists and points elsewhere (conflict) → surface the conflict and let the operator resolve before continuing. Never auto-resolve.
-
-### Act
-
-After the operator confirms, run the OS-appropriate command:
-
-**macOS / Linux / WSL / Git Bash:**
-```bash
-ln -s "$HOME/obsidian" "$HOME/aios" && ls -la "$HOME/aios" | head -1
-```
-
-**Windows PowerShell** (requires Developer Mode or admin — one-time Win 10+ toggle):
-```powershell
-New-Item -ItemType SymbolicLink -Path "$HOME\aios" -Target "$HOME\obsidian"
-```
-
-**Windows CMD fallback** (no admin needed; directory junction; same-volume only):
-```cmd
-mklink /J "%USERPROFILE%\aios" "%USERPROFILE%\obsidian"
-```
-
-Then verify:
-```bash
-test -e "$HOME/aios/vault/01 - calendar" && echo "✓ symlink resolves — ~/aios → ~/obsidian"
-```
-
-If verification passes → done. The operator continues normal flow; every framework reference to `~/aios/...` now resolves to their actual `~/obsidian/` vault.
-
-### Why symlink, not `mv ~/obsidian ~/aios`
-
-The `mv` would force a coordinated rename across: Obsidian app workspace.json + plugin data caches, git remote name (`chuycepeda/obsidian` would mismatch the local path), open files / in-flight syncs, IDE bookmarks, and any script still referencing `~/obsidian/`. Too risky for what is fundamentally a path-resolution problem. The symlink solves the resolution problem with zero side effects and stays reversible (`rm ~/aios` undoes it).
-
-### Going forward
-
-Operators cloning the framework fresh land at `~/aios/` natively (no symlink needed). `SETUP.md → § Path portability` and `/aios:cold-start-interview` (Pre-step) auto-create the symlink for anyone who clones to a different path. The symlink convention is the framework's install-anywhere fallback, of which today's `~/obsidian → ~/aios` migration is the largest case.
-
----
-
-## 2026-05-21 — Initial public release: AIOS extracted from chuycepeda/obsidian
-
-`hash: 71ae219`
-
-### What this entry is
-
-This is the **first canonical entry** for The AIOS as a standalone public framework. If you're discovering this repo for the first time — welcome. If you arrived here because your previous `/aios:update` origin pointed at `chuycepeda/aios` or `sovrahq/internal-vault`, this entry is also your **migration playbook**.
-
-> **Three progressive stages, all compounding** — the AIOS philosophy in one frame:
-> 1. **Automate — *Gain speed, do faster*.** Daily plans, drafts, syntheses — 30 min becomes 30 sec. *Week 1.*
-> 2. **Amplify — *Gain bandwidth, do more*.** Agents draft proposals, write in your voice, research while you sleep — you stop being the bottleneck. *Month 1.*
-> 3. **Agency — *Gain autonomy, do agentic*.** AI co-workers act on your behalf with judgment, within trust boundaries you've defined. *Quarter 1, deepening across years.*
-
----
-
-### What's in this initial release
-
-The AIOS framework — generic, operator-agnostic infrastructure that runs on top of [Claude Code](https://claude.com/claude-code) and produces a personalized agent operating system on your machine.
-
-**Top-level structure (all infra at root, Anthropic-standard-compatible):**
-
-```
-The-AIOS/aios/
-├── CLAUDE.md          # System behavioral contract (universal)
-├── README.md          # Repo entry point
-├── SETUP.md           # First-machine install guide
-├── CHANGELOG.md       # This file
-├── LICENSE            # GPL v2+ (WordPress-style — open commons + commercial layer on top)
-├── commands/          # 24 commands (/today, /close-day, /7plan, /company, ...)
-├── agents/            # 28 task agents organized into 6 plugin bundles
-├── hooks/             # Claude Code event hooks + spawn wrappers
-├── mcps/              # 10 bundled MCP servers (Google Workspace, Slack, GitHub, Stitch, NotebookLM, ...)
-├── plugins/           # Claude Code plugins shipped with the framework
-├── skills/            # Reusable capabilities (Agent Skills standard)
-├── templates/         # Vault templates (project, daily, agent, etc.)
-└── docs/              # Migration map + supplementary docs
-```
-
-**Agents (28 total) organized into 6 plugin bundles:**
-
-- `agents/aios-sales/` (4) — Lead generation, proposals, CRM, brand monitoring
-- `agents/aios-strategy/` (3) — Market research, advisory, deep dives
-- `agents/aios-finance-legal/` (4) — Accounting, legal review, invoicing, compliance
-- `agents/aios-engineering/` (4) — Code review, documentation, bug triage, building
-- `agents/aios-communication/` (7) — Content, decks, emails, meeting prep, reports, design.md authoring
-- `agents/aios-personal/` (6) — Study, journaling, growth-companion, decision-journaler, onboarding-aios, crisis-mode
-- `agents/custom/` — Your operator-specific extensions (never overwritten by `/aios:update`)
-
-Each bundle has its own README scoping what it covers + when to install. Operators install only the bundles they need.
-
-**Bundled MCPs (10 servers):**
-
-Google Workspace · Slack · Atlassian · GitHub · Stitch · NotebookLM · Playwright · Nano Banana (Gemini image gen) · PDF Generator · Spotify DJ (lifestyle, optional)
-
-See `mcps/_index.md` for the canonical list + setup instructions. Run `bash mcps/setup.sh` on first install.
-
----
-
-### What to do — migration playbook (Claude-executable)
-
-> **For Claude running `/vault-update` or `/aios:update` against this CHANGELOG:** this entry IS the migration script. Walk the operator through it step by step in State → Ask → Act format. Hard preconditions short-circuit early; restart-required steps go LAST.
-
-#### Step 0 — Hard precondition (skip rest if not applicable)
-
-**State:** the operator's `~/obsidian/.vault-update` `repo=` field. If it already points at `git@github.com:The-AIOS/aios.git` → skip the rest of this entry (operator already migrated). If it points at `chuycepeda/aios` or `sovrahq/internal-vault` → proceed.
-
-**Ask:** *"Your `.vault-update` shows you're syncing from `{old-repo}`. AIOS moved to `The-AIOS/aios` on 2026-05-21. Want me to walk you through the migration (~15 min, includes folder moves, plugin rename, and a Claude Code restart)?"*
-
-**Act:** if yes, proceed to Step 1.
-
-#### Step 1 — Update the upstream pointer
-
-**State:** `~/obsidian/.vault-update` + `~/obsidian/USER.md` `## Organization` section.
-
-**Ask:** *"I'll update your `.vault-update` `repo=` line to `git@github.com:The-AIOS/aios.git`, set `hash=initial` to force a full sync, and replace `USER.md` `## Organization` with the new `## Companies (mounted)` table. OK?"*
-
-**Act:**
-
-1. Rewrite `.vault-update` to:
-   ```
-   repo=git@github.com:The-AIOS/aios.git
-   hash=initial
-   synced=never
-   ```
-2. In `USER.md`, replace the entire `## Organization` block with a `## Companies (mounted)` section (table format) — use the operator's existing venture folder as the first row. See the new USER.md template in The-AIOS/aios for the schema.
-
-#### Step 2 — Pull new infrastructure (Tier 1 sync)
-
-**State:** local infra still references the old structure (vault-commands plugin, vault/06 - agents/, vault/02 - templates/).
-
-**Ask:** *"Now I'll clone The-AIOS/aios to /tmp/, diff against your local, and replace Tier 1 paths (commands/, hooks/, mcps/, plugins/, skills/, templates/, agents/aios-*/, top-level docs). Your operator-specific extensions (anything under `custom/` in any layer) are preserved. Proceed?"*
-
-**Act:** standard `/aios:update` Tier 1 flow — `git clone --depth=50 --single-branch git@github.com:The-AIOS/aios.git /tmp/vault-update-check`, diff, apply changes for each Tier 1 path. Skip every `custom/` subfolder (`agents/custom/`, `skills/custom/`, `commands/custom/`, `hooks/custom/`, `mcps/custom/`, `plugins/custom/`, `templates/custom/`) — those are operator-specific.
-
-#### Step 3 — Folder migration (promote templates + agents to top-level)
-
-**State:** operator's vault has `vault/02 - templates/`, `vault/06 - agents/` (legacy locations), plus `vault/03 - assets/`, `vault/04 - export/`, `vault/05 - backups/` (legacy numbering).
-
-**Ask:** *"AIOS now keeps templates and agents at the TOP LEVEL (infra), not inside vault/. I'll move your existing templates and agents to top-level folders, renumber vault subfolders to be continuous (00/01/02/03/04), and preserve your custom additions in `*/custom/`. This is reversible — I'll keep a backup. OK?"*
-
-**Act (in order):**
-
-1. **Templates migration** — `vault/02 - templates/{file}.md` → `templates/{file}.md`. If a file with the same name already exists at top-level templates/ (from the Tier 1 sync), MERGE: keep the new canonical version; if the operator's old version differs, ALSO copy to `templates/custom/{name}-legacy.md` for review.
-2. **Agents migration** — for each `vault/06 - agents/{name}.md`:
-   - If `{name}` matches a bundled agent in `agents/aios-*/`, **drop** the legacy copy (the bundle version is canonical now)
-   - If `{name}` is operator-custom (was in `vault/06 - agents/my-agents/`), move to `agents/custom/{name}.md`
-   - Otherwise, move to `agents/custom/{name}.md` and flag for review
-3. **Vault renumbering** — `git mv vault/03 - assets vault/02 - assets`, `git mv vault/04 - export vault/03 - export`, `git mv vault/05 - backups vault/04 - backups`. The old `vault/02 - templates/` and `vault/06 - agents/` are now empty — `rmdir`.
-4. **Sweep stale references** — `grep -rln 'vault/02 - templates\|vault/06 - agents\|vault/03 - assets\|vault/04 - export\|vault/05 - backups' --include='*.md' --exclude-dir=.git` and update each to the new paths. Same for non-prefixed `02 - templates/` / `06 - agents/`.
-
-#### Step 4 — Plugin marketplace rename + versioning (vault-commands@local → aios@the-aios + version 0.1.0)
-
-**State:** `~/.claude/plugins/marketplaces/local/.claude-plugin/marketplace.json` + plugin directories + `~/.claude/settings.json` enabledPlugins reference `vault-commands@local`. The marketplace is named `local`, the plugin has no declared version (cache dir = `unknown`), and the command namespace is `/vault-commands:*`.
-
-**Ask:** *"Three renames in one step: plugin `vault-commands` → `aios`, marketplace `local` → `the-aios`, and add `version: 0.1.0` so the cache stops landing under `/unknown/`. All your `/vault-commands:today` etc. become `/aios:today`, and the plugin reference becomes `aios@the-aios`. I'll update all manifests, rename the directories, update `~/.claude/settings.json` (enabledPlugins + extraKnownMarketplaces), and update `~/obsidian/.claude/settings.local.json` permissions. Restart required at the end. Proceed?"*
-
-**Act:**
-
-1. **Rename marketplace + plugin directories + purge stale cache:**
-   ```bash
-   mv ~/.claude/plugins/marketplaces/local ~/.claude/plugins/marketplaces/the-aios
-   mv ~/.claude/plugins/marketplaces/the-aios/plugins/vault-commands ~/.claude/plugins/marketplaces/the-aios/plugins/aios
-   rm -rf ~/.claude/plugins/cache/local  # rebuilds at new path on next plugin reload
-   ```
-2. **Update `marketplace.json`** at `~/.claude/plugins/marketplaces/the-aios/.claude-plugin/marketplace.json`:
-   - `"name": "local"` → `"name": "the-aios"`
-   - Plugin entry: `"name": "vault-commands"` → `"name": "aios"`, add `"version": "0.1.0"`, update `"source": "./plugins/aios"`.
-3. **Update `plugin.json`** at `~/.claude/plugins/marketplaces/the-aios/plugins/aios/.claude-plugin/plugin.json`:
-   - `"name": "vault-commands"` → `"name": "aios"`
-   - Add `"version": "0.1.0"`
-4. **Update `~/.claude/settings.json`:**
-   - `enabledPlugins`: `"vault-commands@local": true` → `"aios@the-aios": true`
-   - `extraKnownMarketplaces`: rename key `"local"` → `"the-aios"`, update `source.path` to `/Users/{you}/.claude/plugins/marketplaces/the-aios`
-5. **Update `~/obsidian/.claude/settings.local.json`** — every `Skill(vault-commands:X)` permission → `Skill(aios:X)`.
-6. **Rename `commands/vault-update.md` → `commands/update.md`** — invokes cleanly as `/aios:update` instead of `/aios:vault-update`.
-7. **Populate the new cache** with the renamed source-of-truth commands:
-   ```bash
-   mkdir -p ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands
-   cp ~/obsidian/commands/*.md ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
-   cp ~/obsidian/commands/*.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
-   rm -f ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{company-sync,vault-update}.md  # remove stale renamed-away files
-   ```
-
-#### Step 4b — Canonical plugin layout (commands/ → plugins/aios/commands/)
-
-**State:** plugin source still lives in top-level `commands/` folder in your personal vault. Marketplace manifest at `commands/marketplace.json`. Plugin manifest at `commands/plugin.json`. Doesn't match Anthropic's canonical Claude Code plugin layout (cf. [claude-for-legal](https://github.com/anthropics/claude-for-legal), [claude-plugins-official](https://github.com/anthropics/claude-code-plugins)).
-
-**Ask:** *"AIOS is moving its plugin source to the canonical Anthropic layout: `commands/` becomes `plugins/aios/commands/`, manifests move to `.claude-plugin/marketplace.json` (root) and `plugins/aios/.claude-plugin/plugin.json`. This makes us tooling-compatible with the broader Claude Code plugin ecosystem. I'll git-mv your files (history preserved), update the runtime cache, and clean up. Proceed?"*
-
-**Act (in your personal vault):**
-
-1. **Restructure source-of-truth folders:**
-   ```bash
-   cd ~/obsidian
-   mkdir -p .claude-plugin plugins/aios/.claude-plugin
-   git mv commands/marketplace.json .claude-plugin/marketplace.json
-   git mv commands/plugin.json plugins/aios/.claude-plugin/plugin.json
-   git mv commands/*.md plugins/aios/commands/  # ALL .md files
-   git mv commands/custom plugins/aios/commands/custom
-   rmdir commands
-   ```
-2. **Enrich `.claude-plugin/marketplace.json`** with the canonical fields (these are advisory; the existing entry already works):
-   - `displayName: "AIOS — Daily Ritual & Strategic OS"` (shown in plugin lists)
-   - `license: "GPL-2.0-or-later"` · `repository`, `homepage` (GitHub URL) · `keywords` (10 discovery tags)
-3. **Update runtime cache** to mirror the new source layout:
-   ```bash
-   cp ~/obsidian/.claude-plugin/marketplace.json ~/.claude/plugins/marketplaces/the-aios/.claude-plugin/marketplace.json
-   cp ~/obsidian/plugins/aios/.claude-plugin/plugin.json ~/.claude/plugins/marketplaces/the-aios/plugins/aios/.claude-plugin/plugin.json
-   cp ~/obsidian/plugins/aios/commands/*.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
-   cp ~/obsidian/plugins/aios/commands/*.md ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
-   ```
-4. **Remove Sovra-branded `plugins/pdf-generator/` from framework** (if it leaked in from an older sync — it's now operator-vault-only, namespaced as `plugins/sovra/pdf-generator/` per the company-namespacing convention):
-   ```bash
-   # Only in framework repo (The-AIOS/aios) — NOT in operator vault
-   # In operator vault, IF you have it, rename:
-   cd ~/obsidian && [ -d plugins/pdf-generator ] && git mv plugins/pdf-generator plugins/sovra/pdf-generator
-   ```
-
-#### Step 5 — Refresh Obsidian UI cache (optional but recommended)
-
-**State:** `vault/.obsidian/workspace.json` (gitignored, per-machine) may reference old paths (`04 - export/...`, `06 - agents/...`, `02 - templates/...`).
-
-**Ask:** *"Your Obsidian's workspace.json tab cache has stale paths from before the folder renumbering. I'll sed-replace the old paths with the new ones so tabs open correctly when you reopen Obsidian. OK?"*
-
-**Act:**
-
-```bash
-sed -i.bak \
-  -e 's|"04 - export/|"03 - export/|g' \
-  -e 's|"05 - backups/|"04 - backups/|g' \
-  -e 's|"06 - agents/|"agents/|g' \
-  -e 's|"02 - templates/|"templates/|g' \
-  vault/.obsidian/workspace.json && rm vault/.obsidian/workspace.json.bak
-```
-
-#### Step 6 — Final sanity check + RESTART REQUIRED
-
-**State:** all migration work landed but Claude Code's running session still has the OLD plugin loaded in memory.
-
-**Ask:** *"Last step — restart Claude Code so the renamed `/aios:*` plugin loads. Want me to commit + push your vault first?"*
-
-**Act:**
-
-1. Commit + push the operator's vault (their personal repo) with all the changes.
-2. **Tell the operator (don't try to do it for them):** *"Quit and restart Claude Code now. In your fresh session, try `/aios:today` to verify. Welcome to the new AIOS shape."*
-3. After their restart, suggest they run `/aios:housekeeping` — Bucket 17 (CLAUDE.md + USER.md health check) will surface any remaining drift.
-
-#### Step 7 — (Optional) Multi-company setup
-
-If the operator had a single company mounted via the old `/company-sync` (now retired), they can either:
-- Leave their existing venture folder as-is (it remains valid in the new shape)
-- Migrate to the new multi-company model via `/aios:company --create` against `The-AIOS/company-template` (see Phase 1c below). This gives them a proper venture-context repo at `{org}/venture-context` instead of the mixed sovrahq/internal-vault setup.
-
----
-
-### What to do — first-time setup (new operators)
-
-> **This section is for users discovering AIOS for the first time.** If you're migrating from a previous AIOS repo, see the migration playbook above.
-
-1. Clone this repo as the substrate for your personal vault scaffold:
-   ```bash
-   git clone git@github.com:The-AIOS/aios.git ~/obsidian
-   cd ~/obsidian
-   ```
-
-2. Read `START-HERE.md` for the post-clone walkthrough (philosophy + three-repo model + Day 1 expectations).
-
-3. Read `SETUP.md` for first-machine install (Claude Code, MCPs, dependencies).
-
-4. Tell Claude: *"Set me up — read SETUP.md and walk me through it."* The first session does the heavy lifting; you answer questions, Claude does the work.
-
-5. After setup, run your first `/aios:today` — that's the daily ritual that anchors everything else.
-
----
-
-### Phase 1c — `/aios:company` (formerly `/company-sync`) + `The-AIOS/company-template` repo (in this release)
-
-The AIOS now supports mounting **multiple companies** into your vault via the new `/aios:company` command. Each company has its own venture-context repo (typically `{org}/venture-context` on GitHub or a Drive folder). Operators install multi-substrate adapters via the same `/aios:collaborate` adapter pattern.
-
-**Canonical company-template repo:** [The-AIOS/company-template](https://github.com/The-AIOS/company-template) — scaffolds 12 files (about_venture, positioning, personas, gtm, offerings, pricing, primitives, design.md, brand.md, culture, CLAUDE.md, README) when you run `/aios:company --create`.
-
-See `commands/company.md` for the full subcommand surface (`--create`, `--mount`, `--sync`, `--sync-all`, `--status`, `--invite`, `--dry-run`).
-
----
-
-### What's new vs. the pre-extraction state (high-leverage changes)
-
-These are the structural improvements that landed in the 2026-05-21 cutover. Each is documented separately in its own changelog entry below — this initial entry is the umbrella.
-
-1. **Multi-company model** — new `/aios:company` (multi-substrate, multi-company) replaces the older single-company `/company-sync`. `USER.md` shifts from a single `## Organization` block to a `## Companies (mounted)` table that holds N rows.
-2. **Agents restructured into 6 plugin bundles** at top-level `agents/` (was flat at `agents/`). Per-bundle README scoping. Operator extensions in `agents/custom/`.
-3. **5 new agents:** growth-companion, onboarding-aios, design-md-author, decision-journaler, crisis-mode — all in `aios-personal/` and `aios-communication/`.
-4. **Anthropic-official integration** — every agent that has an authoritative Anthropic-shipped specialist references it via `## See also` (anthropics/financial-services, claude-for-legal, claude-code-security-review, etc.). Reference, don't bundle — keeps AIOS lean while making Anthropic's deeper layers discoverable.
-5. **design.md spec adopted** — `design-md-author` agent generates design.md per [Google's design.md spec](https://github.com/google-labs-code/design.md) (14.5K⭐). References VoltAgent/awesome-design-md (82K⭐) for inspiration.
-6. **Three Progressive Stages framing** — added to The-AIOS org profile README as the canonical narrative of how AIOS compounds.
-7. **`/housekeeping` Bucket 17** — comprehensive CLAUDE.md + USER.md health check (inspired by anthropics/claude-plugins-official/claude-md-management, reimplemented inline so AIOS works standalone).
-8. **Agent Skills standard compliance** — agents/skills follow [anthropics/skills](https://github.com/anthropics/skills) (138K⭐) format. Cross-platform compat with Claude Code, Codex, Gemini CLI, Cursor, Antigravity.
-9. **Stitch optional integration** — `/aios:cold-start-interview` surfaces Stitch (UI generation) for operators building user-facing software.
-
----
-
-### Pre-extraction history
-
-The infrastructure in this repo evolved in `chuycepeda/obsidian` from March → May 2026. The full development history — every commit, every PR, every Co-Authored-By trail — is preserved there.
-
-See [HISTORY-PRE-2026-05-21.md](./HISTORY-PRE-2026-05-21.md) for the lineage pointer.
-
----
-
-### What's next
-
-- 2026-05-22+ — operator validation: confirm Sarah and Zineb successfully migrated their vaults to point at this repo
-- After confirmations — archive `chuycepeda/aios` and `sovrahq/internal-vault` (those repos remain accessible read-only)
-- Then continue normal AIOS infrastructure evolution under The-AIOS/ org
-
----
