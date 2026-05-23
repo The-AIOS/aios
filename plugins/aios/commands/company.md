@@ -464,7 +464,7 @@ If confirmed, route by file type:
 
 ### Step 6 — Update tracker + advisory
 
-Update `.{name}-sync` with new hash + today's date.
+Update the tracker at `vault/00 - notes/context/ventures/{name}/.{name}-sync` with new hash + today's date. **Always write to the venture-folder path — never to the vault root.** The tracker lives WITH the venture content it tracks; placing it at the root pollutes the operator's repo root and breaks the "read from venture folder" pattern that Step 1 uses to find it.
 
 If `about_venture.md` changed, surface Tier-3 advisory: *"ℹ️ The `{name}` venture's `about_venture.md` changed. Per CLAUDE.md → Index Maintenance, consider refreshing the `{name}` entry in `vault/00 - notes/context/declared/about_business.md` (and `_index.md` if the one-liner shifted)."*
 
@@ -549,6 +549,7 @@ Combine with `--create`, `--mount`, `--sync`, or `--sync-all`. Outputs the opera
 
 - **Read-only pull semantics.** `/company` never writes back to the source. Permissions live in GitHub/Drive (operator manages who has write access — out of AIOS scope).
 - **Never overwrite the tracker file.** `.{name}-sync` is per-vault control state; ignore it in any diff/apply.
+- **Tracker location is ALWAYS the venture folder.** `vault/00 - notes/context/ventures/{name}/.{name}-sync` — never `~/aios/.{name}-sync` (vault root). The tracker travels with the content it tracks. If you find a stray `.{name}-sync` at the vault root, that's a bug from an older sync run — move it to the venture folder (or recreate it there with the current hash) and delete the root copy.
 - **Surface advisories for user-owned files.** `_index.md`, `about_business.md` — these are user-owned (full venture roster + voice). Show that they changed; don't auto-apply.
 - **Always preview before applying.** Never silent-sync. Diff → confirm → apply.
 - **Vault stores context, not binaries.** Heavy assets (images, fonts) live at their canonical home (Drive/CDN); `brand.md` holds URL pointers. If a sync brings in unexpected binary files, surface and ask before copying.
