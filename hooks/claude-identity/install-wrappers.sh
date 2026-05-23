@@ -326,7 +326,12 @@ spawn-kill() {
   local name="${1:?Usage: spawn-kill <session-name>}"
   local claude_pid pgid tty
 
-  claude_pid=$(pgrep -f "claude --remote-control --name $name" | head -1)
+  # NOTE: ".*" between "claude" and "--remote-control" tolerates flags injected
+  # between them (e.g. "--model claude-opus-4-7[1m]" from the model-selection
+  # block above). Without the wildcard, this pgrep silently fails to find any
+  # spawn launched after the model flag landed — leaving orphan processes.
+  # Caught 2026-05-22 during testing-day end-to-end run.
+  claude_pid=$(pgrep -f "claude .*--remote-control --name $name" | head -1)
   if [ -z "$claude_pid" ]; then
     echo "[spawn-kill] no claude process found for '$name'" >&2
     rm -f "/tmp/spawn-task-$name.md" "/tmp/spawn-launch-$name.sh" "/tmp/spawn-script-$name.applescript" 2>/dev/null
