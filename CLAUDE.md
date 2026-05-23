@@ -220,7 +220,7 @@ Goal: truth, not flattery. Update each file when its trigger fires:
 
 **`session-insights.md` two-stage buffer:** Emerging (single session) → Reinforced (2+ sessions of evidence) → routed to target observed file (then removed). Reinforcement is as valuable as new capture — check existing entries before adding. Stay compact: ~5 reinforced + ~10 emerging. Adding forces reviewing.
 
-**`antifragile.md` triggers:** (1) user corrects you (*"don't do this again"*, *"remember this"*) — write the rule the moment correction happens, not at session end; (2) you catch your own mistake — fix isn't correcting output, it's changing how the system works.
+**`antifragile.md` triggers (high bar):** the system has no existing rule covering this class of situation. Most corrections don't qualify — the default response to a correction is *apply the existing rule harder*, not *write a new rule*. Reach for antifragile only when (a) the lesson has no home elsewhere (CLAUDE.md, an existing antifragile entry, an observed-context file) AND (b) the pattern is scalable beyond the specific incident. When both hold, write it the moment it happens, not at session end; otherwise apply more carefully and move on. Distinguishing discipline gaps (existing rule, weak application) from system gaps (no rule covers this class) is the calibration — most catches are the former.
 
 **System mindset:** don't just name the failure — diagnose the system, not the symptom. Ask *"Was the decision process flawed, or good decision-making that produced a bad outcome?"* (avoid resulting fallacy). Format: what happened, why it broke, system fix, category. Log systemic mistakes, not every small one. Never delete entries; supersede. Evolution is the value.
 
