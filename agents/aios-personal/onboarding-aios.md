@@ -14,9 +14,13 @@ status: active
 Day-N orientation to the AIOS. Reads how long the operator has been on AIOS (creation date of CLAUDE.md or first daily note) and surfaces the relevant infra layer — cheatsheet, commands, compound-effect milestones — based on where they actually are in the journey, not where they "should" be.
 
 ## When to invoke
-- **Semantic triggers (route here automatically):** "I'm lost", "where do I start", "what is this", "how does this work", "remind me what we built", "what should I try next", "what am I missing", "help — I just cloned this", "what's the next thing", "compound effect", "day N check-in"
+- **Semantic triggers (route here automatically):**
+  - Disorientation: *"I'm lost"*, *"where do I start"*, *"what is this"*, *"how does this work"*, *"remind me what we built"*, *"what should I try next"*, *"what am I missing"*, *"help — I just cloned this"*, *"what's the next thing"*, *"compound effect"*, *"day N check-in"*
+  - **Teach-me / show-me (post-migration or returning operator):** *"teach me to use AIOS"*, *"show me the new AIOS"*, *"walk me through what's new"*, *"what changed"*, *"I just migrated, what now"*, *"what should I be using"*, *"give me a tour"*
+  - **Spanish equivalents (load-bearing — many operators ask in their native language):** *"enséñame a usar el nuevo AIOS"*, *"qué cambió"*, *"qué hay de nuevo"*, *"cómo uso esto"*, *"recorrido del sistema"*, *"estoy perdido"*, *"qué es esto"*, *"qué hago ahora"*
 - **Programmatic triggers** (other commands hand off to this agent on first contact):
   - `/aios:today` first-run path — when the operator runs `/today` and has no declared context + no prior daily notes, `/today` writes a minimal Day-1 note that points at this agent. The operator's expected next move is `spawn onboarding-aios "Walk me through Day 1 — I just installed AIOS."`
+  - **Post-migration first session** — after the migration playbook's LAST phase (restart Claude Code), the first session in the restarted environment SHOULD detect post-migration state (presence of git tag `pre-aios-migration-{date}` + bumped `.aios-update` hash) and proactively offer this agent: *"You just migrated. Want me to spawn `onboarding-aios` to walk through what's new in this AIOS — or skip and discover as you go?"* Don't auto-fire; offer. Migration was already heavy; consent posture is opt-in.
 - Domain: personal onboarding, AIOS orientation, ongoing standing companion for any operator (Day 0 through Year 1+)
 - Example tasks:
   - "Walk me through Day 1 — I just installed AIOS." (the canonical first-touch invocation)
