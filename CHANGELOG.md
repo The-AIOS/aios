@@ -58,11 +58,14 @@ Phase 2    (Tracker rename + repoint at The-AIOS/aios)
 Phase 2.5  (Vault structure normalization — moves operator extensions to {layer}/custom/,
             renumbers vault folders surgically with collision-aware merge)
   ↓
-Phase 5    (Framework cascade via /aios:update — brings canonical files into the vault)
+Phase 4    (Plugin cache invalidation — uninstall vault-commands@local, add the-aios
+            marketplace, install aios@the-aios. This makes /aios:update available.)
   ↓
-Phase 3    (Spawn wrappers — re-install using the NOW-canonical install-wrappers.sh)
+Phase 5    (Framework cascade via /aios:update — now-installed plugin provides the
+            command; cascade lands canonical files into the vault)
   ↓
-Phase 4    (Plugin cache invalidation — uses the NOW-canonical aios@the-aios plugin source)
+Phase 3    (Spawn wrappers — re-install using the NOW-canonical install-wrappers.sh
+            that Phase 5 just cascaded into the vault)
   ↓
 Phase 6    (USER.md schema migration: ## Organization → ## Companies (mounted))
   ↓
@@ -77,7 +80,9 @@ Phase 9    (Discovery surface awareness — informational)
 LAST       (Restart Claude Code for plugin daemon reload)
 ```
 
-The Claude session executing this playbook MUST follow the execution-order arrows, not the phase-number sequence. If you skip the ordering (e.g., run Phase 3 wrappers before Phase 5 framework cascade), you'll install the OLD wrapper script and have to reinstall after the cascade overwrites it — wasted work, possible confusion.
+The Claude session executing this playbook MUST follow the execution-order arrows, not the phase-number sequence. **The Phase 4 → Phase 5 → Phase 3 ordering is load-bearing:** Phase 4 installs `aios@the-aios` which provides the `/aios:update` command. Phase 5 calls `/aios:update`. Phase 3 needs the cascaded `hooks/claude-identity/install-wrappers.sh` from Phase 5. Run them in any other order and you'll hit "command not found" or install stale scripts.
+
+**Exit codes are NOT load-bearing on their own.** Every phase's bash block runs in a subshell spawned by Claude's `Bash` tool — `exit 1` ends that subshell, not the migration. When a phase's STOP guard fires (non-zero exit, dirty git status, vault-not-detected, collision-remaining), the executing Claude session MUST notice the failure signal in the tool output and refuse to advance to the next phase until the operator resolves it. **Read every Bash result before moving on. If a phase printed `⚠️` or `STOP` — stop.**
 
 ---
 
@@ -516,21 +521,32 @@ claude plugin marketplace list 2>&1 | grep the-aios || true
 # Remove legacy plugin if present (operator-confirm before destructive op)
 claude plugin uninstall vault-commands@local 2>/dev/null || true
 
-# Add the canonical marketplace (idempotent — silently no-ops if already added)
-# Source can be the GitHub repo URL, an SSH URL, or a local path to a clone.
-claude plugin marketplace add https://github.com/The-AIOS/aios.git 2>/dev/null || \
-  claude plugin marketplace add the-aios https://github.com/The-AIOS/aios.git 2>/dev/null || \
-  true
+# Add the canonical marketplace. The CLI takes ONE positional arg <source>;
+# the marketplace name is derived from the repo's .claude-plugin/marketplace.json
+# (registers as "the-aios"). Idempotent — re-adding is a no-op.
+claude plugin marketplace add https://github.com/The-AIOS/aios.git
+
+# Verify marketplace landed BEFORE attempting install — install fails silently otherwise
+claude plugin marketplace list | grep -q the-aios || {
+  echo "⚠️ STOP — the-aios marketplace did not register. Cannot install aios plugin."
+  echo "   Check: claude plugin marketplace list"
+  echo "   Likely cause: stale Claude Code version (need 0.2+) or network/auth failure."
+  exit 1
+}
+echo "✓ the-aios marketplace registered"
 
 # Install / refresh the plugin from the now-registered marketplace
 claude plugin install aios@the-aios
 
-# Verify both layers landed
-claude plugin marketplace list | grep the-aios && echo "✓ the-aios marketplace registered"
-claude plugin list | grep aios@the-aios && echo "✓ aios plugin installed from the-aios"
+# Verify plugin landed
+claude plugin list | grep -q "aios@the-aios" || {
+  echo "⚠️ STOP — aios plugin did not install. /aios:* commands will be missing."
+  exit 1
+}
+echo "✓ aios plugin installed from the-aios"
 ```
 
-If `claude plugin install aios@the-aios` reports "marketplace not found," the `marketplace add` step didn't take — re-run it explicitly, then retry install. Don't skip verification: silent install failure surfaces as missing `/aios:*` commands later, with no clear cause.
+If `claude plugin install aios@the-aios` reports "marketplace not found," the `marketplace add` step didn't take — re-run it explicitly, check `claude plugin marketplace list`, then retry install. Don't skip verification: silent install failure surfaces as missing `/aios:*` commands in Phase 5, with no clear cause.
 
 **Restart Claude Code AFTER this phase** if the plugin source rotation hasn't taken effect (the plugin daemon caches plugin source paths). The /aios:update spec calls this out as a hard precondition — restart-required steps go LAST in any single playbook run; here we tolerate it mid-flow only because subsequent phases edit framework files, not Claude Code's runtime.
 
