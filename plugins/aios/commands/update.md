@@ -36,7 +36,6 @@ Files where the team version is always correct. Overwrite without merge.
 - `LICENSE` (repo root — GPL v2+ canonical text from gnu.org)
 - `NOTICE` (repo root — AIOS contributors copyright + grant)
 - `FORTRESS.md` (repo root — two-machine operator setup guide)
-- `HISTORY-PRE-2026-05-21.md` (repo root — pre-extraction lineage pointer; cosmetic to ship but harmless)
 - `.gitignore` (repo root — single source of hygiene for the whole repo, including secret-leak patterns)
 - `templates/aios-*` and `templates/*.md` at top level (NEVER overwrite `templates/custom/` — operator-specific extensions)
 - `skills/*` EXCEPT `skills/custom/` (full folder replace for bundled skills; preserve operator extensions)

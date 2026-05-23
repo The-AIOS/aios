@@ -32,7 +32,7 @@ Mid-week or when something feels off — the avoidance detector. Honest scan of 
 ## Drift Report — {date}
 
 ### Drift by venture
-{Group drifting projects by `venture` frontmatter. E.g. "Sovra: 3 projects drifting. ChuyCepeda: 2 projects drifting." This makes the report actionable per-meeting — founders care about Sovra drift, personal review cares about ChuyCepeda drift.}
+{Group drifting projects by `venture` frontmatter. E.g. "Acme: 3 projects drifting. Personal: 2 projects drifting." This makes the report actionable per-meeting — founders care about company drift, personal review cares about personal-venture drift.}
 
 ### Projects with no recent activity
 {Projects with "active" status but no recent work or mentions}

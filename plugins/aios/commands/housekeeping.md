@@ -43,7 +43,7 @@ Gather evidence across **all 12 buckets — no skipping.** "Deferred to tooling"
 4. **Auto-categorize broken refs** into 4 buckets (so judgment is low-friction):
    - **Template placeholders** (`[[wiki-links]]`, `{{project-N}}`, etc.) — IGNORE silently.
    - **Forward-refs to unshipped content** (e.g., Substack post slugs `04-claude-code-for-teams` with matching draft in `substack/`) — IGNORE, will auto-resolve when the content ships.
-   - **Product/entity names without dedicated notes** (e.g., `[[SovraID]]` referenced in prose but no `SovraID.md` exists) — propose **downgrade to plain text** OR **create stub**.
+   - **Product/entity names without dedicated notes** (e.g., `[[ProductX]]` referenced in prose but no `ProductX.md` exists) — propose **downgrade to plain text** OR **create stub**.
    - **Real orphans** (references to notes that existed under a different filename, or notes that were renamed/deleted) — propose **redirect** (using alias syntax to preserve display: `[[actual-file|display text]]`) or **leave as historical intent** if the ref lives in old daily notes/reflections recording what was considered.
 5. Propose adds:
    - **Auto-apply candidates** — unambiguous additions (e.g., project name appears as plain text, single matching note exists).
@@ -406,7 +406,7 @@ Comprehensive integrity check of the two operating files that govern every sessi
 1. **Wiki-link resolution** — for every `[[link]]` in CLAUDE.md, verify the target exists somewhere reachable (in `agents/`, `commands/`, `hooks/`, `templates/`, `vault/00 - notes/context/`, etc.). Flag broken links.
 2. **Path references** — grep for hardcoded paths (`agents/...`, `agents/...`, `my-agents/...`, etc.) that may be stale post-restructure. Compare against current filesystem.
 3. **Section completeness** — required sections present? `# Mandatory First Action`, `## Identity & Greeting`, `## Spawning Sessions`, `## I. Operating Principles`, `## II. Rituals`, `## III. Self-Update`, `## IV. Vault Map`, `## V. Infrastructure`, `## VI. Discipline`. Flag missing.
-4. **Personal-slug leakage** — grep for patterns that look operator-specific (`chuycepeda-*`, `sovra-*`, real-person names) that shouldn't be in canonical infra. Flag for de-personalization.
+4. **Personal-slug leakage** — grep for patterns that look operator-specific (real operator usernames, real company slugs, real-person names) that shouldn't be in canonical infra. Flag for de-personalization.
 5. **Index consistency** — `## IV. Vault Map → Index Maintenance` lists folders with `_index.md` files. Verify each listed folder actually has its `_index.md`. Flag mismatches.
 6. **Command count consistency** — CLAUDE.md, README, SETUP, `commands/_index.md` may reference a command count. Recount actual commands in `commands/` and flag inconsistencies.
 

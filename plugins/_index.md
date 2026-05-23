@@ -33,7 +33,7 @@ The `custom/` subfolder is for operator-built plugins that should survive `/aios
 
 Plugins distributed by `/aios:company --sync` from a company venture-context repo land at:
 
-- `plugins/<company>/<plugin-name>/` — e.g., `plugins/sovra/pdf-generator/` for a Sovra-branded plugin
+- `plugins/<company>/<plugin-name>/` — e.g., `plugins/acme/pdf-generator/` for an Acme-branded plugin
 
 Same namespacing convention as `agents/<company>/`, `templates/<company>/`, etc. Company-distributed plugins never collide with the bundled `aios` plugin or operator `custom/` extensions.
 

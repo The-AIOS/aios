@@ -4,7 +4,7 @@ tags:
   - command
   - sync
   - on-demand
-description: Mount one or more companies into your vault. Multi-substrate (GitHub repo, Google Drive folder, future adapters), multi-company. Subcommands for create, mount, sync, status, invite, dry-run. Replaces the older /company-sync.
+description: Mount one or more companies into your vault. Multi-substrate (GitHub repo, Google Drive folder, future adapters), multi-company. Subcommands for create, mount, sync, status, invite, dry-run.
 allowed-tools: mcp__obsidian__*, mcp__google-workspace__*, Bash(git:*), Bash(gh:*), Bash(rm:*), Bash(cat:*), Bash(mkdir:*), Bash(cp:*), Bash(file:*), Read, Write, Edit, WebFetch
 argument-hint: "optional: --create | --mount {url} | --sync {name} | --sync-all | --status | --invite {name} | --dry-run"
 ---
@@ -31,7 +31,7 @@ The two commands compose naturally — a collaboration space can EXIST within a 
 
 - **Personal vault** — your individual AIOS (declared / observed / intent / projects-you-own)
 - **Mounted company** — read-only mirror of a company's `venture-context` repo or Drive folder, landing at `vault/00 - notes/context/ventures/{company}/`
-- **Multi-company** — operators may mount 0, 1, or many companies (an independent consultant might mount their own ChuyCepeda venture AND a client's company; a Sovra employee mounts just Sovra)
+- **Multi-company** — operators may mount 0, 1, or many companies (an independent consultant might mount their own personal venture AND a client's company; a single-company employee mounts just their employer's)
 
 ## Natural-language triggers
 
@@ -39,7 +39,7 @@ Claude routes to `/company` when the user says things like:
 
 | Phrase | Subcommand |
 |---|---|
-| *"Mount my company"* / *"Set up Sovra in my vault"* | `/company` (default → create-or-mount-existing) |
+| *"Mount my company"* / *"Set up Acme in my vault"* | `/company` (default → create-or-mount-existing) |
 | *"Sync the company"* / *"Refresh company context"* | `/company --sync {default-or-only-company}` |
 | *"Sync all my companies"* | `/company --sync-all` |
 | *"What's the status of my mounted companies?"* | `/company --status` |
@@ -71,9 +71,9 @@ Claude routes to `/company` when the user says things like:
 
 | Company | Substrate | Source | Venture folder | Last sync |
 |---|---|---|---|---|
-| sovra | github | git@github.com:sovrahq/venture-context.git | vault/00 - notes/context/ventures/sovra/ | 2026-05-21 |
-| acme-co | github | git@github.com:acme-co/venture-context.git | vault/00 - notes/context/ventures/acme-co/ | 2026-05-21 |
-| acme-co | drive | https://drive.google.com/drive/folders/... | vault/00 - notes/context/ventures/acme-co/ | 2026-05-19 |
+| acme | github | git@github.com:acme/acme-context.git | vault/00 - notes/context/ventures/acme/ | 2026-05-21 |
+| beta-co | github | git@github.com:beta-co/beta-co-context.git | vault/00 - notes/context/ventures/beta-co/ | 2026-05-21 |
+| beta-co | drive | https://drive.google.com/drive/folders/... | vault/00 - notes/context/ventures/beta-co/ | 2026-05-19 |
 ```
 
 **Empty section signals zero mounted companies** — the default interactive flow detects this and offers to scaffold the first one.
@@ -147,10 +147,10 @@ This is the canonical substrate for venture-context. `/company --create` default
 
 **Configuration:**
 - **Source format:** `git@github.com:{org}/{repo-name}.git`
-- **Recommended repo name:** `{org}/venture-context` (e.g., `acme-co/venture-context`, `my-startup/venture-context`)
+- **Recommended repo name:** `{org}/{company}-context` (e.g., `acme/acme-context`, `my-startup/my-startup-context`) — operator-instance, descriptive in-org. Inside a company's own org, the repo name should identify *which* venture's context this is; `venture-context` reads abstract there, `{company}-context` reads concrete.
 - **Visibility:** private by default; operator decides who has push access
 - **Sync mechanism:** `git clone --depth=50 --single-branch` into `/tmp/company-sync-{name}/`, diff against last hash in `.{name}-sync` tracker, apply changes
-- **Tracker file:** `.{company}-sync` in the venture folder (e.g., `.sovra-sync`)
+- **Tracker file:** `.{company}-sync` in the venture folder (e.g., `.acme-sync`)
 
 ### Google Drive adapter — supported, choose when needed
 
@@ -223,7 +223,7 @@ Ask: *"Substrate? (github / drive)"*
 Ask:
 
 > *"Got existing context to seed from? Options:*
-> *(1) Existing vault folder (e.g. `vault/00 - notes/context/ventures/sovra/`)*
+> *(1) Existing vault folder (e.g. `vault/00 - notes/context/ventures/acme/`)*
 > *(2) Local paths / URLs (Drive folder, GitHub README, existing docs)*
 > *(3) Paste content directly*
 > *(4) None — start fresh"*
@@ -366,7 +366,7 @@ If confirmed, route by file type:
 
 **Always skip:**
 - `.{name}-sync` tracker (per-personal-vault control state — never overwritten by sync)
-- `_index.md` and `about_business.md` if they exist at venture-folder root (user-owned per pre-extraction `/company-sync` rule — surface advisories instead)
+- `_index.md` and `about_business.md` if they exist at venture-folder root (user-owned — surface advisories instead)
 
 ### Step 6 — Update tracker + advisory
 
@@ -386,9 +386,9 @@ Iterate over every row in USER.md `## Companies (mounted)` and run `--sync {name
 
 ```
 Sync summary:
-- sovra: ✅ 3 files updated
-- acme-co: ✅ current (no changes)
-- acme-co: ⚠️ access denied (check permissions)
+- acme: ✅ 3 files updated
+- beta-co: ✅ current (no changes)
+- gamma-co: ⚠️ access denied (check permissions)
 ```
 
 ## Subcommand: `--status`
@@ -400,9 +400,9 @@ Read-only. Output:
 
 | Company | Substrate | Last sync | Drift | Files |
 |---|---|---|---|---|
-| sovra | github | 2 days ago | 3 commits behind | 12 |
-| acme-co | github | today | current | 11 |
-| acme-co | drive | 5 days ago | 2 files modified | 14 |
+| acme | github | 2 days ago | 3 commits behind | 12 |
+| beta-co | github | today | current | 11 |
+| gamma-co | drive | 5 days ago | 2 files modified | 14 |
 ```
 
 Drift indicator is informational — does NOT auto-sync.
@@ -442,18 +442,6 @@ Combine with `--create`, `--mount`, `--sync`, or `--sync-all`. Outputs the opera
 - **Vault stores context, not binaries.** Heavy assets (images, fonts) live at their canonical home (Drive/CDN); `brand.md` holds URL pointers. If a sync brings in unexpected binary files, surface and ask before copying.
 - **Multi-company aware.** When the operator says *"sync"* without naming a company, default to the only one if exactly one is mounted; otherwise ask which.
 - Use `[[wiki-links]]` for all project names, context files, and ventures mentioned.
-
-## Migration from `/company-sync` (deprecated)
-
-The previous `/company-sync` was a single-company command using `USER.md → ## Organization`. The new `/company` supports multiple companies via `USER.md → ## Companies (mounted)`.
-
-**Auto-migration (one-time):** On first invocation in a vault that has a pre-v2 `## Organization` block, `/company`:
-1. Reads the legacy `## Organization` → `Team repo` + `Venture folder`
-2. Migrates to a new `## Companies (mounted)` row
-3. Renames `.{company}-sync` tracker if needed (no actual change — kept for backward compat)
-4. Tells the operator: *"Migrated your legacy `/company-sync` config to the new `/company` model. Your sovra venture is now in the multi-company table. Run `/company --sync` to verify."*
-
-**No data loss.** All venture content stays where it is. Only the USER.md surface changes.
 
 ## See also
 

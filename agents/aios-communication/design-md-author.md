@@ -16,7 +16,7 @@ Author a valid `design.md` per Google's [design.md spec](https://github.com/goog
 - Task contains keywords: design system, design.md, brand identity, design tokens, typography, color palette, visual identity, design guide, brand book, design language
 - Domain: design, content, brand
 - Example tasks:
-  - "Build a design.md for Sovra"
+  - "Build a design.md for Acme"
   - "Generate my personal design system as design.md"
   - "Create a design.md for the new product"
   - "Audit and update my existing design.md"

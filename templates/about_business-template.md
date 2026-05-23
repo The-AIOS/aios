@@ -11,7 +11,7 @@ type: declared-context
 
 > This file is a distilled overview of the user's ventures. Each venture has its own folder in `vault/00 - notes/context/ventures/` with detailed context (positioning, market, personas, pricing, GTM). This file summarizes them all in one place.
 >
-> **When this file is updated:** Every time a new venture is added or `/company-sync` runs, update the corresponding venture summary below.
+> **When this file is updated:** Every time a new venture is added or `/aios:company --sync` runs, update the corresponding venture summary below.
 
 ---
 
