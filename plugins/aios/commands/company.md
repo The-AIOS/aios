@@ -82,23 +82,26 @@ Claude routes to `/company` when the user says things like:
 
 When `/company --create` runs, it scaffolds from [The-AIOS/company-template](https://github.com/The-AIOS/company-template). The structure has **two layers**: **context** (always shipped) and **optional company-distributed infra** (agents, commands, hooks, MCPs, skills, templates — empty by default).
 
-### Context — `context/` folder (10 canonical files + 3 optional addons)
+### Context — `context/` folder (13 canonical files + 3 optional addons)
 
 **Layer 1 — Identity:**
 - `about_venture.md` — mission, history, what the company does
 - `positioning.md` — category, narrative, worthy rivals
 - `personas.md` — who it serves
 - `primitives.md` — core technical/conceptual IP
+- `origin-story.md` — why this venture exists, founding insight, what we learned the hard way
 
 **Layer 2 — Operations:**
 - `gtm.md` — go-to-market motion
 - `offerings.md` — products / services catalog
 - `pricing.md` — pricing model + tiers
 - `culture.md` — values, decision frameworks, rituals
+- `market.md` — competitive landscape, macro forces, where the puck is going
 
-**Layer 3 — Brand:**
-- `design.md` — visual + voice design system (per Google's design.md spec)
+**Layer 3 — Brand + Voice:**
+- `voice.md` — **required.** Voice and tone — how the venture speaks. Load-bearing for `onboarding-{company}` agent (it reads voice.md to calibrate its register) and for every Claude session writing in the company's name. If the operator can't articulate voice during the interview, Claude auto-drafts a first pass from `about_venture` + `positioning` + `brand` + `culture` and asks for confirmation before committing.
 - `brand.md` — URL pointers to logos / fonts / palette / asset library (vault stores context, not binaries)
+- `design.md` — visual design system (per Google's design.md spec)
 
 **Optional addons (scaffolded as commented-out, uncomment to activate):**
 - `coding-practices.md` — engineering standards, code review philosophy, commit conventions
@@ -243,9 +246,33 @@ Operator reviews 🟡 inferred files + fills ⚪ pending before push.
 
 ### Step 4 — Walk the operator through files (if no pre-fill)
 
-For each of the 12 files in canonical order (Layer 1 → 5), ask ONE focused question. Smart defaults provided. Operator answers; Claude drafts; operator refines.
+For each of the 13 canonical files in order (Layer 1 Identity → Layer 2 Operations → Layer 3 Brand+Voice), ask ONE focused question. Smart defaults provided. Operator answers; Claude drafts; operator refines.
 
 Type `skip` to leave a scaffold for later. Type `open` to edit in editor. Type `short` for a 1-line answer that Claude expands.
+
+**Special handling for `voice.md` (required, load-bearing):**
+
+When the interview reaches `voice.md`, **don't accept `skip`.** Voice is load-bearing — the `onboarding-{company}` agent reads it to calibrate its register, and every Claude session writing in the company's name uses it as the canonical reference. A missing voice.md means a wrong-tone agent and wrong-tone external comms.
+
+If the operator types `skip` or says "I don't have voice content yet," **auto-draft a first pass** from the already-filled context — typically `about_venture` + `positioning` + `brand` + `culture` — and present it back:
+
+```
+I drafted voice.md from your other context. Here's the gist:
+
+  Voice in one line: "{derived line}"
+  Posture: {4 derived attributes}
+  Audiences: {1-3 derived calibrations from personas + gtm}
+  Anti-voice: {2-3 things this voice explicitly is not}
+
+This is a starting point — you'll refine over time. OK to commit
+this draft? (yes / let-me-edit / show-me-the-full-file)
+```
+
+The auto-draft is honest about its source — it doesn't pretend to be the operator's voice, but it's a real first pass that gets the bundle to a complete state. Operator can refine in `voice.md` directly post-create.
+
+### Step 4.5 — Auto-bundle the `onboarding-{company}` agent
+
+Before pushing, copy `agents/onboarding-{company}.md` from the scaffold and replace its `{company}` / `{Company}` / `{org}` / `{YYYY-MM-DD}` placeholders with the operator's actual values. The agent ships with every new venture-context repo so mounters get the HR-Day-1 experience automatically. The agent reads `voice.md` at invocation time, so the auto-draft from Step 4 above directly determines how this agent will sound when teammates mount.
 
 ### Step 5 — Push to remote
 
@@ -303,6 +330,20 @@ Add row to `## Companies (mounted)`.
 ### Step 6 — Surface what was pulled
 
 Show the operator a summary: which files landed, what's in `about_venture.md` headline, what CLAUDE.md says about how this company operates. Welcome them to the new layer.
+
+### Step 7 — Auto-fire `onboarding-{company}` agent (if it ships in the bundle)
+
+If `agents/onboarding-{company}.md` exists in the just-pulled bundle (canonical for new venture-contexts created via `--create`; back-fillable for older ones), **automatically spawn it**. The operator just chose to mount this company — that's the consent signal. No "want me to onboard you?" prompt; just open the welcome flow.
+
+```bash
+spawn onboarding-{company} "Walk me through {Company} — I just mounted."
+```
+
+If the bundle doesn't carry an onboarding agent (legacy venture-contexts, partial scaffolds), surface a one-liner instead:
+
+> *"This bundle doesn't ship its own onboarding agent yet. Walk through `vault/00 - notes/context/ventures/{company}/README.md` for orientation, or ask 'tell me about {Company}' anytime."*
+
+The auto-fire is the venture-context cousin of `/aios:cold-start-interview` → `onboarding-aios` (framework-level). Same pattern: when an operator chooses to step into a new context layer, the orientation companion meets them there.
 
 ## Subcommand: `--sync {name}`
 
@@ -374,7 +415,25 @@ Update `.{name}-sync` with new hash + today's date.
 
 If `about_venture.md` changed, surface Tier-3 advisory: *"ℹ️ The `{name}` venture's `about_venture.md` changed. Per CLAUDE.md → Index Maintenance, consider refreshing the `{name}` entry in `vault/00 - notes/context/declared/about_business.md` (and `_index.md` if the one-liner shifted)."*
 
-### Step 7 — Clean up
+### Step 7 — Offer the change-digest (`onboarding-{company}` agent in digest mode)
+
+If the sync was **substantive** (≥1 new file OR ≥3 modified files in `context/`/`agents/`/`templates/`/`plugins/`/`hooks/`/`mcps/`/`skills/`), AND the bundle ships `agents/onboarding-{name}.md`, **offer** (don't auto-fire) the digest:
+
+```
+🆕 Sovra-context shipped N changes since your last sync. Want a brief
+   digest from the onboarding agent? (yes / skip)
+```
+
+If yes:
+```bash
+spawn onboarding-{name} "digest since {previous-hash}"
+```
+
+If no, continue. Trivial syncs (single non-substantive file change, no new files) skip the offer silently — never interrupt for a 1-line edit.
+
+**Why offer, not auto-fire:** the operator ran `--sync` mid-task most likely — they may not want orientation now. The `--mount` case is different (operator just chose to enter the company, that's a clear consent signal). Sync = ongoing maintenance; consent posture stays opt-in.
+
+### Step 8 — Clean up
 
 ```bash
 rm -rf /tmp/{name}-sync-check
