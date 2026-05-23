@@ -254,14 +254,16 @@ mkdir -p agents/custom templates/custom
 if [ -d "$LEGACY_AGENTS" ]; then
   echo "Found legacy agents at: $LEGACY_AGENTS"
   # Move ALL .md files (preserve generously; operator cleans up later if redundant)
-  find "$LEGACY_AGENTS" -maxdepth 1 -name "*.md" | while read f; do
+  find "$LEGACY_AGENTS" -maxdepth 1 -name "*.md" -type f | while read f; do
     base=$(basename "$f")
     mv "$f" "agents/custom/$base"
     echo "  → agents/custom/$base"
   done
   # Move any subfolders (custom bundles, my-agents/, etc.)
-  for sub in "$LEGACY_AGENTS"/*/; do
-    [ -d "$sub" ] || continue
+  # Use `find` instead of bash glob `for sub in "$DIR"/*/` — the bash glob errors in
+  # zsh's default nomatch behavior when the directory has no subfolders ("no matches found").
+  # find -mindepth 1 -maxdepth 1 -type d is portable across bash + zsh + dash.
+  find "$LEGACY_AGENTS" -mindepth 1 -maxdepth 1 -type d | while read sub; do
     name=$(basename "$sub")
     mv "$sub" "agents/custom/$name"
     echo "  → agents/custom/$name/"
@@ -271,13 +273,12 @@ fi
 
 if [ -d "$LEGACY_TEMPLATES" ]; then
   echo "Found legacy templates at: $LEGACY_TEMPLATES"
-  find "$LEGACY_TEMPLATES" -maxdepth 1 -name "*.md" | while read f; do
+  find "$LEGACY_TEMPLATES" -maxdepth 1 -name "*.md" -type f | while read f; do
     base=$(basename "$f")
     mv "$f" "templates/custom/$base"
     echo "  → templates/custom/$base"
   done
-  for sub in "$LEGACY_TEMPLATES"/*/; do
-    [ -d "$sub" ] || continue
+  find "$LEGACY_TEMPLATES" -mindepth 1 -maxdepth 1 -type d | while read sub; do
     name=$(basename "$sub")
     mv "$sub" "templates/custom/$name"
     echo "  → templates/custom/$name/"
