@@ -47,47 +47,71 @@ Each phase is **State → Ask → Act**. Phases are short on purpose — easier 
 The phase numbers below are logical groupings (e.g., "Phase 3 = wrappers"). The actual execution order has a few inversions because some phases depend on the framework cascade (Phase 5) having landed canonical files first:
 
 ```
-Phase 0  (Safety snapshot — MANDATORY first)
+Phase 0    (Safety snapshot + vault-path detection — MANDATORY, zero-mutation)
   ↓
-Phase 1  (Path canonical: ~/aios symlink)
+Phase 1    (Symlink creation — first structural change, using path from Phase 0)
   ↓
-Phase 2  (Tracker rename + repoint at The-AIOS/aios)
+Phase 2    (Tracker rename + repoint at The-AIOS/aios)
   ↓
-Phase 2.5 (Vault structure normalization — moves operator extensions to {layer}/custom/, deletes legacy framework dirs)
+Phase 2.5  (Vault structure normalization — moves operator extensions to {layer}/custom/,
+            renumbers vault folders surgically with collision-aware merge)
   ↓
-Phase 5  (Framework cascade via /aios:update — brings canonical files into the vault)
+Phase 5    (Framework cascade via /aios:update — brings canonical files into the vault)
   ↓
-Phase 3  (Spawn wrappers — re-install using the NOW-canonical install-wrappers.sh from Phase 5)
+Phase 3    (Spawn wrappers — re-install using the NOW-canonical install-wrappers.sh)
   ↓
-Phase 4  (Plugin cache invalidation — uses the NOW-canonical aios@the-aios plugin source)
+Phase 4    (Plugin cache invalidation — uses the NOW-canonical aios@the-aios plugin source)
   ↓
-Phase 6  (USER.md schema migration: ## Organization → ## Companies (mounted))
+Phase 6    (USER.md schema migration: ## Organization → ## Companies (mounted))
   ↓
-Phase 7  (Vault scaffold restoration — empty subfolder placeholders)
+Phase 7    (Vault scaffold restoration — empty subfolder placeholders)
   ↓
-Phase 8  (Auto-memory namespace + path cleanup)
+Phase 8    (Men-in-Black memory wipe — comprehensive old-world reference cleanup)
   ↓
-Phase 9  (Discovery surface awareness — informational)
+Phase 8.5  (New day rising — onboarding-aios catch-up walkthrough, optional)
   ↓
-LAST     (Restart Claude Code for plugin daemon reload)
+Phase 9    (Discovery surface awareness — informational)
+  ↓
+LAST       (Restart Claude Code for plugin daemon reload)
 ```
 
 The Claude session executing this playbook MUST follow the execution-order arrows, not the phase-number sequence. If you skip the ordering (e.g., run Phase 3 wrappers before Phase 5 framework cascade), you'll install the OLD wrapper script and have to reinstall after the cascade overwrites it — wasted work, possible confusion.
 
 ---
 
-#### Phase 0 — Safety snapshot (MANDATORY, do this first)
+#### Phase 0 — Safety snapshot + vault-path detection (MANDATORY, do this first)
 
-**State:** The operator's current vault has content that must survive. Take an explicit snapshot before any structural change so recovery is one git command away.
+**State:** The operator's current vault has content that must survive. Phase 0 is intentionally **zero-mutation**: detect where the vault lives + tag the current state so recovery is one git command away. No structural changes happen until Phase 1.
+
+**Why split detection (here) from symlink (Phase 1):** the safety tag should be taken on the IMMUTABLE state — before any structural change. Detection is observation; the symlink is the first action. Two distinct concerns.
 
 **Ask:**
-> *"Before I touch anything, I'm going to tag the current state of your vault as `pre-aios-migration-{YYYY-MM-DD}` and verify your `USER.md`, `INTENT.md`, `SARAH.md` (if present), and `vault/` are all tracked + committed. If anything's uncommitted, I'll surface it and stop until you decide. OK to proceed?"*
+> *"Before I touch anything: (1) I'll detect where your vault lives by scanning common locations, (2) tag the current state as `pre-aios-migration-{YYYY-MM-DD}`, (3) verify your sacred files (USER.md, INTENT.md, SARAH.md if present, CLAUDE.md) are all tracked + committed. If anything's uncommitted, I'll surface it and stop until you decide. OK to proceed?"*
 
 **Act:**
 
 ```bash
-# Inside the operator's vault root (~/obsidian/ or ~/aios/ — wherever your local clone lives)
-cd ~/obsidian 2>/dev/null || cd ~/aios
+# --- A. Detect vault path (no changes, pure observation) ---
+VAULT_PATH=""
+[ -e "$HOME/aios/vault/01 - calendar" ] && VAULT_PATH="$HOME/aios"
+[ -z "$VAULT_PATH" ] && [ -e "$HOME/obsidian/vault/01 - calendar" ] && VAULT_PATH="$HOME/obsidian"
+
+# Fallback: scan common alternative locations
+[ -z "$VAULT_PATH" ] && for try in "$HOME/code/internal-vault" "$HOME/internal-vault" "$HOME/code/aios" "$HOME/Documents/aios" "$HOME/Documents/obsidian"; do
+  [ -e "$try/vault/01 - calendar" ] && VAULT_PATH="$try" && break
+done
+
+if [ -z "$VAULT_PATH" ]; then
+  echo "⚠️  Could not detect your vault root."
+  echo "    Tried: ~/aios, ~/obsidian, ~/code/internal-vault, ~/internal-vault, ~/code/aios, ~/Documents/aios, ~/Documents/obsidian"
+  echo "    STOP. Tell Claude where your vault lives + re-run from Phase 0."
+  exit 1
+fi
+
+echo "✓ Detected vault root: $VAULT_PATH"
+echo "VAULT_PATH=$VAULT_PATH" > /tmp/aios-migration-state.env  # subsequent phases read from here
+
+cd "$VAULT_PATH"
 
 # 1. Verify nothing is uncommitted
 DIRTY=$(git status --porcelain | wc -l)
@@ -123,33 +147,15 @@ If any step surfaces a warning, **stop and resolve before continuing**. Operator
 
 #### Phase 1 — Path canonical: `~/aios` symlink
 
-**State:** The framework references `~/aios/` everywhere. Operators on the old structure typically have their vault at `~/obsidian/` (chuy's pattern) or `~/aios/` directly (more common for newer ops). If `~/aios` doesn't resolve, every later phase's `~/aios/...` reference fails with "no such directory."
+**State:** Phase 0 detected your vault path (`$VAULT_PATH`). The framework references `~/aios/` everywhere. If `$VAULT_PATH` is already `~/aios`, no action needed. Otherwise create a symlink so every later phase's `~/aios/...` reference resolves.
 
 **Ask:**
-> *"I see your vault is at `{detected-path}`. I need `~/aios/` to resolve so the rest of the migration can use the canonical path. {If path is already ~/aios → silent pass}. {Else → I'll create a symlink `~/aios → {detected-path}`. Non-destructive, reversible, zero risk to your Obsidian app workspace state. OK?}"*
+> *"Your vault is at `{$VAULT_PATH}`. {If already ~/aios → silent pass}. {Else → I'll create a symlink `~/aios → {$VAULT_PATH}`. Non-destructive, reversible (`rm ~/aios` to undo), zero risk to your Obsidian app workspace state. OK?}"*
 
 **Act:**
 
 ```bash
-# Detect current vault path — check the common locations
-VAULT_PATH=""
-[ -e "$HOME/aios/vault/01 - calendar" ] && VAULT_PATH="$HOME/aios"
-[ -z "$VAULT_PATH" ] && [ -e "$HOME/obsidian/vault/01 - calendar" ] && VAULT_PATH="$HOME/obsidian"
-
-# Fallback: scan common alternative locations
-[ -z "$VAULT_PATH" ] && for try in "$HOME/code/internal-vault" "$HOME/internal-vault" "$HOME/code/aios" "$HOME/Documents/aios" "$HOME/Documents/obsidian"; do
-  [ -e "$try/vault/01 - calendar" ] && VAULT_PATH="$try" && break
-done
-
-# If still not found, ASK the operator for the path
-if [ -z "$VAULT_PATH" ]; then
-  echo "⚠️  Could not detect your vault root automatically."
-  echo "    Tried: ~/aios, ~/obsidian, ~/code/internal-vault, ~/internal-vault, ~/code/aios, ~/Documents/aios, ~/Documents/obsidian"
-  echo "    Stop here. Tell Claude where your vault lives, then re-run this phase pointing at the right path."
-  exit 1
-fi
-
-echo "✓ Detected vault root: $VAULT_PATH"
+source /tmp/aios-migration-state.env  # picks up VAULT_PATH from Phase 0
 
 # If already at ~/aios → silent pass
 [ "$VAULT_PATH" = "$HOME/aios" ] && echo "✓ ~/aios already resolves" && exit 0
@@ -296,24 +302,60 @@ if [ -d "commands" ] && [ ! -d "plugins/aios/commands" ]; then
   echo "✓ legacy commands/ removed"
 fi
 
-# --- C. Renumber vault asset + export folders ---
-# vault/03 - assets/ → vault/02 - assets/  (move only if no destination yet)
-if [ -d "vault/03 - assets" ] && [ ! -d "vault/02 - assets" ]; then
-  mv "vault/03 - assets" "vault/02 - assets"
-  echo "✓ vault/03 - assets/ → vault/02 - assets/"
-fi
-# vault/04 - export/ → vault/03 - export/
-if [ -d "vault/04 - export" ] && [ ! -d "vault/03 - export" ]; then
-  mv "vault/04 - export" "vault/03 - export"
-  echo "✓ vault/04 - export/ → vault/03 - export/"
-fi
-# vault/05 - logs/ → vault/00 - notes/logs/
+# --- C. Renumber vault asset + export folders (SURGICAL — operator may have custom subfolders) ---
+#
+# These vault folders hold OPERATOR CONTENT, not framework canonicals. Renaming them must
+# preserve every file + subfolder, including operator-custom organization. Collision case:
+# operator may already have BOTH old + new locations (e.g., they migrated partially before,
+# or framework auto-created the new one at some point). In that case, MERGE — never overwrite.
+
+# Helper: surgical move that handles collision by recursive merge
+surgical_move() {
+  local SRC="$1"
+  local DST="$2"
+  if [ ! -d "$SRC" ]; then return 0; fi
+  if [ ! -d "$DST" ]; then
+    mv "$SRC" "$DST"
+    echo "✓ $SRC/ → $DST/ (clean move)"
+  else
+    # Collision: merge SRC contents into DST. Use rsync-style recursive copy + verify before delete.
+    echo "⚠ Both $SRC/ and $DST/ exist — merging contents."
+    # Copy with -n (no-clobber) so DST's existing content wins on filename collision
+    # Then remove SRC files that were copied; leave any non-copied (collisions) for operator review
+    cp -Rn "$SRC"/. "$DST"/
+    # Identify what was merged vs what stayed in SRC (didn't make it because of collisions)
+    REMAINING=$(find "$SRC" -type f 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$REMAINING" = "0" ]; then
+      rm -rf "$SRC"
+      echo "✓ $SRC/ contents merged into $DST/ (clean)"
+    else
+      echo "⚠ $SRC/ still has $REMAINING files (filename collisions with $DST/). Operator must review + decide manually."
+      echo "  Files in $SRC/ that didn't merge:"
+      find "$SRC" -type f | head -20
+      echo "  STOP here. Operator picks per-file. Recover via Phase 0's safety tag if needed."
+    fi
+  fi
+}
+
+surgical_move "vault/03 - assets"  "vault/02 - assets"
+surgical_move "vault/04 - export"  "vault/03 - export"
+
+# vault/05 - logs/ → vault/00 - notes/logs/ (special: target may exist as the new logs canonical)
 if [ -d "vault/05 - logs" ]; then
   mkdir -p "vault/00 - notes/logs"
-  mv "vault/05 - logs"/* "vault/00 - notes/logs/" 2>/dev/null || true
-  rmdir "vault/05 - logs" 2>/dev/null && echo "✓ vault/05 - logs/ → vault/00 - notes/logs/"
+  # Same surgical merge pattern
+  cp -Rn "vault/05 - logs"/. "vault/00 - notes/logs"/
+  REMAINING=$(find "vault/05 - logs" -type f 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$REMAINING" = "0" ]; then
+    rm -rf "vault/05 - logs"
+    echo "✓ vault/05 - logs/ → vault/00 - notes/logs/ (clean)"
+  else
+    echo "⚠ vault/05 - logs/ still has $REMAINING files; operator must review."
+  fi
 fi
 ```
+
+**Operator content posture**: this phase treats EVERY file inside the renumbered vault folders as operator content. No files get deleted, even on collision — they get *surfaced* for operator review. The safety tag from Phase 0 is your insurance if the merge result is wrong. Subfolders (operator-custom organization) survive the move because `cp -Rn` is recursive.
 
 **Important — what survives + what gets discarded:**
 
@@ -475,34 +517,105 @@ echo "✓ scaffold folders ensured"
 
 ---
 
-#### Phase 8 — Auto-memory namespace + path cleanup
+#### Phase 8 — The "Men in Black" memory wipe (comprehensive old-world cleanup)
 
-**State:** Claude's auto-memory (under `~/.claude/projects/{cwd-slug}/memory/`) may still reference the legacy `vault-commands:` plugin namespace OR the old `~/obsidian/` path in feedback entries written before extraction.
+**State:** Claude's auto-memory (under `~/.claude/projects/{cwd-slug}/memory/`) accumulated references across months of operator work that point at the OLD framework structure: legacy plugin namespace (`vault-commands:*`), legacy command names (`/vault-update`), legacy tracker filename (`.vault-update`), legacy paths (`~/obsidian/`, `vault/02 - templates/`, `vault/06 - agents/`, etc.), legacy team-repo references (`sovrahq/internal-vault`), and legacy plugin install names (`vault-commands@local`). Future Claude sessions reading these stale references will follow dead pointers and feel disoriented.
+
+This phase is the **neuralyzer flash** — wipe the old-world references so memory aligns with the new structure. Pure mechanical rewriting; no semantic change to the lessons themselves.
 
 **Ask:**
-> *"Auto-memory entries reference some legacy patterns: `vault-commands:*` (now `aios:*`) and possibly hardcoded `~/obsidian/` paths (now `~/aios/`). I'll grep auto-memory for these and update where safe. Memory rewrites are mechanical (s/vault-commands:/aios:/g, s/~/obsidian/~/aios/g), but I'll surface the diff before applying. OK?"*
+> *"Auto-memory has accumulated old-world references — legacy plugin namespace, command names, tracker filename, paths, vault structure, team-repo pointers. I'll do a comprehensive sweep + show you the affected files before applying. Mechanical rewriting only; the lessons in the memory entries stay intact, just their pointers update. OK?"*
 
 **Act:**
 
 ```bash
 MEM_DIR="$HOME/.claude/projects"
-# Find any .md memory files mentioning legacy patterns
-grep -rln "vault-commands:" "$MEM_DIR" 2>/dev/null
-grep -rln "~/obsidian/" "$MEM_DIR" 2>/dev/null
+
+# --- A. Surface ALL legacy patterns in one scan ---
+echo "Files with legacy references in auto-memory:"
+grep -rln \
+  -e "vault-commands:" \
+  -e "vault-commands@local" \
+  -e "/vault-update" \
+  -e "\.vault-update" \
+  -e "~/obsidian/" \
+  -e "vault/02 - templates" \
+  -e "vault/06 - agents" \
+  -e "vault/05 - logs" \
+  -e "vault/03 - assets" \
+  -e "vault/04 - export" \
+  -e "sovrahq/internal-vault" \
+  -e "chuycepeda/aios" \
+  "$MEM_DIR" 2>/dev/null | sort -u
 ```
 
-Show the operator the affected files (filenames + match lines). With confirmation:
+Show the operator the affected files. Then with confirmation, apply the full rewrite:
 
 ```bash
 find "$MEM_DIR" -name "*.md" -type f -exec sed -i.bak \
   -e 's|vault-commands:|aios:|g' \
+  -e 's|vault-commands@local|aios@the-aios|g' \
+  -e 's|/vault-update|/aios:update|g' \
+  -e 's|\.vault-update|.aios-update|g' \
   -e 's|~/obsidian/|~/aios/|g' \
+  -e 's|vault/02 - templates|templates|g' \
+  -e 's|vault/06 - agents|agents|g' \
+  -e 's|vault/05 - logs|vault/00 - notes/logs|g' \
+  -e 's|vault/03 - assets|vault/02 - assets|g' \
+  -e 's|vault/04 - export|vault/03 - export|g' \
+  -e 's|sovrahq/internal-vault|The-AIOS/aios|g' \
+  -e 's|chuycepeda/aios|The-AIOS/aios|g' \
   {} \;
-# .bak files preserved for safety; remove with `find $MEM_DIR -name '*.bak' -delete` after verification
-echo "✓ memory entries updated; .bak files preserved"
+echo "✓ memory wiped of old-world references"
+echo "  .bak files preserved at *.bak in $MEM_DIR — verify with: find $MEM_DIR -name '*.md.bak'"
+echo "  Once verified, remove with: find $MEM_DIR -name '*.bak' -delete"
 ```
 
-If the operator already has a `feedback_aios_namespace.md` entry noting the legacy/canonical rename, leave that one alone — it's documenting the rename, not asserting the old name.
+**Important exceptions** — leave these untouched:
+- `feedback_aios_namespace.md` (if present) — explicitly documents the rename; the literal "vault-commands:" inside it is *describing history*, not asserting current state.
+- Any memory entry literally named or describing "pre-extraction" / "migration" / "framework rename" — these are documentation of the journey, not stale pointers.
+
+Detect-skip these by checking the filename + content header. Spot-check the `.bak` files before final delete.
+
+**Optional auxiliary cleanup** — same regex set applied to operator vault content:
+
+```bash
+# Operator vault content (daily notes, projects, reflections) may reference old patterns too
+# Same sed batch, but the operator owns this content — APPLY ONLY WITH EXPLICIT YES per-file.
+# This is more risky than the auto-memory wipe because vault content is operator-authored.
+# Recommend: surface the file list + line numbers, let operator review case-by-case.
+
+echo ""
+echo "OPTIONAL: vault content with legacy references (operator's call per-file):"
+grep -rln \
+  -e "vault-commands:" \
+  -e "/vault-update" \
+  -e "vault/02 - templates" \
+  -e "vault/06 - agents" \
+  "$HOME/aios/vault" 2>/dev/null | sort -u
+```
+
+Operator decides per-file whether to rewrite — many vault references are historical (a daily note from March references "/vault-update", that's still correct in the historical context). The rule of thumb: rewrite EXECUTABLE references (project notes describing how to run things), leave HISTORICAL references (daily-note captures of what happened that day).
+
+---
+
+#### Phase 8.5 — New day rising 🌅
+
+**State:** Old-world references are gone. The framework canonical is in place. Operator content is preserved with safety tags. Migration is structurally complete.
+
+**Ask:** *"Migration done. Want me to spawn `onboarding-aios` to walk you through what's new? Or skip — you'll discover the new capabilities organically as `/today` surfaces them."*
+
+**Act:** Operator's call. If they accept:
+
+```bash
+spawn onboarding-aios "Welcome me back — I just finished migrating from the OLD framework. Walk me through what's changed at the framework level."
+```
+
+The onboarding-aios agent will detect this is a returning-operator (sees old daily notes + working observed context), not a Day-0 fresh-install, and calibrate accordingly — focusing on what's *new* since the operator's pre-migration state rather than walking them through Day-1 basics they already know.
+
+**Sign-off line** (in the operator's voice — Claude session adapts based on USER.md voice anchors):
+
+> *"You're on the post-extraction AIOS now. Same vault, same daily rhythm, new framework canonical. Your `/today` tomorrow morning will look + feel almost the same — just running on cleaner pipes. Welcome back."*
 
 ---
 
