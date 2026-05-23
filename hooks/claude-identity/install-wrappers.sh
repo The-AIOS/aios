@@ -82,16 +82,23 @@ _claude_with_respawn() {
   local -a resume_args
   [ -n "$initial_sid" ] && resume_args=(--resume "$initial_sid")
 
-  # Optional model override via $CLAUDE_MODEL env var. Default behavior
-  # (when unset): claude CLI reads ~/.claude/settings.json `model` key. But
-  # if the operator wants the 1M-context variant or a non-default model
-  # (e.g. sonnet for cheap sessions), they `export CLAUDE_MODEL=...` in
-  # their shell rc and every spawned worker picks it up. Examples:
-  #   export CLAUDE_MODEL='claude-opus-4-7[1m]'   # 1M context Opus
-  #   export CLAUDE_MODEL='claude-sonnet-4-6'     # cheaper sessions
-  #   export CLAUDE_MODEL='opus'                  # alias for latest Opus
-  local -a model_args
-  [ -n "$CLAUDE_MODEL" ] && model_args=(--model "$CLAUDE_MODEL")
+  # Model selection — AIOS defaults to 1M-context Opus because the framework
+  # leans heavily on context engineering (full vault + observed context +
+  # command spec + personalization per /aios:today ≈ 125k chars; max-context
+  # is the right default). Override via $CLAUDE_MODEL env var for cheaper
+  # Sonnet sessions, 3P providers (Bedrock/Vertex), or non-1M Opus.
+  # Examples:
+  #   (default — no setup needed)                 # claude-opus-4-7[1m] — 1M context Opus
+  #   export CLAUDE_MODEL='claude-sonnet-4-6'     # cheaper Sonnet sessions
+  #   export CLAUDE_MODEL='opus'                  # alias for latest base Opus (no [1m])
+  #   export CLAUDE_MODEL='sonnet'                # alias for latest Sonnet
+  # Why hardcoded default + env override (not just env-only): /config and
+  # /model are session-scoped — they don't persist to settings.json or
+  # propagate to spawned children. Without an explicit --model flag, every
+  # spawn falls back to whatever ~/.claude/settings.json `model` key says,
+  # which is often base Opus even when the operator wants 1M.
+  local model_to_use="${CLAUDE_MODEL:-claude-opus-4-7[1m]}"
+  local -a model_args=(--model "$model_to_use")
 
   export CLAUDE_AGENT_NAME="$name"
   export CLAUDE_RESPAWN_CAPABLE=1

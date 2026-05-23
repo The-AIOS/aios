@@ -102,10 +102,10 @@ function Invoke-ClaudeWithRespawn {
     $sidFile = Join-Path $env:TEMP "swap-respawn-$Name.session"
     $resumeArgs = @()
     if ($InitialSessionId) { $resumeArgs = @('--resume', $InitialSessionId) }
-    # Optional model override via $env:CLAUDE_MODEL — see install-wrappers.sh
-    # comment for the rationale (1M context Opus, cheaper sonnet, alias, etc.)
-    $modelArgs = @()
-    if ($env:CLAUDE_MODEL) { $modelArgs = @('--model', $env:CLAUDE_MODEL) }
+    # Model selection — AIOS default is 1M-context Opus (see install-wrappers.sh
+    # comment for the why). Override via $env:CLAUDE_MODEL (Sonnet, 3P, etc.).
+    $modelToUse = if ($env:CLAUDE_MODEL) { $env:CLAUDE_MODEL } else { 'claude-opus-4-7[1m]' }
+    $modelArgs = @('--model', $modelToUse)
     while ($true) {
         $claudeArgs = @() + $modelArgs + $resumeArgs + @('--remote-control', '--name', $Name)
         if ($BootstrapFile -and (Test-Path $BootstrapFile)) {
