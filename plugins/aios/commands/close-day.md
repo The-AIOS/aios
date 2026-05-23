@@ -470,7 +470,7 @@ Show the user a summary table before executing any changes:
 Not every day produces new observations — but never skip this check. The observed context is the compound value of the vault. Update when a **relevant, significant behavioral or strategic pattern** emerges. Don't update just because the day was productive — update because something was *understood* that wasn't understood before.
 
 Candidates:
-- `session-insights.md` — scan and garden the observation buffer (reinforce, add, route, clean up). Emerging → Reinforced → Routed lifecycle; ≤10 Emerging, ≤5 Reinforced.
+- `session-insights.md` — scan and garden the observation buffer (reinforce, add, route, clean up). Emerging → Reinforced → Routed lifecycle; ≤10 Emerging, ≤5 Reinforced. **See Tier A routing enforcement below — Reinforced entries with `Route to:` tags must be routed inline, not deferred.**
 - `growth.md` — new growth edge or confirmed pattern (Tier B — see digest pass below)
 - `patterns.md` — new behavioral or decision-making pattern
 - `business.md` — strategic insight about ventures or relationships
@@ -478,6 +478,44 @@ Candidates:
 - `ecosystem.md` — new relationship or network dynamics (Tier B — see digest pass below)
 - `preferences.md` — new working preference discovered (tool, format, communication style)
 - `vault-routine.md` — cadence adjustment needed (e.g., a command was too frequent/infrequent, a routine isn't landing)
+
+### Tier A routing enforcement (Reinforced session-insights → target files, autonomous)
+
+**Why this step exists:** the session-insights lifecycle is *Emerging → Reinforced → Routed (to target file) → removed from buffer*. The buffer canibalizes target files when Reinforced entries linger with `Route to:` tags but the routing step never executes — observed in chuy's vault 2026-05-23 catch-up where 5 Reinforced entries sat 11-49 days marked "Ready to route on next /close-day or /emerge" while patterns/preferences/antifragile/business missed the additions. Same failure mode as Tier B drift; different layer.
+
+The substance bar for Tier A routing is already passed by the time an entry reaches Reinforced — Reinforced means 2+ sessions of evidence with target file identified. The remaining work is mechanical: snapshot target file, write the entry, remove from buffer.
+
+**Fire this enforcement after the normal session-insights gardening, BEFORE the Tier B observation pass** (Tier A routing feeds Tier B's digest material).
+
+For each entry in `## Reinforced` section of `session-insights.md`:
+
+1. **Check for `Route to:` tag** — every Reinforced entry should have one (added when promoted from Emerging). If missing, the entry hasn't actually been triaged — leave it in Reinforced and surface in close-day output: *"⚠️ Reinforced entry '{title}' missing Route to: tag — needs triage before routing."*
+
+2. **If `Route to:` tag is present** — route autonomously, same posture as Tier B digest writes:
+   - Snapshot target file(s) per the mandatory snapshot rule
+   - Write the entry to each target file under the appropriate section (use the entry's content + evidence + cross-references to existing sections)
+   - Remove the entry from `## Reinforced` in session-insights
+   - Add a `<!-- ROUTED {date}: ... -->` comment in session-insights trailing the section, naming what routed where (preserves the trail)
+
+3. **If the entry routes to multiple targets** (common — e.g., `Route to: [[patterns]] AND [[preferences]] AND [[antifragile]]`): write to all targets in the same pass. The substance bar already validated cross-tier relevance when the entry was promoted to Reinforced.
+
+4. **What NOT to do:**
+   - Don't defer to `/emerge` ("we'll route on next /emerge") — that's exactly the deferral pattern that caused the 11-49 day backlogs. /emerge handles cross-cadence cleanup (resolved edges, contradicted patterns), not routine routing of Reinforced entries.
+   - Don't re-apply the substance bar — Reinforced status IS the bar passed. Re-checking is just friction that delays routing.
+   - Don't ask operator approval per entry — autonomous write, same posture as antifragile.md on a system catch. The operator reads the routing trail in commit messages + the `<!-- ROUTED -->` comments.
+
+5. **Surface the Tier A routing result in close-day output:**
+
+   ```
+   ### Tier A routing
+   - {N} Reinforced entries routed → {list of target files touched}
+   - {M} Reinforced entries deferred (missing Route to: tag — needs triage)
+   - {K} Emerging entries reinforced today, awaiting next reinforcement before routing
+   ```
+
+   If `M > 0` (untriaged Reinforced entries), include a one-line nudge: *"Triage the missing Route to: tags before next close-day so the routing pipeline doesn't back up."*
+
+This step makes the Reinforced→Routed transition **load-bearing in every close-day**, the same way `antifragile.md` writes are load-bearing on every user correction. The lifecycle stops being aspirational; it becomes mechanical.
 
 ### Tier B observation pass (growth / profile / ecosystem — proactive digest, NOT timer-driven)
 

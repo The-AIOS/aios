@@ -487,6 +487,49 @@ Some MCPs are AIOS-built, not vendored — `nano-banana-mcp`, `pdf-generator-mcp
 
 **Why this bucket exists:** the 2026-05-21 skills reorg + MCP attribution sweep made source tracking durable (vendored content lives at `<layer>/<source>/<thing>/` with a `.upstream-sync` manifest). The reorg only pays off if we close the loop — staying current with upstream. Without this bucket, the source folders become museum pieces. With it, AIOS becomes an active integrator of best-in-class skills + MCPs across the ecosystem.
 
+#### Bucket 19: Observed-context lifecycle health (NEW)
+
+**The principle:** the observed-context lifecycle is two-layered — Tier A (patterns, preferences, business, antifragile) receives routed content from session-insights gardening; Tier B (growth, profile, ecosystem) is synthesized one layer above from Tier A + antifragile + daily notes. The forward mechanism (`/close-day`'s session-insights gardening + Tier A routing + Tier B digest) keeps both layers alive day-to-day. But silent drift can still accumulate when `/close-day` is skipped, when routing-execution gets perfunctory, or when individual operators run with older command versions. This bucket is the backstop: a periodic health check that surfaces backlog in both layers.
+
+**Detection (two layers):**
+
+**Tier A layer — Reinforced routing backlog:**
+1. Parse `vault/00 - notes/context/observed/session-insights.md` `## Reinforced` section.
+2. For each entry, extract the date stamp + `Route to:` tag (if any).
+3. Compute days since the entry's date.
+4. Flag as backlog if:
+   - Entry has `Route to:` tag AND days_since > 7 → "stale Reinforced, route now"
+   - Entry has no `Route to:` tag AND days_since > 14 → "untriaged Reinforced, needs target file decision"
+
+**Tier B layer — observation freshness:**
+1. For each of `growth.md`, `profile.md`, `ecosystem.md`:
+   - Read frontmatter `updated:` date.
+   - Compute days since.
+2. Flag as backlog if:
+   - File >30 days stale AND `/close-day` has fired in last 7 days (forward digest should have updated; missing update suggests substance bar failing OR digest skipped)
+   - File contains "Day-0 stub" markers (only frontmatter + seed text) AND vault is >30 days old → "fresh stub never written despite vault accumulating content"
+
+**Proposal table format:**
+
+| # | Layer | File / Entry | Status | Backlog | Action |
+|---|---|---|---|---|---|
+| 19.1 | Tier A | `session-insights.md` → "Slide-creation as MCP edit surface" | 🟡 Reinforced + Route to: tagged | 11 days unrouted | [ ] route now (auto) |
+| 19.2 | Tier A | `session-insights.md` → "Some other entry" | 🔴 Reinforced + no Route to: | 22 days untriaged | [ ] triage target file |
+| 19.3 | Tier B | `growth.md` | 🟡 stale | 31 days, last close-day 1 day ago | [ ] run Tier B digest catch-up |
+| 19.4 | Tier B | `ecosystem.md` | 🔴 stub | seed text only, vault 78 days old | [ ] write from accumulated business.md + daily notes |
+
+**For approved Tier A routings:**
+- Same logic as `/close-day`'s Tier A routing enforcement (snapshot target files, write the entries, remove from buffer, add `<!-- ROUTED -->` comment).
+- Routing-execution is mechanical — substance bar already passed at Reinforced promotion.
+
+**For approved Tier B catch-up:**
+- Same logic as `/close-day`'s Tier B observation pass + the Phase 9.7 catch-up from the migration playbook.
+- Snapshot all touched files, read feed-in sources, apply substance bar (timeline / uniqueness / evidence / essentiality), write autonomously.
+
+**Cadence:** weekly minimum (the forward mechanism in `/close-day` should keep both layers alive — Bucket 19 is the backstop for when daily ritual is skipped, when an old command version is in use, or when an operator wants explicit verification).
+
+**Why this bucket exists:** observed-context drift is invisible until you measure it (caught in chuy's vault 2026-05-23: growth.md 31d stale, profile.md 82d stale, ecosystem.md 63d stale, AND 5 Reinforced session-insights sat 11-49 days marked "Ready to route" but never executed). The forward `/close-day` mechanism (Tier A routing enforcement + Tier B observation pass) addresses the same gap proactively, but Bucket 19 is the periodic floor-check that ensures the forward mechanism is actually firing. Without it, an operator who skips `/close-day` for a week loses both layers silently.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:
