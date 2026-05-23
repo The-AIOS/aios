@@ -99,14 +99,23 @@ VAULT_PATH=""
 [ -z "$VAULT_PATH" ] && [ -e "$HOME/obsidian/vault/01 - calendar" ] && VAULT_PATH="$HOME/obsidian"
 
 # Fallback: scan common alternative locations
-[ -z "$VAULT_PATH" ] && for try in "$HOME/code/internal-vault" "$HOME/internal-vault" "$HOME/code/aios" "$HOME/Documents/aios" "$HOME/Documents/obsidian"; do
+[ -z "$VAULT_PATH" ] && for try in \
+    "$HOME/code/internal-vault" "$HOME/internal-vault" \
+    "$HOME/code/aios" "$HOME/Documents/aios" "$HOME/Documents/obsidian" \
+    "$HOME/code/sovrahq/internal-vault" "$HOME/code/chuycepeda/aios" \
+    "$HOME/OneDrive/Documents/aios" "$HOME/OneDrive/Documents/obsidian" \
+    "$HOME/OneDrive - Personal/Documents/aios" "$HOME/OneDrive - Personal/Documents/obsidian"; do
   [ -e "$try/vault/01 - calendar" ] && VAULT_PATH="$try" && break
 done
 
 if [ -z "$VAULT_PATH" ]; then
   echo "⚠️  Could not detect your vault root."
-  echo "    Tried: ~/aios, ~/obsidian, ~/code/internal-vault, ~/internal-vault, ~/code/aios, ~/Documents/aios, ~/Documents/obsidian"
-  echo "    STOP. Tell Claude where your vault lives + re-run from Phase 0."
+  echo "    Scanned: ~/aios, ~/obsidian, ~/code/{internal-vault,aios,sovrahq/internal-vault,chuycepeda/aios},"
+  echo "             ~/internal-vault, ~/Documents/{aios,obsidian}, ~/OneDrive*/Documents/{aios,obsidian}"
+  echo ""
+  echo "    STOP. Tell Claude the absolute path to your vault root (the folder containing"
+  echo "    'vault/' + USER.md + .vault-update). Claude will set VAULT_PATH manually and"
+  echo "    resume from this phase. Don't guess — wrong path silently corrupts the migration."
   exit 1
 fi
 
@@ -441,6 +450,24 @@ test -d "agents/custom" && echo "✓ agents/custom/ exists (preserved operator e
 test -d "templates/custom" && echo "✓ templates/custom/ exists"
 ```
 
+**Post-Phase-5 cleanup hint** — after Phase 5 lands canonical agents into `agents/aios-*/` bundles, `agents/custom/` will likely contain duplicates (the legacy bundled agents that this phase preserved defensively). Surface the duplicate list for operator review:
+
+```bash
+# Build set of canonical agent basenames from the new aios-* bundles
+CANONICAL=$(find agents -mindepth 2 -maxdepth 2 -path "*/aios-*/*.md" -type f -exec basename {} \; | sort -u)
+
+# Find custom files whose basename matches a canonical
+echo "Duplicates in agents/custom/ that have canonical counterparts in agents/aios-*/:"
+find agents/custom -maxdepth 1 -type f -name "*.md" | while read f; do
+  base=$(basename "$f")
+  if echo "$CANONICAL" | grep -qx "$base"; then
+    echo "  ⚠️ $f  ↔  agents/aios-*/{...}/$base"
+  fi
+done
+```
+
+Operator decides per-file: delete the `custom/` copy (canonical wins), keep it (operator had local edits to preserve), or rename it (it's a fork they want to keep separate). Don't auto-delete — operator authority is the calibration.
+
 ---
 
 #### Phase 3 — Spawn wrappers + universal hooks (re-install)
@@ -476,26 +503,36 @@ powershell -NoProfile -Command "Get-Command spawn,spawn-kill 2>&1 | Select Name,
 
 #### Phase 4 — Plugin cache invalidation: `vault-commands@local` → `aios@the-aios`
 
-**State:** Pre-extraction, slash commands shipped under the `vault-commands:` plugin namespace (e.g., `/vault-commands:today`, `/vault-commands:close-day`). Post-extraction, the namespace is `aios:` (e.g., `/aios:today`). Your local Claude Code cache at `~/.claude/plugins/` may still hold the OLD `vault-commands` plugin source — at best it's dead weight, at worst it causes namespace collisions.
+**State:** Pre-extraction, slash commands shipped under the `vault-commands:` plugin namespace (e.g., `/vault-commands:today`, `/vault-commands:close-day`). Post-extraction, the namespace is `aios:` (e.g., `/aios:today`). Your local Claude Code cache at `~/.claude/plugins/` may still hold the OLD `vault-commands` plugin source — at best it's dead weight, at worst it causes namespace collisions. AND: the pre-extraction `chuycepeda/aios` template + `sovrahq/internal-vault` team-vault both shipped `vault-commands` as a **local plugin** (no marketplace registration). The new `aios@the-aios` plugin lives on a **marketplace** that must be added before install will resolve.
 
 **Ask:**
-> *"I need to (a) uninstall the legacy `vault-commands@local` plugin if it's still registered, (b) confirm the new `aios@the-aios` plugin is registered. The new plugin pulls from `The-AIOS/aios/plugins/aios/`. OK?"*
+> *"I need to (a) uninstall the legacy `vault-commands@local` plugin if it's still registered, (b) add the `the-aios` marketplace (one-time per machine — the new framework canonical), (c) install `aios@the-aios` from that marketplace, (d) verify the new plugin landed. The new plugin pulls from `The-AIOS/aios/plugins/aios/`. OK?"*
 
 **Act:**
 
 ```bash
 # Inspect current state
 claude plugin list 2>&1 | grep -E "vault-commands|aios" || true
+claude plugin marketplace list 2>&1 | grep the-aios || true
 
 # Remove legacy plugin if present (operator-confirm before destructive op)
 claude plugin uninstall vault-commands@local 2>/dev/null || true
 
-# Install / refresh the new plugin from the canonical marketplace
+# Add the canonical marketplace (idempotent — silently no-ops if already added)
+# Source can be the GitHub repo URL, an SSH URL, or a local path to a clone.
+claude plugin marketplace add https://github.com/The-AIOS/aios.git 2>/dev/null || \
+  claude plugin marketplace add the-aios https://github.com/The-AIOS/aios.git 2>/dev/null || \
+  true
+
+# Install / refresh the plugin from the now-registered marketplace
 claude plugin install aios@the-aios
 
-# Verify
-claude plugin list | grep aios@the-aios && echo "✓ aios plugin registered"
+# Verify both layers landed
+claude plugin marketplace list | grep the-aios && echo "✓ the-aios marketplace registered"
+claude plugin list | grep aios@the-aios && echo "✓ aios plugin installed from the-aios"
 ```
+
+If `claude plugin install aios@the-aios` reports "marketplace not found," the `marketplace add` step didn't take — re-run it explicitly, then retry install. Don't skip verification: silent install failure surfaces as missing `/aios:*` commands later, with no clear cause.
 
 **Restart Claude Code AFTER this phase** if the plugin source rotation hasn't taken effect (the plugin daemon caches plugin source paths). The /aios:update spec calls this out as a hard precondition — restart-required steps go LAST in any single playbook run; here we tolerate it mid-flow only because subsequent phases edit framework files, not Claude Code's runtime.
 
@@ -567,6 +604,7 @@ These folders are needed for `/aios:learned`, `/aios:weekly-learnings`, `/aios:r
 
 **Act:**
 
+**macOS / Linux / WSL / Git Bash:**
 ```bash
 cd "$HOME/aios"
 for d in \
@@ -586,6 +624,31 @@ for d in \
   [ ! -f "$d/.gitkeep" ] && touch "$d/.gitkeep"
 done
 echo "✓ scaffold folders ensured"
+```
+
+**Windows PowerShell:**
+```powershell
+Set-Location "$HOME\aios"
+$folders = @(
+  "vault\00 - notes\logs\observed-snapshots",
+  "vault\00 - notes\logs\role-logs",
+  "vault\02 - assets\generated",
+  "vault\03 - export\reports\learned",
+  "vault\03 - export\reports\weekly",
+  "vault\03 - export\reports\monthly",
+  "vault\03 - export\reports\role",
+  "vault\03 - export\talks",
+  "vault\03 - export\meetings",
+  "vault\03 - export\writing\1-drafts",
+  "vault\03 - export\writing\2-ready",
+  "vault\03 - export\writing\3-published"
+)
+foreach ($d in $folders) {
+  New-Item -ItemType Directory -Force -Path $d | Out-Null
+  $keep = Join-Path $d ".gitkeep"
+  if (-not (Test-Path $keep)) { New-Item -ItemType File -Path $keep | Out-Null }
+}
+Write-Host "✓ scaffold folders ensured"
 ```
 
 ---
@@ -624,6 +687,7 @@ grep -rln \
 
 Show the operator the affected files. Then with confirmation, apply the full rewrite:
 
+**macOS / Linux / WSL / Git Bash:**
 ```bash
 find "$MEM_DIR" -name "*.md" -type f -exec sed -i.bak \
   -e 's|vault-commands:|aios:|g' \
@@ -642,6 +706,37 @@ find "$MEM_DIR" -name "*.md" -type f -exec sed -i.bak \
 echo "✓ memory wiped of old-world references"
 echo "  .bak files preserved at *.bak in $MEM_DIR — verify with: find $MEM_DIR -name '*.md.bak'"
 echo "  Once verified, remove with: find $MEM_DIR -name '*.bak' -delete"
+```
+
+**Windows PowerShell:**
+```powershell
+$memDir = "$HOME\.claude\projects"
+$substitutions = @(
+  @{ Old = 'vault-commands:';      New = 'aios:' }
+  @{ Old = 'vault-commands@local'; New = 'aios@the-aios' }
+  @{ Old = '/vault-update';        New = '/aios:update' }
+  @{ Old = '\.vault-update';       New = '.aios-update' }
+  @{ Old = '~/obsidian/';          New = '~/aios/' }
+  @{ Old = 'vault/02 - templates'; New = 'templates' }
+  @{ Old = 'vault/06 - agents';    New = 'agents' }
+  @{ Old = 'vault/05 - logs';      New = 'vault/00 - notes/logs' }
+  @{ Old = 'vault/03 - assets';    New = 'vault/02 - assets' }
+  @{ Old = 'vault/04 - export';    New = 'vault/03 - export' }
+  @{ Old = 'sovrahq/internal-vault'; New = 'The-AIOS/aios' }
+  @{ Old = 'chuycepeda/aios';      New = 'The-AIOS/aios' }
+)
+Get-ChildItem -Path $memDir -Recurse -Filter "*.md" -File | ForEach-Object {
+  $path = $_.FullName
+  Copy-Item -Path $path -Destination "$path.bak" -Force
+  $content = Get-Content -Raw -Path $path
+  foreach ($s in $substitutions) {
+    $content = $content -replace $s.Old, $s.New
+  }
+  Set-Content -Path $path -Value $content -NoNewline
+}
+Write-Host "✓ memory wiped of old-world references"
+Write-Host "  .bak files preserved at *.bak in $memDir"
+Write-Host "  Once verified, remove with: Get-ChildItem $memDir -Recurse -Filter '*.bak' | Remove-Item"
 ```
 
 **Important exceptions** — leave these untouched:
