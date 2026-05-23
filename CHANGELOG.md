@@ -79,6 +79,10 @@ Phase 8.6  (Venture-context mount — REQUIRED if you came from a team-vault dis
   ↓
 Phase 9    (Discovery surface awareness — informational)
   ↓
+Phase 9.7  (Tier B observation catch-up — REQUIRED for vaults >30 days old; one-time
+            synthesis of accumulated growth/profile/ecosystem content from
+            session-insights + antifragile + daily notes backlog)
+  ↓
 LAST       (Restart Claude Code for plugin daemon reload)
 ```
 
@@ -833,6 +837,95 @@ ls .{venture}-sync && ls "vault/00 - notes/context/ventures/{venture}" | head -5
 > *"Want a quick tour of any of these? I can spawn `onboarding-aios` for the framework-level walkthrough, or just point you at the doc per capability. Or skip — you'll discover these naturally as `/today` surfaces them."*
 
 **Act:** Operator's choice. Default: skip — `/today` will surface what's relevant when it's relevant (vault-update freshness check, company-context freshness check, CHEATSHEET pointers).
+
+---
+
+#### Phase 9.7 — Tier B observation catch-up (REQUIRED for operators with >30 days of pre-migration vault history)
+
+**State:** This migration upgrades `/close-day` and `/close-session` with a dedicated **Tier B observation pass** that fires every close-day going forward (see `plugins/aios/commands/close-day.md` § Tier B observation pass). Tier B = `growth.md`, `profile.md`, `ecosystem.md` — observations about the operator (not work mechanics), one synthesis layer above `session-insights.md`.
+
+The forward mechanism is now in place — but operators with months of pre-migration vault history likely have **accumulated backlog**: Reinforced session-insights with growth/profile/ecosystem shape that were never routed up, antifragile entries that absorbed growth-narrative content, daily-note Observed sections never synthesized. Without a one-time catch-up, the forward mechanism starts on top of a buried foundation.
+
+**Detect (content-driven, lineage-blind):**
+
+```bash
+cd "$HOME/aios"
+TODAY_EPOCH=$(date +%s)
+
+echo "=== Tier B staleness check ==="
+for f in growth profile ecosystem; do
+  path="vault/00 - notes/context/observed/$f.md"
+  if [ -f "$path" ]; then
+    updated=$(grep -E "^updated:" "$path" | head -1 | sed "s/updated: *['\"]\?//;s/['\"]\?$//")
+    if [ -n "$updated" ]; then
+      updated_epoch=$(date -j -f "%Y-%m-%d" "$updated" +%s 2>/dev/null || echo 0)
+      [ "$updated_epoch" -gt 0 ] && days=$(( (TODAY_EPOCH - updated_epoch) / 86400 )) || days=999
+      printf "  %-15s last updated: %s (%d days ago)\n" "$f.md" "$updated" "$days"
+    fi
+  fi
+done
+```
+
+If any Tier B file is >30 days stale → this phase applies. If all <30 days → skip (no significant backlog).
+
+**Ask:**
+> *"Your Tier B observed-context files (growth/profile/ecosystem) have accumulated drift while session-insights + antifragile stayed hot. I'm going to do a one-time catch-up: read your last 2-3 months of session-insights, antifragile, daily-note Observed sections, and business.md additions, then synthesize what should have been routed up. I'll snapshot the files first, then write observations directly when they pass the substance bar (timeline / uniqueness / evidence / essentiality — same gate /close-day uses going forward). No approval prompts per observation — autonomous Radical Candor write, same posture as antifragile.md. The catch-up is ~10-15 minutes of read + write. OK to proceed?"*
+
+**Act (Claude executes this whole flow):**
+
+```bash
+# 1. Snapshot all Tier B files before writes (recovery path beyond Phase 0's safety tag)
+TODAY=$(date +%Y-%m-%d)
+SNAP_DIR="vault/00 - notes/logs/observed-snapshots/$(date +%Y-%m)"
+mkdir -p "$SNAP_DIR"
+for f in growth profile ecosystem; do
+  cp "vault/00 - notes/context/observed/$f.md" "$SNAP_DIR/${TODAY}-catchup-$f.md"
+done
+```
+
+2. **Read source materials** (per-Tier-B-file feed-ins):
+   - For `growth.md` ← all of `session-insights.md` (full read), last 10 entries of `antifragile.md` (some growth-shape content gets misrouted there per Diego's cause-4 catch), close-day `### Observed` sections from the last 30 daily notes
+   - For `profile.md` ← cross-session identity signals in `session-insights.md` (consistent personality traits surfaced across 2+ sessions per CLAUDE.md trigger rule), any "## Core identity threads"-shape language in recent daily notes
+   - For `ecosystem.md` ← all of `business.md` recent additions (venture relationship shifts), new people/connections named in last 60 days of daily notes, any new venture-mount activity (`.{venture}-sync` trackers)
+
+3. **Apply substance bar — observation only fires when it passes ALL four tests** (same gate `/close-day` uses):
+   - **Timeline test** — matters in 90 days, not just a today-mood
+   - **Uniqueness test** — NOT already named in target file (paraphrasing = noise; novel synthesis = signal)
+   - **Evidence test** — connects to 2+ sessions or clear cross-source pattern
+   - **Essentiality test** — if removed in 90 days, file loses something real
+
+4. **Write autonomously when bar passes** — Radical Candor voice, evidence-cited, no approval prompt per observation. Update frontmatter `updated:` date. Update footer attribution to name this as catch-up (so the historical signal is preserved): *"Last updated: {date} (Tier B catch-up after {N}-day gap — {N} new entries from accumulated session-insights + antifragile)"*
+
+5. **What NOT to write:**
+   - Single-session observations without 2+ evidence (leave in session-insights)
+   - Sophisticated patterns observations dressed as self-growth (those go to patterns.md)
+   - Existing edges paraphrased (extend existing entries instead — see growth.md edges that have "Update {date}" sub-entries for the pattern)
+   - System rules for Claude (those go to antifragile.md, not growth.md)
+   - Speculative identity traits not confirmed across 2+ sessions (leave for future observation)
+
+6. **Surface the catch-up output to operator:**
+
+   ```
+   ### Tier B catch-up complete
+   - growth.md   — {N} new edges (#X through #Y), {M} lines added, snapshot at {path}
+   - profile.md  — {N} new threads, {M} lines added, snapshot at {path}
+   - ecosystem.md — {N} new sections, {M} lines added, snapshot at {path}
+   
+   What did NOT pass the substance bar (held for future observation):
+   - {count} single-session observations remain in session-insights.md (need 2+ evidence)
+   - {count} growth-content remains in antifragile.md (judgment call — could route in future catch-up)
+   
+   Recovery: snapshots at vault/00 - notes/logs/observed-snapshots/{YYYY-MM}/{date}-catchup-*.md
+   ```
+
+7. **Commit + push** with a clear `chore(observed): Tier B catch-up — N growth + N profile + N ecosystem additions` message that summarizes the write.
+
+**Time budget:** ~10-15 minutes for a vault with 60-90 days of accumulated history. Longer for older vaults (read scope scales linearly). The Claude session can run this concurrently with the operator doing something else — it's a read-heavy synthesis pass, not interactive.
+
+**Why this phase is REQUIRED (not optional) for >30-day-old vaults:**
+The forward Tier B mechanism (`/close-day` digest) builds on the assumption that Tier B files reflect current operator state. Operators arriving at the new framework with 78-day-stale growth.md (Diego's case at migration time) would have their first `/close-day` digest run *on top of* a frozen baseline — propagating stale observations as if current. The catch-up resets the baseline so the forward mechanism starts honest.
+
+**For operators with <30 days of vault history:** skip this phase. There's no accumulation to catch up. The forward `/close-day` digest will keep Tier B files alive from day one.
 
 ---
 
