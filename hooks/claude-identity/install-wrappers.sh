@@ -238,10 +238,18 @@ LAUNCHER
       # precedence over legacy "Antigravity.app" (now an empty shell on updated machines).
       # pgrep -q "Antigravity" matches BOTH names by substring, so we must check the more
       # specific name first or the AppleScript targets the wrong app.
-      pgrep -q "Antigravity IDE" && ide_app="Antigravity IDE"
-      [ -z "$ide_app" ] && pgrep -q "Antigravity" && ide_app="Antigravity"
+      # Use `pgrep -x` (exact match) for Antigravity + Cursor — `-q`
+      # was substring-matching the macOS text-input helper
+      # `CursorUIViewService` and (potentially) any process containing
+      # "Antigravity" as a substring. Fix originally landed Apr 22 in
+      # legacy claude-identity (commit c4b89bd) — never ported when the
+      # wrapper consolidated into install-wrappers.sh; regression caught
+      # 2026-05-22 on sarah. VS Code keeps `-qf` because "Visual Studio
+      # Code" lives in args, not in the process name.
+      pgrep -xq "Antigravity IDE" && ide_app="Antigravity IDE"
+      [ -z "$ide_app" ] && pgrep -xq "Antigravity" && ide_app="Antigravity"
       [ -z "$ide_app" ] && pgrep -qf "Visual Studio Code" && ide_app="Visual Studio Code"
-      [ -z "$ide_app" ] && pgrep -q "Cursor" && ide_app="Cursor"
+      [ -z "$ide_app" ] && pgrep -xq "Cursor" && ide_app="Cursor"
 
       if [ -n "$ide_app" ]; then
         # AppleScript pattern: Ctrl+Shift+\` to create a new terminal, then
