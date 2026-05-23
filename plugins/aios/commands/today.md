@@ -190,18 +190,37 @@ Place triage decisions at the top of Parking lot, not buried in Rhythm.
 
 Detect first run by checking: `about_me.md` still has template placeholders (`{{full name}}`, `{{date}}`), AND no previous daily notes exist in the calendar folder. Don't rely on project count — the repo may ship with reference projects.
 
-If first run:
-- The daily opener should acknowledge this is a fresh start: "Day one. Everything compounds from here."
-- Skip the Radar table (no user projects to show — ignore archived reference projects)
-- Skip "Today I ship" (no context to derive it from)
-- Skip the command suggestion and nudge (no observed context to draw from)
-- Instead, present a simple "Getting Started" section:
-  - [ ] Fill in `USER.md` — sources, organization, identity
-  - [ ] Fill in `about_me.md` — even 5 bullets make a difference
-  - [ ] Fill in `working_style.md` — how you think, decide, and prefer to work
-  - [ ] Create your first project note in `00 - notes/projects/`
-  - [ ] Run `/aios:today` again after filling in context
-- Still use pre-loaded Calendar and Tasks data from the executor (these work immediately)
+**If first run, hand off to the onboarding agent.** A blank daily plan with a setup checklist is the wrong first experience — the operator deserves a guided walkthrough, not a self-service todo list. The `onboarding-aios` agent exists precisely for this; it knows the journey, the principles, the doc map, and what to surface at Day 0.
+
+The first-run daily note becomes minimal — an opener + a single explicit pointer to the onboarding agent:
+
+```
+# {date} — Day One
+
+> *Day one. Everything compounds from here.*
+
+This is your first `/aios:today` run, so there's no context yet — no declared context, no projects, no observed patterns. That's exactly what the onboarding agent is for.
+
+## Recommended next step
+
+Spawn the onboarding session — it'll walk you through:
+- Filling in declared context (`about_me`, `working_style`, etc.) — the foundation Claude reads every session
+- Creating your first project (or importing existing work)
+- Optional: mount a company context (`/aios:company`) or scaffold a collaboration space (`/aios:collaborate`)
+- Understanding the daily/weekly/monthly cadence so the compound starts
+
+To begin: **`spawn onboarding-aios "Walk me through Day 1 — I just installed AIOS."`** (opens in a new terminal/tab) — or invoke as an agent from this session if you'd rather stay here.
+
+## Calendar (pre-loaded)
+
+{Today's events from the executor, if any — Calendar + Tasks data works immediately even without vault context.}
+```
+
+**Why hand off instead of inline checklist:** the onboarding agent is calibrated to ask one question at a time, adapt to what the operator already has filled, surface the right next thing per their position in the journey (Prompt → Context → Intent → Collaboration → Second Brain → AI Company), and offer the right primitive at the right moment (`/aios:company` if they're operating in a venture, `/aios:collaborate` if they're co-creating, plain projects otherwise). A static checklist can't do that. The handoff also makes the agent discoverable from the first ritual the operator ever runs.
+
+**If kickstart sources are configured in USER.md** (Google Workspace, Slack, GitHub for project imports): mention this as an option the onboarding agent will surface — don't auto-import on first run without the operator's affirmation.
+
+**Still write the daily note** (don't skip the write because it's Day 1). The operator's first daily note is a meaningful artifact — they'll re-read it later as the start of their compound. Calendar + Tasks pre-loaded data still goes into the note.
 
 ## Output
 
