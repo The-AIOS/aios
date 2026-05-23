@@ -270,9 +270,62 @@ this draft? (yes / let-me-edit / show-me-the-full-file)
 
 The auto-draft is honest about its source — it doesn't pretend to be the operator's voice, but it's a real first pass that gets the bundle to a complete state. Operator can refine in `voice.md` directly post-create.
 
-### Step 4.5 — Auto-bundle the `onboarding-{company}` agent
+### Step 4.5 — Onboarding agent (bundle-ships-with companion)
 
-Before pushing, copy `agents/onboarding-{company}.md` from the scaffold and replace its `{company}` / `{Company}` / `{org}` / `{YYYY-MM-DD}` placeholders with the operator's actual values. The agent ships with every new venture-context repo so mounters get the HR-Day-1 experience automatically. The agent reads `voice.md` at invocation time, so the auto-draft from Step 4 above directly determines how this agent will sound when teammates mount.
+After context files are drafted, **explicitly mention the onboarding agent + offer customization**. The operator must KNOW the agent ships and have a chance to adapt it before push — silent "copy + replace placeholders" leaves them blind to a load-bearing piece of their bundle.
+
+Show this prompt:
+
+```
+Almost ready to push. One last thing: every venture-context ships with
+an `onboarding-{company}.md` agent — the HR-Day-1 companion for anyone
+who mounts {Company} later. It reads your `voice.md` to calibrate its
+register, then walks operators through identity → products → personas
+→ pricing → toolbox. Three paths (new hire / commercial brief /
+structural overview) and a change-digest mode for post-sync calls.
+
+Auto-fires after `/aios:company --mount`; offered after `--sync` with
+substantive changes; spawnable anytime via `spawn onboarding-{company}`.
+
+Three options for shipping it:
+
+  (a) Ship the template as-is — placeholders auto-filled from your
+      context. Generic shape, works for 80% of cases.
+
+  (b) Let me adapt the template based on what you just filled in.
+      I noticed {1-2 specific observations from the interview content
+      — e.g., "your offering ladder has 5 distinct tiers with format
+      multipliers; the agent's product-walk could mirror that
+      structure" OR "your voice is bilingual ES/EN with fluent
+      code-switching; I can wire that into the welcome flow's
+      language-detection". Pull the observations from voice.md /
+      personas.md / offerings.md you just drafted.}. I'll draft a
+      customized version + show you the diff.
+
+  (c) Skip — ship the template, you'll edit `agents/onboarding-
+      {company}.md` directly post-create.
+
+Default (a) if no answer in 60s.
+```
+
+**Branching:**
+
+- **(a) As-is:** copy `agents/onboarding-{company}.md` from the scaffold, replace `{company}` / `{Company}` / `{org}` / `{YYYY-MM-DD}` placeholders with operator's actual values. Ship.
+
+- **(b) Customized:** Claude reads the just-drafted `voice.md`, `about_venture.md`, `personas.md`, `offerings.md`. Suggests 2-4 specific customizations to the agent's flow — examples:
+  - Welcome-flow opening phrasing matched to voice.md's register
+  - Path A product-walk reordered to match the operator's actual offering ladder structure
+  - Bilingual / multilingual code-switching rules if voice.md indicates them
+  - Voice-specific examples in the change-digest section (drawn from positioning + brand)
+  - Sign-off line in the company's tone (Sovra's "Bienvenido al equipo"; ChuyCepeda's "Clarity before velocity. AI amplifies what is already clear.")
+  
+  Show the diff. Operator accepts / edits / reverts to (a). Ship the accepted version.
+
+- **(c) Skip:** copy template with placeholder replacement only. Ship. Operator can edit later.
+
+**Always tell the operator they can edit the agent any time post-create** — it lives at `agents/onboarding-{company}.md` in the repo. Edits propagate to mounters on their next `/aios:company --sync`.
+
+**Why offer (b):** the template is necessarily generic (it serves Sovra + ChuyCepeda + Acme + any future operator equally). But each company has a *distinct* voice + offering shape that the template can't anticipate. Claude has the just-filled context fresh in mind and can spot specific customizations that improve fit — it's a low-cost, high-value moment of polish.
 
 ### Step 5 — Push to remote
 
