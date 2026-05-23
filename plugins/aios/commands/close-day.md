@@ -174,7 +174,8 @@ For each file that exists:
 - **"Decisions"** → route to the matching project's Session Notes (same routing rules as meeting notes)
 - **"Pendientes"** → include in Carries forward
 - **"Notes"** → feed Learned + Observed sections
-- **"Observed"** (if present) → route to the appropriate observed context file (`patterns.md`, `preferences.md`, `growth.md`, etc.). Same rules as the "Observed context updates" section below: check always, update when warranted, snapshot before editing. This is how observations from standalone project sessions reach the vault — no context is lost even when Claude isn't running in the vault terminal.
+- **"Observed"** (if present) → route to the appropriate Tier A observed context file (`patterns.md`, `preferences.md`, `business.md`, `antifragile.md`). Snapshot before editing. This is how Tier A observations from standalone project sessions reach the vault — no context is lost even when Claude isn't running in the vault terminal.
+- **"Observed (Tier B candidates)"** (if present) → DO NOT write to `growth.md` / `profile.md` / `ecosystem.md` directly from this routing. Instead, feed these candidates into the Tier B digest pass (see § Tier B observation pass below). The digest enforces the substance bar across all sessions for the day before any Tier B write fires — preventing per-session-noise amplification.
 
 **If the summary includes a `## Project Note Updates` section:**
 - **Current State:** merge into the project note's `## Current State` section (replace or complement — use judgement)
@@ -469,14 +470,58 @@ Show the user a summary table before executing any changes:
 Not every day produces new observations — but never skip this check. The observed context is the compound value of the vault. Update when a **relevant, significant behavioral or strategic pattern** emerges. Don't update just because the day was productive — update because something was *understood* that wasn't understood before.
 
 Candidates:
-- `session-insights.md` — scan and garden the observation buffer (reinforce, add, route, clean up)
-- `growth.md` — new growth edge or confirmed pattern
+- `session-insights.md` — scan and garden the observation buffer (reinforce, add, route, clean up). Emerging → Reinforced → Routed lifecycle; ≤10 Emerging, ≤5 Reinforced.
+- `growth.md` — new growth edge or confirmed pattern (Tier B — see digest pass below)
 - `patterns.md` — new behavioral or decision-making pattern
 - `business.md` — strategic insight about ventures or relationships
-- `profile.md` — new identity/background information surfaced
-- `ecosystem.md` — new relationship or network dynamics
+- `profile.md` — new identity/background information surfaced (Tier B — see digest pass below)
+- `ecosystem.md` — new relationship or network dynamics (Tier B — see digest pass below)
 - `preferences.md` — new working preference discovered (tool, format, communication style)
 - `vault-routine.md` — cadence adjustment needed (e.g., a command was too frequent/infrequent, a routine isn't landing)
+
+### Tier B observation pass (growth / profile / ecosystem — proactive digest, NOT timer-driven)
+
+**Why this step exists:** files like `growth.md`, `profile.md`, `ecosystem.md` are observations about the *operator*, not about today's work. They live one synthesis layer above `session-insights.md`. Without an explicit pass, they go cold while `session-insights.md` + `antifragile.md` accumulate growth-shaped content that never reaches its proper home. The compounding promise breaks silently.
+
+This step makes Tier B updates work the same way `session-insights.md` gardening already does: **autonomous Claude observation, fired every close-day, governed by a substance bar — not by an approval prompt or a timer.** When real Tier B content surfaces, Claude writes it directly (same posture as `antifragile.md` on a system catch). When nothing surfaces that meets the bar, Claude logs that honestly and moves on. The staleness number resets when *real* observation lands, not when noise is manufactured to keep the file warm.
+
+**Fire this pass after session-insights gardening, before snapshotting other observed files.**
+
+For each Tier B file (`growth.md`, `profile.md`, `ecosystem.md`):
+
+1. **Read feed-in sources** (file-specific):
+   - `growth.md` ← recent `antifragile.md` entries (last 7 days — Diego's cause-4 catch: growth content sometimes lands in antifragile by mistake) + Reinforced entries in `session-insights.md` with self-shape (about the operator changing, not about work mechanics) + close-day `### Observed` sections from the last 5 daily notes
+   - `profile.md` ← cross-session identity signals in `session-insights.md` (consistent personality trait surfaced across 2+ sessions per CLAUDE.md trigger rule) + "## Core identity threads" candidates from recent daily notes
+   - `ecosystem.md` ← recent `business.md` additions (venture relationship shifts) + new people/connections named in the last 7 days of daily notes
+
+2. **Run the substance bar** — observation only fires when it passes ALL four tests:
+   - **Timeline test** — will this observation matter in 90 days? (not just a today-mood)
+   - **Uniqueness test** — is this NOT already named in the target Tier B file? (paraphrasing existing content is noise; novel synthesis is signal)
+   - **Evidence test** — does this connect to 2+ sessions or a clear cross-source pattern? (one-off observations live in `session-insights.md`, not Tier B)
+   - **Essentiality test** — if removed in 90 days, would the file lose something real? (essential = write; replaceable = don't)
+
+3. **If passes the bar → WRITE.** Claude observes autonomously. No approval prompt. Same posture as `antifragile.md` on a system catch. Snapshot the file first (per the mandatory snapshot rule), then write the observation. Use [[wiki-links]] where natural.
+
+4. **If nothing passes the bar → DON'T WRITE.** Don't manufacture content to keep the file warm. The staleness counter keeps ticking; that's honest data, not failure.
+
+5. **Surface the digest result in close-day output** (always, regardless of write/no-write):
+
+   ```
+   ### Tier B digest
+   - growth.md       — last touched {N} days ago. Digest: {wrote 1 entry | nothing passed substance bar | already current}
+   - profile.md      — last touched {N} days ago. Digest: {result}
+   - ecosystem.md    — last touched {N} days ago. Digest: {result}
+   ```
+
+   This is the trail data — operator sees the digest fired AND its outcome, so silent drift can't hide. If a file is >30 days stale AND the digest has surfaced "nothing passed substance bar" 3+ close-days in a row, append a softer escalation: *"⚠️ growth.md has been cold across 3 consecutive digests. Either growth genuinely paused this period, or the digest is missing something. `/emerge` (bi-weekly) revisits at a longer altitude; consider running it now if this feels wrong."*
+
+**What this step does NOT do:**
+- Doesn't gate writes on operator approval (that's Ruinous Empathy disguised as care; CLAUDE.md → Anti-values catches this)
+- Doesn't try to replicate `/emerge`'s cleanup pass (resolved edges, contradicted patterns — that's bi-weekly cadence, longer horizon)
+- Doesn't write to Tier A files (patterns, business, preferences — those have their own routing protocol, well-functioning)
+- Doesn't write `antifragile.md` (Claude's system-rule layer; event-triggered on corrections, separate flow)
+
+**Connection to other commands:** `/close-session` captures Tier B candidates in its session-report's `Observed` section but does NOT write Tier B files directly — close-session lacks the cross-session view needed for the substance bar. `/close-day` is where the synthesis lands because it has the full daily + session reports context. `/emerge` (bi-weekly) revisits at a longer horizon for cleanup. `/drift` (weekly) uses `ecosystem.md` for declared-vs-actual gaps. Three altitudes, each clear.
 
 ### Snapshot before editing (mandatory)
 

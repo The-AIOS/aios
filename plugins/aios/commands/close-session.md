@@ -60,11 +60,13 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
    - New behavioral pattern confirmed (2+ sessions of evidence) → `patterns.md`
    - New preference discovered → `preferences.md`
    - Strategic insight about ventures → `business.md`
-   - Ecosystem connection → `ecosystem.md`
-   - Growth moment or avoidance pattern → `growth.md`
-   - New identity/background information → `profile.md`
    - System failure or user correction → `antifragile.md`
    Snapshot before editing. Not every session produces observations — but never skip this check for speed. The observed context is the compound value of the vault.
+
+   **Tier B files (growth / profile / ecosystem) — capture candidates, do NOT write directly.** These files live one synthesis layer above session-insights — observations about the operator (not about work mechanics). A single session lacks the cross-session view needed to clear the substance bar (timeline + uniqueness + evidence + essentiality tests). Instead:
+   - Note Tier B candidates in this session's daily-note block under `**Observed (Tier B candidates):**` — e.g. *"possible growth edge: re-secuenciar > apurar el cierre, 3rd instance this month"*. One line each. Date + evidence. No write to growth/profile/ecosystem.md.
+   - `/close-day` runs the digest across all sessions, the daily note, and recent antifragile/session-insights, then writes to Tier B files when the substance bar passes (see `/close-day` § Tier B observation pass for the bar + per-file feed-in sources).
+   - **Why this split:** close-session is single-session scope; close-day has cross-session + daily synthesis context. Writing Tier B from close-session would amplify per-session noise (same insight surfacing 3 times across 3 close-sessions, written 3 times). Close-day consolidates the signal.
 8. **Self-update verification** — before commit, walk the CLAUDE.md Session End rules to confirm step 7 wasn't skipped. The compounding promise of the AI-OS lives in routing, not logging.
 
    - [ ] Snapshotted observed-context files I modified (per CLAUDE.md → "Session End → Snapshot before editing")
@@ -103,6 +105,9 @@ Append this to the daily note:
 
 **Open threads:**
 - [ ] {Unfinished items — these feed next session or close-day carries. Write "None" if the session closed cleanly. Don't fabricate threads to fill the field.}
+
+**Observed (Tier B candidates):**
+- {One-line capture of any growth / profile / ecosystem candidates surfaced this session — observations about the OPERATOR (not work mechanics). Skip the field entirely if nothing surfaced. Don't fabricate to fill it. Examples: "possible growth edge: re-secuenciar > apurar (3rd instance this month)" / "ecosystem shift: Lucas Jolias is now in advisor-grade orbit, not weekly-collab" / "profile signal: integrative work AND presentation work compound together, naming the integrative posture as identity-level" — these become feed-in for /close-day's Tier B digest later, which decides whether they pass the substance bar to write.}
 
 **Energy:** {One honest word — sharp, scattered, fading, deep flow}
 ```
@@ -169,6 +174,16 @@ duration: {estimated hours}
 <!-- Optional: patterns, preferences, or growth edges noticed about the user during this session.
      /close-day routes these to the appropriate observed context file.
      Leave empty if nothing significant was observed. -->
+
+## Observed (Tier B candidates)
+<!-- Optional: one-line captures of growth / profile / ecosystem candidates surfaced this session —
+     observations about the OPERATOR, not about work mechanics. Single sessions lack the cross-session
+     view to clear the substance bar, so we capture here and /close-day decides whether to write to
+     growth.md / profile.md / ecosystem.md via its Tier B digest pass.
+     Skip entirely if nothing surfaced. Don't fabricate. Examples:
+     - "possible growth edge: re-secuenciar > apurar (3rd instance this month)"
+     - "ecosystem shift: {person} now in advisor-grade orbit, not weekly-collab" -->
+
 
 ## Project Note Updates
 {Proposed changes to the vault project note. /close-day applies these.}
