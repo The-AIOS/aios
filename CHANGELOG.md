@@ -102,16 +102,14 @@ VAULT_PATH=""
 [ -z "$VAULT_PATH" ] && for try in \
     "$HOME/code/internal-vault" "$HOME/internal-vault" \
     "$HOME/code/aios" "$HOME/Documents/aios" "$HOME/Documents/obsidian" \
-    "$HOME/code/sovrahq/internal-vault" "$HOME/code/chuycepeda/aios" \
-    "$HOME/OneDrive/Documents/aios" "$HOME/OneDrive/Documents/obsidian" \
-    "$HOME/OneDrive - Personal/Documents/aios" "$HOME/OneDrive - Personal/Documents/obsidian"; do
+    "$HOME/code/sovrahq/internal-vault" "$HOME/code/chuycepeda/aios"; do
   [ -e "$try/vault/01 - calendar" ] && VAULT_PATH="$try" && break
 done
 
 if [ -z "$VAULT_PATH" ]; then
   echo "⚠️  Could not detect your vault root."
   echo "    Scanned: ~/aios, ~/obsidian, ~/code/{internal-vault,aios,sovrahq/internal-vault,chuycepeda/aios},"
-  echo "             ~/internal-vault, ~/Documents/{aios,obsidian}, ~/OneDrive*/Documents/{aios,obsidian}"
+  echo "             ~/internal-vault, ~/Documents/{aios,obsidian}"
   echo ""
   echo "    STOP. Tell Claude the absolute path to your vault root (the folder containing"
   echo "    'vault/' + USER.md + .vault-update). Claude will set VAULT_PATH manually and"
@@ -604,7 +602,6 @@ These folders are needed for `/aios:learned`, `/aios:weekly-learnings`, `/aios:r
 
 **Act:**
 
-**macOS / Linux / WSL / Git Bash:**
 ```bash
 cd "$HOME/aios"
 for d in \
@@ -626,30 +623,7 @@ done
 echo "✓ scaffold folders ensured"
 ```
 
-**Windows PowerShell:**
-```powershell
-Set-Location "$HOME\aios"
-$folders = @(
-  "vault\00 - notes\logs\observed-snapshots",
-  "vault\00 - notes\logs\role-logs",
-  "vault\02 - assets\generated",
-  "vault\03 - export\reports\learned",
-  "vault\03 - export\reports\weekly",
-  "vault\03 - export\reports\monthly",
-  "vault\03 - export\reports\role",
-  "vault\03 - export\talks",
-  "vault\03 - export\meetings",
-  "vault\03 - export\writing\1-drafts",
-  "vault\03 - export\writing\2-ready",
-  "vault\03 - export\writing\3-published"
-)
-foreach ($d in $folders) {
-  New-Item -ItemType Directory -Force -Path $d | Out-Null
-  $keep = Join-Path $d ".gitkeep"
-  if (-not (Test-Path $keep)) { New-Item -ItemType File -Path $keep | Out-Null }
-}
-Write-Host "✓ scaffold folders ensured"
-```
+Run via Claude's `Bash` tool — works identically on macOS, Linux, and Windows (Git Bash, the AIOS-standard shell on Windows).
 
 ---
 
@@ -685,9 +659,8 @@ grep -rln \
   "$MEM_DIR" 2>/dev/null | sort -u
 ```
 
-Show the operator the affected files. Then with confirmation, apply the full rewrite:
+Show the operator the affected files. Then with confirmation, apply the full rewrite — this is Claude wiping its OWN auto-memory store, run via the `Bash` tool (Git Bash on Windows, native bash on macOS/Linux):
 
-**macOS / Linux / WSL / Git Bash:**
 ```bash
 find "$MEM_DIR" -name "*.md" -type f -exec sed -i.bak \
   -e 's|vault-commands:|aios:|g' \
@@ -706,37 +679,6 @@ find "$MEM_DIR" -name "*.md" -type f -exec sed -i.bak \
 echo "✓ memory wiped of old-world references"
 echo "  .bak files preserved at *.bak in $MEM_DIR — verify with: find $MEM_DIR -name '*.md.bak'"
 echo "  Once verified, remove with: find $MEM_DIR -name '*.bak' -delete"
-```
-
-**Windows PowerShell:**
-```powershell
-$memDir = "$HOME\.claude\projects"
-$substitutions = @(
-  @{ Old = 'vault-commands:';      New = 'aios:' }
-  @{ Old = 'vault-commands@local'; New = 'aios@the-aios' }
-  @{ Old = '/vault-update';        New = '/aios:update' }
-  @{ Old = '\.vault-update';       New = '.aios-update' }
-  @{ Old = '~/obsidian/';          New = '~/aios/' }
-  @{ Old = 'vault/02 - templates'; New = 'templates' }
-  @{ Old = 'vault/06 - agents';    New = 'agents' }
-  @{ Old = 'vault/05 - logs';      New = 'vault/00 - notes/logs' }
-  @{ Old = 'vault/03 - assets';    New = 'vault/02 - assets' }
-  @{ Old = 'vault/04 - export';    New = 'vault/03 - export' }
-  @{ Old = 'sovrahq/internal-vault'; New = 'The-AIOS/aios' }
-  @{ Old = 'chuycepeda/aios';      New = 'The-AIOS/aios' }
-)
-Get-ChildItem -Path $memDir -Recurse -Filter "*.md" -File | ForEach-Object {
-  $path = $_.FullName
-  Copy-Item -Path $path -Destination "$path.bak" -Force
-  $content = Get-Content -Raw -Path $path
-  foreach ($s in $substitutions) {
-    $content = $content -replace $s.Old, $s.New
-  }
-  Set-Content -Path $path -Value $content -NoNewline
-}
-Write-Host "✓ memory wiped of old-world references"
-Write-Host "  .bak files preserved at *.bak in $memDir"
-Write-Host "  Once verified, remove with: Get-ChildItem $memDir -Recurse -Filter '*.bak' | Remove-Item"
 ```
 
 **Important exceptions** — leave these untouched:
