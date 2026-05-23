@@ -21,6 +21,9 @@ How to launch, name, and resume sessions.
 | Kill a spawned worker cleanly | `spawn-kill <name>` | Atomic process-group kill + closes the Terminal window (macOS). Avoids orphan Claude processes + Terminal's "terminate?" modal. Doesn't affect IDE-integrated terminals (the IDE manages those). |
 | Override model for spawned workers | `export CLAUDE_MODEL='claude-sonnet-4-6'` (or any model) in `~/.zshrc` | Wrapper **defaults to `claude-opus-4-7[1m]` (1M context Opus)** since AIOS leans on context engineering. Override for cheaper Sonnet sessions, 3P providers, or non-1M Opus. Note: `/config` and `/model` are session-scoped — they DON'T propagate to spawned children. The wrapper's `--model` flag does. |
 | Install the spawn wrapper | `bash ~/aios/hooks/claude-identity/install-wrappers.sh` | One-time setup. Idempotent — safe to re-run. Installs `spawn`, `spawn-kill`, `buddai`, `_claude_with_respawn`. |
+| Mount a teammate's company context | `/aios:company --mount {url}` | One-time per company. Pulls venture context (positioning, gtm, pricing, primitives) into `vault/00 - notes/context/ventures/{name}/` + registers in `USER.md → ## Companies (mounted)`. |
+| Scaffold a NEW company context repo | `/aios:company --create` | Interview-driven scaffold from `The-AIOS/company-template`. Lands at `{org}/{company}-context` (your choice). |
+| Refresh mounted company context | `/aios:company --sync {name}` (or `--sync-all`) | Pulls remote → vault for the named company. Run when teammates push updates. |
 | Run Claude without spawn | `claude --remote-control --name <name>` | Bypasses wrapper; not recommended |
 
 **Why use `spawn` over raw `claude`:** the wrapper sets `$CLAUDE_AGENT_NAME` so CLAUDE.md can match an agent profile (`agents/<name>.md`), greet you in character, and route close-session reports back to the right project. Raw `claude` works but loses the identity-aware behavior.

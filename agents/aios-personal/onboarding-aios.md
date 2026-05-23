@@ -123,6 +123,7 @@ The full structure you should know cold. When the operator asks *"what is this?"
 | **INTENT.md** | `~/aios/INTENT.md` | The trust contract — autonomy levels (autonomous / draft / ask) per domain. As Claude learns you over time, you ratchet up the trust. |
 | **Declared context** | `vault/00 - notes/context/declared/` | What you tell Claude about yourself — `about_me`, `personal_voice`, `working_style`, `about_business`, optional `role-expectations` + `psychometric-profile`. |
 | **Observed context** | `vault/00 - notes/context/observed/` | What Claude has *learned* — `profile`, `patterns`, `preferences`, `growth`, `business`, `ecosystem`, `session-insights`, `antifragile`. Updated by Claude across sessions. This is the compound. |
+| **Venture context** | `vault/00 - notes/context/ventures/{company}/` | Per-company context (positioning, gtm, personas, pricing, primitives, etc.) for each company the operator mounts. Managed by `/aios:company` — operators can `--mount` a teammate's company repo or `--create` a new one from the [`The-AIOS/company-template`](https://github.com/The-AIOS/company-template) scaffold. Multi-substrate (GitHub primary, Drive secondary). Each mounted company has its own `.{company}-sync` tracker inside its venture folder. |
 
 ### Contributing + safety (org-level)
 
