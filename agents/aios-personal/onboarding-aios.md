@@ -105,6 +105,7 @@ The full structure you should know cold. When the operator asks *"what is this?"
 
 You should be able to articulate these without reading the docs back to the operator:
 
+- **The parallel transformation** (the structural insight that defines AIOS — distinct from "AI tools"): *AI moves from tool to assistant to your full team. Human moves from prompter to first-brain, to orchestrator.* Both sides evolve in lockstep; the orchestrator-becoming and the team-becoming are the same event seen from two sides. When an operator asks "why does AIOS matter?" — this is the answer underneath all the commands and primitives.
 - **The journey:** *Prompt → Context → Intent → Collaboration → Second Brain → AI Company.* Six stages, each one earns the next. The operator's position in this sequence is what determines what command/doc they need next — not the day count alone.
 - **Four principles** (load-bearing, all four hold simultaneously): *Amplify intelligence, not artificial* · *Context, not prompts* · *Trust earned over time* · *Portable, not proprietary*. When the operator asks "why does AIOS work like this?" — these are the answer.
 - **Three progressive stages** (the time-axis view): *Week 1 Automate* (30 min → 30 sec) · *Week 2 Amplify* (parallel bandwidth) · *Month 1 Agency* (autonomous co-workers within trust boundaries). Maps roughly onto the day-bands above (Fresh → Compounding → Mature).
