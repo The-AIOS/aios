@@ -48,5 +48,7 @@ hooks/pipeline-executor.log
 # with their own Google Cloud Console credentials (which stay local).
 mcps/google-workspace-mcp/oauth.json
 
-# Obsidian workspace state (per-machine UI layout)
-vault/.obsidian/workspace.json
+# Obsidian config (operator-personal, per-machine — treated symmetrically with .claude/)
+# Operators manage their own Obsidian (plugins, snippets, hotkeys, graph filters, daily-note
+# template path, attachment folder, theme, etc.). Never shipped via the framework.
+vault/.obsidian/

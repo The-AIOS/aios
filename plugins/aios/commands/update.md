@@ -16,7 +16,7 @@ allowed-tools: >-
 
 You are syncing this person's vault infrastructure with the framework's source of truth. Read the framework upstream URL from `.aios-update` at the repo root (the canonical source). If `.aios-update` doesn't exist OR is missing the `repo=` field, default to `git@github.com:The-AIOS/aios.git` (the canonical framework upstream) and ask the user to confirm before proceeding. Also read `USER.md` → `### /aios:update` for command personalizations. This covers commands, templates, settings, and docs — NOT personal content.
 
-> ⚠️ **Operator-personal files are NEVER overwritten by this command.** Hard denylist — `/aios:update` MUST refuse to write to any of these, regardless of tier classification: `USER.md`, `INTENT.md`, `SARAH.md`, anything under `vault/00 - notes/{context,projects,ideas,reflections,logs}/`, anything under `vault/01 - calendar/`, `vault/02 - assets/`, `vault/03 - export/`, `vault/04 - backups/`, all `{layer}/custom/` folders, all `{layer}/<company>/` folders, `.aios-update`, `.claude/settings.json`, `.claude/settings.local.json`. These files ship as templates from the framework but the operator's instance is their source-of-truth. Template evolution surfaces as Tier 3 advisory only — section-by-section nudges, never file replacement. See `antifragile.md` #55 for the system-level lesson on path-identity vs content-identity.
+> ⚠️ **Operator-personal files are NEVER overwritten by this command.** Hard denylist — `/aios:update` MUST refuse to write to any of these, regardless of tier classification: `USER.md`, `INTENT.md`, `SARAH.md`, anything under `vault/00 - notes/{context,projects,ideas,reflections,logs}/`, anything under `vault/01 - calendar/`, `vault/02 - assets/`, `vault/03 - export/`, `vault/04 - backups/`, all `{layer}/custom/` folders, all `{layer}/<company>/` folders, `.aios-update`, `.claude/` (entire folder — operator's per-machine Claude Code config), `vault/.obsidian/` (entire folder — operator's per-machine Obsidian config, symmetric with `.claude/`: plugins, snippets, hotkeys, graph filters, daily-note paths, themes are all operator choices). These files ship as templates from the framework but the operator's instance is their source-of-truth. Template evolution surfaces as Tier 3 advisory only — section-by-section nudges, never file replacement. See `antifragile.md` #55 for the system-level lesson on path-identity vs content-identity.
 
 ## When to use
 
@@ -40,8 +40,6 @@ Files where the team version is always correct. Overwrite without merge.
 - `templates/aios-*` and `templates/*.md` at top level (NEVER overwrite `templates/custom/` — operator-specific extensions)
 - `skills/*` EXCEPT `skills/custom/` (full folder replace for bundled skills; preserve operator extensions)
 - `hooks/*` EXCEPT `hooks/custom/` (pipeline executor, markitdown converter, claude-identity wrappers)
-- `vault/.obsidian/*.json` (Obsidian config baseline — app.json, appearance.json, backlink.json, community-plugins.json, core-plugins.json, daily-notes.json, graph.json, hotkeys.json; NEVER touch `vault/.obsidian/workspace.json` which is per-machine UI state and gitignored)
-- `vault/.obsidian/snippets/*` (CSS fixes)
 - `mcps/*` EXCEPT `mcps/custom/` (vendored MCP servers — code + README; preserve operator-installed MCPs)
 - `agents/aios-*/` (bundled agent definitions — 6 bundles: sales, strategy, finance-legal, engineering, communication, personal — NEVER overwrite `agents/custom/` which holds operator-specific extensions)
 - `plugins/aios/**` (the bundled aios plugin — full folder replace EXCEPT `plugins/aios/commands/custom/`, which holds operator commands and survives updates)
@@ -167,7 +165,6 @@ git -C /tmp/vault-update-check diff {stored_hash}..HEAD --name-only -- \
   "templates/" \
   "skills/" \
   "hooks/" \
-  "vault/.obsidian/snippets/" \
   "mcps/" \
   "plugins/" \
   "agents/" \
