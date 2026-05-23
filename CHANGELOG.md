@@ -75,6 +75,8 @@ Phase 8    (Men-in-Black memory wipe — comprehensive old-world reference clean
   ↓
 Phase 8.5  (New day rising — onboarding-aios catch-up walkthrough, optional)
   ↓
+Phase 8.6  (Venture-context mount — REQUIRED if you came from a team-vault distribution)
+  ↓
 Phase 9    (Discovery surface awareness — informational)
   ↓
 LAST       (Restart Claude Code for plugin daemon reload)
@@ -745,20 +747,55 @@ The onboarding-aios agent will detect this is a returning-operator (sees old dai
 
 ---
 
+#### Phase 8.6 — Venture-context mount (REQUIRED if you came from a team-vault distribution)
+
+**State:** Pre-extraction, venture content (positioning, gtm, pricing, primitives, sales templates, venture-specific agents like `lawyerAR`) shipped INSIDE the team-vault repo (`sovrahq/internal-vault`, `chuycepeda/aios`, or any other team-distribution clone you started from). Post-extraction, venture content lives in its own per-venture repo (`{org}/{venture}-context`) and gets mounted into your vault as a namespaced bundle under `{layer}/{venture}/`.
+
+Without this mount step, your venture content **still works** — Phase 0 marked `vault/` as sacred, so your old static venture files survive intact. But: it's now a **frozen snapshot** of what shipped with the legacy team-vault. Future updates to positioning, pricing, new agents like `lawyerAR`, brand-spec revisions — none of those reach you until you mount. And Phase 2.5 preserved your legacy venture agents at `agents/custom/{...}/` defensively — those will silently drift from the canonical `agents/{venture}/{...}/` until you mount and resolve the duplicates.
+
+**Detect:** does your `USER.md` have an `## Organization` (or post-Phase-6 `## Companies (mounted)`) section pointing at a team-vault repo URL like `sovrahq/internal-vault` or `chuycepeda/aios`? Or did this migration originate from the 🚚 WE MOVED redirect in one of those team-vault repos? If yes, this phase applies.
+
+**Ask:**
+> *"You came from a team-vault distribution that bundled venture content. To stay synced with current canonical (positioning, pricing, new agents, brand updates), mount the venture-context repo as a namespaced bundle. Each venture you had bundled needs one `/aios:company --mount` invocation. Tell me which venture-context repos to mount — common ones include `git@github.com:sovrahq/sovra-context.git` (Sovra), `git@github.com:chuycepeda/chuycepeda-context.git` (ChuyCepeda). Multiple are fine — mount each one. After each mount, the `onboarding-{venture}` agent auto-fires and walks you through what landed."*
+
+**Act:** Per venture the operator names, run:
+
+```bash
+/aios:company --mount <venture-context-url>
+```
+
+`/aios:company --mount`:
+- Clones the venture-context repo under `vault/00 - notes/context/ventures/{venture}/`
+- Cascades any shipped infra into namespaced locations: `agents/{venture}/`, `plugins/{venture}/`, `templates/{venture}/`, etc.
+- Writes a per-venture tracker (e.g. `.sovra-sync`) so `/today` can later detect upstream changes
+- Auto-fires the bundle's `onboarding-{venture}` agent for the HR-Day-1 welcome
+- Surfaces any `agents/custom/{...}/{name}.md` files that now duplicate canonical `agents/{venture}/{...}/{name}.md` — operator decides per-file (keep custom if forked, delete custom if redundant)
+
+**Verification:**
+```bash
+# Each mounted venture should have a tracker + a bundle folder
+ls .{venture}-sync && ls "vault/00 - notes/context/ventures/{venture}" | head -5
+```
+
+**If skipped:** later runs of `/today` will scan mounted ventures and call out unmounted ones with: *"⚠️ You have legacy venture content at `vault/00 - notes/context/ventures/{venture}/` but no `.{venture}-sync` tracker — this content is frozen at the team-vault snapshot. Run `/aios:company --mount <url>` to stay synced with the canonical."*
+
+---
+
 #### Phase 9 — Discovery surface awareness (informational)
 
 **State:** Several new framework pieces landed that the operator may not know to use yet:
 
 | New capability | What it does | Where to learn |
 |---|---|---|
-| `/aios:company --create \| --mount \| --sync` | Multi-venture context distribution | `CHEATSHEET.md §1` + `commands/company.md` |
+| `/aios:company --create \| --mount \| --sync` | Multi-venture context distribution | `CHEATSHEET.md §1` + `plugins/aios/commands/company.md` |
 | `/aios:collaborate` | Shared work spaces (substrate-pluggable: Drive/GitHub/local) | `CHEATSHEET.md §1` |
 | `onboarding-aios` agent | Day-0 framework orientation, programmatic-trigger from /today first-run | `agents/aios-personal/onboarding-aios.md` |
 | `onboarding-{company}` agents | Per-company HR-Day-1 (ships in every venture-context repo) | `agents/onboarding-{company}.md` in mounted bundles |
-| `/aios:cold-start-interview` | Ritualized Day-0 setup with auto-onboarding handoff | `commands/cold-start-interview.md` |
+| `/aios:cold-start-interview` | Ritualized Day-0 setup with auto-onboarding handoff | `plugins/aios/commands/cold-start-interview.md` |
 | CI gates on framework + venture-context repos | 6-job (framework) / 5-job (context) validation on PRs | Their respective `.github/workflows/validate.yml` |
 | Antifragile #61 — `gh pr checkout` cross-repo hijack rule | Don't `gh pr checkout` from inside your vault — pulls foreign content into your working tree | `vault/00 - notes/context/observed/antifragile.md#61` (operator-personal) — universal lesson for any operator with multi-repo workflows |
 | `.claude/` + `vault/.obsidian/` are now fully operator-personal | Never overwritten by `/aios:update`; gitignored | `/aios:update` operator-personal denylist |
+| Multi-machine operators: re-run this playbook on each machine | If you have a SARAH.md (Mac mini / second-machine setup), the migration is per-machine — symlink, plugin install, memory wipe all live on each machine's local Claude Code | Ssh into the second machine, `cd ~/aios` (or its equivalent), open `claude`, invoke this playbook |
 
 **Ask:**
 > *"Want a quick tour of any of these? I can spawn `onboarding-aios` for the framework-level walkthrough, or just point you at the doc per capability. Or skip — you'll discover these naturally as `/today` surfaces them."*
