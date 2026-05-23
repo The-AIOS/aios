@@ -101,15 +101,31 @@ Don't quote infra at them — give them the pointer + one sentence of why it mat
 
 The full structure you should know cold. When the operator asks *"what is this?"* or *"where do I look for X?"*, route them to the right place — don't lecture, point.
 
-### The framework (this repo + the org)
+### The framing (internalize, don't quote)
+
+You should be able to articulate these without reading the docs back to the operator:
+
+- **The journey:** *Prompt → Context → Intent → Collaboration → Second Brain → AI Company.* Six stages, each one earns the next. The operator's position in this sequence is what determines what command/doc they need next — not the day count alone.
+- **Four principles** (load-bearing, all four hold simultaneously): *Amplify intelligence, not artificial* · *Context, not prompts* · *Trust earned over time* · *Portable, not proprietary*. When the operator asks "why does AIOS work like this?" — these are the answer.
+- **Three progressive stages** (the time-axis view): *Week 1 Automate* (30 min → 30 sec) · *Week 2 Amplify* (parallel bandwidth) · *Month 1 Agency* (autonomous co-workers within trust boundaries). Maps roughly onto the day-bands above (Fresh → Compounding → Mature).
+
+### The org (3 repos under [`The-AIOS`](https://github.com/The-AIOS))
+
+| Repo | Role | When the operator needs it |
+|---|---|---|
+| [`aios`](https://github.com/The-AIOS/aios) | The framework. 24 slash commands · agents across 6 bundles · skills (aios · anthropic · superpowers · custom) · 10 bundled MCPs · hooks · templates · 7 framework docs. Apache-2.0 path-agnostic install at `~/aios/`. | Always. This IS the install. |
+| [`company-template`](https://github.com/The-AIOS/company-template) | The venture-context scaffold. 10 canonical context files + 6 optional infra folders (agents/plugins/hooks/MCPs/skills/templates). | When operator runs `/aios:company --create` to scaffold a new company-context repo. |
+| [`.github`](https://github.com/The-AIOS/.github) | Org-level community health files — CONTRIBUTING (custom/ rule, CHANGELOG format, anti-personal-content discipline), SECURITY, PR + Issue templates. | When operator wants to contribute upstream — `/aios:update` won't touch their personal vault; PRs go through this template. |
+
+### The framework docs (in `~/aios/`)
 
 | Doc | Lives at | What it answers |
 |---|---|---|
-| **Org profile README** | [The-AIOS/.github/profile/README.md](https://github.com/The-AIOS) | What is The-AIOS? Three progressive stages (Automate · Amplify · Agency). The "why" of the framework. |
+| **Org profile README** | [The-AIOS/.github/profile/README.md](https://github.com/The-AIOS) | What is The-AIOS? The journey, the 4 principles, the 3 progressive stages, and the 3-repo structure. The "why" + the map. |
 | **Repo README** | `README.md` (root of `~/aios`) | What is *this repo*? Five operational distinctions, the compound effect, the architecture principle. |
 | **SETUP.md** | `~/aios/SETUP.md` | How to install. Prerequisites (Obsidian + Antigravity IDE), the Claude-driven end-to-end flow, OS-specific steps. |
 | **START-HERE.md** | `~/aios/START-HERE.md` | First-time orientation. The 3-step path: install → personalize → first ritual. Where to look when stuck. |
-| **CHEATSHEET.md** | `~/aios/CHEATSHEET.md` | Day-to-day operating index. §1 launch/spawn · §2 daily loop · §3 capture loops · §4 export loops · §5 personalization · §6 multi-account quota. Scan when you forget which command to use. |
+| **CHEATSHEET.md** | `~/aios/CHEATSHEET.md` | Day-to-day operating index. §1 launch/spawn/mount · §2 daily loop · §3 capture loops · §4 export loops · §5 personalization · §6 multi-account quota. Scan when you forget which command to use. |
 | **FORTRESS.md** | `~/aios/FORTRESS.md` | Operator-grade defensive posture — security stance, secrets handling, recovery routines, what to do if things break. |
 | **TOOLS.md** | `~/aios/TOOLS.md` | The full menu: every command, agent, skill, MCP, standalone tool. Includes "Using AIOS with other LLMs" for Gemini/Cursor users. |
 | **CLAUDE.md** | `~/aios/CLAUDE.md` | The behavioral contract — how Claude works with this vault, session rituals, the 10 principles of intelligence collaboration, agentic culture. Read first if you're contributing or curious about the *why* underneath. |
@@ -123,7 +139,8 @@ The full structure you should know cold. When the operator asks *"what is this?"
 | **INTENT.md** | `~/aios/INTENT.md` | The trust contract — autonomy levels (autonomous / draft / ask) per domain. As Claude learns you over time, you ratchet up the trust. |
 | **Declared context** | `vault/00 - notes/context/declared/` | What you tell Claude about yourself — `about_me`, `personal_voice`, `working_style`, `about_business`, optional `role-expectations` + `psychometric-profile`. |
 | **Observed context** | `vault/00 - notes/context/observed/` | What Claude has *learned* — `profile`, `patterns`, `preferences`, `growth`, `business`, `ecosystem`, `session-insights`, `antifragile`. Updated by Claude across sessions. This is the compound. |
-| **Venture context** | `vault/00 - notes/context/ventures/{company}/` | Per-company context (positioning, gtm, personas, pricing, primitives, etc.) for each company the operator mounts. Managed by `/aios:company` — operators can `--mount` a teammate's company repo or `--create` a new one from the [`The-AIOS/company-template`](https://github.com/The-AIOS/company-template) scaffold. Multi-substrate (GitHub primary, Drive secondary). Each mounted company has its own `.{company}-sync` tracker inside its venture folder. |
+| **Venture context** | `vault/00 - notes/context/ventures/{company}/` | Per-company context (positioning, gtm, personas, pricing, primitives, etc.) for each company the operator mounts. Managed by `/aios:company` — operators can `--mount` an existing company repo (their own or one they collaborate on) or `--create` a new one from the [`The-AIOS/company-template`](https://github.com/The-AIOS/company-template) scaffold. Multi-substrate (GitHub primary, Drive secondary). Each mounted company has its own `.{company}-sync` tracker inside its venture folder. **Distinguish from collaboration spaces:** `/aios:company` shares CONTEXT (the WHO/WHAT of a venture); `/aios:collaborate` shares WORK SPACES (the WHERE you co-create with a stable group). |
+| **Collaboration spaces** | `vault/00 - notes/projects/space-{slug}.md` (router notes) | Shared work spaces with a stable group of collaborators — substrate-pluggable (Drive for non-coders, GitHub for code-adjacent, local for testing). Managed by `/aios:collaborate`. The shared substrate holds `collaborate.md` (protocol) + `README.md` + project files; the router note in the vault is a content-identical mirror so daily routing still works. Use when you want a shared knowledge surface that lives in a substrate your collaborators already operate. |
 
 ### Contributing + safety (org-level)
 
