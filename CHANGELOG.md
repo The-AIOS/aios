@@ -79,9 +79,11 @@ Phase 8.6  (Venture-context mount — REQUIRED if you came from a team-vault dis
   ↓
 Phase 9    (Discovery surface awareness — informational)
   ↓
-Phase 9.7  (Tier B observation catch-up — REQUIRED for vaults >30 days old; one-time
+Phase 9.7  (Tier B observation catch-up — REQUIRED for every operator, content-driven;
             synthesis of accumulated growth/profile/ecosystem content from
-            session-insights + antifragile + daily notes backlog)
+            session-insights + antifragile + daily notes. Substance bar self-
+            regulates: fresh vaults write nothing, heavy-backlog vaults catch
+            up the accumulated drift)
   ↓
 LAST       (Restart Claude Code for plugin daemon reload)
 ```
@@ -840,7 +842,7 @@ ls .{venture}-sync && ls "vault/00 - notes/context/ventures/{venture}" | head -5
 
 ---
 
-#### Phase 9.7 — Tier B observation catch-up (REQUIRED for operators with >30 days of pre-migration vault history)
+#### Phase 9.7 — Tier B observation catch-up (REQUIRED for every operator, content-driven scope)
 
 **State:** This migration upgrades `/close-day` and `/close-session` with a dedicated **Tier B observation pass** that fires every close-day going forward (see `plugins/aios/commands/close-day.md` § Tier B observation pass). Tier B = `growth.md`, `profile.md`, `ecosystem.md` — observations about the operator (not work mechanics), one synthesis layer above `session-insights.md`.
 
@@ -922,10 +924,14 @@ done
 
 **Time budget:** ~10-15 minutes for a vault with 60-90 days of accumulated history. Longer for older vaults (read scope scales linearly). The Claude session can run this concurrently with the operator doing something else — it's a read-heavy synthesis pass, not interactive.
 
-**Why this phase is REQUIRED (not optional) for >30-day-old vaults:**
-The forward Tier B mechanism (`/close-day` digest) builds on the assumption that Tier B files reflect current operator state. Operators arriving at the new framework with 78-day-stale growth.md (Diego's case at migration time) would have their first `/close-day` digest run *on top of* a frozen baseline — propagating stale observations as if current. The catch-up resets the baseline so the forward mechanism starts honest.
+**Why this phase is REQUIRED for every operator (regardless of vault age):**
 
-**For operators with <30 days of vault history:** skip this phase. There's no accumulation to catch up. The forward `/close-day` digest will keep Tier B files alive from day one.
+The forward mechanism (`/close-day`'s session-insights gardening + Tier B digest) assumes Tier A files (patterns, preferences, business, antifragile) reflect routed content from session-insights AND that Tier B files (growth, profile, ecosystem) reflect current operator state. Two failure modes the catch-up resolves:
+
+- **Backlog operators** (vaults months old, like chuy's 32-82 day Tier B drift or Diego's 78-day growth gap): accumulated Reinforced entries never routed up, growth-shape content absorbed into antifragile by mistake, daily-note Observed sections never synthesized. Forward digest runs on top of a frozen baseline = stale observations propagate as if current.
+- **Fresh-vault operators** (Zineb-style — recently onboarded, minimal logged history): the digest fires, scans the (small) source material, finds nothing passes the substance bar, surfaces *"Tier B files are baseline — forward digest will populate organically"*. Zero writes, but the phase ran. The operator now knows the catch-up ritual exists and what it does — critical for their next /close-day to feel coherent.
+
+Running the phase always (with content-driven scope) means the executing Claude session naturally adapts: heavy synthesis for old vaults, lightweight confirmation for fresh ones. The substance bar is what self-regulates — not an age threshold the playbook tries to predict.
 
 ---
 
