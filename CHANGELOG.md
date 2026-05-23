@@ -9,7 +9,7 @@
 
 ## 2026-05-23 — Migration playbook: existing operators move from old framework to The-AIOS/aios
 
-`hash: 9dd9ba1`
+`hash: bc80cf1`
 
 > **Read this entry top-to-bottom before executing anything.** It is the single migration playbook for any operator on the pre-extraction framework structure (`chuycepeda/aios` template or `sovrahq/internal-vault` team repo, both frozen at hashes ≤ 2026-05-21). The framework was extracted to a public canonical at `github.com/The-AIOS/aios`. This entry walks you through the full migration in **dependency-sorted phases (Phase 0 → Phase 9 + LAST)**. Later phases assume earlier phases succeeded.
 >
