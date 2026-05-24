@@ -280,20 +280,23 @@ LAUNCHER
       trap "rmdir '$lockdir' 2>/dev/null" EXIT
 
       local ide_app=""
-      # Antigravity IDE (post-2026-05 update — new app bundle "Antigravity IDE.app") takes
-      # precedence over legacy "Antigravity.app" (now an empty shell on updated machines).
-      # pgrep -q "Antigravity" matches BOTH names by substring, so we must check the more
-      # specific name first or the AppleScript targets the wrong app.
-      # Use `pgrep -x` (exact match) for Antigravity + Cursor — `-q`
-      # was substring-matching the macOS text-input helper
-      # `CursorUIViewService` and (potentially) any process containing
-      # "Antigravity" as a substring. Fix originally landed Apr 22 in
-      # legacy claude-identity (commit c4b89bd) — never ported when the
-      # wrapper consolidated into install-wrappers.sh; regression caught
-      # 2026-05-22 on sarah. VS Code keeps `-qf` because "Visual Studio
-      # Code" lives in args, not in the process name.
-      pgrep -xq "Antigravity IDE" && ide_app="Antigravity IDE"
-      [ -z "$ide_app" ] && pgrep -xq "Antigravity" && ide_app="Antigravity"
+      local ide_bundle=""
+      # Antigravity IDE detection (post-2026-05 bundle rename) — the new IDE's MAIN
+      # process is stock Electron (comm="Electron"), not "Antigravity IDE". So
+      # `pgrep -xq "Antigravity IDE"` can NEVER match, and `pgrep -xq "Antigravity"`
+      # matches the LEGACY Antigravity.app which often remains installed as a
+      # dormant shell after the rename — wrong app, keystrokes go nowhere, system
+      # beeps from rejected AppleEvents. Fix: detect by app-bundle PATH (robust to
+      # process-name changes), and address via bundle ID in AppleScript (robust to
+      # LaunchServices display-name changes). Regression caught 2026-05-24 on chuy.
+      pgrep -fq "Antigravity IDE.app/Contents/" && {
+        ide_app="Antigravity IDE"
+        ide_bundle="com.google.antigravity-ide"
+      }
+      [ -z "$ide_app" ] && pgrep -xq "Antigravity" && {
+        ide_app="Antigravity"
+        ide_bundle="com.google.antigravity"
+      }
       [ -z "$ide_app" ] && pgrep -qf "Visual Studio Code" && ide_app="Visual Studio Code"
       [ -z "$ide_app" ] && pgrep -xq "Cursor" && ide_app="Cursor"
 
@@ -316,11 +319,23 @@ LAUNCHER
         # on Antigravity — the menu bar has no "Terminal" menu with that item.
         # The keystroke shortcut is more portable across VS Code-family IDEs.
         local applescript_file="/tmp/spawn-script-$name.applescript"
+        # When a bundle ID is known (Antigravity old/new), address by bundle ID:
+        # the new IDE's process name to System Events is "Electron" (stock Electron
+        # binary), so `tell process "Antigravity IDE"` would fail — bundle ID is the
+        # stable identifier. For VS Code / Cursor, fall back to name addressing.
+        local activate_clause tell_process_clause
+        if [ -n "$ide_bundle" ]; then
+          activate_clause="tell application id \"$ide_bundle\" to activate"
+          tell_process_clause="tell (first process whose bundle identifier is \"$ide_bundle\")"
+        else
+          activate_clause="tell application \"$ide_app\" to activate"
+          tell_process_clause="tell process \"$ide_app\""
+        fi
         cat > "$applescript_file" <<APPLESCRIPT
-tell application "$ide_app" to activate
+$activate_clause
 delay 0.5
 tell application "System Events"
-  tell process "$ide_app"
+  $tell_process_clause
     -- Step 1: Create a NEW terminal via Ctrl+Shift+\` (workbench shortcut,
     -- focus-independent — workbench.action.terminal.new in VS Code-family IDEs).
     keystroke "\`" using {control down, shift down}

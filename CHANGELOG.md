@@ -13,6 +13,30 @@
 
 ---
 
+## 2026-05-24 — spawn wrapper: bundle-ID-based Antigravity IDE addressing (post-rename)
+
+`hash: TBD`
+
+> **What broke.** After Antigravity's 2026-05 update, the IDE moved to a new bundle (`Antigravity IDE.app`, bundle ID `com.google.antigravity-ide`) whose main process is stock Electron (`comm = "Electron"`). The legacy `Antigravity.app` (bundle ID `com.google.antigravity` — a separate Claude-app product) often remains installed alongside. The spawn wrapper's detection used `pgrep -xq "Antigravity IDE"` (never matches — main process is Electron) with a fallback to `pgrep -xq "Antigravity"` (matches the legacy bundle). Result: AppleScript routed keystrokes to the wrong app → System Events rejected them → audible system beeps, no new terminal opened.
+>
+> **Fix.** Detection now uses `pgrep -fq "Antigravity IDE.app/Contents/"` (path-based, robust to process-name changes). AppleScript addressing now uses `tell application id "com.google.antigravity-ide"` + `tell (first process whose bundle identifier is "…")` — bundle ID is stable across renames, won't collide with the legacy Claude-app bundle.
+>
+> **Why this matters now.** Anyone running Antigravity IDE on macOS will hit silent spawn failures (beep, no tab) until they pull this fix. The legacy `Antigravity.app` is supported as a fallback for operators still on the pre-rename install.
+
+### What changed
+
+- `hooks/claude-identity/install-wrappers.sh` — detection (lines 282-301) + AppleScript generation (lines 321-338). Two-part fix: path-based detection + bundle-ID addressing.
+
+### Action required
+
+Run on every macOS machine using Antigravity IDE. Hard precondition: the operator is on macOS. Skip everything below for Windows / Linux operators (their `install-wrappers.ps1` doesn't use AppleScript and isn't affected).
+
+1. **Detect.** Check `uname -s`. If not `Darwin`, skip the rest of this entry.
+2. **Pull.** `/aios:update` has already replaced `hooks/claude-identity/install-wrappers.sh` (Tier 1). No further file action needed — just verify the new detection block is present: `grep -q 'pgrep -fq "Antigravity IDE.app/Contents/"' ~/aios/hooks/claude-identity/install-wrappers.sh && echo "✓ fix present" || echo "❌ fix missing, re-run /aios:update"`.
+3. **Re-install wrappers (LAST — requires new terminal).** Run `bash ~/aios/hooks/claude-identity/install-wrappers.sh`. This refreshes `~/.zshrc`. Then **the operator opens a new terminal** for the change to take effect (the wrapper function is loaded at shell start). Verify in the new terminal: `type spawn` should show a shell function, and `spawn test-bundle-fix "say /exit"` should open a new IDE tab cleanly with no beeps.
+
+---
+
 ## 2026-05-23 — Migration playbook: existing operators move from old framework to The-AIOS/aios
 
 `hash: bc80cf1`
