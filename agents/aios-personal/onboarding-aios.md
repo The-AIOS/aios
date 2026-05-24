@@ -64,26 +64,100 @@ Based on `N`:
 | **Mature** | 31-90 | Advanced — `/connect`, `/role-report`, `/housekeeping`, observed context drives suggestions |
 | **Veteran** | 90+ | Custom — `/challenge`, `/drift`, advanced personalizations, agent extensions |
 
-### Step 3 — Scan what they've actually used
+### Step 3 — Persona calibration (infer first, ask only when needed)
+
+The same AIOS map reads differently at different altitudes. A software engineer extending the framework needs different framing than a senior exec building a team of AI co-workers needs different framing than a knowledge worker building a second brain. Same content, different emphasis.
+
+**Logic:**
+
+1. **Check for persisted persona first** — read `vault/00 - notes/context/observed/profile.md` and `USER.md` (if either has `Operator background: {value}` already set, USE that value, skip inference + ask).
+
+2. **If no persisted value, attempt inference from accumulated context:**
+
+   Read these signals:
+   - `vault/00 - notes/context/declared/about_me.md` — operator's self-description
+   - `vault/00 - notes/context/declared/working_style.md` — how they work
+   - `vault/00 - notes/context/observed/profile.md` — Claude-observed identity threads
+   - `vault/00 - notes/projects/_index.md` — project mix (code-heavy? venture-heavy? content-heavy?)
+   - `vault/00 - notes/context/observed/patterns.md` — workflow patterns (programming patterns vs strategic patterns vs writing patterns)
+
+   Classify into one of four buckets:
+
+   | Persona | Signals (any 2+ = match) |
+   |---|---|
+   | **software-engineering** | Dev project notes (repos, code review patterns), git workflow patterns, technical-craft observations, MCP/plugin development interest |
+   | **senior-exec / founder** | Multiple ventures in `about_business.md`, strategic-narrative patterns, meeting-cadence operations, delegation via spawned workers, INTENT.md autonomy ladders well-developed |
+   | **knowledge-worker** | Writing pipeline activity, study-buddy / content-writer agent use, reflections + ideas folders dense, `/emerge` + `/connect` usage, observed-context-as-second-brain framing |
+   | **generalist** | Multiple buckets above at meaningful depth (operator who genuinely operates across roles) |
+
+3. **Decision gate:**
+   - **High confidence** (≥2 signals match one bucket clearly OR multi-bucket signals at depth = generalist) → use the persona silently, no question. Note in your opening framing which lens you're using ("speaking in operator-founder register" / "framing for engineering altitude" / etc.) so the operator can correct if wrong.
+   - **Low confidence** (Day-0 with no context yet, OR contradictory signals, OR operator hasn't filled in declared context) → ASK the question:
+
+     ```
+     One quick calibration so I land at your altitude:
+
+       (a) Software / engineering — you ship code, comfortable with
+           terminals, git, system tooling
+       (b) Senior exec / founder — you direct teams, AI as
+           delegation surface, less hands-on with tools yourself
+       (c) Knowledge worker — writer, researcher, consultant, analyst —
+           you work with content + ideas more than code
+       (d) Generalist — some of all of the above
+       (e) Other — tell me what fits
+
+     (Pick whichever's closest — I'll adjust framing accordingly.)
+     ```
+
+4. **Persist the answer** (whether inferred or asked):
+
+   Write to `vault/00 - notes/context/observed/profile.md` at the end (or create the section if missing):
+
+   ```markdown
+   ### Operator background
+   {value} ({derived 2026-MM-DD from {sources} | declared 2026-MM-DD via onboarding-aios calibration})
+   ```
+
+   Subsequent invocations read this first and skip both inference + ask. If the operator later evolves (e.g. exec → founder-who-codes), they edit profile.md directly OR re-run with explicit override.
+
+5. **Set the calibration variable for downstream steps** — pass `persona = {software | exec | knowledge | generalist | other}` through to Steps 4-6's framing.
+
+**Why infer-first not always-ask:** at Day 45 the agent already KNOWS the operator from accumulated context — asking again is a tax. At Day 0 there's nothing to infer from, so asking is the only honest move. The decision gate calibrates the calibration itself.
+
+**Frame the persona's emphasis (used in Steps 4-6 below):**
+
+| Persona | Steps 4-6 emphasize | De-emphasize |
+|---|---|---|
+| **software** | MCP layer, plugin development, settings.json, agent customization, framework extension via `/aios:company --create`, hook authoring | Less time on INTENT.md autonomy ladders — they'll figure it out |
+| **exec / founder** | Team-of-AI thesis, delegation via `spawn {agent}`, INTENT.md trust ladders, governance posture, what AIOS DOES for an org, the operator-network distribution arm | Less time on git/CLI details — surface only as needed |
+| **knowledge-worker** | Observed-context as second brain, `/emerge` + `/connect`, study-buddy + writing pipeline, knowledge compounding loop, daily ritual | Less time on MCP/plugin internals |
+| **generalist** | Blend — light touch on all three angles, lets operator pull on threads | Doesn't pretend any angle doesn't exist |
+
+The persona doesn't change WHAT exists in AIOS — it changes which doors you open first for this operator.
+
+### Step 4 — Scan what they've actually used
 
 Read `vault/00 - notes/logs/` (recent activity logs) and recent daily notes (`vault/01 - calendar/{YYYY-MM}/`). Surface:
 - Commands run recently (extract `/aios:{name}` patterns from daily notes' Claude's-take blocks and command-suggestion lines)
 - Agents spawned recently (from session reports + daily note "Agent work" sections)
 - Observed context file freshness (read `updated` frontmatter from each `observed/*.md`)
 
-### Step 4 — Surface the gap
+### Step 5 — Surface the gap (calibrated to band × persona)
 
-Compare what's expected at their band vs what they've actually used. Identify ONE thing they haven't tried that fits where they are.
+Compare what's expected at their band vs what they've actually used. Identify ONE thing they haven't tried that fits where they are AND fits their persona's natural altitude.
 
-Examples:
-- Fresh + missing `/today` for 3+ days → "The morning ritual is the system's nervous system. Even 90 seconds of `/today` compounds. Try it tomorrow morning."
-- Compounding + never run `/emerge` → "Day 21 — your vault has enough density now for `/emerge` to find ideas hiding in the overlap. Worth 10 minutes this week."
-- Mature + observed/growth.md not updated in 14 days → "Your growth edges from a month ago may be stale. `/drift` would name what's shifted."
-- Veteran + never customized USER.md `## Command personalizations` → "You're past the defaults. Your `/today` could be 30% more useful if you tell USER.md what you specifically want emphasized."
+**Band × persona examples:**
 
-**Rule: one observation per session.** Resist the temptation to list 5 unused commands. ONE next-step the operator can actually take this week.
+| Band | Software | Exec / founder | Knowledge worker | Generalist |
+|---|---|---|---|---|
+| **Fresh** + missing `/today` for 3+ days | "The morning ritual hooks into your existing dev flow — read calendar + open threads + Slack triage in 90s, then your IDE." | "The morning ritual is the executive-command center primitive — calendar, Slack, decisions queue surfaced in one beat." | "The morning ritual is your second-brain's daily heartbeat — without it, observed context never grows." | "The morning ritual is the nervous system. 90 seconds compounds." |
+| **Compounding** + never run `/emerge` | "Day 21 — your vault has pattern density now. `/emerge` finds workflow conventions you've encoded but never named." | "Day 21 — `/emerge` surfaces strategic primitives implicit in your week. Better than a strat-offsite." | "Day 21 — `/emerge` finds the unwritten ideas hiding in your reflections + ideas folders. The connect tissue." | "Day 21 — `/emerge` mines the overlap between projects. Worth 10 min this week." |
+| **Mature** + growth.md stale | "Your growth edges from a month ago may be stale — `/drift` would name what's shifted (and you've shipped a lot since)." | "Your growth.md is the operator-self mirror — when stale, the system stops reflecting how YOU are evolving as a leader." | "Your growth.md is the deepest layer of your second brain. /drift surfaces what's shifted that hasn't been written yet." | "Growth.md drift is the most expensive kind. /drift names what's shifted." |
+| **Veteran** + never customized USER.md | "Your `/today` is generic-defaults at this point. Customize `## Command personalizations` for /today + /close-day — 30% more useful." | "USER.md `## Command personalizations` is where you teach AIOS your executive cadence. Defaults are fine for week 1; defaults at month 4 leave compound on the table." | "Your `/today` could surface the right reading queue / writing pipeline state if USER.md tells it which projects are growth routines." | "Default-driven for 90 days is a sign — your USER.md needs love. 15 min of `## Command personalizations` editing returns weeks of compound." |
 
-### Step 5 — Compound-effect milestones (anniversary moments)
+**Rule: one observation per session.** Resist the temptation to list 5 unused commands. ONE next-step the operator can actually take this week, framed in their persona's vocabulary.
+
+### Step 6 — Compound-effect milestones (anniversary moments)
 
 If `N` crosses a milestone exactly (within ±2 days), open the session with the compound moment:
 
@@ -95,9 +169,9 @@ If `N` crosses a milestone exactly (within ±2 days), open the session with the 
 | **Day 180** | "Six months. Run `/trace` on yourself — see how your thinking has evolved in your own words." |
 | **Day 365** | "Year one. The record of who you were becoming exists. What does it show you?" |
 
-These are anchors, not interruptions. Always followed by the day-band guidance from Step 4.
+These are anchors, not interruptions. Always followed by the persona-calibrated band guidance from Step 5.
 
-### Step 6 — Offer the relevant doc, don't quote it
+### Step 7 — Offer the relevant doc, don't quote it
 
 Point at the doc that lives the answer:
 - "See `CHEATSHEET.md` §3 — Capture Loops"
