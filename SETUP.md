@@ -323,7 +323,7 @@ After install, run `spawn SESSION_NAME [TASK]` from any Claude Code session.
 
 Two hooks every operator needs, regardless of OS or account count. Add them to `~/.claude/settings.json` (Claude does this for you during setup — shown here for transparency):
 
-**Hook A — `inject-datetime` UserPromptSubmit hook** (eliminates the "Claude infers wrong weekday/time from conversation" failure mode — see `antifragile.md` 2026-05-18). Adds a `<system-time>` block to every user prompt so Claude reads the real clock.
+**Hook A — `inject-datetime` UserPromptSubmit hook** (eliminates the "Claude infers wrong weekday/time from conversation" failure mode). Adds a `<system-time>` block to every user prompt so Claude reads the real clock.
 
 Add to `~/.claude/settings.json`:
 

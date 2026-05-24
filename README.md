@@ -184,9 +184,9 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) â
 
 ---
 
-## The full setup flow (after value-prop)
+## The canonical setup sequence
 
-If the [30-second version at the top](#get-started-the-30-second-version) was enough, you're already running. If you want the canonical sequence:
+If the [30-second version at the top](#get-started-the-30-second-version) was enough, you're already running. If you want the full step-by-step:
 
 **Step 1 â€” `SETUP.md` (Claude-driven, ~10 min).** Open any terminal with Claude Code installed and say: *"Set up my AI-OS from `https://github.com/The-AIOS/aios`"*. Claude clones the framework, installs MCPs, configures your private vault, and walks you through every choice.
 
