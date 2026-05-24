@@ -5,6 +5,12 @@
 >
 > **This is the canonical CHANGELOG for The AIOS.** The framework lives at [The-AIOS/aios](https://github.com/The-AIOS/aios). It is built from infrastructure that evolved in [chuycepeda/obsidian](https://github.com/chuycepeda/obsidian) from March → May 2026 (pre-extraction history preserved there).
 
+> ## ⚠️ Reading order
+>
+> Newest entries appear first below. **If you're migrating from the pre-2026-05-23 framework** (`chuycepeda/aios` template or `sovrahq/internal-vault` team-repo lineage), scroll down to the **2026-05-23 — Migration playbook** entry and complete it BEFORE acting on any newer entries above it. Newer entries assume you've already migrated; running them on the legacy structure will produce confusion or fail.
+>
+> Already-migrated operators (Diego, Sarah, and anyone who's synced past `bc80cf1`) can read top-down normally — `/aios:update`'s hash-based scan correctly identifies the migration entry as already-applied and won't re-surface it.
+
 ---
 
 ## 2026-05-23 — Migration playbook: existing operators move from old framework to The-AIOS/aios
