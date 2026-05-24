@@ -2,11 +2,33 @@
 
 > Everyone is building an AIOS. We built **The AIOS**.
 
-> **Reading this as Claude?** Operator pointed you at this repo. You're the executor — the human reads alongside, you do the heavy lifting. Sequence:
-> 1. **Setting up for the first time?** → read [SETUP.md](./SETUP.md), follow the "Reading this as Claude?" block at its top
-> 2. **Operator says "I'm lost" or "what is this?"** → invoke [`/agent onboarding-aios`](./agents/aios-personal/onboarding-aios.md) — that agent knows the full doc map (this README, SETUP, CHEATSHEET, FORTRESS, START-HERE, USER.md, INTENT.md, CLAUDE.md, plus the org-level CONTRIBUTING/SECURITY) and routes the operator to the right place without overwhelming them
-> 3. **Operator already set up, needs daily ritual?** → `/aios:today` (morning) · `/aios:close-day` (evening) · `/aios:close-session` (per task) — this is the compound loop
-> 4. **Anything else** → [CLAUDE.md](./CLAUDE.md) is the behavioral contract (session rituals, agentic culture, the 10 principles); [TOOLS.md](./TOOLS.md) is the full menu of commands/agents/skills/MCPs; [CHEATSHEET.md](./CHEATSHEET.md) is the day-to-day operating index
+<details>
+<summary><strong>📍 Reading this as Claude?</strong> (Operator pointed you at this repo — click for your action sequence)</summary>
+
+You're the executor — the human reads alongside, you do the heavy lifting. Sequence:
+
+1. **Setting up for the first time?** → read [SETUP.md](./SETUP.md), follow the "Reading this as Claude?" block at its top
+2. **Operator says "I'm lost" or "what is this?"** → invoke [`/agent onboarding-aios`](./agents/aios-personal/onboarding-aios.md) — that agent knows the full doc map (this README, SETUP, CHEATSHEET, FORTRESS, START-HERE, USER.md, INTENT.md, CLAUDE.md, plus the org-level CONTRIBUTING/SECURITY) and routes the operator to the right place without overwhelming them
+3. **Operator already set up, needs daily ritual?** → `/aios:today` (morning) · `/aios:close-day` (evening) · `/aios:close-session` (per task) — this is the compound loop
+4. **Anything else** → [CLAUDE.md](./CLAUDE.md) is the behavioral contract (session rituals, agentic culture, the 10 principles); [TOOLS.md](./TOOLS.md) is the full menu of commands/agents/skills/MCPs; [CHEATSHEET.md](./CHEATSHEET.md) is the day-to-day operating index
+
+</details>
+
+---
+
+## Get started (the 30-second version)
+
+**Have Claude Code installed?** Open any terminal and say:
+
+```
+Set up my AI-OS from https://github.com/The-AIOS/aios
+```
+
+Claude reads [SETUP.md](./SETUP.md), clones the framework, walks every choice.
+
+**Don't have Claude Code yet?** → [SETUP.md → Prerequisites](./SETUP.md#prerequisites) for OS-specific install (~5-20 min). Then come back and run the line above.
+
+**Want the deeper "what is this and why?" before installing?** → keep reading.
 
 ---
 
@@ -162,9 +184,9 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 
 ---
 
-## Quickstart
+## The full setup flow (after value-prop)
 
-Two-step setup. AIOS does the heavy lifting; you confirm choices.
+If the [30-second version at the top](#get-started-the-30-second-version) was enough, you're already running. If you want the canonical sequence:
 
 **Step 1 — `SETUP.md` (Claude-driven, ~10 min).** Open any terminal with Claude Code installed and say: *"Set up my AI-OS from `https://github.com/The-AIOS/aios`"*. Claude clones the framework, installs MCPs, configures your private vault, and walks you through every choice.
 

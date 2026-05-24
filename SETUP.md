@@ -1,63 +1,37 @@
 # Setup Guide — AI-OS Vault
 
-Get the full system running in under 10 minutes.
+Get the full system running in under 10 minutes (after the prereqs install).
 
-> **Reading this as Claude?** Operator said *"set up my AI-OS from this repo"* or similar. You're the executor. The flow:
-> 1. Confirm Prerequisites are installed (Obsidian + Antigravity IDE/VS Code + Node/Git/gh/Python/uv/Claude Code) — if not, walk OS-specific block from "Prerequisites" §
-> 2. Clone to `~/aios` (default) and create private GitHub repo `{username}/aios` (or whatever the operator names it) — see "The Setup" §1 below
-> 3. Bulk MCP deps: `bash mcps/setup.sh`
-> 4. Guided MCP auth: invoke `/aios:mcps-setup`
-> 5. Install the **spawn wrapper** — `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (or `.ps1` on Windows), then re-source the shell rc
-> 6. Wire the **universal hooks** to `~/.claude/settings.json`: `UserPromptSubmit` → `inject-datetime` (real clock in every prompt) + `statusLine` → `claude-identity.sh cache | context-monitor.py` (rate-limit cache writer + context display). See §10 below for exact JSON.
-> 7. (Conditional, macOS multi-account only) — **ask the operator**: *"Do you use or plan to use more than one Anthropic account?"* If yes → install the launchd plist + drop a `vault/.pending-quota-autopilot-capture` marker. **Don't run the account-capture login/logout dance during setup** — it would interrupt this session. The first `/today` will surface it as a deliberate task. See §11 below for the exact pattern.
-> 8. Personalize: invoke `/aios:cold-start-interview` (15-25 min interactive; follow its Steps 0-13)
-> 9. Wear the hat: `/agent onboarding-aios` (orientation companion)
-> 10. Optional: `/aios:company` (mount/create venture-context) + `/aios:collaborate` (shared space)
-> 11. First `/aios:today` (the proof point — also surfaces the deferred quota-autopilot capture if marker present)
->
-> **Defaults to pick without asking** (unless operator overrides): vault path = `~/aios/`, private repo name = `{username}/aios`, substrate for company = GitHub, wrappers + hooks A+B always install (no opt-out — they're load-bearing). **Always ask, never assume**: Google email, task sources (Slack/GitHub/Linear/Monday), MCP-by-MCP installs (let `/aios:mcps-setup` handle that), the multi-account-Anthropic question (§7 above — affects whether to defer capture). Show diffs before writing to `USER.md` / `INTENT.md` / `vault/00 - notes/context/declared/*` / `~/.claude/settings.json`.
->
-> **Be gentle, not exhaustive.** The operator should feel walked by the hand, not interrogated. One question at a time, sensible defaults, defer anything that risks interrupting the in-flight session (account capture is the canonical example — always deferred).
->
-> **If operator gets lost mid-setup:** route to `/agent onboarding-aios` — that agent knows the full doc map.
+<details>
+<summary><strong>📍 Reading this as Claude?</strong> (Operator said "set up my AI-OS" — click for your 11-step execution sequence)</summary>
+
+Operator said *"set up my AI-OS from this repo"* or similar. You're the executor. The flow:
+
+1. Confirm Prerequisites are installed (Obsidian + Antigravity IDE/VS Code + Node/Git/gh/Python/uv/Claude Code) — if not, walk OS-specific block from "Prerequisites" §
+2. Clone to `~/aios` (default) and create private GitHub repo `{username}/aios` (or whatever the operator names it) — see "The Setup" §1 below
+3. Bulk MCP deps: `bash mcps/setup.sh`
+4. Guided MCP auth: invoke `/aios:mcps-setup`
+5. Install the **spawn wrapper** — `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (or `.ps1` on Windows), then re-source the shell rc
+6. Wire the **universal hooks** to `~/.claude/settings.json`: `UserPromptSubmit` → `inject-datetime` (real clock in every prompt) + `statusLine` → `claude-identity.sh cache | context-monitor.py` (rate-limit cache writer + context display). See §10 below for exact JSON.
+7. (Conditional, macOS multi-account only) — **ask the operator**: *"Do you use more than one Anthropic account?"* If yes → install the launchd plist + drop a `vault/.pending-quota-autopilot-capture` marker. **Don't run the account-capture login/logout dance during setup** — it would interrupt this session. The first `/today` will surface it as a deliberate task. See §11 below for the exact pattern.
+8. Personalize: invoke `/aios:cold-start-interview` (15-25 min interactive; follow its Steps 0-10)
+9. Wear the hat: `/agent onboarding-aios` (orientation companion)
+10. Optional: `/aios:company` (mount/create venture-context) + `/aios:collaborate` (shared space)
+11. First `/aios:today` (the proof point — also surfaces the deferred quota-autopilot capture if marker present)
+
+**Defaults to pick without asking** (unless operator overrides): vault path = `~/aios/`, private repo name = `{username}/aios`, substrate for company = GitHub, wrappers + hooks A+B always install (no opt-out — they're load-bearing). **Always ask, never assume**: Google email, task sources (Slack/GitHub/Linear/Monday), MCP-by-MCP installs (let `/aios:mcps-setup` handle that), the multi-account-Anthropic question (§7 above — affects whether to defer capture). Show diffs before writing to `USER.md` / `INTENT.md` / `vault/00 - notes/context/declared/*` / `~/.claude/settings.json`.
+
+**Be gentle, not exhaustive.** The operator should feel walked by the hand, not interrogated. One question at a time, sensible defaults, defer anything that risks interrupting the in-flight session (account capture is the canonical example — always deferred).
+
+**If operator gets lost mid-setup:** route to `/agent onboarding-aios` — that agent knows the full doc map.
+
+</details>
 
 ---
 
-## The Setup (Claude-Driven)
-
-Open any terminal with Claude Code and say:
-
-```
-Set up my AI-OS from https://github.com/The-AIOS/aios
-```
-
-Claude reads this file and walks you through the full onboarding — clone → install → personalize → orient → optional company + collaboration → first daily plan. Each step is interactive; you confirm decisions, Claude executes.
-
-**The end-to-end flow:**
-
-1. **Clone** the repo to `~/aios` and create your private vault repo (`gh repo create {your-username}/aios --private` — matches the local path; renameable later) — your personal content never goes back to the shared framework. **If you cloned elsewhere**, Claude creates a `~/aios` symlink to the actual install path (see § Path portability below) so every framework reference resolves cleanly.
-2. **Install MCP dependencies** via `bash mcps/setup.sh` (creates venvs, installs Python/Node deps for every bundled MCP)
-3. **Guided MCP auth** via `/aios:mcps-setup` (one MCP at a time — asks "want this?", walks you through tokens, registers with `claude mcp add`, verifies the connection works)
-4. **Personalize via `/aios:cold-start-interview`** — 15-25 min interactive interview: identity (USER.md), declared context (`about_me`, `personal_voice`, `working_style`), trust contract (`INTENT.md`), bundle install choices, optional Anthropic plugins. This is where the vault becomes *yours*.
-5. **Spawn the onboarding companion**: `/agent onboarding-aios` — wears the AIOS-orientation hat. Knows the whole map: org profile, README, SETUP, CHEATSHEET, FORTRESS, START-HERE, USER.md personalization power, the self-update loop, where to look when lost. Invoke anytime later by saying *"I'm lost"* / *"what should I try next"* / *"remind me how this fits together"*.
-6. **(Optional) Mount or create a company** via `/aios:company` — if you have a venture-context repo or want to scaffold one (GitHub recommended ✅, see the command's substrate selector)
-7. **(Optional) Set up a collaboration space** via `/aios:collaborate` — if you have a known shared space (Drive folder, GitHub repo, local sync folder) to mount or scaffold
-8. **First `/aios:today`** — the proof point. Reads everything you just configured, pulls your Calendar + Tasks + Slack, and generates a grounded plan for the rest of today. From here, the daily ritual takes over.
-
-**What Claude auto-detects** (saves asking):
-- Git identity from `~/.gitconfig` or local repo config
-- GitHub username from `gh auth status`
-- SSH keys from `~/.ssh/`
-- Already-installed MCPs, CLI tools, and plugins
-- Bundled OAuth credentials for Google Workspace
-
-**What Claude asks you** (only if needed):
-- Your Google email (for Calendar/Tasks/Drive)
-- Which task sources you use (GitHub Issues, Linear, Monday, etc.)
-- What to name your private vault repo (defaults to `{username}/aios` — matches the local path `~/aios/`; pick a different name if you prefer, e.g., `{username}/vault` or `{username}/my-aios`)
-- Substrate choices when running `/company` or `/collaborate`
-
-**If you ever feel lost during or after setup** — say *"I'm lost"* or *"where do I start"* and Claude routes to the [[onboarding-aios]] agent automatically. That agent is your standing companion for orientation throughout the framework's lifetime.
+> **New here? Read top-to-bottom.** Prerequisites first (install Claude Code + the toolchain), then The Setup (Claude-Driven) runs the framework install.
+>
+> **Already have Claude Code installed?** Skip to [The Setup (Claude-Driven)](#the-setup-claude-driven).
 
 ---
 
@@ -159,6 +133,44 @@ claude
 ```
 
 (For Fedora/Arch/etc., swap the package manager — the package names are the same.)
+
+---
+
+## The Setup (Claude-Driven)
+
+Open any terminal with Claude Code and say:
+
+```
+Set up my AI-OS from https://github.com/The-AIOS/aios
+```
+
+Claude reads this file and walks you through the full onboarding — clone → install → personalize → orient → optional company + collaboration → first daily plan. Each step is interactive; you confirm decisions, Claude executes.
+
+**The end-to-end flow:**
+
+1. **Clone** the repo to `~/aios` and create your private vault repo (`gh repo create {your-username}/aios --private` — matches the local path; renameable later) — your personal content never goes back to the shared framework. **If you cloned elsewhere**, Claude creates a `~/aios` symlink to the actual install path (see § Path portability below) so every framework reference resolves cleanly.
+2. **Install MCP dependencies** via `bash mcps/setup.sh` (creates venvs, installs Python/Node deps for every bundled MCP)
+3. **Guided MCP auth** via `/aios:mcps-setup` (one MCP at a time — asks "want this?", walks you through tokens, registers with `claude mcp add`, verifies the connection works)
+4. **Personalize via `/aios:cold-start-interview`** — 15-25 min interactive interview: identity (USER.md), declared context (`about_me`, `personal_voice`, `working_style`), trust contract (`INTENT.md`), bundle install choices, optional Anthropic plugins. This is where the vault becomes *yours*.
+5. **Spawn the onboarding companion**: `/agent onboarding-aios` — wears the AIOS-orientation hat. Knows the whole map: org profile, README, SETUP, CHEATSHEET, FORTRESS, START-HERE, USER.md personalization power, the self-update loop, where to look when lost. Invoke anytime later by saying *"I'm lost"* / *"what should I try next"* / *"remind me how this fits together"*.
+6. **(Optional) Mount or create a company** via `/aios:company` — if you have a venture-context repo or want to scaffold one (GitHub recommended ✅, see the command's substrate selector)
+7. **(Optional) Set up a collaboration space** via `/aios:collaborate` — if you have a known shared space (Drive folder, GitHub repo, local sync folder) to mount or scaffold
+8. **First `/aios:today`** — the proof point. Reads everything you just configured, pulls your Calendar + Tasks + Slack, and generates a grounded plan for the rest of today. From here, the daily ritual takes over.
+
+**What Claude auto-detects** (saves asking):
+- Git identity from `~/.gitconfig` or local repo config
+- GitHub username from `gh auth status`
+- SSH keys from `~/.ssh/`
+- Already-installed MCPs, CLI tools, and plugins
+- Bundled OAuth credentials for Google Workspace
+
+**What Claude asks you** (only if needed):
+- Your Google email (for Calendar/Tasks/Drive)
+- Which task sources you use (GitHub Issues, Linear, Monday, etc.)
+- What to name your private vault repo (defaults to `{username}/aios` — matches the local path `~/aios/`; pick a different name if you prefer, e.g., `{username}/vault` or `{username}/my-aios`)
+- Substrate choices when running `/company` or `/collaborate`
+
+**If you ever feel lost during or after setup** — say *"I'm lost"* or *"where do I start"* and Claude routes to the [[onboarding-aios]] agent automatically. That agent is your standing companion for orientation throughout the framework's lifetime.
 
 ---
 
