@@ -74,7 +74,7 @@ After this check passes, proceed to the welcome message below.
 ### Step 0 — Welcome + framing
 
 ```
-Welcome to AIOS. The next 15-25 minutes set up your personalized
+Welcome to The AIOS. The next 15-25 minutes set up your personalized
 operating system.
 
 The AIOS turns AI into a team — a legal you, an accountant you,
@@ -331,7 +331,7 @@ ritual that anchors the system. After today, the loop is:
 That loop is what makes Claude get smarter about YOU over time.
 Skip it and the system never compounds.
 
-Welcome to AIOS. 🌊
+Welcome to The AIOS. 🌊
 ```
 
 ### Step 13 — Schedule the Day-7 check-in
