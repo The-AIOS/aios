@@ -33,6 +33,34 @@
 
 $ErrorActionPreference = 'Stop'
 
+# ---- Detect primary session name ----
+# Read from USER.md ## Identity table (first session-name row). If USER.md
+# doesn't exist yet OR has no identity entries (fresh-clone pre-cold-start),
+# fall back to "claude" -- matches the cold-start-interview default for the
+# session-name question. Operator can re-run this script after personalizing
+# USER.md to swap the placeholder for their chosen name.
+function Get-PrimarySessionName {
+    $userMd = Join-Path $HOME 'aios\USER.md'
+    if (-not (Test-Path $userMd)) { return 'claude' }
+    $inSection = $false
+    foreach ($line in Get-Content $userMd) {
+        if ($line -match '^## Identity') { $inSection = $true; continue }
+        if ($inSection -and $line -match '^## ') { break }
+        if ($inSection -and $line -match '^\|\s*`([^`]+)`') {
+            $candidate = $Matches[1]
+            # Skip header/separator rows (| Name | / | --- |)
+            if ($candidate -notmatch '^(Name|[\s\-]+)$') {
+                return $candidate
+            }
+        }
+    }
+    return 'claude'
+}
+
+$PRIMARY_NAME = Get-PrimarySessionName
+$primarySource = if ($PRIMARY_NAME -eq 'claude') { 'fallback -- set in USER.md to customize, then re-run' } else { 'from USER.md' }
+Write-Host "[ok] Primary session name: $PRIMARY_NAME ($primarySource)"
+
 # ---- Detect profile ----
 # $PROFILE auto-resolves to the right path for the current PowerShell edition
 # (pwsh = Documents\PowerShell\Microsoft.PowerShell_profile.ps1,
@@ -63,8 +91,11 @@ $content = [regex]::Replace(
     ''
 )
 
-# Strip inline function defs (no banner) -- only matches well-formed function blocks
-foreach ($fn in 'Invoke-ClaudeWithRespawn', 'spawn') {
+# Strip inline function defs (no banner) -- only matches well-formed function blocks.
+# Includes the dynamic primary-session function so re-installs cleanly replace it
+# (operator might change their primary name in USER.md between runs).
+$stripFns = @('Invoke-ClaudeWithRespawn', 'spawn', 'spawn-kill', $PRIMARY_NAME)
+foreach ($fn in $stripFns) {
     $content = [regex]::Replace(
         $content,
         "(?sm)^function\s+$fn\s*\{.*?^\}\r?\n?",
@@ -262,7 +293,25 @@ function spawn-kill {
 '@
 
 Add-Content -Path $RC -Value $WRAPPER -Encoding UTF8
-Write-Host "[ok] Appended new wrapper block to $RC"
+
+# ---- Append the dynamic primary-session function ----
+# Operators get a shell function matching their declared primary session
+# name (from USER.md). For fresh-clone operators without a session name yet,
+# falls back to `claude` as a generic-safe placeholder. Re-running this
+# script after personalizing USER.md swaps the placeholder for their name.
+$PRIMARY_FN = @"
+
+# Primary-session shorthand -- runs $PRIMARY_NAME as a named, respawn-capable
+# session. Re-run install-wrappers.ps1 after editing USER.md to rename this
+# function to your actual session name.
+function $PRIMARY_NAME {
+    Invoke-ClaudeWithRespawn -Name '$PRIMARY_NAME'
+}
+"@
+
+Add-Content -Path $RC -Value $PRIMARY_FN -Encoding UTF8
+
+Write-Host "[ok] Appended new wrapper block + $PRIMARY_NAME() shorthand to $RC"
 
 # ---- Verify by inspecting profile content ----
 # Why we don't use Get-Command here: this installer runs in the parent shell,

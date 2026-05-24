@@ -38,9 +38,9 @@ fi
 # ---- Detect primary session name ----
 # Read from USER.md ## Identity table (first session-name row). If USER.md
 # doesn't exist yet OR has no identity entries (fresh-clone pre-cold-start),
-# fall back to "primary" as a generic-safe default. Operator can re-run this
-# script after /aios:cold-start-interview to swap the placeholder for their
-# actual session name.
+# fall back to "claude" — matches the cold-start-interview default for the
+# session-name question. Operator can re-run this script after personalizing
+# USER.md to swap the placeholder for their chosen name.
 detect_primary_session() {
   local user_md="$HOME/aios/USER.md"
   if [ -f "$user_md" ]; then
@@ -68,11 +68,11 @@ detect_primary_session() {
       return
     fi
   fi
-  echo "primary"
+  echo "claude"
 }
 
 PRIMARY_NAME="$(detect_primary_session)"
-echo "✓ Primary session name: $PRIMARY_NAME ($([ "$PRIMARY_NAME" = "primary" ] && echo 'fallback — set in USER.md → ## Identity table to customize, then re-run' || echo 'from USER.md'))"
+echo "✓ Primary session name: $PRIMARY_NAME ($([ "$PRIMARY_NAME" = "claude" ] && echo 'fallback — set in USER.md → ## Identity table to customize, then re-run' || echo 'from USER.md'))"
 
 # ---- Backup ----
 BACKUP="${RC}.bak.$(date +%Y%m%d-%H%M%S)"
