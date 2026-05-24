@@ -166,7 +166,7 @@ When the user mentions a project or asks to work on something specific, **zoom i
    - The vault project note IS the deep context — no repo to `cd` into
 5. You now have two layers active: vault context (strategic — who, why, for whom) + project context (execution — how, where, what's next). Keep both loaded. Vault tells the full picture. Project tells the specifics.
 
-**The Current State table contains** (11 fields): `Type` (Coding / Non-coding / Hybrid — drives path loading) · `Code` (`~/code/...` or N/A) · `Drive` (`~/cowork/...` or N/A) · `GitHub` (personal remote URL) · `Team` (team remote URL, if shared) · `CLAUDE.md` / `README` / `Settings` (path + ✓/❌ for each) · `Stack` (techs used) · `Status` (Active / Archived / Idea) · `Orient` (one-sentence summary).
+**The Current State table contains** (11 fields): `Type` (Coding / Non-coding / Hybrid — drives path loading) · `Code` (`~/code/...` or your preferred repo home, or N/A) · `Drive` (your Drive-mount path — could be `~/Drive/`, `~/Documents/`, `~/Google Drive/`, or any local mount you use — or N/A) · `GitHub` (personal remote URL) · `Team` (team remote URL, if shared) · `CLAUDE.md` / `README` / `Settings` (path + ✓/❌ for each) · `Stack` (techs used) · `Status` (Active / Archived / Idea) · `Orient` (one-sentence summary).
 
 **When scaffolding a new coding project**, always create `CLAUDE.md` (repo instructions) + `README.md` (what/how/who) + `.claude/settings.json` (permissions + tool config) so the project is self-contained for any teammate. Then update the project note's Current State to ✓ for each.
 

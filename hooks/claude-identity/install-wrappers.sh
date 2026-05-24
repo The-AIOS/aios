@@ -35,6 +35,45 @@ if [ ! -f "$RC" ]; then
   exit 1
 fi
 
+# ---- Detect primary session name ----
+# Read from USER.md ## Identity table (first session-name row). If USER.md
+# doesn't exist yet OR has no identity entries (fresh-clone pre-cold-start),
+# fall back to "primary" as a generic-safe default. Operator can re-run this
+# script after /aios:cold-start-interview to swap the placeholder for their
+# actual session name.
+detect_primary_session() {
+  local user_md="$HOME/aios/USER.md"
+  if [ -f "$user_md" ]; then
+    # Extract first session name from ## Identity table — match `name` pattern
+    # in the second column of a markdown table row that starts with | `name` |
+    local name
+    name=$(awk '
+      /^## Identity/ { in_section=1; next }
+      /^## / && in_section { exit }
+      in_section && /^\| `[^`]+`/ {
+        # Extract content between first pair of backticks in column 2
+        match($0, /`[^`]+`/)
+        if (RSTART > 0) {
+          name = substr($0, RSTART+1, RLENGTH-2)
+          # Skip the table-header row (| Name |) and separator rows
+          if (name !~ /^(Name|[ -]+)$/) {
+            print name
+            exit
+          }
+        }
+      }
+    ' "$user_md")
+    if [ -n "$name" ]; then
+      echo "$name"
+      return
+    fi
+  fi
+  echo "primary"
+}
+
+PRIMARY_NAME="$(detect_primary_session)"
+echo "✓ Primary session name: $PRIMARY_NAME ($([ "$PRIMARY_NAME" = "primary" ] && echo 'fallback — set in USER.md → ## Identity table to customize, then re-run' || echo 'from USER.md'))"
+
 # ---- Backup ----
 BACKUP="${RC}.bak.$(date +%Y%m%d-%H%M%S)"
 cp "$RC" "$BACKUP"
@@ -46,11 +85,17 @@ echo "✓ Backup: $BACKUP"
 #   1. Banner block: `# ==== claude-spawn-wrappers …` through `# ==== END …`
 #   2. Inline function defs: matched function-name { ... }
 # Uses awk because sed range patterns are fragile across BSD/GNU implementations.
-awk '
+awk -v primary="$PRIMARY_NAME" '
   /^# ==== claude-spawn-wrappers/,/^# ==== END claude-spawn-wrappers/ { next }
   /^_claude_with_respawn[[:space:]]*\(\)[[:space:]]*\{/,/^\}$/        { next }
-  /^buddai[[:space:]]*\(\)[[:space:]]*\{/,/^\}$/                      { next }
   /^spawn[[:space:]]*\(\)[[:space:]]*\{/,/^\}$/                       { next }
+  # Strip the dynamic primary-session function (whatever name USER.md surfaces)
+  $0 ~ "^"primary"[[:space:]]*\\(\\)[[:space:]]*\\{" { skip_primary=1 }
+  skip_primary && /^\}$/ { skip_primary=0; next }
+  skip_primary { next }
+  # Legacy strip for chuycepeda/aios pre-extraction `buddai()` left in operator
+  # rcs from earlier installs — safe no-op if not present.
+  /^buddai[[:space:]]*\(\)[[:space:]]*\{/,/^\}$/                      { next }
   { print }
 ' "$RC" > "${RC}.tmp"
 
@@ -171,9 +216,11 @@ _claude_with_respawn() {
   done
 }
 
-buddai() {
-  _claude_with_respawn buddai
-}
+# NOTE: The primary-session function (e.g. `primary() { ... }` for fresh
+# operators, or e.g. `jarvis() { ... }` / `friday() { ... }` / `buddai() { ... }`
+# for operators who personalized their session name in USER.md) is appended
+# AFTER this heredoc closes, using the $PRIMARY_NAME variable detected at the
+# top of install-wrappers.sh from USER.md → ## Identity table.
 
 _spawn_adj_animal() {
   local adjs="amber bold calm clever fierce gentle jolly nimble swift wise"
@@ -375,7 +422,23 @@ spawn-kill() {
 # ==== END claude-spawn-wrappers ====
 WRAPPER
 
-echo "✓ Appended new wrapper block to $RC"
+# ---- Append the dynamic primary-session function ----
+# Operators get a shell function matching their declared primary session
+# name (from USER.md → ## Identity table). For fresh-clone operators without
+# a session name yet, falls back to `primary()` as a generic-safe placeholder.
+# Re-running this script after personalizing USER.md swaps the placeholder
+# for the chosen name.
+cat >> "$RC" <<EOF
+
+# Primary-session shorthand — runs $PRIMARY_NAME as a named, respawn-capable
+# session. Re-run install-wrappers.sh after editing USER.md → ## Identity to
+# rename this function to your actual session name.
+$PRIMARY_NAME() {
+  _claude_with_respawn $PRIMARY_NAME
+}
+EOF
+
+echo "✓ Appended new wrapper block + ${PRIMARY_NAME}() shorthand to $RC"
 
 # ---- Verify by inspecting rc file content ----
 # Why we don't use `declare -f` here: this installer runs in bash (per the
