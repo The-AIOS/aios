@@ -15,7 +15,7 @@
 
 ## 2026-05-24 — spawn wrapper: bundle-ID-based Antigravity IDE addressing (post-rename)
 
-`hash: TBD`
+`hash: 11017df`
 
 > **What broke.** After Antigravity's 2026-05 update, the IDE moved to a new bundle (`Antigravity IDE.app`, bundle ID `com.google.antigravity-ide`) whose main process is stock Electron (`comm = "Electron"`). The legacy `Antigravity.app` (bundle ID `com.google.antigravity` — a separate Claude-app product) often remains installed alongside. The spawn wrapper's detection used `pgrep -xq "Antigravity IDE"` (never matches — main process is Electron) with a fallback to `pgrep -xq "Antigravity"` (matches the legacy bundle). Result: AppleScript routed keystrokes to the wrong app → System Events rejected them → audible system beeps, no new terminal opened.
 >
