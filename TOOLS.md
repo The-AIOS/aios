@@ -64,7 +64,12 @@ Say `spawn {name}` to launch a named tab dedicated to that role, or `/agent {nam
 | `consultant` | Strategic advisory, frameworks, recommendations | strategy |
 | `content-scheduler` | Plan and queue content calendar from vault insights | communication |
 | `content-writer` | Draft posts for LinkedIn, X, Substack in your voice | communication |
+| `crisis-mode` | Emergency / incident-response framing — calm, structured, actionable | personal |
+| `deck-builder` | End-to-end slide-deck construction via `batch_update_presentation` — design discovery → outline → nano-banana imagery → live Google Slides build → human polish handoff | communication |
+| `decision-journaler` | Structured decision capture (verdict / diagnosis / options / reasoning / confidence / revisit-if) | personal |
+| `design-md-author` | Author `DESIGN.md` per Google Labs spec (visual design system + tokens) — pairs with Stitch MCP | communication |
 | `email-drafter` | Draft professional emails matching voice + context | communication |
+| `growth-companion` | Growth-focused conversational companion — surfaces growth edges, holds you accountable without judging | personal |
 | `invoice-tracker` | Track pending invoices, flag overdue | finance-legal |
 | `journal-prompter` | Generate reflection prompts from sessions + patterns | personal |
 | `lawyer` | Legal review, contract analysis, compliance | finance-legal |
@@ -89,50 +94,99 @@ Say `spawn {name}` to launch a named tab dedicated to that role, or `/agent {nam
 
 ## Skills
 
-Skills auto-load — you don't invoke them by name. Describe what you want and Claude picks the right one.
+Skills auto-load — you don't invoke them by name. Describe what you want and Claude picks the right one. Each entry below shows the source folder so you know what ships out-of-box vs what comes from a marketplace plugin.
 
 ### Coding & engineering
-| Skill | Trigger phrase |
-|-------|---------------|
-| `code-review-excellence` | "Review this code thoroughly" |
-| `karpathy-coding` | "Follow Karpathy's principles" — think before coding, simplicity first, surgical changes |
-| `systematic-debugging` | "Help me debug this systematically" |
-| `test-driven-development` | "Let's write tests first" |
+| Skill | Source | Trigger phrase |
+|---|---|---|
+| `api-design-principles` | `skills/aios/` | "How should I shape this API?" |
+| `architecture-patterns` | `skills/aios/` | "What architecture fits this problem?" |
+| `database-migration` | `skills/aios/` | "Write a safe migration for this schema change" |
+| `error-handling-patterns` | `skills/aios/` | "Where should I handle errors here?" |
+| `karpathy-coding` | `skills/aios/` | "Follow Karpathy's principles" — think before coding, simplicity first, surgical changes |
+| `python-best-practices` | `skills/aios/` | "Write idiomatic Python here" |
+| `react-nextjs-patterns` | `skills/aios/` | "Build this Next.js / React feature" |
+| `tailwind-design-system` | `skills/aios/` | "Style this with Tailwind tokens" |
+| `prompt-engineering-patterns` | `skills/aios/` | "Improve this prompt" |
+| `systematic-debugging` | `skills/superpowers/` | "Help me debug this systematically" |
+| `test-driven-development` | `skills/superpowers/` | "Let's write tests first" |
+| `code-review-excellence` | marketplace plugin | "Review this code thoroughly" — install via `/plugin install code-review@claude-plugins-official` |
 
 ### Content & design
-| Skill | Trigger phrase |
-|-------|---------------|
-| `brand-guidelines` | "Apply brand styling to this" |
-| `canvas-design` | "Create a poster / visual design" |
-| `doc-coauthoring` | "Let's co-write this document" |
-| `frontend-design` | "Build a landing page / component / dashboard" |
+| Skill | Source | Trigger phrase |
+|---|---|---|
+| `algorithmic-art` | `skills/anthropic/` | "Generate code-based art / generative visuals" |
+| `brand-guidelines` | `skills/anthropic/` | "Apply Anthropic brand styling" — for AIOS contributions |
+| `canvas-design` | `document-skills` plugin | "Create a poster / visual design" |
+| `claude-api` | `skills/anthropic/` | "Build a Claude API integration" |
+| `doc-coauthoring` | `skills/anthropic/` | "Let's co-write this document" |
+| `frontend-design` | `skills/anthropic/` | "Build a landing page / component / dashboard" |
+| `internal-comms` | `skills/anthropic/` | "Draft a company-internal comms message (3P update, FAQ, etc.)" |
+| `slack-gif-creator` | `skills/anthropic/` | "Make an animated GIF for Slack" |
+| `theme-factory` | `skills/anthropic/` | "Apply a theme to this artifact / slide deck / doc" |
+| `data-presentation` | `skills/aios/` | "How should I present this data?" — chart selection, table layout |
 
-### Documents & files
+### Documents & files (all via Anthropic's `document-skills` plugin — `/plugin install`)
 | Skill | Trigger phrase |
-|-------|---------------|
+|---|---|
 | `docx` | "Create a Word document" / "Edit this .docx" |
 | `pdf` | "Create a PDF" / "Fill this PDF form" / "Merge these PDFs" |
 | `pptx` | "Create a presentation" / "Edit these slides" |
 | `xlsx` | "Create a spreadsheet" / "Analyze this Excel file" |
 
 ### Obsidian-specific
-| Skill | Trigger phrase |
-|-------|---------------|
-| `defuddle` | "Clean this web page into markdown" |
-| `json-canvas` | "Create a visual canvas / diagram / map" |
-| `obsidian-bases` | "Create a Bases view for my projects" |
-| `obsidian-cli` | "Open this note in Obsidian" / "Run an Obsidian command" |
-| `obsidian-markdown` | "Write proper Obsidian markdown" — wikilinks, callouts, properties |
+| Skill | Source | Trigger phrase |
+|---|---|---|
+| `json-canvas` | `skills/aios/` | "Create a visual canvas / diagram / map" |
+| `obsidian-bases` | `skills/aios/` | "Create a Bases view for my projects" |
+| `obsidian-cli` | `skills/aios/` | "Open this note in Obsidian" / "Run an Obsidian command" |
+| `obsidian-markdown` | `skills/aios/` | "Write proper Obsidian markdown" — wikilinks, callouts, properties |
+| `defuddle` | marketplace plugin | "Clean this web page into markdown" — install via Anthropic skills marketplace |
 
 ### Planning & process
-| Skill | Trigger phrase |
-|-------|---------------|
-| `brainstorming` | "Let's brainstorm before building" |
-| `executing-plans` | "Execute this plan with checkpoints" |
-| `verification-before-completion` | "Verify everything works before we ship" |
-| `writing-plans` | "Help me plan the implementation" |
+| Skill | Source | Trigger phrase |
+|---|---|---|
+| `brainstorming` | `skills/superpowers/` | "Let's brainstorm before building" |
+| `executing-plans` | `skills/superpowers/` | "Execute this plan with checkpoints" |
+| `verification-before-completion` | `skills/superpowers/` | "Verify everything works before we ship" |
+| `writing-plans` | `skills/superpowers/` | "Help me plan the implementation" |
 
-**Source folders:** `skills/aios/` (AIOS-built) · `skills/anthropic/` (vendored from `anthropics/skills`) · `skills/superpowers/` (vendored from `obra/superpowers`) · `skills/custom/` (your own — survives `/aios:update`). Browse `skills/_index.md` for the full registry. Additional skills (canvas-design, docx, pdf, pptx, xlsx) ship via Anthropic's `document-skills@anthropic-agent-skills` plugin — install via `/plugin install`.
+### Meta / framework
+| Skill | Source | Trigger phrase |
+|---|---|---|
+| `mcp-builder` | `skills/anthropic/` | "Build a new MCP server" |
+| `skill-creator` | `skills/anthropic/` | "Create / edit a skill" / "Optimize a skill's description" |
+
+### Compliance
+| Skill | Source | Trigger phrase |
+|---|---|---|
+| `accessibility-compliance` | `skills/aios/` | "Check this for accessibility (WCAG, ARIA, contrast)" |
+| `pci-compliance` | `skills/aios/` | "Audit this for PCI compliance" |
+
+**Source folders:** `skills/aios/` (AIOS-built — 16 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 9 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — brainstorming + systematic-debugging + executing-plans + writing-plans + verification-before-completion + TDD) · `skills/custom/` (your own — survives `/aios:update`). Browse `skills/_index.md` for the full registry.
+
+**Marketplace skills** (NOT in `skills/`, install via `/plugin install`): `canvas-design`/`docx`/`pdf`/`pptx`/`xlsx` (via `document-skills` plugin) · `code-review-excellence` (via `code-review@claude-plugins-official`) · `defuddle` (via Anthropic skills marketplace) · `superpowers` full marketplace (`obra/superpowers-marketplace`).
+
+---
+
+## MCPs
+
+The 10 bundled MCP servers — each connects Claude to a real tool you use. Auto-connect via `~/.claude/settings.json` after you run `/aios:mcps-setup` (which walks token + register + verify per MCP).
+
+| MCP | What it gives Claude | When you'd use it | Auth |
+|---|---|---|---|
+| **Google Workspace** | Calendar (read events), Tasks (read/write), Drive (read/write Docs/Sheets/Slides), Gmail (drafts + search), Contacts | Read by `/aios:today` + `/aios:close-day` for calendar + tasks; used by `deck-builder` agent for Slides composition | OAuth (your Google account) |
+| **Slack** | DMs + channels: read, send, react, threads. Daily-recap pre-fetch for `/aios:today` + `/aios:close-day`'s Slack triage section | When `/today` surfaces unreads, when you draft messages via `email-drafter`-style agents, when ingest pulls Slack threads | OAuth (workspace per operator) |
+| **GitHub** | Repos, issues, PRs, search, file contents, branch ops. Used by `code-reviewer`, `bug-triager`, `pr-review-toolkit` agents | Any code work touching repos you have access to | PAT (read+repo+workflow scopes typical) |
+| **Atlassian** | Jira (issues, sprints, boards, transitions) + Confluence (pages, search, comments) | Engineering teams using Atlassian; integrates with project status surfacing in `/today` | API token |
+| **NotebookLM** | Create notebooks, add sources, generate audio summaries + study guides + briefing docs. Full programmatic API beyond what NotebookLM UI exposes | Long-form research synthesis, podcast-style audio from your written corpus | Google OAuth |
+| **Stitch** | AI-native UI screen generation from text prompts + DESIGN.md tokens. Apply design systems, create projects, list screens, edit. Pairs with `design-md-author` agent | UI/UX work where you want Claude to author DESIGN.md once then generate matching screens on demand | Google account (Stitch beta access) |
+| **Playwright** | Browser automation: navigate, click, fill, screenshot, scrape. Use sparingly — heavy ops | Auto-publish flows (LinkedIn, X), end-to-end testing, scraping a site that has no API | None (browser binary) |
+| **Nano Banana** | Gemini-based image generation. Cover images, illustrations, brand-fit visuals | Used by `deck-builder` for slide imagery; useful for any agent that needs custom visuals | Google API key |
+| **PDF Generator** | Markdown → HTML (with inline CSS) → Chrome headless → PDF. Branded reports per design tokens | Powers `/aios:weekly-learnings`, `/aios:learned`, `/aios:role-report` branded exports | None (Chrome binary) |
+| **Spotify DJ** | Playback control + search + current track + queue management | Lifestyle — no AIOS command depends on it. Music while you work, via Claude | OAuth |
+
+**Setup pattern:** `/aios:mcps-setup` walks each MCP one at a time — "want this?", token capture, `claude mcp add` registration, smoke-test verification. Skip any MCP you don't use; they sit on disk until you change your mind. Per-MCP README at `mcps/{name}-mcp/README.md` has the auth specifics + advanced options.
 
 ---
 
@@ -177,6 +231,17 @@ Used internally by `/aios:today` and `/aios:close-day` to batch-load Google Cale
 uv run ~/aios/hooks/pipeline-executor.py --command today       # for /today shape
 uv run ~/aios/hooks/pipeline-executor.py --command close-day   # for /close-day shape
 ```
+
+### `inject-datetime` — UserPromptSubmit hook (real clock in every prompt)
+
+Adds a `<system-time>` block to every user prompt before Claude reads it. Eliminates the "Claude infers wrong weekday/time from conversation history" failure mode — without this hook, Claude can drift on the actual day across long sessions, schedule on stale assumptions, or get the year wrong.
+
+```bash
+~/aios/hooks/inject-datetime.sh      # macOS / Linux (Git Bash on Windows too)
+~/aios/hooks/inject-datetime.ps1     # PowerShell
+```
+
+You don't invoke this manually. It's wired into `~/.claude/settings.json` as a `UserPromptSubmit` hook (see SETUP.md §10 for the JSON snippet). Fires on every prompt you submit; load-bearing for any time-sensitive reasoning Claude does.
 
 ---
 
