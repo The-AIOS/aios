@@ -101,10 +101,13 @@ WAIT for confirmation before proceeding.
 
 Walk through `USER.md` section by section:
 
-1. **Identity table** — ask the operator's primary session name (default: `claude` or `assistant`; power users pick something custom)
+1. **Identity table** — ask the operator's primary session name (default: `claude` or `assistant`; power users pick something custom — e.g. fictional-bot names like JARVIS, Friday, Samantha, HAL, Cortana, TARS).
+
+   **Role string is OS-detected, not hardcoded.** Default the role to a machine-agnostic "Primary session" baseline. Only add OS-specificity ("MacBook primary", "Windows primary", etc.) if the operator explicitly signals a multi-machine setup. Single-machine operators (99% of fresh clones) see clean "Primary session — AI partner" without machine-class jargon.
+
 2. **Anthropic accounts** — ask for primary email AND the multi-account question:
 
-   > *"Quick gentle question — do you use (or plan to use) more than one Anthropic account to manage the 5h/7d rate limits? (yes / no — single account)"*
+   > *"Quick gentle question — do you use more than one Anthropic account to manage the 5h/7d rate limits? (yes / no — single account)"*
 
    - **If no** → record primary email only. No autopilot setup needed; skip the quota-autopilot deferred-capture path entirely.
    - **If yes** (macOS only) → record primary + secondary emails in USER.md `## Anthropic accounts`, and **drop the deferred-capture marker** so the first `/today` surfaces it as a task:
@@ -128,12 +131,31 @@ Edit USER.md inline as the operator answers. Show the diff before applying.
 
 ### Step 2 — Declared context (4 files, fast pass)
 
-For each of these files in `vault/00 - notes/context/declared/`, ask ONE question and draft based on the answer. Operator refines if needed.
+**Opening — offer the pre-fill path BEFORE the per-file questions:**
+
+```
+Before we walk through the 4 declared files one at a time — got
+existing material I can pre-fill these from? Options:
+
+  (a) URL — your personal site, LinkedIn, About page, public bio
+  (b) File path — an existing About-Me doc, resume, manifesto
+  (c) Paste content directly — anything you have in any format
+  (d) None — interview from scratch, one question per file
+
+(For operators with public material, a-then-refine is usually
+ 5x faster than asking "who are you?" from cold.)
+```
+
+If a pre-fill source is provided, Claude fetches it once and uses it to draft EACH of the 4 files (about_me, personal_voice, working_style, about_business). For each file, show the draft + offer (a) accept / (b) edit / (c) ask the original question fresh. **Be honest about source limits** — `working_style.md` rhythm (morning vs evening) is usually NOT in public material; explicitly tell the operator what was inferred vs what needs their input.
+
+If no pre-fill source, ask the 4 questions one at a time:
 
 1. **`about_me.md`** — *"In one paragraph: who are you, what do you do, what are you building?"*
 2. **`personal_voice.md`** — *"How would a friend describe how you communicate? (warm / direct / poetic / precise / etc.)"*
 3. **`working_style.md`** — *"When do you do your best creative work — morning / afternoon / evening? Any other patterns Claude should know about how you operate?"*
 4. **`about_business.md`** (if applicable) — *"Are you building one or more ventures? Brief description of each."*
+
+**Per-file skip option (load-bearing):** every file ask must offer *"or skip + I'll observe and pick it up from our first weeks together"*. This isn't a cop-out for the operator — it's a real backstop. The Tier B observation pass in `/close-day` (introduced 2026-05-23) runs the digest every close-day and proposes updates to declared/observed files when content surfaces from accumulated sessions. Operators who skip declared context at cold-start aren't permanently disadvantaged; they're trusting the observation loop to fill it in.
 
 Skip optional files (`role-expectations.md`, `psychometric-profile.md`) unless the operator asks for them.
 
@@ -149,34 +171,51 @@ INTENT.md is the highest-leverage file for compounding trust. Walk through:
 
 Don't try to fill out venture-level overrides yet — those come once the operator has mounted at least one company (Step 5).
 
-### Step 4 — Agent bundle install
+### Step 4 — Agent bundles (informational — all 6 ship by default)
 
-Show the 6 bundles + scope (1 line each). Ask which apply.
+All 6 bundles ship in the AIOS clone. This step is mental-model setting + signal which bundles are HOT for the operator. **Don't ask the operator to "install" or "demote" anything — those are mechanically vague terms.** Instead, classify each bundle as HOT (with one-line reason matching this operator's declared work) or NOT-YET-HOT (with the value it WOULD bring later as an invitation).
 
-| Bundle | Install if you... | Default |
+| Bundle | HOT for this operator IF | NOT-YET-HOT framing |
 |---|---|---|
-| `aios-sales/` | Handle leads, write proposals, manage a sales pipeline | ✓ if applicable |
-| `aios-strategy/` | Do market research or strategic advisory | ✓ if applicable |
-| `aios-finance-legal/` | Run a business with invoicing, contracts, or compliance exposure | ✓ if applicable |
-| `aios-engineering/` | Write code, ship products, review PRs | ✓ if applicable |
-| `aios-communication/` | Publish content, give presentations, send emails (almost everyone) | ✓ default install |
-| `aios-personal/` | Want growth-companion, study-buddy, decision-journaler, etc. | ✓ default install |
+| `aios-sales/` | Handles leads, writes proposals, manages a sales pipeline | "value if needed: proposal templates + lead-tracker when you start consulting on the side" |
+| `aios-strategy/` | Does market research or strategic advisory | "value if needed: market-research agents + competitive-positioning frameworks" |
+| `aios-finance-legal/` | Runs a business with invoicing, contracts, or compliance exposure | "value if needed: invoice templates + contract review when accounting load picks up" |
+| `aios-engineering/` | Writes code, ships products, reviews PRs | "value if needed: dev session reports + code review agents when you start building" |
+| `aios-communication/` | Publishes content, gives presentations, sends emails (almost everyone) | rarely NOT-HOT — default install |
+| `aios-personal/` | Wants growth-companion, study-buddy, decision-journaler, etc. | rarely NOT-HOT — default install |
 
-Operator picks. All 6 bundles ship in the AIOS template by default — this step doesn't add files, it just sets the operator's mental model for what's available + suggests demoting unused bundles to ignore in `/today` Radar.
+**No action required from the operator at this step.** Just close with: *"Nothing to install or demote — bundles ship in the clone; `/today` surfaces what's relevant based on your declared work."*
 
-### Step 5 — Mount your first company (optional but recommended)
+### Step 5 — Companies + collaboration spaces (informational — defer setup)
 
-Ask: *"Do you have a company / venture context to mount? (your own company, a client, an advisory engagement)"*
+AIOS comes with two adjacent primitives for shared infrastructure beyond your personal vault. **Do NOT try to set either up during cold-start** — both require git MCP working (configured in Step 6) AND substrate choice (GitHub/Drive) AND their own interview flows (~10 min each). Setting one up mid-onboarding is a momentum-killing detour. Cover them informationally + defer.
 
-If yes → invoke `/company` flow:
+```
+The AIOS bundles two workspace primitives. We'll skip setup now —
+both deserve their own beats post-cold-start.
 
-- *"Create a new company-context repo, or mount an existing one?"*
-- If create → walks `/company --create` (interview-driven scaffold per the [Layer 1-5 template](./company.md))
-- If mount → ask for the URL (GitHub repo or Drive folder), runs `/company --mount {url}`
+1. /aios:company — mount your venture-context (positioning, gtm,
+   pricing, brand, agents specific to a venture). Each venture lands
+   at vault/00 - notes/context/ventures/{venture}/. Multi-company
+   supported — you might mount Acme + your-startup + a client.
 
-If no → skip. Operator can run `/company` later.
+2. /aios:collaborate — scaffold shared-with-teammates workspaces
+   (partner Drive folders, co-founder GitHub repos, local sync
+   folders). Bidirectional content, multiple writers. Distinct
+   from /aios:company (which is one-way pulled-in canonical context).
+
+When you finish cold-start, tell me "let's mount my company" or
+"let's set up a collaboration space" and we'll do it together —
+each takes ~10 min on its own.
+```
+
+No questions asked at this step. Operator just acknowledges + moves to Step 6.
 
 ### Step 6 — MCP setup (the real workflow surface)
+
+**Open with a 1-2 line executive-friendly definition** — many operators encounter "MCP" jargon-cold and need orientation:
+
+> *"MCPs (Model Context Protocols) are how Claude connects to the real tools you use — Google Calendar, Slack, GitHub, etc. Think browser extensions, but for AI: each one teaches Claude to read and write in one specific tool. We bundle 10 with AIOS; you set up the ones you actually use."*
 
 The AIOS bundles 10 MCPs. Operator picks which to set up now vs defer:
 
@@ -198,18 +237,19 @@ The AIOS bundles 10 MCPs. Operator picks which to set up now vs defer:
 
 After this step the MCP-tooling layer is operational — Claude can read your Calendar, post to Slack as you, query GitHub PRs, render PDFs, generate images, etc.
 
-### Step 7 — Stitch optional integration (UI builders only)
+### Step 7 — Google's Stitch (UI builders only)
 
-This is the dedicated ask for operators who build user interfaces:
+Dedicated ask for operators who build user interfaces. **Binary choice — no "tell me more" branch** (the prompt below explains enough; adding a third option creates decision overhead for an already-narrow audience):
 
 ```
 Do you build user interfaces? (web apps, mobile apps, design systems)
 
-If yes, Stitch is worth wiring in. It's Google's AI-native design → code
-pipeline, and it integrates with our design-md-author agent (which generates
-DESIGN.md per Google's spec, then optionally uploads to Stitch for UI generation).
+If yes, Google's Stitch is worth wiring in — it's Google's AI-native
+design → code pipeline. Pairs with our design-md-author agent (generates
+DESIGN.md per Google's spec, then optionally uploads to Stitch for UI
+screen generation from prompts + design tokens).
 
-Install: y / n / tell me more
+Install: y / n
 ```
 
 If `y`:
@@ -217,104 +257,64 @@ If `y`:
 - Optionally install Stitch Skills marketplace: `npx plugins add google-labs-code/stitch-skills --scope project --target claude-code`
 - Surface VoltAgent/awesome-design-md (82K⭐) as the inspiration repo for first-time DESIGN.md authors
 
-If `tell me more`:
-- Show: *"Stitch generates UI screens from text prompts and DESIGN.md tokens. Pairs with our `design-md-author` agent. The combination: author your brand's DESIGN.md once → generate matching screens on demand. Useful if you're shipping any user-facing product."*
+If `n`: defer, move on. Stitch MCP is on disk; operator can wire it in later via `/aios:mcps-setup` if their UI work picks up.
 
-If `n`: defer, move on.
+### Step 8 — Plugins (announce + install-all-by-default)
 
-### Step 8 — Optional Anthropic + community plugins (recommended installs)
+Plugins are NOT optional in cold-start. The new operator doesn't know what each plugin does yet — making them DECIDE upfront forces knowledge they don't have. Same pattern as bundles (ship by default) and MCPs (bulk-install Phase 1): **announce the recommended set, install them, surface what landed.** Operators can disable any plugin later if they notice it as noise.
 
-Based on what the operator told us in Steps 2-4, suggest plugins from Anthropic's official marketplace + the broader community. The recommendation engine cross-references the operator's declared role + ventures + work patterns and surfaces the highest-leverage plugins they don't have yet.
-
-**Universal recommendations (suggest for almost everyone):**
-
-- **Superpowers** (obra/superpowers — 201K⭐) — *"Complete software development methodology for coding agents."* Installs as `/plugin install superpowers@claude-plugins-official`. The third-party plugin with the highest leverage for any operator who codes. Already partially absorbed into our `skills/` folder (brainstorming, writing-plans, systematic-debugging, etc.) — installing the marketplace plugin gets ongoing updates + the full methodology.
-- **claude-md-management** (`anthropics/claude-plugins-official`) — comprehensive CLAUDE.md + USER.md health check. We've reimplemented its patterns inline in `/housekeeping` Bucket 17, but the official plugin adds interactive tooling. Install via `/plugin install claude-md-management@claude-plugins-official`.
-
-**Role-specific recommendations:**
-
-- **If engineering / build heavy** → `/plugin install code-review@claude-plugins-official` + `pr-review-toolkit@claude-plugins-official` + `feature-dev@claude-plugins-official` + `security-guidance@claude-plugins-official`. Augments our aios-engineering bundle.
-- **If finance / accounting heavy** → `npx plugins add anthropics/financial-services` (26K⭐) — 10 vertical agents (month-end-closer, gl-reconciler, model-builder, kyc-screener, valuation-reviewer, statement-auditor, pitch-agent, market-researcher, meeting-prep-agent, earnings-reviewer)
-- **If legal exposure** → `npx plugins add anthropics/claude-for-legal` (7.4K⭐) — suite of legal-workflow plugins
-- **If knowledge-work heavy** (writing, research, study) → `npx plugins add anthropics/knowledge-work-plugins` (12K⭐)
-- **If life sciences / healthcare** → `npx plugins add anthropics/life-sciences` OR `anthropics/healthcare`
-
-**Marketplace browse (always offer):**
-
-```bash
-/plugin marketplace add anthropics/skills     # canonical Agent Skills marketplace (138K⭐ — anthropics/skills)
-/plugin marketplace add anthropics/claude-plugins-official    # 35+ official plugins
-/plugin marketplace add obra/superpowers-marketplace          # Superpowers + related plugins
-```
-
-**Recommendation rules:**
-
-- **Don't push.** If the operator says "skip plugins" or "I'll explore later", honor that. The default install is zero — every plugin is opt-in.
-- **One install per beat.** Don't ask "should I install all 4?" — confirm each separately so the operator can see what's being added.
-- **After install, surface the slash command.** *"Superpowers installed. Try `/superpowers` in your next session to see what landed."*
-- **If knowledge-work-heavy** → suggest `npx plugins add anthropics/knowledge-work-plugins` (12K⭐)
-- **Always** → mention `anthropics/skills` (138K⭐) — the canonical Agent Skills marketplace; browse via `/plugin marketplace add anthropics/skills`
-
-Operator picks which to install now vs defer. None are required.
-
-### Step 9 — Wear the onboarding hat (`/agent onboarding-aios`)
-
-Before the first `/today`, put the orientation companion in front of the operator so they understand *where they are* and *what they have*:
+**The standard install set** (based on the universal + role-specific selection from declared context in Steps 2-4):
 
 ```
-You're set up. Before we run your first plan — let me put on the
-"onboarding companion" hat so you understand the whole map.
+Installing the recommended plugin set for you...
 
-In the next message I'll switch hats with /agent onboarding-aios.
-That agent knows the full AIOS structure: the org (The-AIOS),
-this repo's README + CHEATSHEET + FORTRESS + START-HERE, USER.md
-personalization power, the self-update loop via /today and
-/close-session, the org's SECURITY/CONTRIBUTING playbooks. It's
-your standing companion for orientation — anytime later you
-feel lost, just say "I'm lost" or "what should I try next" and
-Claude routes here.
-
-OK to switch hats? (yes / skip — I'll explore solo)
+  ✓ /plugin marketplace add anthropics/skills                (138K⭐)
+  ✓ /plugin marketplace add anthropics/claude-plugins-official
+  ✓ /plugin marketplace add obra/superpowers-marketplace
+  ✓ /plugin install superpowers@superpowers-marketplace      (universal — dev methodology)
+  ✓ /plugin install claude-md-management@claude-plugins-official  (universal — CLAUDE.md/USER.md health)
+  + role-specific selections based on declared context (see table below)
 ```
 
-If yes → invoke `/agent onboarding-aios` and let it do the full orientation walk. The operator now has the AIOS mental map in conversation.
+**Role-specific augmentation** (read declared/observed context to decide):
 
-### Step 10 — (Optional) Mount or create a company
+| Operator signal | Add to install set |
+|---|---|
+| Engineering / build heavy (Sovra-style codebase, GitHub presence, dev project notes) | `code-review@claude-plugins-official`, `pr-review-toolkit@claude-plugins-official`, `feature-dev@claude-plugins-official`, `security-guidance@claude-plugins-official` |
+| Finance / accounting heavy (invoicing, contracts, tax work) | `npx plugins add anthropics/financial-services` (26K⭐ — 10 vertical agents) |
+| Legal exposure (compliance, contracts, advisory) | `npx plugins add anthropics/claude-for-legal` (7.4K⭐) |
+| Knowledge-work heavy (writing, research, study, content publishing) | `npx plugins add anthropics/knowledge-work-plugins` (12K⭐) |
+| Life sciences / healthcare | `npx plugins add anthropics/life-sciences` OR `anthropics/healthcare` |
 
-After the orientation walk:
+**After install, surface what landed** — list new slash commands available in the next session (e.g., `/superpowers`, `/claude-md-health`, `/code-review`, `/security-review`, `/verify`, etc.). Close with: *"You can disable any of these later via `/plugin list` if they feel like noise. Claude won't fire them unless relevant."*
 
-```
-You're operator-ready. Two optional setups before your first /today:
+**Edge case — operator says "skip plugins entirely"** before the install fires: respect it. The default is install-all-by-recommended-set, but explicit "skip" wins.
 
-1. Companies — do you have a venture-context repo / Drive folder
-   to mount? Or want to scaffold a new one? /company handles both.
-   GitHub substrate is highly recommended ✅ (see /company docs).
+### Step 9 — Introducing you to {primary-session-name}
 
-   Examples: your own venture, a client you work with, your
-   employer's shared context.
+Auto-launch the orientation companion. **No y/skip gate** — the "skip" option there is a fake choice (operator would lose orientation; defeats the purpose). Same pattern as bundles ship by default, plugins install by default. Announce + transition + execute.
 
-   Want to set up a company now? (yes / not yet)
-```
-
-If yes → invoke `/aios:company` (no args — it routes to create or mount based on what the operator says). If not yet → continue.
-
-### Step 11 — (Optional) Set up a collaboration space
+Frame it as the operator's primary-session-name (e.g., `buddai`) "wearing the onboarding-aios hat" — this is more accurate than "switching hats" because the operator continues to interact with their named session; the agent's expertise is what loads.
 
 ```
-2. Collaboration — do you have a shared/collaborative space to
-   mount or create? /collaborate scaffolds a substrate-pluggable
-   shared workspace (Drive for non-coders, GitHub for code-adjacent,
-   local folder for testing) and mirrors it into your vault.
+You're configured. One last hat-switch before your first /today —
+I'm putting on the onboarding companion to walk you through the
+whole map, framed for your altitude.
 
-   Examples: a partner-org Drive, a co-founder's GitHub repo, a
-   local sync folder you share with a teammate.
-
-   Want to set up a collaboration space now? (yes / not yet)
+(Switching to /agent onboarding-aios now...)
 ```
 
-If yes → invoke `/aios:collaborate`. If not yet → continue.
+Then auto-fire `/agent onboarding-aios`. The agent's greeting MUST extract the operator's name from `vault/00 - notes/context/declared/about_me.md` (first line typically contains "I'm {Name}"  or similar). Combine with the primary session name + the agent hat. Greeting format:
 
-### Step 12 — Run your first `/today`
+> *"Hey {operator-name-from-about_me}, {primary-session-name} here wearing the onboarding-aios agent hat. Day 0 — clone is fresh, you've configured identity, bundles are all hot, plugins installed. The next move that matters: your first /today..."*
+
+The agent then runs its full Day-0 walkthrough (persona calibration from declared context, compounding-mechanism explanation, ONE next-step). At end, returns control to the cold-start flow for Step 10.
+
+**Why no skip option:** the orientation walk is short (~2-3 minutes), and the operator has NO ALTERNATIVE source for the same mental map. Skipping it = the operator runs /today blind + spends the next two weeks figuring out commands from CHEATSHEET piecemeal. The 2-minute orientation is the highest-leverage moment in the whole onboarding.
+
+### Step 10 — Run your first `/today` + schedule Day-7 check-in
+
+After the orientation walk, close the interview with the climax move: the daily ritual + a Day-7 nudge so the operator doesn't fall off the loop after Day 1. **Companies + collaborations are NOT offered here** — they were deferred to "after cold-start completes" in Step 5's informational coverage. Operator initiates with "let's mount my company" / "let's set up a collaboration space" when ready.
 
 ```
 Everything compounds from here. Time to feel it.
@@ -331,16 +331,20 @@ ritual that anchors the system. After today, the loop is:
 That loop is what makes Claude get smarter about YOU over time.
 Skip it and the system never compounds.
 
+I'm scheduling a Day-7 check-in — you'll get a prompt to spawn
+onboarding-aios for a Week-1 review. That agent will surface what
+to try next based on how you've actually been using AIOS in your
+first week. (Easy to ignore if you're not in the mood; the schedule
+is a nudge, not an interrupt.)
+
 Welcome to The AIOS. 🌊
 ```
 
-### Step 13 — Schedule the Day-7 check-in
+Then create the Day-7 `RemoteTrigger` with the prompt: *"Spawn onboarding-aios for the Week-1 check-in."*
 
-After the operator finishes their first `/today`, surface:
+After `/today` fires, the cold-start interview is complete. Operator's next move is whatever `/today` suggests — typically beginning the work the day is already underway with, or just absorbing the rhythm-establishing first daily note.
 
-> *"Want me to remind you on Day 7 to run `spawn onboarding-aios` for a Week-1 check-in? That agent surfaces what to try next based on how you've actually been using AIOS."*
-
-If yes, create a `RemoteTrigger` for Day 7 with the prompt: *"Spawn onboarding-aios for the Week-1 check-in."*
+**Reminder for the executing Claude:** the company + collaboration setups DEFERRED at Step 5 are NOT forgotten — they're operator-initiated post-cold-start. If the operator next says *"let's mount my company"* or *"let's set up a collaboration space"*, route to `/aios:company` or `/aios:collaborate` respectively. Don't ask "did you mean...?" — the deferral phrasing in Step 5 is the canonical trigger.
 
 ## Output
 
