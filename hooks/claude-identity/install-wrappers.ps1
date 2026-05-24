@@ -91,10 +91,20 @@ $content = [regex]::Replace(
     ''
 )
 
+# Strip banner block: # ==== claude-primary-session ... # ==== END claude-primary-session
+# Banner-wrapping the dynamic primary-session function lets re-installs cleanly
+# strip it regardless of the previous primary-session name -- handles rename
+# N->N+1 without leaving orphan function definitions in the profile.
+$content = [regex]::Replace(
+    $content,
+    '(?s)# ==== claude-primary-session.*?# ==== END claude-primary-session ====\r?\n?',
+    ''
+)
+
 # Strip inline function defs (no banner) -- only matches well-formed function blocks.
-# Includes the dynamic primary-session function so re-installs cleanly replace it
-# (operator might change their primary name in USER.md between runs).
-$stripFns = @('Invoke-ClaudeWithRespawn', 'spawn', 'spawn-kill', $PRIMARY_NAME)
+# These are the legacy-strip pass for any old installs that didn't use banners
+# yet. Safe no-op if not present.
+$stripFns = @('Invoke-ClaudeWithRespawn', 'spawn', 'spawn-kill')
 foreach ($fn in $stripFns) {
     $content = [regex]::Replace(
         $content,
@@ -299,14 +309,20 @@ Add-Content -Path $RC -Value $WRAPPER -Encoding UTF8
 # name (from USER.md). For fresh-clone operators without a session name yet,
 # falls back to `claude` as a generic-safe placeholder. Re-running this
 # script after personalizing USER.md swaps the placeholder for their name.
+#
+# **Wrapped in its own banner** so re-installs cleanly strip it regardless of
+# the previous primary-session name -- handles rename N->N+1 without leaving
+# orphan function definitions in the profile.
 $PRIMARY_FN = @"
 
-# Primary-session shorthand -- runs $PRIMARY_NAME as a named, respawn-capable
+# ==== claude-primary-session (managed by hooks/claude-identity/install-wrappers.ps1) ====
+# Primary-session shorthand -- runs ``$PRIMARY_NAME`` as a named, respawn-capable
 # session. Re-run install-wrappers.ps1 after editing USER.md to rename this
 # function to your actual session name.
 function $PRIMARY_NAME {
     Invoke-ClaudeWithRespawn -Name '$PRIMARY_NAME'
 }
+# ==== END claude-primary-session ====
 "@
 
 Add-Content -Path $RC -Value $PRIMARY_FN -Encoding UTF8

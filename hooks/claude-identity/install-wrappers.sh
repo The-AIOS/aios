@@ -85,16 +85,15 @@ echo "✓ Backup: $BACKUP"
 #   1. Banner block: `# ==== claude-spawn-wrappers …` through `# ==== END …`
 #   2. Inline function defs: matched function-name { ... }
 # Uses awk because sed range patterns are fragile across BSD/GNU implementations.
-awk -v primary="$PRIMARY_NAME" '
+awk '
   /^# ==== claude-spawn-wrappers/,/^# ==== END claude-spawn-wrappers/ { next }
+  /^# ==== claude-primary-session/,/^# ==== END claude-primary-session/ { next }
   /^_claude_with_respawn[[:space:]]*\(\)[[:space:]]*\{/,/^\}$/        { next }
   /^spawn[[:space:]]*\(\)[[:space:]]*\{/,/^\}$/                       { next }
-  # Strip the dynamic primary-session function (whatever name USER.md surfaces)
-  $0 ~ "^"primary"[[:space:]]*\\(\\)[[:space:]]*\\{" { skip_primary=1 }
-  skip_primary && /^\}$/ { skip_primary=0; next }
-  skip_primary { next }
   # Legacy strip for chuycepeda/aios pre-extraction `buddai()` left in operator
-  # rcs from earlier installs — safe no-op if not present.
+  # rcs from earlier installs (before banner-wrapped primary-session blocks).
+  # Safe no-op if not present. New installs use banner-wrap above, so this only
+  # cleans up legacy state.
   /^buddai[[:space:]]*\(\)[[:space:]]*\{/,/^\}$/                      { next }
   { print }
 ' "$RC" > "${RC}.tmp"
@@ -425,17 +424,23 @@ WRAPPER
 # ---- Append the dynamic primary-session function ----
 # Operators get a shell function matching their declared primary session
 # name (from USER.md → ## Identity table). For fresh-clone operators without
-# a session name yet, falls back to `primary()` as a generic-safe placeholder.
+# a session name yet, falls back to `claude` as a generic-safe placeholder.
 # Re-running this script after personalizing USER.md swaps the placeholder
 # for the chosen name.
+#
+# **Wrapped in its own banner** so re-installs cleanly strip it regardless of
+# the previous primary-session name — handles rename N→N+1 without leaving
+# orphan function definitions in the rc file.
 cat >> "$RC" <<EOF
 
-# Primary-session shorthand — runs $PRIMARY_NAME as a named, respawn-capable
+# ==== claude-primary-session (managed by hooks/claude-identity/install-wrappers.sh) ====
+# Primary-session shorthand — runs \`$PRIMARY_NAME\` as a named, respawn-capable
 # session. Re-run install-wrappers.sh after editing USER.md → ## Identity to
 # rename this function to your actual session name.
 $PRIMARY_NAME() {
   _claude_with_respawn $PRIMARY_NAME
 }
+# ==== END claude-primary-session ====
 EOF
 
 echo "✓ Appended new wrapper block + ${PRIMARY_NAME}() shorthand to $RC"
