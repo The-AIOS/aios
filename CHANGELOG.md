@@ -15,7 +15,7 @@
 
 ## 2026-05-25 — Framework reorg: auto-apply /aios:update, agents/aios/ restructure, dual-write context rule
 
-`hash: TBD`
+`hash: 1ae30e5`
 
 > **Big day. Six structural shifts that consolidate the framework around one principle: *infra is infra — applied automatically, never asked.*** All were triggered by a live operator migration session (Alecs) that exposed three structural papercuts: (a) `/aios:update` asking operators to approve framework changes (slow, error-prone, false sense of control), (b) duplicate skills/agents leaking into `custom/` and at layer roots after every migration, (c) the flat `agents/aios-*` naming making operator-contribution flow harder than it should be. Plus polish from morning ships: cold-start wrapper refresh, claude-fallback recursion fix, and a CLAUDE.md dual-write rule for behavioral patterns.
 
