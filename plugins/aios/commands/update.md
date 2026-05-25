@@ -52,19 +52,38 @@ See the callout at the top. Hard denylist — this command refuses to write to a
 
 When a template under `templates/*-template.md` gains a new section, advise the operator that their corresponding filled-in file (`vault/00 - notes/context/declared/{file}.md`) is missing that section. No file is touched. Same for `USER.md` template gaining sections vs operator's USER.md.
 
-## Backup-on-divergence
+## Backup-on-divergence (three-way compare — stale is NOT a personalization)
 
-Before overwriting any Tier 1 file, compare local content to upstream. If they differ (operator customized the file), back up the operator's version BEFORE overwriting:
+Before overwriting any Tier 1 file, do a **three-way compare** to distinguish operator personalizations from merely-stale files. The naive "local differs from upstream HEAD → backup" rule over-backs-up: an operator whose vault is N days behind has local files that differ from current upstream simply because they haven't synced yet, not because they personalized anything. Backing those up floods `vault/04 - backups/` with non-personalizations and noises the "your edits were preserved" report.
+
+The right comparison: **local vs operator's last-synced BASELINE** (the version they had after their last successful `/aios:update`).
 
 ```bash
-BACKUP_DIR="$HOME/aios/vault/04 - backups/aios-update-$(date +%Y-%m-%d)"
-mkdir -p "$BACKUP_DIR"
-cp "$HOME/aios/{relative-path}" "$BACKUP_DIR/{filename-with-flattened-path}"
+# For each changed Tier 1 file, get THREE versions:
+#   (a) baseline — what upstream looked like at stored_hash (operator's last sync)
+#   (b) local    — what's in operator's vault now
+#   (c) upstream — what's at upstream HEAD (target of this update)
+
+# Fetch baseline content from the same clone we already have (no second clone needed):
+git -C /tmp/vault-update-check show {stored_hash}:{path} > /tmp/aios-baseline-{flattened-path}
+
+# Compare local vs baseline:
+diff -q "$HOME/aios/{path}" /tmp/aios-baseline-{flattened-path}
 ```
 
-Then overwrite. Then add the backup to the report: "Backed up your customized `CLAUDE.md` → `vault/04 - backups/aios-update-2026-05-25/CLAUDE.md`. If you had edits worth keeping, restore them manually."
+**Three outcomes:**
 
-Files with NO local divergence (operator never touched them) → overwrite silently, no backup needed.
+| Local vs baseline | Meaning | Action |
+|---|---|---|
+| **Identical** | Operator never touched this file — they just had an older synced version | **Overwrite silently. No backup.** The "diff vs upstream HEAD" is just stale, not personalization. |
+| **Different** | Operator made local edits AFTER last sync | **Backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{date}/{flattened-path}` BEFORE overwrite. Tell operator what was preserved. |
+| **Baseline doesn't exist in clone** (cross-repo case, OR `stored_hash` is `initial`) | Can't establish baseline | **Conservative fallback:** treat as personalization → backup before overwrite. Better to over-backup once than risk losing operator edits. |
+
+Files with NO upstream change → not even considered (`git diff` didn't list them).
+
+Files where local == baseline (clean overwrites) → never appear in the report's "Backed up" section. Only true personalizations land there.
+
+This makes the "Backed up (your customizations preserved)" report **meaningful** — every entry represents an actual operator edit worth their review.
 
 ## Post-replace auto-execution (scripts must RUN, not just copy)
 
@@ -98,17 +117,18 @@ Migration history left operators with duplicates: a skill (or agent) lives BOTH 
 For each layer in `agents`, `skills`, `plugins`, `mcps`, `templates`, `hooks`:
 
 1. Build the set of bundled file basenames — every `.md` under `{layer}/aios/`, `{layer}/anthropic/`, `{layer}/superpowers/`, and (for plugins/) `{layer}/aios/commands/`. **Exclude `_index.md` from this set** — every folder gets its OWN `_index.md` as navigation metadata, they are NEVER duplicates of each other (`agents/aios/_index.md` is the bundled index; `agents/custom/_index.md` is the operator's index for their custom agents — both intentional, neither is a copy).
-2. Scan `{layer}/custom/*` for any file whose basename appears in the bundled set AND is not `_index.md`. **For each match: backup-on-divergence then remove.**
-   - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the bundled file (`{layer}/{bundled-subfolder}/{name}.md`).
-   - **If divergent** (operator customized a same-named bundled file instead of renaming it): backup the operator's version FIRST → `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-custom-{name}.md`. Then remove.
-   - **If byte-identical** (true duplicate, no operator value lost): remove silently, no backup needed.
-   - Log either way: *"Removed `agents/custom/lawyer.md` — duplicate of bundled `agents/aios/finance-legal/lawyer.md`. [Backed up to vault/04 - backups/aios-update-2026-05-25/duplicates/agents-custom-lawyer.md — your version differed from bundled; restore manually if you had intentional edits.]"* (bracketed clause only when divergent).
-3. Scan `{layer}/*.md` at the top level (outside any subfolder). Skip `_index.md` (layer-root index is intentional, not an orphan). If a remaining top-level file's basename matches a bundled file → **same backup-on-divergence rule, then remove.** Migration artifact — operator's original belongs inside the appropriate bundled subfolder (already there). Backup path: `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-root-{name}.md`. Log: *"Removed `skills/test-driven-development.md` — duplicate of bundled `skills/superpowers/test-driven-development.md`."*
+2. Scan `{layer}/custom/*` for any file whose basename appears in the bundled set AND is not `_index.md`. **For each match: apply the stale-vs-personalized test, then remove.**
+   - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the CURRENT bundled file (`{layer}/{bundled-subfolder}/{name}.md`).
+   - **If byte-identical to current bundled** (true duplicate, no operator value): remove silently, no backup needed.
+   - **If different from current bundled → check if it's a stale-bundled version** (not a personalization): scan recent upstream history for any past version of the bundled file matching this content. Use `git -C /tmp/vault-update-check log --all -p -- {bundled-path}` and compare against the past few revisions of the file. If a match is found in upstream history → the file is just a stale bundled copy (migration leftover) → remove silently, no backup.
+   - **Else** (different from current AND no match in upstream history): treat as real personalization → backup-on-divergence: copy operator's version to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-custom-{name}.md` FIRST, then remove.
+   - Log either way: *"Removed `agents/custom/lawyer.md` — duplicate of bundled `agents/aios/finance-legal/lawyer.md`. [Backed up to vault/04 - backups/aios-update-2026-05-25/duplicates/agents-custom-lawyer.md — your version didn't match current or any past bundled; restore manually if you had intentional edits.]"* (bracketed clause only when backed up).
+3. Scan `{layer}/*.md` at the top level (outside any subfolder). Skip `_index.md` (layer-root index is intentional, not an orphan). If a remaining top-level file's basename matches a bundled file → **same stale-vs-personalized test as step 2.** If byte-identical or matches a past bundled version → silent remove. Else → backup to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-root-{name}.md` then remove. Log: *"Removed `skills/test-driven-development.md` — duplicate of bundled `skills/superpowers/test-driven-development.md`."*
 4. Skip files that are genuinely unique to `custom/` — those are operator extensions and stay. **All `_index.md` files at any level are also preserved** — navigation metadata is per-folder, never a duplicate.
 
 Skip layers without a `custom/` subfolder (no opportunity for duplicates there).
 
-Aggregate the cleanup report: *"Cleaned N duplicates across {layer1, layer2, ...}: M removed silently (byte-identical), K backed up to `vault/04 - backups/aios-update-{date}/duplicates/` before removal (divergent — review if you want those edits)."*
+Aggregate the cleanup report: *"Cleaned N duplicates across {layer1, layer2, ...}: M removed silently (matched current OR past bundled version — stale migration leftovers), K backed up to `vault/04 - backups/aios-update-{date}/duplicates/` (didn't match any bundled version past or present — likely real personalizations, review)."*
 
 ## Tracker file
 
@@ -183,8 +203,12 @@ Report to operator at the end: *"`/aios:update` self-updated and re-ran automati
 
 For each changed Tier 1 file:
 
-1. **Diff local vs upstream.** If files are byte-identical, skip (no work needed).
-2. **If local differs from upstream → backup-on-divergence:** copy the operator's current local file to `vault/04 - backups/aios-update-{YYYY-MM-DD}/{flattened-path}.md` before overwriting.
+1. **Diff local vs upstream HEAD.** If byte-identical, skip (no work needed — operator already has this version somehow).
+2. **Three-way compare to decide on backup** (see § Backup-on-divergence above):
+   - Get baseline via `git -C /tmp/vault-update-check show {stored_hash}:{path}`.
+   - If `local == baseline` → operator never touched it → overwrite silently, **no backup**.
+   - If `local != baseline` → operator personalized → **backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{YYYY-MM-DD}/{flattened-path}.md` BEFORE overwrite.
+   - If baseline unreachable (cross-repo hash or `stored_hash=initial`) → conservative fallback: backup.
 3. **Overwrite** using the right tool:
    - `.md` files **inside** `vault/` → `mcp__obsidian__write_note` (keeps Obsidian graph consistent)
    - `.md` files **outside** `vault/` (root + `hooks/`, `mcps/`, `plugins/`, `skills/`, `agents/`, `templates/`) → `Bash cp` or `Write`
