@@ -101,7 +101,9 @@ WAIT for confirmation before proceeding.
 
 Walk through `USER.md` section by section:
 
-1. **Identity table** — ask the operator's primary session name (default: `claude` or `assistant`; power users pick something custom — e.g. fictional-bot names like JARVIS, Friday, Samantha, HAL, Cortana, TARS).
+1. **Identity table** — ask the operator's primary session name. **Lead with the functional value, not the vibe:** this name becomes a shell shorthand — typing `{name}` in any terminal launches `claude --remote-control --model claude-opus-4-7[1m] --name {name}` with respawn-on-quota-swap. Saves 60+ keystrokes per launch, every time. The fun part (calling your AI "JARVIS") is the bonus, not the point.
+
+   Phrase the question something like: *"What do you want to call your primary session? It becomes a one-word shortcut in your terminal — type that one word, you get a named claude session with all the right flags, ready to work. Default is `claude` or `assistant` (functional, gets the job done). Power users pick something personal — fictional AI names work well: JARVIS, Friday, Samantha, HAL, Cortana, TARS. Short, memorable, yours."*
 
    **Role string is OS-detected, not hardcoded.** Default the role to a machine-agnostic "Primary session" baseline. Only add OS-specificity ("MacBook primary", "Windows primary", etc.) if the operator explicitly signals a multi-machine setup. Single-machine operators (99% of fresh clones) see clean "Primary session — AI partner" without machine-class jargon.
 
@@ -126,6 +128,14 @@ Walk through `USER.md` section by section:
 6. **Sources → Growth routines** — does the operator have a Reading or Writing routine they want to track? Defer; can configure later.
 
 Edit USER.md inline as the operator answers. Show the diff before applying.
+
+**After the Identity table is captured — refresh the wrapper banner.** SETUP.md Step 5 installed `~/.zshrc` wrappers BEFORE USER.md was populated, so the primary-session shorthand fell back to the default `claude()` function. Now that the operator has chosen their name (e.g. `samantha`), re-run the installer to bind the shorthand to the captured name:
+
+```bash
+bash ~/aios/hooks/claude-identity/install-wrappers.sh
+```
+
+The installer is idempotent (timestamped backup → strip prior banner → append fresh banner with the new name → verify). Output confirms the detected name: *"✓ Primary session name: {name} (from USER.md)"*. Then tell the operator: *"Wrapper refreshed. Open a new terminal and type `{name}` — that's your shorthand now."* The shell-function activates on next shell start; existing terminals can `source ~/.zshrc` to pick it up immediately.
 
 **Rule for this whole step:** one question at a time. The operator should feel walked by the hand, not interrogated. Use sensible defaults. Defer any action that involves cycling Claude's auth (the multi-account capture is the canonical example — always deferred to `/today`).
 
