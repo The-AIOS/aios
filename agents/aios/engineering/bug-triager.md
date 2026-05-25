@@ -1,4 +1,7 @@
 ---
+name: bug-triager
+description: 'Use when task involves triage issues or similar. Classify GitHub issues, suggest priority + assignee'
+tools: '*'
 tags:
   - agent
   - engineering

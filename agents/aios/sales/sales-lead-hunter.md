@@ -1,4 +1,7 @@
 ---
+name: sales-lead-hunter
+description: 'Use when task involves lead or similar. Explore leads, qualify, score, draft outreach emails'
+tools: '*'
 tags:
   - agent
   - sales

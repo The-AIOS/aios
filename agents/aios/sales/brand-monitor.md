@@ -1,4 +1,7 @@
 ---
+name: brand-monitor
+description: 'Use when task involves brand mentions or similar. Track mentions, competitors, industry news'
+tools: '*'
 tags:
   - agent
   - brand

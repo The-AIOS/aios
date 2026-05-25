@@ -1,4 +1,7 @@
 ---
+name: invoice-tracker
+description: 'Use when task involves invoice or similar. Track pending invoices, flag overdue, draft follow-ups'
+tools: '*'
 tags:
   - agent
   - finance

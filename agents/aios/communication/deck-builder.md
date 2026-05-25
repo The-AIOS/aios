@@ -1,4 +1,7 @@
 ---
+name: deck-builder
+description: 'Use when task involves deck or similar. Build presentations end-to-end via 6-phase AIOS process'
+tools: '*'
 tags:
   - agent
   - content

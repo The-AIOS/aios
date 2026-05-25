@@ -1,4 +1,7 @@
 ---
+name: market-researcher
+description: 'Use when task involves market research or similar. Deep 11-section McKinsey-style market intelligence'
+tools: '*'
 tags:
   - agent
   - market-research

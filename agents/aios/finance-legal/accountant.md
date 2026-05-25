@@ -1,4 +1,7 @@
 ---
+name: accountant
+description: 'Use when task involves accounting or similar. Financial analysis, bookkeeping, tax prep, cash flow'
+tools: '*'
 tags:
   - agent
   - finance

@@ -1,4 +1,7 @@
 ---
+name: content-scheduler
+description: 'Use when task involves content calendar or similar. Plan and queue content calendar from vault insights'
+tools: '*'
 tags:
   - agent
   - content

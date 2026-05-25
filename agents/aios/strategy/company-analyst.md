@@ -1,4 +1,7 @@
 ---
+name: company-analyst
+description: 'Use when task involves company analysis or similar. Acquired-style deep dives — history, strategy, moat, playbook'
+tools: '*'
 tags:
   - agent
   - strategy

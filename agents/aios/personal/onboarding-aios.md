@@ -1,4 +1,7 @@
 ---
+name: onboarding-aios
+description: 'Use when task involves I''m lost or similar. Standing AIOS orientation companion — knows the org/repo/CHEATSHEET/FORTRESS/USER.md map, self-update loop, semantic invocation for "lost" moments'
+tools: '*'
 tags:
   - agent
   - personal

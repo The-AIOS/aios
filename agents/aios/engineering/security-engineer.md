@@ -1,4 +1,7 @@
 ---
+name: security-engineer
+description: 'Use when task involves threat model or similar. STRIDE threat modeling, SAST setup, secrets management, vulnerability triage with prioritized remediation'
+tools: '*'
 tags:
   - agent
   - engineering

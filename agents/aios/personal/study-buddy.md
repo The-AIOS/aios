@@ -1,4 +1,7 @@
 ---
+name: study-buddy
+description: 'Use when task involves study or similar. Pre-read chapters, prepare briefs, facilitate study sessions'
+tools: '*'
 tags:
   - agent
   - personal

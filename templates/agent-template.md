@@ -1,4 +1,7 @@
 ---
+name: {{agent-name}}
+description: Use when {{trigger condition}}. {{One-sentence purpose}}.
+tools: '*'
 tags:
   - agent
   - {domain}

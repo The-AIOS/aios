@@ -1,4 +1,7 @@
 ---
+name: compliance-checker
+description: 'Use when task involves compliance or similar. Review documents against legal/regulatory requirements'
+tools: '*'
 tags:
   - agent
   - finance

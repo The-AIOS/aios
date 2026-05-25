@@ -1,4 +1,7 @@
 ---
+name: consultant
+description: 'Use when task involves consulting or similar. Strategic advisory, frameworks, business analysis'
+tools: '*'
 tags:
   - agent
   - strategy

@@ -1,4 +1,7 @@
 ---
+name: technical-cofounder
+description: 'Use when task involves build app or similar. Build real products end-to-end — discovery → ship → handoff'
+tools: '*'
 tags:
   - agent
   - engineering

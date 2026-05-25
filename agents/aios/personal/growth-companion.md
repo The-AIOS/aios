@@ -1,4 +1,7 @@
 ---
+name: growth-companion
+description: 'Use when task involves vent or similar. Listen + witness + surface growth from observed context. Anti-sycophancy.'
+tools: '*'
 tags:
   - agent
   - personal

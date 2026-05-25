@@ -1,4 +1,7 @@
 ---
+name: email-drafter
+description: 'Use when task involves email or similar. Draft professional emails matching voice + context'
+tools: '*'
 tags:
   - agent
   - operations

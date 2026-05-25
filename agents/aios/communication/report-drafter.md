@@ -1,4 +1,7 @@
 ---
+name: report-drafter
+description: 'Use when task involves status report or similar. Draft status reports and board updates from vault activity'
+tools: '*'
 tags:
   - agent
   - operations

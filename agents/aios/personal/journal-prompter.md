@@ -1,4 +1,7 @@
 ---
+name: journal-prompter
+description: 'Use when task involves reflect or similar. Generate reflection prompts from sessions + patterns'
+tools: '*'
 tags:
   - agent
   - personal

@@ -1,4 +1,7 @@
 ---
+name: decision-journaler
+description: 'Use when task involves decision or similar. Proactive Decision Journal — inversion + pre-mortem + tradeoff scoring'
+tools: '*'
 tags:
   - agent
   - personal

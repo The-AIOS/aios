@@ -1,4 +1,7 @@
 ---
+name: meeting-prepper
+description: 'Use when task involves meeting or similar. Prepare context-rich briefings for upcoming meetings'
+tools: '*'
 tags:
   - agent
   - operations

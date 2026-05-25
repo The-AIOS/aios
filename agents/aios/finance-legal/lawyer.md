@@ -1,4 +1,7 @@
 ---
+name: lawyer
+description: 'Use when task involves legal or similar. Legal review, contract analysis, risk assessment'
+tools: '*'
 tags:
   - agent
   - legal

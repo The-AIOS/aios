@@ -1,4 +1,7 @@
 ---
+name: sales-proposal-writer
+description: 'Use when task involves proposal or similar. Draft proposals from project notes + the user''s consulting catalog'
+tools: '*'
 tags:
   - agent
   - sales

@@ -1,4 +1,7 @@
 ---
+name: code-reviewer
+description: 'Use when task involves review PR or similar. Review PRs for security, quality, pattern consistency'
+tools: '*'
 tags:
   - agent
   - engineering

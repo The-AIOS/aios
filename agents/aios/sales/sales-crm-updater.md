@@ -1,4 +1,7 @@
 ---
+name: sales-crm-updater
+description: 'Use when task involves CRM or similar. Sync deal updates to Monday/CRM from meeting notes'
+tools: '*'
 tags:
   - agent
   - sales

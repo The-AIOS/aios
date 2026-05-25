@@ -1,4 +1,7 @@
 ---
+name: design-md-author
+description: 'Use when task involves design system or similar. Author design.md per Google''s spec; interview + validate + optional Stitch upload'
+tools: '*'
 tags:
   - agent
   - content
