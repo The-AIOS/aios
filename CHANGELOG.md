@@ -3,13 +3,13 @@
 > What changed in The AIOS framework, why, and what to do about it.
 > Entries are newest-first. Each entry is tied to a git commit hash so `/aios:update` can show you only what's new since your last sync.
 >
-> **This is the canonical CHANGELOG for The AIOS.** The framework lives at [The-AIOS/aios](https://github.com/The-AIOS/aios). It is built from infrastructure that evolved in [chuycepeda/obsidian](https://github.com/chuycepeda/obsidian) from March → May 2026 (pre-extraction history preserved there).
+> **This is the canonical CHANGELOG for The AIOS.** The framework lives at [The-AIOS/aios](https://github.com/The-AIOS/aios).
 
 > ## ⚠️ Reading order
 >
 > Newest entries appear first below. **If you're migrating from the pre-2026-05-23 framework** (`chuycepeda/aios` template or `sovrahq/internal-vault` team-repo lineage), scroll down to the **2026-05-23 — Migration playbook** entry and complete it BEFORE acting on any newer entries above it. Newer entries assume you've already migrated; running them on the legacy structure will produce confusion or fail.
 >
-> Already-migrated operators (Diego, Sarah, and anyone who's synced past `bc80cf1`) can read top-down normally — `/aios:update`'s hash-based scan correctly identifies the migration entry as already-applied and won't re-surface it.
+> Already-migrated operators (anyone who's synced past `bc80cf1`) can read top-down normally — `/aios:update`'s hash-based scan correctly identifies the migration entry as already-applied and won't re-surface it.
 
 ---
 
@@ -17,7 +17,7 @@
 
 `hash: 1ae30e5`
 
-> **Big day. Six structural shifts that consolidate the framework around one principle: *infra is infra — applied automatically, never asked.*** All were triggered by a live operator migration session (Alecs) that exposed three structural papercuts: (a) `/aios:update` asking operators to approve framework changes (slow, error-prone, false sense of control), (b) duplicate skills/agents leaking into `custom/` and at layer roots after every migration, (c) the flat `agents/aios-*` naming making operator-contribution flow harder than it should be. Plus polish from morning ships: cold-start wrapper refresh, claude-fallback recursion fix, and a CLAUDE.md dual-write rule for behavioral patterns.
+> **Big day. Six structural shifts that consolidate the framework around one principle: *infra is infra — applied automatically, never asked.*** All were triggered by a live operator migration session that exposed three structural papercuts: (a) `/aios:update` asking operators to approve framework changes (slow, error-prone, false sense of control), (b) duplicate skills/agents leaking into `custom/` and at layer roots after every migration, (c) the flat `agents/aios-*` naming making operator-contribution flow harder than it should be. Plus polish from morning ships: cold-start wrapper refresh, claude-fallback recursion fix, and a CLAUDE.md dual-write rule for behavioral patterns.
 
 ### What changed
 
@@ -26,7 +26,7 @@
 - **Tier 2 (Suggest / show diff / user picks) eliminated.** Folded into Tier 1 (Mandatory Replace). `plugins/aios/commands/*` and `CLAUDE.md` are now Tier 1 — overwritten byte-identical to upstream. The "ask user before applying" flow is gone; the operator sees a report of what was done, not a multiple-choice menu.
 - **Backup-on-divergence** is the safety net for operator customizations. Before overwriting any Tier 1 file that diverges from upstream, the operator's version lands in `vault/04 - backups/aios-update-{date}/{filename}`. They can salvage edits manually if needed.
 - **Auto-execute scripts after replace.** When `hooks/claude-identity/install-wrappers.{sh,ps1}` is updated → the installer auto-runs. When plugin command files change → auto-sync to the 3-location plugin pipeline. Principle-based 4-class table in spec: installer/state-producer → run · plugin-sync target → cp · dep-installer → flag · library code → no action.
-- **Duplicate cleanup** runs every `/aios:update` invocation (even when no upstream changes pending). Scans `{layer}/custom/*.md` for files duplicating bundled paths AND `{layer}/*.md` at layer-root for orphaned files that should be inside a bundled subfolder. **Backup-on-divergence applies** — if a custom-located file has the same name as a bundled file but DIFFERENT content (operator customized instead of renaming), the operator's version is backed up to `vault/04 - backups/aios-update-{date}/duplicates/` before removal. Byte-identical duplicates removed silently. Handles Alecs's exact symptom (`skills/<every-superpower>.md` AND `skills/superpowers/<every-superpower>.md`) without risking operator customizations.
+- **Duplicate cleanup** runs every `/aios:update` invocation (even when no upstream changes pending). Scans `{layer}/custom/*.md` for files duplicating bundled paths AND `{layer}/*.md` at layer-root for orphaned files that should be inside a bundled subfolder. **Backup-on-divergence applies** — if a custom-located file has the same name as a bundled file but DIFFERENT content (operator customized instead of renaming), the operator's version is backed up to `vault/04 - backups/aios-update-{date}/duplicates/` before removal. Byte-identical duplicates removed silently. Handles the migration-leftover symptom (`skills/<every-superpower>.md` AND `skills/superpowers/<every-superpower>.md`) without risking operator customizations.
 - **Self-update auto-re-invokes** (bootstrap-safe). When `update.md` itself is in the diff: apply + sync to plugin pipeline, then auto-fire `Skill(aios:update)`. The inner run loads the new spec from the marketplace cache and processes everything cleanly. Termination guaranteed by content-comparison (after self-apply, local matches upstream → no recursion). Operator never sees a "please re-run" prompt — self-healing automatic.
 
 **2. `agents/aios-*` restructure → `agents/aios/{bundle}/`**
@@ -56,7 +56,7 @@ Two-phase rollout because the first `/aios:update` run uses your CURRENT (old) s
 
 **Phase 2 — new-spec run (auto-finishes the migration):**
 
-4. **`/aios:update` (second invocation).** Now uses the new auto-apply spec. Tracker shows no Tier 1 changes pending (Phase 1 brought them), but the **duplicate cleanup pass runs anyway** — scans your `agents/custom/`, `skills/custom/`, `plugins/custom/`, `mcps/custom/`, `templates/custom/`, `hooks/custom/` AND each layer's top-level for files duplicating bundled paths. Auto-removes (with per-file log) any duplicates from the old flat-`agents/aios-*` era or from migration leftover. (This is exactly Alecs's symptom — `skills/test-driven-development.md` alongside `skills/superpowers/test-driven-development.md`.)
+4. **`/aios:update` (second invocation).** Now uses the new auto-apply spec. Tracker shows no Tier 1 changes pending (Phase 1 brought them), but the **duplicate cleanup pass runs anyway** — scans your `agents/custom/`, `skills/custom/`, `plugins/custom/`, `mcps/custom/`, `templates/custom/`, `hooks/custom/` AND each layer's top-level for files duplicating bundled paths. Auto-removes (with per-file log) any duplicates from the old flat-`agents/aios-*` era or from migration leftover. (Example shape — `skills/test-driven-development.md` alongside `skills/superpowers/test-driven-development.md`.)
 
 **Phase 3 — restart-required step (LAST):**
 
@@ -583,7 +583,7 @@ bash "$HOME/aios/hooks/claude-identity/install-wrappers.sh"
 zsh -i -c 'type spawn spawn-kill _claude_with_respawn 2>&1 | head -3'
 ```
 
-**Windows PowerShell** (Zineb's path — uses the `.ps1` installer that ships alongside the `.sh`):
+**Windows PowerShell** (uses the `.ps1` installer that ships alongside the `.sh`):
 ```powershell
 & "$HOME\aios\hooks\claude-identity\install-wrappers.ps1"
 
@@ -841,8 +841,8 @@ The onboarding-aios agent will detect this is a returning-operator (sees old dai
 **State:** Pre-extraction, venture content (positioning, gtm, pricing, primitives, sales templates, venture-specific agents like `lawyerAR`) sometimes shipped INSIDE a team-vault repo (e.g. `sovrahq/internal-vault` bundled Sovra). Post-extraction, venture content lives in its own per-venture repo (`{org}/{venture}-context`) and gets mounted into the vault as a namespaced bundle under `{layer}/{venture}/`. The mount step is what keeps that content synced with canonical going forward.
 
 **Crucial distinction — this phase is for VAULTS WITH VENTURE CONTENT, not for any specific lineage:**
-- A **team-vault clone** (Diego from `sovrahq/internal-vault`) carries bundled Sovra content from before extraction → has unmounted venture content → needs mount
-- A **personal-template clone** (Zineb from `chuycepeda/aios`) is a clean personal vault with no bundled company → no venture content to mount → this phase no-ops
+- A **team-vault clone** (e.g. from `sovrahq/internal-vault`) carries bundled venture content from before extraction → has unmounted venture content → needs mount
+- A **personal-template clone** (e.g. from `chuycepeda/aios`) is a clean personal vault with no bundled company → no venture content to mount → this phase no-ops
 - A multi-machine operator's second clone with no bundled venture → no-ops
 
 Mounting is per-vault, per-venture, and **per operator's intent**. Personal vaults stay personal. Don't mount company infra into a personal vault.
@@ -969,7 +969,7 @@ done
 ```
 
 2. **Read source materials** (per-Tier-B-file feed-ins):
-   - For `growth.md` ← all of `session-insights.md` (full read), last 10 entries of `antifragile.md` (some growth-shape content gets misrouted there per Diego's cause-4 catch), close-day `### Observed` sections from the last 30 daily notes
+   - For `growth.md` ← all of `session-insights.md` (full read), last 10 entries of `antifragile.md` (some growth-shape content gets misrouted there — known cause-4 pattern), close-day `### Observed` sections from the last 30 daily notes
    - For `profile.md` ← cross-session identity signals in `session-insights.md` (consistent personality traits surfaced across 2+ sessions per CLAUDE.md trigger rule), any "## Core identity threads"-shape language in recent daily notes
    - For `ecosystem.md` ← all of `business.md` recent additions (venture relationship shifts), new people/connections named in last 60 days of daily notes, any new venture-mount activity (`.{venture}-sync` trackers)
 
@@ -1011,8 +1011,8 @@ done
 
 The forward mechanism (`/close-day`'s session-insights gardening + Tier B digest) assumes Tier A files (patterns, preferences, business, antifragile) reflect routed content from session-insights AND that Tier B files (growth, profile, ecosystem) reflect current operator state. Two failure modes the catch-up resolves:
 
-- **Backlog operators** (vaults months old, like chuy's 32-82 day Tier B drift or Diego's 78-day growth gap): accumulated Reinforced entries never routed up, growth-shape content absorbed into antifragile by mistake, daily-note Observed sections never synthesized. Forward digest runs on top of a frozen baseline = stale observations propagate as if current.
-- **Fresh-vault operators** (Zineb-style — recently onboarded, minimal logged history): the digest fires, scans the (small) source material, finds nothing passes the substance bar, surfaces *"Tier B files are baseline — forward digest will populate organically"*. Zero writes, but the phase ran. The operator now knows the catch-up ritual exists and what it does — critical for their next /close-day to feel coherent.
+- **Backlog operators** (vaults months old, with multi-week Tier B drift or growth gaps): accumulated Reinforced entries never routed up, growth-shape content absorbed into antifragile by mistake, daily-note Observed sections never synthesized. Forward digest runs on top of a frozen baseline = stale observations propagate as if current.
+- **Fresh-vault operators** (recently onboarded, minimal logged history): the digest fires, scans the (small) source material, finds nothing passes the substance bar, surfaces *"Tier B files are baseline — forward digest will populate organically"*. Zero writes, but the phase ran. The operator now knows the catch-up ritual exists and what it does — critical for their next /close-day to feel coherent.
 
 Running the phase always (with content-driven scope) means the executing Claude session naturally adapts: heavy synthesis for old vaults, lightweight confirmation for fresh ones. The substance bar is what self-regulates — not an age threshold the playbook tries to predict.
 
