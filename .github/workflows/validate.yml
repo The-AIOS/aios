@@ -62,12 +62,22 @@ jobs:
 
           FOUND=""
 
-          # agents/ — allowed: aios-{sales,strategy,finance-legal,engineering,communication,personal} + custom
+          # agents/ — allowed: aios (nested bundles inside) + custom
+          # Nested layout adopted v0.2.0: agents/aios/{sales,strategy,finance-legal,engineering,communication,personal}/
           for dir in agents/*/; do
             name=$(basename "$dir")
             case "$name" in
-              aios-sales|aios-strategy|aios-finance-legal|aios-engineering|aios-communication|aios-personal|custom) ;;
-              *) FOUND+=$'\n  - agents/'"$name"'/  (expected: aios-* bundle or custom/)' ;;
+              aios|custom) ;;
+              *) FOUND+=$'\n  - agents/'"$name"'/  (expected: aios/ or custom/)' ;;
+            esac
+          done
+
+          # agents/aios/ — allowed bundles: sales, strategy, finance-legal, engineering, communication, personal
+          for dir in agents/aios/*/; do
+            name=$(basename "$dir")
+            case "$name" in
+              sales|strategy|finance-legal|engineering|communication|personal) ;;
+              *) FOUND+=$'\n  - agents/aios/'"$name"'/  (expected: one of: sales, strategy, finance-legal, engineering, communication, personal)' ;;
             esac
           done
 
@@ -147,11 +157,11 @@ jobs:
         run: |
           set -e
           test -f "agents/_index.md" || { echo "::error::Missing canonical registry: agents/_index.md"; exit 1; }
-          for bundle in aios-sales aios-strategy aios-finance-legal aios-engineering aios-communication aios-personal; do
-            test -d "agents/$bundle" || { echo "::error::Missing agent bundle: agents/$bundle/"; exit 1; }
-            test -f "agents/$bundle/README.md" || { echo "::error::Missing bundle README: agents/$bundle/README.md"; exit 1; }
+          for bundle in sales strategy finance-legal engineering communication personal; do
+            test -d "agents/aios/$bundle" || { echo "::error::Missing agent bundle: agents/aios/$bundle/"; exit 1; }
+            test -f "agents/aios/$bundle/README.md" || { echo "::error::Missing bundle README: agents/aios/$bundle/README.md"; exit 1; }
           done
-          echo "OK: all 6 agent bundles present with README.md, and agents/_index.md is in place"
+          echo "OK: all 6 agent bundles present at agents/aios/{bundle}/ with README.md, and agents/_index.md is in place"
 
   manifests:
     name: Plugin manifests
@@ -204,7 +214,7 @@ jobs:
           failures = []
           patterns = [
               "plugins/aios/commands/*.md",
-              "agents/aios-*/*.md",
+              "agents/aios/*/*.md",
               "skills/*/*/SKILL.md",
               "templates/*.md",
           ]
