@@ -97,14 +97,14 @@ Migration history left operators with duplicates: a skill (or agent) lives BOTH 
 
 For each layer in `agents`, `skills`, `plugins`, `mcps`, `templates`, `hooks`:
 
-1. Build the set of bundled file basenames — every `.md` under `{layer}/aios/`, `{layer}/anthropic/`, `{layer}/superpowers/`, and (for plugins/) `{layer}/aios/commands/`.
-2. Scan `{layer}/custom/*` for any file whose basename appears in the bundled set. **For each match: backup-on-divergence then remove.**
+1. Build the set of bundled file basenames — every `.md` under `{layer}/aios/`, `{layer}/anthropic/`, `{layer}/superpowers/`, and (for plugins/) `{layer}/aios/commands/`. **Exclude `_index.md` from this set** — every folder gets its OWN `_index.md` as navigation metadata, they are NEVER duplicates of each other (`agents/aios/_index.md` is the bundled index; `agents/custom/_index.md` is the operator's index for their custom agents — both intentional, neither is a copy).
+2. Scan `{layer}/custom/*` for any file whose basename appears in the bundled set AND is not `_index.md`. **For each match: backup-on-divergence then remove.**
    - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the bundled file (`{layer}/{bundled-subfolder}/{name}.md`).
    - **If divergent** (operator customized a same-named bundled file instead of renaming it): backup the operator's version FIRST → `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-custom-{name}.md`. Then remove.
    - **If byte-identical** (true duplicate, no operator value lost): remove silently, no backup needed.
    - Log either way: *"Removed `agents/custom/lawyer.md` — duplicate of bundled `agents/aios/finance-legal/lawyer.md`. [Backed up to vault/04 - backups/aios-update-2026-05-25/duplicates/agents-custom-lawyer.md — your version differed from bundled; restore manually if you had intentional edits.]"* (bracketed clause only when divergent).
-3. Scan `{layer}/*.md` at the top level (outside any subfolder). If a top-level file's basename matches a bundled file → **same backup-on-divergence rule, then remove.** Migration artifact — operator's original belongs inside the appropriate bundled subfolder (already there). Backup path: `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-root-{name}.md`. Log: *"Removed `skills/test-driven-development.md` — duplicate of bundled `skills/superpowers/test-driven-development.md`."*
-4. Skip files that are genuinely unique to `custom/` — those are operator extensions and stay.
+3. Scan `{layer}/*.md` at the top level (outside any subfolder). Skip `_index.md` (layer-root index is intentional, not an orphan). If a remaining top-level file's basename matches a bundled file → **same backup-on-divergence rule, then remove.** Migration artifact — operator's original belongs inside the appropriate bundled subfolder (already there). Backup path: `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-root-{name}.md`. Log: *"Removed `skills/test-driven-development.md` — duplicate of bundled `skills/superpowers/test-driven-development.md`."*
+4. Skip files that are genuinely unique to `custom/` — those are operator extensions and stay. **All `_index.md` files at any level are also preserved** — navigation metadata is per-folder, never a duplicate.
 
 Skip layers without a `custom/` subfolder (no opportunity for duplicates there).
 
