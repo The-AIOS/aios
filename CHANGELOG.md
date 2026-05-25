@@ -15,7 +15,7 @@
 
 ## 2026-05-25 — cold-start wrapper-refresh + claude-fallback recursion fix
 
-`hash: TBD`
+`hash: 6884311`
 
 > **Two related fixes around the primary-session shorthand setup path.** Both were caught when an operator asked *"do we ask for the primary session name BEFORE installing the wrappers?"* during dry-run review.
 >
