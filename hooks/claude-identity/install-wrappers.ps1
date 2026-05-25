@@ -147,12 +147,19 @@ function Invoke-ClaudeWithRespawn {
     # comment for the why). Override via $env:CLAUDE_MODEL (Sonnet, 3P, etc.).
     $modelToUse = if ($env:CLAUDE_MODEL) { $env:CLAUDE_MODEL } else { 'claude-opus-4-7[1m]' }
     $modelArgs = @('--model', $modelToUse)
+    # Resolve the claude EXECUTABLE explicitly (not via function lookup) to
+    # avoid recursion when the primary-session-name fallback is "claude" — in
+    # that case `function claude { Invoke-ClaudeWithRespawn ... }` is defined,
+    # and bare `& claude` would re-resolve to the function. Get-Command with
+    # -CommandType Application forces PATH-binary resolution. Mirrors the
+    # `command claude` fix in install-wrappers.sh.
+    $claudeExe = (Get-Command -Name 'claude' -CommandType Application -ErrorAction Stop).Source
     while ($true) {
         $claudeArgs = @() + $modelArgs + $resumeArgs + @('--remote-control', '--name', $Name)
         if ($BootstrapFile -and (Test-Path $BootstrapFile)) {
             $claudeArgs += "Read $BootstrapFile and follow the instructions inside."
         }
-        & claude @claudeArgs
+        & $claudeExe @claudeArgs
         if (Test-Path $marker) {
             $sid = ''
             if (Test-Path $sidFile) { $sid = (Get-Content $sidFile -Raw).Trim() }

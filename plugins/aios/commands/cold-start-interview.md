@@ -129,13 +129,19 @@ Walk through `USER.md` section by section:
 
 Edit USER.md inline as the operator answers. Show the diff before applying.
 
-**After the Identity table is captured — refresh the wrapper banner.** SETUP.md Step 5 installed `~/.zshrc` wrappers BEFORE USER.md was populated, so the primary-session shorthand fell back to the default `claude()` function. Now that the operator has chosen their name (e.g. `samantha`), re-run the installer to bind the shorthand to the captured name:
+**After the Identity table is captured — refresh the wrapper banner.** SETUP.md Step 5 installed shell wrappers BEFORE USER.md was populated, so the primary-session shorthand fell back to the default `claude` function. Now that the operator has chosen their name (e.g. `samantha`), re-run the installer to bind the shorthand to the captured name. **OS-conditional** — pick the right installer for the operator's machine:
 
 ```bash
+# macOS / Linux (zsh or bash)
 bash ~/aios/hooks/claude-identity/install-wrappers.sh
 ```
 
-The installer is idempotent (timestamped backup → strip prior banner → append fresh banner with the new name → verify). Output confirms the detected name: *"✓ Primary session name: {name} (from USER.md)"*. Then tell the operator: *"Wrapper refreshed. Open a new terminal and type `{name}` — that's your shorthand now."* The shell-function activates on next shell start; existing terminals can `source ~/.zshrc` to pick it up immediately.
+```powershell
+# Windows (PowerShell)
+pwsh -File ~\aios\hooks\claude-identity\install-wrappers.ps1
+```
+
+Both installers are idempotent (timestamped backup → strip prior banner → append fresh banner with the new name → verify). Output confirms the detected name: *"✓ Primary session name: {name} (from USER.md)"*. Then tell the operator: *"Wrapper refreshed. Open a new terminal and type `{name}` — that's your shorthand now."* The shell function activates on next shell start; existing terminals can `source ~/.zshrc` (or restart pwsh) to pick it up immediately.
 
 **Rule for this whole step:** one question at a time. The operator should feel walked by the hand, not interrogated. Use sensible defaults. Defer any action that involves cycling Claude's auth (the multi-account capture is the canonical example — always deferred to `/today`).
 

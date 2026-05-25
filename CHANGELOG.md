@@ -13,6 +13,30 @@
 
 ---
 
+## 2026-05-25 — cold-start wrapper-refresh + claude-fallback recursion fix
+
+`hash: TBD`
+
+> **Two related fixes around the primary-session shorthand setup path.** Both were caught when an operator asked *"do we ask for the primary session name BEFORE installing the wrappers?"* during dry-run review.
+>
+> **Fix 1 — cold-start re-installs the wrapper.** SETUP.md Step 5 installs `~/.zshrc` (or `$PROFILE`) wrappers BEFORE USER.md is populated by cold-start (Step 8). At Step 5, USER.md is still the template (Identity rows italicized as examples — regex won't match them), so `detect_primary_session` falls back to `claude`. Then cold-start writes the real name (e.g. `samantha`) into USER.md but never refreshed the shell banner. Operator finished setup with `claude()` bound, not `samantha()`. Now cold-start Step 1 auto-re-runs the installer after Identity capture, OS-conditional (`.sh` for macOS/Linux, `.ps1` for Windows).
+>
+> **Fix 2 — recursion bug in the `claude` fallback path.** When the fallback name is literally `claude`, the installed `claude()` shell function would call `_claude_with_respawn claude`, which internally called bare `claude …`. Bash/zsh resolve that bare name via function-table first → infinite recursion. Same pattern in `.ps1` (`& claude` resolves function before binary). Bug never manifested because every current operator has a non-`claude` primary name (buddai, sarah, …), but it would trip any new operator running SETUP without cold-start, or anyone who actively chose `claude` as their name. Fix: `command claude` in `.sh`, `Get-Command -CommandType Application` in `.ps1` — both force PATH-binary resolution.
+
+### What changed
+
+- `plugins/aios/commands/cold-start-interview.md` — Step 1 now appends a wrapper-refresh after Identity capture, OS-conditional command shown. Sub-step 1 reframed to lead with the functional value of the shell shorthand (saves 60+ keystrokes per launch).
+- `hooks/claude-identity/install-wrappers.sh` — bare `claude` invocations (lines 155 + 157) now prefixed with `command`.
+- `hooks/claude-identity/install-wrappers.ps1` — `& claude` replaced with `$claudeExe = (Get-Command claude -CommandType Application).Source; & $claudeExe …`.
+
+### Action required
+
+Operators who already completed cold-start with a non-`claude` primary name (buddai, sarah, anything custom): **no action required** — the recursion bug doesn't affect you. `/aios:update` will pull the refreshed wrappers + cold-start file silently. Re-running `install-wrappers.{sh,ps1}` is optional but harmless.
+
+Operators mid-onboarding or planning fresh setups: the new cold-start flow handles the re-install automatically. Nothing manual.
+
+---
+
 ## 2026-05-24 — spawn wrapper: bundle-ID-based Antigravity IDE addressing (post-rename)
 
 `hash: 11017df`

@@ -151,10 +151,17 @@ _claude_with_respawn() {
   local consecutive_failures=0
 
   while true; do
+    # `command claude` bypasses function/alias lookup and resolves to the PATH
+    # binary directly. Critical for the fallback case: if USER.md is still the
+    # template (Identity table italicized as examples), detect_primary_session
+    # falls back to "claude" and installs a `claude()` shell function. Without
+    # `command`, the bare `claude` inside this function would re-resolve to the
+    # shell function → infinite recursion. Safe for all primary names: yours,
+    # sarah's, the fallback.
     if [ -n "$bootstrap" ]; then
-      claude "${model_args[@]}" "${resume_args[@]}" --remote-control --name "$name" "$bootstrap"
+      command claude "${model_args[@]}" "${resume_args[@]}" --remote-control --name "$name" "$bootstrap"
     else
-      claude "${model_args[@]}" "${resume_args[@]}" --remote-control --name "$name"
+      command claude "${model_args[@]}" "${resume_args[@]}" --remote-control --name "$name"
     fi
     local exit_code=$?
 
