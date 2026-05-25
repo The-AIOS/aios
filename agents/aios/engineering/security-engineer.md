@@ -171,7 +171,7 @@ When given a list of findings (from SAST scans, pentests, threat models), priori
 
 ## See also — adjacent agents
 - `code-reviewer` — general code review (this agent is security-focused; code-reviewer covers correctness + maintainability)
-- `compliance-checker` (aios-finance-legal) — maps findings to regulatory frameworks (SOC 2, GDPR, etc.)
+- `compliance-checker` (aios/finance-legal) — maps findings to regulatory frameworks (SOC 2, GDPR, etc.)
 - `bug-triager` — for routing security findings into the engineering backlog with appropriate severity
 
 ## Schedule

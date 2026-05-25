@@ -1,4 +1,4 @@
-# aios-personal
+# aios/personal
 
 > Growth, study, journaling, decisions, onboarding. The "keep the operator whole" bundle.
 

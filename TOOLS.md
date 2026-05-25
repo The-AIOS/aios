@@ -251,7 +251,7 @@ Where everything lives:
 
 | Folder | What's inside | How it's used |
 |--------|--------------|---------------|
-| `agents/` | Task agents in 6 bundles (`aios-sales/` · `aios-strategy/` · `aios-finance-legal/` · `aios-engineering/` · `aios-communication/` · `aios-personal/`) + `agents/custom/` (operator) + `agents/{company}/` (company-distributed) | Spawned via `spawn {name}` or invoked via `/aios:agent {name}` |
+| `agents/` | Task agents in 6 bundles (`aios/sales/` · `aios/strategy/` · `aios/finance-legal/` · `aios/engineering/` · `aios/communication/` · `aios/personal/`) + `agents/custom/` (operator) + `agents/{company}/` (company-distributed) | Spawned via `spawn {name}` or invoked via `/aios:agent {name}` |
 | `hooks/` | Pipeline scripts (`pipeline-executor.py`, `markitdown-convert.py`) + `claude-identity/` quota autopilot + event hooks (`inject-datetime`) | Called by commands, by `launchd` (autopilot), or via `python3` directly |
 | `mcps/` | Bundled MCP servers — Google Workspace, Slack, GitHub, Atlassian, NotebookLM, Playwright, Stitch, Nano Banana, PDF Generator, Spotify DJ | Auto-connected via `~/.claude/settings.json` after `/aios:mcps-setup` |
 | `plugins/` | Claude Code plugins — `plugins/aios/` (this framework) + `plugins/custom/<your-plugin>/` (operator) + `plugins/<company>/<plugin>/` (company-distributed) | Auto-loaded when enabled in `~/.claude/settings.json` |

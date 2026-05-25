@@ -5,292 +5,239 @@ tags:
   - sync
   - infra
 description: >-
-  Pull latest shared infrastructure from the team repo (commands, templates,
-  settings)
+  Pull latest shared infrastructure from The-AIOS/aios and auto-apply
+  every change. Operator content is never touched; framework infra is
+  always overwritten, scripts are re-run, duplicates are cleaned.
 allowed-tools: >-
-  mcp__obsidian__*, Bash(git:*), Bash(rm:*), Bash(diff:*), Bash(cat:*),
-  Bash(cp:*), Read, Edit, Grep
+  mcp__obsidian__*, Bash(git:*), Bash(rm:*), Bash(mkdir:*), Bash(diff:*),
+  Bash(cat:*), Bash(cp:*), Bash(mv:*), Bash(bash:*), Bash(pwsh:*),
+  Read, Write, Edit, Grep
 ---
 
-# /aios:update — Team Infrastructure Sync
+# /aios:update — Framework Infrastructure Sync (auto-apply)
 
-You are syncing this person's vault infrastructure with the framework's source of truth. Read the framework upstream URL from `.aios-update` at the repo root (the canonical source). If `.aios-update` doesn't exist OR is missing the `repo=` field, default to `git@github.com:The-AIOS/aios.git` (the canonical framework upstream) and ask the user to confirm before proceeding. Also read `USER.md` → `### /aios:update` for command personalizations. This covers commands, templates, settings, and docs — NOT personal content.
+Pulls the latest framework from The-AIOS/aios (or whatever upstream is tracked in `.aios-update`) and **auto-applies every change.** Framework infra is **mandatory** — every Tier 1 file is overwritten byte-identical to upstream. If the operator customized one, their version is backed up to `vault/04 - backups/aios-update-{date}/` first, then overwritten + the operator is told what was backed up. Scripts that were updated are **automatically re-executed** (e.g. wrapper installer) so the update lands complete, not just the files. After the replace + execute pass, the command scans for duplicates between operator's `custom/` folders and bundled folders and removes them.
 
-> ⚠️ **Operator-personal files are NEVER overwritten by this command.** Hard denylist — `/aios:update` MUST refuse to write to any of these, regardless of tier classification: `USER.md`, `INTENT.md`, `SARAH.md`, anything under `vault/00 - notes/{context,projects,ideas,reflections,logs}/`, anything under `vault/01 - calendar/`, `vault/02 - assets/`, `vault/03 - export/`, `vault/04 - backups/`, all `{layer}/custom/` folders, all `{layer}/<company>/` folders, `.aios-update`, `.claude/` (entire folder — operator's per-machine Claude Code config), `vault/.obsidian/` (entire folder — operator's per-machine Obsidian config, symmetric with `.claude/`: plugins, snippets, hotkeys, graph filters, daily-note paths, themes are all operator choices). These files ship as templates from the framework but the operator's instance is their source-of-truth. Template evolution surfaces as Tier 3 advisory only — section-by-section nudges, never file replacement. See `antifragile.md` #55 for the system-level lesson on path-identity vs content-identity.
+Read the framework upstream URL from `.aios-update` (`repo=` field). If `.aios-update` doesn't exist OR is missing the `repo=` field, default to `git@github.com:The-AIOS/aios.git` and ask the operator once to confirm. Also read `USER.md` → `### /aios:update` for command personalizations (if any).
+
+> ⚠️ **Operator-personal files are NEVER overwritten.** Hard denylist (Tier 2 — see below): `USER.md`, `INTENT.md`, and any other `{IDENTITY}.md` at repo root (e.g. session-specific identity files), everything under `vault/00 - notes/{context,projects,ideas,reflections,logs}/`, everything under `vault/01 - calendar/`, `vault/02 - assets/`, `vault/03 - export/`, `vault/04 - backups/`, all `{layer}/custom/` folders, all `{layer}/<company>/` folders, `.aios-update`, `.claude/` (operator's per-machine Claude Code config), `vault/.obsidian/workspace.json` (operator's per-machine Obsidian UI state). Framework infra wins on its files; operator content wins on theirs.
 
 ## When to use
 
-When notified that the team repo has new commits (e.g., `/today` flags BEHIND in the morning, or you see a CHANGELOG update). Pulls the latest shared infrastructure from The-AIOS/aios with three-tier sync (Replace / Suggest / Flag) so personalization survives.
+When the upstream framework has new commits. `/today` and `/close-day` auto-detect BEHIND state and auto-fire this command. You can also run it manually anytime.
 
+## What gets updated
 
-## Three sync tiers
+### Tier 1: Mandatory infra (always replaced, never asked)
 
-### Tier 1: Replace (team wins)
-Files where the team version is always correct. Overwrite without merge.
-- `README.md` (repo root)
-- `START-HERE.md` (repo root — first-time orientation)
-- `SETUP.md` (repo root)
-- `CHEATSHEET.md` (repo root — day-to-day operating index)
-- `TOOLS.md` (repo root — human-facing guide to all vault capabilities)
-- `CHANGELOG.md` (repo root)
-- `LICENSE` (repo root — GPL v2+ canonical text from gnu.org)
-- `NOTICE` (repo root — AIOS contributors copyright + grant)
-- `FORTRESS.md` (repo root — two-machine operator setup guide)
-- `.gitignore` (repo root — single source of hygiene for the whole repo, including secret-leak patterns)
-- `templates/aios-*` and `templates/*.md` at top level (NEVER overwrite `templates/custom/` — operator-specific extensions)
-- `skills/*` EXCEPT `skills/custom/` (full folder replace for bundled skills; preserve operator extensions)
-- `hooks/*` EXCEPT `hooks/custom/` (pipeline executor, markitdown converter, claude-identity wrappers)
-- `mcps/*` EXCEPT `mcps/custom/` (vendored MCP servers — code + README; preserve operator-installed MCPs)
-- `agents/aios-*/` (bundled agent definitions — 6 bundles: sales, strategy, finance-legal, engineering, communication, personal — NEVER overwrite `agents/custom/` which holds operator-specific extensions)
-- `plugins/aios/**` (the bundled aios plugin — full folder replace EXCEPT `plugins/aios/commands/custom/`, which holds operator commands and survives updates)
-- `plugins/*` at top level EXCEPT `plugins/custom/`, `plugins/aios/`, and `plugins/<company>/` paths (other bundled plugins; preserve operator + company-namespaced plugins)
-- `.claude-plugin/marketplace.json` (marketplace manifest)
+Every file below is overwritten byte-identical to upstream. If the operator customized one, their version is backed up first (see § Backup-on-divergence below).
 
-### Tier 2: Suggest (show diff, user picks)
-Files the user may have personalized. Show per-section diffs, let them cherry-pick.
-- `plugins/aios/commands/*` (the slash commands inside the aios plugin)
-- `CLAUDE.md` (vault-level instructions)
+- **Root docs:** `README.md`, `START-HERE.md`, `SETUP.md`, `CHEATSHEET.md`, `TOOLS.md`, `CHANGELOG.md`, `LICENSE`, `NOTICE`, `FORTRESS.md`, `.gitignore`
+- **CLAUDE.md** (vault-level instructions — moved here from Tier 2 on 2026-05-25 per the "infra is infra" principle)
+- **Templates:** `templates/aios-*` and `templates/*.md` at top level (never `templates/custom/`)
+- **Skills:** `skills/aios/`, `skills/anthropic/`, `skills/superpowers/` (never `skills/custom/`)
+- **Hooks:** `hooks/*` except `hooks/custom/` (pipeline executor, markitdown converter, claude-identity wrappers)
+- **MCPs:** `mcps/*` except `mcps/custom/` (vendored MCP servers — code + README)
+- **Agents:** `agents/aios/` (bundled 6-bundle structure: `aios/sales/`, `aios/strategy/`, `aios/finance-legal/`, `aios/engineering/`, `aios/communication/`, `aios/personal/`) and `agents/_index.md`. Never overwrite `agents/custom/` or `agents/<company>/`.
+- **Plugins:** `plugins/aios/**` (full plugin folder replace, INCLUDING `plugins/aios/commands/*` — these are framework commands, not operator content) except `plugins/aios/commands/custom/`
+- **Other bundled plugins** at top level except `plugins/custom/`, `plugins/aios/`, and `plugins/<company>/`
+- **Marketplace manifest:** `.claude-plugin/marketplace.json`
+- **Obsidian config baseline:** `vault/.obsidian/*.json` except `workspace.json`, plus `vault/.obsidian/snippets/*`
 
-### Tier 3: Flag (advisory only)
-Detect when a template evolved but the user's filled-in version is missing new sections. No files touched — just a heads-up.
-- Compare `templates/about_me-template.md` sections → `00 - notes/context/declared/about_me.md`
-- Compare `templates/about_business-template.md` sections → `00 - notes/context/declared/about_business.md`
-- Compare `templates/working_style-template.md` sections → `00 - notes/context/declared/working_style.md`
-- Compare `templates/personal_voice-template.md` sections → `00 - notes/context/declared/personal_voice.md`
-- Compare `templates/role-expectations-template.md` sections → `00 - notes/context/declared/role-expectations.md`
-- Compare `USER.md` (team template) sections → user's `USER.md` (flag new sections the user doesn't have yet)
-- Compare `templates/project-template.md` sections → any project note (general advisory)
+### Tier 2: Operator content (never touched — denylist)
+
+See the callout at the top. Hard denylist — this command refuses to write to any path under it.
+
+### Tier 3: Advisory only (template evolution flags)
+
+When a template under `templates/*-template.md` gains a new section, advise the operator that their corresponding filled-in file (`vault/00 - notes/context/declared/{file}.md`) is missing that section. No file is touched. Same for `USER.md` template gaining sections vs operator's USER.md.
+
+## Backup-on-divergence
+
+Before overwriting any Tier 1 file, compare local content to upstream. If they differ (operator customized the file), back up the operator's version BEFORE overwriting:
+
+```bash
+BACKUP_DIR="$HOME/aios/vault/04 - backups/aios-update-$(date +%Y-%m-%d)"
+mkdir -p "$BACKUP_DIR"
+cp "$HOME/aios/{relative-path}" "$BACKUP_DIR/{filename-with-flattened-path}"
+```
+
+Then overwrite. Then add the backup to the report: "Backed up your customized `CLAUDE.md` → `vault/04 - backups/aios-update-2026-05-25/CLAUDE.md`. If you had edits worth keeping, restore them manually."
+
+Files with NO local divergence (operator never touched them) → overwrite silently, no backup needed.
+
+## Post-replace auto-execution (scripts must RUN, not just copy)
+
+After Tier 1 replace lands, automatically execute any updated script that **produces operator-environment state**, so the update is COMPLETE, not just file-deep. The principle:
+
+| Class | What it is | Action when updated |
+|---|---|---|
+| **Installer / state-producer** | Idempotent scripts that write to `~/.zshrc`, `~/.claude/`, `~/Library/LaunchAgents/`, etc. — running them is the whole point | **Auto-run** |
+| **Plugin sync target** | Markdown command files that need to land in `~/.claude/plugins/{marketplaces,cache}/...` to be active | **Auto-sync** (cp to both locations) |
+| **Dep-installer** | Scripts that install system packages or write to shared paths (e.g. `mcps/setup.sh` installs venvs + Node deps) | **Flag as manual step** — operator decides which MCPs need refresh; running blindly is expensive |
+| **Library code** | Scripts invoked by other commands (e.g. `hooks/pipeline-executor.py` — called by `/today` and `/close-day`) | **No action needed** — the next caller picks up the new code automatically |
+
+Concrete rules for what's currently in the framework (the operator-environment-state class):
+
+- **`hooks/claude-identity/install-wrappers.sh` updated** (macOS / Linux) → `bash $HOME/aios/hooks/claude-identity/install-wrappers.sh`. Don't ask. Idempotent (timestamped backup → strip prior banner → append fresh). Report: *"Wrappers re-installed. Open a new terminal to pick up changes."*
+- **`hooks/claude-identity/install-wrappers.ps1` updated** (Windows) → `pwsh -File $HOME\aios\hooks\claude-identity\install-wrappers.ps1`. Same idempotency.
+- **Any `hooks/claude-identity/install-*.sh` / install-*.ps1` updated** (current + future installers in that path) → auto-run by the same rule.
+- **Any `plugins/aios/commands/*.md` updated** → cp to both plugin pipeline locations:
+  ```bash
+  cp $HOME/aios/plugins/aios/commands/*.md $HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
+  cp $HOME/aios/plugins/aios/commands/*.md $HOME/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
+  ```
+- **`mcps/setup.sh` or any other dep-installer updated** → surface in the report as a recommended manual step, with the exact command. Don't auto-run.
+
+If a future framework update adds a new state-producing installer under `hooks/`, the principle extends naturally — add it to the rule above and it gets auto-run. Library scripts (`*.py` invoked indirectly) are picked up by their callers; no auto-execution needed.
+
+## Duplicate cleanup (after replace + execute)
+
+Migration history left operators with duplicates: a skill (or agent) lives BOTH in the canonical bundled location AND in `custom/` (or at the layer's root). After every replace, scan + clean:
+
+For each layer in `agents`, `skills`, `plugins`, `mcps`, `templates`, `hooks`:
+
+1. Build the set of bundled file basenames — every `.md` under `{layer}/aios/`, `{layer}/anthropic/`, `{layer}/superpowers/`, and (for plugins/) `{layer}/aios/commands/`.
+2. Scan `{layer}/custom/*` for any file whose basename appears in the bundled set. **For each match: backup-on-divergence then remove.**
+   - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the bundled file (`{layer}/{bundled-subfolder}/{name}.md`).
+   - **If divergent** (operator customized a same-named bundled file instead of renaming it): backup the operator's version FIRST → `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-custom-{name}.md`. Then remove.
+   - **If byte-identical** (true duplicate, no operator value lost): remove silently, no backup needed.
+   - Log either way: *"Removed `agents/custom/lawyer.md` — duplicate of bundled `agents/aios/finance-legal/lawyer.md`. [Backed up to vault/04 - backups/aios-update-2026-05-25/duplicates/agents-custom-lawyer.md — your version differed from bundled; restore manually if you had intentional edits.]"* (bracketed clause only when divergent).
+3. Scan `{layer}/*.md` at the top level (outside any subfolder). If a top-level file's basename matches a bundled file → **same backup-on-divergence rule, then remove.** Migration artifact — operator's original belongs inside the appropriate bundled subfolder (already there). Backup path: `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-root-{name}.md`. Log: *"Removed `skills/test-driven-development.md` — duplicate of bundled `skills/superpowers/test-driven-development.md`."*
+4. Skip files that are genuinely unique to `custom/` — those are operator extensions and stay.
+
+Skip layers without a `custom/` subfolder (no opportunity for duplicates there).
+
+Aggregate the cleanup report: *"Cleaned N duplicates across {layer1, layer2, ...}: M removed silently (byte-identical), K backed up to `vault/04 - backups/aios-update-{date}/duplicates/` before removal (divergent — review if you want those edits)."*
 
 ## Tracker file
 
-Read `.aios-update` from the repo root.
-
 ```
-repo={team repo URL from USER.md}
+repo={framework upstream URL}
 hash={last synced commit hash}
 synced={date of last sync}
 ```
 
-If the file doesn't exist, create it with `repo=git@github.com:The-AIOS/aios.git` (the canonical framework upstream — ask the user to confirm if they sync from a fork) and set `hash=initial` (forces a full comparison).
+If the file doesn't exist, create it with `repo=git@github.com:The-AIOS/aios.git` and ask the operator once to confirm. Set `hash=initial` (forces full comparison on first run).
 
 ## Steps
 
 ### 1. Clone and check for changes
 
-Read the framework upstream URL from `.aios-update` (`repo=` field). Fallback: if absent, default to `git@github.com:The-AIOS/aios.git` and ask the user to confirm.
-
 ```bash
 rm -rf /tmp/vault-update-check && git clone --depth=50 --single-branch {team_repo_url} /tmp/vault-update-check 2>&1
 ```
 
-**Note:** If SSH fails, try converting to HTTPS format (e.g. `git@github.com:org/repo.git` → `https://github.com/org/repo.git`).
-
-Get current HEAD:
-```bash
-git -C /tmp/vault-update-check rev-parse HEAD
-```
-
-If HEAD matches stored hash → "Your vault infrastructure is current (synced {date})." → clean up → done.
+If SSH fails, try HTTPS format. Get current HEAD: `git -C /tmp/vault-update-check rev-parse HEAD`. If HEAD matches stored hash → "Your vault infrastructure is current (synced {date})." → clean up → done.
 
 ### 1.5. Show changelog context
 
-Read `CHANGELOG.md` from the cloned repo root (`/tmp/vault-update-check/CHANGELOG.md`).
+Read `CHANGELOG.md` from the cloned repo root. If absent, skip silently. Otherwise:
 
-**If the file doesn't exist:** skip silently (backwards compatible with repos that don't have a changelog yet).
-
-**If the file exists:**
-1. Parse all `## ` entries (each entry starts with `## YYYY-MM-DD — title`)
-2. Extract the `hash:` line from each entry (format: `` `hash: {short_hash}` ``)
-3. For each entry (newest first), check if it's already synced:
-   ```bash
-   git -C /tmp/vault-update-check merge-base --is-ancestor {entry_hash} {stored_hash}
-   ```
-   - Exit code 0 → entry was already synced → stop scanning (all older entries are also synced)
-   - Exit code 1 → entry is new → collect it
-   - **Exit code 128 (hash not found in cloned repo)** → cross-repo case (e.g., CHANGELOG references team-vault hashes but the user syncs from `chuycepeda/aios`). The byte-identical-CHANGELOG invariant means the hash exists in another repo but not the one being synced. **Fall back to local-CHANGELOG content comparison:**
-     - Read the user's LOCAL `CHANGELOG.md` (in the vault, not the clone)
-     - Search for the fetched entry's date header (e.g., `## 2026-05-11 —`) and full title line
-     - If the entry exists verbatim in local → already synced → stop scanning
-     - If absent or different → new entry → collect it
-     - This makes the comparison content-based rather than hash-based when the hash is unreachable, preserving correctness across cross-repo cascades.
-4. If there are new entries, display them before any diffs:
-
-```
-## What's new since your last sync ({stored_date})
-
-### {entry title}
-
-**What changed:**
-{bullet list from entry}
-
-**Action required:**
-{action items from entry}
-
----
-{repeat for each new entry}
-
-Proceeding with file-by-file review...
-```
-
-Show only the **What changed** and **Action required** sections from each entry — skip **Why** and **FYI** for brevity during sync (the full details are in CHANGELOG.md in the team repo).
-
-If any changelog entries have **Action required** items, collect them from ALL new entries (not just the latest — a teammate who hasn't synced in 2 weeks may have 3+ entries worth of actions). Aggregate and **deduplicate** — if multiple entries say "migrate project notes to Current State table," list it once.
-
-The action items are written as instructions for YOU (Claude) to execute — not for the user to do manually. Present them as a numbered list, then execute them:
-
-```
-## Action items from changelog
-
-I found {N} action items across {M} changelog entries since your last sync:
-
-1. {action — what Claude will do}
-2. {action — what Claude will do}
-3. {action — what Claude will do}
-
-I'll run through these now. Say "go" to execute all, or pick specific numbers to skip.
-```
-
-After the user says "go" (or picks), **execute each action item directly** — read files, migrate notes, run commands, check configs. Don't just list what needs to happen; do it. This is the Proactive Execution principle applied to vault-update.
+1. Parse `## ` entries (each is `## YYYY-MM-DD — title` followed by `` `hash: {short_hash}` ``).
+2. For each entry newest first, check if synced via `git -C /tmp/vault-update-check merge-base --is-ancestor {entry_hash} {stored_hash}` (exit 0 = synced, stop scanning; exit 1 = new, collect; exit 128 = hash unreachable in cloned repo → fall back to content-comparison against local CHANGELOG.md by date header + title).
+3. If new entries exist, show them before applying changes — present **What changed** + **Action required** sections only (skip Why/FYI for brevity; full details in CHANGELOG.md). Aggregate + deduplicate Action required across all new entries.
+4. Execute the action items inline as part of this run — don't list them and wait for the operator to ask. This command IS the implementation arm of CHANGELOG action items.
 
 ### 2. Find what changed
 
 ```bash
 git -C /tmp/vault-update-check diff {stored_hash}..HEAD --name-only -- \
-  "README.md" \
-  "SETUP.md" \
-  "TOOLS.md" \
-  "CHANGELOG.md" \
-  "CLAUDE.md" \
-  ".gitignore" \
-  "templates/" \
-  "skills/" \
-  "hooks/" \
-  "mcps/" \
-  "plugins/" \
-  "agents/" \
-  ".claude-plugin/" \
-  "LICENSE" \
-  "NOTICE" \
-  "FORTRESS.md"
+  "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
+  "CHANGELOG.md" "CLAUDE.md" "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
+  "templates/" "skills/" "hooks/" "mcps/" "plugins/" "agents/" \
+  ".claude-plugin/" "vault/.obsidian/"
 ```
 
-**Note:** `README.md` and `SETUP.md` live at the repo root (not inside `vault/`). Adjust read/write paths accordingly — these are not Obsidian notes, use `Read`/`Write` tools, not `mcp__obsidian__*`.
+If no Tier 1 files changed → update tracker hash → still run **duplicate cleanup** (cleanup is independent of upstream changes — it cleans local migration drift) → done.
 
-If no files changed in these paths → update hash → done.
+### 2.5. Self-update guard (bootstrap-safe, auto-re-invokes)
 
-If files changed → categorize each into its tier and continue.
+**Before processing anything else, content-compare local `plugins/aios/commands/update.md` against the cloned upstream version.** This is the bootstrap-safety check: when `update.md` itself changes, the current run is executing OLD spec — we need the NEW spec to land + re-process everything, without operator action.
 
-### 3. Process Tier 1 (Replace)
+```bash
+diff -q "$HOME/aios/plugins/aios/commands/update.md" /tmp/vault-update-check/plugins/aios/commands/update.md
+```
+
+**Case A — Identical (no self-update needed):** local already matches upstream. Skip the rest of this step, proceed to Step 3 with current logic. This is the normal path AND the path taken by an auto-re-invocation (because the first run already applied update.md).
+
+**Case B — Different (update.md was updated upstream):**
+
+1. Apply the replace for `update.md` immediately:
+   - Backup local to `vault/04 - backups/aios-update-{date}/update.md` (operator divergence preserved per the standard rule).
+   - Overwrite local `plugins/aios/commands/update.md` from upstream.
+2. Sync to BOTH plugin pipeline locations (marketplace + cache):
+   ```bash
+   cp $HOME/aios/plugins/aios/commands/update.md $HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/update.md
+   cp $HOME/aios/plugins/aios/commands/update.md $HOME/.claude/plugins/cache/the-aios/aios/0.1.0/commands/update.md
+   ```
+3. Clean up the temp clone (the re-invoke will re-clone fresh): `rm -rf /tmp/vault-update-check`.
+4. **Auto-re-invoke the command** via `Skill(aios:update)`. The re-invocation loads the NEW spec from the plugin cache (just synced) and processes all changed files from a clean state.
+5. **Exit the current run** after the re-invocation returns — its work is done by the inner run.
+
+Report to operator at the end: *"`/aios:update` self-updated and re-ran automatically with the new spec — {summary of what the inner run processed}."* No operator action required; the outer run handed off cleanly.
+
+**Why content-compare instead of a state-flag:** the content IS the state. On auto-re-invocation, local update.md is already byte-identical to upstream → Case A fires → no recursion. The pattern is self-terminating by design.
+
+### 3. Apply ALL Tier 1 changes (auto-apply)
 
 For each changed Tier 1 file:
-1. Read the remote version from `/tmp/vault-update-check/{path}` (only `vault/`-relative paths get the `vault/` prefix; root paths like `README.md`, `SETUP.md`, `hooks/`, `mcps/`, `plugins/`, `skills/` sit at the clone root).
-2. Show a brief summary: "{file}: updated ({one-line description of change})"
-3. After showing all Tier 1 changes, ask: "Apply Tier 1 updates? (These are reference files — templates, docs, graph settings.)"
-4. If confirmed: overwrite using the right tool for the path:
-   - `.md` files **inside** `vault/` → `mcp__obsidian__write_note` (keeps the Obsidian graph consistent)
-   - `.md` files **outside** `vault/` (root-level: `README.md`, `SETUP.md`, `TOOLS.md`, `CHANGELOG.md`, anything under `hooks/`, `mcps/`, `plugins/`, `skills/`) → `Bash cp` or the `Write` tool
-   - All other extensions (`.json`, `.css`, `.py`, `.sh`, `.plist`, `.yml`, etc., wherever they live) → `Bash cp` (preserves file mode — load-bearing for executable scripts under `hooks/`)
-   - New subdirectories that don't exist locally (e.g. a freshly added `hooks/{subdir}/`) → `mkdir -p` first, then `cp` each file inside
 
-### 4. Process Tier 2 (Suggest)
+1. **Diff local vs upstream.** If files are byte-identical, skip (no work needed).
+2. **If local differs from upstream → backup-on-divergence:** copy the operator's current local file to `vault/04 - backups/aios-update-{YYYY-MM-DD}/{flattened-path}.md` before overwriting.
+3. **Overwrite** using the right tool:
+   - `.md` files **inside** `vault/` → `mcp__obsidian__write_note` (keeps Obsidian graph consistent)
+   - `.md` files **outside** `vault/` (root + `hooks/`, `mcps/`, `plugins/`, `skills/`, `agents/`, `templates/`) → `Bash cp` or `Write`
+   - All other extensions (`.json`, `.css`, `.py`, `.sh`, `.plist`, `.yml`) → `Bash cp` (preserves file mode — load-bearing for executable scripts under `hooks/`)
+   - New subdirectories that don't exist locally → `mkdir -p` first, then `cp`
+   - New files in `agents/aios/{bundle}/` or other bundled subfolders → `cp` to the matching local path
+4. **Files deleted upstream:** flag with a question, don't auto-delete. *"Upstream removed `{path}`. Delete your local copy too? [yes/keep]."* Default: keep (operator may have reasons to retain locally).
 
-**Content-level comparison.** The user's vault and the team repo are separate repos — there's no git relationship after setup. So don't assume the team version is always "more complete." The user may have customized commands with content the team repo doesn't have. Compare content, not git history. For each changed Tier 2 file:
+### 4. Auto-execute post-replace scripts
 
-1. Read both the **remote version** from `/tmp/vault-update-check/vault/{path}` and the **local version** from the vault
-2. Compare section by section (split on `## ` headings)
-3. Classify each difference:
-   - **New section from team** (exists in remote, not in local): "NEW section added: `## {heading}`" — show the full section content
-   - **Modified section** (exists in both, content differs): "CHANGED: `## {heading}`" — show a clear before/after diff of the specific lines that changed
-   - **User-only section** (exists in local, not in team): Don't auto-keep. Ask: "YOUR section `## {heading}` — not in team repo. (1) Keep it — it's your personalization, (2) Delete it — it's outdated, (3) Show me the content — I'll decide." This prevents stale or accidentally copied sections from persisting forever.
-   - **Possible rename** (user has a section the team doesn't, AND the team has a section the user doesn't, AND they cover similar topics): Flag the likely rename: "Team may have renamed `## {old heading}` → `## {new heading}`. (1) Replace with team's version, (2) Keep yours, (3) Show me both." Detect by comparing section topics — e.g., "Book / study progress" and "Growth routines update" both relate to evening learning.
-   - **User section is richer** (both exist, but user's has extra content): "⚠️ Your `## {heading}` has content the team version doesn't. Applying the team version would REMOVE your additions. Showing both — you pick."
-   - **Unchanged section**: skip silently
+See § Post-replace auto-execution above. For each script that was updated in step 3, run it now. Wait for it to finish, capture output, report success/failure.
 
-**Safety rule:** If a section exists in both versions but the user's version is longer or has content the team's doesn't, **always warn before replacing.** The two repos have no git relationship — after setup the user pushes to their own remote, never to the team repo. So richer local content = user personalization, not a merge conflict. Never silently overwrite a richer user section with a shorter team one.
+### 5. Duplicate cleanup
 
-4. Present each file's changes as a numbered list:
-```
-### plugins/aios/commands/today.md — 2 changes
+See § Duplicate cleanup above. Always runs — even when no upstream changes landed. Removes migration-leftover duplicates between bundled folders and `custom/` + top-level orphans.
 
-1. NEW section: `## Meeting Notes Routing`
-   {show content}
+### 6. Tier 3 advisory flags
 
-2. CHANGED: `## Steps` — line 14
-   Before: "Read calendar events for today"
-   After:  "Read calendar events for today and tomorrow"
+For each template that changed in step 3, compare its `## ` heading set to the operator's corresponding filled-in file. List missing sections without taking action. Same for the USER.md template.
 
-Your sections not in team repo:
-- `## Rhythm` — (1) Keep (personalization), (2) Delete (outdated), (3) Show content
+### 7. Update tracker and clean up
 
-Apply changes to today.md? [all / pick numbers / skip]
-```
-
-5. Based on user response:
-   - **all**: apply every new/changed section
-   - **pick numbers**: apply only selected changes
-   - **skip**: leave file untouched
-
-6. To apply a **new section**: use `mcp__obsidian__patch_note` to insert the section at the appropriate position (after the preceding section heading from the remote version)
-7. To apply a **changed section**: use `mcp__obsidian__patch_note` with the local section content as `oldString` and remote section content as `newString`
-8. After applying, if the command file changed, sync to plugin pipeline:
-   ```bash
-   cp "plugins/aios/commands/{file}" ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{file}
-   cp "plugins/aios/commands/{file}" ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/{file}
-   ```
-
-### 5. Process Tier 3 (Flag)
-
-For each template that changed in Tier 1:
-1. Extract `## ` headings from the updated template
-2. Read the corresponding local content file (e.g., `about_me.md` for `about_me-template.md`)
-3. If the content file is missing headings that exist in the template:
-   ```
-   ### Advisory: template evolved
-
-   `about_me-template.md` now has these sections your `about_me.md` doesn't:
-   - `## My intent layer` — tradeoff rules, decision boundaries, communication rules
-
-   No action taken. Consider adding these sections when you have time.
-   ```
-4. If all template sections are present in the content file: skip silently
-
-### 6. Sync plugin cache, update tracker, and clean up
-
-**After all Tier 2 command changes are applied**, ensure the full plugin pipeline is current:
-```bash
-# Sync ALL command files to both plugin locations (not just changed ones — ensures consistency)
-cp ~/aios/plugins/aios/commands/*.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
-cp ~/aios/plugins/aios/commands/*.md ~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
-```
-
-Update `.aios-update` (repo root) with new HEAD hash and today's date.
-
-```bash
-rm -rf /tmp/vault-update-check
-```
+Update `.aios-update` with new HEAD hash + today's date. `rm -rf /tmp/vault-update-check`.
 
 ## Output format
 
-**If current:**
-> Your vault infrastructure is current (synced 2026-03-07, hash abc1234).
+**If current and no duplicates:**
+> Your vault infrastructure is current (synced {date}, hash {hash}). No duplicates found.
 
-**If updates available:**
+**If current but duplicates were cleaned:**
+> Your vault infrastructure is current. Cleaned {N} migration-leftover duplicates: {brief list}.
+
+**If updates landed:**
 ```
-## Vault infrastructure has updates
-
-**Last synced:** {date} ({N} commits behind)
+## Vault updated to {new_hash} (was {old_hash}, {N} commits)
 
 ### What's new (changelog)
-{Relevant changelog entries — What changed + Action required only. If no CHANGELOG.md exists, skip this section.}
+{action-item-bearing entries; What changed + Action required only}
 
-### Tier 1 — Replace (team reference files)
-{list of files with one-line descriptions}
+### Applied (Tier 1)
+{file list — grouped by area, e.g. "Root docs (3): README, CHANGELOG, TOOLS"}
 
-### Tier 2 — Suggest (your customizable files)
-{per-file section diffs with apply options}
+### Backed up (your customizations preserved)
+{any divergent file → backup path, e.g. "CLAUDE.md → vault/04 - backups/aios-update-2026-05-25/CLAUDE.md"}
 
-### Tier 3 — Advisory (template evolution)
-{flagged missing sections, if any}
+### Scripts re-executed
+{e.g. "install-wrappers.sh — wrappers refreshed. Open a new terminal."}
+
+### Duplicates cleaned
+{any duplicates removed from custom/ or top-level orphans}
+
+### Advisory (Tier 3 — template evolution)
+{missing sections in declared context, if any}
 ```
 
 **If network error:**
@@ -298,22 +245,16 @@ rm -rf /tmp/vault-update-check
 
 ## Rules
 
-- **Never touch personal content.** Declared context (except about_business, handled by `/company`), observed context, projects, calendar, ideas, logs — all off limits.
-- **Tier 2 is always opt-in.** Never auto-apply command or CLAUDE.md changes. Always show the diff first and let the user pick.
-- **Preserve personalizations.** Sections that exist locally but not in the team repo are the user's customizations. Flag them as "keeping" but never delete.
-- **Sync the plugin pipeline.** When a command file is updated, always copy to marketplace source AND plugin cache.
-- **Clean up temp clone.** Always `rm -rf /tmp/vault-update-check` at the end, even on error.
-- **One command at a time for Tier 2.** Don't batch all command diffs into one wall of text. Show one file, get confirmation, then the next.
-- **Self-update detection.** Before processing any Tier 2 files, check if `vault-update.md` itself changed. If it did: (1) apply the update to all 3 locations (commands/ source, marketplace, cache), (2) tell the user: "vault-update just updated itself. Re-running with the new version now." (3) Stop processing and re-invoke `/aios:update`. This ensures the new logic handles all other files. If it didn't change, proceed normally.
-- **Protect user personalizations.** The user's vault and team repo are separate repos with no git relationship. If the user's section is richer than the team's, warn before replacing — that's their work, not a stale copy.
-- **New command files.** If the team repo has a command file that doesn't exist locally, treat it as Tier 1 (just add it) since there's nothing to merge.
-- **Deleted command files.** If the team repo removed a command, flag it: "Team removed `{command}.md`. Delete your local copy too? [yes/keep]"
-- Use [[wiki-links]] for all project names, context files, and ventures mentioned.
+- **Auto-apply, never ask.** Tier 1 changes are mandatory infra — the command does not present diff approval flows. The operator sees a report of what was done, not a multiple-choice menu.
+- **Backup-on-divergence is the safety net.** Operator customizations to Tier 1 files are preserved in `vault/04 - backups/aios-update-{date}/` but are NOT auto-restored. If they want their edits back, they manually merge from the backup.
+- **Scripts must run.** A script update that doesn't get executed is half a sync. The wrapper installer is the canonical example — bringing the file without running it leaves the operator's shell on the old code path.
+- **Duplicate cleanup is structural.** Always runs. The bundled folder structure (`agents/aios/{bundle}/`, `skills/superpowers/`, etc.) is canonical. `custom/` is for genuinely operator-unique extensions only.
+- **Tier 2 (operator content) is sacred.** Never touched. Includes everything under the denylist.
+- **Self-update is auto-re-invoking + bootstrap-safe.** When `update.md` itself is in the diff, apply + sync to plugin pipeline FIRST, then auto-re-invoke `Skill(aios:update)`. The inner run loads the new spec, processes everything cleanly, returns. Content-comparison guards against recursion (after self-apply, local matches upstream → Case A fires → no loop). Operator sees one report from the outer run; no manual re-invocation needed. See Step 2.5.
+- **Cross-repo cascades.** When CHANGELOG hashes don't exist in the cloned repo (common for operators syncing from a fork or downstream mirror), fall back to content-comparison via date header + title (see Step 1.5).
+- **Clean up temp clone.** Always `rm -rf /tmp/vault-update-check` at end, even on error.
+- Use `[[wiki-links]]` for project names, context files, ventures mentioned in the report.
 
 ## Relationship to /company
 
-These two commands are complementary:
-- **/company** — mounts and syncs company narrative, positioning, branding, design.md, CLAUDE.md operating manual, and business context. Multi-substrate, multi-company. Run before creating company content.
-- **vault-update** — syncs infrastructure: commands, templates, settings, docs. Run when the team ships tooling improvements.
-
-`/aios:update` syncs the framework infra (commands, templates, hooks, etc.) from the framework upstream tracked in `.aios-update`. `/aios:company` mounts COMPANY venture-context from the per-company repos tracked in `USER.md → ## Companies (mounted)`. Different layers, different trackers, never conflated. Running one does not affect the other.
+`/aios:update` syncs framework infra (commands, templates, hooks, agents, skills, etc.) from the framework upstream tracked in `.aios-update`. `/aios:company` mounts COMPANY venture-context from per-company repos tracked in `USER.md → ## Companies (mounted)`. Different layers, different trackers, never conflated. Running one does not affect the other.

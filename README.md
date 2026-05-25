@@ -8,7 +8,7 @@
 You're the executor — the human reads alongside, you do the heavy lifting. Sequence:
 
 1. **Setting up for the first time?** → read [SETUP.md](./SETUP.md), follow the "Reading this as Claude?" block at its top
-2. **Operator says "I'm lost" or "what is this?"** → invoke [`/agent onboarding-aios`](./agents/aios-personal/onboarding-aios.md) — that agent knows the full doc map (this README, SETUP, CHEATSHEET, FORTRESS, START-HERE, USER.md, INTENT.md, CLAUDE.md, plus the org-level CONTRIBUTING/SECURITY) and routes the operator to the right place without overwhelming them
+2. **Operator says "I'm lost" or "what is this?"** → invoke [`/agent onboarding-aios`](./agents/aios/personal/onboarding-aios.md) — that agent knows the full doc map (this README, SETUP, CHEATSHEET, FORTRESS, START-HERE, USER.md, INTENT.md, CLAUDE.md, plus the org-level CONTRIBUTING/SECURITY) and routes the operator to the right place without overwhelming them
 3. **Operator already set up, needs daily ritual?** → `/aios:today` (morning) · `/aios:close-day` (evening) · `/aios:close-session` (per task) — this is the compound loop
 4. **Anything else** → [CLAUDE.md](./CLAUDE.md) is the behavioral contract (session rituals, agentic culture, the 10 principles); [TOOLS.md](./TOOLS.md) is the full menu of commands/agents/skills/MCPs; [CHEATSHEET.md](./CHEATSHEET.md) is the day-to-day operating index
 

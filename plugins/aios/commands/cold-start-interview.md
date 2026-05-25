@@ -193,12 +193,12 @@ All 6 bundles ship in the AIOS clone. This step is mental-model setting + signal
 
 | Bundle | HOT for this operator IF | NOT-YET-HOT framing |
 |---|---|---|
-| `aios-sales/` | Handles leads, writes proposals, manages a sales pipeline | "value if needed: proposal templates + lead-tracker when you start consulting on the side" |
-| `aios-strategy/` | Does market research or strategic advisory | "value if needed: market-research agents + competitive-positioning frameworks" |
-| `aios-finance-legal/` | Runs a business with invoicing, contracts, or compliance exposure | "value if needed: invoice templates + contract review when accounting load picks up" |
-| `aios-engineering/` | Writes code, ships products, reviews PRs | "value if needed: dev session reports + code review agents when you start building" |
-| `aios-communication/` | Publishes content, gives presentations, sends emails (almost everyone) | rarely NOT-HOT — default install |
-| `aios-personal/` | Wants growth-companion, study-buddy, decision-journaler, etc. | rarely NOT-HOT — default install |
+| `aios/sales/` | Handles leads, writes proposals, manages a sales pipeline | "value if needed: proposal templates + lead-tracker when you start consulting on the side" |
+| `aios/strategy/` | Does market research or strategic advisory | "value if needed: market-research agents + competitive-positioning frameworks" |
+| `aios/finance-legal/` | Runs a business with invoicing, contracts, or compliance exposure | "value if needed: invoice templates + contract review when accounting load picks up" |
+| `aios/engineering/` | Writes code, ships products, reviews PRs | "value if needed: dev session reports + code review agents when you start building" |
+| `aios/communication/` | Publishes content, gives presentations, sends emails (almost everyone) | rarely NOT-HOT — default install |
+| `aios/personal/` | Wants growth-companion, study-buddy, decision-journaler, etc. | rarely NOT-HOT — default install |
 
 **No action required from the operator at this step.** Just close with: *"Nothing to install or demote — bundles ship in the clone; `/today` surfaces what's relevant based on your declared work."*
 

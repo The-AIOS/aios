@@ -13,27 +13,56 @@
 
 ---
 
-## 2026-05-25 — cold-start wrapper-refresh + claude-fallback recursion fix
+## 2026-05-25 — Framework reorg: auto-apply /aios:update, agents/aios/ restructure, dual-write context rule
 
-`hash: 6884311`
+`hash: TBD`
 
-> **Two related fixes around the primary-session shorthand setup path.** Both were caught when an operator asked *"do we ask for the primary session name BEFORE installing the wrappers?"* during dry-run review.
->
-> **Fix 1 — cold-start re-installs the wrapper.** SETUP.md Step 5 installs `~/.zshrc` (or `$PROFILE`) wrappers BEFORE USER.md is populated by cold-start (Step 8). At Step 5, USER.md is still the template (Identity rows italicized as examples — regex won't match them), so `detect_primary_session` falls back to `claude`. Then cold-start writes the real name (e.g. `samantha`) into USER.md but never refreshed the shell banner. Operator finished setup with `claude()` bound, not `samantha()`. Now cold-start Step 1 auto-re-runs the installer after Identity capture, OS-conditional (`.sh` for macOS/Linux, `.ps1` for Windows).
->
-> **Fix 2 — recursion bug in the `claude` fallback path.** When the fallback name is literally `claude`, the installed `claude()` shell function would call `_claude_with_respawn claude`, which internally called bare `claude …`. Bash/zsh resolve that bare name via function-table first → infinite recursion. Same pattern in `.ps1` (`& claude` resolves function before binary). Bug never manifested because every current operator has a non-`claude` primary name (buddai, sarah, …), but it would trip any new operator running SETUP without cold-start, or anyone who actively chose `claude` as their name. Fix: `command claude` in `.sh`, `Get-Command -CommandType Application` in `.ps1` — both force PATH-binary resolution.
+> **Big day. Six structural shifts that consolidate the framework around one principle: *infra is infra — applied automatically, never asked.*** All were triggered by a live operator migration session (Alecs) that exposed three structural papercuts: (a) `/aios:update` asking operators to approve framework changes (slow, error-prone, false sense of control), (b) duplicate skills/agents leaking into `custom/` and at layer roots after every migration, (c) the flat `agents/aios-*` naming making operator-contribution flow harder than it should be. Plus polish from morning ships: cold-start wrapper refresh, claude-fallback recursion fix, and a CLAUDE.md dual-write rule for behavioral patterns.
 
 ### What changed
 
-- `plugins/aios/commands/cold-start-interview.md` — Step 1 now appends a wrapper-refresh after Identity capture, OS-conditional command shown. Sub-step 1 reframed to lead with the functional value of the shell shorthand (saves 60+ keystrokes per launch).
-- `hooks/claude-identity/install-wrappers.sh` — bare `claude` invocations (lines 155 + 157) now prefixed with `command`.
-- `hooks/claude-identity/install-wrappers.ps1` — `& claude` replaced with `$claudeExe = (Get-Command claude -CommandType Application).Source; & $claudeExe …`.
+**1. `/aios:update` philosophy — auto-apply, never-ask (the largest behavior shift)**
+
+- **Tier 2 (Suggest / show diff / user picks) eliminated.** Folded into Tier 1 (Mandatory Replace). `plugins/aios/commands/*` and `CLAUDE.md` are now Tier 1 — overwritten byte-identical to upstream. The "ask user before applying" flow is gone; the operator sees a report of what was done, not a multiple-choice menu.
+- **Backup-on-divergence** is the safety net for operator customizations. Before overwriting any Tier 1 file that diverges from upstream, the operator's version lands in `vault/04 - backups/aios-update-{date}/{filename}`. They can salvage edits manually if needed.
+- **Auto-execute scripts after replace.** When `hooks/claude-identity/install-wrappers.{sh,ps1}` is updated → the installer auto-runs. When plugin command files change → auto-sync to the 3-location plugin pipeline. Principle-based 4-class table in spec: installer/state-producer → run · plugin-sync target → cp · dep-installer → flag · library code → no action.
+- **Duplicate cleanup** runs every `/aios:update` invocation (even when no upstream changes pending). Scans `{layer}/custom/*.md` for files duplicating bundled paths AND `{layer}/*.md` at layer-root for orphaned files that should be inside a bundled subfolder. **Backup-on-divergence applies** — if a custom-located file has the same name as a bundled file but DIFFERENT content (operator customized instead of renaming), the operator's version is backed up to `vault/04 - backups/aios-update-{date}/duplicates/` before removal. Byte-identical duplicates removed silently. Handles Alecs's exact symptom (`skills/<every-superpower>.md` AND `skills/superpowers/<every-superpower>.md`) without risking operator customizations.
+- **Self-update auto-re-invokes** (bootstrap-safe). When `update.md` itself is in the diff: apply + sync to plugin pipeline, then auto-fire `Skill(aios:update)`. The inner run loads the new spec from the marketplace cache and processes everything cleanly. Termination guaranteed by content-comparison (after self-apply, local matches upstream → no recursion). Operator never sees a "please re-run" prompt — self-healing automatic.
+
+**2. `agents/aios-*` restructure → `agents/aios/{bundle}/`**
+
+- Flat naming retired. New layout: `agents/aios/{sales,strategy,finance-legal,engineering,communication,personal}/`. Cleaner mental model, easier for operator extensions and company-namespaced bundles to slot in. Mirrors the existing `skills/aios/`, `skills/superpowers/`, `skills/anthropic/` pattern.
+- Agent-matching (CLAUDE.md `agents/**/{name}.md` recursive glob) works unchanged. Spawn wrapper has no hardcoded bundle paths.
+- 14 docs updated to reflect the new path (README, CLAUDE, TOOLS, CHANGELOG, cold-start-interview, agents/_index, all bundle READMEs, security-engineer agent's keyword refs).
+
+**3. CLAUDE.md polish**
+
+- **Dual-write rule added** under § Context Hierarchy: when saving a feedback memory about behavioral patterns or operator preferences, also write to `vault/00 - notes/context/declared/working_style.md` (or about_me.md) and/or `vault/00 - notes/context/observed/preferences.md` (or patterns.md). Memory bootstraps; vault is source of truth. Tool quirks stay in memory only.
+- **Light trim pass** — Agentic Culture table → compact list (10 principles preserved, prose compressed). Documentation map table → tighter columns. Vault Map structure tree → tighter comments. 429 → 410 lines, ~9.8K → ~9.1K tokens. All rules intact; verified by spot-check.
+
+**4. Morning ships absorbed into the same date**
+
+Earlier today shipped: (a) cold-start re-installs wrappers after Identity capture so the operator-chosen primary-session name actually binds (was: `claude()` fallback never refreshed); (b) `claude`-fallback recursion fix in `install-wrappers.{sh,ps1}` (bare `claude` would re-resolve to the function → infinite recursion; now `command claude` + `Get-Command -CommandType Application`); (c) `SARAH.md` operator-leak from the `/aios:update` denylist removed (general `{IDENTITY}.md` pattern instead).
 
 ### Action required
 
-Operators who already completed cold-start with a non-`claude` primary name (buddai, sarah, anything custom): **no action required** — the recursion bug doesn't affect you. `/aios:update` will pull the refreshed wrappers + cold-start file silently. Re-running `install-wrappers.{sh,ps1}` is optional but harmless.
+Two-phase rollout because the first `/aios:update` run uses your CURRENT (old) spec, then the new spec lands and takes over. Both phases are mostly automated.
 
-Operators mid-onboarding or planning fresh setups: the new cold-start flow handles the re-install automatically. Nothing manual.
+**Phase 1 — current-spec run (one-time bootstrap):**
+
+1. **Detect OS.** Check `uname -s`. If Darwin/Linux → bash variants below. If Windows → use the `pwsh` variants.
+2. **`/aios:update`** — old logic. Pulls all changed Tier 1 files (the entire `agents/aios-*` → `agents/aios/{bundle}/` restructure, CLAUDE.md, README.md, TOOLS.md, CHANGELOG.md, cold-start-interview.md, all the agent-bundle READMEs). For Tier 2 (CLAUDE.md + `commands/update.md`) the old spec will ASK to approve — **approve both.** The new auto-apply spec lands at this step.
+3. **Re-run the wrapper installer (idempotent safety):** `bash $HOME/aios/hooks/claude-identity/install-wrappers.sh` (macOS/Linux) or `pwsh -File $HOME\aios\hooks\claude-identity\install-wrappers.ps1` (Windows). Guarantees your shell banner is current even if a prior update brought the file but didn't run it. Safe to re-run — both installers are idempotent (timestamped backup, strip old block, append fresh).
+
+**Phase 2 — new-spec run (auto-finishes the migration):**
+
+4. **`/aios:update` (second invocation).** Now uses the new auto-apply spec. Tracker shows no Tier 1 changes pending (Phase 1 brought them), but the **duplicate cleanup pass runs anyway** — scans your `agents/custom/`, `skills/custom/`, `plugins/custom/`, `mcps/custom/`, `templates/custom/`, `hooks/custom/` AND each layer's top-level for files duplicating bundled paths. Auto-removes (with per-file log) any duplicates from the old flat-`agents/aios-*` era or from migration leftover. (This is exactly Alecs's symptom — `skills/test-driven-development.md` alongside `skills/superpowers/test-driven-development.md`.)
+
+**Phase 3 — restart-required step (LAST):**
+
+5. **Open a new terminal.** The wrapper banner in `~/.zshrc` activates on shell start; existing terminals still hold the old function table. New terminal → `type {your-primary-session-name}` should resolve to the refreshed shell function with bundle-ID-based Antigravity IDE addressing.
+
+After Phase 2, your vault is fully on the new framework: auto-apply `/aios:update`, agents/aios/ nested layout, no duplicates, fresh CLAUDE.md, fresh wrappers. Every subsequent `/aios:update` run is single-phase + auto-apply.
 
 ---
 
@@ -881,7 +910,7 @@ ls .{venture}-sync && ls "vault/00 - notes/context/ventures/{venture}" | head -5
 |---|---|---|
 | `/aios:company --create \| --mount \| --sync` | Multi-venture context distribution | `CHEATSHEET.md §1` + `plugins/aios/commands/company.md` |
 | `/aios:collaborate` | Shared work spaces (substrate-pluggable: Drive/GitHub/local) | `CHEATSHEET.md §1` |
-| `onboarding-aios` agent | Day-0 framework orientation, programmatic-trigger from /today first-run | `agents/aios-personal/onboarding-aios.md` |
+| `onboarding-aios` agent | Day-0 framework orientation, programmatic-trigger from /today first-run | `agents/aios/personal/onboarding-aios.md` |
 | `onboarding-{company}` agents | Per-company HR-Day-1 (ships in every venture-context repo) | `agents/onboarding-{company}.md` in mounted bundles |
 | `/aios:cold-start-interview` | Ritualized Day-0 setup with auto-onboarding handoff | `plugins/aios/commands/cold-start-interview.md` |
 | CI gates on framework + venture-context repos | 6-job (framework) / 5-job (context) validation on PRs | Their respective `.github/workflows/validate.yml` |

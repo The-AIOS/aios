@@ -1,4 +1,4 @@
-# aios-sales
+# aios/sales
 
 > Lead generation, proposals, CRM, and brand monitoring.
 

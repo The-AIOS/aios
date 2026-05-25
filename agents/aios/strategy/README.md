@@ -1,4 +1,4 @@
-# aios-strategy
+# aios/strategy
 
 > Research, advisory, deep dives. The "think harder before deciding" bundle.
 

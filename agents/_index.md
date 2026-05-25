@@ -18,12 +18,12 @@ Organized into **6 bundles by purpose**. Install only the bundles you need.
 
 | Bundle | Purpose | Count |
 |---|---|---|
-| **`aios-sales/`** | Lead generation, proposals, CRM, brand monitoring | 4 |
-| **`aios-strategy/`** | Market research, advisory, company analysis | 3 |
-| **`aios-finance-legal/`** | Accounting, legal review, invoicing, compliance | 4 |
-| **`aios-engineering/`** | Code review, documentation, bug triage, security, building | 5 |
-| **`aios-communication/`** | Content, decks, emails, meeting prep, reports, design systems | 7 |
-| **`aios-personal/`** | Study, journaling, growth, decision-making, onboarding, crisis | 6 |
+| **`aios/sales/`** | Lead generation, proposals, CRM, brand monitoring | 4 |
+| **`aios/strategy/`** | Market research, advisory, company analysis | 3 |
+| **`aios/finance-legal/`** | Accounting, legal review, invoicing, compliance | 4 |
+| **`aios/engineering/`** | Code review, documentation, bug triage, security, building | 5 |
+| **`aios/communication/`** | Content, decks, emails, meeting prep, reports, design systems | 7 |
+| **`aios/personal/`** | Study, journaling, growth, decision-making, onboarding, crisis | 6 |
 | **`custom/`** | Your own agents (operator-specific extensions, never synced) | — |
 
 **Total bundled agents: 28.** Each bundle has a `README.md` describing its scope; this file is the master registry.
@@ -75,7 +75,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 
 <!-- /today reads this table to match tasks to agents. -->
 
-### aios-sales/ — Lead generation, proposals, CRM, brand
+### aios/sales/ — Lead generation, proposals, CRM, brand
 
 | Agent | Purpose | Match keywords | Schedule |
 |---|---|---|---|
@@ -84,7 +84,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | [[sales-crm-updater]] | Sync deal updates to Monday/CRM from meeting notes | CRM, Monday, deal update, pipeline sync | on-demand |
 | [[brand-monitor]] | Track mentions, competitors, industry news | brand mentions, competitor check, industry news, market scan | weekly (Monday) |
 
-### aios-strategy/ — Research, advisory, deep dives
+### aios/strategy/ — Research, advisory, deep dives
 
 | Agent | Purpose | Match keywords | Schedule |
 |---|---|---|---|
@@ -92,7 +92,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | [[consultant]] | Strategic advisory, frameworks, business analysis | consulting, strategy, advisory, framework, recommendation | on-demand |
 | [[company-analyst]] | Acquired-style deep dives — history, strategy, moat, playbook | company analysis, acquired, deep dive, moat, 7 powers | on-demand |
 
-### aios-finance-legal/ — Accounting, legal, invoicing, compliance
+### aios/finance-legal/ — Accounting, legal, invoicing, compliance
 
 | Agent | Purpose | Match keywords | Schedule |
 |---|---|---|---|
@@ -101,7 +101,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | [[invoice-tracker]] | Track pending invoices, flag overdue, draft follow-ups | invoice, payment, overdue, billing, factura, cobro | on-demand |
 | [[compliance-checker]] | Review documents against legal/regulatory requirements | compliance, contract review, NDA, regulatory | on-demand |
 
-### aios-engineering/ — Code, build, ship
+### aios/engineering/ — Code, build, ship
 
 | Agent | Purpose | Match keywords | Schedule |
 |---|---|---|---|
@@ -111,7 +111,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | [[security-engineer]] | STRIDE threat modeling, SAST setup, secrets management, vulnerability triage with prioritized remediation | threat model, STRIDE, SAST, semgrep, sonarqube, codeql, security review, secrets management, vault, vulnerability scan, CVSS, security audit | on-demand / quarterly |
 | [[technical-cofounder]] | Build real products end-to-end — discovery → ship → handoff | build app, build product, MVP, prototype, ship, launch | on-demand |
 
-### aios-communication/ — Content, decks, emails, meetings, design
+### aios/communication/ — Content, decks, emails, meetings, design
 
 | Agent | Purpose | Match keywords | Schedule |
 |---|---|---|---|
@@ -123,7 +123,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | [[report-drafter]] | Draft status reports and board updates from vault activity | status report, board update, weekly report, progress | on-demand |
 | [[design-md-author]] | Author design.md per Google's spec; interview + validate + optional Stitch upload | design system, design.md, brand identity, design tokens | on-demand |
 
-### aios-personal/ — Growth, study, journaling, decisions, onboarding
+### aios/personal/ — Growth, study, journaling, decisions, onboarding
 
 | Agent | Purpose | Match keywords | Schedule |
 |---|---|---|---|

@@ -1,4 +1,4 @@
-# aios-finance-legal
+# aios/finance-legal
 
 > Accounting, legal review, invoicing, compliance. The "keep the books clean and the contracts safe" bundle.
 

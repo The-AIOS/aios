@@ -74,20 +74,11 @@ The combination creates compound value. Each session builds on the last. Over mo
 
 ### Agentic Culture
 
-Everything in this CLAUDE.md — the rituals, the discipline, the self-update rules — flows from **ten principles of intelligence collaboration**. They're not new rules to learn; they're the philosophy already woven through what's already here. Surfaced in one place so the system is self-documenting.
+This CLAUDE.md flows from **ten principles of intelligence collaboration** ([full essay](https://chuycepeda.substack.com/p/the-agentic-culture-team-management)). They're philosophy already woven into the rituals/discipline/self-update rules below — surfaced once so the system is self-documenting.
 
-| Layer | # | Principle | Lands in |
-|---|---|---|---|
-| **Architecture** | 1 | **Systems Over Goals** — persistent context, compounding routines, not transactional requests | § Rituals · § Vault Map |
-| Architecture | 3 | **Trust Is Architecture** — define boundaries; expand by evidence | INTENT.md autonomy levels |
-| Architecture | 5 | **The Transfer Is Everything** — capture intelligence across sessions; the weak link was never new ideas, it was the transfer | § Session End · § Self-Update |
-| **Relationship** | 2 | **Ownership, Not Outsourcing** — commander's intent, not bare tasks; AI declares intent before acting | "I intend to..." protocol (§ VI) |
-| Relationship | 6 | **Identity Before Behavior** — who you are precedes what you do | § Mandatory First Action · § Identity & Greeting |
-| Relationship | 8 | **Ask Better Questions** — diagnose before solving | "What's the real challenge?" (§ VI) |
-| **Execution** | 4 | **Protect the Ugly Babies** — generate volume; shield rough ideas from premature optimization | Daily-note parking lot · /graduate |
-| Execution | 7 | **Balance Over Stability** — antifragility > stability; every failure is a system upgrade waiting to happen | § Self-Update → Antifragile |
-| Execution | 9 | **Finish What Matters, Kill What Doesn't** — WIP limits; say no by default | "What are you saying no to?" gate (§ VI) · /today |
-| Execution | 10 | **Calibrate, Don't Choose** — balance opposing principles contextually; believability-weighted decisions | Decision journal in /close-day |
+- **Architecture** — (1) Systems Over Goals · (3) Trust Is Architecture · (5) The Transfer Is Everything
+- **Relationship** — (2) Ownership Not Outsourcing · (6) Identity Before Behavior · (8) Ask Better Questions
+- **Execution** — (4) Protect the Ugly Babies · (7) Balance Over Stability · (9) Finish What Matters Kill What Doesn't · (10) Calibrate Don't Choose
 
 **Sticky reminders for every session:**
 - *Output quality depends on your leadership culture, not prompt quality.*
@@ -123,6 +114,10 @@ This vault has two persistence layers. They must compound, not compete.
 **The boundary:** memory stores rules about *how* to interact with the vault — not facts about the domain. *"When you need a path, read the Current State table"* is memory. The actual path is vault. Storing domain facts in memory creates a stale competitor that silently drifts. **When vault and memory disagree, vault wins.**
 
 **The test before saving to memory:** "Does a vault file already track this?" If yes, don't save — update the vault file instead.
+
+**The dual-write rule for behavioral patterns:** working-style observations (how the operator organizes calendars, files, repos, sessions) and observed preferences (what they gravitate toward, what slows them down) belong in BOTH places — memory (bootstrap cache) AND vault (source of truth). Write the memory entry AND the corresponding section in `vault/00 - notes/context/declared/` (operator's own statement — `working_style.md`, `about_me.md`) and/or `vault/00 - notes/context/observed/` (derived rule — `preferences.md`, `patterns.md`). The test: *would a fresh session with full vault access but no memory still learn this?* If no, the vault is incomplete and memory is doing too much. Memory should bootstrap; the vault should be self-contained.
+
+Tool quirks (e.g. *"Obsidian `patch_note` uses `oldString`/`newString` params"*) stay in memory only — vault doesn't need them. Anything about the operator's behavior, preferences, working style, or tool-interpretation conventions MUST surface in vault context as well as memory.
 
 ### Growth Mindset
 
@@ -232,26 +227,21 @@ Goal: truth, not flattery. Update each file when its trigger fires:
 
 ### Documentation map (the 7 framework docs)
 
-When the operator asks *"where is X documented?"* — route by role, not by reading every doc:
+When the operator asks *"where is X documented?"* — route by role, don't read every doc:
 
-| Doc | Role | Who reads it | When to point operator there |
-|---|---|---|---|
-| [`README.md`](./README.md) | Value-prop + philosophy (3 stages, compound effect, 5 distinctions) | First-time visitor deciding if AIOS fits | *"Is this for me?"* / *"What does AIOS actually do?"* |
-| [`SETUP.md`](./SETUP.md) | Install instructions + the canonical 11-step setup flow | New operator + Claude executing setup | *"How do I install?"* / *"Claude, set up my AI-OS"* |
-| [`START-HERE.md`](./START-HERE.md) | Post-clone walkthrough — what to do in the first 24 hours | New operator just past `git clone` | *"I just cloned, what now?"* |
-| `CLAUDE.md` (this file) | Behavioral contract — session rituals, agentic culture, 10 principles | Claude every session (auto-loaded) | *"How does Claude work with the vault?"* / when explaining behavior |
-| [`CHEATSHEET.md`](./CHEATSHEET.md) | Day-to-day operating index — launch, daily loop, capture/export, personalization | Operator daily | *"Which command do I use for X?"* / *"How do I customize Y?"* |
-| [`TOOLS.md`](./TOOLS.md) | Full menu of commands + agents + skills + MCPs + standalone tools | Operator looking for capability | *"Is there a tool for X?"* / *"What can AIOS do?"* |
-| [`FORTRESS.md`](./FORTRESS.md) | Two-machine architecture (MacBook + Mac mini), 6 defensive layers, 24/7 agent host | Advanced operator with second machine | *"How do I run agents 24/7?"* / *"My Mac mini..."* |
+| Doc | Role | Trigger |
+|---|---|---|
+| [`README.md`](./README.md) | Value-prop + philosophy | *"Is this for me?"* / *"What does AIOS do?"* |
+| [`SETUP.md`](./SETUP.md) | Install + 11-step canonical setup flow | *"How do I install?"* / *"Set up my AI-OS"* |
+| [`START-HERE.md`](./START-HERE.md) | Post-clone walkthrough (first 24h) | *"I just cloned, what now?"* |
+| `CLAUDE.md` (this file) | Behavioral contract — auto-loaded every session | When explaining Claude's behavior |
+| [`CHEATSHEET.md`](./CHEATSHEET.md) | Day-to-day operating index | *"Which command for X?"* / *"How do I customize Y?"* |
+| [`TOOLS.md`](./TOOLS.md) | Full menu — commands + agents + skills + MCPs | *"Is there a tool for X?"* |
+| [`FORTRESS.md`](./FORTRESS.md) | Two-machine architecture (+ Mac mini agent host) | *"How do I run agents 24/7?"* |
 
-**Plus 2 operator-owned files** (Claude reads them every session for personalization context):
+**Plus 2 operator-owned files** Claude reads every session: [`USER.md`](./USER.md) (identity, sources, command overrides) + [`INTENT.md`](./INTENT.md) (trust contract — autonomy per domain).
 
-| File | Role |
-|---|---|
-| [`USER.md`](./USER.md) | Operator's personalization: identity, sources, organization, command overrides |
-| [`INTENT.md`](./INTENT.md) | Trust contract: autonomy levels per domain, what Claude does autonomously vs draft-only |
-
-**Rule:** when the operator gets disoriented (*"I'm lost"* / *"what is this?"*), invoke [`/agent onboarding-aios`](./agents/aios-personal/onboarding-aios.md) — that agent knows the whole map and walks them through it without lecturing.
+**Rule:** when the operator gets disoriented (*"I'm lost"* / *"what is this?"*), invoke [`/agent onboarding-aios`](./agents/aios/personal/onboarding-aios.md) — that agent knows the whole map and walks them through it without lecturing.
 
 ### Structure
 
@@ -259,26 +249,21 @@ When the operator asks *"where is X documented?"* — route by role, not by read
 vault/
 ├── 00 - notes/
 │   ├── context/
-│   │   ├── declared/   ← owner-authored: about_me, personal_voice, working_style, about_business + optional role-expectations, psychometric-profile
-│   │   ├── observed/   ← Claude-authored: profile, patterns, preferences, business, ecosystem, growth, session-insights, antifragile, vault-routine
-│   │   └── ventures/   ← deep venture reference docs (one subfolder per venture)
-│   ├── projects/       ← one note per active project
-│   ├── ideas/          ← permanent notes (from /graduate)
-│   ├── reflections/    ← book study notes + deep dives
-│   └── logs/           ← activity logs + observed-context snapshots ({YYYY-MM}/ subfolders)
-├── 01 - calendar/{YYYY-MM}/    ← {YYYY-MM-DD}.md daily + {YYYY}-W{WW}-*.md weekly
-├── 02 - assets/        ← images, PDFs, attachments
-├── 03 - export/        ← /role-report, /weekly-learnings, /ingest, talks, writing pipeline (1-drafts/ → 2-ready/ → 3-published/)
-└── 04 - backups/
+│   │   ├── declared/   ← owner-authored (about_me, personal_voice, working_style, about_business, …)
+│   │   ├── observed/   ← Claude-authored (profile, patterns, preferences, business, ecosystem, growth, session-insights, antifragile, vault-routine)
+│   │   └── ventures/   ← deep venture reference (one subfolder per venture)
+│   ├── projects/   ideas/   reflections/   logs/
+├── 01 - calendar/{YYYY-MM}/    ← daily + weekly notes
+├── 02 - assets/   03 - export/   04 - backups/
 
 (top-level infra — outside vault/)
-.claude-plugin/marketplace.json   ← marketplace manifest
-plugins/                          ← Claude Code plugins: aios/ (canonical, source of truth) · custom/ (operator) · <company>/ (via /aios:company --sync)
-agents/                           ← 28 task agents in 6 bundles + custom/ + <company>/
-skills/                           ← aios/ · anthropic/ · superpowers/ · custom/
-hooks/                            ← pipeline executor + markitdown + claude-identity wrappers
-mcps/                             ← 10 vendored MCP servers (custom/ for operator)
-templates/                        ← reference templates + custom/
+.claude-plugin/marketplace.json
+plugins/   ← aios/ (bundled) · custom/ · <company>/
+agents/    ← aios/{sales,strategy,finance-legal,engineering,communication,personal}/ · custom/ · <company>/
+skills/    ← aios/ · anthropic/ · superpowers/ · custom/
+hooks/     ← pipeline executor + markitdown + claude-identity wrappers
+mcps/      ← vendored MCP servers + custom/
+templates/ ← reference templates + custom/
 ```
 
 ### Index Maintenance
@@ -351,7 +336,7 @@ See `vault/00 - notes/context/observed/vault-routine.md` for recommended cadence
 | `hooks/` | Pipeline scripts (executor, markitdown) + `claude-identity/` wrappers (`install-wrappers.sh` / `.ps1`) | Called by commands; wrappers installed via the install scripts | Add `.py`, document in `_index.md` |
 | `mcps/` | Bundled MCP servers — see `mcps/_index.md` for the canonical list | Auto-connected via `settings.json` | Add folder, register in settings |
 | `plugins/` | Claude Code plugins — `aios` (bundled) + `custom/<your-plugin>/` (operator) + `<company>/<plugin>/` (company-namespaced) | Auto-loaded when enabled in settings | Add folder under `plugins/custom/<name>/` with `.claude-plugin/plugin.json` |
-| `agents/` | Task agents in 6 bundles (`aios-sales/`, `aios-strategy/`, `aios-finance-legal/`, `aios-engineering/`, `aios-communication/`, `aios-personal/`) + `custom/` for operator extensions | Spawned via `spawn {name}` or `/agent {name}` — glob match across all bundles | Add `{name}.md` to the relevant bundle folder (or `custom/` for your own) from `[[agent-template]]` |
+| `agents/` | Task agents in 6 bundles (`aios/sales/`, `aios/strategy/`, `aios/finance-legal/`, `aios/engineering/`, `aios/communication/`, `aios/personal/`) + `custom/` for operator extensions | Spawned via `spawn {name}` or `/agent {name}` — glob match across all bundles | Add `{name}.md` to the relevant bundle folder (or `custom/` for your own) from `[[agent-template]]` |
 
 **Custom/ + company namespacing:** every framework layer has a `custom/` subfolder for operator extensions (single files, survive `/aios:update`, override bundled). `plugins/` follows Anthropic's plugin convention (each plugin is a self-contained folder; operator-built plugins go in `plugins/custom/<your-plugin>/`, NOT inside `aios/`). Company-distributed infra (via `/aios:company --sync`) lands at `{layer}/{company}/` (single-file layers) or `plugins/{company}/<plugin>/` (plugin layer) — namespaced by company, never collides with `custom/` or `aios-*/`.
 

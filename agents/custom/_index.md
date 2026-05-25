@@ -14,7 +14,7 @@ updated: '2026-05-21'
 
 ## Naming note
 
-This folder was previously called `my-agents/`. Renamed to `custom/` in the 2026-05-21 restructure to disambiguate from the `aios-personal/` bundle (which is the *shared* personal-life bundle: study-buddy, growth-companion, etc.). `custom/` is for YOUR operator-specific extensions; `aios-personal/` is the canonical AIOS personal bundle.
+This folder was previously called `my-agents/`. Renamed to `custom/` in the 2026-05-21 restructure to disambiguate from the `aios/personal/` bundle (which is the *shared* personal-life bundle: study-buddy, growth-companion, etc.). `custom/` is for YOUR operator-specific extensions; `aios/personal/` is the canonical AIOS personal bundle.
 
 ## Override behavior
 

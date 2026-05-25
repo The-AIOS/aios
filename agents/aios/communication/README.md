@@ -1,4 +1,4 @@
-# aios-communication
+# aios/communication
 
 > Content, decks, emails, meetings, design systems. The "make every external surface tight" bundle.
 
