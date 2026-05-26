@@ -210,7 +210,7 @@ Build the deck:
 
 Skip Phase 3 (Google Slides). Use this pipeline instead when Phase 0 picked path 4 (venture template library) OR when output-format is `html` for any reason.
 
-**Pipeline overview** (mirrors the sovra `decks-pdf-generator` agent):
+**Pipeline overview** (mirrors the sovra `sovra-decks` agent):
 1. Setup working dir: `WORK=/tmp/aios-decks/$(date +%s); mkdir -p "$WORK"`
 2. Read the shared template CSS from `templates/{venture}/decks/base/styles.css` (or operator's design.md → generate CSS)
 3. For each slide in the outline: copy matching template, substitute fields with `sed`, strip unfilled `{{placeholders}}`, extract the `<section class="slide ...">` block

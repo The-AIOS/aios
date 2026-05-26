@@ -838,7 +838,7 @@ The onboarding-aios agent will detect this is a returning-operator (sees old dai
 
 #### Phase 8.6 — Venture-context mount (conditional — content-driven detection)
 
-**State:** Pre-extraction, venture content (positioning, gtm, pricing, primitives, sales templates, venture-specific agents like `lawyerAR`) sometimes shipped INSIDE a team-vault repo (e.g. `sovrahq/internal-vault` bundled Sovra). Post-extraction, venture content lives in its own per-venture repo (`{org}/{venture}-context`) and gets mounted into the vault as a namespaced bundle under `{layer}/{venture}/`. The mount step is what keeps that content synced with canonical going forward.
+**State:** Pre-extraction, venture content (positioning, gtm, pricing, primitives, sales templates, venture-specific agents like `sovra-lawyer-ar`) sometimes shipped INSIDE a team-vault repo (e.g. `sovrahq/internal-vault` bundled Sovra). Post-extraction, venture content lives in its own per-venture repo (`{org}/{venture}-context`) and gets mounted into the vault as a namespaced bundle under `{layer}/{venture}/`. The mount step is what keeps that content synced with canonical going forward.
 
 **Crucial distinction — this phase is for VAULTS WITH VENTURE CONTENT, not for any specific lineage:**
 - A **team-vault clone** (e.g. from `sovrahq/internal-vault`) carries bundled venture content from before extraction → has unmounted venture content → needs mount
