@@ -53,13 +53,16 @@ Read in order:
 3. **Observed context** — `preferences.md` (deck-related preferences), `patterns.md` (the user's writing/speaking patterns)
 4. **USER.md → `### /agent deck-builder`** (if exists) — per-user overrides for Drive convention, default design source, template preferences
 
-### Phase 0 — DESIGN DISCOVERY
+### Phase 0 — DESIGN DISCOVERY + OUTPUT-FORMAT CHOICE
 
-Before outlining content, surface the design intent. Don't assume.
+Before outlining content, surface (a) the design intent and (b) the output format. Don't assume.
 
 **Search the vault for design docs:**
 - `find ~/aios/vault -name 'design.md' -o -name '*-design.md'` — the Google Labs `design.md` convention. Any matches are candidates.
 - Also scan `vault/00 - notes/context/declared/` and `vault/00 - notes/context/ventures/*/` for design-system documents (any `.md` whose body describes brand colors, fonts, layout primitives).
+
+**Search for venture template libraries** (template-library path):
+- `find ~/aios/templates -type d -name 'decks'` — if any `templates/{venture}/decks/` exists, the venture has a canonical slide library. Read `_index.md` for the catalog. This unlocks brand-locked rapid assembly (sovra-style pattern).
 
 **Search Drive for existing decks** (via `search_drive_files`):
 - Past decks: `mimeType='application/vnd.google-apps.presentation'` or `.pptx`, ordered by recency
@@ -67,19 +70,31 @@ Before outlining content, surface the design intent. Don't assume.
 - Filter by the deck's venture/audience if discernible from task description
 
 **Present the discovery + decision prompt to the user:**
-> "I found these design sources for this deck:
+> "I found these sources for this deck:
 > - Design docs in vault: {list with paths}
+> - Venture template libraries: {`templates/{venture}/decks/` if found, with template count}
 > - Past decks in Drive: {list with names + URLs, most recent first}
-> - Templates: {list}
+> - Drive templates: {list}
 >
-> Three paths:
-> 1. **Use an existing design doc** — apply {vault design.md} as the style spec
-> 2. **Copy from a past deck** — duplicate {Drive deck} and adapt content
-> 3. **Propose a new design** — based on this deck's content + audience, I'll suggest 2-3 candidates from the awesome-design-md catalog (or a combination) for approval before building.
+> Four paths:
+> 1. **Use an existing design doc** — apply {vault design.md} as the style spec, build in Google Slides via MCP
+> 2. **Copy from a past deck** — duplicate {Drive deck} and adapt content, edit in Google Slides
+> 3. **Propose a new design** — suggest 2-3 candidates from the awesome-design-md catalog (or a combination), build in Google Slides
+> 4. **Use venture template library** — assemble from {`templates/{venture}/decks/`}, output as **self-contained HTML** (sovra-style rapid pipeline — single file, F11-presentable, optional Chrome-headless PDF). Best for: brand-locked decks, offline-portable deliverables, when speed matters more than collaborative editing.
 >
 > Which path?"
 
-**Wait for the user's choice.** Phase 0 output is a recorded design source — file path, template URL, or a written design proposal — saved to the outline note's frontmatter as `design-source`.
+**Wait for the user's choice.** Phase 0 output is a recorded design source AND output format — saved to the outline note's frontmatter as `design-source` + `output-format: slides|html`.
+
+### Phase 0.5 — THEME CHOICE (light or dark)
+
+Before outlining content, ask explicitly: **light or dark?**
+
+Use `AskUserQuestion` unless the user already specified in their task. The choice is contextual:
+- **Dark:** cinematic, product-surface feel, on-stage / projector audiences. Default for keynotes, investor pitches with bold thesis, product launches.
+- **Light:** formal-document feel, partner-PDF, bright rooms, printed handouts. Default for government deliverables, financial reports, partner-facing one-pagers-as-slides.
+
+Save to outline frontmatter as `theme: dark|light`. Both themes must be brand-aligned (the design source — design.md or template library — must define tokens for both). For the awesome-design-md path, ensure the chosen catalog brand has both theme variants documented; if not, ask the user to confirm light-only or dark-only.
 
 **If user picks "propose a new design"** — don't generate from scratch. Reference the **VoltAgent awesome-design-md catalog** (https://github.com/VoltAgent/awesome-design-md — MIT, 73 design systems across 9 categories: AI/LLM, Dev Tools, Backend/DevOps, Productivity, Design, Fintech, E-commerce, Media, Automotive).
 
@@ -128,15 +143,51 @@ Co-author the outline in a vault note:
   ```
 - Iterate with the user until they say "ready for images" or equivalent. **Do not proceed to Phase 2 without explicit greenlight.**
 
-### Phase 2 — IMAGES
+### Phase 2 — IMAGES (format-aware)
 
-For each slide with non-empty `Image direction`:
-- Call `mcp__nano-banana__generate_image` with the direction text + design-source style cues (colors/aesthetic from Phase 0)
+Image strategy depends on `output-format` from Phase 0 — declare `image_type` per slide in the outline (`photo` / `diagram` / `brand-canonical`).
+
+**For all slides, infer image_type from the Image direction if not declared:**
+- Editorial scene / person / building / object → `photo`
+- Visualization of structure / relationship / process / 4-pillar / architecture → `diagram`
+- Logo / icon / fixed brand asset → `brand-canonical`
+
+**Output-format: slides (Google Slides MCP path):**
+- All image types → raster PNG (Slides API doesn't accept SVG — known limitation)
+- For each slide with `image_type: photo` or `diagram`: call `mcp__nano-banana__generate_image` with the direction + design-source style cues (Phase 0)
 - Save to deck's Drive imagery folder via `create_drive_file`
-- Annotate the outline with the image URL/path
+- For `brand-canonical`: pull from operator's asset folder (configured in `about_business.md`, venture files, or USER.md). **Never generate logos.**
+- Annotate the outline with image URL/path
 - Skip slides marked `image: none` or `text-only`
 
-For brand logos / fixed assets: pull from the user's asset folder (configured in `about_business.md`, venture files, or USER.md). **Never generate logos** — use canonical brand PNGs.
+**Output-format: html (sovra-style HTML pipeline) — three paths by image_type:**
+
+| `image_type` | Path | Why |
+|---|---|---|
+| `photo` | Nano-banana raster → JPEG slim → inline base64 | Photoreal needs raster; SVG can't do it |
+| `diagram` / `schematic` / `icon` | **Inline SVG** — Claude writes `<svg>` markup directly using design.md tokens (CSS variables) | Vector quality + zero base64 overhead + semantic + brand-locked |
+| `brand-canonical` | URL directly (if hosted) OR inline base64 (if local) | Operator's canonical asset path |
+
+**SVG path detail** (preferred for diagrams in HTML format):
+```html
+<svg viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg">
+  <rect x="..." y="..." fill="var(--color-primary)" />
+  <text x="..." font-family="var(--font-display)">...</text>
+</svg>
+```
+The deck's `<style>` block exposes design.md tokens as CSS variables, so the inline SVG inherits theme + brand automatically.
+
+**Photo path detail** (when `mcp__nano-banana__generate_image` is connected):
+1. Generate PNG with design-source style cues
+2. **Slim PNG → JPEG q70 capped at 1600px** (mandatory; 89% size reduction, no visible loss when masked by overlay):
+   ```bash
+   sips -s format jpeg -s formatOptions 70 -Z 1600 "$f.png" --out "$f.jpg"
+   ```
+3. Embed as `data:image/jpeg;base64,...` inline. Keep PNG only for transparency-required cases (logos with alpha).
+
+If Nano-banana MCP isn't connected, surface to operator + offer manual asset path OR fallback to brand-canonical for that slide.
+
+**Why image size matters for HTML:** unslimmed PNGs → 9+ MB HTML, 6+ MB PDF for a 10-slide deck. Decks should travel intact + load fast — slim mandatory.
 
 ### Phase 3 — GOOGLE SLIDES (live MCP edit)
 
@@ -155,22 +206,87 @@ Build the deck:
 
 **Batching workflow:** prefer batched `replaceAllText` operations over single-shot edits — one batch can land 40+ replacements atomically. Faster + cleaner than piecemeal edits.
 
-### Phase 4 — ADJUSTMENTS (human-led)
+### Phase 3.B — HTML BUILD (sovra-style pipeline, when output-format: html)
+
+Skip Phase 3 (Google Slides). Use this pipeline instead when Phase 0 picked path 4 (venture template library) OR when output-format is `html` for any reason.
+
+**Pipeline overview** (mirrors the sovra `decks-pdf-generator` agent):
+1. Setup working dir: `WORK=/tmp/aios-decks/$(date +%s); mkdir -p "$WORK"`
+2. Read the shared template CSS from `templates/{venture}/decks/base/styles.css` (or operator's design.md → generate CSS)
+3. For each slide in the outline: copy matching template, substitute fields with `sed`, strip unfilled `{{placeholders}}`, extract the `<section class="slide ...">` block
+4. Compose single self-contained HTML: `<style>` block with theme class (`theme-{light|dark}`) + concatenated `<section>` blocks + optional navigation JS for F11 / arrow-key / click-to-advance
+5. Drop deliverables to `~/Downloads/{venture}-Deck-{Topic}-{date}.html`
+
+**Optional PDF export — two modes by use case:**
+
+- **Live / editable mode** (text-PDF, searchable, slow viewer load): Chrome `--print-to-pdf` directly. Use when audience needs to copy/paste from PDF. ⚠️ Emits anonymous Type 3 fonts → slow loading in Preview & Chrome PDF viewer.
+- **Sharing / presentation mode** (raster-PDF, instant open, not searchable): render each slide via Chrome `--screenshot` at native viewport with `--force-device-scale-factor=2`, bundle via PIL into a multi-page PDF. **Default for any deck the audience will receive.**
+
+```python
+import subprocess
+from pathlib import Path
+from PIL import Image
+
+CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+W, H = 1280, 720          # native slide viewport
+SCALE = 2                 # → 2560×1440 sharp pages
+
+pngs = []
+for i, page_html in enumerate(per_slide_htmls, 1):
+    png = WORK / f"slide-{i:02d}.png"
+    subprocess.run([CHROME, "--headless=new", "--disable-gpu",
+                    f"--window-size={W},{H}",
+                    f"--force-device-scale-factor={SCALE}",
+                    "--hide-scrollbars",
+                    f"--screenshot={png}", f"file://{page_html}"], check=True)
+    img = Image.open(png)
+    assert img.size == (W * SCALE, H * SCALE), \
+        f"Slide {i} rendered at {img.size} — viewport bumped or scale missing"
+    pngs.append(png)
+
+imgs = [Image.open(p).convert("RGB") for p in pngs]
+imgs[0].save(pdf_out, save_all=True, append_images=imgs[1:],
+             format="PDF", resolution=192.0, quality=82)
+```
+
+**Critical gotcha** — use `--force-device-scale-factor=2` with NATIVE viewport (`1280×720`), NOT a bumped window size. Slide CSS uses absolute units that lock to logical pixels; forcing `--window-size=1920,1080` leaves content rendered at native size inside a larger frame → content appears zoomed-out relative to the HTML. The pixel-dimensions assertion above catches this automatically. Full rationale in memory: `feedback_chrome_pdf_type3_fonts.md`.
+
+**Phase 3.B skips Phase 4 (human-led adjustments)** — HTML decks are mechanically generated from a locked template library; per-slide design tweaks happen by editing the template upstream + regenerating, not by manual polish. Operators wanting per-slide manual edits should pick the Google Slides path (Phase 3) instead.
+
+### Phase 4 — ADJUSTMENTS (human-led, Slides path only)
 
 User refines manually in Google Slides UI. Agent stays in-session but does not auto-edit unless explicitly asked. Announce:
 > "Phase 4 is yours — refine in Slides UI (Gemini for text, Nano for image regen). Ping me when ready for Phase 5 validation."
 
 Update outline frontmatter `status: human-polish`.
 
-### Phase 5 — VALIDATION
+### Phase 5 — VALIDATION (format-aware)
 
-Joint review pass. Use `get_presentation` to read the deck back. Check:
+Joint review pass. Checklist depends on output-format from Phase 0.
+
+**Universal checks (both formats):**
 - [ ] Every slide has the intended beat from Phase 1
-- [ ] No placeholder text left behind (`[TBD]`, `Lorem ipsum`, unfilled `{placeholders}`)
+- [ ] No placeholder text left behind (`[TBD]`, `Lorem ipsum`, unfilled `{placeholders}` — for HTML: `grep '{{' $WORK/*.html` must be empty)
 - [ ] Brand/design assets present where required by Phase 0 source
-- [ ] Speaker notes complete on slides that need them
+- [ ] Speaker notes complete on slides that need them (Slides only — HTML decks rarely carry speaker notes)
 - [ ] Slide order matches the outline arc
+- [ ] Voice locked per declared context (`personal_voice.md`, venture voice file) — no fabricated metrics, claims, or partnership statements
+
+**Slides-path checks (output-format: slides):**
+- [ ] Read deck back via `get_presentation` — every `replaceAllText` landed
 - [ ] Any deck-specific risks (live demo fallbacks, network dependencies, embed validity) noted in speaker notes
+- [ ] Drive folder URL + deck URL saved to outline frontmatter
+- [ ] No SVG attempts (Slides API silently fails — caught in Phase 2 but verify)
+
+**HTML-path checks (output-format: html):**
+- [ ] Composed deck is fully self-contained — no broken external links, no missing CSS, no `file://` references in the final HTML
+- [ ] HTML opens correctly in browser, F11 enters full-screen, arrow keys navigate (if nav JS included)
+- [ ] **Layout proportions match HTML** (raster-mode PDFs only) — every rendered slide PNG equals exactly `(W × scale_factor, H × scale_factor)` pixels. The Step D pipeline assertion catches this; do NOT ship a PDF where layout looks zoomed-out.
+- [ ] **No Type 3 fonts in PDF** (raster mode): `python3 -c "import re; d=open('$PDF','rb').read(); print('Type3:', len(re.findall(rb'/Type3', d)))"` must be 0. Expected ~25-30 for text-PDF mode (acceptable, warn the user).
+- [ ] **Image embeds are JPEG, not PNG** when using nano-banana raster backgrounds: `grep -c 'data:image/png' $DECK.html` should be 0 (except true-PNG cases like logos with transparency)
+- [ ] Inline SVG diagrams reference design.md tokens via CSS variables (not hardcoded colors)
+- [ ] If PDF requested: page count = number of slides in outline, file < 30 MB
+- [ ] Final filename: `{venture}-Deck-{Topic}-{YYYY-MM-DD}.{html|pdf}` at `~/Downloads/`
 
 Surface issues for user judgment — don't auto-fix in Phase 5. Surface + ask.
 

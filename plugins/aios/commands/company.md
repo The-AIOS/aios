@@ -270,6 +270,57 @@ this draft? (yes / let-me-edit / show-me-the-full-file)
 
 The auto-draft is honest about its source — it doesn't pretend to be the operator's voice, but it's a real first pass that gets the bundle to a complete state. Operator can refine in `voice.md` directly post-create.
 
+**Special handling for `design.md` (required, load-bearing — same discipline as voice.md):**
+
+`design.md` is the canonical brand interchange format (Google Labs `design.md` spec). It defines tokens — colors, typography, spacing, shadows — that EVERY downstream agent reads: `deck-builder`, `content-writer`, one-pager generators, future Stitch-based screen generators. A missing design.md means brand drift across all surfaces. Like voice.md, **don't accept `skip` on design.md.**
+
+Branch based on whether the operator has design source material:
+
+**Path A — Source-driven** (operator has website, brand PDF, existing collateral, design tokens already documented):
+
+> *"Got design sources I can extract from? Options:*
+> *(1) Live website URL (I'll scrape CSS + typography)*
+> *(2) Existing brand PDF / design doc (provide path or URL)*
+> *(3) Past collateral folder (let me look at deck/one-pager/site files for tokens)*
+> *(4) Operator paste — type out the brand spec*
+
+Invoke `design-md-author` agent (in `agents/aios/communication/`) with the source. It extracts tokens, asks 4-5 clarifying questions (primary color confirmation, type-pair preference, etc.), and writes `context/design.md`.
+
+**Path B — Awesome-design-md fallback** (operator has nothing — *"start fresh"* or *"no brand assets yet"*):
+
+> *"No worries — pick a base brand from the awesome-design-md catalog, then customize. Based on your company category ({gov / fintech / AI / consumer / etc.}), I suggest:*
+> *(1) **{Brand A}** — rationale: {one line}. Preview: {URL}*
+> *(2) **{Brand B}** — rationale. Preview: {URL}*
+> *(3) **{Brand C}** — rationale. Preview: {URL}*
+> *Pick one as your base. We'll customize 5-6 tokens so your brand is distinct."*
+
+Catalog: [VoltAgent awesome-design-md](https://github.com/VoltAgent/awesome-design-md) (73 design systems, MIT-licensed). Heuristics same as the deck-builder Phase 0 path 3 ("Propose new design").
+
+After base selected, walk the operator through 5-6 customizations:
+1. **Primary color** — keep base or substitute (hex picker — what evokes the brand?)
+2. **Accent color** — keep or substitute
+3. **Dark theme support** — does the company need both light + dark variants? (yes/no — affects downstream deck-builder + others)
+4. **Type pair** — display + body fonts (keep base pair, or pick from Google Fonts / system)
+5. **Voice-adjacent visual tone** — formal / playful / bold / minimal (drives spacing + corner-radius defaults)
+6. **Logo placeholder** — if operator has a logo path, embed; else placeholder SVG referencing the chosen color tokens
+
+Result: `context/design.md` written with tokens + a comment-line at top: `# Sourced from awesome-design-md base: {brand} (https://github.com/VoltAgent/awesome-design-md/tree/main/design-md/{brand}). Customizations: ...`
+
+**Path C — Defer** (operator says "later" / "I'll think about it"):
+
+Don't push without design.md. Instead:
+1. Drop a `.pending-design-md` marker in the company's context folder
+2. Write a SCAFFOLD `context/design.md` with `# {{COMPANY}} Design System — PENDING` heading + placeholder token table
+3. The scaffold + marker get pushed to remote (so the bundle is complete enough to mount)
+4. `/aios:today` will surface the pending marker as a Phase 0 task every run until it's filled in (same pattern as quota-autopilot-capture)
+5. Tell operator: *"Pushed with a design.md scaffold + pending marker. Your daily plan will nudge you until it's filled in — earlier you do it, less brand drift across downstream collateral."*
+
+**Path D — Existing design.md exists** (in pre-fill source from Step 3):
+
+Reuse it. Validate it has the canonical token sections (colors, typography, spacing, optional dark-theme variant). If sections are missing, surface the gaps + offer to fill via Path A or B for the missing pieces only.
+
+The same "design.md is load-bearing" discipline applies on `--sync` for existing companies — if a company is mounted without design.md, `/aios:today` surfaces this on every run + offers to walk through it.
+
 ### Step 4.5 — Onboarding agent (bundle-ships-with companion)
 
 After context files are drafted, **explicitly mention the onboarding agent + offer customization**. The operator must KNOW the agent ships and have a chance to adapt it before push — silent "copy + replace placeholders" leaves them blind to a load-bearing piece of their bundle.
