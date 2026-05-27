@@ -13,6 +13,47 @@
 
 ---
 
+## 2026-05-27 — Windows install hardening v2: CRLF-safe compares, real-Python detection, PowerShell + SSH fallbacks
+
+`hash: PENDING`
+
+> **Real Windows validation of yesterday's release surfaced four more silent failure modes.** The 2026-05-26 hardening was reasoned-about from macOS; running `/aios:update` end-to-end on a stock Windows 11 box exposed four gaps the Mac path can't see — all four were worked around in-session, so no vault was harmed, and all four are now fixed upstream. Theme: defaults that differ silently between macOS/Linux and Windows (line endings, the `python3` alias, which PowerShell ships, whether ssh-agent runs). Each one fails *quietly* — the operation appears to succeed while doing nothing, or adds latency without an error.
+
+### What changed
+
+**1. CRLF-safe content comparisons (`/aios:update`)**
+
+- Windows Git's `core.autocrlf` rewrites LF→CRLF on checkout, so vault files carry `\r\n` while `git show {hash}:{path}` emits LF. The three-way backup-on-divergence compare (`diff -q local baseline`) then flagged **every** Tier 1 file as "differ" on byte-identical content → **11 false backups in `vault/04 - backups/` on every single sync**, draining the "your edits were preserved" report of all meaning.
+- Fix: **every content comparison in `update.md` now strips `\r` before diffing** — `diff -q <(tr -d '\r' < a) <(tr -d '\r' < b)`. Applies to the three-way compare (§ Backup-on-divergence), the self-update guard (Step 2.5), and the duplicate-cleanup content-compares (§ Duplicate cleanup). A single CRLF note documents the rule once.
+
+**2. Real-Python detection in `mcps/setup.sh` (completes the 2026-05-26 venv fix)**
+
+- On Windows, `python3.exe` is the **Microsoft Store redirector stub** by default — invoking it opens a Store page and exits non-zero, so `python3 -m venv` no-ops while the `&& echo "✓"` chain reports success over an empty venv. This is the *first* half of the silent-install bug; yesterday's `vbin` helper fixed the *second* (`.venv/bin` vs `.venv/Scripts`) but couldn't help if the venv was never created.
+- Fix: a `$PY` launcher probes `python3 → python → py -3` at script start and uses the first that actually runs (`$PY` stays unquoted so `py -3` word-splits). If none works, the script bails loudly with the exact remediation: install from python.org **and** disable the Store alias (Settings → Apps → Advanced app settings → App execution aliases → turn OFF `python.exe`/`python3.exe`). Node-only MCPs still set up regardless.
+
+**3. PowerShell fallback (`/aios:update` post-replace auto-exec)**
+
+- The auto-run step for the updated `install-wrappers.ps1` hard-coded `pwsh` (PowerShell 7), which is **not** installed by default — a stock Win11 ships only Windows PowerShell 5.1 (`powershell`). The installer simply failed.
+- Fix: try `pwsh`, fall back to `powershell` (5.1 runs the `.ps1` unchanged).
+
+**4. SSH→HTTPS rewrite on Git Bash (`/aios:update` clone)**
+
+- `git@github.com:` clones assume a running ssh-agent. On Windows it usually isn't running, so every sync hung ~5-10s on the SSH timeout before the HTTPS fallback kicked in.
+- Fix: detect MSYS/Cygwin (`$OSTYPE`) and rewrite `git@github.com:` → `https://github.com/` **before** cloning, skipping the timeout entirely. Non-Windows keeps the SSH-first-then-HTTPS-on-failure behavior.
+
+### Action required
+
+`/aios:update` auto-applies everything (`update.md` self-updates via the Step 2.5 guard; `setup.sh` is Tier 1 replace). For the teammate's Claude session running the update:
+
+1. **`/aios:update`** — applies the CRLF-safe `update.md` (the self-update guard re-invokes with the new spec automatically) and the new `setup.sh`. From this sync forward, **Windows operators stop getting the 11-file false-backup flood.**
+2. **Windows operators only — re-run `bash mcps/setup.sh`.** The `$PY` detector now creates real venvs instead of silently no-op'ing over the Store-alias stub. **Verify it worked:** each Python MCP dir should now have a non-empty `.venv/Scripts/` (`ls mcps/google-workspace-mcp/.venv/Scripts/`). If `setup.sh` prints the "No working Python found" banner, install Python from python.org and disable the Store execution alias, then re-run.
+3. **Windows operators — optional cleanup:** if your 2026-05-26 sync left false backups in `vault/04 - backups/aios-update-2026-05-26/` (Tier 1 files that you never actually edited), they're safe to delete — they were CRLF false positives, not real personalizations. Spot-check one against upstream first if unsure.
+4. **macOS/Linux operators:** no action — these are Windows-path fixes; your sync behavior is unchanged (the `tr -d '\r'` normalization is a no-op on LF-only files, and the SSH path is untouched on non-Windows).
+
+**Restart-required:** none beyond the standard "open a new terminal" if the wrapper installer re-ran in step 1.
+
+---
+
 ## 2026-05-26 — Structural consistency (templates/aios/), folder-aware cleanup, cross-platform install hardening
 
 `hash: 9eedd2d`

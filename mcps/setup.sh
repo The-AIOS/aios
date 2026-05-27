@@ -10,17 +10,36 @@ echo ""
 # shouldn't kill the rest. Errors are surfaced per block.
 
 # Cross-platform venv binary dir: Unix → .venv/bin, Windows (Git Bash) → .venv/Scripts.
-# Call from inside the MCP dir AFTER `python3 -m venv .venv`. Without this, the
+# Call from inside the MCP dir AFTER `$PY -m venv .venv`. Without this, the
 # hardcoded `.venv/bin/pip` path does not exist on Windows, the `&& echo "✓"`
 # chain short-circuits, and the operator sees no error while nothing installed —
 # the silent-failure bug surfaced on a Windows operator's machine 2026-05-26.
 # Git Bash resolves bare names (pip, playwright) to their .exe, so no suffix needed.
 vbin() { if [ -d ".venv/Scripts" ]; then echo ".venv/Scripts"; else echo ".venv/bin"; fi; }
 
+# Cross-platform Python launcher. On Windows, `python3.exe` is the Microsoft Store
+# redirector stub by default — invoking it opens an "install Python" page and exits
+# non-zero, so `python3 -m venv` silently no-ops while the `&& echo "✓"` chain hides
+# it (the second half of the Windows silent-install bug — first half was the .venv/bin
+# vs .venv/Scripts path, fixed via vbin() above; surfaced by a Windows operator
+# 2026-05-27). Probe for a REAL interpreter: python3 → python → py -3. $PY is used
+# UNQUOTED below so `py -3` word-splits correctly.
+PY=""
+for cand in python3 python "py -3"; do
+  if $cand -c 'import sys' >/dev/null 2>&1; then PY="$cand"; break; fi
+done
+if [ -z "$PY" ]; then
+  echo "✗ No working Python found (python3 / python / py -3 all failed)."
+  echo "  On Windows: install Python from python.org, then disable the Store alias —"
+  echo "  Settings → Apps → Advanced app settings → App execution aliases → turn OFF"
+  echo "  python.exe and python3.exe. Node-only MCPs (slack/github/stitch) still set up below."
+  echo ""
+fi
+
 # --- Google Workspace MCP (Python) ---
 if [ -d "$SCRIPT_DIR/google-workspace-mcp" ] && [ ! -d "$SCRIPT_DIR/google-workspace-mcp/.venv" ]; then
   echo "→ google-workspace-mcp..."
-  (cd "$SCRIPT_DIR/google-workspace-mcp" && python3 -m venv .venv && "$(vbin)/pip" install -e . -q) \
+  (cd "$SCRIPT_DIR/google-workspace-mcp" && $PY -m venv .venv && "$(vbin)/pip" install -e . -q) \
     && echo "  ✓ installed" \
     || echo "  ✗ failed — check google-workspace-mcp/README.md"
 fi
@@ -41,7 +60,7 @@ fi
 if [ -d "$SCRIPT_DIR/notebooklm-mcp" ] && [ ! -d "$SCRIPT_DIR/notebooklm-mcp/.venv" ]; then
   echo "→ notebooklm-mcp..."
   cd "$SCRIPT_DIR/notebooklm-mcp"
-  python3 -m venv .venv
+  $PY -m venv .venv
   "$(vbin)/pip" install notebooklm-py playwright -q
   "$(vbin)/playwright" install chromium 2>/dev/null
   "$(vbin)/notebooklm" skill install 2>/dev/null || true
@@ -52,7 +71,7 @@ fi
 if [ -d "$SCRIPT_DIR/playwright-mcp" ] && [ ! -d "$SCRIPT_DIR/playwright-mcp/.venv" ]; then
   echo "→ playwright-mcp..."
   cd "$SCRIPT_DIR/playwright-mcp"
-  python3 -m venv .venv
+  $PY -m venv .venv
   "$(vbin)/pip" install playwright browser-cookie3 -q
   "$(vbin)/playwright" install chromium 2>/dev/null
   echo "  ✓ installed (chromium bundled)"
@@ -89,7 +108,7 @@ fi
 if [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && [ ! -d "$SCRIPT_DIR/nano-banana-mcp/.venv" ]; then
   echo "→ nano-banana-mcp..."
   cd "$SCRIPT_DIR/nano-banana-mcp"
-  python3 -m venv .venv
+  $PY -m venv .venv
   "$(vbin)/pip" install google-genai mcp -q
   echo "  ✓ installed (requires GEMINI_API_KEY — see README)"
 fi
@@ -98,7 +117,7 @@ fi
 if [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && [ ! -d "$SCRIPT_DIR/pdf-generator-mcp/.venv" ]; then
   echo "→ pdf-generator-mcp..."
   cd "$SCRIPT_DIR/pdf-generator-mcp"
-  python3 -m venv .venv
+  $PY -m venv .venv
   "$(vbin)/pip" install mcp -q
   command -v pandoc >/dev/null 2>&1 || echo "  ⚠ pandoc not found — brew install pandoc"
   [ -d "/Applications/Google Chrome.app" ] || echo "  ⚠ Google Chrome not found — install from https://google.com/chrome"
@@ -109,7 +128,7 @@ fi
 if [ -d "$SCRIPT_DIR/spotify-dj-mcp" ] && [ ! -d "$SCRIPT_DIR/spotify-dj-mcp/.venv" ]; then
   echo "→ spotify-dj-mcp..."
   cd "$SCRIPT_DIR/spotify-dj-mcp"
-  python3 -m venv .venv
+  $PY -m venv .venv
   "$(vbin)/pip" install spotipy mcp -q
   echo "  ✓ installed (requires Spotify Dev app + SPOTIFY_CLIENT_ID/SECRET — see README)"
 fi

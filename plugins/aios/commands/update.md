@@ -67,9 +67,11 @@ The right comparison: **local vs operator's last-synced BASELINE** (the version 
 # Fetch baseline content from the same clone we already have (no second clone needed):
 git -C /tmp/vault-update-check show {stored_hash}:{path} > /tmp/aios-baseline-{flattened-path}
 
-# Compare local vs baseline:
-diff -q "$HOME/aios/{path}" /tmp/aios-baseline-{flattened-path}
+# Compare local vs baseline (line-ending-normalized — see CRLF note below):
+diff -q <(tr -d '\r' < "$HOME/aios/{path}") <(tr -d '\r' < /tmp/aios-baseline-{flattened-path})
 ```
+
+> **CRLF note (Windows).** On Windows, Git's `core.autocrlf` converts LF→CRLF on checkout, so vault files have `\r\n` line endings while `git show {hash}:{path}` (and the temp clone's working tree) may not — a raw `diff -q` then reports "differ" for byte-identical content, flooding `vault/04 - backups/` with false personalizations on every sync. **Every content comparison in this command strips `\r` before diffing** (`tr -d '\r'` via process substitution, as above). This applies to the self-update guard (Step 2.5) and the duplicate-cleanup content-compares (§ Duplicate cleanup) too — normalize line endings, then compare.
 
 **Three outcomes:**
 
@@ -99,7 +101,15 @@ After Tier 1 replace lands, automatically execute any updated script that **prod
 Concrete rules for what's currently in the framework (the operator-environment-state class):
 
 - **`hooks/claude-identity/install-wrappers.sh` updated** (macOS / Linux) → `bash $HOME/aios/hooks/claude-identity/install-wrappers.sh`. Don't ask. Idempotent (timestamped backup → strip prior banner → append fresh). Report: *"Wrappers re-installed. Open a new terminal to pick up changes."*
-- **`hooks/claude-identity/install-wrappers.ps1` updated** (Windows) → `pwsh -File $HOME\aios\hooks\claude-identity\install-wrappers.ps1`. Same idempotency.
+- **`hooks/claude-identity/install-wrappers.ps1` updated** (Windows) → run with whichever PowerShell exists. `pwsh` (PowerShell 7) is **not** installed by default on Windows — a stock Win11 ships only Windows PowerShell 5.1 (`powershell`), which runs the `.ps1` fine. Try `pwsh`, fall back to `powershell`:
+  ```bash
+  if command -v pwsh >/dev/null 2>&1; then
+    pwsh -File "$HOME/aios/hooks/claude-identity/install-wrappers.ps1"
+  else
+    powershell -File "$HOME/aios/hooks/claude-identity/install-wrappers.ps1"
+  fi
+  ```
+  Same idempotency. (Hard-coding `pwsh` fails the install on a stock machine — surfaced by a Windows operator 2026-05-27.)
 - **Any `hooks/claude-identity/install-*.sh` / install-*.ps1` updated** (current + future installers in that path) → auto-run by the same rule.
 - **Any `plugins/aios/commands/*.md` updated** → cp to both plugin pipeline locations:
   ```bash
@@ -118,8 +128,8 @@ For each layer in `agents`, `skills`, `plugins`, `mcps`, `templates`, `hooks`:
 
 1. Build the set of bundled file basenames — every `.md` under `{layer}/aios/`, `{layer}/anthropic/`, `{layer}/superpowers/`, and (for plugins/) `{layer}/aios/commands/`. **Exclude `_index.md` from this set** — every folder gets its OWN `_index.md` as navigation metadata, they are NEVER duplicates of each other (`agents/aios/_index.md` is the bundled index; `agents/custom/_index.md` is the operator's index for their custom agents — both intentional, neither is a copy).
 2. Scan `{layer}/custom/*` for any file whose basename appears in the bundled set AND is not `_index.md`. **For each match: apply the stale-vs-personalized test, then remove.**
-   - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the CURRENT bundled file (`{layer}/{bundled-subfolder}/{name}.md`).
-   - **If byte-identical to current bundled** (true duplicate, no operator value): remove silently, no backup needed.
+   - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the CURRENT bundled file (`{layer}/{bundled-subfolder}/{name}.md`). **Normalize line endings first** (`tr -d '\r'` both sides — see CRLF note in § Backup-on-divergence) so Windows CRLF checkouts don't read as differences.
+   - **If byte-identical to current bundled** (after CRLF-normalization — true duplicate, no operator value): remove silently, no backup needed.
    - **If different from current bundled → check if it's a stale-bundled version** (not a personalization): scan recent upstream history for any past version of the bundled file matching this content. Use `git -C /tmp/vault-update-check log --all -p -- {bundled-path}` and compare against the past few revisions of the file. If a match is found in upstream history → the file is just a stale bundled copy (migration leftover) → remove silently, no backup.
    - **Else** (different from current AND no match in upstream history): treat as real personalization → backup-on-divergence: copy operator's version to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-custom-{name}.md` FIRST, then remove.
    - Log either way: *"Removed `agents/custom/lawyer.md` — duplicate of bundled `agents/aios/finance-legal/lawyer.md`. [Backed up to vault/04 - backups/aios-update-2026-05-25/duplicates/agents-custom-lawyer.md — your version didn't match current or any past bundled; restore manually if you had intentional edits.]"* (bracketed clause only when backed up).
@@ -147,10 +157,17 @@ If the file doesn't exist, create it with `repo=git@github.com:The-AIOS/aios.git
 ### 1. Clone and check for changes
 
 ```bash
-rm -rf /tmp/vault-update-check && git clone --depth=50 --single-branch {team_repo_url} /tmp/vault-update-check 2>&1
+# On Windows Git Bash, ssh-agent typically isn't running, so a git@ URL hangs
+# ~5-10s before failing on EVERY sync. Detect MSYS/Cygwin and rewrite git@ → HTTPS
+# up front to skip the timeout (surfaced by a Windows operator 2026-05-27).
+clone_url="{team_repo_url}"
+case "$OSTYPE" in
+  msys*|cygwin*) clone_url=$(echo "$clone_url" | sed -E 's#git@github\.com:#https://github.com/#') ;;
+esac
+rm -rf /tmp/vault-update-check && git clone --depth=50 --single-branch "$clone_url" /tmp/vault-update-check 2>&1
 ```
 
-If SSH fails, try HTTPS format. Get current HEAD: `git -C /tmp/vault-update-check rev-parse HEAD`. If HEAD matches stored hash → "Your vault infrastructure is current (synced {date})." → clean up → done.
+If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git@github.com:org/repo` → `https://github.com/org/repo`). Get current HEAD: `git -C /tmp/vault-update-check rev-parse HEAD`. If HEAD matches stored hash → "Your vault infrastructure is current (synced {date})." → clean up → done.
 
 ### 1.5. Show changelog context
 
@@ -178,7 +195,7 @@ If no Tier 1 files changed → update tracker hash → still run **duplicate cle
 **Before processing anything else, content-compare local `plugins/aios/commands/update.md` against the cloned upstream version.** This is the bootstrap-safety check: when `update.md` itself changes, the current run is executing OLD spec — we need the NEW spec to land + re-process everything, without operator action.
 
 ```bash
-diff -q "$HOME/aios/plugins/aios/commands/update.md" /tmp/vault-update-check/plugins/aios/commands/update.md
+diff -q <(tr -d '\r' < "$HOME/aios/plugins/aios/commands/update.md") <(tr -d '\r' < /tmp/vault-update-check/plugins/aios/commands/update.md)
 ```
 
 **Case A — Identical (no self-update needed):** local already matches upstream. Skip the rest of this step, proceed to Step 3 with current logic. This is the normal path AND the path taken by an auto-re-invocation (because the first run already applied update.md).
