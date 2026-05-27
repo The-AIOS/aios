@@ -153,11 +153,13 @@ function Invoke-ClaudeWithRespawn {
     $modelToUse = if ($env:CLAUDE_MODEL) { $env:CLAUDE_MODEL } else { 'claude-opus-4-7[1m]' }
     $modelArgs = @('--model', $modelToUse)
     # Resolve the claude EXECUTABLE explicitly (not via function lookup) to
-    # avoid recursion when the primary-session-name fallback is "claude" — in
-    # that case `function claude { Invoke-ClaudeWithRespawn ... }` is defined,
-    # and bare `& claude` would re-resolve to the function. Get-Command with
-    # -CommandType Application forces PATH-binary resolution. Mirrors the
-    # `command claude` fix in install-wrappers.sh.
+    # avoid recursion if the operator NAMES their session "claude" in USER.md —
+    # then `function claude { Invoke-ClaudeWithRespawn ... }` is defined and a
+    # bare `& claude` would re-resolve to the function. (The default fallback is
+    # now "primary", which never shadows the CLI — see Get-PrimarySessionName;
+    # this guard now covers only the explicit "claude" session-name edge case.)
+    # Get-Command -CommandType Application forces PATH-binary resolution.
+    # Mirrors the `command claude` guard in install-wrappers.sh.
     $claudeExe = (Get-Command -Name 'claude' -CommandType Application -ErrorAction Stop).Source
     while ($true) {
         $claudeArgs = @() + $modelArgs + $resumeArgs + @('--remote-control', '--name', $Name)
