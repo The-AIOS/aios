@@ -15,7 +15,7 @@
 
 ## 2026-05-26 — Structural consistency (templates/aios/), folder-aware cleanup, cross-platform install hardening
 
-`hash: {pending}`
+`hash: 9eedd2d`
 
 > **Closes the gaps that multi-operator migration sessions surfaced this week.** Two operators independently hit the same classes of failure: (a) `templates/` was the odd layer out — bundled templates sat at the layer root while `agents/`, `skills/`, `plugins/` all used the `{layer}/aios/` + `custom/` + `<company>/` convention, so duplicate-cleanup had no clean rule for it; (b) the cleanup pass removed stray `.md` files but missed stray *directories* (pre-bundle skill folders are `{name}/` dirs, not flat files) and left hollow empty folders behind; (c) the Windows install path had three silent failure modes. This release makes one more layer consistent, makes cleanup folder-aware + empty-folder-aware, and hardens the cross-platform install. **`mcps/` and `hooks/` stay deliberately flat** (documented exemption — operator `~/.claude.json` registers absolute MCP paths and `settings.json` references hook paths directly; the blast radius of moving them isn't worth it, and the `-mcp` suffix already namespaces).
 
