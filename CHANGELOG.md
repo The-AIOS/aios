@@ -15,7 +15,7 @@
 
 ## 2026-05-27 — Windows install hardening v2: CRLF-safe compares, real-Python detection, PowerShell + SSH fallbacks
 
-`hash: PENDING`
+`hash: bdb8425`
 
 > **Real Windows validation of yesterday's release surfaced four more silent failure modes.** The 2026-05-26 hardening was reasoned-about from macOS; running `/aios:update` end-to-end on a stock Windows 11 box exposed four gaps the Mac path can't see — all four were worked around in-session, so no vault was harmed, and all four are now fixed upstream. Theme: defaults that differ silently between macOS/Linux and Windows (line endings, the `python3` alias, which PowerShell ships, whether ssh-agent runs). Each one fails *quietly* — the operation appears to succeed while doing nothing, or adds latency without an error.
 
