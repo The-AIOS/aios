@@ -40,13 +40,20 @@ spotify-cache.json
 # Playwright browser-auth cookie stores (session credentials per service)
 mcps/playwright-mcp/auth/*.json
 
-# Runtime artifacts (regenerated each session)
-hooks/pipeline-executor.log
+# Runtime artifacts (regenerated each session) — all logs are per-session, never tracked.
+# (Was just hooks/pipeline-executor.log — broadened so MCP debug logs like
+# mcps/**/mcp_server_debug.log don't accumulate diffs from an accidental commit.)
+**/*.log
 **/.DS_Store
 
 # OAuth credentials NEVER tracked — operators copy oauth.json.template → oauth.json
 # with their own Google Cloud Console credentials (which stay local).
 mcps/google-workspace-mcp/oauth.json
+
+# Claude Code config (operator-personal, per-machine — symmetric with vault/.obsidian/).
+# Tool permissions, statusline, hooks config, MCP registrations live here per machine.
+# The framework ships none of this; each operator's instance is their own source of truth.
+.claude/
 
 # Obsidian config (operator-personal, per-machine — treated symmetrically with .claude/)
 # Operators manage their own Obsidian (plugins, snippets, hotkeys, graph filters, daily-note

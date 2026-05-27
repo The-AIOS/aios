@@ -9,10 +9,18 @@ echo ""
 # NOTE: intentionally no `set -e` — each MCP block is independent. One failure
 # shouldn't kill the rest. Errors are surfaced per block.
 
+# Cross-platform venv binary dir: Unix → .venv/bin, Windows (Git Bash) → .venv/Scripts.
+# Call from inside the MCP dir AFTER `python3 -m venv .venv`. Without this, the
+# hardcoded `.venv/bin/pip` path does not exist on Windows, the `&& echo "✓"`
+# chain short-circuits, and the operator sees no error while nothing installed —
+# the silent-failure bug surfaced on a Windows operator's machine 2026-05-26.
+# Git Bash resolves bare names (pip, playwright) to their .exe, so no suffix needed.
+vbin() { if [ -d ".venv/Scripts" ]; then echo ".venv/Scripts"; else echo ".venv/bin"; fi; }
+
 # --- Google Workspace MCP (Python) ---
 if [ -d "$SCRIPT_DIR/google-workspace-mcp" ] && [ ! -d "$SCRIPT_DIR/google-workspace-mcp/.venv" ]; then
   echo "→ google-workspace-mcp..."
-  (cd "$SCRIPT_DIR/google-workspace-mcp" && python3 -m venv .venv && .venv/bin/pip install -e . -q) \
+  (cd "$SCRIPT_DIR/google-workspace-mcp" && python3 -m venv .venv && "$(vbin)/pip" install -e . -q) \
     && echo "  ✓ installed" \
     || echo "  ✗ failed — check google-workspace-mcp/README.md"
 fi
@@ -34,10 +42,10 @@ if [ -d "$SCRIPT_DIR/notebooklm-mcp" ] && [ ! -d "$SCRIPT_DIR/notebooklm-mcp/.ve
   echo "→ notebooklm-mcp..."
   cd "$SCRIPT_DIR/notebooklm-mcp"
   python3 -m venv .venv
-  .venv/bin/pip install notebooklm-py playwright -q
-  .venv/bin/playwright install chromium 2>/dev/null
-  .venv/bin/notebooklm skill install 2>/dev/null || true
-  echo "  ✓ installed (authenticate: ~/aios/mcps/notebooklm-mcp/.venv/bin/notebooklm login)"
+  "$(vbin)/pip" install notebooklm-py playwright -q
+  "$(vbin)/playwright" install chromium 2>/dev/null
+  "$(vbin)/notebooklm" skill install 2>/dev/null || true
+  echo "  ✓ installed (authenticate: run notebooklm login from mcps/notebooklm-mcp/$(vbin))"
 fi
 
 # --- Playwright MCP ---
@@ -45,8 +53,8 @@ if [ -d "$SCRIPT_DIR/playwright-mcp" ] && [ ! -d "$SCRIPT_DIR/playwright-mcp/.ve
   echo "→ playwright-mcp..."
   cd "$SCRIPT_DIR/playwright-mcp"
   python3 -m venv .venv
-  .venv/bin/pip install playwright browser-cookie3 -q
-  .venv/bin/playwright install chromium 2>/dev/null
+  "$(vbin)/pip" install playwright browser-cookie3 -q
+  "$(vbin)/playwright" install chromium 2>/dev/null
   echo "  ✓ installed (chromium bundled)"
 fi
 
@@ -82,7 +90,7 @@ if [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && [ ! -d "$SCRIPT_DIR/nano-banana-mcp/.
   echo "→ nano-banana-mcp..."
   cd "$SCRIPT_DIR/nano-banana-mcp"
   python3 -m venv .venv
-  .venv/bin/pip install google-genai mcp -q
+  "$(vbin)/pip" install google-genai mcp -q
   echo "  ✓ installed (requires GEMINI_API_KEY — see README)"
 fi
 
@@ -91,7 +99,7 @@ if [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && [ ! -d "$SCRIPT_DIR/pdf-generator-m
   echo "→ pdf-generator-mcp..."
   cd "$SCRIPT_DIR/pdf-generator-mcp"
   python3 -m venv .venv
-  .venv/bin/pip install mcp -q
+  "$(vbin)/pip" install mcp -q
   command -v pandoc >/dev/null 2>&1 || echo "  ⚠ pandoc not found — brew install pandoc"
   [ -d "/Applications/Google Chrome.app" ] || echo "  ⚠ Google Chrome not found — install from https://google.com/chrome"
   echo "  ✓ installed (requires pandoc + Chrome)"
@@ -102,7 +110,7 @@ if [ -d "$SCRIPT_DIR/spotify-dj-mcp" ] && [ ! -d "$SCRIPT_DIR/spotify-dj-mcp/.ve
   echo "→ spotify-dj-mcp..."
   cd "$SCRIPT_DIR/spotify-dj-mcp"
   python3 -m venv .venv
-  .venv/bin/pip install spotipy mcp -q
+  "$(vbin)/pip" install spotipy mcp -q
   echo "  ✓ installed (requires Spotify Dev app + SPOTIFY_CLIENT_ID/SECRET — see README)"
 fi
 
@@ -126,7 +134,7 @@ echo "Manual auth steps per MCP (if you prefer):"
 echo "  • pdf-generator    : no auth (works immediately — just register)"
 echo "  • google-workspace : uvx workspace-mcp (opens browser on first call)"
 echo "  • slack            : npx -y @jtalk22/slack-mcp --refresh-tokens  (extracts from Chrome; posts AS YOU)"
-echo "  • notebooklm       : ~/aios/mcps/notebooklm-mcp/.venv/bin/notebooklm login"
+echo "  • notebooklm       : run 'notebooklm login' from mcps/notebooklm-mcp/.venv/bin (Unix) or .venv/Scripts (Windows)"
 echo "  • github           : export GITHUB_TOKEN (Personal Access Token)"
 echo "  • atlassian        : export ATLASSIAN_URL / ATLASSIAN_USERNAME / ATLASSIAN_API_TOKEN"
 echo "  • nano-banana      : export GEMINI_API_KEY (requires Cloud Billing enabled — ~\$0.04/image)"

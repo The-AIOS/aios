@@ -36,29 +36,34 @@ $ErrorActionPreference = 'Stop'
 # ---- Detect primary session name ----
 # Read from USER.md ## Identity table (first session-name row). If USER.md
 # doesn't exist yet OR has no identity entries (fresh-clone pre-cold-start),
-# fall back to "claude" -- matches the cold-start-interview default for the
-# session-name question. Operator can re-run this script after personalizing
-# USER.md to swap the placeholder for their chosen name.
+# fall back to "primary" -- a non-colliding placeholder. (NOT "claude": a
+# claude() shell function shadows the Claude Code CLI binary at the user
+# prompt, so typing `claude` would launch a named session instead of bare
+# Claude Code.) Operator can re-run this script after personalizing USER.md.
 function Get-PrimarySessionName {
     $userMd = Join-Path $HOME 'aios\USER.md'
-    if (-not (Test-Path $userMd)) { return 'claude' }
+    if (-not (Test-Path $userMd)) { return 'primary' }
     $inSection = $false
     foreach ($line in Get-Content $userMd) {
         if ($line -match '^## Identity') { $inSection = $true; continue }
         if ($inSection -and $line -match '^## ') { break }
-        if ($inSection -and $line -match '^\|\s*`([^`]+)`') {
-            $candidate = $Matches[1]
+        # Backtick-OPTIONAL: matches both | `name` | (vault format) and | name |
+        # (README example format). A strict backtick-required match silently fell
+        # back to the placeholder for operators who followed the README's plain
+        # format -- see CHANGELOG "install-wrappers: backtick-optional USER.md parse."
+        if ($inSection -and $line -match '^\|\s*`?([^`|]+?)`?\s*\|') {
+            $candidate = $Matches[1].Trim()
             # Skip header/separator rows (| Name | / | --- |)
-            if ($candidate -notmatch '^(Name|[\s\-]+)$') {
+            if ($candidate -and $candidate -notmatch '^(Name|[\s\-]+)$') {
                 return $candidate
             }
         }
     }
-    return 'claude'
+    return 'primary'
 }
 
 $PRIMARY_NAME = Get-PrimarySessionName
-$primarySource = if ($PRIMARY_NAME -eq 'claude') { 'fallback -- set in USER.md to customize, then re-run' } else { 'from USER.md' }
+$primarySource = if ($PRIMARY_NAME -eq 'primary') { 'fallback -- set in USER.md to customize, then re-run' } else { 'from USER.md' }
 Write-Host "[ok] Primary session name: $PRIMARY_NAME ($primarySource)"
 
 # ---- Detect profile ----

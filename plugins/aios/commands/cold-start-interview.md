@@ -48,13 +48,28 @@ elif [ -L "$CANONICAL" ] && [ "$(readlink "$CANONICAL")" = "$INSTALL_PATH" ]; th
 elif [ -e "$CANONICAL" ]; then
   echo "path-portability: CONFLICT — ~/aios exists and points elsewhere. Operator must resolve before continuing."
 else
-  ln -s "$INSTALL_PATH" "$CANONICAL" && echo "path-portability: created ~/aios → $INSTALL_PATH"
+  case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*)
+      # Git Bash on Windows: `ln -s` does NOT create a real link — by MSYS default
+      # (unless MSYS=winsymlinks:nativestrict is exported) it silently creates a
+      # STALE DIRECTORY COPY. The operator then runs the framework against a frozen
+      # pre-migration snapshot while the real install drifts ahead — every update
+      # appears to land but nothing changes. Caught on a Windows operator 2026-05-26.
+      # Fix: create a real Windows directory junction instead of a symlink.
+      cmd //c mklink /J "$(cygpath -w "$CANONICAL")" "$(cygpath -w "$INSTALL_PATH")" \
+        && echo "path-portability: created ~/aios junction → $INSTALL_PATH" \
+        || echo "path-portability: junction failed — use the PowerShell snippet below (run as Developer Mode / elevated)"
+      ;;
+    *)
+      ln -s "$INSTALL_PATH" "$CANONICAL" && echo "path-portability: created ~/aios → $INSTALL_PATH"
+      ;;
+  esac
 fi
 ```
 
-**On CONFLICT** (the `~/aios` path exists and points elsewhere): surface this to the operator immediately and ask whether to back up the existing path (`mv ~/aios ~/aios.backup-$(date +%Y%m%d)`) or skip the symlink (operator commits to running the framework from a non-default path, knowing some references will need manual translation). **Default: do not auto-resolve conflicts** — operator decides.
+**On CONFLICT** (the `~/aios` path exists and points elsewhere): surface this to the operator immediately and ask whether to back up the existing path (`mv ~/aios ~/aios.backup-$(date +%Y%m%d)`) or skip the symlink (operator commits to running the framework from a non-default path, knowing some references will need manual translation). **Default: do not auto-resolve conflicts** — operator decides. **On Windows, also flag a stale `~/aios` directory copy** (a non-junction folder that looks like a link but isn't) as a CONFLICT to resolve — `ls ~/aios` showing pre-migration content while the real install moved on is the signature.
 
-**On Windows PowerShell** (where `ln -s` isn't available natively), use:
+**On Windows PowerShell** (where `ln -s` isn't available natively — and as the fallback if the Git Bash junction above fails), use:
 ```powershell
 $Install = (Get-Location).Path
 $Canonical = "$HOME\aios"

@@ -38,28 +38,31 @@ fi
 # ---- Detect primary session name ----
 # Read from USER.md ## Identity table (first session-name row). If USER.md
 # doesn't exist yet OR has no identity entries (fresh-clone pre-cold-start),
-# fall back to "claude" — matches the cold-start-interview default for the
-# session-name question. Operator can re-run this script after personalizing
-# USER.md to swap the placeholder for their chosen name.
+# fall back to "primary" — a non-colliding placeholder. (NOT "claude": a
+# `claude()` shell function shadows the Claude Code CLI binary at the user
+# prompt, so typing `claude` would launch a named session instead of bare
+# Claude Code. "primary" avoids the collision and matches the doc below.)
+# Operator can re-run this script after personalizing USER.md.
 detect_primary_session() {
   local user_md="$HOME/aios/USER.md"
   if [ -f "$user_md" ]; then
-    # Extract first session name from ## Identity table — match `name` pattern
-    # in the second column of a markdown table row that starts with | `name` |
+    # Extract first session name from the ## Identity table's second column.
+    # Backtick-OPTIONAL: matches both | `name` | (vault format) and | name |
+    # (README example format). A strict backtick-required match silently fell
+    # back to the placeholder for operators who followed the README's plain
+    # format — see CHANGELOG "install-wrappers: backtick-optional USER.md parse."
     local name
-    name=$(awk '
+    name=$(awk -F'|' '
       /^## Identity/ { in_section=1; next }
       /^## / && in_section { exit }
-      in_section && /^\| `[^`]+`/ {
-        # Extract content between first pair of backticks in column 2
-        match($0, /`[^`]+`/)
-        if (RSTART > 0) {
-          name = substr($0, RSTART+1, RLENGTH-2)
-          # Skip the table-header row (| Name |) and separator rows
-          if (name !~ /^(Name|[ -]+)$/) {
-            print name
-            exit
-          }
+      in_section && /^\|/ {
+        raw = $2
+        gsub(/`/, "", raw)                       # strip backticks if present
+        gsub(/^[ \t]+|[ \t]+$/, "", raw)         # trim surrounding whitespace
+        # Skip the header row (| Name |) and separator rows (|---|)
+        if (raw != "" && raw != "Name" && raw !~ /^[ -]+$/) {
+          print raw
+          exit
         }
       }
     ' "$user_md")
@@ -68,11 +71,11 @@ detect_primary_session() {
       return
     fi
   fi
-  echo "claude"
+  echo "primary"
 }
 
 PRIMARY_NAME="$(detect_primary_session)"
-echo "✓ Primary session name: $PRIMARY_NAME ($([ "$PRIMARY_NAME" = "claude" ] && echo 'fallback — set in USER.md → ## Identity table to customize, then re-run' || echo 'from USER.md'))"
+echo "✓ Primary session name: $PRIMARY_NAME ($([ "$PRIMARY_NAME" = "primary" ] && echo 'fallback — set in USER.md → ## Identity table to customize, then re-run' || echo 'from USER.md'))"
 
 # ---- Backup ----
 BACKUP="${RC}.bak.$(date +%Y%m%d-%H%M%S)"
