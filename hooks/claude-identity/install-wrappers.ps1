@@ -36,13 +36,15 @@ $ErrorActionPreference = 'Stop'
 # ---- Detect primary session name ----
 # Read from USER.md ## Identity table (first session-name row). If USER.md
 # doesn't exist yet OR has no identity entries (fresh-clone pre-cold-start),
-# fall back to "primary" -- a non-colliding placeholder. (NOT "claude": a
-# claude() shell function shadows the Claude Code CLI binary at the user
-# prompt, so typing `claude` would launch a named session instead of bare
-# Claude Code.) Operator can re-run this script after personalizing USER.md.
+# fall back to "aios" -- the framework's own name, a non-colliding placeholder.
+# (NOT "claude": a claude() shell function would shadow the Claude Code CLI
+# binary at the user prompt, so typing `claude` would launch a named session
+# instead of bare Claude Code -- and a kill could take down a plain claude
+# session. Naming the fallback "aios" keeps bare `claude` always-plain.)
+# Operator can re-run this script after personalizing USER.md.
 function Get-PrimarySessionName {
     $userMd = Join-Path $HOME 'aios\USER.md'
-    if (-not (Test-Path $userMd)) { return 'primary' }
+    if (-not (Test-Path $userMd)) { return 'aios' }
     $inSection = $false
     foreach ($line in Get-Content $userMd) {
         if ($line -match '^## Identity') { $inSection = $true; continue }
@@ -59,11 +61,11 @@ function Get-PrimarySessionName {
             }
         }
     }
-    return 'primary'
+    return 'aios'
 }
 
 $PRIMARY_NAME = Get-PrimarySessionName
-$primarySource = if ($PRIMARY_NAME -eq 'primary') { 'fallback -- set in USER.md to customize, then re-run' } else { 'from USER.md' }
+$primarySource = if ($PRIMARY_NAME -eq 'aios') { 'fallback -- set in USER.md to customize, then re-run' } else { 'from USER.md' }
 Write-Host "[ok] Primary session name: $PRIMARY_NAME ($primarySource)"
 
 # ---- Detect profile ----
@@ -156,7 +158,7 @@ function Invoke-ClaudeWithRespawn {
     # avoid recursion if the operator NAMES their session "claude" in USER.md —
     # then `function claude { Invoke-ClaudeWithRespawn ... }` is defined and a
     # bare `& claude` would re-resolve to the function. (The default fallback is
-    # now "primary", which never shadows the CLI — see Get-PrimarySessionName;
+    # now "aios", which never shadows the CLI — see Get-PrimarySessionName;
     # this guard now covers only the explicit "claude" session-name edge case.)
     # Get-Command -CommandType Application forces PATH-binary resolution.
     # Mirrors the `command claude` guard in install-wrappers.sh.

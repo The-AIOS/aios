@@ -38,10 +38,11 @@ fi
 # ---- Detect primary session name ----
 # Read from USER.md ## Identity table (first session-name row). If USER.md
 # doesn't exist yet OR has no identity entries (fresh-clone pre-cold-start),
-# fall back to "primary" — a non-colliding placeholder. (NOT "claude": a
-# `claude()` shell function shadows the Claude Code CLI binary at the user
-# prompt, so typing `claude` would launch a named session instead of bare
-# Claude Code. "primary" avoids the collision and matches the doc below.)
+# fall back to "aios" — the framework's own name, a non-colliding placeholder.
+# (NOT "claude": a `claude()` shell function would shadow the Claude Code CLI
+# binary at the user prompt, so typing `claude` would launch a named session
+# instead of bare Claude Code — and `spawn-kill claude` could take down a plain
+# claude session. Naming the fallback "aios" keeps bare `claude` always-plain.)
 # Operator can re-run this script after personalizing USER.md.
 detect_primary_session() {
   local user_md="$HOME/aios/USER.md"
@@ -71,11 +72,11 @@ detect_primary_session() {
       return
     fi
   fi
-  echo "primary"
+  echo "aios"
 }
 
 PRIMARY_NAME="$(detect_primary_session)"
-echo "✓ Primary session name: $PRIMARY_NAME ($([ "$PRIMARY_NAME" = "primary" ] && echo 'fallback — set in USER.md → ## Identity table to customize, then re-run' || echo 'from USER.md'))"
+echo "✓ Primary session name: $PRIMARY_NAME ($([ "$PRIMARY_NAME" = "aios" ] && echo 'fallback — set in USER.md → ## Identity table to customize, then re-run' || echo 'from USER.md'))"
 
 # ---- Backup ----
 BACKUP="${RC}.bak.$(date +%Y%m%d-%H%M%S)"
@@ -158,7 +159,7 @@ _claude_with_respawn() {
     # binary directly. Critical for the edge case where the operator NAMES their
     # session "claude" in USER.md — that installs a `claude()` shell function, and
     # without `command` the bare `claude` here would re-resolve to it → infinite
-    # recursion. (The default fallback is now "primary", which never shadows the
+    # recursion. (The default fallback is now "aios", which never shadows the
     # CLI — see detect_primary_session; this guard now covers only the explicit
     # "claude" session-name case.) Safe for all primary names.
     if [ -n "$bootstrap" ]; then
