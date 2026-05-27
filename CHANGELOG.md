@@ -13,6 +13,51 @@
 
 ---
 
+## 2026-05-26 — Structural consistency (templates/aios/), folder-aware cleanup, cross-platform install hardening
+
+`hash: {pending}`
+
+> **Closes the gaps that multi-operator migration sessions surfaced this week.** Two operators independently hit the same classes of failure: (a) `templates/` was the odd layer out — bundled templates sat at the layer root while `agents/`, `skills/`, `plugins/` all used the `{layer}/aios/` + `custom/` + `<company>/` convention, so duplicate-cleanup had no clean rule for it; (b) the cleanup pass removed stray `.md` files but missed stray *directories* (pre-bundle skill folders are `{name}/` dirs, not flat files) and left hollow empty folders behind; (c) the Windows install path had three silent failure modes. This release makes one more layer consistent, makes cleanup folder-aware + empty-folder-aware, and hardens the cross-platform install. **`mcps/` and `hooks/` stay deliberately flat** (documented exemption — operator `~/.claude.json` registers absolute MCP paths and `settings.json` references hook paths directly; the blast radius of moving them isn't worth it, and the `-mcp` suffix already namespaces).
+
+### What changed
+
+**1. `templates/` → `templates/aios/` (structural consistency)**
+
+- The 11 bundled templates moved from `templates/` root into `templates/aios/` (e.g. `templates/aios/about_me-template.md`), matching the `{layer}/aios/` (bundled) + `custom/` (operator) + `<company>/` (company-distributed) convention every other layer uses. `templates/_index.md` + `templates/README.md` stay at the layer root.
+- Path references updated across `SETUP.md`, `START-HERE.md`, `cold-start-interview.md`, `update.md` (Tier 1 + Tier 3), and the seed `about_business.md`. CI (`validate.yml`) updated: the templates subdir check now allows `aios/` + `custom/`, and the frontmatter-validation glob is `templates/aios/*.md`.
+- `_index.md` wiki-links (`[[about_me-template]]`) resolve by filename regardless of folder, so they're unchanged.
+
+**2. Duplicate cleanup — folder-aware + empty-folder-aware (`/aios:update`)**
+
+- **Folder-based dedup for `skills/`.** A skill is a `{name}/` directory containing `SKILL.md` — so the existing file-basename matching (every skill's file is `SKILL.md`) could never catch a stray skill folder. New step 3b: build the set of bundled skill-folder *names* (under `skills/aios|anthropic|superpowers/`), then scan `skills/*/` at root AND `skills/custom/*/` for folders matching a bundled name → stale-vs-personalized test on the folder's `SKILL.md` → remove. This is what left 60+ pre-bundle skill folders at `skills/` root after migration.
+- **Empty-folder removal (new step 5).** After dup removal, `rmdir` any directory left empty (or containing only an orphaned `_index.md`). `{layer}/custom/` itself is preserved even when empty (operator namespace). Closes the "removed the files but left hollow folders" gap.
+
+**3. Cross-platform install hardening (Windows)**
+
+- **`install-wrappers.{sh,ps1}`: backtick-OPTIONAL USER.md identity parse.** The strict `` | `name` | `` regex silently fell back to a placeholder for operators who followed the README's plain `| name |` format. Now matches both. **Fallback name changed `claude` → `primary`** — a `claude()` shell function shadows the Claude Code CLI binary at the user prompt; `primary` never collides (and matches the spec's own doc comment).
+- **`mcps/setup.sh`: cross-platform venv path** (`vbin` helper resolves `.venv/bin` on Unix, `.venv/Scripts` on Windows Git Bash). The hardcoded `.venv/bin/pip` does not exist on Windows; the `&& echo "✓"` chain short-circuited and operators saw "installed" while nothing did. Independent-block design (no `set -e`) preserved.
+- **`cold-start-interview.md`: Git Bash junction branch.** `ln -s` on Git Bash silently creates a stale directory *copy* (MSYS default), not a real link — operators end up running a frozen pre-migration snapshot while the real install drifts ahead. Now detects MSYS/MINGW/CYGWIN and uses a real Windows junction (`mklink /J`). Stale `~/aios` copies flagged as CONFLICT.
+
+**4. Hygiene + docs**
+
+- **`.gitignore`:** added `.claude/` (operator-personal per-machine config, symmetric with `vault/.obsidian/`; framework ships none) + broadened logs to `**/*.log` so MCP debug logs don't accumulate diffs from accidental commits.
+- **`mcps/_index.md`:** new "Where credentials live" section — MCP keys/tokens live in `~/.claude.json` + OAuth caches, both survive `/aios:update`/cleanup. A failed MCP is a local-state issue (stale token, missing `.venv`, port held by a stale process), not a lost-key issue — debug locally before any cloud console.
+- **`mcps/google-workspace-mcp/TROUBLESHOOTING.md`** (new): the local-first Day-N recovery recipe (delete cached token → kill MCP process → retrigger → re-consent with `prompt=consent` in incognito) + Day-0 console setup + the 23-scope reference.
+
+### Action required
+
+`/aios:update` auto-applies everything (Tier 1 + cleanup). For the teammate's Claude session running the update:
+
+1. **Detect OS** (`uname -s`): Darwin/Linux → bash variants; Windows → `pwsh` variants.
+2. **`/aios:update`** — auto-applies all Tier 1 changes. The duplicate-cleanup pass now (a) moves any `templates/*-template.md` you still have at the layer root into `templates/aios/` (preserving `templates/custom/` + any `templates/<company>/`), (b) removes stray pre-bundle skill folders at `skills/` root, (c) removes empty folders left behind. Per-file log shows what moved/removed.
+3. **Infra-compare CLAUDE.md (verification — do this explicitly).** After the update, confirm the operator's `CLAUDE.md` is byte-identical to upstream and NOT a personalized leftover: `diff <(git -C /tmp/aios-upstream show HEAD:CLAUDE.md) "$HOME/aios/CLAUDE.md"` (or compare against the cloned upstream copy `/aios:update` already fetched). If they differ, the operator is on a stale or hand-edited `CLAUDE.md` — it's Tier 1 infra, so overwrite byte-identical (backup-on-divergence will have preserved any real edits to `vault/04 - backups/`). The point: `CLAUDE.md` must land as *infra* CLAUDE.md, never a user-leftover. Do the same spot-check for `README.md`, `SETUP.md`, `TOOLS.md`.
+4. **Re-run the wrapper installer (idempotent):** `bash $HOME/aios/hooks/claude-identity/install-wrappers.sh` (macOS/Linux) or `pwsh -File $HOME\aios\hooks\claude-identity\install-wrappers.ps1` (Windows). Picks up the backtick-optional USER.md parse + `primary` fallback. If your USER.md `## Identity` table uses plain `| name |` (no backticks), this is the run that finally binds your real session name instead of the placeholder.
+5. **Windows operators only:** if `ls ~/aios` shows pre-migration content (a stale directory copy, not a junction), remove it and re-create via the cold-start junction step (`cmd //c mklink /J`) or the PowerShell snippet. Then re-run `bash mcps/setup.sh` — the cross-platform venv paths now actually install instead of silently no-op'ing.
+
+**Restart-required (LAST):** open a new terminal so the refreshed wrapper banner in your rc file activates — existing terminals hold the old function table.
+
+---
+
 ## 2026-05-25 — Framework reorg: auto-apply /aios:update, agents/aios/ restructure, dual-write context rule
 
 `hash: 1ae30e5`

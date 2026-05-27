@@ -29,7 +29,7 @@ type: declared-context
 
 *No ventures defined yet. Create your first by:*
 1. *Adding a subfolder at `vault/00 - notes/context/ventures/{venture-name}/`*
-2. *Copying `vault/02 - templates/about_venture-template.md` into that folder as `about_venture.md`*
+2. *Copying `templates/aios/about_venture-template.md` into that folder as `about_venture.md`*
 3. *Filling in the placeholders, then summarizing here*
 
 ---

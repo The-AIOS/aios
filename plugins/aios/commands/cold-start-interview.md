@@ -190,7 +190,7 @@ If no pre-fill source, ask the 4 questions one at a time:
 
 Skip optional files (`role-expectations.md`, `psychometric-profile.md`) unless the operator asks for them.
 
-**Surface the psychometric-profile graduation step** — say something like: *"There's an optional 6th declared file — `psychometric-profile.md` — that captures assessment-based self-knowledge (MBTI, Strengths, Saboteurs, neurochemistry, etc.). It's the highest-leverage declared file for voice calibration when you have it — even 1-2 free assessments (Saboteurs, Quiggle, online MBTI) + a synthesis paragraph dramatically sharpen how the AI frames work, nudges, and energy. Template is at `templates/psychometric-profile-template.md`. Want to start one now (~5 min for 1 lens), schedule it for a week-2 follow-up, or skip?"* Default to "schedule" — operators rarely have assessments ready at cold-start.
+**Surface the psychometric-profile graduation step** — say something like: *"There's an optional 6th declared file — `psychometric-profile.md` — that captures assessment-based self-knowledge (MBTI, Strengths, Saboteurs, neurochemistry, etc.). It's the highest-leverage declared file for voice calibration when you have it — even 1-2 free assessments (Saboteurs, Quiggle, online MBTI) + a synthesis paragraph dramatically sharpen how the AI frames work, nudges, and energy. Template is at `templates/aios/psychometric-profile-template.md`. Want to start one now (~5 min for 1 lens), schedule it for a week-2 follow-up, or skip?"* Default to "schedule" — operators rarely have assessments ready at cold-start.
 
 ### Step 3 — `INTENT.md` (trust contract)
 

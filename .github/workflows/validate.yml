@@ -109,12 +109,13 @@ jobs:
             esac
           done
 
-          # templates/ — allowed: custom (templates themselves are .md files at layer level)
+          # templates/ — bundled templates live in aios/, operator extensions in custom/
+          # (company-distributed templates land in {company}/ via /aios:company --sync).
           for dir in templates/*/; do
             name=$(basename "$dir")
             case "$name" in
-              custom) ;;
-              *) FOUND+=$'\n  - templates/'"$name"'/  (templates are .md files at layer level; only custom/ subfolder allowed)' ;;
+              aios|custom) ;;
+              *) FOUND+=$'\n  - templates/'"$name"'/  (expected: aios/ for bundled templates, custom/ for operator extensions — company namespaces land via /aios:company)' ;;
             esac
           done
 
@@ -216,7 +217,7 @@ jobs:
               "plugins/aios/commands/*.md",
               "agents/aios/*/*.md",
               "skills/*/*/SKILL.md",
-              "templates/*.md",
+              "templates/aios/*.md",
           ]
 
           for pat in patterns:

@@ -261,9 +261,9 @@ vault/
 plugins/   ← aios/ (bundled) · custom/ · <company>/
 agents/    ← aios/{sales,strategy,finance-legal,engineering,communication,personal}/ · custom/ · <company>/
 skills/    ← aios/ · anthropic/ · superpowers/ · custom/
-hooks/     ← pipeline executor + markitdown + claude-identity wrappers
-mcps/      ← vendored MCP servers + custom/
-templates/ ← reference templates + custom/
+hooks/     ← claude-identity + pipeline + markitdown · custom/ (flat — deliberate exemption: operator settings.json references hook paths directly)
+mcps/      ← *-mcp/ servers · custom/ (flat — deliberate exemption: ~/.claude.json registers absolute MCP paths; the -mcp suffix already namespaces)
+templates/ ← aios/ (bundled) · custom/ · <company>/
 ```
 
 ### Index Maintenance

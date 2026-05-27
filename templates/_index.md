@@ -10,6 +10,8 @@ type: index
 # Templates — Index
 
 > Starter templates for vault files. Copy to the target folder, rename, and fill in the placeholders.
+>
+> **Bundled templates live in `templates/aios/`** (e.g. `templates/aios/about_me-template.md`) — matching the `{layer}/aios/` + `custom/` + `<company>/` convention used by agents, skills, and plugins. Operator-authored templates go in `templates/custom/`; company-distributed ones land in `templates/<company>/` via `/aios:company --sync`. The `[[wiki-links]]` below resolve by filename regardless of folder.
 
 ---
 
