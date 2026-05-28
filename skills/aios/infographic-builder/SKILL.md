@@ -80,7 +80,9 @@ One self-contained HTML file. Tailwind (CDN) + Google Fonts. Apply the chosen de
 
 ### 5. Output + optional export
 
-Save the `.html` to the location the caller specifies. **Default path + naming:**
+Two destinations, split by weight. **The HTML is the canonical artifact — lightweight, self-contained, version-controlled — and goes in the vault. Raster exports are ephemeral *views* and go to `~/Downloads`, never the vault.**
+
+**HTML → vault. Default path + naming:**
 ```
 03 - export/infographics/{YYYY-MM-DD}-{slug}.html
 ```
@@ -88,11 +90,13 @@ Save the `.html` to the location the caller specifies. **Default path + naming:*
 - `{slug}` = lowercase-kebab-case derived from the source filename or the one-line thesis (strip dates, articles, punctuation; max ~6 words).
 - Mirrors the vault's date-prefixed convention used in `reflections/ingests/` and other dated artifacts.
 
-Offer optional exports:
-- **PNG** — Chrome headless `--screenshot` per the rasterize recipe (native viewport + `--force-device-scale-factor=2`).
-- **PDF** — `mcp__pdf-generator__html_to_pdf`.
+**Raster exports → `~/Downloads` (offer these; don't auto-run). Never the vault:**
+- **PNG** — `~/Downloads/{YYYY-MM-DD}-{slug}.png` — Chrome headless `--screenshot` per the rasterize recipe (native viewport + `--force-device-scale-factor=2`).
+- **PDF** — `~/Downloads/{YYYY-MM-DD}-{slug}.pdf` — `mcp__pdf-generator__html_to_pdf`.
 
-Then surface the file to the user (e.g. `SendUserFile`).
+> **Why the split:** the HTML regenerates any raster on demand, so a committed PNG/PDF is pure bloat — a 1 MB+ binary that re-downloads on every clone and re-syncs on every push, for a view you can rebuild in one command. HTML in the vault; rasters in `~/Downloads`. (If the caller explicitly names a different output dir, honor it — but default rasters outside the git-synced vault.)
+
+Then surface the file to the user (e.g. `SendUserFile` for the raster, or the HTML path).
 
 ## Composition
 
@@ -109,3 +113,4 @@ This skill orchestrates existing ones — it doesn't reinvent them:
 - ❌ Hand-picking fonts/colors when a brand `design.md` exists. Read it first.
 - ❌ Template-string fills that leak `${...}`. Generate markup directly.
 - ❌ Forcing a Key Contrast viz when the source has no single pivot. Cut the section.
+- ❌ Committing raster exports (PNG/PDF) to the git-synced vault. HTML is the canonical artifact; rasters default to `~/Downloads`.
