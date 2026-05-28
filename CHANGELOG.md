@@ -15,7 +15,7 @@
 
 ## 2026-05-28 — Wrapper default model → Opus 4.8 (1M)
 
-`hash: PENDING`
+`hash: 8ecf6bb`
 
 > **Claude Opus 4.8 shipped; the spawn-wrapper default follows.** The `spawn` / named-session wrappers launch children with an explicit `--model` flag (because `/config` and `/model` are session-scoped and don't propagate to spawned children). That default moves `claude-opus-4-7[1m]` → `claude-opus-4-8[1m]` — 1M-context Opus 4.8. The `$CLAUDE_MODEL` env override is unchanged (still how you pick Sonnet, a 3P provider, or non-1M Opus). **Scope is the wrappers only** — the vendored `skills/anthropic/claude-api/*` SDK references (which cite `claude-opus-4-7` in code samples + a price table) are intentionally untouched here; those track Anthropic's upstream skill and are a separate decision.
 
