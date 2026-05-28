@@ -8,7 +8,7 @@ tags:
   - speaking
   - presentations
 created: '2026-05-18'
-updated: '2026-05-18'
+updated: '2026-05-28'
 status: active
 ---
 # Deck Builder
@@ -122,15 +122,19 @@ Save to outline frontmatter as `theme: dark|light`. Both themes must be brand-al
 ### Phase 1 — OUTLINE IN .MD
 
 Co-author the outline in a vault note:
-- Location: `vault/00 - notes/reflections/decks/{YYYY-MM-DD}-{audience}-{theme}.md` (auto-create the `decks/` subfolder if missing)
+- Location: `vault/03 - export/decks/outlines/{YYYY-MM-DD}-{slug}.md` (auto-create the `outlines/` subfolder if missing). `slug = {venture}-{topic}`, e.g. `aios-grand-arc`, `sovragov-argentine`. All four artifacts of the same deck (outline / html / pdf / build) share this slug — date-first so they sort together.
 - Frontmatter:
   ```yaml
-  deck-url: TBD
-  drive-folder-url: TBD
+  slug: {venture}-{topic}                 # e.g. aios-grand-arc
   audience: {target audience}
   length-min: {target length in minutes, if speaking}
   language: {language}
   design-source: {file path / template URL / "proposed (see Design Proposal section)"}
+  output: html                            # html (recommended) | slides
+  pdf: no                                 # yes | no — Phase 3.B opt-in
+  offline: no                             # yes | no — Phase 3.B opt-in (embed fonts for offline-safe HTML)
+  deck-url: N/A (HTML pipeline)           # filled only if Phase 3 Google Slides path chosen
+  drive-folder-url: N/A
   status: drafting
   ```
 - Body sections per slide:
@@ -206,31 +210,47 @@ Build the deck:
 
 **Batching workflow:** prefer batched `replaceAllText` operations over single-shot edits — one batch can land 40+ replacements atomically. Faster + cleaner than piecemeal edits.
 
-### Phase 3.B — HTML BUILD (sovra-style pipeline, when output-format: html)
+### Phase 3.B — HTML BUILD (recommended default)
 
-Skip Phase 3 (Google Slides). Use this pipeline instead when Phase 0 picked path 4 (venture template library) OR when output-format is `html` for any reason.
+**HTML is the recommended deliverable** for any operator-CEO keynote, brand-locked deck, or anywhere the visual register matters — the Slides API can't express the design systems decks actually depend on ([[patterns]] § "HTML over Slides for brand-locked decks is structural"). Pick Phase 3 (Google Slides) only when the user explicitly asks for live collaborative editing during a meeting.
 
-**Pipeline overview** (mirrors the sovra `sovra-decks` agent):
-1. Setup working dir: `WORK=/tmp/aios-decks/$(date +%s); mkdir -p "$WORK"`
-2. Read the shared template CSS from `templates/{venture}/decks/base/styles.css` (or operator's design.md → generate CSS)
-3. For each slide in the outline: copy matching template, substitute fields with `sed`, strip unfilled `{{placeholders}}`, extract the `<section class="slide ...">` block
-4. Compose single self-contained HTML: `<style>` block with theme class (`theme-{light|dark}`) + concatenated `<section>` blocks + optional navigation JS for F11 / arrow-key / click-to-advance
-5. Drop deliverables to `~/Downloads/{venture}-Deck-{Topic}-{date}.html`
+#### Step 1 — Pre-build questions (ask once, default `no` on both)
 
-**Optional PDF export — two modes by use case:**
+Phrase plainly — never "CDN", "base64", or "raster":
 
-- **Live / editable mode** (text-PDF, searchable, slow viewer load): Chrome `--print-to-pdf` directly. Use when audience needs to copy/paste from PDF. ⚠️ Emits anonymous Type 3 fonts → slow loading in Preview & Chrome PDF viewer.
-- **Sharing / presentation mode** (raster-PDF, instant open, not searchable): render each slide via Chrome `--screenshot` at native viewport with `--force-device-scale-factor=2`, bundle via PIL into a multi-page PDF. **Default for any deck the audience will receive.**
+1. *"Want a PDF too, for sharing or archive?"* → **yes** = also render a raster PDF after the HTML; **no** = HTML only.
+2. *"Should this work even if wifi fails at the venue?"* → **yes** = embed fonts (heavier file, fully offline); **no** = standard Google Fonts link (smaller, needs internet at the venue).
+
+Save the answers to outline frontmatter as `pdf: yes|no` + `offline: yes|no`. Both default `no` keeps the everyday case lean.
+
+#### Step 2 — Generate the per-session `build.py` (lives in `/tmp`, discarded after)
+
+```bash
+WORK=/tmp/aios-decks/$(date +%s); mkdir -p "$WORK"
+SLUG={venture}-{topic}                  # e.g. aios-grand-arc
+DATE=$(date +%Y-%m-%d)
+HTML_OUT="$HOME/obsidian/vault/03 - export/decks/$DATE-$SLUG.html"
+PDF_OUT="$HOME/Downloads/$DATE-$SLUG.pdf"            # only used if pdf:yes
+mkdir -p "$(dirname "$HTML_OUT")"
+```
+
+The generated `build.py` is a single Python file that:
+
+1. Defines `SLIDES = [...]` — one dict per slide: `{cls: "cover|divider|demo|close|...", mod: "Module label", html: "<div class='slide-inner'>...</div>", tier: "core|full"}`. `core` = appears in the 1-hour keynote; `full` = 3-hour expansion. Default `core`.
+2. Concatenates the deck's design-recipe CSS (from Phase 0 — Calm Editorial Dark, Sovra Light Editorial, or whatever Phase 0 picked) **with Block 1 (animation framework CSS)** from § "HTML Keynote Toolkit" at the bottom of this file. Emit Block 1 verbatim.
+3. **Offline mode only (`offline: yes`):** include **Block 5** (offline-fonts Python helper) and call it; otherwise emit the standard `<link>` to Google Fonts.
+4. **Compose master HTML:** `<head>` (with the font link or embedded `@font-face`) + the concatenated `<style>` block + **Block 3** container divs + every slide as `<section class="slide {cls}" data-slide="N" data-tier="{tier}">{html}{optional footer}</section>` + the **Block 4** nav `<script>`. Emit Blocks 3 and 4 verbatim.
+5. Writes the master HTML to the `HTML_OUT` path defined above (vault export).
+6. **PDF step — only when `pdf: yes`.** For each slide, write a standalone HTML (the same `<head>` + an additional `<style>` containing **Block 2** freeze, then the single active section), Chrome `--screenshot` at native 1280×720 with `--force-device-scale-factor=2`, then PIL combines the PNGs into a multi-page PDF at `PDF_OUT`. The in-script pixel-dimensions assertion catches any zoom-out before the bundle runs.
 
 ```python
+# canonical render gotcha — native viewport + force-scale-factor
+# (per memory feedback_chrome_pdf_type3_fonts.md)
 import subprocess
 from pathlib import Path
 from PIL import Image
-
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-W, H = 1280, 720          # native slide viewport
-SCALE = 2                 # → 2560×1440 sharp pages
-
+W, H, SCALE = 1280, 720, 2   # → 2560×1440 sharp pages
 pngs = []
 for i, page_html in enumerate(per_slide_htmls, 1):
     png = WORK / f"slide-{i:02d}.png"
@@ -243,15 +263,26 @@ for i, page_html in enumerate(per_slide_htmls, 1):
     assert img.size == (W * SCALE, H * SCALE), \
         f"Slide {i} rendered at {img.size} — viewport bumped or scale missing"
     pngs.append(png)
-
 imgs = [Image.open(p).convert("RGB") for p in pngs]
-imgs[0].save(pdf_out, save_all=True, append_images=imgs[1:],
+imgs[0].save(PDF_OUT, save_all=True, append_images=imgs[1:],
              format="PDF", resolution=192.0, quality=82)
 ```
 
-**Critical gotcha** — use `--force-device-scale-factor=2` with NATIVE viewport (`1280×720`), NOT a bumped window size. Slide CSS uses absolute units that lock to logical pixels; forcing `--window-size=1920,1080` leaves content rendered at native size inside a larger frame → content appears zoomed-out relative to the HTML. The pixel-dimensions assertion above catches this automatically. Full rationale in memory: `feedback_chrome_pdf_type3_fonts.md`.
+**Critical gotcha:** `--force-device-scale-factor=2` with **native** `--window-size=1280,720`, NOT a bumped window. Slide CSS uses absolute units that lock to logical pixels; bumping the window leaves content at native size inside a larger frame → zoomed-out PDF. The assertion above is the gate.
 
-**Phase 3.B skips Phase 4 (human-led adjustments)** — HTML decks are mechanically generated from a locked template library; per-slide design tweaks happen by editing the template upstream + regenerating, not by manual polish. Operators wanting per-slide manual edits should pick the Google Slides path (Phase 3) instead.
+#### Step 3 — Run, validate, drop
+
+```bash
+python3 "$WORK/build.py"
+```
+
+- HTML lands at `vault/03 - export/decks/{DATE}-{SLUG}.html` — F11-presentable. The full nav kit is keyboard-driven: `← →`/space navigate · **F** fullscreen · **M** slide menu · **K** toggles 1-hour keynote ↔ 3-hour full · **B** black out (for live demos) · type a number + Enter to jump · **?** help · Esc closes overlays.
+- PDF (if requested) lands at `~/Downloads/{DATE}-{SLUG}.pdf` — raster, instant-open, sharing copy.
+- `build.py` lives in `/tmp` and is **discarded** — not preserved in the vault. If the deck needs editing later, re-spawn `deck-builder` on the outline at `vault/03 - export/decks/outlines/{DATE}-{SLUG}.md`.
+
+#### Step 4 — Skips Phase 4 (human-led adjustments)
+
+HTML decks are mechanically generated. Per-slide design tweaks happen by editing the outline + regenerating, not by manual polish. Operators wanting per-slide manual edits should pick the Google Slides path (Phase 3) instead.
 
 ### Phase 4 — ADJUSTMENTS (human-led, Slides path only)
 
@@ -286,18 +317,21 @@ Joint review pass. Checklist depends on output-format from Phase 0.
 - [ ] **Image embeds are JPEG, not PNG** when using nano-banana raster backgrounds: `grep -c 'data:image/png' $DECK.html` should be 0 (except true-PNG cases like logos with transparency)
 - [ ] Inline SVG diagrams reference design.md tokens via CSS variables (not hardcoded colors)
 - [ ] If PDF requested: page count = number of slides in outline, file < 30 MB
-- [ ] Final filename: `{venture}-Deck-{Topic}-{YYYY-MM-DD}.{html|pdf}` at `~/Downloads/`
+- [ ] Final paths: HTML at `vault/03 - export/decks/{YYYY-MM-DD}-{slug}.html`; PDF (only if `pdf: yes`) at `~/Downloads/{YYYY-MM-DD}-{slug}.pdf`
+- [ ] Master HTML loads in browser: F enters fullscreen · M opens the slide menu · K toggles 1-hour keynote ⇄ 3-hour full · B blacks out for a live demo · type-#-Enter jumps
 
 Surface issues for user judgment — don't auto-fix in Phase 5. Surface + ask.
 
 Update outline frontmatter `status: ready` when validation passes.
 
 ## Output format
-- **Outline note** at `vault/00 - notes/reflections/decks/{slug}.md` — per-slide structure + frontmatter + (if Phase 0 proposed new design) Design Proposal section
-- **Google Slides deck** in Drive at conventional/user-configured path
-- **Imagery folder** next to the deck with generated assets
-- **Close-session report:** deck title, audience, slide count, deck URL, outline note link, phase reached (design-discovery / drafting / images / built / polished / validated)
-- **Daily note entry** under `## Decks shipped` (or in Rhythm if today's ship): one line with deck title + URL + audience
+- **Outline note** at `vault/03 - export/decks/outlines/{YYYY-MM-DD}-{slug}.md` — per-slide structure + frontmatter + (if Phase 0 proposed new design) Design Proposal section
+- **Deck HTML** *(Phase 3.B, recommended)* at `vault/03 - export/decks/{YYYY-MM-DD}-{slug}.html` — single self-contained file, F11-presentable, full keynote nav kit (M/K/B/?/jump/progress)
+- **Deck PDF** *(Phase 3.B, opt-in only when `pdf: yes`)* at `~/Downloads/{YYYY-MM-DD}-{slug}.pdf` — raster, instant-open sharing/archive copy
+- **Google Slides deck** *(Phase 3 only — when the user explicitly asked for live editing)* in Drive at conventional/user-configured path
+- **Imagery folder** *(Slides path only)* next to the deck with generated assets. The HTML path inlines everything (SVG or base64 JPEG).
+- **Close-session report:** deck title, audience, slide count, HTML path, outline link, phase reached (design-discovery / drafting / images / built / polished / validated)
+- **Daily note entry** under `## Decks shipped` (or in Rhythm if today's ship): one line with deck title + path + audience
 
 ## Constraints
 - **Never publish or share decks externally** — pause at validation; user delivers.
@@ -311,3 +345,279 @@ Update outline frontmatter `status: ready` when validation passes.
 
 ## Schedule
 On-demand. Triggered by `spawn deck-builder` OR `/agent deck-builder` in-session. Naturally pairs with `meeting-prepper` (audience research) and `content-writer` (narrative beats).
+
+
+## HTML Keynote Toolkit (canonical code blocks)
+
+Brand-agnostic interactivity + animation toolkit. The agent emits these blocks verbatim into each deck's per-session `build.py`. **Per-deck design tokens** (`--canvas`, `--accent`, `--font-display`, etc.) are layered on top via the deck's chosen design recipe — they are **not** part of this toolkit.
+
+### Toolkit philosophy
+
+- **Animation resolves to a clean final state.** Every entrance animation lands at the natural CSS, so a static frame (a raster PDF) captures it correctly.
+- **PDF-safe via STANDALONE_FREEZE.** When rendering per-slide standalone HTML for raster export, append the freeze block (Block 2) — it forces every animated element to its final state.
+- **All interactivity is master-only.** The nav script (Block 4) lives in the master deck HTML; standalone per-slide HTML used for PDF render gets none of it.
+
+### Block 1 — Animation framework CSS (append to deck's main CSS, inside the master `<style>`)
+
+```css
+/* --- ENTRANCE ANIMATIONS — resolve to final state --- */
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:none;}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes drawLine{from{stroke-dashoffset:var(--dash,1400);}to{stroke-dashoffset:0;}}
+@keyframes softPulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+@keyframes glowPulse{0%,100%{filter:drop-shadow(0 0 0 transparent);}50%{filter:drop-shadow(0 0 7px var(--accent));}}
+@keyframes ghostDrop{0%{opacity:1;}100%{opacity:.22;}}
+
+.slide.active .slide-inner>*{opacity:0;animation:fadeUp .55s cubic-bezier(.2,.7,.2,1) both;}
+.slide.active .slide-inner>*:nth-child(1){animation-delay:.05s}
+.slide.active .slide-inner>*:nth-child(2){animation-delay:.13s}
+.slide.active .slide-inner>*:nth-child(3){animation-delay:.21s}
+.slide.active .slide-inner>*:nth-child(4){animation-delay:.29s}
+.slide.active .slide-inner>*:nth-child(5){animation-delay:.37s}
+.slide.active .slide-inner>*:nth-child(6){animation-delay:.45s}
+.slide.active .slide-inner>*:nth-child(7){animation-delay:.53s}
+.slide.active .slide-inner>*:nth-child(8){animation-delay:.61s}
+.slide.active .slide-inner>*:nth-child(n+9){animation-delay:.69s}
+
+.slide.active svg.assemble>*{opacity:0;animation:fadeIn .5s ease both;}
+.slide.active svg.assemble>*:nth-child(1){animation-delay:.30s}
+.slide.active svg.assemble>*:nth-child(2){animation-delay:.38s}
+.slide.active svg.assemble>*:nth-child(3){animation-delay:.46s}
+.slide.active svg.assemble>*:nth-child(4){animation-delay:.54s}
+.slide.active svg.assemble>*:nth-child(5){animation-delay:.62s}
+.slide.active svg.assemble>*:nth-child(6){animation-delay:.70s}
+.slide.active svg.assemble>*:nth-child(7){animation-delay:.78s}
+.slide.active svg.assemble>*:nth-child(8){animation-delay:.86s}
+.slide.active svg.assemble>*:nth-child(n+9){animation-delay:.94s}
+
+.slide.active .draw{stroke-dasharray:var(--dash,1400);animation:drawLine 1.2s ease .4s both;}
+.glow{animation:glowPulse 3s ease-in-out infinite;}
+.pulse{animation:softPulse 2.6s ease-in-out infinite;}
+.ghost-drop{animation:ghostDrop 1.4s ease 1s forwards;}
+
+/* --- DEMO-CUE INTERSTITIAL STYLE --- */
+.slide.demo{justify-content:center;align-items:center;text-align:center;}
+.slide.demo .slide-inner{text-align:center;align-items:center;max-width:920px;}
+.demo-badge{font-family:var(--font-label);font-weight:700;font-size:12pt;letter-spacing:2.6px;text-transform:uppercase;color:var(--accent);margin:0;}
+
+/* --- MASTER-ONLY UI (deck wrap + nav containers) --- */
+.deck{position:fixed;inset:0;background:var(--canvas);overflow:hidden;}
+.slide-wrap{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(var(--scale,1));transform-origin:center;width:1280px;height:720px;}
+.slide{display:none;} .slide.active{display:flex;}
+#progress{position:fixed;top:0;left:0;height:2px;background:var(--accent);width:0;z-index:150;transition:width .25s ease;}
+#blackout{position:fixed;inset:0;background:#000;z-index:300;display:none;} #blackout.on{display:block;}
+#jump{position:fixed;bottom:18px;left:24px;font-family:ui-monospace,Menlo,monospace;font-size:13px;letter-spacing:2px;color:var(--accent);z-index:160;display:none;} #jump.on{display:block;}
+#menu{position:fixed;inset:0;background:rgba(1,1,2,0.97);z-index:200;display:none;overflow-y:auto;padding:40px 56px;} #menu.open{display:block;}
+.menu-head{display:flex;justify-content:space-between;align-items:baseline;font-family:'Inter',sans-serif;}
+.menu-head .mh-title{font-weight:700;font-size:12pt;letter-spacing:2.4px;text-transform:uppercase;color:var(--ink);}
+.menu-head .mh-hint{font-size:9pt;letter-spacing:1.2px;color:var(--ink-subtle);text-transform:uppercase;}
+.menu-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:24px;}
+.menu-card{border:1px solid var(--hairline);background:var(--surface-1);padding:13px 13px 15px;cursor:pointer;border-radius:3px;min-height:88px;display:flex;flex-direction:column;}
+.menu-card:hover{border-color:var(--accent);background:var(--surface-2);} .menu-card.cur{border-color:var(--accent);} .menu-card.full-tier{opacity:0.45;}
+.menu-card .mc-num{font-family:'Inter',sans-serif;font-size:8.5pt;letter-spacing:1.4px;color:var(--ink-subtle);} .menu-card.demo-card .mc-num{color:var(--accent);}
+.menu-card .mc-title{font-family:'Playfair Display',serif;font-size:11.5pt;color:var(--ink);margin-top:auto;line-height:1.14;}
+#help{position:fixed;inset:0;background:rgba(1,1,2,0.97);z-index:250;display:none;align-items:center;justify-content:center;} #help.open{display:flex;}
+#help .help-box{font-family:'Inter',sans-serif;color:var(--ink-muted);font-size:13pt;line-height:2.1;text-align:left;}
+#help .help-box b{color:var(--accent);font-family:ui-monospace,Menlo,monospace;font-weight:700;}
+#help .help-box .hh{display:block;font-size:10pt;letter-spacing:2.4px;text-transform:uppercase;color:var(--ink-subtle);margin-bottom:18px;font-weight:700;}
+```
+
+### Block 2 — Standalone freeze CSS (append only to per-slide standalone HTML used for raster PDF)
+
+```css
+.slide.active .slide-inner>*, .slide.active svg.assemble>*, .slide.active .draw,
+.glow, .pulse, .ghost-drop{
+  animation:none !important; opacity:1 !important; transform:none !important;
+  stroke-dashoffset:0 !important; filter:none !important;
+}
+.ghost-drop{opacity:.22 !important;}
+.slide{display:flex;}
+body{width:1280px;height:720px;}
+```
+
+### Block 3 — Master container divs (inject in master HTML body, before the nav script)
+
+```html
+<div id="progress"></div>
+<div id="blackout"></div>
+<div id="jump"></div>
+<div id="menu"></div>
+<div id="help"><div class="help-box"><span class="hh">Keyboard</span>
+<b>&larr; &rarr;</b> &nbsp;navigate &nbsp;&middot;&nbsp; <b>space</b> next<br/>
+<b>F</b> &nbsp;fullscreen &nbsp;&middot;&nbsp; <b>M</b> &nbsp;slide menu<br/>
+<b>K</b> &nbsp;toggle 1-hour keynote &harr; 3-hour full<br/>
+<b>B</b> &nbsp;black out (for live demos)<br/>
+<b>type # then Enter</b> &nbsp;jump to a slide<br/>
+<b>?</b> &nbsp;this help &nbsp;&middot;&nbsp; <b>Esc</b> &nbsp;close</div></div>
+<div class="nav-bar" style="position:fixed;bottom:18px;right:24px;font-family:'Inter',sans-serif;font-size:11px;letter-spacing:1.6px;color:var(--ink-subtle);z-index:160;text-transform:uppercase;">
+<span id="slide-counter">1 / 1</span> &nbsp;&middot;&nbsp; M menu &middot; K 1h/3h &middot; ? help</div>
+```
+
+### Block 4 — Master nav JS (inject as `<script>` after the container divs)
+
+```javascript
+(function(){
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let mode='full', current=1, typeBuf='';
+  const tierOf = n => slides[n-1].getAttribute('data-tier') || 'core';
+  const titleOf = n => { const s=slides[n-1];
+    const h=s.querySelector('.display-xl,.display-lg,.display-md') || s.querySelector('.demo-badge');
+    return h ? h.textContent.replace(/\s+/g,' ').trim() : ('Slide '+n); };
+  const activeList = () => mode==='keynote'
+    ? slides.map((s,i)=>i+1).filter(n=>tierOf(n)==='core')
+    : slides.map((s,i)=>i+1);
+  function counter(){ const l=activeList(), idx=l.indexOf(current);
+    return (idx>=0?idx+1:'·') + ' / ' + l.length + (mode==='keynote'?' · 1H':''); }
+  function setProgress(){ const l=activeList(), idx=l.indexOf(current);
+    const p = idx>=0 ? idx/Math.max(1,l.length-1) : 0;
+    const pb=document.getElementById('progress'); if(pb) pb.style.width=(p*100)+'%'; }
+  function refresh(){ const c=document.getElementById('slide-counter'); if(c)c.textContent=counter(); setProgress(); }
+  function countUp(el,target){ el.textContent='0'; const dur=1500, st=performance.now();
+    (function tick(now){ const p=Math.min(1,(now-st)/dur), e=1-Math.pow(1-p,3);
+      el.textContent=Math.floor(e*target).toLocaleString('en-US');
+      if(p<1) requestAnimationFrame(tick); else el.textContent=target.toLocaleString('en-US'); })(performance.now()); }
+  function show(n){ n=Math.max(1,Math.min(total,n));
+    slides.forEach(s=>s.classList.remove('active'));
+    const t=slides[n-1]; t.classList.add('active'); current=n;
+    if(history&&history.replaceState) history.replaceState(null,'','#'+n);
+    /* Generic count-up: any element with data-countup="N" animates from 0 to N on slide-enter. */
+    t.querySelectorAll('[data-countup]').forEach(el=>{ const v=parseInt(el.dataset.countup,10); if(!isNaN(v)) countUp(el, v); });
+    refresh(); }
+  function step(d){ const l=activeList(); let idx=l.indexOf(current);
+    if(idx<0){ if(d>0){const nx=l.find(n=>n>current); show(nx||l[l.length-1]);}
+               else{const pv=l.filter(n=>n<current); show(pv.length?pv[pv.length-1]:l[0]);} return; }
+    idx=Math.max(0,Math.min(l.length-1, idx+d)); show(l[idx]); }
+  function setMode(m){ mode=m; const l=activeList();
+    if(l.indexOf(current)<0){ const near=l.find(n=>n>=current)||l[l.length-1]; show(near); } else refresh();
+    toast(mode==='keynote'?'1-Hour Keynote':'3-Hour Full'); }
+  let toastT; function toast(msg){ let el=document.getElementById('toast');
+    if(!el){ el=document.createElement('div'); el.id='toast';
+      el.style.cssText='position:fixed;top:22px;left:50%;transform:translateX(-50%);font-family:Inter,sans-serif;font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--accent);background:var(--surface-1);border:1px solid var(--accent);padding:8px 16px;z-index:400;transition:opacity .4s;'; document.body.appendChild(el); }
+    el.textContent=msg; el.style.opacity='1'; clearTimeout(toastT); toastT=setTimeout(()=>{el.style.opacity='0';},1500); }
+  function buildMenu(){ const m=document.getElementById('menu');
+    let h='<div class="menu-head"><span class="mh-title">Slides</span><span class="mh-hint">click to jump · Esc to close · '+total+' slides · dimmed = 3h-only</span></div><div class="menu-grid">';
+    for(let n=1;n<=total;n++){ const demo=slides[n-1].classList.contains('demo'), full=tierOf(n)==='full';
+      h+='<div class="menu-card'+(full?' full-tier':'')+(demo?' demo-card':'')+(n===current?' cur':'')+'" data-n="'+n+'">'
+       + '<div class="mc-num">'+(demo?'▶ ':'')+String(n).padStart(2,'0')+'</div>'
+       + '<div class="mc-title">'+titleOf(n)+'</div></div>'; }
+    m.innerHTML=h+'</div>';
+    m.querySelectorAll('.menu-card').forEach(c=>c.onclick=()=>{ closeAll(); show(parseInt(c.dataset.n,10)); }); }
+  function openMenu(){ buildMenu(); document.getElementById('menu').classList.add('open'); }
+  function closeAll(){ document.getElementById('menu').classList.remove('open');
+    document.getElementById('help').classList.remove('open');
+    document.getElementById('blackout').classList.remove('on'); }
+  function updJump(){ const j=document.getElementById('jump');
+    if(typeBuf){ j.classList.add('on'); j.textContent='→ '+typeBuf; } else j.classList.remove('on'); }
+  document.addEventListener('keydown',function(e){ const k=e.key;
+    if(k==='Escape'){ closeAll(); typeBuf=''; updJump(); return; }
+    if(/^[0-9]$/.test(k)){ typeBuf+=k; updJump(); return; }
+    if(k==='Enter'){ if(typeBuf){ show(parseInt(typeBuf,10)); typeBuf=''; updJump(); } return; }
+    if(k==='Backspace'){ typeBuf=typeBuf.slice(0,-1); updJump(); e.preventDefault(); return; }
+    if(k==='ArrowRight'||k===' '||k==='PageDown'){ step(1); e.preventDefault(); }
+    else if(k==='ArrowLeft'||k==='PageUp'){ step(-1); e.preventDefault(); }
+    else if(k==='Home'){ const l=activeList(); show(l[0]); }
+    else if(k==='End'){ const l=activeList(); show(l[l.length-1]); }
+    else if(k==='f'||k==='F'){ if(!document.fullscreenElement)document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+    else if(k==='m'||k==='M'){ const o=document.getElementById('menu').classList.contains('open'); closeAll(); if(!o) openMenu(); }
+    else if(k==='b'||k==='B'){ document.getElementById('blackout').classList.toggle('on'); }
+    else if(k==='k'||k==='K'){ setMode(mode==='keynote'?'full':'keynote'); }
+    else if(k==='?'){ document.getElementById('help').classList.toggle('open'); } });
+  document.addEventListener('click',function(e){ if(e.target.closest('a'))return;
+    if(e.target.closest('#menu')||e.target.closest('#help'))return;
+    if(document.getElementById('menu').classList.contains('open')||document.getElementById('help').classList.contains('open')){ closeAll(); return; }
+    if(document.getElementById('blackout').classList.contains('on')){ document.getElementById('blackout').classList.remove('on'); return; }
+    if(e.clientX<window.innerWidth/2) step(-1); else step(1); });
+  const init=parseInt(location.hash.replace('#','')||'1',10); show(isNaN(init)?1:init);
+})();
+function rescale(){ const w=document.querySelector('.slide-wrap'); if(!w)return;
+  const s=Math.min(window.innerWidth/1280, window.innerHeight/720);
+  document.documentElement.style.setProperty('--scale', s); }
+window.addEventListener('resize',rescale); rescale();
+```
+
+### Block 5 — Offline-fonts Python helper (opt-in only)
+
+Only emit + call this when the user answered **yes** to *"Should this work even if wifi fails at the venue?"* Otherwise emit the standard `<link>` to Google Fonts CDN.
+
+```python
+import urllib.request, re, base64
+from pathlib import Path
+_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+
+def embed_google_fonts(specs, cache_dir):
+    """
+    specs: [(family_name, css2_axis_spec), ...]
+      e.g. [("Playfair Display", "wght@600"),
+            ("Source Serif Pro", "ital,wght@0,400;0,700;1,400"),
+            ("Inter", "wght@400;500;700")]
+    cache_dir: Path where woff2 binaries are cached across builds.
+    Returns: '<style>...@font-face...</style>' with base64-embedded woff2,
+             or None if any fetch fails (caller falls back to the CDN <link>).
+    """
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    faces = []
+    try:
+        for fam, axis in specs:
+            url = f"https://fonts.googleapis.com/css2?family={fam.replace(' ','+')}:{axis}&display=swap"
+            req = urllib.request.Request(url, headers={"User-Agent": _UA})
+            css = urllib.request.urlopen(req, timeout=25).read().decode()
+            parts = re.split(r'/\*\s*([\w-]+)\s*\*/', css)
+            for j in range(1, len(parts) - 1, 2):
+                subset, block = parts[j], parts[j + 1]
+                if subset not in ("latin", "latin-ext"):
+                    continue
+                mu = re.search(r'src:\s*url\(([^)]+\.woff2)\)', block)
+                if not mu: continue
+                wt = (re.search(r'font-weight:\s*([^;]+);', block) or [None, "400"])[1].strip()
+                st = (re.search(r'font-style:\s*([^;]+);', block) or [None, "normal"])[1].strip()
+                ur = (re.search(r'unicode-range:\s*([^;]+);', block) or [None, "U+0000-00FF"])[1].strip()
+                key = f"{fam}-{wt}-{st}-{subset}.woff2".replace(" ", "_")
+                fp = cache_dir / key
+                if not fp.exists():
+                    fp.write_bytes(urllib.request.urlopen(urllib.request.Request(mu.group(1), headers={"User-Agent": _UA}), timeout=25).read())
+                b64 = base64.b64encode(fp.read_bytes()).decode()
+                faces.append(f"@font-face{{font-family:'{fam}';font-style:{st};font-weight:{wt};font-display:swap;"
+                             f"src:url(data:font/woff2;base64,{b64}) format('woff2');unicode-range:{ur};}}")
+        if faces:
+            return "<style>" + "".join(faces) + "</style>"
+    except Exception as e:
+        print(f"  font-embed failed — falling back to CDN link: {e}")
+    return None
+```
+
+### Slide markup conventions
+
+The toolkit assumes these classes/attributes on slide markup:
+
+- `<section class="slide" data-slide="N" data-tier="core|full">` — every slide. `core` = appears in 1h keynote; `full` = 3h-only. Default `core`.
+- `<section class="slide divider">` — section dividers (centered, no footer).
+- `<section class="slide demo">` — live-demo cue interstitial (▶ LIVE DEMO style, no footer; first to drop in the 1h cut).
+- `<section class="slide cover">` / `<section class="slide close">` — first and last slide (centered, no footer).
+- `<svg class="assemble">` — diagrams whose children fade in sequentially when the slide activates.
+- `<path class="draw" style="--dash:1200">` — paths that draw themselves in (`--dash` ≈ path length, or a safely large value).
+- `<element class="glow">` / `<element class="pulse">` — looping subtle emphasis (rests at full opacity → PDF is fine).
+- `<element class="ghost-drop">` — fade down to .22 opacity at 1s, conveying "dropped / discarded".
+- `<text data-countup="1490380">1,490,380</text>` — count-up: the element's static text is the final number; on slide-enter the nav JS animates from 0 → `data-countup`. (Standalone HTML used for the PDF render keeps the static value → PDF shows the final number.)
+
+### Per-deck `build.py` pipeline (ephemeral, lives in /tmp)
+
+The agent generates `/tmp/decks-{session}/build.py` containing:
+
+1. `SLIDES = [...]` — list of `{cls, mod, html, tier}` dicts per slide (one for every slide, demos included).
+2. `CSS` — the deck's design tokens (from the chosen recipe: Calm Editorial, Sovra Light Editorial, etc.) **+ Block 1 (animation framework CSS)** concatenated.
+3. **Offline mode only:** import the helper from Block 5 → call `embed_google_fonts(...)` → inline the returned `@font-face` `<style>`. Standard mode: emit the Google Fonts `<link>`.
+4. **Compose master HTML:** `<head>` + `<style>` (CSS + animation framework) + Block 3 containers + sections + Block 4 nav `<script>`.
+5. Write master to `vault/03 - export/decks/{YYYY-MM-DD}-{slug}.html`.
+6. **PDF only when the user asked for one** — for each slide, write a standalone HTML (`<style>` includes Block 1 + Block 2 freeze), Chrome `--screenshot` at native 1280×720 with `--force-device-scale-factor=2`, then PIL combines PNGs into `~/Downloads/{YYYY-MM-DD}-{slug}.pdf`.
+
+The `build.py` itself is **not preserved** — discarded with `/tmp` after the build. If the deck needs updating later, re-spawn `deck-builder` on the outline at `vault/03 - export/decks/outlines/{YYYY-MM-DD}-{slug}.md`.
+
+### Pre-build questions the agent asks once (Phase 3.B kickoff)
+
+Both questions default to "no" — only embed/render extras when the user explicitly opts in. Phrase them in plain language:
+
+- **PDF:** *"Want a PDF too, for sharing or archive?"* If no → HTML only.
+- **Offline:** *"Should this work even if wifi fails at the venue?"* If no → standard Google Fonts CDN `<link>` (smaller HTML). If yes → embed fonts via Block 5 (heavier HTML, fully offline).
+
+Both default `no` keeps the everyday case lean; the user opts up only when needed.
