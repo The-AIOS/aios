@@ -190,9 +190,10 @@ Place triage decisions at the top of Parking lot, not buried in Rhythm.
 - Write the daily note (preserving user edits if note already exists — keep checked items, meeting notes, user-added subtasks)
 - **Post-write clean pass** (run silently before commit; fix issues, don't ask):
   1. **Dedup across sections.** Scan Rhythm + Parking + Horizon + Sarah-results (if present) + Energy note for the same task appearing in more than one place. Match by core task name (ignore emojis, source tags, carry counts). If a task is in Rhythm AND Parking → keep only Rhythm. If a review item is in Sarah's results AND Parking → keep only the Rhythm/Evening placement.
-  2. **Drop check.** Re-count unique unchecked `- [ ]` items from the previous note. Count unique items placed in today's note. If `previous_unique > today_placed`, something was dropped — find it and add to Parking before committing.
-  3. **Review items.** Every "needs review" flag (📋, `→ review`, `/tmp/...` file reference) should have a corresponding task in Rhythm or Evening. If absent, add one.
-  4. Note any fixes inline in the commit message: `Daily plan {date} (clean pass: merged X, restored Y)`.
+  2. **Drop check (carries).** Re-count unique unchecked `- [ ]` items from the previous note. Count unique items placed in today's note. If `previous_unique > today_placed`, something was dropped — find it and add to Parking before committing.
+  3. **Due-today task check (fresh tasks, NOT just carries).** Step 2 guards *previous-note carries* — it does NOT guard *fresh* tasks due today. Cross-reference the pre-loaded executor's Google Tasks where `due == today` against what actually landed in the note. **Every due-today task must appear somewhere** — Rhythm, Parking lot, or Agents-can-handle (ingests + delegatable work → Agents-can-handle). For each due-today task absent from the note, place it before committing. Don't let a narrative-heavy day (big backfill, long Shipped section) crowd out the mechanical task merge. (Caught 2026-05-28: two due-today ingests + a wrapper task fell through because the drop check only scanned previous-note carries — a fresh due-today task that isn't also a calendar event had no safety net.)
+  4. **Review items.** Every "needs review" flag (📋, `→ review`, `/tmp/...` file reference) should have a corresponding task in Rhythm or Evening. If absent, add one.
+  5. Note any fixes inline in the commit message: `Daily plan {date} (clean pass: merged X, restored Y, recovered N due-today tasks)`.
 
 ### Message 3 — Commit + push
 - `cd ~/aios && git add -A && git commit -m "Daily plan {date}" && git push`
