@@ -10,6 +10,7 @@ import sys
 import os
 import re
 import subprocess
+import time
 from datetime import datetime
 
 
@@ -480,6 +481,42 @@ def get_account_display():
         return ""
 
 
+SWAP_BANNER_TTL_SECS = 180  # 3 min — empirically (2026-05-28) sessions
+# auto-transition to the new account within ~30s via Keychain re-read on the
+# next token refresh (README Lesson #4's "~1h" was overly pessimistic). The
+# banner is purely informational at this point — 3 min is enough for the
+# operator to notice the rotation; longer is residual visual noise.
+
+
+def get_swap_banner():
+    """Minimal in-session banner — 'swap happened, here's from→to' — shown
+    for SWAP_BANNER_TTL_SECS after the autopilot rotates accounts. No action
+    prescription: the running session auto-transitions to the new account on
+    its next API turn (Keychain re-read), so there's nothing for the operator
+    to do. The marker is written by _watch.py after a successful swap; this
+    renderer reads it on every statusLine refresh."""
+    try:
+        p = os.path.expanduser("~/.claude/swap-notification.json")
+        if not os.path.exists(p):
+            return ""
+        with open(p) as f:
+            m = json.load(f)
+        ts = m.get("ts", 0)
+        if not ts:
+            return ""
+        age = int(time.time() - ts)
+        if age < 0 or age > SWAP_BANNER_TTL_SECS:
+            return ""
+        from_local = (m.get("from") or "?").split("@")[0]
+        to_local = (m.get("to") or "?").split("@")[0]
+        return (
+            f"\033[31;1m🔄 {from_local}→{to_local}\033[0m "
+            f"\033[90m|\033[0m "
+        )
+    except Exception:
+        return ""
+
+
 def main():
     # Force UTF-8 stdout so emoji render on Windows (where the default
     # console code page is cp1252 and json/print would crash on 📁🌿🟢).
@@ -508,6 +545,7 @@ def main():
         # cost_display = get_cost_display(cost_data, transcript_path)
         rate_display = get_rate_limit_display(rate_limits)
         account_display = get_account_display()
+        swap_banner = get_swap_banner()
         git_status = get_git_status()
 
         # Shorten model name: "Opus 4.6 (1M context)" → "Opus 4.6 (1M)"
@@ -527,6 +565,7 @@ def main():
             model_display = f"\033[94m[{model_name}]\033[0m"
 
         status_line = (
+            f"{swap_banner}"  # empty when no recent swap; prominent red banner for SWAP_BANNER_TTL_SECS after
             f"{model_display} "
             f"\033[93m📁 {directory}\033[0m"
             f"{git_status} "

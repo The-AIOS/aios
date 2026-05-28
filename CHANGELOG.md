@@ -13,42 +13,57 @@
 
 ---
 
-## 2026-05-28 — New skill: `aios/infographic-builder` + `/ingest` Step 6 (optional visual infographic)
+## 2026-05-28 — Quiet-default autopilot + `aios/infographic-builder` skill (`/ingest` Step 6) + venture-name leak scrub
 
-`hash: e76432f`
+`hash: PENDING`
 
-> **Turn any ingest into a beautiful, themed, self-contained HTML one-pager — opt-in, fact-disciplined, brand-aware.** New skill `aios/infographic-builder` distills a structured document (ingest reflection, role report, weekly learnings, deck outline, research note) into a single-file HTML infographic following a reusable 7-section Information Architecture. Theme matching is brand-first (uses your venture's `design.md` if the content maps to one) with a fallback to [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) — 73 brand design systems (Claude, Linear, Vercel, Supabase, WIRED, Stripe…) following the Google Stitch DESIGN.md format. `/ingest` gains a new optional **Step 6** that offers the infographic post-log; declined silently if not wanted. Dark/light toggle via CSS custom properties is standard (~30 lines CSS + ~15 JS — not overweight). Validated by two dogfood runs on real ingests in deliberately different theme registers.
+> **Three ships consolidated for the day.** **(1) Autopilot redesigned: quiet by default.** The legacy kill+respawn path on quota swap is gone — sessions are no longer terminated and re-launched via osascript keystroke automation into the IDE (which caused alert beeps + focus contention on multi-session swaps, and a far worse failure mode discovered today: a single session with a malformed-image transcript could chain-burn every rotation account through the legacy auto-respawn loop). Now after a swap, `_watch.py` writes a `~/.claude/swap-notification.json` marker and `context-monitor.py` renders a minimal red `🔄 cc→j` banner at the front of every active statusLine for 3 minutes. The running session **auto-transitions to the new account on its next API turn via Keychain re-read — empirically ~30 seconds** (validated by a real cap event 2026-05-28 07:18:43). The README's prior "~1h until token refresh" claim was overly pessimistic. Opt-in env var `CLAUDE_AUTOSWAP_RESPAWN=1` preserves the legacy behavior for unattended overnight agents. **(2) New skill `aios/infographic-builder` + `/ingest` Step 6** distills a structured document into a single-file HTML one-pager with brand-aware theme selection (brand-first via venture `design.md` → fallback to [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md)'s 73 brand design systems). **(3) Venture-name leak scrub** of `agents/aios/communication/deck-builder.md` + `plugins/aios/commands/cold-start-interview.md`; one hardcoded `~/obsidian` path replaced with `~/aios` (CI Migration-drift check passes again).
 
 ### What changed
 
-**1. New skill — `skills/aios/infographic-builder/SKILL.md`**
+**1. Autopilot: quiet by default (`hooks/claude-identity/_watch.py` + `context-monitor.py`)**
 
-A single-file skill (no `references/` — one flow, no conditional sub-modes) that composes existing capabilities:
-- `anthropic/frontend-design` + `anthropic/canvas-design` — visual execution quality.
-- `aios/data-presentation` — which-viz-for-which-data on the key contrast.
-- `anthropic/theme-factory` — local theme alternative to the awesome-design-md fetch.
+- **`_watch.py` no longer calls `_resume.py` on swap.** After a successful Keychain rotation, it writes `~/.claude/swap-notification.json` (`{from, to, ts, reason}`).
+- **`context-monitor.py`** gets `get_swap_banner()`: if the marker is fresh (`SWAP_BANNER_TTL_SECS = 180`), prepends a red+bold `🔄 cc→j` banner to the statusLine. After 3 min, banner auto-suppresses; on the next swap, the marker is overwritten and the banner re-appears with the new from/to.
+- **Legacy path preserved as opt-in:** set `CLAUDE_AUTOSWAP_RESPAWN=1` in the environment to restore the kill+`_resume.py`-respawn behavior. Only meaningful for unattended overnight agents that MUST keep working past the cap without a human-in-loop restart. For interactive use it's strictly noisier (the original alert-beep + focus-contention path).
+- **README correction:** `hooks/claude-identity/README.md` § "Lessons learned the hard way" #4 claimed the running session keeps the old account's token "until the token refreshes naturally (~1h)." Empirically, Keychain re-read happens on the next API turn — ~30 seconds. The banner copy now reflects this (informational, no "restart" prescription).
 
-Encodes a **7-section IA** (hero + stat callouts → narrative arc → contrasting forces → lessons → key contrast viz → quote + sources) plus a **non-negotiable fact-discipline rule** — only use what's in the source, never fabricate metrics/dates/percentages/compositional details to fill panels.
+**The bigger reason this shipped now — a real quota-drain failure mode it prevents:** Today's cap event surfaced a chain-burn the legacy `_resume.py` path created. A single session's transcript contained a malformed image → API returns "image could not be processed and was removed" on every turn → 78 burned turns at full cache-creation cost → account 1 capped → legacy auto-respawn fires → restarts the session into the **same broken transcript** → account 2 capped → loop. With quiet-default, the swap rotates Keychain and the loop ends — no respawn into the broken transcript, sessions are killed manually only if needed.
 
-**Theme-matching hierarchy:** (1) explicit user reference → (2) brand-first via `vault/00 - notes/context/ventures/{venture}/design.md` → (3) fallback fetch from awesome-design-md (`https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/<slug>/DESIGN.md`) → (4) local theme-factory. Always tells the user which theme was picked and offers an override. Combining two systems is allowed when it sharpens (one as typography spine, the other as surface/palette).
+**2. New skill — `skills/aios/infographic-builder/SKILL.md` + `/ingest` Step 6**
 
-**Render checklist** explicitly requires: design tokens applied verbatim from the chosen DESIGN.md (no drift), markup generated directly (no JS template-string fill — that leaks `${placeholders}` under pressure), dark/light toggle via CSS custom properties + FOUC-prevention inline script, and SRI guidance for hosted/embedded use (Tailwind Play CDN is acceptable only for local previews — by design it has no stable hash).
+A single-file skill (no `references/` — one flow, no conditional sub-modes) that composes existing capabilities (`anthropic/frontend-design` + `canvas-design`, `aios/data-presentation`, `anthropic/theme-factory`). Encodes a **7-section IA** (hero + stat callouts → narrative arc → contrasting forces → lessons → key contrast viz → quote + sources) plus a **non-negotiable fact-discipline rule** — only use what's in the source, never fabricate metrics/dates/percentages/compositional details.
 
-**2. `/ingest` — new optional Step 6: visual infographic offer**
+**Theme hierarchy:** (1) explicit user reference → (2) brand-first via `vault/00 - notes/context/ventures/{venture}/design.md` → (3) fallback fetch from awesome-design-md (`https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/<slug>/DESIGN.md`) → (4) local theme-factory. Always tells the user which theme was picked and offers an override.
 
-After Step 5 (daily-note log), `/ingest` now offers an opt-in infographic render via the new skill. Default output `03 - export/infographics/{YYYY-MM-DD}-{slug}.html`. Skipped silently if declined or if the source is too thin. The offer is the *only* change to the existing command flow — Steps 1–5 unchanged.
+**Render checklist** requires: design tokens applied verbatim, markup generated directly (no JS template-string fill — `${placeholders}` leaks under pressure), dark/light toggle via CSS custom properties + FOUC-prevention inline script, SRI guidance for hosted/embedded use (Tailwind Play CDN acceptable only for local previews — no stable hash by design).
 
-**3. Skill count refresh**
+**`/ingest` Step 6:** after Step 5 (daily-note log), offers an opt-in infographic render via the new skill. Default output `03 - export/infographics/{YYYY-MM-DD}-{slug}.html`. Silent skip if declined or source too thin. Steps 1–5 unchanged.
 
-`skills/_index.md` AIOS-bundled count 16 → 17, new Meta row added. `TOOLS.md` count updated to match (only other place that carries the count).
+**Counts refreshed:** `skills/_index.md` AIOS-bundled 16 → 17 (new Meta row); `TOOLS.md` count updated.
+
+**3. Venture-name leak scrub (canonical hygiene + CI fix)**
+
+- `agents/aios/communication/deck-builder.md`: `sovra-style` → `brand-locked` (3 sites); `Sovra Light Editorial` → `Light Editorial` (2 sites); the `sovragov-argentine` example slug → `acme-q1-launch`; one hardcoded `$HOME/obsidian/vault/...` path → `$HOME/aios/vault/...` (this was the trigger for the CI Migration-drift failure on commits `058a2e0`, `5c7ebe2`, `83f23b4` — now passes).
+- `plugins/aios/commands/cold-start-interview.md`: `Sovra-style codebase` → `multi-repo codebase`.
 
 ### Action required
 
-`/aios:update` applies everything — Tier 1 replace for `plugins/aios/commands/ingest.md`, `TOOLS.md`, and `skills/_index.md`; Tier 1 add for `skills/aios/infographic-builder/SKILL.md`. No restart needed; the next `/ingest` invocation picks up Step 6 automatically.
+`/aios:update` auto-applies everything (Tier 1 replace for all changed files). For the teammate's Claude session running the update:
 
-**Optional operator personalization (never synced):** If you want venture-brand theme matching to take priority (use your `vault/00 - notes/context/ventures/{venture}/design.md` ahead of the awesome-design-md fallback), add a `### /ingest` block to your `USER.md` documenting that preference. The default behavior (mood-matched fallback to awesome-design-md) produces a polished result without any personalization.
+1. **`/aios:update`** — applies the new `_watch.py`, `context-monitor.py`, `deck-builder.md`, `cold-start-interview.md`, plus the morning ship (`infographic-builder/SKILL.md`, `ingest.md` Step 6, `_index.md`/`TOOLS.md` counts). The next `/ingest` invocation picks up Step 6 automatically.
+2. **No action needed for default autopilot users.** The next time the autopilot rotates accounts, you'll see a red `🔄 cc→j` banner at the top of every active statusLine for 3 min; the running session keeps working on the new account automatically (Keychain re-read on the next API turn — usually within ~30 seconds).
+3. **Unattended-agent users:** if you run overnight agents that need to keep working past their cap without a human-in-loop restart, set `CLAUDE_AUTOSWAP_RESPAWN=1` in those sessions' env to restore the legacy kill+respawn behavior. Leave the default for interactive use.
+4. **Launchd safety-net health check.** Run `launchctl list | grep claude-quota-watch`. If empty, the agent isn't loaded — install + load it:
+   ```bash
+   rm -f ~/Library/LaunchAgents/com.*.claude-quota-watch.plist
+   cp $HOME/aios/hooks/claude-identity/com.aios.claude-quota-watch.plist ~/Library/LaunchAgents/
+   launchctl load ~/Library/LaunchAgents/com.aios.claude-quota-watch.plist
+   ```
+   This was a separate latent gap surfaced during the 2026-05-28 diagnosis — the stale `com.sovra.claude-quota-watch.plist` was sitting unloaded for some operators.
+5. **Optional `/ingest` Step 6 personalization (never synced):** If you want venture-brand theme matching to take priority over the awesome-design-md fallback, add a `### /ingest` block to your `USER.md` documenting that preference. The default produces a polished result with no personalization.
 
-**Restart-required:** none.
+**Restart-required:** none. `context-monitor.py` is re-invoked per statusLine refresh; `_watch.py` is re-invoked per launchd tick (or via the statusLine fast-path's `_cache.py` kick). Both pick up the new code on next invocation.
 
 ---
 

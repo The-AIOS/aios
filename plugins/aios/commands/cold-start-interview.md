@@ -311,7 +311,7 @@ Installing the recommended plugin set for you...
 
 | Operator signal | Add to install set |
 |---|---|
-| Engineering / build heavy (Sovra-style codebase, GitHub presence, dev project notes) | `code-review@claude-plugins-official`, `pr-review-toolkit@claude-plugins-official`, `feature-dev@claude-plugins-official`, `security-guidance@claude-plugins-official` |
+| Engineering / build heavy (multi-repo codebase, GitHub presence, dev project notes) | `code-review@claude-plugins-official`, `pr-review-toolkit@claude-plugins-official`, `feature-dev@claude-plugins-official`, `security-guidance@claude-plugins-official` |
 | Finance / accounting heavy (invoicing, contracts, tax work) | `npx plugins add anthropics/financial-services` (26K⭐ — 10 vertical agents) |
 | Legal exposure (compliance, contracts, advisory) | `npx plugins add anthropics/claude-for-legal` (7.4K⭐) |
 | Knowledge-work heavy (writing, research, study, content publishing) | `npx plugins add anthropics/knowledge-work-plugins` (12K⭐) |

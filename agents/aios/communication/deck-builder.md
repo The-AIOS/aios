@@ -62,7 +62,7 @@ Before outlining content, surface (a) the design intent and (b) the output forma
 - Also scan `vault/00 - notes/context/declared/` and `vault/00 - notes/context/ventures/*/` for design-system documents (any `.md` whose body describes brand colors, fonts, layout primitives).
 
 **Search for venture template libraries** (template-library path):
-- `find ~/aios/templates -type d -name 'decks'` — if any `templates/{venture}/decks/` exists, the venture has a canonical slide library. Read `_index.md` for the catalog. This unlocks brand-locked rapid assembly (sovra-style pattern).
+- `find ~/aios/templates -type d -name 'decks'` — if any `templates/{venture}/decks/` exists, the venture has a canonical slide library. Read `_index.md` for the catalog. This unlocks brand-locked rapid assembly (brand-locked pattern).
 
 **Search Drive for existing decks** (via `search_drive_files`):
 - Past decks: `mimeType='application/vnd.google-apps.presentation'` or `.pptx`, ordered by recency
@@ -80,7 +80,7 @@ Before outlining content, surface (a) the design intent and (b) the output forma
 > 1. **Use an existing design doc** — apply {vault design.md} as the style spec, build in Google Slides via MCP
 > 2. **Copy from a past deck** — duplicate {Drive deck} and adapt content, edit in Google Slides
 > 3. **Propose a new design** — suggest 2-3 candidates from the awesome-design-md catalog (or a combination), build in Google Slides
-> 4. **Use venture template library** — assemble from {`templates/{venture}/decks/`}, output as **self-contained HTML** (sovra-style rapid pipeline — single file, F11-presentable, optional Chrome-headless PDF). Best for: brand-locked decks, offline-portable deliverables, when speed matters more than collaborative editing.
+> 4. **Use venture template library** — assemble from {`templates/{venture}/decks/`}, output as **self-contained HTML** (brand-locked rapid pipeline — single file, F11-presentable, optional Chrome-headless PDF). Best for: brand-locked decks, offline-portable deliverables, when speed matters more than collaborative editing.
 >
 > Which path?"
 
@@ -122,7 +122,7 @@ Save to outline frontmatter as `theme: dark|light`. Both themes must be brand-al
 ### Phase 1 — OUTLINE IN .MD
 
 Co-author the outline in a vault note:
-- Location: `vault/03 - export/decks/outlines/{YYYY-MM-DD}-{slug}.md` (auto-create the `outlines/` subfolder if missing). `slug = {venture}-{topic}`, e.g. `aios-grand-arc`, `sovragov-argentine`. All four artifacts of the same deck (outline / html / pdf / build) share this slug — date-first so they sort together.
+- Location: `vault/03 - export/decks/outlines/{YYYY-MM-DD}-{slug}.md` (auto-create the `outlines/` subfolder if missing). `slug = {venture}-{topic}`, e.g. `aios-grand-arc`, `acme-q1-launch`. All four artifacts of the same deck (outline / html / pdf / build) share this slug — date-first so they sort together.
 - Frontmatter:
   ```yaml
   slug: {venture}-{topic}                 # e.g. aios-grand-arc
@@ -164,7 +164,7 @@ Image strategy depends on `output-format` from Phase 0 — declare `image_type` 
 - Annotate the outline with image URL/path
 - Skip slides marked `image: none` or `text-only`
 
-**Output-format: html (sovra-style HTML pipeline) — three paths by image_type:**
+**Output-format: html (brand-locked HTML pipeline) — three paths by image_type:**
 
 | `image_type` | Path | Why |
 |---|---|---|
@@ -229,7 +229,7 @@ Save the answers to outline frontmatter as `pdf: yes|no` + `offline: yes|no`. Bo
 WORK=/tmp/aios-decks/$(date +%s); mkdir -p "$WORK"
 SLUG={venture}-{topic}                  # e.g. aios-grand-arc
 DATE=$(date +%Y-%m-%d)
-HTML_OUT="$HOME/obsidian/vault/03 - export/decks/$DATE-$SLUG.html"
+HTML_OUT="$HOME/aios/vault/03 - export/decks/$DATE-$SLUG.html"
 PDF_OUT="$HOME/Downloads/$DATE-$SLUG.pdf"            # only used if pdf:yes
 mkdir -p "$(dirname "$HTML_OUT")"
 ```
@@ -237,7 +237,7 @@ mkdir -p "$(dirname "$HTML_OUT")"
 The generated `build.py` is a single Python file that:
 
 1. Defines `SLIDES = [...]` — one dict per slide: `{cls: "cover|divider|demo|close|...", mod: "Module label", html: "<div class='slide-inner'>...</div>", tier: "core|full"}`. `core` = appears in the 1-hour keynote; `full` = 3-hour expansion. Default `core`.
-2. Concatenates the deck's design-recipe CSS (from Phase 0 — Calm Editorial Dark, Sovra Light Editorial, or whatever Phase 0 picked) **with Block 1 (animation framework CSS)** from § "HTML Keynote Toolkit" at the bottom of this file. Emit Block 1 verbatim.
+2. Concatenates the deck's design-recipe CSS (from Phase 0 — Calm Editorial Dark, Light Editorial, or whatever Phase 0 picked) **with Block 1 (animation framework CSS)** from § "HTML Keynote Toolkit" at the bottom of this file. Emit Block 1 verbatim.
 3. **Offline mode only (`offline: yes`):** include **Block 5** (offline-fonts Python helper) and call it; otherwise emit the standard `<link>` to Google Fonts.
 4. **Compose master HTML:** `<head>` (with the font link or embedded `@font-face`) + the concatenated `<style>` block + **Block 3** container divs + every slide as `<section class="slide {cls}" data-slide="N" data-tier="{tier}">{html}{optional footer}</section>` + the **Block 4** nav `<script>`. Emit Blocks 3 and 4 verbatim.
 5. Writes the master HTML to the `HTML_OUT` path defined above (vault export).
@@ -605,7 +605,7 @@ The toolkit assumes these classes/attributes on slide markup:
 The agent generates `/tmp/decks-{session}/build.py` containing:
 
 1. `SLIDES = [...]` — list of `{cls, mod, html, tier}` dicts per slide (one for every slide, demos included).
-2. `CSS` — the deck's design tokens (from the chosen recipe: Calm Editorial, Sovra Light Editorial, etc.) **+ Block 1 (animation framework CSS)** concatenated.
+2. `CSS` — the deck's design tokens (from the chosen recipe: Calm Editorial, Light Editorial, etc.) **+ Block 1 (animation framework CSS)** concatenated.
 3. **Offline mode only:** import the helper from Block 5 → call `embed_google_fonts(...)` → inline the returned `@font-face` `<style>`. Standard mode: emit the Google Fonts `<link>`.
 4. **Compose master HTML:** `<head>` + `<style>` (CSS + animation framework) + Block 3 containers + sections + Block 4 nav `<script>`.
 5. Write master to `vault/03 - export/decks/{YYYY-MM-DD}-{slug}.html`.
