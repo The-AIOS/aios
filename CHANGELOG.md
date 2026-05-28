@@ -15,7 +15,7 @@
 
 ## 2026-05-28 — New skill: `aios/infographic-builder` + `/ingest` Step 6 (optional visual infographic)
 
-`hash: {pin-after-commit}`
+`hash: e76432f`
 
 > **Turn any ingest into a beautiful, themed, self-contained HTML one-pager — opt-in, fact-disciplined, brand-aware.** New skill `aios/infographic-builder` distills a structured document (ingest reflection, role report, weekly learnings, deck outline, research note) into a single-file HTML infographic following a reusable 7-section Information Architecture. Theme matching is brand-first (uses your venture's `design.md` if the content maps to one) with a fallback to [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) — 73 brand design systems (Claude, Linear, Vercel, Supabase, WIRED, Stripe…) following the Google Stitch DESIGN.md format. `/ingest` gains a new optional **Step 6** that offers the infographic post-log; declined silently if not wanted. Dark/light toggle via CSS custom properties is standard (~30 lines CSS + ~15 JS — not overweight). Validated by two dogfood runs on real ingests in deliberately different theme registers.
 
