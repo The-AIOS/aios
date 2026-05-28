@@ -46,7 +46,7 @@ After Step 5 (daily-note log), `/ingest` now offers an opt-in infographic render
 
 `/aios:update` applies everything — Tier 1 replace for `plugins/aios/commands/ingest.md`, `TOOLS.md`, and `skills/_index.md`; Tier 1 add for `skills/aios/infographic-builder/SKILL.md`. No restart needed; the next `/ingest` invocation picks up Step 6 automatically.
 
-**Optional operator personalization (never synced):** If you want venture-brand theme matching to take priority (use your `chuycepeda` / `sovra` / `<your-venture>` `design.md` ahead of the awesome-design-md fallback), add a `### /ingest` block to your `USER.md` documenting that preference. The default behavior (mood-matched fallback to awesome-design-md) produces a polished result without any personalization.
+**Optional operator personalization (never synced):** If you want venture-brand theme matching to take priority (use your `vault/00 - notes/context/ventures/{venture}/design.md` ahead of the awesome-design-md fallback), add a `### /ingest` block to your `USER.md` documenting that preference. The default behavior (mood-matched fallback to awesome-design-md) produces a polished result without any personalization.
 
 **Restart-required:** none.
 
