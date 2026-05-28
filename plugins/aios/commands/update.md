@@ -272,22 +272,41 @@ The tracker-diff (`stored..HEAD`, Step 2) is an optimization that assumes the st
 
 ```bash
 # Compare vault vs the fresh clone (which IS canonical HEAD) across Tier-1
-# paths. Exclude operator + runtime dirs. The clone is already on disk.
+# paths. The clone is already on disk.
+#
+# `diff -rq` emits TWO line shapes, and they need DIFFERENT handling:
+#   "Files A and B differ"      → a framework file diverged           → DRIFT (pull)
+#   "Only in <clone>/...: name" → framework file MISSING from vault   → DRIFT (pull)
+#   "Only in <vault>/...: name" → operator/company/runtime EXTRA      → IGNORE (not in canonical; nothing to pull)
+#
+# So: DROP every vault-side "Only in" line wholesale (operator extras —
+# custom/, company namespaces, .venv, __pycache__, auth, logs, .session —
+# are never framework-drift-to-pull; an upstream DELETION is handled by
+# Step 3.4, not here). Then drop runtime noise from what remains.
+#
+# NOTE the gotcha that bit the first version: `diff` writes "Only in DIR: name"
+# with a COLON after the dir, so a `custom/` (slash) exclusion does NOT match
+# "…/custom: name". Anchoring the drop on "^Only in $HOME/aios" sidesteps the
+# whole slash-vs-colon problem — it filters by SIDE, not by token.
+VAULT="$HOME/aios"
 for p in README.md START-HERE.md SETUP.md TOOLS.md CHEATSHEET.md CHANGELOG.md \
          LICENSE NOTICE FORTRESS.md .gitignore CLAUDE.md \
          templates skills hooks mcps plugins agents .claude-plugin; do
-  diff -rq "$HOME/aios/$p" "/tmp/vault-update-check/$p" 2>/dev/null \
-    | grep -vE "custom/|\.venv|__pycache__|\.log$|oauth|egg-info|/auth|/\.DS_Store" \
-    | grep -vE "Only in $HOME/aios.*: (sovra|chuycepeda|[a-z-]+)$"  # operator/company namespaces
-done
+  diff -rq "$VAULT/$p" "/tmp/vault-update-check/$p" 2>/dev/null
+done \
+  | grep -vF "Only in $VAULT" \
+  | grep -vE "(/|: )(\.venv|__pycache__|node_modules|auth|\.DS_Store)(/|$)" \
+  | grep -vE "\.(log|pyc)$|oauth|egg-info|\.session$"
+# Whatever remains = genuine framework drift: differing framework files +
+# framework files/dirs present in the clone but missing from the vault.
 ```
 
-For each genuine framework drift surfaced (a Tier-1 file that differs, or a bundled file/dir present in the clone but **missing** from the vault):
+For each genuine framework drift surfaced (a Tier-1 file that **differs**, or a bundled file/dir present in the clone but **missing** from the vault — i.e. a `Files … differ` line or a clone-side `Only in /tmp/vault-update-check/…` line):
 - Apply it exactly like a Step-3 Tier-1 file (three-way backup decision, then overwrite/add; CRLF-normalize the compare).
 - Sync any recovered command file to the plugin pipeline (marketplace + cache).
 - **Report it loudly** — this drift means the tracker was lying; name the files recovered so the operator knows a gap self-healed.
 
-CRLF-normalize both sides of the diff (`tr -d '\r'`) per the § Backup-on-divergence CRLF note. Skip `custom/`, `<company>/`, `.venv/`, `__pycache__/`, `*.log`, OAuth/auth caches — operator + runtime, never framework.
+CRLF-normalize when comparing file *contents* (`tr -d '\r'`) per the § Backup-on-divergence CRLF note. **Vault-side `Only in` lines are dropped wholesale** — operator extensions (`custom/`), company namespaces (`<company>/`), and runtime (`.venv/`, `__pycache__/`, `*.log`, OAuth/auth caches, `.session`) live only in the vault, are never in canonical, and are never framework-drift-to-pull. (An upstream *deletion* — a file the vault has that canonical removed — is handled by Step 3.4's flag-don't-delete rule, not here.) Filtering by **side** (`^Only in $VAULT`), not by token, is what makes this robust — `diff` writes `Only in DIR: name` with a colon, so token patterns like `custom/` silently miss `…/custom: name`.
 
 ### 7. Advance tracker (only on a clean, fully-applied run) and clean up
 
