@@ -7,7 +7,8 @@ tags:
 description: >-
   Pull latest shared infrastructure from The-AIOS/aios and auto-apply
   every change. Operator content is never touched; framework infra is
-  always overwritten, scripts are re-run, duplicates are cleaned.
+  always overwritten, scripts are re-run, and a tracker-independent
+  completeness reconcile guarantees the vault matches canonical HEAD.
 allowed-tools: >-
   mcp__obsidian__*, Bash(git:*), Bash(rm:*), Bash(mkdir:*), Bash(diff:*),
   Bash(cat:*), Bash(cp:*), Bash(mv:*), Bash(bash:*), Bash(pwsh:*),
@@ -16,7 +17,7 @@ allowed-tools: >-
 
 # /aios:update — Framework Infrastructure Sync (auto-apply)
 
-Pulls the latest framework from The-AIOS/aios (or whatever upstream is tracked in `.aios-update`) and **auto-applies every change.** Framework infra is **mandatory** — every Tier 1 file is overwritten byte-identical to upstream. If the operator customized one, their version is backed up to `vault/04 - backups/aios-update-{date}/` first, then overwritten + the operator is told what was backed up. Scripts that were updated are **automatically re-executed** (e.g. wrapper installer) so the update lands complete, not just the files. After the replace + execute pass, the command scans for duplicates between operator's `custom/` folders and bundled folders and removes them.
+Pulls the latest framework from The-AIOS/aios (or whatever upstream is tracked in `.aios-update`) and **auto-applies every change.** Framework infra is **mandatory** — every Tier 1 file is overwritten byte-identical to upstream. If the operator customized one, their version is backed up to `vault/04 - backups/aios-update-{date}/` first, then overwritten + the operator is told what was backed up. Scripts that were updated are **automatically re-executed** (e.g. wrapper installer) so the update lands complete, not just the files. After the replace + execute pass, a **completeness reconcile** (Step 6.5) diffs the vault against canonical HEAD directly — so a desynced tracker self-heals rather than silently orphaning content — and the tracker advances only on a clean, fully-applied run. Duplicate cleanup is **opt-in** (`--cleanup`, report-first); it's after-migration scaffolding, off the default path.
 
 Read the framework upstream URL from `.aios-update` (`repo=` field). If `.aios-update` doesn't exist OR is missing the `repo=` field, default to `git@github.com:The-AIOS/aios.git` and ask the operator once to confirm. Also read `USER.md` → `### /aios:update` for command personalizations (if any).
 
@@ -120,9 +121,11 @@ Concrete rules for what's currently in the framework (the operator-environment-s
 
 If a future framework update adds a new state-producing installer under `hooks/`, the principle extends naturally — add it to the rule above and it gets auto-run. Library scripts (`*.py` invoked indirectly) are picked up by their callers; no auto-execution needed.
 
-## Duplicate cleanup (after replace + execute)
+## Duplicate cleanup (OPT-IN via `--cleanup` — see Step 5)
 
-Migration history left operators with duplicates: a skill (or agent) lives BOTH in the canonical bundled location AND in `custom/` (or at the layer's root). After every replace, scan + clean:
+> **This runs only when the operator passes `--cleanup`, and even then it reports-then-confirms before removing anything (Step 5).** It is NOT part of the default sync. It was after-migration scaffolding; the structure is now stable. Kept available for the rare case, documented below.
+
+Migration history left operators with duplicates: a skill (or agent) lives BOTH in the canonical bundled location AND in `custom/` (or at the layer's root). When `--cleanup` is passed, scan + (on confirm) clean:
 
 For each layer in `agents`, `skills`, `plugins`, `mcps`, `templates`, `hooks`:
 
@@ -164,10 +167,20 @@ clone_url="{team_repo_url}"
 case "$OSTYPE" in
   msys*|cygwin*) clone_url=$(echo "$clone_url" | sed -E 's#git@github\.com:#https://github.com/#') ;;
 esac
-rm -rf /tmp/vault-update-check && git clone --depth=50 --single-branch "$clone_url" /tmp/vault-update-check 2>&1
+# FULL single-branch clone (no --depth). The three-way backup baseline
+# (`git show {stored_hash}:path`) and the changelog ancestor-scan
+# (`merge-base --is-ancestor {entry_hash} {stored_hash}`) both require the
+# operator's stored_hash + every entry_hash to be REACHABLE in the clone.
+# Canonical runs ~10 commits/day, so a shallow --depth=50 ≈ 5 days — any
+# operator syncing less than weekly would have an unreachable stored_hash,
+# triggering a backup-flood (conservative fallback fires on every Tier-1
+# file) + degraded changelog detection. A full clone is text-only, lands in
+# /tmp, and is deleted at the end — the depth optimization traded correctness
+# for a clone-time saving that doesn't matter for an occasional command.
+rm -rf /tmp/vault-update-check && git clone --single-branch "$clone_url" /tmp/vault-update-check 2>&1
 ```
 
-If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git@github.com:org/repo` → `https://github.com/org/repo`). Get current HEAD: `git -C /tmp/vault-update-check rev-parse HEAD`. If HEAD matches stored hash → "Your vault infrastructure is current (synced {date})." → clean up → done.
+If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git@github.com:org/repo` → `https://github.com/org/repo`). Get current HEAD: `git -C /tmp/vault-update-check rev-parse HEAD`. If HEAD matches stored hash → run the **completeness reconcile** (§ Step 6.5 — catches drift even when the tracker says "current") → if also clean, "Your vault infrastructure is current (synced {date})." → clean up → done.
 
 ### 1.5. Show changelog context
 
@@ -188,7 +201,7 @@ git -C /tmp/vault-update-check diff {stored_hash}..HEAD --name-only -- \
   ".claude-plugin/" "vault/.obsidian/"
 ```
 
-If no Tier 1 files changed → update tracker hash → still run **duplicate cleanup** (cleanup is independent of upstream changes — it cleans local migration drift) → done.
+If no Tier 1 files changed in the tracker-diff → **still run the completeness reconcile (§ Step 6.5)** before declaring "current." The tracker-diff (`stored..HEAD`) is an *optimization*, NOT the source of truth — if the stored hash over-claims (e.g. a prior manual edit, or a previous run that advanced the tracker without fully applying), genuinely-missing files are *ancestors* of stored and invisible to this diff. The reconcile is the tracker-independent backstop. Only advance the tracker after the reconcile is clean.
 
 ### 2.5. Self-update guard (bootstrap-safe, auto-re-invokes)
 
@@ -240,25 +253,55 @@ For each changed Tier 1 file:
 
 See § Post-replace auto-execution above. For each script that was updated in step 3, run it now. Wait for it to finish, capture output, report success/failure.
 
-### 5. Duplicate cleanup
+### 5. Duplicate cleanup — OPT-IN only (`--cleanup`), report-first
 
-See § Duplicate cleanup above. Always runs — even when no upstream changes landed. Removes migration-leftover duplicates between bundled folders and `custom/` + top-level orphans.
+**Does NOT run by default.** This was after-migration scaffolding (the 2026-05-23 restructure left duplicates between bundled folders and `custom/` + layer roots). Post-migration the structure is stable and duplicates don't recur, so running a *destructive* (backup-then-remove) scan on every sync is a standing risk (mis-removing an operator file) for a problem that no longer occurs.
+
+- **Default (no flag):** skip entirely.
+- **`/aios:update --cleanup`:** run the § Duplicate cleanup scan, but **report-first** — list every suspected duplicate (with the stale-vs-personalized verdict) and **ask the operator to confirm** before removing anything. Never auto-remove on the opt-in path either; the migration is over, so there's no longer a "just clean it" mandate that outweighs a confirm.
+
+(Structural drift — files that *should* be present but aren't, or bundled files that diverged — is now caught by the Step 6.5 completeness reconcile, which is non-destructive. Cleanup is only for the narrow "duplicate of a bundled file sitting in the wrong place" case, which is a migration artifact.)
 
 ### 6. Tier 3 advisory flags
 
 For each template that changed in step 3, compare its `## ` heading set to the operator's corresponding filled-in file. List missing sections without taking action. Same for the USER.md template.
 
-### 7. Update tracker and clean up
+### 6.5. Completeness reconcile (tracker-independent backstop) — ALWAYS runs
 
-Update `.aios-update` with new HEAD hash + today's date. `rm -rf /tmp/vault-update-check`.
+The tracker-diff (`stored..HEAD`, Step 2) is an optimization that assumes the stored hash honestly reflects what's in the vault. When it doesn't — a hand-edited tracker, or a prior run that advanced the tracker without fully applying — content that shipped *before* the over-claimed stored hash becomes an **ancestor** of stored and is permanently invisible to `diff stored..HEAD`. This step is the safety net: it compares the vault against the cloned canonical HEAD directly, so completeness never depends on the tracker being honest.
+
+```bash
+# Compare vault vs the fresh clone (which IS canonical HEAD) across Tier-1
+# paths. Exclude operator + runtime dirs. The clone is already on disk.
+for p in README.md START-HERE.md SETUP.md TOOLS.md CHEATSHEET.md CHANGELOG.md \
+         LICENSE NOTICE FORTRESS.md .gitignore CLAUDE.md \
+         templates skills hooks mcps plugins agents .claude-plugin; do
+  diff -rq "$HOME/aios/$p" "/tmp/vault-update-check/$p" 2>/dev/null \
+    | grep -vE "custom/|\.venv|__pycache__|\.log$|oauth|egg-info|/auth|/\.DS_Store" \
+    | grep -vE "Only in $HOME/aios.*: (sovra|chuycepeda|[a-z-]+)$"  # operator/company namespaces
+done
+```
+
+For each genuine framework drift surfaced (a Tier-1 file that differs, or a bundled file/dir present in the clone but **missing** from the vault):
+- Apply it exactly like a Step-3 Tier-1 file (three-way backup decision, then overwrite/add; CRLF-normalize the compare).
+- Sync any recovered command file to the plugin pipeline (marketplace + cache).
+- **Report it loudly** — this drift means the tracker was lying; name the files recovered so the operator knows a gap self-healed.
+
+CRLF-normalize both sides of the diff (`tr -d '\r'`) per the § Backup-on-divergence CRLF note. Skip `custom/`, `<company>/`, `.venv/`, `__pycache__/`, `*.log`, OAuth/auth caches — operator + runtime, never framework.
+
+### 7. Advance tracker (only on a clean, fully-applied run) and clean up
+
+**Only write `.aios-update` to the new HEAD hash if BOTH are true:** (a) every Step-3 apply + Step-4 auto-exec succeeded, and (b) the Step-6.5 reconcile came back clean (no remaining framework drift). If either failed, leave the tracker at its current value and report what's incomplete — a stale tracker is recoverable (next run re-pulls); an over-advanced tracker orphans content (the failure we're guarding against). Set `hash={HEAD}` + `synced={today}`, then `rm -rf /tmp/vault-update-check`.
+
+> **The tracker is written ONLY by this command, as its final step, after a clean fully-applied run. NEVER hand-edit `.aios-update`** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65).
 
 ## Output format
 
-**If current and no duplicates:**
-> Your vault infrastructure is current (synced {date}, hash {hash}). No duplicates found.
+**If current (tracker matches AND reconcile clean):**
+> Your vault infrastructure is current (synced {date}, hash {hash}). Completeness reconcile: clean.
 
-**If current but duplicates were cleaned:**
-> Your vault infrastructure is current. Cleaned {N} migration-leftover duplicates: {brief list}.
+**If the tracker said current but the reconcile recovered drift (the self-heal case):**
+> Tracker claimed current, but the completeness reconcile found + recovered {N} framework file(s) the tracker-diff missed: {brief list}. Tracker was over-claiming; now reconciled to HEAD. (See antifragile #65 — this is the orphan-recovery backstop working.)
 
 **If updates landed:**
 ```
@@ -276,8 +319,11 @@ Update `.aios-update` with new HEAD hash + today's date. `rm -rf /tmp/vault-upda
 ### Scripts re-executed
 {e.g. "install-wrappers.sh — wrappers refreshed. Open a new terminal."}
 
-### Duplicates cleaned
-{any duplicates removed from custom/ or top-level orphans}
+### Recovered by completeness reconcile (if any)
+{framework files the tracker-diff missed but the Step-6.5 reconcile pulled — names + why it matters (tracker was over-claiming). Omit if reconcile was clean.}
+
+### Duplicates cleaned (only if `--cleanup` was passed)
+{duplicates removed after operator confirmation; omit entirely on the default path}
 
 ### Advisory (Tier 3 — template evolution)
 {missing sections in declared context, if any}
@@ -291,7 +337,8 @@ Update `.aios-update` with new HEAD hash + today's date. `rm -rf /tmp/vault-upda
 - **Auto-apply, never ask.** Tier 1 changes are mandatory infra — the command does not present diff approval flows. The operator sees a report of what was done, not a multiple-choice menu.
 - **Backup-on-divergence is the safety net.** Operator customizations to Tier 1 files are preserved in `vault/04 - backups/aios-update-{date}/` but are NOT auto-restored. If they want their edits back, they manually merge from the backup.
 - **Scripts must run.** A script update that doesn't get executed is half a sync. The wrapper installer is the canonical example — bringing the file without running it leaves the operator's shell on the old code path.
-- **Duplicate cleanup is structural.** Always runs. The bundled folder structure (`agents/aios/{bundle}/`, `skills/superpowers/`, etc.) is canonical. `custom/` is for genuinely operator-unique extensions only.
+- **Completeness reconcile is the source of truth, not the tracker.** Step 6.5 always runs (even on the "current" path) — it compares the vault against canonical HEAD directly, so a desynced tracker self-heals instead of orphaning content. The tracker advances only on a clean, fully-applied run; it is NEVER hand-edited.
+- **Duplicate cleanup is opt-in (`--cleanup`) + report-first.** Post-migration scaffolding, off the default path. The bundled folder structure (`agents/aios/{bundle}/`, `skills/superpowers/`, etc.) is canonical; `custom/` is for genuinely operator-unique extensions only.
 - **Tier 2 (operator content) is sacred.** Never touched. Includes everything under the denylist.
 - **Self-update is auto-re-invoking + bootstrap-safe.** When `update.md` itself is in the diff, apply + sync to plugin pipeline FIRST, then auto-re-invoke `Skill(aios:update)`. The inner run loads the new spec, processes everything cleanly, returns. Content-comparison guards against recursion (after self-apply, local matches upstream → Case A fires → no loop). Operator sees one report from the outer run; no manual re-invocation needed. See Step 2.5.
 - **Cross-repo cascades.** When CHANGELOG hashes don't exist in the cloned repo (common for operators syncing from a fork or downstream mirror), fall back to content-comparison via date header + title (see Step 1.5).

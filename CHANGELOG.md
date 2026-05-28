@@ -13,6 +13,33 @@
 
 ---
 
+## 2026-05-28 — `/aios:update` hardening: completeness reconcile + opt-in cleanup + full clone
+
+`hash: PENDING`
+
+> **Three fixes that make `/aios:update` trustworthy and self-healing post-migration — triggered by a real orphan bug.** A manually-edited `.aios-update` tracker (hand-bumped past un-pulled commits during a manual-cp consolidation) silently orphaned a whole feature (the `infographic-builder` skill + `/ingest` Step 6 from `e76432f`): because the missing content was an *ancestor* of the over-claimed stored hash, `/aios:update`'s tracker-diff (`stored..HEAD`) could never see it again. The command trusted the tracker as its sole source of truth, so one bad tracker write = permanent invisible gap. **(A)** A new **completeness reconcile** (Step 6.5, always runs) diffs the vault against canonical HEAD directly — making the tracker an *optimization*, not the source of truth — so a desynced tracker now self-heals on the next run. The tracker advances *only* on a clean, fully-applied run, and the spec now forbids hand-editing it (antifragile #65). **(B)** Duplicate cleanup — after-migration scaffolding that ran destructively on *every* sync — is now **opt-in (`--cleanup`) + report-then-confirm**, off the default path. **(C)** The clone dropped `--depth=50` (≈5 days at ~10 commits/day → unreachable `stored_hash` for any non-weekly syncer → backup-flood + degraded changelog scan) for a **full single-branch clone**.
+
+### What changed
+
+- `plugins/aios/commands/update.md`:
+  - **New Step 6.5 — Completeness reconcile (ALWAYS runs).** `diff -rq vault /tmp/vault-update-check` across Tier-1 paths (excluding `custom/`/company/`.venv`/`__pycache__`/logs/auth). Any framework file that *differs* or is *missing* gets pulled (three-way backup decision, CRLF-normalized) + reported. Catches drift the tracker-diff structurally can't.
+  - **Step 7 — tracker advances only on a clean, fully-applied run** (every apply + auto-exec succeeded AND reconcile clean). On failure: leave tracker put, report. Explicit rule: **never hand-edit `.aios-update`** (only the command writes it, as its final step).
+  - **Step 5 — duplicate cleanup is now opt-in** (`/aios:update --cleanup`) + report-then-confirm; default skips it.
+  - **Step 1 — full clone** (no `--depth`) so `stored_hash` + every changelog `entry_hash` stay reachable regardless of staleness.
+  - Intro, frontmatter, output-format, and Rules updated to match.
+
+### Action required
+
+`/aios:update` self-applies this (it's an `update.md` change → the Step 2.5 self-update guard applies the new spec + re-invokes with it; the new Step 6.5 reconcile runs in the re-invoked pass). For the teammate's session:
+
+1. **`/aios:update`** — pulls + self-updates. Watch for a new report line: *"Completeness reconcile: clean"* (or, if your tracker was ever desynced, *"recovered N framework file(s) the tracker-diff missed"* — that's the self-heal). No action on a clean reconcile.
+2. **If you've ever hand-edited `.aios-update`:** stop — and run `/aios:update` once; the reconcile recovers anything the bad tracker orphaned. (Manual oracle if you suspect a gap: `diff -rq` your vault against a fresh clone across `plugins/skills/agents/hooks/templates` + root docs, excluding `custom/`.)
+3. **Duplicate cleanup** no longer runs by default. If you want the post-migration dup scan, run `/aios:update --cleanup` (it reports + asks before removing).
+
+**Restart-required:** none.
+
+---
+
 ## 2026-05-28 — `/today` clean-pass: due-today task safety net (fresh tasks, not just carries)
 
 `hash: fced66f`
