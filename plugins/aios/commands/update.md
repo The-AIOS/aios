@@ -295,8 +295,15 @@ for p in README.md START-HERE.md SETUP.md TOOLS.md CHEATSHEET.md CHANGELOG.md \
   diff -rq "$VAULT/$p" "/tmp/vault-update-check/$p" 2>/dev/null
 done \
   | grep -vF "Only in $VAULT" \
+  | grep -vE "/custom(/|: )" \
   | grep -vE "(/|: )(\.venv|__pycache__|node_modules|auth|\.DS_Store)(/|$)" \
   | grep -vE "\.(log|pyc)$|oauth|egg-info|\.session$"
+# `/custom(/|: )` drops the operator namespace in BOTH line shapes — a
+# `Files …/custom/_index.md … differ` (framework ships a custom/_index.md SEED;
+# the operator's customized copy is Tier-2 denylist, never overwritten) AND any
+# `Only in …/custom: name`. The vault-side `Only in $VAULT` drop already covers
+# company namespaces (<company>/ folders aren't in canonical, so they only ever
+# appear as vault-side extras, never as Files-differ).
 # Whatever remains = genuine framework drift: differing framework files +
 # framework files/dirs present in the clone but missing from the vault.
 ```
