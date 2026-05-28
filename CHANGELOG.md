@@ -15,7 +15,7 @@
 
 ## 2026-05-28 — `/today` clean-pass: due-today task safety net (fresh tasks, not just carries)
 
-`hash: PENDING`
+`hash: fced66f`
 
 > **`/today`'s drop-check had a hole: it guarded *carries* but not *fresh due-today tasks*.** The post-write "ZERO TOLERANCE" drop-check reconciled today's note only against the *previous* note's unchecked items — so a task added today (not a carry) that also wasn't a calendar event had **no safety net** and could silently fall out of the plan. Surfaced live 2026-05-28: two due-today ingest tasks + a wrapper task were dropped from the daily note on a narrative-heavy day (large backfill section crowded out the mechanical Google-Tasks merge). Fix: a new clean-pass step 3 cross-references the executor's `due == today` Google Tasks against what landed, and places any absent task (ingests/delegatable → Agents-can-handle) before commit.
 
