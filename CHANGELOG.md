@@ -7,7 +7,7 @@
 
 > ## ⚠️ Reading order
 >
-> Newest entries appear first below. **If you're migrating from the pre-2026-05-23 framework** (`chuycepeda/aios` template or `sovrahq/internal-vault` team-repo lineage), scroll down to the **2026-05-23 — Migration playbook** entry and complete it BEFORE acting on any newer entries above it. Newer entries assume you've already migrated; running them on the legacy structure will produce confusion or fail.
+> Newest entries appear first below. **If you're migrating from the pre-2026-05-23 framework** (`{user}/aios` template or `{org}/internal-vault` team-repo lineage), scroll down to the **2026-05-23 — Migration playbook** entry and complete it BEFORE acting on any newer entries above it. Newer entries assume you've already migrated; running them on the legacy structure will produce confusion or fail.
 >
 > Already-migrated operators (anyone who's synced past `bc80cf1`) can read top-down normally — `/aios:update`'s hash-based scan correctly identifies the migration entry as already-applied and won't re-surface it.
 
@@ -225,7 +225,7 @@ Run on every macOS machine using Antigravity IDE. Hard precondition: the operato
 
 `hash: bc80cf1`
 
-> **Read this entry top-to-bottom before executing anything.** It is the single migration playbook for any operator on the pre-extraction framework structure (`chuycepeda/aios` template or `sovrahq/internal-vault` team repo, both frozen at hashes ≤ 2026-05-21). The framework was extracted to a public canonical at `github.com/The-AIOS/aios`. This entry walks you through the full migration in **dependency-sorted phases (Phase 0 → Phase 9 + LAST)**. Later phases assume earlier phases succeeded.
+> **Read this entry top-to-bottom before executing anything.** It is the single migration playbook for any operator on the pre-extraction framework structure (`{user}/aios` template or `{org}/internal-vault` team repo, both frozen at hashes ≤ 2026-05-21). The framework was extracted to a public canonical at `github.com/The-AIOS/aios`. This entry walks you through the full migration in **dependency-sorted phases (Phase 0 → Phase 9 + LAST)**. Later phases assume earlier phases succeeded.
 >
 > **Note to the Claude session executing this playbook — be sharp, not robotic.** This playbook was crafted across multiple dry-runs (real sandbox migrations, real operator pushback, real catches). It encodes lessons that aren't visible from the surface text — phase ordering is load-bearing, the `cp -Rn` vs `mv` distinction in Phase 2.5 is collision-aware on purpose, the "Phase 0 first" rule survived three attempts to shortcut it. **Don't skip phases that look redundant** — most of them caught a real failure during testing. But also **don't follow blindly** — adapt the bash/PowerShell commands to the operator's actual environment (their detected `$VAULT_PATH`, their shell, their OS), surface anything that doesn't fit their situation, and **stop to ask whenever you're unsure** rather than guessing. The playbook tolerates pauses gracefully (every phase is reentrant); it does NOT tolerate silent skips or blind execution. If a command's intent is clear but its mechanics don't fit (e.g., operator is on PowerShell but only the bash variant is shown for that one micro-step), translate using your judgment + the patterns already established in earlier phases. If the intent itself isn't clear, surface it.
 >
@@ -233,7 +233,7 @@ Run on every macOS machine using Antigravity IDE. Hard precondition: the operato
 
 ### State
 
-The pre-extraction framework structure (`chuycepeda/aios` + `sovrahq/internal-vault`, three-repo topology) is frozen. Going forward the canonical infrastructure lives in three public repos under [The-AIOS](https://github.com/The-AIOS):
+The pre-extraction framework structure (`{user}/aios` + `{org}/internal-vault`, three-repo topology) is frozen. Going forward the canonical infrastructure lives in three public repos under [The-AIOS](https://github.com/The-AIOS):
 
 - **`The-AIOS/aios`** — the framework (commands, agents, skills, hooks, MCPs, templates, 7 root docs)
 - **`The-AIOS/company-template`** — the venture-context scaffold used by `/aios:company --create`
@@ -329,13 +329,13 @@ VAULT_PATH=""
 [ -z "$VAULT_PATH" ] && for try in \
     "$HOME/code/internal-vault" "$HOME/internal-vault" \
     "$HOME/code/aios" "$HOME/Documents/aios" "$HOME/Documents/obsidian" \
-    "$HOME/code/sovrahq/internal-vault" "$HOME/code/chuycepeda/aios"; do
+    "$HOME/code/{org}/internal-vault" "$HOME/code/{user}/aios"; do
   [ -e "$try/vault/01 - calendar" ] && VAULT_PATH="$try" && break
 done
 
 if [ -z "$VAULT_PATH" ]; then
   echo "⚠️  Could not detect your vault root."
-  echo "    Scanned: ~/aios, ~/obsidian, ~/code/{internal-vault,aios,sovrahq/internal-vault,chuycepeda/aios},"
+  echo "    Scanned: ~/aios, ~/obsidian, ~/code/{internal-vault,aios,{org}/internal-vault,{user}/aios},"
   echo "             ~/internal-vault, ~/Documents/{aios,obsidian}"
   echo ""
   echo "    STOP. Tell Claude the absolute path to your vault root (the folder containing"
@@ -423,7 +423,7 @@ test -e "$HOME/aios/vault/01 - calendar" && echo "✓ ~/aios resolves to vault c
 
 #### Phase 2 — Tracker rename + repoint: `.vault-update` → `.aios-update`
 
-**State:** The OLD framework uses `.vault-update` at the vault repo root, with `repo=` pointing at the old team repo (typically `git@github.com:sovrahq/internal-vault.git` for team members or `git@github.com:chuycepeda/aios.git` for solo operators). The NEW framework reads `.aios-update` and expects `repo=git@github.com:The-AIOS/aios.git`.
+**State:** The OLD framework uses `.vault-update` at the vault repo root, with `repo=` pointing at the old team repo (typically `git@github.com:{org}/internal-vault.git` for team members or `git@github.com:{user}/aios.git` for solo operators). The NEW framework reads `.aios-update` and expects `repo=git@github.com:The-AIOS/aios.git`.
 
 **Ask:**
 > *"Renaming the tracker file from `.vault-update` to `.aios-update` and repointing the `repo=` field at the public canonical `git@github.com:The-AIOS/aios.git`. The hash field stays at `initial` so the next `/aios:update` does a full comparison — that's intentional, it lets the new gate verify your local matches canonical even though most files do (since both repos descend from the same lineage). OK?"*
@@ -728,7 +728,7 @@ powershell -NoProfile -Command "Get-Command spawn,spawn-kill 2>&1 | Select Name,
 
 #### Phase 4 — Plugin cache invalidation: `vault-commands@local` → `aios@the-aios`
 
-**State:** Pre-extraction, slash commands shipped under the `vault-commands:` plugin namespace (e.g., `/vault-commands:today`, `/vault-commands:close-day`). Post-extraction, the namespace is `aios:` (e.g., `/aios:today`). Your local Claude Code cache at `~/.claude/plugins/` may still hold the OLD `vault-commands` plugin source — at best it's dead weight, at worst it causes namespace collisions. AND: the pre-extraction `chuycepeda/aios` template + `sovrahq/internal-vault` team-vault both shipped `vault-commands` as a **local plugin** (no marketplace registration). The new `aios@the-aios` plugin lives on a **marketplace** that must be added before install will resolve.
+**State:** Pre-extraction, slash commands shipped under the `vault-commands:` plugin namespace (e.g., `/vault-commands:today`, `/vault-commands:close-day`). Post-extraction, the namespace is `aios:` (e.g., `/aios:today`). Your local Claude Code cache at `~/.claude/plugins/` may still hold the OLD `vault-commands` plugin source — at best it's dead weight, at worst it causes namespace collisions. AND: the pre-extraction `{user}/aios` template + `{org}/internal-vault` team-vault both shipped `vault-commands` as a **local plugin** (no marketplace registration). The new `aios@the-aios` plugin lives on a **marketplace** that must be added before install will resolve.
 
 **Ask:**
 > *"I need to (a) uninstall the legacy `vault-commands@local` plugin if it's still registered, (b) add the `the-aios` marketplace (one-time per machine — the new framework canonical), (c) install `aios@the-aios` from that marketplace, (d) verify the new plugin landed. The new plugin pulls from `The-AIOS/aios/plugins/aios/`. OK?"*
@@ -812,8 +812,8 @@ Example transformation:
 ```diff
 - ## Organization
 -
-- Team repo: git@github.com:sovrahq/internal-vault.git
-- Venture folder: vault/00 - notes/context/ventures/sovra/
+- Team repo: git@github.com:{org}/internal-vault.git
+- Venture folder: vault/00 - notes/context/ventures/{venture}/
 
 + ## Companies (mounted)
 +
@@ -822,10 +822,10 @@ Example transformation:
 +
 + | Company | Substrate | Source | Venture folder | Last sync |
 + |---|---|---|---|---|
-+ | sovra | github | `git@github.com:sovrahq/sovra-context.git` | `vault/00 - notes/context/ventures/sovra/` | YYYY-MM-DD |
++ | {venture} | github | `git@github.com:{org}/{venture}-context.git` | `vault/00 - notes/context/ventures/{venture}/` | YYYY-MM-DD |
 ```
 
-**Note:** if the operator's old team repo was `sovrahq/internal-vault`, the new pointer is `sovrahq/sovra-context` (the new venture-context repo). The team repo's content was split: framework → `The-AIOS/aios`, venture-specific → `sovrahq/sovra-context`. If they don't have access to sovrahq/sovra-context yet, leave the URL empty and ask them to request access; the row can still register the venture folder for local-only use.
+**Note:** if the operator's old team repo was `{org}/internal-vault`, the new pointer is `{org}/{venture}-context` (the new venture-context repo). The team repo's content was split: framework → `The-AIOS/aios`, venture-specific → `{org}/{venture}-context`. If they don't have access to {org}/{venture}-context yet, leave the URL empty and ask them to request access; the row can still register the venture folder for local-only use.
 
 ---
 
@@ -867,7 +867,7 @@ Run via Claude's `Bash` tool — works identically on macOS, Linux, and Windows 
 
 #### Phase 8 — The "Men in Black" memory wipe (comprehensive old-world cleanup)
 
-**State:** Claude's auto-memory (under `~/.claude/projects/{cwd-slug}/memory/`) accumulated references across months of operator work that point at the OLD framework structure: legacy plugin namespace (`vault-commands:*`), legacy command names (`/vault-update`), legacy tracker filename (`.vault-update`), legacy paths (`~/obsidian/`, `vault/02 - templates/`, `vault/06 - agents/`, etc.), legacy team-repo references (`sovrahq/internal-vault`), and legacy plugin install names (`vault-commands@local`). Future Claude sessions reading these stale references will follow dead pointers and feel disoriented.
+**State:** Claude's auto-memory (under `~/.claude/projects/{cwd-slug}/memory/`) accumulated references across months of operator work that point at the OLD framework structure: legacy plugin namespace (`vault-commands:*`), legacy command names (`/vault-update`), legacy tracker filename (`.vault-update`), legacy paths (`~/obsidian/`, `vault/02 - templates/`, `vault/06 - agents/`, etc.), legacy team-repo references (`{org}/internal-vault`), and legacy plugin install names (`vault-commands@local`). Future Claude sessions reading these stale references will follow dead pointers and feel disoriented.
 
 This phase is the **neuralyzer flash** — wipe the old-world references so memory aligns with the new structure. Pure mechanical rewriting; no semantic change to the lessons themselves.
 
@@ -892,8 +892,8 @@ grep -rln \
   -e "vault/05 - logs" \
   -e "vault/03 - assets" \
   -e "vault/04 - export" \
-  -e "sovrahq/internal-vault" \
-  -e "chuycepeda/aios" \
+  -e "{org}/internal-vault" \
+  -e "{user}/aios" \
   "$MEM_DIR" 2>/dev/null | sort -u
 ```
 
@@ -911,8 +911,8 @@ find "$MEM_DIR" -name "*.md" -type f -exec sed -i.bak \
   -e 's|vault/05 - logs|vault/00 - notes/logs|g' \
   -e 's|vault/03 - assets|vault/02 - assets|g' \
   -e 's|vault/04 - export|vault/03 - export|g' \
-  -e 's|sovrahq/internal-vault|The-AIOS/aios|g' \
-  -e 's|chuycepeda/aios|The-AIOS/aios|g' \
+  -e 's|{org}/internal-vault|The-AIOS/aios|g' \
+  -e 's|{user}/aios|The-AIOS/aios|g' \
   {} \;
 echo "✓ memory wiped of old-world references"
 echo "  .bak files preserved at *.bak in $MEM_DIR — verify with: find $MEM_DIR -name '*.md.bak'"
@@ -969,11 +969,11 @@ The onboarding-aios agent will detect this is a returning-operator (sees old dai
 
 #### Phase 8.6 — Venture-context mount (conditional — content-driven detection)
 
-**State:** Pre-extraction, venture content (positioning, gtm, pricing, primitives, sales templates, venture-specific agents like `sovra-lawyer-ar`) sometimes shipped INSIDE a team-vault repo (e.g. `sovrahq/internal-vault` bundled Sovra). Post-extraction, venture content lives in its own per-venture repo (`{org}/{venture}-context`) and gets mounted into the vault as a namespaced bundle under `{layer}/{venture}/`. The mount step is what keeps that content synced with canonical going forward.
+**State:** Pre-extraction, venture content (positioning, gtm, pricing, primitives, sales templates, venture-specific agents like `{venture}-{role}`) sometimes shipped INSIDE a team-vault repo (e.g. `{org}/internal-vault` bundled venture content). Post-extraction, venture content lives in its own per-venture repo (`{org}/{venture}-context`) and gets mounted into the vault as a namespaced bundle under `{layer}/{venture}/`. The mount step is what keeps that content synced with canonical going forward.
 
 **Crucial distinction — this phase is for VAULTS WITH VENTURE CONTENT, not for any specific lineage:**
-- A **team-vault clone** (e.g. from `sovrahq/internal-vault`) carries bundled venture content from before extraction → has unmounted venture content → needs mount
-- A **personal-template clone** (e.g. from `chuycepeda/aios`) is a clean personal vault with no bundled company → no venture content to mount → this phase no-ops
+- A **team-vault clone** (e.g. from `{org}/internal-vault`) carries bundled venture content from before extraction → has unmounted venture content → needs mount
+- A **personal-template clone** (e.g. from `{user}/aios`) is a clean personal vault with no bundled company → no venture content to mount → this phase no-ops
 - A multi-machine operator's second clone with no bundled venture → no-ops
 
 Mounting is per-vault, per-venture, and **per operator's intent**. Personal vaults stay personal. Don't mount company infra into a personal vault.
@@ -1008,7 +1008,7 @@ cat /tmp/aios-unmounted-ventures.txt | sed 's/^/  - /'
 If the script prints "✓ No unmounted venture content detected" → **skip this phase entirely**. Operator has nothing to mount. Personal-template lineage operators will see this skip — that's the correct behavior.
 
 **Ask (only if unmounted ventures were detected):**
-> *"Your vault has unmounted venture content at `vault/00 - notes/context/ventures/{venture}/` for: `{list-from-detection}`. This content is currently a frozen snapshot from before the framework extraction. To keep it synced with canonical going forward, mount each venture via `/aios:company --mount <venture-context-url>`. Tell me the venture-context repo URL for each venture you want to sync (e.g. `git@github.com:sovrahq/sovra-context.git` for Sovra). If you don't want any of these synced (e.g. you no longer work on that venture), I can leave the frozen snapshot in place — it'll keep working, just won't get updates."*
+> *"Your vault has unmounted venture content at `vault/00 - notes/context/ventures/{venture}/` for: `{list-from-detection}`. This content is currently a frozen snapshot from before the framework extraction. To keep it synced with canonical going forward, mount each venture via `/aios:company --mount <venture-context-url>`. Tell me the venture-context repo URL for each venture you want to sync (e.g. `git@github.com:{org}/{venture}-context.git` for your venture). If you don't want any of these synced (e.g. you no longer work on that venture), I can leave the frozen snapshot in place — it'll keep working, just won't get updates."*
 
 **Act:** Per venture the operator names with its URL, run:
 
