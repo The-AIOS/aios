@@ -15,7 +15,7 @@
 
 ## 2026-05-28 — Quiet-default autopilot + `aios/infographic-builder` skill (`/ingest` Step 6) + venture-name leak scrub
 
-`hash: PENDING`
+`hash: ded5e87`
 
 > **Three ships consolidated for the day.** **(1) Autopilot redesigned: quiet by default.** The legacy kill+respawn path on quota swap is gone — sessions are no longer terminated and re-launched via osascript keystroke automation into the IDE (which caused alert beeps + focus contention on multi-session swaps, and a far worse failure mode discovered today: a single session with a malformed-image transcript could chain-burn every rotation account through the legacy auto-respawn loop). Now after a swap, `_watch.py` writes a `~/.claude/swap-notification.json` marker and `context-monitor.py` renders a minimal red `🔄 cc→j` banner at the front of every active statusLine for 3 minutes. The running session **auto-transitions to the new account on its next API turn via Keychain re-read — empirically ~30 seconds** (validated by a real cap event 2026-05-28 07:18:43). The README's prior "~1h until token refresh" claim was overly pessimistic. Opt-in env var `CLAUDE_AUTOSWAP_RESPAWN=1` preserves the legacy behavior for unattended overnight agents. **(2) New skill `aios/infographic-builder` + `/ingest` Step 6** distills a structured document into a single-file HTML one-pager with brand-aware theme selection (brand-first via venture `design.md` → fallback to [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md)'s 73 brand design systems). **(3) Venture-name leak scrub** of `agents/aios/communication/deck-builder.md` + `plugins/aios/commands/cold-start-interview.md`; one hardcoded `~/obsidian` path replaced with `~/aios` (CI Migration-drift check passes again).
 
