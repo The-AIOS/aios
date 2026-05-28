@@ -140,6 +140,16 @@ Append to today's daily note (if it exists) or note for `/close-day`:
 - Action items: {count} added to project notes
 ```
 
+### 6. Optional — visual infographic
+
+After logging, offer the user a one-page visual summary:
+
+> Want a visual infographic of this ingest? A themed, self-contained HTML one-pager. → invokes `aios/infographic-builder`.
+
+If accepted, invoke the **[`aios/infographic-builder`](../../../skills/aios/infographic-builder/SKILL.md)** skill against the reflection file just written. Default output: `03 - export/infographics/{YYYY-MM-DD}-{slug}.html`. The skill handles theme matching (brand-first → `awesome-design-md` fallback), IA distillation, and rendering — `/ingest` just makes the offer.
+
+Skip silently if the user declines, or if the source is too thin to merit an infographic (single tweet, sub-page note, half-formed idea).
+
 ## Output
 
 - **Summary page** at `00 - notes/reflections/ingests/{slug}.md` (or `00 - notes/ideas/{slug}.md` for half-formed thoughts, or directly into a project note for project-specific sources)
@@ -148,6 +158,7 @@ Append to today's daily note (if it exists) or note for `/close-day`:
 - **Contradictions flagged** as `> ⚠️ Contradiction:` callouts in the relevant files (don't auto-resolve — flag for user decision)
 - **Updated `_index.md`** in the destination folder
 - **Daily-note log entry** under "Ingested:" so the day's close-day picks it up
+- **Optional infographic** (if the user accepts the Step-6 offer) — themed self-contained HTML at `03 - export/infographics/{YYYY-MM-DD}-{slug}.html`, via `aios/infographic-builder`
 
 
 ## Rules

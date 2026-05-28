@@ -163,7 +163,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `accessibility-compliance` | `skills/aios/` | "Check this for accessibility (WCAG, ARIA, contrast)" |
 | `pci-compliance` | `skills/aios/` | "Audit this for PCI compliance" |
 
-**Source folders:** `skills/aios/` (AIOS-built — 16 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 9 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — brainstorming + systematic-debugging + executing-plans + writing-plans + verification-before-completion + TDD) · `skills/custom/` (your own — survives `/aios:update`). Browse `skills/_index.md` for the full registry.
+**Source folders:** `skills/aios/` (AIOS-built — 17 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 9 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — brainstorming + systematic-debugging + executing-plans + writing-plans + verification-before-completion + TDD) · `skills/custom/` (your own — survives `/aios:update`). Browse `skills/_index.md` for the full registry.
 
 **Marketplace skills** (NOT in `skills/`, install via `/plugin install`): `canvas-design`/`docx`/`pdf`/`pptx`/`xlsx` (via `document-skills` plugin) · `code-review-excellence` (via `code-review@claude-plugins-official`) · `defuddle` (via Anthropic skills marketplace) · `superpowers` full marketplace (`obra/superpowers-marketplace`).
 

@@ -13,6 +13,45 @@
 
 ---
 
+## 2026-05-28 — New skill: `aios/infographic-builder` + `/ingest` Step 6 (optional visual infographic)
+
+`hash: {pin-after-commit}`
+
+> **Turn any ingest into a beautiful, themed, self-contained HTML one-pager — opt-in, fact-disciplined, brand-aware.** New skill `aios/infographic-builder` distills a structured document (ingest reflection, role report, weekly learnings, deck outline, research note) into a single-file HTML infographic following a reusable 7-section Information Architecture. Theme matching is brand-first (uses your venture's `design.md` if the content maps to one) with a fallback to [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) — 73 brand design systems (Claude, Linear, Vercel, Supabase, WIRED, Stripe…) following the Google Stitch DESIGN.md format. `/ingest` gains a new optional **Step 6** that offers the infographic post-log; declined silently if not wanted. Dark/light toggle via CSS custom properties is standard (~30 lines CSS + ~15 JS — not overweight). Validated by two dogfood runs on real ingests in deliberately different theme registers.
+
+### What changed
+
+**1. New skill — `skills/aios/infographic-builder/SKILL.md`**
+
+A single-file skill (no `references/` — one flow, no conditional sub-modes) that composes existing capabilities:
+- `anthropic/frontend-design` + `anthropic/canvas-design` — visual execution quality.
+- `aios/data-presentation` — which-viz-for-which-data on the key contrast.
+- `anthropic/theme-factory` — local theme alternative to the awesome-design-md fetch.
+
+Encodes a **7-section IA** (hero + stat callouts → narrative arc → contrasting forces → lessons → key contrast viz → quote + sources) plus a **non-negotiable fact-discipline rule** — only use what's in the source, never fabricate metrics/dates/percentages/compositional details to fill panels.
+
+**Theme-matching hierarchy:** (1) explicit user reference → (2) brand-first via `vault/00 - notes/context/ventures/{venture}/design.md` → (3) fallback fetch from awesome-design-md (`https://raw.githubusercontent.com/VoltAgent/awesome-design-md/main/design-md/<slug>/DESIGN.md`) → (4) local theme-factory. Always tells the user which theme was picked and offers an override. Combining two systems is allowed when it sharpens (one as typography spine, the other as surface/palette).
+
+**Render checklist** explicitly requires: design tokens applied verbatim from the chosen DESIGN.md (no drift), markup generated directly (no JS template-string fill — that leaks `${placeholders}` under pressure), dark/light toggle via CSS custom properties + FOUC-prevention inline script, and SRI guidance for hosted/embedded use (Tailwind Play CDN is acceptable only for local previews — by design it has no stable hash).
+
+**2. `/ingest` — new optional Step 6: visual infographic offer**
+
+After Step 5 (daily-note log), `/ingest` now offers an opt-in infographic render via the new skill. Default output `03 - export/infographics/{YYYY-MM-DD}-{slug}.html`. Skipped silently if declined or if the source is too thin. The offer is the *only* change to the existing command flow — Steps 1–5 unchanged.
+
+**3. Skill count refresh**
+
+`skills/_index.md` AIOS-bundled count 16 → 17, new Meta row added. `TOOLS.md` count updated to match (only other place that carries the count).
+
+### Action required
+
+`/aios:update` applies everything — Tier 1 replace for `plugins/aios/commands/ingest.md`, `TOOLS.md`, and `skills/_index.md`; Tier 1 add for `skills/aios/infographic-builder/SKILL.md`. No restart needed; the next `/ingest` invocation picks up Step 6 automatically.
+
+**Optional operator personalization (never synced):** If you want venture-brand theme matching to take priority (use your `chuycepeda` / `sovra` / `<your-venture>` `design.md` ahead of the awesome-design-md fallback), add a `### /ingest` block to your `USER.md` documenting that preference. The default behavior (mood-matched fallback to awesome-design-md) produces a polished result without any personalization.
+
+**Restart-required:** none.
+
+---
+
 ## 2026-05-27 — Windows install hardening v2: CRLF-safe compares, real-Python detection, PowerShell + SSH fallbacks
 
 `hash: bdb8425`
