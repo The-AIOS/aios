@@ -13,6 +13,36 @@
 
 ---
 
+## 2026-05-28 — Wrapper default model → Opus 4.8 (1M)
+
+`hash: PENDING`
+
+> **Claude Opus 4.8 shipped; the spawn-wrapper default follows.** The `spawn` / named-session wrappers launch children with an explicit `--model` flag (because `/config` and `/model` are session-scoped and don't propagate to spawned children). That default moves `claude-opus-4-7[1m]` → `claude-opus-4-8[1m]` — 1M-context Opus 4.8. The `$CLAUDE_MODEL` env override is unchanged (still how you pick Sonnet, a 3P provider, or non-1M Opus). **Scope is the wrappers only** — the vendored `skills/anthropic/claude-api/*` SDK references (which cite `claude-opus-4-7` in code samples + a price table) are intentionally untouched here; those track Anthropic's upstream skill and are a separate decision.
+
+### What changed
+
+- `hooks/claude-identity/install-wrappers.sh` — default `model_to_use="${CLAUDE_MODEL:-claude-opus-4-8[1m]}"` (+ the two explanatory comments).
+- `hooks/claude-identity/install-wrappers.ps1` — `$modelToUse` default → `claude-opus-4-8[1m]`.
+- `plugins/aios/commands/cold-start-interview.md` — identity-table description of the launch command → `--model claude-opus-4-8[1m]`.
+- `CHEATSHEET.md` — "Override model" row default → `claude-opus-4-8[1m]`.
+
+`_resume.py` is unaffected — it inherits the model from the running session's process args, never hardcodes it. `context-monitor.py`'s context-window detection keys on `"1M"`/`"opus"` in the display name, so it reports 1M for Opus 4.8 unchanged.
+
+### Action required
+
+`/aios:update` auto-applies the file replacements (Tier 1: `hooks/`, `plugins/aios/`, `CHEATSHEET.md`). Then, for the teammate's Claude session running the update:
+
+1. **Re-run the wrapper installer** so the new default lands in your shell rc (this is the load-bearing step — the file change alone doesn't update your already-installed `spawn`/named-session functions):
+   - macOS/Linux: `bash $HOME/aios/hooks/claude-identity/install-wrappers.sh`
+   - Windows: `pwsh -File $HOME/aios/hooks/claude-identity/install-wrappers.ps1` (or `powershell -File ...` on stock Win11 — see 2026-05-27 entry). 
+   
+   The post-replace auto-execution rule fires this for you automatically when `install-wrappers.{sh,ps1}` is in the diff — confirm it ran (look for *"Wrappers re-installed"* in the update report).
+2. **If you pin a model via `$CLAUDE_MODEL`** in your rc file, you're opted out of the default — no action; you stay on your pinned model. To adopt 4.8, update your `export CLAUDE_MODEL=...` line or remove it to take the new default.
+
+**Restart-required (LAST):** open a new terminal so the refreshed wrapper functions activate — existing terminals hold the old `--model` flag in their function table until then.
+
+---
+
 ## 2026-05-28 — Quiet-default autopilot + `aios/infographic-builder` skill (`/ingest` Step 6) + venture-name leak scrub
 
 `hash: ded5e87`

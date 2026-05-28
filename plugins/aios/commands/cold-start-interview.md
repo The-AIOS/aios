@@ -116,7 +116,7 @@ WAIT for confirmation before proceeding.
 
 Walk through `USER.md` section by section:
 
-1. **Identity table** — ask the operator's primary session name. **Lead with the functional value, not the vibe:** this name becomes a shell shorthand — typing `{name}` in any terminal launches `claude --remote-control --model claude-opus-4-7[1m] --name {name}` with respawn-on-quota-swap. Saves 60+ keystrokes per launch, every time. The fun part (calling your AI "JARVIS") is the bonus, not the point.
+1. **Identity table** — ask the operator's primary session name. **Lead with the functional value, not the vibe:** this name becomes a shell shorthand — typing `{name}` in any terminal launches `claude --remote-control --model claude-opus-4-8[1m] --name {name}` with respawn-on-quota-swap. Saves 60+ keystrokes per launch, every time. The fun part (calling your AI "JARVIS") is the bonus, not the point.
 
    Phrase the question something like: *"What do you want to call your primary session? It becomes a one-word shortcut in your terminal — type that one word, you get a named claude session with all the right flags, ready to work. Default is `claude` or `assistant` (functional, gets the job done). Power users pick something personal — fictional AI names work well: JARVIS, Friday, Samantha, HAL, Cortana, TARS. Short, memorable, yours."*
 
