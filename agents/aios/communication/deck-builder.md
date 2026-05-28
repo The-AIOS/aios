@@ -133,6 +133,9 @@ Co-author the outline in a vault note:
   output: html                            # html (recommended) | slides
   pdf: no                                 # yes | no — Phase 3.B opt-in
   offline: no                             # yes | no — Phase 3.B opt-in (embed fonts for offline-safe HTML)
+  tiers:                                  # set in Phase 1.5 — drives the K toggle. Omit / "none" = single version (no K).
+    short: Keynote                        # label for the core-only cut (evocative, honest-for-THIS-deck — NOT a hardcoded duration)
+    full: Full                            # label for everything (core + full-tier slides)
   deck-url: N/A (HTML pipeline)           # filled only if Phase 3 Google Slides path chosen
   drive-folder-url: N/A
   status: drafting
@@ -146,6 +149,21 @@ Co-author the outline in a vault note:
   **Speaker notes:** {what speaker says, not what slide shows}
   ```
 - Iterate with the user until they say "ready for images" or equivalent. **Do not proceed to Phase 2 without explicit greenlight.**
+
+### Phase 1.5 — TIERING (propose the K toggle; never hardcode durations)
+
+Once the outline exists (slide count + `length-min` known), decide whether the deck earns a **two-tier K toggle** — a short cut and a full version living in one HTML file. **Tier labels are an editorial choice, not a computed value.** Propose; never auto-default to fixed durations.
+
+> **Why this exists:** the toolkit was extracted from a deck that genuinely was a 1-hour-vs-3-hour talk, and those absolute durations got hardcoded into the nav. They read as "elegantly right but mathematically imprecise" on any other deck — a 12-minute case study is not a "3-Hour Full." The fix is to *ask*, sizing the labels to the actual deck, so they stay both evocative **and** honest.
+
+**Propose to the user (plain language):**
+> "This is {N} slides / ~{length-min} min. Want two tiers in the same file — a short cut and the full version, toggled live with **K**? I'd suggest **'{short}' ⇄ '{full}'** (e.g. *Keynote ⇄ Full*, *Brief ⇄ Deep*, *Overview ⇄ Workshop* — or literal durations like *15-min ⇄ 45-min* if that's truly the shape). Or tell me the tiers you find useful — or skip tiering and ship a single version (K does nothing)."
+
+**Rules:**
+- **Labels are evocative, not pedantic.** Lean to magnitude-signaling words (*Keynote / Full*, *Brief / Deep*). Use literal minutes only if the operator asks — and keep round/honest anchors (1h/3h is fine *when the deck really is that*).
+- **Three valid outcomes:** (a) two tiers with operator-approved labels → write `tiers: {short, full}` to frontmatter, mark expansion slides `data-tier="full"`; (b) operator-defined tiers (could be their own pair) → honor verbatim; (c) **no tiering** → set `tiers: none`, mark every slide `core`, and the build omits the K binding + the footer "K …" hint entirely (no dead toggle, no lying toast).
+- **Don't invent the split silently.** If you propose tiers, you must also identify *which* slides are `full`-tier (the expansions a short cut would drop) and confirm them with the operator.
+- Default suggestion when unsure: `Keynote ⇄ Full`. Never `1-Hour ⇄ 3-Hour` unless the operator picks it.
 
 ### Phase 2 — IMAGES (format-aware)
 
@@ -236,10 +254,11 @@ mkdir -p "$(dirname "$HTML_OUT")"
 
 The generated `build.py` is a single Python file that:
 
-1. Defines `SLIDES = [...]` — one dict per slide: `{cls: "cover|divider|demo|close|...", mod: "Module label", html: "<div class='slide-inner'>...</div>", tier: "core|full"}`. `core` = appears in the 1-hour keynote; `full` = 3-hour expansion. Default `core`.
+1. Defines `SLIDES = [...]` — one dict per slide: `{cls: "cover|divider|demo|close|...", mod: "Module label", html: "<div class='slide-inner'>...</div>", tier: "core|full"}`. `core` = appears in the short cut; `full` = the expansion the short cut drops. Default `core`. Also defines the tier labels from Phase 1.5: `TIER_SHORT`, `TIER_FULL` (or `TIERS = None` when the operator chose no tiering — see step 4b).
 2. Concatenates the deck's design-recipe CSS (from Phase 0 — Calm Editorial Dark, Light Editorial, or whatever Phase 0 picked) **with Block 1 (animation framework CSS)** from § "HTML Keynote Toolkit" at the bottom of this file. Emit Block 1 verbatim.
 3. **Offline mode only (`offline: yes`):** include **Block 5** (offline-fonts Python helper) and call it; otherwise emit the standard `<link>` to Google Fonts.
-4. **Compose master HTML:** `<head>` (with the font link or embedded `@font-face`) + the concatenated `<style>` block + **Block 3** container divs + every slide as `<section class="slide {cls}" data-slide="N" data-tier="{tier}">{html}{optional footer}</section>` + the **Block 4** nav `<script>`. Emit Blocks 3 and 4 verbatim.
+4. **Compose master HTML:** `<head>` (with the font link or embedded `@font-face`) + the concatenated `<style>` block + **Block 3** container divs + every slide as `<section class="slide {cls}" data-slide="N" data-tier="{tier}">{html}{optional footer}</section>` + a tiny **tier-labels script** `<script>window.TIER={short:"{TIER_SHORT}",full:"{TIER_FULL}"};</script>` (or `window.TIER=null` for no-tiering) injected immediately before **Block 4** + the **Block 4** nav `<script>`. Emit Blocks 3 and 4 verbatim — they read `window.TIER` at runtime; do not hardcode duration strings into them.
+4b. **No-tiering (`tiers: none`):** emit `window.TIER=null`. Block 4 then disables the K binding and Block 3's footer hint renders without "K …". Mark every slide `core`. Result: a clean single-version deck with no dead toggle and no misleading toast.
 5. Writes the master HTML to the `HTML_OUT` path defined above (vault export).
 6. **PDF step — only when `pdf: yes`.** For each slide, write a standalone HTML (the same `<head>` + an additional `<style>` containing **Block 2** freeze, then the single active section), Chrome `--screenshot` at native 1280×720 with `--force-device-scale-factor=2`, then PIL combines the PNGs into a multi-page PDF at `PDF_OUT`. The in-script pixel-dimensions assertion catches any zoom-out before the bundle runs.
 
@@ -276,7 +295,7 @@ imgs[0].save(PDF_OUT, save_all=True, append_images=imgs[1:],
 python3 "$WORK/build.py"
 ```
 
-- HTML lands at `vault/03 - export/decks/{DATE}-{SLUG}.html` — F11-presentable. The full nav kit is keyboard-driven: `← →`/space navigate · **F** fullscreen · **M** slide menu · **K** toggles 1-hour keynote ↔ 3-hour full · **B** black out (for live demos) · type a number + Enter to jump · **?** help · Esc closes overlays.
+- HTML lands at `vault/03 - export/decks/{DATE}-{SLUG}.html` — F11-presentable. The full nav kit is keyboard-driven: `← →`/space navigate · **F** fullscreen · **M** slide menu · **K** toggles the short cut ↔ full version (labels set per deck in Phase 1.5; absent when `tiers: none`) · **B** black out (for live demos) · type a number + Enter to jump · **?** help · Esc closes overlays.
 - PDF (if requested) lands at `~/Downloads/{DATE}-{SLUG}.pdf` — raster, instant-open, sharing copy.
 - `build.py` lives in `/tmp` and is **discarded** — not preserved in the vault. If the deck needs editing later, re-spawn `deck-builder` on the outline at `vault/03 - export/decks/outlines/{DATE}-{SLUG}.md`.
 
@@ -318,7 +337,7 @@ Joint review pass. Checklist depends on output-format from Phase 0.
 - [ ] Inline SVG diagrams reference design.md tokens via CSS variables (not hardcoded colors)
 - [ ] If PDF requested: page count = number of slides in outline, file < 30 MB
 - [ ] Final paths: HTML at `vault/03 - export/decks/{YYYY-MM-DD}-{slug}.html`; PDF (only if `pdf: yes`) at `~/Downloads/{YYYY-MM-DD}-{slug}.pdf`
-- [ ] Master HTML loads in browser: F enters fullscreen · M opens the slide menu · K toggles 1-hour keynote ⇄ 3-hour full · B blacks out for a live demo · type-#-Enter jumps
+- [ ] Master HTML loads in browser: F enters fullscreen · M opens the slide menu · K toggles the short cut ⇄ full version using the Phase-1.5 labels (or is inert/absent when `tiers: none`) · B blacks out for a live demo · type-#-Enter jumps
 
 Surface issues for user judgment — don't auto-fix in Phase 5. Surface + ask.
 
@@ -445,13 +464,15 @@ body{width:1280px;height:720px;}
 <div id="help"><div class="help-box"><span class="hh">Keyboard</span>
 <b>&larr; &rarr;</b> &nbsp;navigate &nbsp;&middot;&nbsp; <b>space</b> next<br/>
 <b>F</b> &nbsp;fullscreen &nbsp;&middot;&nbsp; <b>M</b> &nbsp;slide menu<br/>
-<b>K</b> &nbsp;toggle 1-hour keynote &harr; 3-hour full<br/>
+<b class="tier-only">K</b> <span class="tier-only">&nbsp;toggle <span id="help-tier-short">short</span> &harr; <span id="help-tier-full">full</span><br/></span>
 <b>B</b> &nbsp;black out (for live demos)<br/>
 <b>type # then Enter</b> &nbsp;jump to a slide<br/>
 <b>?</b> &nbsp;this help &nbsp;&middot;&nbsp; <b>Esc</b> &nbsp;close</div></div>
 <div class="nav-bar" style="position:fixed;bottom:18px;right:24px;font-family:'Inter',sans-serif;font-size:11px;letter-spacing:1.6px;color:var(--ink-subtle);z-index:160;text-transform:uppercase;">
-<span id="slide-counter">1 / 1</span> &nbsp;&middot;&nbsp; M menu &middot; K 1h/3h &middot; ? help</div>
+<span id="slide-counter">1 / 1</span> &nbsp;&middot;&nbsp; M menu <span id="nav-tier-hint"></span>&middot; ? help</div>
 ```
+
+> The `.tier-only` spans + `#help-tier-short`/`#help-tier-full`/`#nav-tier-hint` are filled (or hidden) by Block 4 from `window.TIER`. When `window.TIER` is null, Block 4 removes the `.tier-only` elements so the help/footer carry no K hint.
 
 ### Block 4 — Master nav JS (inject as `<script>` after the container divs)
 
@@ -459,7 +480,16 @@ body{width:1280px;height:720px;}
 (function(){
   const slides = Array.from(document.querySelectorAll('.slide'));
   const total = slides.length;
+  // Tier labels come from the per-deck inject (window.TIER = {short,full} | null). Never hardcode durations.
+  const TIER = (typeof window!=='undefined' && window.TIER) ? window.TIER : null;
+  const hasTiers = !!TIER && slides.some(s=>(s.getAttribute('data-tier')||'core')==='full');
   let mode='full', current=1, typeBuf='';
+  // Wire the (optional) tier labels into help + footer; strip the hint when there are no tiers.
+  (function initTierUI(){
+    const hs=document.getElementById('help-tier-short'), hf=document.getElementById('help-tier-full'), nh=document.getElementById('nav-tier-hint');
+    if(hasTiers){ if(hs)hs.textContent=TIER.short; if(hf)hf.textContent=TIER.full; if(nh)nh.textContent='· K '+TIER.short+'/'+TIER.full+' '; }
+    else { document.querySelectorAll('.tier-only').forEach(e=>e.remove()); if(nh)nh.textContent=''; }
+  })();
   const tierOf = n => slides[n-1].getAttribute('data-tier') || 'core';
   const titleOf = n => { const s=slides[n-1];
     const h=s.querySelector('.display-xl,.display-lg,.display-md') || s.querySelector('.demo-badge');
@@ -468,7 +498,7 @@ body{width:1280px;height:720px;}
     ? slides.map((s,i)=>i+1).filter(n=>tierOf(n)==='core')
     : slides.map((s,i)=>i+1);
   function counter(){ const l=activeList(), idx=l.indexOf(current);
-    return (idx>=0?idx+1:'·') + ' / ' + l.length + (mode==='keynote'?' · 1H':''); }
+    return (idx>=0?idx+1:'·') + ' / ' + l.length + (mode==='keynote'&&TIER?' · '+TIER.short:''); }
   function setProgress(){ const l=activeList(), idx=l.indexOf(current);
     const p = idx>=0 ? idx/Math.max(1,l.length-1) : 0;
     const pb=document.getElementById('progress'); if(pb) pb.style.width=(p*100)+'%'; }
@@ -488,15 +518,15 @@ body{width:1280px;height:720px;}
     if(idx<0){ if(d>0){const nx=l.find(n=>n>current); show(nx||l[l.length-1]);}
                else{const pv=l.filter(n=>n<current); show(pv.length?pv[pv.length-1]:l[0]);} return; }
     idx=Math.max(0,Math.min(l.length-1, idx+d)); show(l[idx]); }
-  function setMode(m){ mode=m; const l=activeList();
+  function setMode(m){ if(!hasTiers) return; mode=m; const l=activeList();
     if(l.indexOf(current)<0){ const near=l.find(n=>n>=current)||l[l.length-1]; show(near); } else refresh();
-    toast(mode==='keynote'?'1-Hour Keynote':'3-Hour Full'); }
+    toast(mode==='keynote'?TIER.short:TIER.full); }
   let toastT; function toast(msg){ let el=document.getElementById('toast');
     if(!el){ el=document.createElement('div'); el.id='toast';
       el.style.cssText='position:fixed;top:22px;left:50%;transform:translateX(-50%);font-family:Inter,sans-serif;font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--accent);background:var(--surface-1);border:1px solid var(--accent);padding:8px 16px;z-index:400;transition:opacity .4s;'; document.body.appendChild(el); }
     el.textContent=msg; el.style.opacity='1'; clearTimeout(toastT); toastT=setTimeout(()=>{el.style.opacity='0';},1500); }
   function buildMenu(){ const m=document.getElementById('menu');
-    let h='<div class="menu-head"><span class="mh-title">Slides</span><span class="mh-hint">click to jump · Esc to close · '+total+' slides · dimmed = 3h-only</span></div><div class="menu-grid">';
+    let h='<div class="menu-head"><span class="mh-title">Slides</span><span class="mh-hint">click to jump · Esc to close · '+total+' slides'+(hasTiers?' · dimmed = '+TIER.full+'-only':'')+'</span></div><div class="menu-grid">';
     for(let n=1;n<=total;n++){ const demo=slides[n-1].classList.contains('demo'), full=tierOf(n)==='full';
       h+='<div class="menu-card'+(full?' full-tier':'')+(demo?' demo-card':'')+(n===current?' cur':'')+'" data-n="'+n+'">'
        + '<div class="mc-num">'+(demo?'▶ ':'')+String(n).padStart(2,'0')+'</div>'
@@ -590,7 +620,7 @@ def embed_google_fonts(specs, cache_dir):
 
 The toolkit assumes these classes/attributes on slide markup:
 
-- `<section class="slide" data-slide="N" data-tier="core|full">` — every slide. `core` = appears in 1h keynote; `full` = 3h-only. Default `core`.
+- `<section class="slide" data-slide="N" data-tier="core|full">` — every slide. `core` = appears in the short cut; `full` = full-version-only (dropped from the short cut). Default `core`. Tier *labels* come from Phase 1.5 (`window.TIER`), not from these attribute names.
 - `<section class="slide divider">` — section dividers (centered, no footer).
 - `<section class="slide demo">` — live-demo cue interstitial (▶ LIVE DEMO style, no footer; first to drop in the 1h cut).
 - `<section class="slide cover">` / `<section class="slide close">` — first and last slide (centered, no footer).
