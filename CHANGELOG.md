@@ -15,7 +15,7 @@
 
 ## 2026-05-28 — `/aios:update` hardening: completeness reconcile + opt-in cleanup + full clone
 
-`hash: PENDING`
+`hash: c40706c`
 
 > **Three fixes that make `/aios:update` trustworthy and self-healing post-migration — triggered by a real orphan bug.** A manually-edited `.aios-update` tracker (hand-bumped past un-pulled commits during a manual-cp consolidation) silently orphaned a whole feature (the `infographic-builder` skill + `/ingest` Step 6 from `e76432f`): because the missing content was an *ancestor* of the over-claimed stored hash, `/aios:update`'s tracker-diff (`stored..HEAD`) could never see it again. The command trusted the tracker as its sole source of truth, so one bad tracker write = permanent invisible gap. **(A)** A new **completeness reconcile** (Step 6.5, always runs) diffs the vault against canonical HEAD directly — making the tracker an *optimization*, not the source of truth — so a desynced tracker now self-heals on the next run. The tracker advances *only* on a clean, fully-applied run, and the spec now forbids hand-editing it (antifragile #65). **(B)** Duplicate cleanup — after-migration scaffolding that ran destructively on *every* sync — is now **opt-in (`--cleanup`) + report-then-confirm**, off the default path. **(C)** The clone dropped `--depth=50` (≈5 days at ~10 commits/day → unreachable `stored_hash` for any non-weekly syncer → backup-flood + degraded changelog scan) for a **full single-branch clone**.
 
