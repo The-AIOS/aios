@@ -438,6 +438,12 @@ jobs:
           # README.md — command count
           check "commands"           "$CMD"     "$(grep -oE '\*\*[0-9]+ commands' README.md | grep -oE '[0-9]+' | head -1)"                   "README.md"
 
+          # agents/_index.md — total bundled agents (the registry's own claim)
+          check "agents (index total)" "$AGENTS" "$(grep -oE 'Total bundled agents: [0-9]+' agents/_index.md | grep -oE '[0-9]+' | head -1)" "agents/_index.md"
+          # cross-check: the per-bundle Count column should also sum to ground truth
+          BUNDLE_SUM=$(grep -oE '\*\*`aios/[a-z-]+/`\*\* \| [^|]+ \| [0-9]+' agents/_index.md | grep -oE '[0-9]+$' | paste -sd+ - | bc 2>/dev/null || echo "")
+          if [ -n "$BUNDLE_SUM" ]; then check "agents (bundle-table sum)" "$AGENTS" "$BUNDLE_SUM" "agents/_index.md"; fi
+
           if [ "$FAIL" = "1" ]; then
             echo ""
             echo "Capability-count drift detected. The numbers in the docs above no longer match the bundled folders. This is the antifragile guard for the count class (added 2026-05-28 after agents/skills counts silently drifted across TOOLS.md + the site)."

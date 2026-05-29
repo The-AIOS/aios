@@ -26,7 +26,7 @@ Organized into **6 bundles by purpose**. Install only the bundles you need.
 | **`aios/personal/`** | Study, journaling, growth, decision-making, onboarding, crisis | 6 |
 | **`custom/`** | Your own agents (operator-specific extensions, never synced) | — |
 
-**Total bundled agents: 28.** Each bundle has a `README.md` describing its scope; this file is the master registry.
+**Total bundled agents: 29.** Each bundle has a `README.md` describing its scope; this file is the master registry.
 
 > **Standard:** all agents follow the [Agent Skills open standard](https://github.com/anthropics/skills) (138K⭐ — Anthropic's public canonical repo). Cross-platform compatible with Claude Code, Codex, Gemini CLI, Cursor, Antigravity.
 
