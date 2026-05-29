@@ -394,3 +394,53 @@ jobs:
             exit 1
           fi
           echo "OK: no ~/obsidian hardcoded paths — framework is install-path-agnostic with ~/aios canonical default"
+
+  counts:
+    name: Capability counts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Doc count claims match bundled ground truth
+        run: |
+          set -e
+          # Ground truth = framework-BUNDLED counts, EXCLUDING custom/ and {company}/
+          # namespaces (sovra/, acme/, …). Layered folders count their bundled
+          # source-peers (skills = aios + anthropic + superpowers); flat folders count
+          # root entries by convention (mcps = *-mcp/). This mirrors the operating rule:
+          # "AIOS numbers, not sovra, not custom." Counts are hand-maintained in several
+          # docs (TOOLS.md source-folders line, README.md) + the site repo (separate, not
+          # checked here) — this job kills the drift class for the docs in THIS repo.
+          CMD=$(ls plugins/aios/commands/*.md 2>/dev/null | grep -v _index | wc -l | tr -d ' ')
+          AGENTS=$(find agents/aios -name '*.md' ! -name '_index.md' ! -name 'README.md' | wc -l | tr -d ' ')
+          S_AIOS=$(ls -d skills/aios/*/ 2>/dev/null | wc -l | tr -d ' ')
+          S_ANTH=$(ls -d skills/anthropic/*/ 2>/dev/null | wc -l | tr -d ' ')
+          S_SUP=$(ls -d skills/superpowers/*/ 2>/dev/null | wc -l | tr -d ' ')
+          S_TOTAL=$((S_AIOS + S_ANTH + S_SUP))
+          MCPS=$(ls -d mcps/*-mcp/ 2>/dev/null | wc -l | tr -d ' ')
+          echo "Ground truth: commands=$CMD agents=$AGENTS skills=${S_AIOS}+${S_ANTH}+${S_SUP}=${S_TOTAL} mcps=$MCPS"
+
+          FAIL=0
+          check() { # $1=label $2=expected(truth) $3=claimed $4=where
+            if [ -z "$3" ]; then
+              echo "::error::$4: no '$1' count claim found (expected $2) — did the count-bearing sentence get reworded? Update this check's regex or restore the phrasing."; FAIL=1
+            elif [ "$3" != "$2" ]; then
+              echo "::error::$4: '$1' claims $3 but bundled ground truth is $2 — update $4 (or this is your reminder to fix the doc in the same PR that changed the count)"; FAIL=1
+            fi
+          }
+
+          # TOOLS.md — skill source-folder counts (anchored on stable source names)
+          check "aios skills"        "$S_AIOS"  "$(grep -oE 'AIOS-built[^0-9]+[0-9]+ skills' TOOLS.md | grep -oE '[0-9]+' | head -1)"        "TOOLS.md"
+          check "anthropic skills"   "$S_ANTH"  "$(grep -oE 'anthropics/skills[^0-9]+[0-9]+ skills' TOOLS.md | grep -oE '[0-9]+' | head -1)" "TOOLS.md"
+          check "superpowers skills" "$S_SUP"   "$(grep -oE 'obra/superpowers[^0-9]+[0-9]+ skills' TOOLS.md | grep -oE '[0-9]+' | head -1)"  "TOOLS.md"
+          check "total bundled"      "$S_TOTAL" "$(grep -oE 'Total bundled: [0-9]+' TOOLS.md | grep -oE '[0-9]+' | head -1)"                  "TOOLS.md"
+
+          # README.md — command count
+          check "commands"           "$CMD"     "$(grep -oE '\*\*[0-9]+ commands' README.md | grep -oE '[0-9]+' | head -1)"                   "README.md"
+
+          if [ "$FAIL" = "1" ]; then
+            echo ""
+            echo "Capability-count drift detected. The numbers in the docs above no longer match the bundled folders. This is the antifragile guard for the count class (added 2026-05-28 after agents/skills counts silently drifted across TOOLS.md + the site)."
+            exit 1
+          fi
+          echo "OK: all capability-count claims match bundled ground truth"

@@ -13,6 +13,27 @@
 
 ---
 
+## 2026-05-28 — Capability-count drift guard (CI) + TOOLS.md skill-count fix
+
+`hash: PENDING`
+
+> **Counts in the docs had silently drifted from the bundled folders — now CI-enforced.** Adding the `infographic-builder` skill surfaced that several capability counts were stale: TOOLS.md said anthropic "9 skills" (actually 11) with a hand-listed superpowers subset (actually 14), and the new skill wasn't in the named table. Root cause: these counts are hand-maintained in multiple docs, so they drift whenever bundled content changes. **Fix is two-part:** (1) corrected TOOLS.md — added the `infographic-builder` row + fixed the source-folder counts to ground truth (aios 17 · anthropic 11 · superpowers 14 · **total bundled 42**); (2) a new **CI `counts` job** computes the bundled ground truth from the folders (excluding `custom/` + `{company}/` namespaces — "AIOS numbers, not sovra/custom") and fails the build if any doc claim disagrees. The drift class is now structurally prevented in this repo.
+
+### What changed
+
+- `TOOLS.md` — `infographic-builder` added to the Content & design skills table; source-folder line corrected: `anthropics/skills` 9→**11**, `obra/superpowers` stale-named-list→**14 skills**, added `Total bundled: 42`.
+- `.github/workflows/validate.yml` — new `Capability counts` job. Computes `commands` (`plugins/aios/commands/*.md`), `agents` (`agents/aios/**`), `skills` (`skills/{aios,anthropic,superpowers}/*/`), `mcps` (`mcps/*-mcp/`) — bundled only, no custom/company — and asserts the count-bearing claims in TOOLS.md + README.md match. Reworded count sentences fail loudly (regex anchored on stable source names). No untrusted input (no `github.event.*`) — pure repo-file scan.
+
+### Action required
+
+`/aios:update` brings the corrected `TOOLS.md` (Tier 1). The CI job is canonical-repo-only (`.github/` doesn't sync to operator vaults), so there's nothing for operators to run — it just keeps the framework's own docs honest going forward.
+
+**Note (separate repo, not covered here):** the public site (`the-aios.com`) carries its own count claims (commands/agents in `messages/*.ts` + `llms.txt`) and is a different repo CI can't see from here — those are corrected directly in the site repo. A cross-repo count guard is a possible future follow-up.
+
+**Restart-required:** none.
+
+---
+
 ## 2026-05-28 — `/aios:update` hardening: completeness reconcile + opt-in cleanup + full clone
 
 `hash: 626e982`
