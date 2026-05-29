@@ -6,6 +6,8 @@
 >
 > **Update this file when your trust level changes** — not on a schedule, but when you notice the AI is ready for more responsibility (or when you want to pull back). `/today` nudges you if this file hasn't been updated in 14+ days.
 >
+> **How this contract works — and where it stops.** Loading this file into the AI's context is enough to *guide* it: it shapes judgment, autonomy, and focus every session. It is not, on its own, enough to *stop* it — adherence is soft, and how faithfully it's honored scales with the model you run. That's intentional: good judgment can't be hard-coded, only cultivated. So treat this as the **guidance** layer. When a boundary here is genuinely non-negotiable, elevate it into a **hard** rule in your AI tool's permission config (in Claude Code: `settings.json` → `permissions`) — `deny` (never), `ask` (confirm first), `allow` (go autonomous). Intent guides; permissions enforce. The strongest setups use both: this file for the judgment, permissions for the floor.
+>
 > Updated: {date}
 
 ---

@@ -13,6 +13,28 @@
 
 ---
 
+## 2026-05-28 — INTENT.md: honest "guidance vs enforcement" disclaimer
+
+`hash: PENDING`
+
+> **Transparency over the comfortable omission.** INTENT.md is loaded into context every session and shapes the AI's judgment, autonomy, and focus — but loading is *soft* governance: it guides the model, it doesn't *stop* it, and adherence scales with the model you run. The framework never said this out loud, which risked operators believing a parked item or autonomy boundary in INTENT.md was a hard guarantee. It isn't. Added a calm, non-alarming note to the INTENT.md template explaining the distinction and pointing operators to the hard-enforcement layer: their AI tool's permission config (`deny` / `ask` / `allow`). Intent guides; permissions enforce; the strongest setups use both. This makes the trust model honest — you know exactly what the contract does and doesn't do.
+
+### What changed
+
+- `INTENT.md` (template) — new intro callout: *"How this contract works — and where it stops."* Explains that context-loading guides but doesn't enforce, that fidelity is model-dependent, and that non-negotiable boundaries should be elevated to hard permission rules (`deny` = never, `ask` = confirm first, `allow` = autonomous). Framed as empowerment ("here's how to make a boundary hard if you want"), not alarm.
+
+### Action required
+
+INTENT.md is **operator-personal** (hard denylist — `/aios:update` never overwrites it). So this won't auto-apply; it's a **surgical add** for the operator's Claude session:
+
+1. **Detect:** check whether your `INTENT.md` already contains a "How this contract works — and where it stops" note (or equivalent guidance-vs-enforcement language).
+2. **If absent → offer to add it:** insert the disclaimer callout right after the intro blockquote (before the `## Autonomy levels` section), matching the template wording. It's a universal note — no personalization needed. Confirm with the operator before writing (it's their trust contract).
+3. **Optional, recommended follow-on:** if any of your INTENT.md boundaries are *genuinely non-negotiable* and map to a concrete tool/command, mirror them into `settings.json` → `permissions`: `deny` for "never," `ask` for "confirm first." (Most operators' `ask` list is empty — that's the highest-value tier for outward actions like sends/merges/deploys.)
+
+**Restart-required:** none.
+
+---
+
 ## 2026-05-28 — Capability-count drift guard (CI) + TOOLS.md skill-count fix
 
 `hash: 09b1abf`
