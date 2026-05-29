@@ -15,7 +15,7 @@
 
 ## 2026-05-28 — Capability-count drift guard (CI) + TOOLS.md skill-count fix
 
-`hash: PENDING`
+`hash: 09b1abf`
 
 > **Counts in the docs had silently drifted from the bundled folders — now CI-enforced.** Adding the `infographic-builder` skill surfaced that several capability counts were stale: TOOLS.md said anthropic "9 skills" (actually 11) with a hand-listed superpowers subset (actually 14), and the new skill wasn't in the named table. Root cause: these counts are hand-maintained in multiple docs, so they drift whenever bundled content changes. **Fix is two-part:** (1) corrected TOOLS.md — added the `infographic-builder` row + fixed the source-folder counts to ground truth (aios 17 · anthropic 11 · superpowers 14 · **total bundled 42**); (2) a new **CI `counts` job** computes the bundled ground truth from the folders (excluding `custom/` + `{company}/` namespaces — "AIOS numbers, not sovra/custom") and fails the build if any doc claim disagrees. The drift class is now structurally prevented in this repo.
 
