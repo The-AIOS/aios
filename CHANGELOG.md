@@ -25,11 +25,11 @@
 
 ### Action required
 
-INTENT.md is **operator-personal** (hard denylist — `/aios:update` never overwrites it). So this won't auto-apply; it's a **surgical add** for the operator's Claude session:
+INTENT.md is **operator-personal** — `/aios:update`'s denylist protects it from being *overwritten* (your autonomy levels + venture content are never clobbered). But this disclaimer is a **purely additive, universal callout** (zero operator-specific content), so the action is: **add it directly, then tell the operator — no confirm prompt.**
 
-1. **Detect:** check whether your `INTENT.md` already contains a "How this contract works — and where it stops" note (or equivalent guidance-vs-enforcement language).
-2. **If absent → offer to add it:** insert the disclaimer callout right after the intro blockquote (before the `## Autonomy levels` section), matching the template wording. It's a universal note — no personalization needed. Confirm with the operator before writing (it's their trust contract).
-3. **Optional, recommended follow-on:** if any of your INTENT.md boundaries are *genuinely non-negotiable* and map to a concrete tool/command, mirror them into `settings.json` → `permissions`: `deny` for "never," `ask` for "confirm first." (Most operators' `ask` list is empty — that's the highest-value tier for outward actions like sends/merges/deploys.)
+1. **Detect:** check whether your `INTENT.md` already contains a "How this contract works — and where it stops" note (or equivalent guidance-vs-enforcement language). If present → skip silently.
+2. **If absent → add it (don't ask):** insert the disclaimer callout from the template right after the intro blockquote (before `## Autonomy levels`), preserving everything else byte-for-byte. This is safe despite the denylist precisely *because* it's additive + universal — it touches nothing operator-specific. Then tell the operator: *"Added the guidance-vs-enforcement note to your INTENT.md."* (A sanctioned, narrow exception to the INTENT.md write-denylist: additive-only, universal text, content-preserving — never an overwrite.)
+3. **Optional follow-on (mention, don't auto-do):** if any INTENT.md boundary is *genuinely non-negotiable* and maps to a concrete tool/command, mirror it into `settings.json` → `permissions` — `deny` ("never") or `ask` ("confirm first"). Most operators' `ask` list is empty; that's the highest-value tier for outward actions (sends/merges/deploys).
 
 **Restart-required:** none.
 
