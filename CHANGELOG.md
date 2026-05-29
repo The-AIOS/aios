@@ -15,7 +15,7 @@
 
 ## 2026-05-28 — INTENT.md: honest "guidance vs enforcement" disclaimer
 
-`hash: PENDING`
+`hash: c7a9dbd`
 
 > **Transparency over the comfortable omission.** INTENT.md is loaded into context every session and shapes the AI's judgment, autonomy, and focus — but loading is *soft* governance: it guides the model, it doesn't *stop* it, and adherence scales with the model you run. The framework never said this out loud, which risked operators believing a parked item or autonomy boundary in INTENT.md was a hard guarantee. It isn't. Added a calm, non-alarming note to the INTENT.md template explaining the distinction and pointing operators to the hard-enforcement layer: their AI tool's permission config (`deny` / `ask` / `allow`). Intent guides; permissions enforce; the strongest setups use both. This makes the trust model honest — you know exactly what the contract does and doesn't do.
 
