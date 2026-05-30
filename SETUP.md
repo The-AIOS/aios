@@ -48,7 +48,7 @@ The AIOS is *one filesystem, two surfaces*. Install both:
 | App | Role | Why |
 |---|---|---|
 | **[Obsidian](https://obsidian.md/)** | User-friendly *note reading* | Beautiful read of your vault — daily notes, project notes, observed context, reflections. Wikilinks resolve, graph view shows connections, the markdown structure compounds visually. You think + reflect here. |
-| **[Antigravity IDE](https://antigravity.dev/)** | User-friendly *file editing + agent spawning* | Bundles Claude Code natively — agents run in IDE terminals (one per spawn), Obsidian vault opens as a project, file edits + git ops feel native. You execute + ship here. Use VS Code as the alternative if you prefer it; Antigravity is just batteries-included. |
+| **[Antigravity IDE](https://antigravity.google/product/antigravity-ide)** | User-friendly *file editing + agent spawning* | Bundles Claude Code natively — agents run in IDE terminals (one per spawn), Obsidian vault opens as a project, file edits + git ops feel native. You execute + ship here. Use VS Code as the alternative if you prefer it; Antigravity is just batteries-included. |
 
 You don't pick one — you run them side-by-side. Obsidian on the left for context, Antigravity IDE on the right for execution. Same vault, both windows.
 
@@ -63,7 +63,7 @@ brew install node git gh python uv
 
 # 3. The two daily apps (see "Two apps you'll use daily" above)
 brew install --cask obsidian
-# Download Antigravity IDE from https://antigravity.dev (no brew cask yet — drag .dmg to Applications)
+# Download Antigravity IDE from https://antigravity.google/product/antigravity-ide (no brew cask yet — drag .dmg to Applications)
 
 # 4. Claude Code CLI
 npm install -g @anthropic-ai/claude-code
@@ -88,7 +88,7 @@ winget install Python.Python.3.12
 
 # 2. The two daily apps (Obsidian + IDE — see "Two apps you'll use daily" above)
 winget install Obsidian.Obsidian
-# For Antigravity IDE (recommended — Claude Code bundled): download from https://antigravity.dev
+# For Antigravity IDE (recommended — Claude Code bundled): download from https://antigravity.google/product/antigravity-ide
 # For VS Code as the IDE alternative: winget install Microsoft.VisualStudioCode
 
 # 2. uv (Python package runner — vendored MCPs need it)
@@ -124,7 +124,7 @@ sudo npm install -g @anthropic-ai/claude-code
 
 # 4. The two daily apps (see "Two apps you'll use daily" above)
 # Obsidian — download the AppImage from https://obsidian.md/download
-# Antigravity IDE (recommended, Claude Code bundled) — https://antigravity.dev
+# Antigravity IDE (recommended, Claude Code bundled) — https://antigravity.google/product/antigravity-ide
 #   or VS Code as the alternative: sudo snap install code --classic
 
 # 5. Auth
