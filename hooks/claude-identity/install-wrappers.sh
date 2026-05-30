@@ -128,7 +128,11 @@ _claude_with_respawn() {
   # "unknown option '--resume <uuid>'". Array expansion "${resume_args[@]}"
   # is portable across both shells.
   local -a resume_args
-  [ -n "$initial_sid" ] && resume_args=(--resume "$initial_sid")
+  if [ "$initial_sid" = "--continue" ]; then
+    resume_args=(--continue)
+  elif [ -n "$initial_sid" ]; then
+    resume_args=(--resume "$initial_sid")
+  fi
 
   # Model selection — AIOS defaults to 1M-context Opus because the framework
   # leans heavily on context engineering (full vault + observed context +
@@ -464,7 +468,11 @@ cat >> "$RC" <<EOF
 # session. Re-run install-wrappers.sh after editing USER.md → ## Identity to
 # rename this function to your actual session name.
 $PRIMARY_NAME() {
-  _claude_with_respawn $PRIMARY_NAME
+  case "\$1" in
+    -c|--continue) _claude_with_respawn $PRIMARY_NAME "" --continue ;;
+    -r|--resume)   _claude_with_respawn $PRIMARY_NAME "" "\${2:-}" ;;
+    *)             _claude_with_respawn $PRIMARY_NAME ;;
+  esac
 }
 # ==== END claude-primary-session ====
 EOF

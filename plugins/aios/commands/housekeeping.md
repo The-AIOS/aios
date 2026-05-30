@@ -9,7 +9,7 @@ allowed-tools: mcp__obsidian__*, Read, Grep, Glob, Bash
 
 # /housekeeping — Vault Housekeeping
 
-Periodic care of the vault as it grows. Produces a review packet across 14 buckets — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
+Periodic care of the vault as it grows. Produces a review packet across 20 buckets — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
 
 **When to run:** monthly as a rhythm, or whenever the vault feels heavy (lots of carries, too many active projects, stale snapshots). `/today` will suggest it when triggers fire.
 
@@ -33,7 +33,7 @@ Check if `00 - notes/logs/command-logs/housekeeping-*.md` exists. If not, this i
 
 ### Phase 1 — Scan (build the proposal packet)
 
-Gather evidence across **all 12 buckets — no skipping.** "Deferred to tooling" is banned; the scanning IS the tooling. If a bucket surfaces low signal, state that explicitly with evidence ("scanned N items, 0 merge candidates found") — don't hand-wave.
+Gather evidence across **all 20 buckets — no skipping.** "Deferred to tooling" is banned; the scanning IS the tooling. If a bucket surfaces low signal, state that explicitly with evidence ("scanned N items, 0 merge candidates found") — don't hand-wave.
 
 #### Bucket 1: Link repairs
 
@@ -201,6 +201,8 @@ The `plugins/aios/commands/` repo folder is the source of truth. Two derived loc
 **Evidence discipline:** show the actual `diff -q` output per drifted command. "`plugins/aios/commands/today.md` differs from cache" is more useful than "today is out of sync."
 
 **Why this matters:** the plugin cache is what Claude actually reads at runtime. Drift between source and cache means edits to `plugins/aios/commands/*.md` don't take effect — silent breakage, hard to debug.
+
+> **Sibling check:** skills have the same source-of-truth-vs-registered-location problem. **Bucket 20** verifies AIOS skills are symlinked into `~/.claude/skills` (and registers the missing ones, collision-safe).
 
 #### Bucket 12: Antifragile compact + promotion (NEW — extends Bucket 9)
 
@@ -530,6 +532,32 @@ Some MCPs are AIOS-built, not vendored — `nano-banana-mcp`, `pdf-generator-mcp
 
 **Why this bucket exists:** observed-context drift is invisible until you measure it (caught in chuy's vault 2026-05-23: growth.md 31d stale, profile.md 82d stale, ecosystem.md 63d stale, AND 5 Reinforced session-insights sat 11-49 days marked "Ready to route" but never executed). The forward `/close-day` mechanism (Tier A routing enforcement + Tier B observation pass) addresses the same gap proactively, but Bucket 19 is the periodic floor-check that ensures the forward mechanism is actually firing. Without it, an operator who skips `/close-day` for a week loses both layers silently.
 
+#### Bucket 20: Skill registration verification (NEW — sibling to Bucket 11)
+
+Bucket 11 verifies the **command** plugin cache. This bucket is its sibling for **skills**: it catches AIOS skills that are authored in the repo but never registered into the skills-dir Claude actually loads — the exact gap that made `accessibility-compliance` return *"I don't have that skill"* before `skills/setup.sh` existed.
+
+**Source of truth:** every skill folder under `skills/<source>/<skill>/` **except** `anthropic/` and `superpowers/` (those are marketplace-provided and live in `~/.claude/skills` already — never re-register them).
+**Registered location:** a symlink at `~/.claude/skills/<skill>/` pointing back into the repo (the mechanism `skills/setup.sh` creates).
+
+**Scan:** for each AIOS-origin skill, classify:
+
+- **Authored but unregistered** → skill exists in `skills/` but `~/.claude/skills/<name>` is absent → **not loadable**. This is the primary thing to catch.
+- **Name collision** → `~/.claude/skills/<name>` exists but is *not* a symlink into this repo's `skills/` (a real dir, or a symlink to a different source) → a different skill already owns that name.
+- **Dangling symlink** → `~/.claude/skills/<name>` is a symlink into `skills/` but its target no longer exists (skill was renamed/removed in the repo).
+
+Show the actual evidence: `ls -la ~/.claude/skills/<name>` per finding — "`accessibility-compliance` authored in `skills/aios/` but no symlink in `~/.claude/skills`" beats "some skills unregistered."
+
+**Auto-apply candidates** (low-stakes, deterministic — **zero-collision**):
+- Register unregistered skills by running `bash skills/setup.sh` (`pwsh skills/setup.ps1` on Windows). It is idempotent and **collision-safe by design** — it skips any name already present in `~/.claude/skills` (including the marketplace `anthropic`/`superpowers` folders), so it can only *add* missing AIOS skills, never clobber an existing one. Confirm post-run with `ls ~/.claude/skills/<name>`.
+
+**Propose-only candidates** (need user judgment — never auto-resolve):
+- **Name collisions** → an existing different skill owns the name. `skills/setup.sh` already skips these silently; surface them so the operator can decide (rename the AIOS skill, or accept that the existing one wins). Never overwrite.
+- **Dangling symlinks** → propose removal (the source is gone), but ask — could be a mid-rename state.
+
+**Restart-required:** yes — the skills-dir is read at **session start**, so after registering, the operator must **restart their Claude Code sessions** for the newly-linked skills to load.
+
+**Why this matters:** a skill that isn't symlinked is invisible — agents that name it in their `## Skills` block silently get nothing, and the operator hits *"I don't have that skill."* This bucket is the periodic floor-check that every AIOS-origin skill is actually loadable, mirroring what Bucket 11 does for commands.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:
@@ -555,6 +583,7 @@ Categorize all findings into one review table:
 - Radar health audit: {N} proposals
 - CLAUDE.md + USER.md health check: {N} proposals
 - Upstream source freshness: {N} sources behind, {M} sources current
+- Skill registration verify: {N} auto-registered, {M} proposals (collisions/dangling)
 
 ### 🟢 Auto-applied (no approval needed)
 {Low-stakes mechanical fixes — link adds where unambiguous, snapshot timestamp updates, obvious [x] marks}

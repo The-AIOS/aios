@@ -149,7 +149,8 @@ function Invoke-ClaudeWithRespawn {
     $marker  = Join-Path $env:TEMP "swap-respawn-$Name.flag"
     $sidFile = Join-Path $env:TEMP "swap-respawn-$Name.session"
     $resumeArgs = @()
-    if ($InitialSessionId) { $resumeArgs = @('--resume', $InitialSessionId) }
+    if ($InitialSessionId -eq '--continue') { $resumeArgs = @('--continue') }
+    elseif ($InitialSessionId) { $resumeArgs = @('--resume', $InitialSessionId) }
     # Model selection — AIOS default is 1M-context Opus (see install-wrappers.sh
     # comment for the why). Override via $env:CLAUDE_MODEL (Sonnet, 3P, etc.).
     $modelToUse = if ($env:CLAUDE_MODEL) { $env:CLAUDE_MODEL } else { 'claude-opus-4-8[1m]' }
@@ -336,7 +337,9 @@ $PRIMARY_FN = @"
 # session. Re-run install-wrappers.ps1 after editing USER.md to rename this
 # function to your actual session name.
 function $PRIMARY_NAME {
-    Invoke-ClaudeWithRespawn -Name '$PRIMARY_NAME'
+    if (`$args[0] -eq '-c' -or `$args[0] -eq '--continue') { Invoke-ClaudeWithRespawn -Name '$PRIMARY_NAME' -InitialSessionId '--continue' }
+    elseif (`$args[0] -eq '-r' -or `$args[0] -eq '--resume') { Invoke-ClaudeWithRespawn -Name '$PRIMARY_NAME' -InitialSessionId `$args[1] }
+    else { Invoke-ClaudeWithRespawn -Name '$PRIMARY_NAME' }
 }
 # ==== END claude-primary-session ====
 "@

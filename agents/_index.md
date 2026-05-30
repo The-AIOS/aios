@@ -21,12 +21,12 @@ Organized into **6 bundles by purpose**. Install only the bundles you need.
 | **`aios/sales/`** | Lead generation, proposals, CRM, brand monitoring | 4 |
 | **`aios/strategy/`** | Market research, advisory, company analysis | 3 |
 | **`aios/finance-legal/`** | Accounting, legal review, invoicing, compliance | 4 |
-| **`aios/engineering/`** | Code review, documentation, bug triage, security, building | 5 |
+| **`aios/engineering/`** | Code review, documentation, bug triage, security, building | 6 |
 | **`aios/communication/`** | Content, decks, emails, meeting prep, reports, design systems | 7 |
 | **`aios/personal/`** | Study, journaling, growth, decision-making, onboarding, crisis | 6 |
 | **`custom/`** | Your own agents (operator-specific extensions, never synced) | — |
 
-**Total bundled agents: 29.** Each bundle has a `README.md` describing its scope; this file is the master registry.
+**Total bundled agents: 30.** Each bundle has a `README.md` describing its scope; this file is the master registry.
 
 > **Standard:** all agents follow the [Agent Skills open standard](https://github.com/anthropics/skills) (138K⭐ — Anthropic's public canonical repo). Cross-platform compatible with Claude Code, Codex, Gemini CLI, Cursor, Antigravity.
 
@@ -110,6 +110,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | [[bug-triager]] | Classify GitHub issues, suggest priority + assignee | triage issues, classify bugs, bug triage, issue backlog | on-demand / weekly |
 | [[security-engineer]] | STRIDE threat modeling, SAST setup, secrets management, vulnerability triage with prioritized remediation | threat model, STRIDE, SAST, semgrep, sonarqube, codeql, security review, secrets management, vault, vulnerability scan, CVSS, security audit | on-demand / quarterly |
 | [[technical-cofounder]] | Build real products end-to-end — discovery → ship → handoff | build app, build product, MVP, prototype, ship, launch | on-demand |
+| [[aios-builder]] | Scaffold a new custom AIOS element (agent/skill/plugin/command/template/hook/MCP) — compliant structure + registration | new agent, new skill, new plugin, new command, new template, new hook, new MCP, scaffold custom, add custom element | on-demand |
 
 ### aios/communication/ — Content, decks, emails, meetings, design
 

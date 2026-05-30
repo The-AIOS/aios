@@ -13,6 +13,28 @@
 
 ---
 
+## 2026-05-30 — Agents leverage registered skills · aios-builder · primary-session resume · housekeeping skill-reg bucket
+
+`hash: PENDING`
+
+> **Closing the skills loop end to end.** Now that `skills/setup.sh` registers AIOS skills, four follow-ons land: (1) the **bundled agents** — authored before skills were loadable — get light `## Skills` nudges so the right methodology fires (12 wired across engineering / finance-legal / strategy + report-drafter; deck-builder, design-md-author, and self-disciplined agents deliberately **skipped** to avoid diluting their craft); (2) a new **`aios-builder`** agent that scaffolds AND **registers** new custom elements — it runs `skills/setup.sh` for new skills (and drives skill-creation through `skill-creator`'s eval loop), so the "authored but never wired in" gap never recurs; (3) the primary-session wrapper (`buddai` / your name) now supports **`-c`/`--continue`** and **`-r`/`--resume`**, resuming with the session's `--name` intact so a resumed primary is identifiable to tooling instead of anonymous; (4) `/aios:housekeeping` gains **Bucket 20 — skill-registration verification**, the sibling of the plugin-cache bucket: it catches AIOS skills authored but never symlinked into `~/.claude/skills` and auto-registers them (collision-safe via `skills/setup.sh`). Skills stay standalone (skills-dir / marketplace) — the `aios:` commands plugin is untouched.
+
+### What changed
+
+- `agents/aios/**` — 12 agents gained a `## Skills` block (prose nudges to registered skills; marketplace skills namespaced `document-skills:*`). New `agents/aios/engineering/aios-builder.md`. `agents/_index.md` + `templates/aios/agent-template.md` — "declare relevant skills" convention; engineering 5→6, total bundled agents 29→30.
+- `hooks/claude-identity/install-wrappers.sh` + `install-wrappers.ps1` — `_claude_with_respawn` / `Invoke-ClaudeWithRespawn` gain a `--continue` resume mode; the emitted primary-session function accepts `-c`/`--continue` and `-r [sid]`/`--resume`, both preserving `--name`.
+- `plugins/aios/commands/housekeeping.md` — new **Bucket 20: Skill registration verification** (sibling to Bucket 11 plugin-cache); cross-linked from Bucket 11; summary line added; stale bucket-count refs corrected to 20.
+
+### Action required
+
+1. **Agents + aios-builder** — applied automatically by `/aios:update` (Tier-1 file sync); nothing to run. Bundled agents now name the skills that drive their methodology, and `spawn aios-builder "create a new …"` scaffolds + registers compliant custom elements under `*/custom/`.
+2. **Primary-session resume** — to get `<your-session> -c` (resume, named), **re-run the wrapper installer**: `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (macOS/Linux) or `pwsh ~/aios/hooks/claude-identity/install-wrappers.ps1` (Windows). It regenerates the managed profile blocks idempotently. *(The `.ps1` port mirrors the `.sh` structure but was authored on a machine without `pwsh` to syntax-test — Windows operators, flag anything that misbehaves.)*
+3. **Refresh the `aios` plugin cache** so `/aios:housekeeping` runs the new Bucket 20. `/aios:update`'s Tier-1 sync updates the repo file, but the runtime cache is what the slash command actually reads. Run `claude plugin update aios@the-aios` (or, per CLAUDE.md → Personalization, `cp` the updated `housekeeping.md` from `plugins/aios/commands/` into both the marketplace and cache paths, then `diff -q` all three to confirm). Verify: `/aios:housekeeping` should list **20 buckets** and include "Skill registration verify" in its summary.
+
+**Restart-required:** yes — **open a fresh shell** after re-running the installer (action 2) so the updated `_claude_with_respawn` / `Invoke-ClaudeWithRespawn` + primary-session function load.
+
+---
+
 ## 2026-05-29 — Register bundled skills into ~/.claude/skills (skills/setup.sh)
 
 `hash: f6f26c6`
