@@ -15,7 +15,7 @@
 
 ## 2026-05-29 — Register bundled skills into ~/.claude/skills (skills/setup.sh)
 
-`hash: PENDING`
+`hash: f6f26c6`
 
 > **AIOS-authored skills were never actually loadable.** `skills/aios/*` (and `custom/`, company namespaces) are vendored in the repo, but nothing wired them into Claude Code — only the marketplace-installed `anthropic/` + `superpowers/` skills live in `~/.claude/skills` (the auto-loaded skills-dir). So invoking an AIOS skill (e.g. `accessibility-compliance`) returned *"I don't have that skill."* Fix: a new **`skills/setup.sh`** (+ `skills/setup.ps1` for Windows) that **symlinks every AIOS-origin skill into `~/.claude/skills`** — the same skills-dir mechanism the superpowers skills already use — so they auto-load at session start. Skills register **standalone**; this deliberately does NOT bundle them into the `aios` commands plugin (keeps commands and skills cleanly separate). Idempotent: skips `anthropic/`+`superpowers/` (marketplace-provided) and any name already present in `~/.claude/skills`.
 
