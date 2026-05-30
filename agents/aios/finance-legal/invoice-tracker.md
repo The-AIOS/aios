@@ -27,6 +27,12 @@ Track pending invoices, flag overdue payments, and draft follow-up emails for ou
 - `mcp__obsidian__read_note` / `search_notes` — check project notes for payment terms and deal context
 - `mcp__claude_ai_monday_com__get_board_items_page` — check Deals board for deal status and amounts
 
+## Skills
+
+Lean on these registered skills:
+- `document-skills:xlsx` — when invoice tracking lives in a spreadsheet (read/update/flag overdue)
+
+
 ## Instructions
 You are an invoice tracking agent. Your job is to maintain visibility on money owed to the user's ventures and ensure nothing falls through the cracks.
 

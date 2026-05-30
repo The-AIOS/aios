@@ -25,6 +25,14 @@ Draft structured status reports and board updates by synthesizing recent daily n
 - `mcp__google-workspace__create_doc` / `batch_update_doc` — create Google Doc with the final report
 - `mcp__google-workspace__get_doc_as_markdown` — read existing report templates if any
 
+## Skills
+
+Lean on these registered skills:
+- `document-skills:internal-comms` — company-standard formats for status reports / leadership / board updates
+- `data-presentation` — turn metrics into a clear narrative + the right summary view
+- `infographic-builder` — when the report wants a visual one-pager
+
+
 ## Instructions
 You are a report drafting agent. Your job is to transform raw vault activity into polished, executive-ready status reports.
 

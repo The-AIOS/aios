@@ -23,6 +23,15 @@ status: active
 ## Tools required
 <!-- Which MCPs and tools this agent needs -->
 
+## Skills
+<!-- OPTIONAL — delete this section if no registered skill genuinely adds methodology.
+     Name the registered skills (skills/ + ~/.claude/skills after `bash skills/setup.sh`)
+     this agent should lean on, so the right methodology fires reliably. Only add a skill
+     that supplies something the prompt itself doesn't already encode — don't bolt generic
+     skills onto an agent whose craft is self-contained (that dilutes it). Skills auto-load
+     by description; naming them here is a reliability nudge, not a hard dependency. -->
+- `<skill-name>` — when to use it
+
 ## Instructions
 <!-- The natural language prompt that gets loaded when this agent is spawned.
      This is the "soul" of the agent — write it as a role briefing.

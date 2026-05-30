@@ -150,8 +150,9 @@ Run `/emerge` to get agent suggestions based on your observed patterns.
 
 1. Decide which bundle it belongs in (see bundle README.md files for scope)
 2. Create the agent file from [[agent-template]] in that bundle subfolder
-3. Add a row to the matching bundle table above
-4. Test: `spawn {name} "test task"` → should resolve via glob match
+3. **Declare relevant skills** — if a registered skill (`skills/` → `~/.claude/skills` via `bash skills/setup.sh`) supplies methodology the prompt doesn't already encode, name it in the agent's `## Skills` section. Only where it genuinely adds — don't bolt generic skills onto a self-contained agent (it dilutes). Skills auto-load by description; naming them is a reliability nudge.
+4. Add a row to the matching bundle table above
+5. Test: `spawn {name} "test task"` → should resolve via glob match
 
 If creating a new bundle (rare):
 1. Create the bundle folder `agents/aios-{name}/`
