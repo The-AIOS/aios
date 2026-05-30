@@ -82,6 +82,8 @@ diff -q <(tr -d '\r' < "$HOME/aios/{path}") <(tr -d '\r' < /tmp/aios-baseline-{f
 | **Different** | Operator made local edits AFTER last sync | **Backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{date}/{flattened-path}` BEFORE overwrite. Tell operator what was preserved. |
 | **Baseline doesn't exist in clone** (cross-repo case, OR `stored_hash` is `initial`) | Can't establish baseline | **Conservative fallback:** treat as personalization → backup before overwrite. Better to over-backup once than risk losing operator edits. |
 
+**Exempt from backup entirely — `CHANGELOG.md`.** It is append-only **canonical history, mandated byte-identical across every repo** (no operator ever personalizes it — there is nothing in it that is theirs to keep). A local diff on `CHANGELOG.md` is therefore *always* stale-not-personalized, even when the three-way compare reports "Different" (e.g. a WIP entry an operator's earlier session left mid-edit). So `CHANGELOG.md` is **always a clean overwrite, never backed up** — skip the three-way compare for it and never write it to `vault/04 - backups/`. (Backing it up just produces noise files that duplicate canonical history.)
+
 Files with NO upstream change → not even considered (`git diff` didn't list them).
 
 Files where local == baseline (clean overwrites) → never appear in the report's "Backed up" section. Only true personalizations land there.
@@ -237,6 +239,7 @@ For each changed Tier 1 file:
 
 1. **Diff local vs upstream HEAD.** If byte-identical, skip (no work needed — operator already has this version somehow).
 2. **Three-way compare to decide on backup** (see § Backup-on-divergence above):
+   - **`CHANGELOG.md` → skip this compare entirely: overwrite silently, never back up** (append-only canonical history — never a personalization).
    - Get baseline via `git -C /tmp/vault-update-check show {stored_hash}:{path}`.
    - If `local == baseline` → operator never touched it → overwrite silently, **no backup**.
    - If `local != baseline` → operator personalized → **backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{YYYY-MM-DD}/{flattened-path}.md` BEFORE overwrite.
