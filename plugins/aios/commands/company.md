@@ -125,7 +125,7 @@ Beyond context, a company can distribute **its own infra** to operators who moun
 | `plugins/<plugin>/` | `plugins/{company}/<plugin>/` | Company-distributed Claude Code plugins (each plugin a self-contained bundle — operator invokes its commands as `/<plugin>:<name>`, registered in the operator's marketplace at sync time) |
 | `hooks/` | `hooks/{company}/` | Company-specific event hooks (e.g. UserPromptSubmit injectors) |
 | `mcps/` | `mcps/{company}/` | Company-internal MCP servers (CRM, billing, internal tools) |
-| `skills/` | `skills/{company}/` | Company-specific Agent Skills |
+| `skills/` | `skills/{company}/` | Company-specific Agent Skills (registered into `~/.claude/skills` at sync time via `skills/setup.sh` / `.ps1` when the sync brings skill changes — see Step 5.5 of `--sync`) |
 | `templates/` | `templates/{company}/` | Proposal / contract / deck shapes specific to the company |
 
 **Empty folder = no shipment.** If `agents/` is empty (just README placeholder), operators mounting this company won't get any agents/{company}/ in their vault. Companies opt-in to each infra type as their needs evolve.
@@ -512,6 +512,25 @@ If confirmed, route by file type:
 **Always skip:**
 - `.{name}-sync` tracker (per-personal-vault control state — never overwritten by sync)
 - `_index.md` and `about_business.md` if they exist at venture-folder root (user-owned — surface advisories instead)
+
+### Step 5.5 — Register newly-synced company skills (ONLY if skills changed)
+
+**Skills must be *registered*, not just landed.** Company skills land at `skills/{company}/` (Step 5 routing), but a file on disk isn't a loadable skill until it's symlinked into `~/.claude/skills`. `skills/setup.sh` (macOS/Linux) and `skills/setup.ps1` (Windows) do that — and their scan is **venture-aware by design** (`skills/*/*/SKILL.md`, registering every source folder *except* `anthropic`/`superpowers`), so `skills/{company}/` is already covered. The only missing piece is *invoking* the registrar after a sync brings skills — mirroring how company plugins are registered at sync time.
+
+**Gate (per the operator note 2026-05-30):** run this **only if this sync added or changed a `skills/{company}/**/SKILL.md`** (check the Step 3 diff). If no skill files changed, **skip** — registration is idempotent, but running it when nothing changed is unnecessary work.
+
+When skills did change, run the registrar (idempotent — skips names already linked; new symlinks load at next session start, not mid-session):
+- **macOS / Linux:** `bash "$HOME/aios/skills/setup.sh"`
+- **Windows:** try PowerShell 7, fall back to Windows PowerShell 5.1 (stock machines ship only the latter):
+  ```bash
+  if command -v pwsh >/dev/null 2>&1; then
+    pwsh -File "$HOME/aios/skills/setup.ps1"
+  else
+    powershell -File "$HOME/aios/skills/setup.ps1"
+  fi
+  ```
+
+Report: *"Registered {N} new {company} skill(s) into `~/.claude/skills` — restart Claude Code sessions to load them."*
 
 ### Step 6 — Update tracker + advisory
 
