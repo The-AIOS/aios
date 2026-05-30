@@ -59,7 +59,7 @@ This gives you: USER.md personalizations, the actual weekday, what sources are c
 
 **Vault-update freshness rendering (handled in Message 1a, BEFORE Message 1b vault reads):**
 - **`synced`** → silent. Proceed to Message 1b normally.
-- **`BEHIND`** → **proactively fire `/aios:update` BEFORE Message 1b.** Surface to user inline first:
+- **`BEHIND`** → **check the operator's auto-update preference first.** Read `USER.md` → `## Settings` → **Automatic updates**. If it's `no`, do NOT auto-fire — surface the nudge-only callout (*"Vault is BEHIND (local `{h}`, remote `{r}`) — run `/aios:update` when you're ready. (Auto-update is off in your USER.md Settings.)"*) at the top of the daily note and proceed to Message 1b. If it's `yes` (or the setting is absent → **default yes**), **proactively fire `/aios:update` BEFORE Message 1b.** Surface to user inline first:
 
   > *"Vault is BEHIND — local hash `{h}`, team repo `{r}`. Running `/aios:update` now to pull fresh commands / templates / settings before today's plan. After the update lands, I'll continue with /today. If you'd rather skip and pull later, say "skip update" inline."*
 

@@ -19,6 +19,12 @@
 | *`buddy`* | *My main session* | *Warm co-pilot — reference the day, recent work, whatever feels natural.* |
 | *`ops`* | *Operations session* | *Brief and operational — what needs doing, no small talk.* |
 
+## Settings
+
+> Operator preferences Claude and AIOS Glass read every session. Edit here, or toggle from Glass's config (the cog).
+
+- **Automatic updates:** yes — when `yes`, `/today` and `/close-day` auto-pull framework updates (`/aios:update`) the moment your vault is BEHIND; set to `no` to be *nudged* only (never auto-run). Default: `yes`.
+
 ## Session cascade
 
 > **Default rule:** If `{IDENTITY}.md` exists at repo root (matching the session name), read the full file on session start. This covers most cases — no table entry needed. Add exceptions below only when a session needs partial reads or cross-identity file access.
