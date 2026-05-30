@@ -9,7 +9,7 @@ Operator said *"set up my AI-OS from this repo"* or similar. You're the executor
 
 1. Confirm Prerequisites are installed (Obsidian + Antigravity IDE/VS Code + Node/Git/gh/Python/uv/Claude Code) — if not, walk OS-specific block from "Prerequisites" §
 2. Clone to `~/aios` (default) and create private GitHub repo `{username}/aios` (or whatever the operator names it) — see "The Setup" §1 below
-3. Bulk MCP deps: `bash mcps/setup.sh`
+3. Bulk MCP deps: `bash mcps/setup.sh` · Register bundled skills: `bash skills/setup.sh` (Windows: `pwsh skills/setup.ps1`) — symlinks AIOS skills into `~/.claude/skills` so Claude Code loads them (restart sessions after)
 4. Guided MCP auth: invoke `/aios:mcps-setup`
 5. Install the **spawn wrapper** — `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (or `.ps1` on Windows), then re-source the shell rc
 6. Wire the **universal hooks** to `~/.claude/settings.json`: `UserPromptSubmit` → `inject-datetime` (real clock in every prompt) + `statusLine` → `claude-identity.sh cache | context-monitor.py` (rate-limit cache writer + context display). See §10 below for exact JSON.

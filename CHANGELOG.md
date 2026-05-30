@@ -13,6 +13,30 @@
 
 ---
 
+## 2026-05-29 — Register bundled skills into ~/.claude/skills (skills/setup.sh)
+
+`hash: PENDING`
+
+> **AIOS-authored skills were never actually loadable.** `skills/aios/*` (and `custom/`, company namespaces) are vendored in the repo, but nothing wired them into Claude Code — only the marketplace-installed `anthropic/` + `superpowers/` skills live in `~/.claude/skills` (the auto-loaded skills-dir). So invoking an AIOS skill (e.g. `accessibility-compliance`) returned *"I don't have that skill."* Fix: a new **`skills/setup.sh`** (+ `skills/setup.ps1` for Windows) that **symlinks every AIOS-origin skill into `~/.claude/skills`** — the same skills-dir mechanism the superpowers skills already use — so they auto-load at session start. Skills register **standalone**; this deliberately does NOT bundle them into the `aios` commands plugin (keeps commands and skills cleanly separate). Idempotent: skips `anthropic/`+`superpowers/` (marketplace-provided) and any name already present in `~/.claude/skills`.
+
+### What changed
+
+- `skills/setup.sh` (new) — symlinks `skills/<source>/<skill>/` → `~/.claude/skills/<skill>/` for every source except `anthropic`/`superpowers`; skips already-registered names. Mirrors the `mcps/setup.sh` pattern (idempotent, re-runnable).
+- `skills/setup.ps1` (new) — Windows equivalent using **directory junctions** (no admin / Developer Mode required, unlike Windows symlinks).
+- `SETUP.md` — added the skill-registration step alongside MCP setup.
+
+### Action required
+
+Run the skill-registration step so the bundled AIOS skills become invocable in your sessions.
+
+1. **Detect:** after this sync your vault has `skills/setup.sh` — proceed.
+2. **Run it:** `bash skills/setup.sh` (macOS/Linux) or `pwsh skills/setup.ps1` (Windows). Idempotent — safe to re-run; it skips already-registered names and the marketplace-provided `anthropic`/`superpowers` folders.
+3. **Report** which skills it linked.
+
+**Restart-required:** yes — **restart your Claude Code sessions** after running, so the newly-symlinked skills load (the skills-dir is read at session start).
+
+---
+
 ## 2026-05-28 — INTENT.md: honest "guidance vs enforcement" disclaimer
 
 `hash: 013bff8`
