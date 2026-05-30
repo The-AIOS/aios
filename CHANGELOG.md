@@ -13,9 +13,9 @@
 
 ---
 
-## 2026-05-30 — Agents leverage registered skills · aios-builder · primary-session resume · housekeeping skill-reg bucket
+## 2026-05-30 — Agents leverage registered skills · aios-builder · primary-session resume · housekeeping skill-reg bucket · changelog backup-exemption
 
-`hash: 47e33e2`
+`hash: 8170058`
 
 > **Closing the skills loop end to end.** Now that `skills/setup.sh` registers AIOS skills, five follow-ons land: (1) the **bundled agents** — authored before skills were loadable — get light `## Skills` nudges so the right methodology fires (12 wired across engineering / finance-legal / strategy + report-drafter; deck-builder, design-md-author, and self-disciplined agents deliberately **skipped** to avoid diluting their craft); (2) a new **`aios-builder`** agent that scaffolds AND **registers** new custom elements — it runs `skills/setup.sh` for new skills (and drives skill-creation through `skill-creator`'s eval loop), so the "authored but never wired in" gap never recurs; (3) the primary-session wrapper (`buddai` / your name) now supports **`-c`/`--continue`** and **`-r`/`--resume`**, resuming with the session's `--name` intact so a resumed primary is identifiable to tooling instead of anonymous; (4) `/aios:housekeeping` gains **Bucket 20 — skill-registration verification**, the sibling of the plugin-cache bucket: it catches AIOS skills authored but never symlinked into `~/.claude/skills` and auto-registers them (collision-safe via `skills/setup.sh`); (5) `/aios:update` now **exempts `CHANGELOG.md` from backup-on-divergence** — it's append-only canonical history (never a personalization), so a local diff is always stale and gets clean-overwritten instead of producing a noise backup. Skills stay standalone (skills-dir / marketplace) — the `aios:` commands plugin is untouched.
 
