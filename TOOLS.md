@@ -55,6 +55,7 @@ Say `spawn {name}` to launch a named tab dedicated to that role, or `/agent {nam
 | Agent | What it does | Bundle |
 |-------|-------------|--------|
 | `accountant` | Financial analysis, bookkeeping, tax prep, SaaS metrics | finance-legal |
+| `aios-builder` | Scaffold + register a new AIOS element (agent/skill/command/plugin/hook/MCP) under `custom/` — compliant and actually loaded | engineering |
 | `brand-monitor` | Track mentions, competitors, industry news | communication |
 | `bug-triager` | Classify issues by severity, propose priority | engineering |
 | `code-documenter` | Generate/update README, CLAUDE.md, inline docs | engineering |
