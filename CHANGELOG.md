@@ -15,7 +15,7 @@
 
 ## 2026-05-31 — AIOS Glass: a graphical layer over your AIOS (now on Open VSX)
 
-`hash: HASH_PLACEHOLDER`
+`hash: 2647749`
 
 > **Your AIOS now has a face.** [AIOS Glass](https://open-vsx.org/extension/the-aios/aios-glass) is an IDE extension — a *glass layer* over the framework you already run from the terminal. It surfaces and triggers your existing AIOS; it reimplements nothing (**glass, not engine**). From one Home panel you run the daily rituals (`/today`, `/close-session`, `/close-day`), launch agents and "go with agents" off your daily note, browse skills/commands, manage spaces/workspaces, watch your context **compound** (recent learnings + outputs + reports), and swap accounts/model/permission-mode — all without typing slash commands. It reads everything live from `~/aios` at runtime, so the vault stays the single source of truth. Optional and additive: the framework works exactly as before without it. Same license as the framework (GPL-2.0-or-later).
 >
