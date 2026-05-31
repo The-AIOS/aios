@@ -91,6 +91,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | [[market-researcher]] | Deep 11-section McKinsey-style market intelligence | market research, TAM, competitive landscape, market sizing | on-demand |
 | [[consultant]] | Strategic advisory, frameworks, business analysis | consulting, strategy, advisory, framework, recommendation | on-demand |
 | [[company-analyst]] | Acquired-style deep dives — history, strategy, moat, playbook | company analysis, acquired, deep dive, moat, 7 powers | on-demand |
+| [[protocol-steward]] | Governance + open-source + licensing + trademark for an open protocol/standard — lead technically without being perceived as owner (avoid vendor-capture) | governance, open-source, license, Apache, MIT, consortium, foundation, steering committee, trademark, vendor-capture, protocol, standard, CLA | on-demand |
 
 ### aios/finance-legal/ — Accounting, legal, invoicing, compliance
 
