@@ -13,6 +13,33 @@
 
 ---
 
+## 2026-05-31 — AIOS Glass: a graphical layer over your AIOS (now on Open VSX)
+
+`hash: HASH_PLACEHOLDER`
+
+> **Your AIOS now has a face.** [AIOS Glass](https://open-vsx.org/extension/the-aios/aios-glass) is an IDE extension — a *glass layer* over the framework you already run from the terminal. It surfaces and triggers your existing AIOS; it reimplements nothing (**glass, not engine**). From one Home panel you run the daily rituals (`/today`, `/close-session`, `/close-day`), launch agents and "go with agents" off your daily note, browse skills/commands, manage spaces/workspaces, watch your context **compound** (recent learnings + outputs + reports), and swap accounts/model/permission-mode — all without typing slash commands. It reads everything live from `~/aios` at runtime, so the vault stays the single source of truth. Optional and additive: the framework works exactly as before without it. Same license as the framework (GPL-2.0-or-later).
+>
+> **This is a one-time install nudge, not a recurring one** — once you install from Open VSX, Glass **auto-updates itself** on every future release with zero changelog action.
+
+### What is it / what you get
+
+- **Daily Ritual card** — one-click `/today` · `/close-session` · `/close-day`, plus **Go with agents** (spawns the agents your daily note suggests under "Agents can handle," one terminal each; the counter tracks unchecked items).
+- **Sessions Running** — live view of your named Claude sessions (from `~/.claude/sessions/`), spawn a new one, reveal/close.
+- **Context that compounds** — recent learnings (session-insights), recent outputs (`03 - export/`), reports, plus a close-loop nudge so the discipline that makes the AIOS valuable stays visible.
+- **Frequent tasks + Reports** — pre-bundled, context-driven prompts (elevator pitch, "who I am for this audience," what's changed lately, …) and a report launcher (role / weekly / status / custom × period).
+- **Config cog** — model, permission mode, terminal mode, account swap, `/goal` · `/fewer-permission-prompts` · `/schedule`, framework-update status.
+
+### Action required (optional — install only if you want the GUI)
+
+1. **Detect the editor + whether Glass is already present.** Run `<editor-cli> --list-extensions` (Antigravity: `~/.antigravity-ide/antigravity-ide/bin/agy-ide`; VSCodium/Cursor/Windsurf: their CLI; stock VS Code: `code`). If `the-aios.aios-glass` is already listed → **skip, nothing to do** (it auto-updates).
+2. **If on an Open VSX–backed editor** (Antigravity, VSCodium, Cursor, Windsurf) **and not installed** → ask the operator *"Install AIOS Glass (graphical layer over your AIOS)?"* On yes: `<editor-cli> --install-extension the-aios.aios-glass` (this pulls Foam, the wikilink dependency, automatically), then tell them to **reload the window** (`⌘⇧P` → *Developer: Reload Window*).
+3. **If on stock Microsoft VS Code** (uses the MS marketplace, where Glass is **not** published) → inform: install isn't available from the registry; download the `.vsix` from [Releases](https://github.com/The-AIOS/aios-glass/releases) and *Install from VSIX…*, or switch to an Open VSX–backed editor. Point them at [`INSTALL.md`](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md).
+4. **How to launch** (tell the operator after install) — command palette (`⌘⇧P`) → **AIOS Glass: Open Home**, or click the AIOS mark in the activity bar. Dock it in the **secondary side bar** (drag the view there). If the cards are empty, Glass can't find the vault → set `aiosGlass.frameworkPath` to your AIOS root.
+
+**Restart-required:** no framework restart — but the IDE **window must be reloaded** after install for Glass to activate.
+
+---
+
 ## 2026-05-30 — Agents leverage registered skills · aios-builder · primary-session resume · housekeeping skill-reg bucket · changelog backup-exemption · automatic-updates setting
 
 `hash: 034ec7b`
