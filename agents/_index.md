@@ -19,14 +19,14 @@ Organized into **6 bundles by purpose**. Install only the bundles you need.
 | Bundle | Purpose | Count |
 |---|---|---|
 | **`aios/sales/`** | Lead generation, proposals, CRM, brand monitoring | 4 |
-| **`aios/strategy/`** | Market research, advisory, company analysis | 3 |
+| **`aios/strategy/`** | Market research, advisory, company analysis, open-source governance | 4 |
 | **`aios/finance-legal/`** | Accounting, legal review, invoicing, compliance | 4 |
 | **`aios/engineering/`** | Code review, documentation, bug triage, security, building | 6 |
 | **`aios/communication/`** | Content, decks, emails, meeting prep, reports, design systems | 7 |
 | **`aios/personal/`** | Study, journaling, growth, decision-making, onboarding, crisis | 6 |
 | **`custom/`** | Your own agents (operator-specific extensions, never synced) | — |
 
-**Total bundled agents: 30.** Each bundle has a `README.md` describing its scope; this file is the master registry.
+**Total bundled agents: 31.** Each bundle has a `README.md` describing its scope; this file is the master registry.
 
 > **Standard:** all agents follow the [Agent Skills open standard](https://github.com/anthropics/skills) (138K⭐ — Anthropic's public canonical repo). Cross-platform compatible with Claude Code, Codex, Gemini CLI, Cursor, Antigravity.
 
