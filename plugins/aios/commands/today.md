@@ -410,6 +410,7 @@ Example phrasing should be specific to today's vault state — never generic. *"
 - **Rotate.** Don't suggest the same command two days in a row, even if the trigger still applies.
 - **Skip if not ready.** If the vault doesn't have enough content for a command to produce value, don't suggest it. Empty vault + `/emerge` = bad experience.
 - **First two weeks:** Stick to day-based triggers (Monday/Wednesday/Friday). Don't overwhelm new users with state-based suggestions until the vault has depth.
+- **No fabricated specifics in the description.** The `_{brief description}_` must not invent counts, names, or facts the vault doesn't state — e.g. don't write *"across all four pillars"* unless the context actually defines four. Describe generically (*"across your ventures"*, *"across your pillars"*) or use the real number from context (`role-expectations.md` pillars, mounted ventures). Downstream surfaces (AIOS Glass renders this line verbatim as a nudge) amplify whatever you write — a made-up number becomes a visible lie. Honors the no-fabricated-specifics rule.
 
 ## Observed Nudges
 
