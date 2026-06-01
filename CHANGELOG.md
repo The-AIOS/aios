@@ -15,7 +15,7 @@
 
 ## 2026-06-01 — Daily note as a live ledger (mark tasks done the moment they're done)
 
-`hash: 1c3d486`
+`hash: 9470658`
 
 > **Your daily note now stays true during the day, not just at its bookends.** Until now the note was written at `/today` and reconciled at `/close-day` — so a task finished at 9am still showed `- [ ]` until evening. A new § VI Discipline rule closes the loop in real time: the moment Claude completes, ships, or confirms a task that's an unchecked `- [ ]` in *today's* note, it marks it `- [x]` with a one-line result. It's honest about partials (a passed meeting ≠ a finished deliverable), composes with the publish-evidence rule (a `✅` on a publish-action still needs a URL or `published-pending`), and is autonomous (daily-note writes already are per INTENT.md). `/close-day` stays the deterministic backstop for anything the live rule misses (e.g. spawned agents in project repos, via their session reports). Soft live rule + hard close-day reconcile — the same shape as observed-context writes.
 
