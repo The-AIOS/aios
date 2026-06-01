@@ -52,6 +52,8 @@ The AIOS is *one filesystem, two surfaces*. Install both:
 
 You don't pick one — you run them side-by-side. Obsidian on the left for context, Antigravity IDE on the right for execution. Same vault, both windows.
 
+> **Then add the glass layer:** once the AIOS is set up (below), install **AIOS Glass** into Antigravity — a docked graphical surface for running rituals/agents/spaces by *clicking* instead of typing (great if you, or someone you onboard, aren't heavy terminal users). Open VSX → search **"AIOS Glass"** → Install. Walkthrough: see [`START-HERE.md`](./START-HERE.md) → *Step 4 — Install AIOS Glass*.
+
 ### macOS (~5 min)
 
 ```bash

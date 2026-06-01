@@ -109,6 +109,16 @@ Mount with `--mount {url}` (using a URL teammate shared with you), or create fre
 
 ---
 
+### Step 4 — (Recommended) Install AIOS Glass — the clickable front door
+
+If you're in **Antigravity** (or any Open VSX editor — VSCodium, Cursor, Windsurf), add **[AIOS Glass](https://open-vsx.org/extension/the-aios/aios-glass)** — a docked graphical layer that turns the terminal rituals into clickable surfaces: run `/aios:*` commands, launch agents, browse skills, manage spaces, and watch your context compound. **Especially valuable if you (or someone you're onboarding) aren't heavy terminal users.**
+
+Extensions view → search **"AIOS Glass"** → Install (it auto-installs the Foam dependency and auto-updates from then on). Full instructions + the `.vsix` fallback for stock Microsoft VS Code: **[aios-glass → INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md)**.
+
+Glass is *glass, not engine* — it reads your `~/aios` at runtime and triggers your existing rituals/agents through Claude; it reimplements nothing. Install it after Steps 1–2 (it surfaces what's already set up).
+
+---
+
 ## Day 1 — Your first daily plan
 
 Once context is set up, run:
