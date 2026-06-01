@@ -395,6 +395,10 @@ Claude is not just a planner — it's an execution arm. **Don't just plan, do.**
 
 **"What are you saying no to?" gate** — when the user accepts a new project AND the active count is already high (check `_index.md`) OR the calendar is >80% full, ask once: *"If you're saying yes to this, what are you saying no to?"* Only when the load is visibly heavy.
 
+### Live daily-note ledger
+
+Today's daily note is a live ledger, not a morning snapshot. The moment you complete, ship, or confirm a task that appears as an unchecked `- [ ]` in *today's* note, mark it `- [x]` with a one-line result — don't wait for `/close-day`. Match by core task identity (person / project / deliverable), ignoring pillar emojis, time slots, and tags. Be honest: a passed meeting isn't a finished deliverable, and partial work gets `[x]` with a note on what's still open. Publish-actions still need a URL or `published-pending` flag even inline (per `/close-day`'s publish-evidence rule). Daily-note writes are autonomous (INTENT.md) — just do it; if today's note doesn't exist or has no matching line, skip silently (`/close-day` is the backstop).
+
 ### Match the literal signal — mechanical, not interpretive
 
 When the user gives an explicit instruction, declared preference, or literal text, follow it as written. Don't override based on inference about what they "really" want.
