@@ -321,6 +321,14 @@ Installing the recommended plugin set for you...
 
 **Edge case — operator says "skip plugins entirely"** before the install fires: respect it. The default is install-all-by-recommended-set, but explicit "skip" wins.
 
+### Step 8.5 — (Recommended) Install AIOS Glass — the graphical front door
+
+Announce + offer (don't hard-gate). **What it is:** a docked panel inside the IDE that turns the AIOS into a point-and-click surface — run rituals, launch/spawn agents, browse skills + commands, mount companies, manage spaces, all without typing terminal commands. *Glass, not engine* — it triggers the existing rituals through Claude, reimplements nothing.
+
+Say: *"One more — **AIOS Glass** lets you run all of this by clicking instead of typing. Open your Extensions view → search 'AIOS Glass' → Install (it auto-installs the Foam dependency + auto-updates), then reload the window. Want me to walk you through it, or grab it from `START-HERE.md` → Step 4 when you're ready?"*
+
+**Calibration (use the persona from `onboarding-aios`/declared context):** for **`exec` / `knowledge` / non-terminal** operators this is a *strong* recommendation — often the difference between using the AIOS and bouncing off the terminal. For **`software`** operators, mention it lightly (terminal-comfortable, but may still like the agent-orchestrator + spaces surfaces). Stock Microsoft VS Code users sideload the `.vsix` — full install incl. CLI + troubleshooting: [aios-glass INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md). It's a recommendation, not a gate — "skip / later" is fine.
+
 ### Step 9 — Introducing you to {primary-session-name}
 
 Auto-launch the orientation companion. **No y/skip gate** — the "skip" option there is a fake choice (operator would lose orientation; defeats the purpose). Same pattern as bundles ship by default, plugins install by default. Announce + transition + execute.

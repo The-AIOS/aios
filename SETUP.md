@@ -52,7 +52,9 @@ The AIOS is *one filesystem, two surfaces*. Install both:
 
 You don't pick one — you run them side-by-side. Obsidian on the left for context, Antigravity IDE on the right for execution. Same vault, both windows.
 
-> **Then add the glass layer:** once the AIOS is set up (below), install **AIOS Glass** into Antigravity — a docked graphical surface for running rituals/agents/spaces by *clicking* instead of typing (great if you, or someone you onboard, aren't heavy terminal users). Open VSX → search **"AIOS Glass"** → Install. Walkthrough: see [`START-HERE.md`](./START-HERE.md) → *Step 4 — Install AIOS Glass*.
+> **Then add the glass layer (recommended).** **AIOS Glass** is a docked panel inside Antigravity that turns the AIOS into a *point-and-click* surface — run rituals, launch agents, browse skills/commands, mount companies, manage spaces, all without typing terminal commands. *Glass, not engine:* it just triggers your existing AIOS through Claude. **Especially valuable if you (or someone you onboard) aren't comfortable in a terminal.**
+>
+> **Install it AFTER the AIOS is set up** (it surfaces what's already there): Extensions view (`⌘⇧X`/`Ctrl+Shift+X`) → search **"AIOS Glass"** → **Install** (auto-installs the **Foam** dependency + auto-updates) → reload the window. Works in any Open VSX editor (Antigravity / VSCodium / Cursor / Windsurf). On **stock Microsoft VS Code**, sideload the `.vsix` from the [latest release](https://github.com/The-AIOS/aios-glass/releases). Full walkthrough: [`START-HERE.md`](./START-HERE.md) → *Step 4* + the [aios-glass INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md).
 
 ### macOS (~5 min)
 

@@ -218,6 +218,12 @@ You should be able to articulate these without reading the docs back to the oper
 | **CLAUDE.md** | `~/aios/CLAUDE.md` | The behavioral contract — how Claude works with this vault, session rituals, the 10 principles of intelligence collaboration, agentic culture. Read first if you're contributing or curious about the *why* underneath. |
 | **CHANGELOG.md** | `~/aios/CHANGELOG.md` | What's new in the framework. Read by `/aios:update` to walk operators through migrations. |
 
+### AIOS Glass — the graphical front door (recommend, persona-calibrated)
+
+Beyond the docs above there's **AIOS Glass** — a docked IDE panel ([Open VSX](https://open-vsx.org/extension/the-aios/aios-glass) · [INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md)) that runs rituals / agents / skills / spaces by *clicking* instead of typing. *Glass, not engine* — it surfaces the existing AIOS, reimplements nothing.
+
+**Recommend it as a top Day-0 move for `exec` / `knowledge` / non-terminal personas** — for them it's often the difference between actually using the AIOS and bouncing off the terminal. Install: Extensions view → search **"AIOS Glass"** → Install (auto-installs Foam + auto-updates) → reload window. For `software` personas, mention it lightly (terminal-comfortable, but may still like the agent-orchestrator + spaces surfaces). Point to `START-HERE.md` → *Step 4* for the full install.
+
 ### Operator-owned personalization
 
 | Doc | Lives at | What it answers |

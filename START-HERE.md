@@ -111,11 +111,16 @@ Mount with `--mount {url}` (using a URL teammate shared with you), or create fre
 
 ### Step 4 — (Recommended) Install AIOS Glass — the clickable front door
 
-If you're in **Antigravity** (or any Open VSX editor — VSCodium, Cursor, Windsurf), add **[AIOS Glass](https://open-vsx.org/extension/the-aios/aios-glass)** — a docked graphical layer that turns the terminal rituals into clickable surfaces: run `/aios:*` commands, launch agents, browse skills, manage spaces, and watch your context compound. **Especially valuable if you (or someone you're onboarding) aren't heavy terminal users.**
+**What it is:** a docked panel inside your IDE that turns the AIOS into a *point-and-click* surface — run any `/aios:*` ritual, launch/spawn agents, browse skills + commands, mount companies, manage collaboration spaces, and watch your context compound, all without typing terminal commands. *Glass, not engine:* it reads your `~/aios` at runtime and triggers your existing rituals through Claude — it reimplements nothing. **Especially valuable if you (or someone you onboard) aren't comfortable in a terminal.**
 
-Extensions view → search **"AIOS Glass"** → Install (it auto-installs the Foam dependency and auto-updates from then on). Full instructions + the `.vsix` fallback for stock Microsoft VS Code: **[aios-glass → INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md)**.
+**Install** (in **Antigravity**, or any Open VSX editor — VSCodium / Cursor / Windsurf):
+1. Open the Extensions view (`⌘⇧X` / `Ctrl+Shift+X`).
+2. Search **"AIOS Glass"** → **Install**. It auto-installs its **Foam** dependency and **auto-updates** from then on.
+3. **Reload the window** when prompted (`⌘⇧P` → *Developer: Reload Window*). Glass docks into the side bar.
 
-Glass is *glass, not engine* — it reads your `~/aios` at runtime and triggers your existing rituals/agents through Claude; it reimplements nothing. Install it after Steps 1–2 (it surfaces what's already set up).
+> **On stock Microsoft VS Code?** Glass isn't on MS's marketplace — download `aios-glass-<version>.vsix` from the [latest release](https://github.com/The-AIOS/aios-glass/releases), then *Extensions → ⋯ → Install from VSIX…* → reload. Full details (CLI install, configuration, troubleshooting): **[aios-glass → INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md)**.
+
+Install it **after** Steps 1–2 — Glass surfaces what's already set up.
 
 ---
 
