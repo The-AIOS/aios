@@ -13,6 +13,30 @@
 
 ---
 
+## 2026-06-02 — study-buddy gains a reading system: the method, the library pipeline, and infographics
+
+`hash: pending`
+
+> **The `study-buddy` agent goes from "walk a chapter" to "run a reading system" — and bootstraps one for you if you don't have it.** Three upgrades, all de-personalized and shipped via the bundled agent + a new template.
+>
+> **(1) The method — read it to me, unfiltered but engaging.** study-buddy now has explicit reading doctrine: read the chapter *to* you (as if aloud), source-faithful and register-honest — never a sanitized digest. Keep the cool empirical claims and the hot rhetoric distinct as you go, and *name the moment the evidence-quality changes*. The brief is the scaffold; the walk is the value.
+>
+> **(2) Detect-or-scaffold.** A new Step 0: study-buddy checks for an existing reading protocol (a `reading`/`study` project note, a `USER.md → Growth routines → Reading` pointer, or a `reflections/books/_index`). If found, that note is the source of truth and the agent follows it. If not, it offers to scaffold one from the new `templates/aios/reading-project-template.md` — the method + a WIP-5 library pipeline (focus on 5 books at a time; read all 5, then bring 5 more) + a `{Title} — {Author} ({Year}).pdf` naming convention + the per-book output stack.
+>
+> **(3) The completion stack now includes infographics + smart replenishment.** On book completion, beyond the non-negotiables synthesis, study-buddy now (a) builds infographic(s) via the `infographic-builder` skill — an *argument* one-pager always, plus a *personal* one if the book has personal-specific value — and (b) when a library pipeline is active, proposes the next 5 books with a **deepen + mutate** rule: ~3 same-vein + ~1 bridge + **≥1 deliberately unrelated "mutation" (hard floor, never zero)** so studying stays expansive.
+
+### What changed
+
+- `agents/aios/personal/study-buddy.md` — new **Step 0 (detect-or-scaffold)** + **the method** doctrine block; Step 4 (explain) now invokes the method explicitly; new completion steps **10 (infographics)** + **11 (deepen + mutate replenishment)**.
+- `templates/aios/reading-project-template.md` — **new**: a scaffoldable reading-project note (Current State, Library Pipeline WIP-5, batch-selection heuristic, naming convention, Study Protocol + method, completion stack, Reading Queue).
+- `templates/_index.md` — registers `[[reading-project-template]]` under Operational.
+
+### Action required
+
+**None — auto-applies.** The agent + template ship as plain framework files (no installer, no restart). Next time you invoke `study-buddy`, it detects your reading setup or offers to scaffold one. If you already keep a reading/study project note, study-buddy defers to it as the source of truth.
+
+---
+
 ## 2026-06-01 — Live daily-note ledger + onboarding portability fixes
 
 `hash: cb20fb2`

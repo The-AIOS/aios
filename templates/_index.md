@@ -4,7 +4,7 @@ tags:
   - index
   - MOC
 created: '2026-03-05'
-updated: '2026-05-09'
+updated: '2026-06-02'
 type: index
 ---
 # Templates — Index
@@ -40,6 +40,7 @@ Templates for the standard files used across the vault. Each template includes s
 | Template | Target location | What it creates |
 |----------|----------------|----------------|
 | [[project-template]] | `vault/00 - notes/projects/{project}.md` | Active project tracking note |
+| [[reading-project-template]] | `vault/00 - notes/projects/{name}-reading.md` | Book-study system — the method, WIP-5 library pipeline, naming convention, per-book output stack (briefs → master note → non-negotiables → infographics). Scaffolded by the [[study-buddy]] agent when no reading protocol exists. |
 | [[role-log-template]] | `vault/00 - notes/logs/role-logs/{date}.md` | Daily role activity log |
 | [[meeting-prep-template]] | `vault/03 - export/meetings/{YYYY-MM-DD}-{slug}-prep.md` | High-stakes meeting prep — disambiguation, two-path flow (demo vs discovery), materials checklist, post-call routing |
 | [[agent-template]] | `agents/custom/{name}.md` | Specialized task agent — purpose, tools, instructions, constraints |
