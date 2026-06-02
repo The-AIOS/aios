@@ -46,7 +46,7 @@ Each vendored MCP has a `.upstream-sync` file in its folder recording `repo=`, `
 bash mcps/setup.sh
 ```
 
-Creates virtual environments and installs dependencies for all MCPs. Skips any that are already set up. Run once after cloning, or after `vault-update` adds a new MCP. Non-technical users: Claude can run this for you.
+Creates virtual environments and installs dependencies for all MCPs. Skips any that are already set up. Run once after cloning, or after `/aios:update` adds a new MCP. Non-technical users: Claude can run this for you.
 
 Each MCP's README covers the one-time auth step (API token, OAuth, dev app creation, etc.).
 

@@ -233,7 +233,12 @@ function spawn {
     # Build the script the new shell will run. Pass via -EncodedCommand because
     # wt.exe treats unescaped semicolons as tab separators -- a -Command string
     # with multiple statements would be split across phantom tabs.
-    $shell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { 'pwsh' } else { 'powershell' }
+    # Open the SAME PowerShell edition the wrapper was installed under — not
+    # just "pwsh if it exists". The wrapper lives in this edition's $PROFILE;
+    # opening the other edition would dot-source a different (wrapper-less)
+    # profile → Invoke-ClaudeWithRespawn: command not found. Match the running
+    # edition (Core = pwsh, Desktop = Windows PowerShell 5.1).
+    $shell = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh' } else { 'powershell' }
     $inner = @"
 . `$PROFILE
 Set-Location '$($PWD.Path)'

@@ -272,9 +272,21 @@ spawn() {
   printf '%s\n' "$task" > "$task_file"
 
   local launcher="/tmp/spawn-launch-$name.sh"
+  # Match the launcher's shell + rc to the user's LOGIN shell — the same
+  # resolution install-wrappers.sh used to decide where these functions were
+  # installed. Hard-coding zsh/.zshrc here silently broke spawn on any non-zsh
+  # login shell: the wrapper installs to .bashrc (bash user) but the launcher
+  # sourced .zshrc → _claude_with_respawn: command not found. Re-deriving from
+  # $SHELL keeps launcher and install in lockstep on every machine.
+  local _sh _rc
+  case "$(basename "${SHELL:-/bin/zsh}")" in
+    zsh)  _sh=/bin/zsh;  _rc="$HOME/.zshrc"  ;;
+    bash) _sh=/bin/bash; _rc="$HOME/.bashrc" ;;
+    *)    _sh=/bin/zsh;  _rc="$HOME/.zshrc"  ;;
+  esac
   cat > "$launcher" <<LAUNCHER
-#!/bin/zsh
-[ -f ~/.zshrc ] && source ~/.zshrc
+#!$_sh
+[ -f "$_rc" ] && source "$_rc"
 cd ~/aios 2>/dev/null
 _claude_with_respawn '$name' 'Read $task_file and follow the instructions inside.'
 LAUNCHER

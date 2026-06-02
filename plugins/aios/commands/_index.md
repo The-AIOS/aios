@@ -59,7 +59,7 @@ type: index
 | [[role-report]]  | Quarterly role report per pillars in role-expectations.md                        |
 | [[company]]      | Mount/sync company context (multi-substrate, multi-company; reads USER.md `## Companies (mounted)`). Subcommands: `--create`, `--mount`, `--sync`, `--sync-all`, `--status`, `--invite`, `--dry-run` |
 | [[cold-start-interview]] | First-touch interview after you clone AIOS — walks identity, declared context, INTENT.md, bundle install choices, MCP setup, optional Anthropic plugins, first /today |
-| [[vault-update]] | Pull latest shared infrastructure from team repo (commands, templates, settings) |
+| [[update]] | Pull latest framework infrastructure from upstream and auto-apply (commands, templates, agents, skills, hooks) |
 | [[mcps-setup]]   | Guided MCP setup — walks you through tokens + zshrc + register + verify |
 | [[ingest]]       | Process a source (PDF, URL, doc) into the vault — extract, file, cross-reference, log |
 | [[agent]]        | Load an agent's expertise into the current session (temporary hat) or list agents |

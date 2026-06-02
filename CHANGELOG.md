@@ -13,19 +13,33 @@
 
 ---
 
-## 2026-06-01 — Daily note as a live ledger (mark tasks done the moment they're done)
+## 2026-06-01 — Live daily-note ledger + onboarding portability fixes
 
-`hash: 9470658`
+`hash: PENDING`
 
-> **Your daily note now stays true during the day, not just at its bookends.** Until now the note was written at `/today` and reconciled at `/close-day` — so a task finished at 9am still showed `- [ ]` until evening. A new § VI Discipline rule closes the loop in real time: the moment Claude completes, ships, or confirms a task that's an unchecked `- [ ]` in *today's* note, it marks it `- [x]` with a one-line result. It's honest about partials (a passed meeting ≠ a finished deliverable), composes with the publish-evidence rule (a `✅` on a publish-action still needs a URL or `published-pending`), and is autonomous (daily-note writes already are per INTENT.md). `/close-day` stays the deterministic backstop for anything the live rule misses (e.g. spawned agents in project repos, via their session reports). Soft live rule + hard close-day reconcile — the same shape as observed-context writes.
+> **Two threads today: the daily note becomes a live ledger, and three onboarding papercuts a fresh external user surfaced get fixed.**
+>
+> **(1) Live daily-note ledger.** Until now the note was written at `/today` and reconciled at `/close-day` — a task finished at 9am still showed `- [ ]` until evening. A new § VI Discipline rule closes the loop in real time: the moment Claude completes/ships/confirms a task that's an unchecked `- [ ]` in *today's* note, it marks it `- [x]` with a one-line result. Honest about partials (a passed meeting ≠ a finished deliverable), composes with the publish-evidence rule (a `✅` on a publish-action still needs a URL or `published-pending`), autonomous (daily-note writes already are per INTENT.md). `/close-day` stays the deterministic backstop.
+>
+> **(2) `spawn` works on non-zsh login shells.** The spawn launcher hard-coded `#!/bin/zsh` + `source ~/.zshrc`, but `install-wrappers.sh` installs the wrapper functions to `$RC` resolved from `$SHELL` (`~/.bashrc` for a bash user). On any non-zsh login shell the helper landed in `.bashrc` while the launcher sourced `.zshrc` → `_claude_with_respawn: command not found`, and spawn silently failed. The launcher now re-derives shell+rc from `$SHELL`, in lockstep with the installer. Windows parity: `install-wrappers.ps1` now opens the *current* PowerShell edition (Core→pwsh, Desktop→5.1) instead of "pwsh if it exists," so the new window dot-sources the same `$PROFILE` the wrapper was installed into.
+>
+> **(3) Freshness check no longer false-alarms "unreachable" for HTTPS-clone users.** `/today` + `/close-day` did `git ls-remote {ssh-url}`; a fresh user who cloned via HTTPS with no SSH keys got "unreachable" — scary, and it masked a real BEHIND. The check now falls back SSH→public-HTTPS (the upstream is public), resolving to synced/BEHIND correctly. "unreachable" now means genuinely offline.
+>
+> **(4) Dead "vault-update" narrative removed.** `vault-update` was the pre-rename name of `/aios:update`; every active reference across commands/docs/hooks is now `aios-update` / `/aios:update`. (CHANGELOG history left intact — those are dated records.)
 
 ### What changed
 
 - `CLAUDE.md` — new § VI Discipline subsection **"Live daily-note ledger."**
+- `hooks/claude-identity/install-wrappers.sh` — spawn launcher re-derives shell+rc from `$SHELL`.
+- `hooks/claude-identity/install-wrappers.ps1` — launcher opens the current PowerShell edition, not "pwsh if present."
+- `plugins/aios/commands/today.md` + `close-day.md` — `git ls-remote` SSH→HTTPS fallback in the freshness checks; `vault-update`→`aios-update` labels + section names.
+- `plugins/aios/commands/update.md`, `_index.md`, `mcps/setup.sh`, `mcps/_index.md`, `hooks/claude-identity/README.md`, `CHEATSHEET.md` — `vault-update`→`aios-update` / `/aios:update` references; temp clone dir `/tmp/vault-update-check`→`/tmp/aios-update-check`.
 
 ### Action required
 
-1. **Apply the new CLAUDE.md subsection.** It surfaces as a Tier-2 (Suggest) diff during this `/aios:update` — review and accept the **"Live daily-note ledger"** section under § VI Discipline. No other files change, nothing to run, no restart.
+1. **Apply the Tier-1 + Tier-2 diffs** (auto during this `/aios:update`): CLAUDE.md (live-ledger subsection), today.md/close-day.md (fallback + rename), and the doc/hook renames.
+2. **`install-wrappers.sh` auto-re-runs** (it's a state-producer) — it re-installs the corrected spawn launcher into your `$RC`. Open a new terminal afterward so `spawn` picks it up. (Windows: `install-wrappers.ps1` likewise.)
+3. No restart beyond a fresh terminal for the wrapper change.
 
 ---
 

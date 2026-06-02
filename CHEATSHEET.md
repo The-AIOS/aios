@@ -42,7 +42,7 @@ The minimum every-day rhythm. **`/today` is the orchestrator** — running it cl
 
 | Command | When | What it does |
 |---|---|---|
-| **`/today`** | Every morning | **Required.** Loads context + pulls calendar/tasks/Slack + writes today's plan. **Checks the previous daily note for `## Close of Day`** — if missing, auto-invokes `/close-day` first. **Checks vault-update freshness** — surfaces a callout if the shared template/team repo has new infra. Commits + pushes the plan. |
+| **`/today`** | Every morning | **Required.** Loads context + pulls calendar/tasks/Slack + writes today's plan. **Checks the previous daily note for `## Close of Day`** — if missing, auto-invokes `/close-day` first. **Checks aios-update freshness** — surfaces a callout if the shared template/team repo has new infra. Commits + pushes the plan. |
 | `/close-day` | Every evening, OR auto-invoked by `/today` next morning | Captures Close of Day (verdict, shipped, decisions, carries, observed patterns) and routes signals to observed-context + project notes. Skip-tolerant — `/today` catches missing close-day. |
 | `/aios:update` | When `/today` surfaces a BEHIND callout | Pulls fresh infra from the shared template/team repo. On-demand, not scheduled. |
 

@@ -66,7 +66,7 @@ The right comparison: **local vs operator's last-synced BASELINE** (the version 
 #   (c) upstream — what's at upstream HEAD (target of this update)
 
 # Fetch baseline content from the same clone we already have (no second clone needed):
-git -C /tmp/vault-update-check show {stored_hash}:{path} > /tmp/aios-baseline-{flattened-path}
+git -C /tmp/aios-update-check show {stored_hash}:{path} > /tmp/aios-baseline-{flattened-path}
 
 # Compare local vs baseline (line-ending-normalized — see CRLF note below):
 diff -q <(tr -d '\r' < "$HOME/aios/{path}") <(tr -d '\r' < /tmp/aios-baseline-{flattened-path})
@@ -135,7 +135,7 @@ For each layer in `agents`, `skills`, `plugins`, `mcps`, `templates`, `hooks`:
 2. Scan `{layer}/custom/*` for any file whose basename appears in the bundled set AND is not `_index.md`. **For each match: apply the stale-vs-personalized test, then remove.**
    - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the CURRENT bundled file (`{layer}/{bundled-subfolder}/{name}.md`). **Normalize line endings first** (`tr -d '\r'` both sides — see CRLF note in § Backup-on-divergence) so Windows CRLF checkouts don't read as differences.
    - **If byte-identical to current bundled** (after CRLF-normalization — true duplicate, no operator value): remove silently, no backup needed.
-   - **If different from current bundled → check if it's a stale-bundled version** (not a personalization): scan recent upstream history for any past version of the bundled file matching this content. Use `git -C /tmp/vault-update-check log --all -p -- {bundled-path}` and compare against the past few revisions of the file. If a match is found in upstream history → the file is just a stale bundled copy (migration leftover) → remove silently, no backup.
+   - **If different from current bundled → check if it's a stale-bundled version** (not a personalization): scan recent upstream history for any past version of the bundled file matching this content. Use `git -C /tmp/aios-update-check log --all -p -- {bundled-path}` and compare against the past few revisions of the file. If a match is found in upstream history → the file is just a stale bundled copy (migration leftover) → remove silently, no backup.
    - **Else** (different from current AND no match in upstream history): treat as real personalization → backup-on-divergence: copy operator's version to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-custom-{name}.md` FIRST, then remove.
    - Log either way: *"Removed `agents/custom/lawyer.md` — duplicate of bundled `agents/aios/finance-legal/lawyer.md`. [Backed up to vault/04 - backups/aios-update-2026-05-25/duplicates/agents-custom-lawyer.md — your version didn't match current or any past bundled; restore manually if you had intentional edits.]"* (bracketed clause only when backed up).
 3. Scan `{layer}/*.md` at the top level (outside any subfolder). Skip `_index.md` (layer-root index is intentional, not an orphan). If a remaining top-level file's basename matches a bundled file → **same stale-vs-personalized test as step 2.** If byte-identical or matches a past bundled version → silent remove. Else → backup to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-root-{name}.md` then remove. Log: *"Removed `templates/project-template.md` — duplicate of bundled `templates/aios/project-template.md`."*
@@ -179,24 +179,24 @@ esac
 # file) + degraded changelog detection. A full clone is text-only, lands in
 # /tmp, and is deleted at the end — the depth optimization traded correctness
 # for a clone-time saving that doesn't matter for an occasional command.
-rm -rf /tmp/vault-update-check && git clone --single-branch "$clone_url" /tmp/vault-update-check 2>&1
+rm -rf /tmp/aios-update-check && git clone --single-branch "$clone_url" /tmp/aios-update-check 2>&1
 ```
 
-If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git@github.com:org/repo` → `https://github.com/org/repo`). Get current HEAD: `git -C /tmp/vault-update-check rev-parse HEAD`. If HEAD matches stored hash → run the **completeness reconcile** (§ Step 6.5 — catches drift even when the tracker says "current") → if also clean, "Your vault infrastructure is current (synced {date})." → clean up → done.
+If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git@github.com:org/repo` → `https://github.com/org/repo`). Get current HEAD: `git -C /tmp/aios-update-check rev-parse HEAD`. If HEAD matches stored hash → run the **completeness reconcile** (§ Step 6.5 — catches drift even when the tracker says "current") → if also clean, "Your vault infrastructure is current (synced {date})." → clean up → done.
 
 ### 1.5. Show changelog context
 
 Read `CHANGELOG.md` from the cloned repo root. If absent, skip silently. Otherwise:
 
 1. Parse `## ` entries (each is `## YYYY-MM-DD — title` followed by `` `hash: {short_hash}` ``).
-2. For each entry newest first, check if synced via `git -C /tmp/vault-update-check merge-base --is-ancestor {entry_hash} {stored_hash}` (exit 0 = synced, stop scanning; exit 1 = new, collect; exit 128 = hash unreachable in cloned repo → fall back to content-comparison against local CHANGELOG.md by date header + title).
+2. For each entry newest first, check if synced via `git -C /tmp/aios-update-check merge-base --is-ancestor {entry_hash} {stored_hash}` (exit 0 = synced, stop scanning; exit 1 = new, collect; exit 128 = hash unreachable in cloned repo → fall back to content-comparison against local CHANGELOG.md by date header + title).
 3. If new entries exist, show them before applying changes — present **What changed** + **Action required** sections only (skip Why/FYI for brevity; full details in CHANGELOG.md). Aggregate + deduplicate Action required across all new entries.
 4. Execute the action items inline as part of this run — don't list them and wait for the operator to ask. This command IS the implementation arm of CHANGELOG action items.
 
 ### 2. Find what changed
 
 ```bash
-git -C /tmp/vault-update-check diff {stored_hash}..HEAD --name-only -- \
+git -C /tmp/aios-update-check diff {stored_hash}..HEAD --name-only -- \
   "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
   "CHANGELOG.md" "CLAUDE.md" "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
   "templates/" "skills/" "hooks/" "mcps/" "plugins/" "agents/" \
@@ -210,7 +210,7 @@ If no Tier 1 files changed in the tracker-diff → **still run the completeness 
 **Before processing anything else, content-compare local `plugins/aios/commands/update.md` against the cloned upstream version.** This is the bootstrap-safety check: when `update.md` itself changes, the current run is executing OLD spec — we need the NEW spec to land + re-process everything, without operator action.
 
 ```bash
-diff -q <(tr -d '\r' < "$HOME/aios/plugins/aios/commands/update.md") <(tr -d '\r' < /tmp/vault-update-check/plugins/aios/commands/update.md)
+diff -q <(tr -d '\r' < "$HOME/aios/plugins/aios/commands/update.md") <(tr -d '\r' < /tmp/aios-update-check/plugins/aios/commands/update.md)
 ```
 
 **Case A — Identical (no self-update needed):** local already matches upstream. Skip the rest of this step, proceed to Step 3 with current logic. This is the normal path AND the path taken by an auto-re-invocation (because the first run already applied update.md).
@@ -225,7 +225,7 @@ diff -q <(tr -d '\r' < "$HOME/aios/plugins/aios/commands/update.md") <(tr -d '\r
    cp $HOME/aios/plugins/aios/commands/update.md $HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/update.md
    cp $HOME/aios/plugins/aios/commands/update.md $HOME/.claude/plugins/cache/the-aios/aios/0.1.0/commands/update.md
    ```
-3. Clean up the temp clone (the re-invoke will re-clone fresh): `rm -rf /tmp/vault-update-check`.
+3. Clean up the temp clone (the re-invoke will re-clone fresh): `rm -rf /tmp/aios-update-check`.
 4. **Auto-re-invoke the command** via `Skill(aios:update)`. The re-invocation loads the NEW spec from the plugin cache (just synced) and processes all changed files from a clean state.
 5. **Exit the current run** after the re-invocation returns — its work is done by the inner run.
 
@@ -240,7 +240,7 @@ For each changed Tier 1 file:
 1. **Diff local vs upstream HEAD.** If byte-identical, skip (no work needed — operator already has this version somehow).
 2. **Three-way compare to decide on backup** (see § Backup-on-divergence above):
    - **`CHANGELOG.md` → skip this compare entirely: overwrite silently, never back up** (append-only canonical history — never a personalization).
-   - Get baseline via `git -C /tmp/vault-update-check show {stored_hash}:{path}`.
+   - Get baseline via `git -C /tmp/aios-update-check show {stored_hash}:{path}`.
    - If `local == baseline` → operator never touched it → overwrite silently, **no backup**.
    - If `local != baseline` → operator personalized → **backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{YYYY-MM-DD}/{flattened-path}.md` BEFORE overwrite.
    - If baseline unreachable (cross-repo hash or `stored_hash=initial`) → conservative fallback: backup.
@@ -295,7 +295,7 @@ VAULT="$HOME/aios"
 for p in README.md START-HERE.md SETUP.md TOOLS.md CHEATSHEET.md CHANGELOG.md \
          LICENSE NOTICE FORTRESS.md .gitignore CLAUDE.md \
          templates skills hooks mcps plugins agents .claude-plugin; do
-  diff -rq "$VAULT/$p" "/tmp/vault-update-check/$p" 2>/dev/null
+  diff -rq "$VAULT/$p" "/tmp/aios-update-check/$p" 2>/dev/null
 done \
   | grep -vF "Only in $VAULT" \
   | grep -vE "/custom(/|: )" \
@@ -311,7 +311,7 @@ done \
 # framework files/dirs present in the clone but missing from the vault.
 ```
 
-For each genuine framework drift surfaced (a Tier-1 file that **differs**, or a bundled file/dir present in the clone but **missing** from the vault — i.e. a `Files … differ` line or a clone-side `Only in /tmp/vault-update-check/…` line):
+For each genuine framework drift surfaced (a Tier-1 file that **differs**, or a bundled file/dir present in the clone but **missing** from the vault — i.e. a `Files … differ` line or a clone-side `Only in /tmp/aios-update-check/…` line):
 - Apply it exactly like a Step-3 Tier-1 file (three-way backup decision, then overwrite/add; CRLF-normalize the compare).
 - Sync any recovered command file to the plugin pipeline (marketplace + cache).
 - **Report it loudly** — this drift means the tracker was lying; name the files recovered so the operator knows a gap self-healed.
@@ -320,7 +320,7 @@ CRLF-normalize when comparing file *contents* (`tr -d '\r'`) per the § Backup-o
 
 ### 7. Advance tracker (only on a clean, fully-applied run) and clean up
 
-**Only write `.aios-update` to the new HEAD hash if BOTH are true:** (a) every Step-3 apply + Step-4 auto-exec succeeded, and (b) the Step-6.5 reconcile came back clean (no remaining framework drift). If either failed, leave the tracker at its current value and report what's incomplete — a stale tracker is recoverable (next run re-pulls); an over-advanced tracker orphans content (the failure we're guarding against). Set `hash={HEAD}` + `synced={today}`, then `rm -rf /tmp/vault-update-check`.
+**Only write `.aios-update` to the new HEAD hash if BOTH are true:** (a) every Step-3 apply + Step-4 auto-exec succeeded, and (b) the Step-6.5 reconcile came back clean (no remaining framework drift). If either failed, leave the tracker at its current value and report what's incomplete — a stale tracker is recoverable (next run re-pulls); an over-advanced tracker orphans content (the failure we're guarding against). Set `hash={HEAD}` + `synced={today}`, then `rm -rf /tmp/aios-update-check`.
 
 > **The tracker is written ONLY by this command, as its final step, after a clean fully-applied run. NEVER hand-edit `.aios-update`** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65).
 
@@ -334,7 +334,7 @@ CRLF-normalize when comparing file *contents* (`tr -d '\r'`) per the § Backup-o
 
 **If updates landed:**
 ```
-## Vault updated to {new_hash} (was {old_hash}, {N} commits)
+## Framework updated to {new_hash} (was {old_hash}, {N} commits)
 
 ### What's new (changelog)
 {action-item-bearing entries; What changed + Action required only}
@@ -371,7 +371,7 @@ CRLF-normalize when comparing file *contents* (`tr -d '\r'`) per the § Backup-o
 - **Tier 2 (operator content) is sacred.** Never touched. Includes everything under the denylist.
 - **Self-update is auto-re-invoking + bootstrap-safe.** When `update.md` itself is in the diff, apply + sync to plugin pipeline FIRST, then auto-re-invoke `Skill(aios:update)`. The inner run loads the new spec, processes everything cleanly, returns. Content-comparison guards against recursion (after self-apply, local matches upstream → Case A fires → no loop). Operator sees one report from the outer run; no manual re-invocation needed. See Step 2.5.
 - **Cross-repo cascades.** When CHANGELOG hashes don't exist in the cloned repo (common for operators syncing from a fork or downstream mirror), fall back to content-comparison via date header + title (see Step 1.5).
-- **Clean up temp clone.** Always `rm -rf /tmp/vault-update-check` at end, even on error.
+- **Clean up temp clone.** Always `rm -rf /tmp/aios-update-check` at end, even on error.
 - Use `[[wiki-links]]` for project names, context files, ventures mentioned in the report.
 
 ## Relationship to /company

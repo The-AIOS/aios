@@ -30,7 +30,7 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
 
 1. **Run executor + read vault** — fire these in **one parallel batch**:
    - `Bash(uv run ~/aios/hooks/pipeline-executor.py --command close-day)` — pre-loads Calendar (detailed, with attachments), Calendar next 7 days, Tasks, Slack
-   - `Bash(cfg=~/aios/.aios-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && echo "vault-update: unreachable" || { [ "$h" = "$r" ] && echo "vault-update: synced" || echo "vault-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "vault-update: no-config"; fi)` — **infrastructure freshness check** (mirror of `/today`'s morning check). Render per § Vault-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before sarah's overnight queue (or first thing tomorrow)".
+   - `Bash(cfg=~/aios/.aios-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && { hr=$(echo "$repo" | sed -E 's#git@github\.com:#https://github.com/#'); r=$(git ls-remote "$hr" HEAD 2>/dev/null | awk '{print $1}'); }; [ -z "$r" ] && echo "aios-update: unreachable" || { [ "$h" = "$r" ] && echo "aios-update: synced" || echo "aios-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "aios-update: no-config"; fi)` — **infrastructure freshness check** (mirror of `/today`'s morning check; SSH `ls-remote` falls back to public HTTPS so a fresh HTTPS clone with no SSH keys still resolves). Render per § Aios-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before sarah's overnight queue (or first thing tomorrow)".
    - `Read` → `USER.md` (for dev project paths, growth routines, session cascade, organization, and `### /close-day` command personalizations)
    - `Read` → `INTENT.md` (if it exists — for focus alignment check, parked item handling in carries)
    - Read the daily note to close: list files in `01 - calendar/{YYYY-MM}/`, pick the **most recent `YYYY-MM-DD.md`** (exclude weekly plans like `W{N}-plan.md`). If it's after midnight and no note exists for today, the most recent note is yesterday's — close that one. If it already has a `## Close of Day` section, update it (merge new info, don't duplicate). **Always tell the user which date you're closing:** "Closing {date}."
@@ -59,16 +59,16 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
 12. **Update weekly plan progress** (see Weekly Plan Progress Update below)
 13. **Sync Google Tasks** — use pre-loaded Tasks data (see Google Tasks Sync below)
 
-## Vault-update freshness rendering
+## Aios-update freshness rendering
 
 Apply the result from step 1's `.aios-update` check (BEHIND / synced / unreachable / no-config):
 
 - **`synced`** → silent. No surface in the close-of-day section.
-- **`BEHIND`** → surface as a callout at the top of the `## Close of Day` block, before the verdict line: `> 🆕 **Vault-update pending** — local hash `{h}`, team repo `{r}`. Run `/aios:update` before sarah's overnight queue (or first thing tomorrow morning) so fresh commands/templates land in her shift.` This is consequential at close-day specifically because sarah's queue is generated FROM your local state — stale local = stale handoff.
-- **`unreachable`** → soft mention near the Observed section: *"vault-update check unreachable at close (network/auth — fine for now; /today will retry tomorrow)."* Don't escalate.
+- **`BEHIND`** → surface as a callout at the top of the `## Close of Day` block, before the verdict line: `> 🆕 **Aios-update pending** — local hash `{h}`, upstream `{r}`. Run `/aios:update` before sarah's overnight queue (or first thing tomorrow morning) so fresh commands/templates land in her shift.` This is consequential at close-day specifically because sarah's queue is generated FROM your local state — stale local = stale handoff.
+- **`unreachable`** → soft mention near the Observed section: *"aios-update check unreachable at close (offline — fine for now; /today will retry tomorrow)."* Don't escalate.
 - **`no-config`** → silent (no Organization configured = single-vault user, nothing to sync).
 
-**USER.md override:** if `USER.md` → `## Command personalizations` → `### /close-day` (or `### /today`) has a vault-update nudge suppression (e.g., for users who are upstream authors of the team repo), apply it. The check still runs; rendering is muted per the personalization.
+**USER.md override:** if `USER.md` → `## Command personalizations` → `### /close-day` (or `### /today`) has an aios-update nudge suppression (e.g., for users who are upstream authors of the team repo), apply it. The check still runs; rendering is muted per the personalization.
 
 ## Output
 

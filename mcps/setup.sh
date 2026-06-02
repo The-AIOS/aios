@@ -1,6 +1,6 @@
 #!/bin/bash
 # MCP Setup — creates virtual environments and installs dependencies for all bundled MCPs.
-# Run once after cloning, or after vault-update adds a new MCP.
+# Run once after cloning, or after /aios:update adds a new MCP.
 # Usage: bash mcps/setup.sh
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

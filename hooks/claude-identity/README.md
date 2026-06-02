@@ -153,7 +153,7 @@ EOF
 **If missing or outdated:** ask *"Install the spawn wrapper for named worker sessions (e.g. `spawn accountant`)? It auto-detects IDE (Antigravity / VS Code / Cursor) and falls back to Terminal.app. (y/n)"*
 
 On yes:
-1. Read the spawn wrapper template from the team repo's `CLAUDE.md` (or `/tmp/vault-update-check/CLAUDE.md` if running during `/aios:update`) — the section that contains the `spawn() {` function definition.
+1. Read the spawn wrapper template from the team repo's `CLAUDE.md` (or `/tmp/aios-update-check/CLAUDE.md` if running during `/aios:update`) — the section that contains the `spawn() {` function definition.
 2. Append it to the user's rc file via `Bash` heredoc:
    ```bash
    cat >> ~/.zshrc <<'WRAPPER'
