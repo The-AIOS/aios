@@ -15,7 +15,7 @@
 
 ## 2026-06-02 — study-buddy gains a reading system: the method, the library pipeline, and infographics
 
-`hash: pending`
+`hash: 95b4aa2`
 
 > **The `study-buddy` agent goes from "walk a chapter" to "run a reading system" — and bootstraps one for you if you don't have it.** Three upgrades, all de-personalized and shipped via the bundled agent + a new template.
 >
