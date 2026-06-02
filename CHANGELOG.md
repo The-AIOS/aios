@@ -15,7 +15,7 @@
 
 ## 2026-06-01 — Live daily-note ledger + onboarding portability fixes
 
-`hash: PENDING`
+`hash: cb20fb2`
 
 > **Two threads today: the daily note becomes a live ledger, and three onboarding papercuts a fresh external user surfaced get fixed.**
 >
