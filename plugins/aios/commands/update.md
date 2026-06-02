@@ -103,8 +103,9 @@ After Tier 1 replace lands, automatically execute any updated script that **prod
 
 Concrete rules for what's currently in the framework (the operator-environment-state class):
 
-- **`hooks/claude-identity/install-wrappers.sh` updated** (macOS / Linux) → `bash $HOME/aios/hooks/claude-identity/install-wrappers.sh`. Don't ask. Idempotent (timestamped backup → strip prior banner → append fresh). Report: *"Wrappers re-installed. Open a new terminal to pick up changes."*
-- **`hooks/claude-identity/install-wrappers.ps1` updated** (Windows) → run with whichever PowerShell exists. `pwsh` (PowerShell 7) is **not** installed by default on Windows — a stock Win11 ships only Windows PowerShell 5.1 (`powershell`), which runs the `.ps1` fine. Try `pwsh`, fall back to `powershell`:
+- **Platform guard — auto-run ONLY the installer matching the operator's OS, never the other platform's.** Detect once: `case "$OSTYPE" in msys*|cygwin*|win*) IS_WIN=1 ;; *) IS_WIN=0 ;; esac` (or `uname -s`: `Darwin`/`Linux` = non-Windows). On macOS/Linux run only the `.sh`; on Windows run only the `.ps1`. This prevents a Mac/Linux session from attempting the `.ps1` (a stray `powershell: command not found` in the report, or a pointless write into an unused `pwsh` profile) — and a Windows session from attempting the `.sh`. The file still gets *copied* on every OS (Tier-1); only its *execution* is platform-gated.
+- **`hooks/claude-identity/install-wrappers.sh` updated** → **macOS / Linux only** (`IS_WIN=0`; skip on Windows) → `bash $HOME/aios/hooks/claude-identity/install-wrappers.sh`. Don't ask. Idempotent (timestamped backup → strip prior banner → append fresh). Report: *"Wrappers re-installed. Open a new terminal to pick up changes."*
+- **`hooks/claude-identity/install-wrappers.ps1` updated** → **Windows only** (`IS_WIN=1`; skip on macOS / Linux) → run with whichever PowerShell exists. `pwsh` (PowerShell 7) is **not** installed by default on Windows — a stock Win11 ships only Windows PowerShell 5.1 (`powershell`), which runs the `.ps1` fine. Try `pwsh`, fall back to `powershell`:
   ```bash
   if command -v pwsh >/dev/null 2>&1; then
     pwsh -File "$HOME/aios/hooks/claude-identity/install-wrappers.ps1"
@@ -113,7 +114,7 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   fi
   ```
   Same idempotency. (Hard-coding `pwsh` fails the install on a stock machine — surfaced by a Windows operator 2026-05-27.)
-- **Any `hooks/claude-identity/install-*.sh` / install-*.ps1` updated** (current + future installers in that path) → auto-run by the same rule.
+- **Any `hooks/claude-identity/install-*.sh` / `install-*.ps1` updated** (current + future installers in that path) → auto-run by the same rule, under the same platform guard (`.sh` on non-Windows, `.ps1` on Windows).
 - **Any `plugins/aios/commands/*.md` updated** → cp to both plugin pipeline locations:
   ```bash
   cp $HOME/aios/plugins/aios/commands/*.md $HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/

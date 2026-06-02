@@ -15,7 +15,7 @@
 
 ## 2026-06-01 — Live daily-note ledger + onboarding portability fixes
 
-`hash: efae63c`
+`hash: PENDING`
 
 > **Two threads today: the daily note becomes a live ledger, and three onboarding papercuts a fresh external user surfaced get fixed.**
 >
@@ -34,6 +34,7 @@
 - `hooks/claude-identity/install-wrappers.ps1` — launcher opens the current PowerShell edition, not "pwsh if present."
 - `plugins/aios/commands/today.md` + `close-day.md` — `git ls-remote` SSH→HTTPS fallback in the freshness checks; `vault-update`→`aios-update` labels + section names.
 - `plugins/aios/commands/update.md`, `_index.md`, `mcps/setup.sh`, `mcps/_index.md`, `hooks/claude-identity/README.md`, `CHEATSHEET.md` — `vault-update`→`aios-update` / `/aios:update` references; temp clone dir `/tmp/vault-update-check`→`/tmp/aios-update-check`.
+- `plugins/aios/commands/update.md` — auto-execution **platform guard**: `install-wrappers.sh` auto-runs on macOS/Linux only, `install-wrappers.ps1` on Windows only (both files still *copy* on every OS — only *execution* is platform-gated, so a Mac session no longer attempts the `.ps1` and vice-versa).
 
 ### Action required
 
