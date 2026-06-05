@@ -558,6 +558,21 @@ Show the actual evidence: `ls -la ~/.claude/skills/<name>` per finding — "`acc
 
 **Why this matters:** a skill that isn't symlinked is invisible — agents that name it in their `## Skills` block silently get nothing, and the operator hits *"I don't have that skill."* This bucket is the periodic floor-check that every AIOS-origin skill is actually loadable, mirroring what Bucket 11 does for commands.
 
+#### Bucket 21: File placement drift (NEW)
+
+Audits the vault against the **File Placement Router** (CLAUDE.md § IV) — the router exists so every session places files semantically; this bucket catches what slipped through.
+
+**Scan:**
+
+- **Species mismatch** → a file living in a zone whose question it doesn't answer. The classic: a human-authored, compounding note inside `00/logs/` (logs is for script/system output ONLY). Test each `logs/` root file: written by a script? If no → propose move (usually `reflections/` or a project note). Also check the reverse: machine output accumulating outside `logs/`.
+- **Folder-birth candidates (rule of 3)** → 3+ loose files of the same species sitting in a parent without a semantic subfolder. Evidence: list the candidate files + propose the subfolder name (plain noun, species not dates).
+- **Unsanctioned bespoke rooms** → custom folders under `00 - notes/` lacking an `_index.md`. Bespoke rooms are legitimate (a family cookbook, a poetry archive) — but deliberate: propose adding the `_index.md`, never removal.
+- **Source/deliverable splits** → deliverable sources (filled HTML, deck sources) living only outside the vault (`/tmp`, Downloads) or only as PDF. Propose persisting the source per the router's export rule.
+
+**Propose-only — never auto-move.** Placement is semantic judgment; the operator approves each move. On approval: `git mv`, update wiki-links pointing at the old path (grep first), update affected `_index.md` files.
+
+**Why this bucket exists:** placement drift is invisible until retrieval fails — the file exists but nobody finds it because it lives where it was *born*, not where it'll be *asked for*. Caught 2026-06-04 in the reference vault: a strategy-rich conference capture filed in `logs/` next to a machine-written bridge beacon — same folder, opposite species. The router (CLAUDE.md § IV) is the forward mechanism; this bucket is the periodic backstop.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:

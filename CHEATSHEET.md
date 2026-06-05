@@ -69,6 +69,8 @@ Where does X go when you notice it? One row per signal type.
 
 **Rule of thumb:** if you're unsure where it goes, write it in the daily note and let `/close-day` route it. The daily note is the safest fallback.
 
+**Where do files live? (the placement router, human version).** The vault's numbered folders are semantic zones — place by *the question you'll ask later*, not by where the file came from: machine/script output → `00/logs/` (only that) · raw inputs you didn't author (PDFs, transcripts) → `02 - assets/` · anything that ships to an audience (plus its HTML source) → `03 - export/` · what-happened-today → `01 - calendar/` · thinking you'll re-read → `00/reflections/` · who-you-are → `00/context/`. When 3+ files of one species pile up loose, give them a semantic subfolder (noun-named — dates go in filenames). Custom rooms (a cookbook, an archive) are welcome under `00 - notes/` — just give them an `_index.md`. Full rules: CLAUDE.md § IV → File Placement Router; `/housekeeping` audits drift.
+
 See: [CLAUDE.md](./CLAUDE.md) → § Observed Context Rules · `plugins/aios/commands/graduate.md` · `plugins/aios/commands/ideas.md`
 
 ---

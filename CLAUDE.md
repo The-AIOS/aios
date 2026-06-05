@@ -266,6 +266,25 @@ mcps/      ← *-mcp/ servers · custom/ (flat — deliberate exemption: ~/.clau
 templates/ ← aios/ (bundled) · custom/ · <company>/
 ```
 
+### File Placement Router
+
+Before writing any new file, route it — never default to "wherever feels close":
+
+| Question | Answer → home |
+|---|---|
+| **Written by a script/system?** (heartbeats, alerts, snapshots) | `00/logs/` — and *only* this lives there |
+| **Raw input the operator didn't author?** (PDFs, transcripts, images) | `02 - assets/` |
+| **Made for an audience / ships outward?** (deliverable + its HTML source) | `03 - export/{type-or-venture}/` |
+| **Time-bound narrative?** (what happened today) | `01 - calendar/` daily note |
+| **Compounds — will be re-read for meaning?** | `00/reflections/` (or the project note if it's one project's state; `ideas/` if it's a seed) |
+| **About who the operator is / how to work with them?** | `00/context/` |
+
+**The retrieval test:** place by *the question you'll ask later*, not by where the file came from. A conference capture answers "what did we learn about X?" → `reflections/` — not `logs/`, even though it's date-stamped. **Date-stamped ≠ log.**
+
+**Folder-birth rule (rule of 3):** when 3+ files of the same species accumulate in a parent, create a semantic subfolder (plain-noun name; species, not dates — dates belong in filenames) and move them in. Inside `export/`: namespace by **venture** when the audience is one venture (`sovra/`), by **type** when cross-venture (`decks/`, `invoices/{YYYY}/`). New subfolder in an indexed folder → update its `_index.md`.
+
+**Bespoke rooms are legitimate** — operators may grow custom folders under `00 - notes/` for genuine domain corpora (a family cookbook, a poetry archive). Name it semantically, give it an `_index.md`, done. The rule is *deliberate birth*, not *no birth*. `/aios:housekeeping` surfaces placement drift; it never auto-moves.
+
 ### Index Maintenance
 
 Folders with a `_index.md` file are self-documenting. **When you create, rename, or delete a file in any indexed folder, update its `_index.md` to reflect the change.** This keeps the vault navigable and the Obsidian graph connected.
