@@ -15,7 +15,7 @@
 
 ## 2026-06-05 — Placement Router · Windows spawn fix · command upgrades (trace/graduate/7plan) · marketplace merge rule
 
-`hash: 55bfbf1`
+`hash: aeb8ee6`
 
 > **Four threads today: files get a semantic router, Windows operators get `spawn` back, three commands absorb Internet Vin's best framings, and operator plugins survive syncs.**
 >
