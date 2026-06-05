@@ -84,6 +84,13 @@ Present in the response AND write to `01 - calendar/{YYYY-MM}/{YYYY}-W{WW}-plan.
 **Diagnosis:** {what's actually hard this week — the real constraint, not the to-do list}
 **Guiding policy:** {the approach — what we'll prioritize and what we'll sacrifice}
 
+## The bet (durable — carries across weeks)
+**Focus:** {THE one bet the next several weeks ladder up to — carried verbatim from last week's plan unless deliberately changed. If changing it, say what changed and why. A bet that changes weekly is churn, not focus.}
+**Review:** {when this bet gets re-examined — e.g. "end of Q2" or "after X ships"}
+**Leverage domains:** {3-5 durable domains of concentrated skill/asset investment (e.g. governed-agents narrative, institutional trust, publishing flywheel) — the through-lines weekly priorities should serve. Carried week to week; pruned rarely.}
+
+{Read last week's plan for this section first. Default is CARRY, not regenerate — this layer exists precisely so the weekly reset doesn't churn the multi-week thesis. New operators (no prior plan): derive the first bet from INTENT.md focus priorities + active projects, and mark it "(first bet — calibrate over 2-3 weeks)".}
+
 ## Weekly priorities by venture
 
 {Read all active projects from 00 - notes/projects/. Group by `venture` frontmatter field (first value in array = primary group). If venture field is missing, fall back to tag/venture guess. If no ventures exist at all, generate one section per project.}

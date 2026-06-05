@@ -42,7 +42,7 @@ Every file below is overwritten byte-identical to upstream. If the operator cust
 - **Agents:** `agents/aios/` (bundled 6-bundle structure: `aios/sales/`, `aios/strategy/`, `aios/finance-legal/`, `aios/engineering/`, `aios/communication/`, `aios/personal/`) and `agents/_index.md`. Never overwrite `agents/custom/` or `agents/<company>/`.
 - **Plugins:** `plugins/aios/**` (full plugin folder replace, INCLUDING `plugins/aios/commands/*` — these are framework commands, not operator content) except `plugins/aios/commands/custom/`
 - **Other bundled plugins** at top level except `plugins/custom/`, `plugins/aios/`, and `plugins/<company>/`
-- **Marketplace manifest:** `.claude-plugin/marketplace.json`
+- **Marketplace manifest:** `.claude-plugin/marketplace.json` — **MERGE, never byte-replace.** This file is dual-owned: the framework owns the bundled plugin entries (e.g. `aios`), but CLAUDE.md instructs operators to register their own `plugins/custom/<name>/` (and `/aios:company` registers `plugins/<company>/`) entries in the SAME file. Merge rule: parse both versions as JSON → take upstream's top-level fields + upstream's entries for bundled plugins → preserve every local entry whose `source` points into `./plugins/custom/` or a company namespace → write the union. A byte-replace here silently deregisters every operator/company plugin on every sync (caught 2026-06-05 registering the first `plugins/custom/` command).
 - **Obsidian config baseline:** `vault/.obsidian/*.json` except `workspace.json`, plus `vault/.obsidian/snippets/*`
 
 ### Tier 2: Operator content (never touched — denylist)

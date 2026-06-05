@@ -163,7 +163,19 @@ function Invoke-ClaudeWithRespawn {
     # this guard now covers only the explicit "claude" session-name edge case.)
     # Get-Command -CommandType Application forces PATH-binary resolution.
     # Mirrors the `command claude` guard in install-wrappers.sh.
-    $claudeExe = (Get-Command -Name 'claude' -CommandType Application -ErrorAction Stop).Source
+    # CAUTION: npm on Windows installs BOTH claude.cmd AND an extensionless
+    # Unix shim 'claude' into %AppData%\Roaming\npm\ — Get-Command matches
+    # both, .Source becomes a 2-element array, and `& $claudeExe` collapses
+    # it into one bogus path -> CommandNotFoundException (spawn/zai dead).
+    # Resolve deterministically: prefer .cmd, then .exe, then .bat; fall
+    # back to first match. (Reported via internal review 2026-06-02.)
+    $claudeCmds = @(Get-Command -Name 'claude' -CommandType Application -ErrorAction Stop)
+    $claudeExe = $null
+    foreach ($ext in @('\.cmd$', '\.exe$', '\.bat$')) {
+        $hit = $claudeCmds | Where-Object { $_.Source -match $ext } | Select-Object -First 1
+        if ($hit) { $claudeExe = $hit.Source; break }
+    }
+    if (-not $claudeExe) { $claudeExe = $claudeCmds[0].Source }
     while ($true) {
         $claudeArgs = @() + $modelArgs + $resumeArgs + @('--remote-control', '--name', $Name)
         if ($BootstrapFile -and (Test-Path $BootstrapFile)) {

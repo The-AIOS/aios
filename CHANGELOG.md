@@ -13,27 +13,34 @@
 
 ---
 
-## 2026-06-05 — File Placement Router: every file gets a semantic home
+## 2026-06-05 — Placement Router · Windows spawn fix · command upgrades (trace/graduate/7plan) · marketplace merge rule
 
 `hash: 55bfbf1`
 
-> **The vault's numbered folders were always semantic zones — but the routing logic lived in each operator's accumulated taste, not in the framework.** A fresh vault ships the rooms with no rule for which door to use; six weeks later a strategy-rich conference capture sits in `logs/` next to a machine-written heartbeat — same folder, opposite species, invisible at retrieval time. This ship moves the placement intelligence into the framework.
+> **Four threads today: files get a semantic router, Windows operators get `spawn` back, three commands absorb Internet Vin's best framings, and operator plugins survive syncs.**
 >
-> **(1) The router (CLAUDE.md § IV).** Six questions, asked before any new file is written: written by a script? → `logs/` (and ONLY that) · raw input you didn't author? → `02 - assets/` · ships to an audience (+ its HTML source)? → `03 - export/` · time-bound narrative? → `01 - calendar/` · compounds on re-read? → `reflections/` / project note / `ideas/` · about who the operator is? → `context/`. Anchored by the **retrieval test**: place by the question you'll ask later, not by where the file came from — **date-stamped ≠ log**.
+> **(1) File Placement Router (CLAUDE.md § IV).** The vault's numbered folders were always semantic zones — but the routing logic lived in each operator's accumulated taste, not in the framework. Six questions, asked before any new file is written: written by a script? → `logs/` (and ONLY that) · raw input you didn't author? → `02 - assets/` · ships to an audience (+ its HTML source)? → `03 - export/` · time-bound narrative? → `01 - calendar/` · compounds on re-read? → `reflections/` / project note / `ideas/` · about who the operator is? → `context/`. Anchored by the **retrieval test**: place by the question you'll ask later — **date-stamped ≠ log**. Plus the **rule of 3** (3+ same-species files → noun-named subfolder) and **sanctioned bespoke rooms** (a cookbook is legitimate — give it an `_index.md`). `/housekeeping` gains **Bucket 21** (placement-drift audit, propose-only).
 >
-> **(2) Folder birth, not folder sprawl (rule of 3).** When 3+ files of one species pile up loose, create a noun-named semantic subfolder (dates belong in filenames, not folder names). Inside `export/`: namespace by venture when the audience is one venture, by type when cross-venture. **Bespoke rooms are legitimate** — a cookbook, a poetry archive — as long as they're born deliberately with an `_index.md`.
+> **(2) Windows spawn-wrapper fix.** npm on Windows installs BOTH `claude.cmd` and an extensionless Unix shim `claude`; `Get-Command -CommandType Application` matched both, `.Source` became a 2-element array, and `& $claudeExe` collapsed it into one bogus path → `spawn`/`zai` dead for every Windows npm operator. Now resolves deterministically (`.cmd` > `.exe` > `.bat`, fallback first-match). Reported root-caused-and-patched via internal review 2026-06-02 — this lands it upstream so syncs stop reverting the local fix.
 >
-> **(3) The backstop (`/housekeeping` Bucket 21).** Audits placement drift: species mismatches, folder-birth candidates, unsanctioned bespoke rooms, and deliverable sources living only in `/tmp`/Downloads/PDF. Propose-only — placement is semantic judgment; the operator approves every move.
+> **(3) Command upgrades from the Internet Vin diff.** A 27-command diff against [internetvin.com/Obsidian+Commands] found 13 already covered and the value concentrated in framings, not new commands: `/trace` gains the **Compounding view** (answer the topic's question twice — with the vault as of the earliest mention vs today; the delta is the compounding made visible) · `/graduate` gains the **Make lens** (which graduated ideas are ripe to become *published output*, and in what form — max 3) · `/7plan` gains **The bet (durable layer)** (one multi-week bet + review cadence + 3-5 leverage domains, carried verbatim week to week unless deliberately changed — the weekly reset stops churning the thesis).
+>
+> **(4) Marketplace manifest is now MERGE, not byte-replace.** `.claude-plugin/marketplace.json` is dual-owned: the framework owns bundled entries, but operators register `plugins/custom/<name>/` (and companies `plugins/<company>/`) in the same file. The old Tier-1 byte-replace silently deregistered every operator plugin on every sync. `/aios:update` now merges: upstream wins on bundled entries, local `custom/`+company entries are preserved.
 
 ### What changed
 
-- `CLAUDE.md` — new § IV subsection **"File Placement Router"** (router table + retrieval test + rule of 3 + bespoke rooms), placed between Structure and Index Maintenance.
-- `CHEATSHEET.md` — § 3 gains the human-version paragraph ("Where do files live?").
+- `CLAUDE.md` — new § IV subsection **"File Placement Router"**; `CHEATSHEET.md` § 3 human version.
 - `plugins/aios/commands/housekeeping.md` — new **Bucket 21: File placement drift**.
+- `hooks/claude-identity/install-wrappers.ps1` — deterministic claude-executable resolution (`.cmd` > `.exe` > `.bat`).
+- `plugins/aios/commands/trace.md` — step 5 + **Compounding view** output section.
+- `plugins/aios/commands/graduate.md` — step 5 **Make lens** + **Make-ripe** summary section.
+- `plugins/aios/commands/7plan.md` — **The bet (durable — carries across weeks)** output section (carry-by-default).
+- `plugins/aios/commands/update.md` — marketplace.json Tier-1 entry changed to **merge semantics**.
 
 ### Action required
 
-**None — auto-applies on sync.** The router is behavioral (CLAUDE.md is read every session). Optionally, run `/aios:housekeeping` after syncing — Bucket 21 will surface any existing placement drift in your vault as a propose-only packet.
+- **Windows operators:** after this sync auto-runs `install-wrappers.ps1`, open a NEW terminal — `spawn`/`zai` resolve correctly again. (If you hand-patched locally per the 2026-06-02 finding, this upstream version supersedes it cleanly — deterministic extension order instead of first-match.)
+- **Everyone else: none — auto-applies.** Optionally run `/aios:housekeeping` after syncing; Bucket 21 will surface existing placement drift as a propose-only packet. Next `/7plan` will derive your first durable bet and mark it "(first bet — calibrate over 2-3 weeks)".
 
 ---
 

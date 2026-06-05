@@ -28,6 +28,7 @@ Every 2 weeks (or whenever the daily-note parking lot feels heavy) to promote ha
    - Deserve development beyond their current one-liner form
 3. For each qualifying idea, check if a note for it already exists in `00 - notes/ideas/`
 4. Create a new note for each new graduating idea
+5. **Make lens (publish-ripeness):** after graduating notes, run a second pass over BOTH the new graduates AND existing `ideas/` notes: which are ripe to become *published output* — and in what form? A note is make-ripe when it has a claim + evidence + an audience who'd care. Recommend the form per candidate: post (single insight, contrarian or teachable) · deck/talk (framework with stages) · product/template (reusable artifact others could run) · thread (listicle energy). Max 3 candidates — ripeness, not inventory.
 
 ## Output
 
@@ -68,6 +69,10 @@ Present a summary in the response:
 
 {n} ideas skipped (already exist or too undeveloped):
 - {Brief note on what was skipped and why}
+
+### Make-ripe (publish candidates)
+- **{Title}** → recommended form: {post / deck / product / thread} — {one line: the claim + who'd care}
+{Max 3. Omit section if nothing is genuinely ripe — forced candidates erode trust in the lens.}
 ```
 
 Then commit and push: `cd ~/aios && git add -A && git commit -m "Graduate ideas {date}" && git push`

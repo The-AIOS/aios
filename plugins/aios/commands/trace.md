@@ -25,6 +25,7 @@ When revisiting a topic and you want to see how your thinking has evolved — ac
 2. Search ALL notes for mentions of the topic
 3. Order mentions chronologically
 4. Identify where thinking shifted and what caused it
+5. **Compounding view:** formulate the natural question behind the topic (e.g. topic "pricing" → *"how should I price engagements?"*), then answer it TWICE — once using only what the vault knew at the earliest mention, once using everything it knows today. The delta between the two answers is the compounding made visible.
 
 ## Output
 
@@ -47,6 +48,12 @@ When revisiting a topic and you want to see how your thinking has evolved — ac
 
 ### What might shift next
 {Based on trajectory, where might this go?}
+
+### Compounding view
+**The question:** {the natural question behind the topic}
+**Answered with the vault as of {earliest date}:** {2-4 sentences — only what was knowable then}
+**Answered with the vault today:** {2-4 sentences — the richer answer}
+**What compounded:** {one line naming what the vault learned in between — the proof the system works}
 
 ### Concrete actions
 
