@@ -13,6 +13,30 @@
 
 ---
 
+## 2026-06-05 — File Placement Router: every file gets a semantic home
+
+`hash: 55bfbf1`
+
+> **The vault's numbered folders were always semantic zones — but the routing logic lived in each operator's accumulated taste, not in the framework.** A fresh vault ships the rooms with no rule for which door to use; six weeks later a strategy-rich conference capture sits in `logs/` next to a machine-written heartbeat — same folder, opposite species, invisible at retrieval time. This ship moves the placement intelligence into the framework.
+>
+> **(1) The router (CLAUDE.md § IV).** Six questions, asked before any new file is written: written by a script? → `logs/` (and ONLY that) · raw input you didn't author? → `02 - assets/` · ships to an audience (+ its HTML source)? → `03 - export/` · time-bound narrative? → `01 - calendar/` · compounds on re-read? → `reflections/` / project note / `ideas/` · about who the operator is? → `context/`. Anchored by the **retrieval test**: place by the question you'll ask later, not by where the file came from — **date-stamped ≠ log**.
+>
+> **(2) Folder birth, not folder sprawl (rule of 3).** When 3+ files of one species pile up loose, create a noun-named semantic subfolder (dates belong in filenames, not folder names). Inside `export/`: namespace by venture when the audience is one venture, by type when cross-venture. **Bespoke rooms are legitimate** — a cookbook, a poetry archive — as long as they're born deliberately with an `_index.md`.
+>
+> **(3) The backstop (`/housekeeping` Bucket 21).** Audits placement drift: species mismatches, folder-birth candidates, unsanctioned bespoke rooms, and deliverable sources living only in `/tmp`/Downloads/PDF. Propose-only — placement is semantic judgment; the operator approves every move.
+
+### What changed
+
+- `CLAUDE.md` — new § IV subsection **"File Placement Router"** (router table + retrieval test + rule of 3 + bespoke rooms), placed between Structure and Index Maintenance.
+- `CHEATSHEET.md` — § 3 gains the human-version paragraph ("Where do files live?").
+- `plugins/aios/commands/housekeeping.md` — new **Bucket 21: File placement drift**.
+
+### Action required
+
+**None — auto-applies on sync.** The router is behavioral (CLAUDE.md is read every session). Optionally, run `/aios:housekeeping` after syncing — Bucket 21 will surface any existing placement drift in your vault as a propose-only packet.
+
+---
+
 ## 2026-06-02 — study-buddy gains a reading system: the method, the library pipeline, and infographics
 
 `hash: 95b4aa2`
