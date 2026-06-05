@@ -25,7 +25,12 @@ When revisiting a topic and you want to see how your thinking has evolved — ac
 2. Search ALL notes for mentions of the topic
 3. Order mentions chronologically
 4. Identify where thinking shifted and what caused it
-5. **Compounding view:** formulate the natural question behind the topic (e.g. topic "pricing" → *"how should I price engagements?"*), then answer it TWICE — once using only what the vault knew at the earliest mention, once using everything it knows today. The delta between the two answers is the compounding made visible.
+5. **Compounding view:** formulate the natural question behind the topic (e.g. topic "pricing" → *"how should I price engagements?"*), then answer it at **three snapshots** of the vault. Rules that keep it honest:
+   - **Question validation:** skip the view for stable-factual questions (answers that don't improve with context) — say so instead.
+   - **Snapshot selection:** pick the two earlier points at *inflection moments* (where relevant context roughly doubled — a project landing, a venture mounting, a study arc), not arbitrary dates. Third snapshot = today.
+   - **Anachronism guard:** each answer may use ONLY what existed in the vault at that time. Check yourself afterward.
+   - **Equal length (hard constraint):** all three answers the same length — isolates quality improvement from volume inflation.
+   - **Null result is a result:** if the answers didn't meaningfully improve, that IS the finding — name it, don't fabricate progress.
 
 ## Output
 
@@ -51,9 +56,11 @@ When revisiting a topic and you want to see how your thinking has evolved — ac
 
 ### Compounding view
 **The question:** {the natural question behind the topic}
-**Answered with the vault as of {earliest date}:** {2-4 sentences — only what was knowable then}
-**Answered with the vault today:** {2-4 sentences — the richer answer}
-**What compounded:** {one line naming what the vault learned in between — the proof the system works}
+**Answered with the vault as of {snapshot 1 — inflection date}:** {N sentences — only what was knowable then}
+**Answered with the vault as of {snapshot 2 — inflection date}:** {same length}
+**Answered with the vault today:** {same length}
+**Where it improved:** {specificity / actionability / personal relevance / cross-domain connections — name which dimensions moved and what caused each jump}
+**What compounded:** {one line — the proof the system works. If nothing meaningfully improved, say that instead.}
 
 ### Concrete actions
 

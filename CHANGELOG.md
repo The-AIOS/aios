@@ -13,7 +13,7 @@
 
 ---
 
-## 2026-06-05 — Placement Router · Windows spawn fix · command upgrades (trace/graduate/7plan) · marketplace merge rule
+## 2026-06-05 — Placement Router · Windows spawn fix · command upgrades (trace/graduate/connect/7plan) · marketplace merge rule · README positioning
 
 `hash: aeb8ee6`
 
@@ -23,7 +23,9 @@
 >
 > **(2) Windows spawn-wrapper fix.** npm on Windows installs BOTH `claude.cmd` and an extensionless Unix shim `claude`; `Get-Command -CommandType Application` matched both, `.Source` became a 2-element array, and `& $claudeExe` collapsed it into one bogus path → `spawn`/`zai` dead for every Windows npm operator. Now resolves deterministically (`.cmd` > `.exe` > `.bat`, fallback first-match). Reported root-caused-and-patched via internal review 2026-06-02 — this lands it upstream so syncs stop reverting the local fix.
 >
-> **(3) Command upgrades from the Internet Vin diff.** A 27-command diff against [internetvin.com/Obsidian+Commands] found 13 already covered and the value concentrated in framings, not new commands: `/trace` gains the **Compounding view** (answer the topic's question twice — with the vault as of the earliest mention vs today; the delta is the compounding made visible) · `/graduate` gains the **Make lens** (which graduated ideas are ripe to become *published output*, and in what form — max 3) · `/7plan` gains **The bet (durable layer)** (one multi-week bet + review cadence + 3-5 leverage domains, carried verbatim week to week unless deliberately changed — the weekly reset stops churning the thesis).
+> **(3) Command upgrades from the Internet Vin diff — then deepened from his full prompt pages.** A 27-command diff against [internetvin.com/Obsidian+Commands] found 13 already covered and the value concentrated in framings; a second pass against his full prompt pages imported the rigor the one-line verdicts had compressed away: `/trace` gains the **Compounding view** (answer the topic's question at THREE vault snapshots picked at inflection points; equal-length hard constraint; anachronism guard; "no improvement IS the finding") · `/graduate` gains the **Make lens** (5 ripeness signals — density, originality, narrative, tension, resonance — as search queries; multiple natural forms per candidate; max 3) · `/connect` goes graph-mechanical (2-3 hop neighborhoods, depth asymmetry for sparse domains, intermediary-note focus, Converging/Diverging/Stable trend per bridge, strongest-bridge + missing-links sections) · `/7plan` gains **The bet (durable layer)** (one multi-week bet + review cadence + 3-5 leverage domains, carried verbatim week to week unless deliberately changed). His deeper `/focus` (Kill-Park Ledger, falsifiable thresholds) and `/leverage` (constraint-mapping diagnostic) are parked as potential builds — too big for tweaks.
+>
+> **(5) README positioning.** The architecture convergence happening publicly (independent builders arriving at filesystem-as-context, plain Markdown, no RAG) is now named in the README as validation, with the differentiation stated on top: *governed (INTENT.md trust contract), multiplayer (personal × team × company), substrate-agnostic — not a deeper single-player engine, but the operating system your whole circle runs.*
 >
 > **(4) Marketplace manifest is now MERGE, not byte-replace.** `.claude-plugin/marketplace.json` is dual-owned: the framework owns bundled entries, but operators register `plugins/custom/<name>/` (and companies `plugins/<company>/`) in the same file. The old Tier-1 byte-replace silently deregistered every operator plugin on every sync. `/aios:update` now merges: upstream wins on bundled entries, local `custom/`+company entries are preserved.
 
@@ -32,10 +34,12 @@
 - `CLAUDE.md` — new § IV subsection **"File Placement Router"**; `CHEATSHEET.md` § 3 human version.
 - `plugins/aios/commands/housekeeping.md` — new **Bucket 21: File placement drift**.
 - `hooks/claude-identity/install-wrappers.ps1` — deterministic claude-executable resolution (`.cmd` > `.exe` > `.bat`).
-- `plugins/aios/commands/trace.md` — step 5 + **Compounding view** output section.
-- `plugins/aios/commands/graduate.md` — step 5 **Make lens** + **Make-ripe** summary section.
+- `plugins/aios/commands/trace.md` — step 5 + **Compounding view** output section (3 inflection-point snapshots, equal-length constraint, anachronism guard, null-result honesty).
+- `plugins/aios/commands/graduate.md` — step 5 **Make lens** (5 detection signals, multi-form recommendations) + **Make-ripe** summary section.
+- `plugins/aios/commands/connect.md` — graph-mechanical steps (neighborhood hops, depth asymmetry, intermediaries, bridge trends) + **strongest bridge** / **missing links** output sections.
 - `plugins/aios/commands/7plan.md` — **The bet (durable — carries across weeks)** output section (carry-by-default).
 - `plugins/aios/commands/update.md` — marketplace.json Tier-1 entry changed to **merge semantics**.
+- `README.md` — convergence-validation + governed/multiplayer/substrate-agnostic positioning in "What makes The AIOS different".
 
 ### Action required
 

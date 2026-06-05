@@ -28,7 +28,14 @@ Every 2 weeks (or whenever the daily-note parking lot feels heavy) to promote ha
    - Deserve development beyond their current one-liner form
 3. For each qualifying idea, check if a note for it already exists in `00 - notes/ideas/`
 4. Create a new note for each new graduating idea
-5. **Make lens (publish-ripeness):** after graduating notes, run a second pass over BOTH the new graduates AND existing `ideas/` notes: which are ripe to become *published output* — and in what form? A note is make-ripe when it has a claim + evidence + an audience who'd care. Recommend the form per candidate: post (single insight, contrarian or teachable) · deck/talk (framework with stages) · product/template (reusable artifact others could run) · thread (listicle energy). Max 3 candidates — ripeness, not inventory.
+5. **Make lens (publish-ripeness):** after graduating notes, run a second pass over BOTH the new graduates AND existing `ideas/` notes: which are ripe to become *published output* — and in what form? Detect ripeness via five signals (search queries, not vibes):
+   - **Density** — mentioned repeatedly across multiple days; material has accumulated
+   - **Originality** — diverges from conventional thinking (search: "most people think", "wrong about", "actually")
+   - **Narrative** — a documented arc or transformation (search: "realized", "changed my mind", "turning point")
+   - **Tension** — unresolved questions with substance on multiple sides (search: "on one hand", "paradox", "tradeoff")
+   - **Resonance** — external validation already happened (conversations, feedback, someone asked for it)
+
+   A candidate needs claim + evidence + an audience who'd care. Recommend **multiple natural forms** per candidate, not one prescription: post (single insight) · deck/talk (framework with stages) · product/template (reusable artifact) · thread (listicle energy) · series (arc too big for one piece). Max 3 candidates — ripeness, not inventory; ruthlessly honest scores beat flattering ones.
 
 ## Output
 

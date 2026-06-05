@@ -63,7 +63,9 @@ Each stage builds on the last. Each next stage returns ~10× the leverage.
 
 ## What makes The AIOS different
 
-The phrase "AI operating system" is everywhere now — most are second-brain wrappers with a `CLAUDE.md` and a few prompts. Five things make this one operationally distinct:
+The phrase "AI operating system" is everywhere now — most are second-brain wrappers with a `CLAUDE.md` and a few prompts. And the strongest builders keep arriving at the same architecture independently: filesystem as context, plain Markdown, no RAG. That convergence validates the foundation — the difference is the layer above it: **The AIOS is *governed* (the INTENT.md trust contract), *multiplayer* (personal × team × company topologies), and *substrate-agnostic* — not a deeper single-player engine, but the operating system your whole circle runs.**
+
+Five things make this operationally distinct:
 
 **1. Three-layer context that compounds.** Most setups ship declared context only. The AIOS adds *observed context* — Claude writes its own observations about your patterns, growth edges, blind spots — AND *intent* (a trust contract that encodes judgment, not just knowledge). After a month, the AI knows things about you that aren't in any file you wrote.
 

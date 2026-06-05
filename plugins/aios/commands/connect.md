@@ -21,18 +21,19 @@ Periodically (monthly is a good cadence) to find unexpected bridges between unre
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /connect` for any user overrides. Apply them to the steps below.
 
 1. Read ALL notes across context, projects, daily notes
-2. Map the distinct domains/topics
-3. Look for thematic, structural, or conceptual bridges
-4. Present only genuinely surprising connections
+2. Map the distinct domains/topics — then map each domain's **neighborhood**: notes, backlinks, and tags 2-3 hops out from its hub notes (go 4+ hops for sparse domains — **depth asymmetry**: a sparse domain's connections are more valuable per link, so dig deeper there)
+3. Look for bridges structurally, not just thematically: shared references, shared people, shared tags, recurring patterns — and pay special attention to **intermediary notes** (the notes that sit *between* two domains often hold the deepest insight)
+4. Classify each bridge's **trend**: Converging (the domains are growing together — recent notes link more), Diverging (an old bridge fading), or Stable
+5. Present only genuinely surprising connections
 
 ## Output
 
 ```
 ## Connections — {date}
 
-### Bridge 1: {Domain A} ↔ {Domain B}
+### Bridge 1: {Domain A} ↔ {Domain B} — {Converging / Diverging / Stable}
 **The connection**: {What links these}
-**Evidence**: {Specific notes or quotes}
+**Evidence**: {Specific notes or quotes — name the intermediary note if one carries the bridge}
 **Implication**: {What this means — could it become something?}
 
 ### Bridge 2
@@ -40,6 +41,12 @@ Periodically (monthly is a good cadence) to find unexpected bridges between unre
 
 ### Bridge 3
 {Same structure}
+
+### The strongest bridge
+{The single bridge most worth acting on, and why}
+
+### Missing links
+{1-3 connections that *should* exist given the neighborhoods but don't yet — each is a suggested note or conversation}
 
 ### The meta-pattern
 {Pattern across the bridges themselves, if one exists}
