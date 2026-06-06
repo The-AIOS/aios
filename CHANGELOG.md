@@ -15,7 +15,7 @@
 
 ## 2026-06-05 — Placement Router · Windows spawn fix · command upgrades (trace/graduate/connect/7plan) · marketplace merge rule · README positioning · session-identity fallback + standalone deliverables
 
-`hash: 5d25fbf`
+`hash: 152c427`
 
 > **Five threads today: files get a semantic router, Windows operators get `spawn` back, three commands absorb Internet Vin's best framings, operator plugins survive syncs, and two session-integrity rules land from a live routine test.**
 >
