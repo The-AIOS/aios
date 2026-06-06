@@ -36,6 +36,7 @@
 ### What changed
 
 - `agents/aios/**` — every bundled agent (31) declares `keywords:` search synonyms in frontmatter (consumed by AIOS Glass search; inert elsewhere).
+- `CLAUDE.md` § Live daily-note ledger — multi-part tasks: strike the TITLE when the last sub-item completes (title-struck = done is the contract consumers read; sub-item strikes alone read as partial).
 - `CLAUDE.md` — new § IV subsection **"File Placement Router"**; `CHEATSHEET.md` § 3 human version.
 - `plugins/aios/commands/housekeeping.md` — new **Bucket 21: File placement drift**.
 - `hooks/claude-identity/install-wrappers.ps1` — deterministic claude-executable resolution (`.cmd` > `.exe` > `.bat`).
