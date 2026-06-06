@@ -13,9 +13,9 @@
 
 ---
 
-## 2026-06-05 — Placement Router · Windows spawn fix · command upgrades (trace/graduate/connect/7plan) · marketplace merge rule · README positioning · session-identity fallback + standalone deliverables
+## 2026-06-05 — Placement Router · Windows spawn fix · command upgrades (trace/graduate/connect/7plan) · marketplace merge rule · README positioning · session-identity fallback + standalone deliverables · agent search keywords
 
-`hash: 152c427`
+`hash: 4bf8b78`
 
 > **Five threads today: files get a semantic router, Windows operators get `spawn` back, three commands absorb Internet Vin's best framings, operator plugins survive syncs, and two session-integrity rules land from a live routine test.**
 >
@@ -31,8 +31,11 @@
 >
 > **(6) Session-identity fallback + standalone deliverables (CLAUDE.md).** A live routine-session test caught two gaps. First: routines, scheduled runs, and bridge sessions are *named by the harness* but never set `$CLAUDE_AGENT_NAME` — the Mandatory First Action misread them as plain CLI, skipping worker behaviors (role greeting, proactive `/close-session`). The identity check now falls back to the session's own transcript (`grep` the `agent-name` record in `~/.claude/projects/*/$CLAUDE_CODE_SESSION_ID.jsonl`) before concluding "plain CLI" — deterministic, zero behavior change for spawn-wrapper and true-CLI sessions. Second: assistant text emitted *between tool calls* in the same turn can be silently dropped on some session surfaces — present in the model's context, never rendered, never persisted to the transcript (a deliverable vanished mid-turn while standalone messages survived). New § VI discipline rule: **deliverables land in a standalone message or a file, never as mid-turn interleaved text** — and "the user didn't see it" gets verified against the on-disk transcript, not context.
 
+> **(7) Agents declare search keywords.** Every bundled agent's frontmatter gains a `keywords:` line — 4–8 intent words an operator might type (content-writer: "social media, posts, linkedin…"). AIOS Glass (0.1.6) folds them into picker search so intent words find the right agent; inert metadata for every other consumer. The company context repos received the same treatment in their own repos. **No action** — agent files auto-apply on sync.
+
 ### What changed
 
+- `agents/aios/**` — every bundled agent (31) declares `keywords:` search synonyms in frontmatter (consumed by AIOS Glass search; inert elsewhere).
 - `CLAUDE.md` — new § IV subsection **"File Placement Router"**; `CHEATSHEET.md` § 3 human version.
 - `plugins/aios/commands/housekeeping.md` — new **Bucket 21: File placement drift**.
 - `hooks/claude-identity/install-wrappers.ps1` — deterministic claude-executable resolution (`.cmd` > `.exe` > `.bat`).
