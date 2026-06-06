@@ -1,6 +1,7 @@
 ---
 name: sales-crm-updater
 description: 'Use when task involves CRM or similar. Sync deal updates to Monday/CRM from meeting notes'
+keywords: pipeline, deals, monday, deal update, sync board, pipeline hygiene, sales tracking
 tools: '*'
 tags:
   - agent

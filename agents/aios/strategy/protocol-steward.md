@@ -1,6 +1,7 @@
 ---
 name: protocol-steward
 description: 'Use when designing the governance, open-source strategy, licensing, or trademark posture of a protocol/standard you open to multiple stakeholders. Helps you lead technically without being perceived as the owner (avoid vendor-capture).'
+keywords: governance, open-source, licensing, foundation, consortium, trademark, standard, contribution model, vendor-capture
 tools: '*'
 tags:
   - agent

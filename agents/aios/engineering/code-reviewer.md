@@ -1,6 +1,7 @@
 ---
 name: code-reviewer
 description: 'Use when task involves review PR or similar. Review PRs for security, quality, pattern consistency'
+keywords: pull request, pr, code review, diff, branch, quality, merge check
 tools: '*'
 tags:
   - agent

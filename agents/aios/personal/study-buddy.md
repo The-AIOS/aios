@@ -1,6 +1,7 @@
 ---
 name: study-buddy
 description: 'Use when task involves study or similar. Pre-read chapters, prepare briefs, facilitate study sessions'
+keywords: study, read chapter, book, briefing, learning, course, notes, review
 tools: '*'
 tags:
   - agent

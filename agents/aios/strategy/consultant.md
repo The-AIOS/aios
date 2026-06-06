@@ -1,6 +1,7 @@
 ---
 name: consultant
 description: 'Use when task involves consulting or similar. Strategic advisory, frameworks, business analysis'
+keywords: strategy, business model, positioning, growth, pivot, roadmap, framework, prioritization, advisory
 tools: '*'
 tags:
   - agent

@@ -1,6 +1,7 @@
 ---
 name: sales-proposal-writer
 description: 'Use when task involves proposal or similar. Draft proposals from project notes + the user''s consulting catalog'
+keywords: quote, offer, scope, sow, pricing, consulting proposal, client deliverable, statement of work
 tools: '*'
 tags:
   - agent

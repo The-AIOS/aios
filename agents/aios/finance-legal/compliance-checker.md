@@ -1,6 +1,7 @@
 ---
 name: compliance-checker
 description: 'Use when task involves compliance or similar. Review documents against legal/regulatory requirements'
+keywords: regulatory, nda, agreement, terms, policy, data privacy, contract review, audit
 tools: '*'
 tags:
   - agent

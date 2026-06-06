@@ -1,6 +1,7 @@
 ---
 name: content-writer
 description: 'Use when task involves draft post or similar. Draft posts for LinkedIn, Twitter/X, Substack in the user''s voice'
+keywords: social media, posts, linkedin, twitter, x, substack, blog, copywriting, ghostwriting
 tools: '*'
 tags:
   - agent

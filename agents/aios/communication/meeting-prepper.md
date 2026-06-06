@@ -1,6 +1,7 @@
 ---
 name: meeting-prepper
 description: 'Use when task involves meeting or similar. Prepare context-rich briefings for upcoming meetings'
+keywords: meeting, briefing, talking points, agenda, call prep, calendar, sync
 tools: '*'
 tags:
   - agent

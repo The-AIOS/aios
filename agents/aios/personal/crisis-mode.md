@@ -1,6 +1,7 @@
 ---
 name: crisis-mode
 description: 'Use when task involves emergency or similar. Heavy-day emergency handler — stabilize, triage, sequence response, route to specialist, bridge to growth-companion when stable'
+keywords: emergency, urgent, panic, fire, breach, lawsuit, threat, hack, incident, overwhelmed
 tools: '*'
 tags:
   - agent

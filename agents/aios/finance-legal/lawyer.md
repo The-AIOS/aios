@@ -1,6 +1,7 @@
 ---
 name: lawyer
 description: 'Use when task involves legal or similar. Legal review, contract analysis, risk assessment'
+keywords: contract, nda, terms of service, agreement, liability, ip assignment, non-compete, sla, regulatory
 tools: '*'
 tags:
   - agent

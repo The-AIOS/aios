@@ -1,6 +1,7 @@
 ---
 name: email-drafter
 description: 'Use when task involves email or similar. Draft professional emails matching voice + context'
+keywords: email, reply, follow up, outreach, cold email, intro, gmail, correspondence
 tools: '*'
 tags:
   - agent

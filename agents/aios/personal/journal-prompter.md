@@ -1,6 +1,7 @@
 ---
 name: journal-prompter
 description: 'Use when task involves reflect or similar. Generate reflection prompts from sessions + patterns'
+keywords: reflect, journal, prompts, introspection, self-reflection, evening reflection, process
 tools: '*'
 tags:
   - agent

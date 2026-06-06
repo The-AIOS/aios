@@ -1,6 +1,7 @@
 ---
 name: sales-lead-hunter
 description: 'Use when task involves lead or similar. Explore leads, qualify, score, draft outreach emails'
+keywords: prospect, outreach, pipeline, qualify, cold email, warm intro, business development, lead generation
 tools: '*'
 tags:
   - agent

@@ -1,6 +1,7 @@
 ---
 name: invoice-tracker
 description: 'Use when task involves invoice or similar. Track pending invoices, flag overdue, draft follow-ups'
+keywords: payment, overdue, billing, accounts receivable, factura, cobro, pago pendiente, reminder
 tools: '*'
 tags:
   - agent

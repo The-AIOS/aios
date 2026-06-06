@@ -1,6 +1,7 @@
 ---
 name: market-researcher
 description: 'Use when task involves market research or similar. Deep 11-section McKinsey-style market intelligence'
+keywords: tam, competitive landscape, market sizing, go-to-market, industry analysis, due diligence, investment thesis
 tools: '*'
 tags:
   - agent

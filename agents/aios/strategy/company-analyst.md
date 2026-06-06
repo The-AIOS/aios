@@ -1,6 +1,7 @@
 ---
 name: company-analyst
 description: 'Use when task involves company analysis or similar. Acquired-style deep dives — history, strategy, moat, playbook'
+keywords: deep dive, moat, 7 powers, competitive analysis, company story, business model, strategy breakdown
 tools: '*'
 tags:
   - agent

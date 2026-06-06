@@ -1,6 +1,7 @@
 ---
 name: content-scheduler
 description: 'Use when task involves content calendar or similar. Plan and queue content calendar from vault insights'
+keywords: content calendar, editorial planning, publishing schedule, post pipeline, what to post, audience
 tools: '*'
 tags:
   - agent

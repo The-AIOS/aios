@@ -1,6 +1,7 @@
 ---
 name: brand-monitor
 description: 'Use when task involves brand mentions or similar. Track mentions, competitors, industry news'
+keywords: mentions, competitors, industry news, monitoring, reputation, social listening, market signals
 tools: '*'
 tags:
   - agent

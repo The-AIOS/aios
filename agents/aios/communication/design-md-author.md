@@ -1,6 +1,7 @@
 ---
 name: design-md-author
 description: 'Use when task involves design system or similar. Author design.md per Google''s spec; interview + validate + optional Stitch upload'
+keywords: design system, brand identity, design tokens, typography, color palette, visual identity, brand book, stitch
 tools: '*'
 tags:
   - agent

@@ -1,6 +1,7 @@
 ---
 name: accountant
 description: 'Use when task involves accounting or similar. Financial analysis, bookkeeping, tax prep, cash flow'
+keywords: finances, p&l, balance sheet, tax, bookkeeping, revenue, expenses, burn rate, runway, ebitda
 tools: '*'
 tags:
   - agent

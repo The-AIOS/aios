@@ -1,6 +1,7 @@
 ---
 name: growth-companion
 description: 'Use when task involves vent or similar. Listen + witness + surface growth from observed context. Anti-sycophancy.'
+keywords: vent, frustrated, stuck, overwhelmed, struggling, emotional, self-awareness, how am i doing
 tools: '*'
 tags:
   - agent

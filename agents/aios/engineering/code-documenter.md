@@ -1,6 +1,7 @@
 ---
 name: code-documenter
 description: 'Use when task involves update docs or similar. Generate/update README, CLAUDE.md, inline docs'
+keywords: documentation, readme, docs, comments, onboarding, codebase docs, doc drift
 tools: '*'
 tags:
   - agent
