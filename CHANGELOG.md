@@ -13,11 +13,11 @@
 
 ---
 
-## 2026-06-05 — Placement Router · Windows spawn fix · command upgrades (trace/graduate/connect/7plan) · marketplace merge rule · README positioning
+## 2026-06-05 — Placement Router · Windows spawn fix · command upgrades (trace/graduate/connect/7plan) · marketplace merge rule · README positioning · session-identity fallback + standalone deliverables
 
 `hash: 5d25fbf`
 
-> **Four threads today: files get a semantic router, Windows operators get `spawn` back, three commands absorb Internet Vin's best framings, and operator plugins survive syncs.**
+> **Five threads today: files get a semantic router, Windows operators get `spawn` back, three commands absorb Internet Vin's best framings, operator plugins survive syncs, and two session-integrity rules land from a live routine test.**
 >
 > **(1) File Placement Router (CLAUDE.md § IV).** The vault's numbered folders were always semantic zones — but the routing logic lived in each operator's accumulated taste, not in the framework. Six questions, asked before any new file is written: written by a script? → `logs/` (and ONLY that) · raw input you didn't author? → `02 - assets/` · ships to an audience (+ its HTML source)? → `03 - export/` · time-bound narrative? → `01 - calendar/` · compounds on re-read? → `reflections/` / project note / `ideas/` · about who the operator is? → `context/`. Anchored by the **retrieval test**: place by the question you'll ask later — **date-stamped ≠ log**. Plus the **rule of 3** (3+ same-species files → noun-named subfolder) and **sanctioned bespoke rooms** (a cookbook is legitimate — give it an `_index.md`). `/housekeeping` gains **Bucket 21** (placement-drift audit, propose-only).
 >
@@ -28,6 +28,8 @@
 > **(5) README positioning.** The architecture convergence happening publicly (independent builders arriving at filesystem-as-context, plain Markdown, no RAG) is now named in the README as validation, with the differentiation stated on top: *governed (INTENT.md trust contract), multiplayer (personal × team × company), substrate-agnostic — not a deeper single-player engine, but the operating system your whole circle runs.*
 >
 > **(4) Marketplace manifest is now MERGE, not byte-replace.** `.claude-plugin/marketplace.json` is dual-owned: the framework owns bundled entries, but operators register `plugins/custom/<name>/` (and companies `plugins/<company>/`) in the same file. The old Tier-1 byte-replace silently deregistered every operator plugin on every sync. `/aios:update` now merges: upstream wins on bundled entries, local `custom/`+company entries are preserved.
+>
+> **(6) Session-identity fallback + standalone deliverables (CLAUDE.md).** A live routine-session test caught two gaps. First: routines, scheduled runs, and bridge sessions are *named by the harness* but never set `$CLAUDE_AGENT_NAME` — the Mandatory First Action misread them as plain CLI, skipping worker behaviors (role greeting, proactive `/close-session`). The identity check now falls back to the session's own transcript (`grep` the `agent-name` record in `~/.claude/projects/*/$CLAUDE_CODE_SESSION_ID.jsonl`) before concluding "plain CLI" — deterministic, zero behavior change for spawn-wrapper and true-CLI sessions. Second: assistant text emitted *between tool calls* in the same turn can be silently dropped on some session surfaces — present in the model's context, never rendered, never persisted to the transcript (a deliverable vanished mid-turn while standalone messages survived). New § VI discipline rule: **deliverables land in a standalone message or a file, never as mid-turn interleaved text** — and "the user didn't see it" gets verified against the on-disk transcript, not context.
 
 ### What changed
 
@@ -40,6 +42,7 @@
 - `plugins/aios/commands/7plan.md` — **The bet (durable — carries across weeks)** output section (carry-by-default).
 - `plugins/aios/commands/update.md` — marketplace.json Tier-1 entry changed to **merge semantics**.
 - `README.md` — convergence-validation + governed/multiplayer/substrate-agnostic positioning in "What makes The AIOS different".
+- `CLAUDE.md` — **Mandatory First Action** gains the transcript-based identity fallback for harness-named sessions; new § VI subsection **"Deliverables land standalone"**.
 
 ### Action required
 

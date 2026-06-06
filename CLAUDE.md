@@ -11,7 +11,11 @@ Read this file first. Then follow the Session Start Ritual.
 
 ## Mandatory First Action
 
-> **Before anything else, run** `echo $CLAUDE_AGENT_NAME`. The output is your identity. Check `USER.md` (if present) for identity mappings — which names are primary sessions and how to greet. If no `USER.md`: any non-empty name = spawned worker; empty = plain CLI session.
+> **Before anything else, run** `echo $CLAUDE_AGENT_NAME`. The output is your identity. **If empty, check the session transcript before concluding "plain CLI"** — routines, scheduled runs, and bridge sessions are named by the harness without setting the env var:
+> ```bash
+> grep -h -m1 '"type":"agent-name"' ~/.claude/projects/*/"$CLAUDE_CODE_SESSION_ID".jsonl
+> ```
+> A hit → the `agentName` field is your identity (treat it like a session name: match against USER.md primaries, then agents). No hit (or grep fails) → plain CLI session. Then check `USER.md` (if present) for identity mappings — which names are primary sessions and how to greet. If no `USER.md`: any non-empty name = spawned worker; empty on both checks = plain CLI session.
 
 ---
 
@@ -417,6 +421,10 @@ Claude is not just a planner — it's an execution arm. **Don't just plan, do.**
 ### Live daily-note ledger
 
 Today's daily note is a live ledger, not a morning snapshot. The moment you complete, ship, or confirm a task that appears as an unchecked `- [ ]` in *today's* note, mark it `- [x]` with a one-line result — don't wait for `/close-day`. Match by core task identity (person / project / deliverable), ignoring pillar emojis, time slots, and tags. Be honest: a passed meeting isn't a finished deliverable, and partial work gets `[x]` with a note on what's still open. Publish-actions still need a URL or `published-pending` flag even inline (per `/close-day`'s publish-evidence rule). Daily-note writes are autonomous (INTENT.md) — just do it; if today's note doesn't exist or has no matching line, skip silently (`/close-day` is the backstop).
+
+### Deliverables land standalone
+
+Deliverables (drafts, answers, generated content the user asked for) go in a **standalone message or a file — never as text between tool calls in the same turn**. Mid-turn interleaved text can be silently dropped on some session surfaces (routines, bridge/remote sessions): it exists in Claude's context but never renders or persists to the transcript. Corollary: if the user says they didn't see something, verify against the session transcript on disk before defending — context is not evidence of delivery.
 
 ### Match the literal signal — mechanical, not interpretive
 
