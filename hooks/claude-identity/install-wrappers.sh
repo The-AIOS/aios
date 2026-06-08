@@ -360,7 +360,11 @@ LAUNCHER
         fi
         cat > "$applescript_file" <<APPLESCRIPT
 $activate_clause
-delay 0.5
+-- Focus-settle 1.2s (was 0.5): give the IDE time to become fully frontmost
+-- before the first keystroke. A back-to-back spawn leaves macOS mid focus-
+-- transition, and 0.5s let the first Ctrl+Shift+\` leak to the desktop →
+-- stray empty Terminal.app window. Caught 2026-06-08 (study-buddy + ingest).
+delay 1.2
 tell application "System Events"
   $tell_process_clause
     -- Step 1: Create a NEW terminal via Ctrl+Shift+\` (workbench shortcut,
@@ -394,6 +398,13 @@ tell application "System Events"
 end tell
 APPLESCRIPT
         osascript "$applescript_file"
+        # Hold the lock ~1.5s after the AppleScript returns so a consecutive
+        # spawn can't re-activate the IDE while these keystrokes are still in
+        # flight. The lock already serializes acquisition; this serializes the
+        # *keystroke tail* too — without it, two rapid spawns overlap their
+        # activation windows and a stray keystroke leaks to the desktop (empty
+        # Terminal.app window). Caught 2026-06-08.
+        sleep 1.5
       else
         osascript -e "tell application \"Terminal\" to do script \"$launcher\""
       fi
