@@ -13,6 +13,22 @@
 
 ---
 
+## 2026-06-08 — Spawn serialization fix (stray Terminal window on back-to-back spawns)
+
+`hash: 05cae11`
+
+> **Spawning two workers in quick succession could pop an empty Terminal.app window. The agents landed fine in the IDE; the Terminal was leaked-keystroke debris. Fixed at the source.**
+>
+> **What changed.** The `spawn` wrapper's IDE path (taken when `CLAUDECODE` is set — i.e. spawning from inside a Claude Code session) drives a new IDE terminal via AppleScript keystrokes: `Ctrl+Shift+\`` to create → `Cmd+Shift+P` → "Terminal: Rename" → run the launcher. It's GUI automation, so it depends on the IDE being frontmost for each keystroke. Two **back-to-back** spawns overlapped: the second `activate`d the IDE while the first's keystrokes were still settling, and the first `Ctrl+Shift+\`` leaked to the desktop → macOS surfaced an empty Terminal.app window. Two fixes in `install-wrappers.sh`: (1) post-activate focus-settle bumped `0.5s → 1.2s`; (2) the spawn lock is now held `~1.5s` after `osascript` returns, so consecutive spawns serialize their *keystroke tails*, not just lock acquisition. Single spawns are unaffected; the fragility only ever showed with rapid multi-spawns.
+>
+> **Why it matters.** Cosmetic, but it reads as "spawn half-broke" when it didn't — the agents were always running correctly in the IDE. macOS-only path; the Windows `.ps1` never hits the AppleScript branch and is untouched.
+>
+> **What to do.** State→Ask→Act for your Claude session:
+> - **Detect:** `/aios:update` pulls the new `hooks/claude-identity/install-wrappers.sh` into your vault (Tier 1). This updates the *source*, not your live shell.
+> - **Act (restart-required — do LAST):** re-run the installer to regenerate the `spawn` block in your shell rc — `bash hooks/claude-identity/install-wrappers.sh` (idempotent: timestamped backup → strip prior block → append → verify → auto-rollback on failure). Then open a fresh terminal (or `source ~/.zshrc`) so the new `spawn` is live. If you never spawn from inside an IDE session, this is optional — your spawns were never affected.
+
+---
+
 ## 2026-06-05 — Placement Router · Windows spawn fix · command upgrades (trace/graduate/connect/7plan) · marketplace merge rule · README positioning · session-identity fallback + standalone deliverables · agent search keywords
 
 `hash: 4bf8b78`
