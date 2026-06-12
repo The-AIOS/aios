@@ -56,7 +56,7 @@ Say `spawn {name}` to launch a named tab dedicated to that role, or `/agent {nam
 |-------|-------------|--------|
 | `accountant` | Financial analysis, bookkeeping, tax prep, SaaS metrics | finance-legal |
 | `aios-builder` | Scaffold + register a new AIOS element (agent/skill/command/plugin/hook/MCP) under `custom/` — compliant and actually loaded | engineering |
-| `brand-monitor` | Track mentions, competitors, industry news | communication |
+| `brand-monitor` | Track mentions, competitors, industry news | sales |
 | `bug-triager` | Classify issues by severity, propose priority | engineering |
 | `code-documenter` | Generate/update README, CLAUDE.md, inline docs | engineering |
 | `code-reviewer` | Review code for security, quality, patterns | engineering |
@@ -77,6 +77,7 @@ Say `spawn {name}` to launch a named tab dedicated to that role, or `/agent {nam
 | `market-researcher` | McKinsey-style market intelligence (Porter's Five Forces, etc.) | strategy |
 | `meeting-prepper` | Prepare context-rich briefings for meetings | communication |
 | `onboarding-aios` | Knows the whole AIOS map; walks you through it when lost | personal |
+| `protocol-steward` | Governance, open-source strategy, licensing + trademark posture for open protocols/standards — lead without vendor-capture | strategy |
 | `report-drafter` | Draft status reports and board updates | communication |
 | `sales-crm-updater` | Sync deal updates to Monday/CRM | sales |
 | `sales-lead-hunter` | Explore leads, qualify, score, draft outreach | sales |
