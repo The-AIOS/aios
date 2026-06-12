@@ -13,6 +13,24 @@
 
 ---
 
+## 2026-06-12 — TOOLS.md agents table catches up to the fleet (31)
+
+`hash: 9d9d0ad`
+
+> **A docs-only fix: the TOOLS.md agents table drifted from the filesystem.** `protocol-steward` (shipped in `agents/aios/strategy/`) was missing from the table, and `brand-monitor` was listed under *communication* while it lives in `agents/aios/sales/` — the canonical registry (`agents/_index.md`) and the sales bundle README both already had it right. The table now matches the 31-agent ground truth the CI counts job enforces.
+>
+> **Why it matters.** TOOLS.md is the menu — `/today` task-matching reads the registry, but humans (and external collateral) read TOOLS.md. A stale row propagates: this one surfaced when a brochure built from the TOOLS.md table shipped "30 agents" and the operator caught the off-by-one. The registry was never wrong; the menu was.
+>
+> **What to do.** State→Ask→Act for your Claude session:
+> - **Detect:** `/aios:update` pulls the corrected `TOOLS.md` (Tier 1, byte-identical).
+> - **Act:** nothing — docs-only, auto-applies on sync. If you've built anything downstream from the TOOLS.md agents table (decks, one-pagers, onboarding docs), re-check its agent count and bundles against `agents/_index.md`.
+
+### What changed
+
+- `TOOLS.md` § Agents — added `protocol-steward` row (governance, open-source strategy, licensing + trademark posture for open protocols; strategy bundle); `brand-monitor` row re-bundled communication → sales.
+
+---
+
 ## 2026-06-08 — Spawn serialization fix (stray Terminal window on back-to-back spawns)
 
 `hash: 05cae11`
