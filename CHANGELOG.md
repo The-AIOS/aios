@@ -15,7 +15,7 @@
 
 ## 2026-06-14 — spawn wrapper fix: Antigravity terminal creation via Command Palette
 
-`hash: 376c854`
+`hash: 5d9e3d1`
 
 > **`spawn` could leak into the wrong session on Antigravity IDE.** The wrapper created each new terminal with `Ctrl+Shift+\`` — the VS Code keybinding for `workbench.action.terminal.new`. VS Code and Cursor bind it; **Antigravity does not.** On Antigravity the keystroke was swallowed: no terminal was created, the *active* tab got renamed to the agent name, and the launcher path was typed into the **current (parent) session** instead of a fresh one. Caught 2026-06-13 during a new operator's onboarding (a 12-hour first run) — exactly the moment a silent spawn failure is most damaging.
 >
