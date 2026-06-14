@@ -13,9 +13,9 @@
 
 ---
 
-## 2026-06-14 — spawn wrapper: layout-independent terminal creation (Command Palette + paste)
+## 2026-06-14 — spawn wrapper layout-independence + AIOS Glass promoted to a required setup step
 
-`hash: 8d43b2f`
+`hash: PENDING`
 
 > **The `spawn` wrapper silently assumed a US keyboard layout.** It created the IDE terminal with `Ctrl+Shift+\`` and *typed* the launcher — both break on non-US layouts (Spanish LA/ES confirmed, others likely): the backtick chord maps to a different physical key (no terminal created) and `keystroke` garbles symbols/spaces (launcher corrupts). The result was the "leak" signature — the active tab gets renamed and the launcher spills into the parent session, no new worker. Surfaced on a LATAM operator's onboarding.
 >
@@ -25,11 +25,17 @@
 > - **Detect:** `/aios:update` pulls the corrected `install-wrappers.sh` (Tier 1, byte-identical) + the new `hooks/claude-identity/TROUBLESHOOTING.md`.
 > - **Act (RESTART-CLASS):** the installer is auto-re-run by `/aios:update`; if running manually, `bash ~/aios/hooks/claude-identity/install-wrappers.sh`, then **open a new terminal** to pick up the regenerated wrappers.
 > - **Verify:** `grep -c "Terminal: Create New Terminal" ~/.zshrc` ≥ 1 and `grep -c 'control down, shift down' ~/.zshrc` = 0.
+>
+> **AIOS Glass is now a required part of setup, not a "recommended" extra.** Glass is the front door — the difference between using the AIOS and bouncing off the terminal, especially for non-terminal operators. The onboarding flow was soft-pedaling it ("recommended… skip/later is fine"), so a new operator could miss it entirely (caught on a LATAM onboarding — the operator never got Glass without hands-on help). Now the cold-start interview **installs it by default** (walk-through, no fake skip-gate — same posture as bundles/plugins), and SETUP + START-HERE frame it as core. The walkthrough also now covers **opening** it (the bottom status-bar item — installing isn't opening) + the secondary-sidebar layout.
+>
+> **What to do (Glass):** nothing for existing operators — you already have Glass; this only changes how *new* operators are onboarded (the cold-start interview runs once at first clone). `/aios:update` pulls the updated SETUP / START-HERE / cold-start-interview (the command file auto-syncs to your plugin cache).
 
 ### What changed
 
 - `hooks/claude-identity/install-wrappers.sh` — IDE spawn AppleScript: `Ctrl+Shift+\`` create → Command-Palette-via-paste create; typed launcher → pasted launcher; added `set frontmost to true` focus guard; dropped the palette-rename; save/restore the user clipboard.
 - `hooks/claude-identity/TROUBLESHOOTING.md` (new) — Claude-facing runbook for diagnosing spawn leaks (stale wrapper / focus race / layout / Accessibility permission).
+- `plugins/aios/commands/cold-start-interview.md` — Step 8.5: Glass install reframed from "announce + offer, skip-fine" to **install-by-default** (walk-through, no fake skip-gate); added open-the-panel + secondary-sidebar steps; persona calibration now tunes *pace*, not *whether*.
+- `SETUP.md` + `START-HERE.md` — Glass reframed from "(recommended)" to a core, required part of setup for every operator; both now include the open-the-panel (bottom status-bar) + secondary-sidebar steps.
 
 ---
 

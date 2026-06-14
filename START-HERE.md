@@ -109,7 +109,7 @@ Mount with `--mount {url}` (using a URL teammate shared with you), or create fre
 
 ---
 
-### Step 4 — (Recommended) Install AIOS Glass — the clickable front door
+### Step 4 — Install AIOS Glass — the clickable front door
 
 **What it is:** a docked panel inside your IDE that turns the AIOS into a *point-and-click* surface — run any `/aios:*` ritual, launch/spawn agents, browse skills + commands, mount companies, manage collaboration spaces, and watch your context compound, all without typing terminal commands. *Glass, not engine:* it reads your `~/aios` at runtime and triggers your existing rituals through Claude — it reimplements nothing. **Especially valuable if you (or someone you onboard) aren't comfortable in a terminal.**
 
@@ -124,7 +124,7 @@ Mount with `--mount {url}` (using a URL teammate shared with you), or create fre
 
 > **On stock Microsoft VS Code?** Glass isn't on MS's marketplace — download `aios-glass-<version>.vsix` from the [latest release](https://github.com/The-AIOS/aios-glass/releases), then *Extensions → ⋯ → Install from VSIX…* → reload. Full details (CLI install, configuration, troubleshooting): **[aios-glass → INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md)**.
 
-Install it **after** Steps 1–2 — Glass surfaces what's already set up. **If you're onboarding someone who isn't terminal-comfortable, treat Glass as required, not optional — walk them through opening it (step 4) and the secondary-sidebar layout (step 5) before you leave them on their own.**
+Install it **after** Steps 1–2 — Glass surfaces what's already set up. **Glass is a core part of the AIOS, not an optional add-on** — install it as part of your setup, every operator. If you're onboarding someone else (especially anyone who isn't terminal-comfortable), walk them through opening it (step 4) and the secondary-sidebar layout (step 5) before leaving them on their own — *installing isn't opening.*
 
 ---
 

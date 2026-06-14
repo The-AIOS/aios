@@ -321,13 +321,16 @@ Installing the recommended plugin set for you...
 
 **Edge case — operator says "skip plugins entirely"** before the install fires: respect it. The default is install-all-by-recommended-set, but explicit "skip" wins.
 
-### Step 8.5 — (Recommended) Install AIOS Glass — the graphical front door
+### Step 8.5 — Install AIOS Glass — the graphical front door
 
-Announce + offer (don't hard-gate). **What it is:** a docked panel inside the IDE that turns the AIOS into a point-and-click surface — run rituals, launch/spawn agents, browse skills + commands, mount companies, manage spaces, all without typing terminal commands. *Glass, not engine* — it triggers the existing rituals through Claude, reimplements nothing.
+**Install it as part of setup — walk them through it, don't soft-offer-and-skip.** Glass is a core surface of the AIOS, not an optional extra. Same posture as Step 9 and the bundle/plugin installs: the default is *do it now, together* — there's no fake "skip / later" gate (skipping it leaves a new operator, especially a non-terminal one, without the surface that makes the AIOS usable — exactly the gap that strands them). **What it is:** a docked panel inside the IDE that turns the AIOS into a point-and-click surface — run rituals, launch/spawn agents, browse skills + commands, mount companies, manage spaces, all without typing terminal commands. *Glass, not engine* — it triggers the existing rituals through Claude, reimplements nothing.
 
-Say: *"One more — **AIOS Glass** lets you run all of this by clicking instead of typing. Open your Extensions view → search 'AIOS Glass' → Install (it auto-installs the Foam dependency + auto-updates), then reload the window. Want me to walk you through it, or grab it from `START-HERE.md` → Step 4 when you're ready?"*
+Walk them through it now (don't just name it — installing isn't opening):
+1. Extensions view (`⌘⇧X` / `Ctrl+Shift+X`) → search **"AIOS Glass"** → **Install** (auto-installs the **Foam** dependency + auto-updates) → reload the window.
+2. **Open it:** click the **`AIOS Glass`** item in the **bottom status bar** (or `⌘⇧P` → *AIOS Glass: Open Panel*). This trips up first-timers — confirm they see the panel.
+3. **Move it to the secondary (right) side bar** so it sits beside their editor (`⌘⌥B` to toggle the secondary side bar, then drag the AIOS Glass view over). Now panel + files + terminals are all visible at once.
 
-**Calibration (use the persona from `onboarding-aios`/declared context):** for **`exec` / `knowledge` / non-terminal** operators this is a *strong* recommendation — often the difference between using the AIOS and bouncing off the terminal. For **`software`** operators, mention it lightly (terminal-comfortable, but may still like the agent-orchestrator + spaces surfaces). Stock Microsoft VS Code users sideload the `.vsix` — full install incl. CLI + troubleshooting: [aios-glass INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md). It's a recommendation, not a gate — "skip / later" is fine.
+**Calibration (use the persona from `onboarding-aios`/declared context) — this tunes the *pace*, not *whether*:** for **`exec` / `knowledge` / non-terminal** operators, slow down and confirm each step lands (this is the surface that decides whether they use the AIOS or bounce off the terminal — do NOT let them skip it). For **`software`** operators, move faster (terminal-comfortable), but still install it — the agent-orchestrator + spaces surfaces are worth it. Stock Microsoft VS Code users sideload the `.vsix` — full install incl. CLI + troubleshooting: [aios-glass INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md). Full walkthrough also in `START-HERE.md` → Step 4. Only honor an explicit, insistent "skip" — and flag that they'll be operating without the front door.
 
 ### Step 9 — Introducing you to {primary-session-name}
 
