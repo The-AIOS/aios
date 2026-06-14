@@ -13,6 +13,26 @@
 
 ---
 
+## 2026-06-14 — spawn wrapper: layout-independent terminal creation (Command Palette + paste)
+
+`hash: PENDING`
+
+> **The `spawn` wrapper silently assumed a US keyboard layout.** It created the IDE terminal with `Ctrl+Shift+\`` and *typed* the launcher — both break on non-US layouts (Spanish LA/ES confirmed, others likely): the backtick chord maps to a different physical key (no terminal created) and `keystroke` garbles symbols/spaces (launcher corrupts). The result was the "leak" signature — the active tab gets renamed and the launcher spills into the parent session, no new worker. Surfaced on a LATAM operator's onboarding.
+>
+> **The fix is layout-independent by construction** (validated end-to-end on US/ABC + Latin American + Spanish-ISO, including the worst case of a non-US layout *with focus in another window*): create the terminal via the Command Palette (`⌘⇧P`, a letter chord) with the command name **pasted** (not typed), deliver the launcher by **paste**, and force the IDE frontmost (`set frontmost to true`) before any keystroke so focus can't leak. The fragile palette-rename step is dropped (the session is already named via `--name`). The operator's clipboard is saved + restored around the spawn. Glass-shell is unaffected (it spawns natively via node-pty).
+>
+> **What to do.** State→Ask→Act for your Claude session:
+> - **Detect:** `/aios:update` pulls the corrected `install-wrappers.sh` (Tier 1, byte-identical) + the new `hooks/claude-identity/TROUBLESHOOTING.md`.
+> - **Act (RESTART-CLASS):** the installer is auto-re-run by `/aios:update`; if running manually, `bash ~/aios/hooks/claude-identity/install-wrappers.sh`, then **open a new terminal** to pick up the regenerated wrappers.
+> - **Verify:** `grep -c "Terminal: Create New Terminal" ~/.zshrc` ≥ 1 and `grep -c 'control down, shift down' ~/.zshrc` = 0.
+
+### What changed
+
+- `hooks/claude-identity/install-wrappers.sh` — IDE spawn AppleScript: `Ctrl+Shift+\`` create → Command-Palette-via-paste create; typed launcher → pasted launcher; added `set frontmost to true` focus guard; dropped the palette-rename; save/restore the user clipboard.
+- `hooks/claude-identity/TROUBLESHOOTING.md` (new) — Claude-facing runbook for diagnosing spawn leaks (stale wrapper / focus race / layout / Accessibility permission).
+
+---
+
 ## 2026-06-12 — TOOLS.md agents table catches up to the fleet (31)
 
 `hash: 9d9d0ad`

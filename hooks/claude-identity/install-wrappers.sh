@@ -328,28 +328,26 @@ LAUNCHER
       [ -z "$ide_app" ] && pgrep -xq "Cursor" && ide_app="Cursor"
 
       if [ -n "$ide_app" ]; then
-        # AppleScript pattern: Ctrl+Shift+\` to create a new terminal, then
-        # Cmd+Shift+P → "Terminal: Rename" to rename. This is the proven
-        # April 25 → early May pattern that worked across all spawned tabs.
+        # Layout-independent CREATE via Command Palette + clipboard PASTE.
+        # ── Why this shape (validated US/ABC + Latin American + Spanish-ISO 2026-06-14) ──
+        # The legacy method keystroked Ctrl+Shift+backtick to create the terminal and
+        # TYPED the name + launcher. That silently relied on a US keyboard layout: on
+        # Spanish (LA/ES) and other layouts AppleScript `keystroke` maps the backtick to
+        # a different physical key (so no terminal is created) AND garbles symbols/spaces
+        # in typed text (so the launcher corrupts). The keystrokes then leak into the
+        # parent session — the active tab gets renamed, the launcher spills in. Confirmed
+        # on a LATAM operator's onboarding (Spanish layout); see antifragile #73.
         #
-        # Why Ctrl+Shift+\` works: in VS Code / Antigravity / Cursor, this
-        # shortcut is bound to the workbench command "workbench.action.terminal.new"
-        # — i.e. CREATE new terminal. It is workbench-level (focus-independent),
-        # which means it fires correctly even when the chat panel has focus.
-        # NOTE: Ctrl+\` (without Shift) is "toggle terminal panel" — different
-        # action; do not substitute.
-        #
-        # After step 1, focus is in the just-created terminal, so Cmd+Shift+P
-        # opens the command palette reliably from terminal-focus state.
-        #
-        # Menu-bar invocation (\`click menu item "New Terminal"\`) doesn't work
-        # on Antigravity — the menu bar has no "Terminal" menu with that item.
-        # The keystroke shortcut is more portable across VS Code-family IDEs.
+        # Robust fix — every step is layout-independent:
+        #   * Cmd+Shift+P            → letter chord; letters don't move across layouts.
+        #   * PASTE the command name → clipboard delivers bytes intact (typing garbles).
+        #   * PASTE the launcher     → same; the launcher path/spaces survive any layout.
+        #   * NO rename step         → the session is already named via --name; the old
+        #     palette-rename was the step that leaked. (Tab title is cosmetic.)
+        # Glass-shell spawns natively (node-pty) and never uses this path.
         local applescript_file="/tmp/spawn-script-$name.applescript"
-        # When a bundle ID is known (Antigravity old/new), address by bundle ID:
-        # the new IDE's process name to System Events is "Electron" (stock Electron
-        # binary), so `tell process "Antigravity IDE"` would fail — bundle ID is the
-        # stable identifier. For VS Code / Cursor, fall back to name addressing.
+        # Address Antigravity by bundle ID (its System-Events process name is stock
+        # "Electron"); VS Code / Cursor fall back to display-name addressing.
         local activate_clause tell_process_clause
         if [ -n "$ide_bundle" ]; then
           activate_clause="tell application id \"$ide_bundle\" to activate"
@@ -358,53 +356,56 @@ LAUNCHER
           activate_clause="tell application \"$ide_app\" to activate"
           tell_process_clause="tell process \"$ide_app\""
         fi
+        # Clipboard staging: save the user's clipboard to restore afterward (spawning
+        # must not eat what they had copied), stage the launcher in a temp file (avoids
+        # AppleScript escaping), and prime the clipboard with the create command.
+        local saved_clip; saved_clip=$(pbpaste 2>/dev/null)
+        printf '%s' "$launcher" > "/tmp/spawn-launch-cmd-$name"
+        printf '%s' 'Terminal: Create New Terminal' | pbcopy
         cat > "$applescript_file" <<APPLESCRIPT
 $activate_clause
--- Focus-settle 1.2s (was 0.5): give the IDE time to become fully frontmost
--- before the first keystroke. A back-to-back spawn leaves macOS mid focus-
--- transition, and 0.5s let the first Ctrl+Shift+\` leak to the desktop →
--- stray empty Terminal.app window. Caught 2026-06-08 (study-buddy + ingest).
+-- Focus-settle 1.2s: let the IDE become fully frontmost before the first keystroke.
+-- A back-to-back spawn leaves macOS mid focus-transition; too short a delay lets the
+-- first keystroke leak to the desktop. Caught 2026-06-08.
 delay 1.2
 tell application "System Events"
   $tell_process_clause
-    -- Step 1: Create a NEW terminal via Ctrl+Shift+\` (workbench shortcut,
-    -- focus-independent — workbench.action.terminal.new in VS Code-family IDEs).
-    keystroke "\`" using {control down, shift down}
+    -- Robustness: force the IDE frontmost before any keystroke. `activate` alone can
+    -- lose the race when another window/app holds focus at spawn time (e.g. operator
+    -- typing in a separate terminal) — keystrokes then leak. `set frontmost to true`
+    -- is the forceful guarantee; the extra settle lets the focus change land.
+    set frontmost to true
+    delay 0.5
+    -- Step 1: open the command palette (Cmd+Shift+P — letter chord, layout-safe).
+    keystroke "p" using {command down, shift down}
     delay 0.8
-    -- Defensive: if Antigravity shows a shell-picker on first terminal creation,
-    -- Enter selects the default. Harmless if no picker appears (just emits an
-    -- empty newline at the fresh terminal's prompt).
+    -- PASTE the create command (clipboard primed by the wrapper). Paste, not type:
+    -- typing garbles symbols/spaces on non-US layouts; paste delivers bytes intact.
+    keystroke "v" using {command down}
+    delay 0.7
     keystroke return
-    delay 1
-
-    -- Step 2: Rename the new terminal via command palette. Focus is now in
-    -- the just-created terminal, so Cmd+Shift+P opens the palette reliably.
-    keystroke "P" using {command down, shift down}
-    delay 0.5
-    keystroke "Terminal: Rename"
-    delay 0.5
+    delay 1.2
+    -- Defensive Enter: dismiss a shell-picker if one appears on first terminal
+    -- creation. Harmless otherwise (empty newline at the fresh prompt).
     keystroke return
-    delay 0.3
-    keystroke "$name"
-    keystroke return
-    delay 1
-
-    -- Step 3: Run the launcher (short path → safe to keystroke once we're
-    -- in the just-created, named terminal).
-    keystroke "$launcher"
-    delay 0.3
+    delay 0.6
+    -- Step 2: deliver the launcher via PASTE — swap the clipboard to the launcher
+    -- command (staged in a temp file), paste, and run.
+    do shell script "cat /tmp/spawn-launch-cmd-$name | pbcopy"
+    keystroke "v" using {command down}
+    delay 0.4
     keystroke return
   end tell
 end tell
 APPLESCRIPT
         osascript "$applescript_file"
-        # Hold the lock ~1.5s after the AppleScript returns so a consecutive
-        # spawn can't re-activate the IDE while these keystrokes are still in
-        # flight. The lock already serializes acquisition; this serializes the
-        # *keystroke tail* too — without it, two rapid spawns overlap their
-        # activation windows and a stray keystroke leaks to the desktop (empty
-        # Terminal.app window). Caught 2026-06-08.
+        # Hold the lock ~1.5s after the AppleScript returns so a consecutive spawn
+        # can't re-activate the IDE while these keystrokes are still in flight.
+        # Caught 2026-06-08.
         sleep 1.5
+        # Restore the user's clipboard + clean the staged launcher command file.
+        printf '%s' "$saved_clip" | pbcopy
+        rm -f "/tmp/spawn-launch-cmd-$name"
       else
         osascript -e "tell application \"Terminal\" to do script \"$launcher\""
       fi
