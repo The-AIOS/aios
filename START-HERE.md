@@ -116,11 +116,15 @@ Mount with `--mount {url}` (using a URL teammate shared with you), or create fre
 **Install** (in **Antigravity**, or any Open VSX editor — VSCodium / Cursor / Windsurf):
 1. Open the Extensions view (`⌘⇧X` / `Ctrl+Shift+X`).
 2. Search **"AIOS Glass"** → **Install**. It auto-installs its **Foam** dependency and **auto-updates** from then on.
-3. **Reload the window** when prompted (`⌘⇧P` → *Developer: Reload Window*). Glass docks into the side bar.
+3. **Reload the window** when prompted (`⌘⇧P` → *Developer: Reload Window*).
+
+**Open it** (this trips up first-timers — installing isn't opening):
+4. Click the **`AIOS Glass`** item in the **bottom status bar** to open the panel. (You can also run `⌘⇧P` → *AIOS Glass: Open Panel*.)
+5. **Recommended layout:** drag the Glass view into the **secondary (right) side bar** so it sits beside your editor instead of replacing your file explorer — *View → Appearance → Secondary Side Bar* (`⌘⌥B`) toggles it, then drag the **AIOS Glass** view icon over to it. Now the panel, your files, and your terminals are all visible at once.
 
 > **On stock Microsoft VS Code?** Glass isn't on MS's marketplace — download `aios-glass-<version>.vsix` from the [latest release](https://github.com/The-AIOS/aios-glass/releases), then *Extensions → ⋯ → Install from VSIX…* → reload. Full details (CLI install, configuration, troubleshooting): **[aios-glass → INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md)**.
 
-Install it **after** Steps 1–2 — Glass surfaces what's already set up.
+Install it **after** Steps 1–2 — Glass surfaces what's already set up. **If you're onboarding someone who isn't terminal-comfortable, treat Glass as required, not optional — walk them through opening it (step 4) and the secondary-sidebar layout (step 5) before you leave them on their own.**
 
 ---
 
