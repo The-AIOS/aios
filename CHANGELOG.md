@@ -13,6 +13,25 @@
 
 ---
 
+## 2026-06-14 — spawn wrapper fix: Antigravity terminal creation via Command Palette
+
+`hash: 5d9e3d1`
+
+> **`spawn` could leak into the wrong session on Antigravity IDE.** The wrapper created each new terminal with `Ctrl+Shift+\`` — the VS Code keybinding for `workbench.action.terminal.new`. VS Code and Cursor bind it; **Antigravity does not.** On Antigravity the keystroke was swallowed: no terminal was created, the *active* tab got renamed to the agent name, and the launcher path was typed into the **current (parent) session** instead of a fresh one. Caught 2026-06-13 during a new operator's onboarding (a 12-hour first run) — exactly the moment a silent spawn failure is most damaging.
+>
+> **The fix.** Step 1 of the spawn AppleScript now creates the terminal via the **Command Palette** (`Cmd+Shift+P` → "Terminal: Create New Terminal") instead of the keystroke. The palette command carries the same label across VS Code, Cursor, and Antigravity, and `Cmd+Shift+P` is workbench-level (focus-independent) — already proven by the rename step that follows. Net: one portable path across the whole VS Code family, no keybinding dependency.
+>
+> **What to do.** State→Ask→Act for your Claude session:
+> - **Detect:** `/aios:update` pulls the corrected `hooks/claude-identity/install-wrappers.sh` (Tier 1).
+> - **Act (required — restart-class):** re-run the installer so your live `~/.zshrc` regenerates with the fix — `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (idempotent; timestamped backup). **Then open a NEW terminal** (or `source ~/.zshrc`) for `spawn` to pick it up. Without the re-run, the canonical file is fixed but your live wrapper still carries the old keystroke.
+> - **Verify:** `grep -c "Terminal: Create New Terminal" ~/.zshrc` should return ≥1; `grep -c 'control down, shift down' ~/.zshrc` (the create keystroke) should be 0.
+
+### What changed
+
+- `hooks/claude-identity/install-wrappers.sh` — spawn AppleScript Step 1: `Ctrl+Shift+\`` keystroke → Command Palette "Terminal: Create New Terminal"; timings tuned (0.7/0.7, step-2 settle 1.4s); header + focus-settle comments updated to document the Antigravity keybinding gap.
+
+---
+
 ## 2026-06-12 — TOOLS.md agents table catches up to the fleet (31)
 
 `hash: 9d9d0ad`

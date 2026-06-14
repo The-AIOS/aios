@@ -328,23 +328,25 @@ LAUNCHER
       [ -z "$ide_app" ] && pgrep -xq "Cursor" && ide_app="Cursor"
 
       if [ -n "$ide_app" ]; then
-        # AppleScript pattern: Ctrl+Shift+\` to create a new terminal, then
-        # Cmd+Shift+P → "Terminal: Rename" to rename. This is the proven
-        # April 25 → early May pattern that worked across all spawned tabs.
+        # AppleScript pattern: Cmd+Shift+P → "Terminal: Create New Terminal" to
+        # create a fresh terminal, then Cmd+Shift+P → "Terminal: Rename" to name
+        # it, then keystroke the launcher into the now-focused new terminal.
         #
-        # Why Ctrl+Shift+\` works: in VS Code / Antigravity / Cursor, this
-        # shortcut is bound to the workbench command "workbench.action.terminal.new"
-        # — i.e. CREATE new terminal. It is workbench-level (focus-independent),
-        # which means it fires correctly even when the chat panel has focus.
-        # NOTE: Ctrl+\` (without Shift) is "toggle terminal panel" — different
-        # action; do not substitute.
-        #
-        # After step 1, focus is in the just-created terminal, so Cmd+Shift+P
-        # opens the command palette reliably from terminal-focus state.
+        # Why the Command Palette (not Ctrl+Shift+\`): Ctrl+Shift+\` is the VS
+        # Code keybinding for workbench.action.terminal.new, but Antigravity does
+        # NOT bind it — the keystroke is swallowed, no terminal is created, and
+        # every keystroke that follows lands on the CURRENT terminal: the active
+        # tab gets renamed to the agent name and the launcher path leaks into the
+        # wrong (parent) session. The palette command "Terminal: Create New
+        # Terminal" carries the same label in VS Code, Cursor, and Antigravity,
+        # so this path is portable across the whole family. Cmd+Shift+P is
+        # workbench-level (focus-independent) and already proven by the rename
+        # step. Caught 2026-06-13 on Antigravity (Yayo's onboarding) — the active
+        # tab renamed to the agent name + launcher keystroke leaked upward.
         #
         # Menu-bar invocation (\`click menu item "New Terminal"\`) doesn't work
         # on Antigravity — the menu bar has no "Terminal" menu with that item.
-        # The keystroke shortcut is more portable across VS Code-family IDEs.
+        # The palette command is more portable across VS Code-family IDEs.
         local applescript_file="/tmp/spawn-script-$name.applescript"
         # When a bundle ID is known (Antigravity old/new), address by bundle ID:
         # the new IDE's process name to System Events is "Electron" (stock Electron
@@ -362,20 +364,19 @@ LAUNCHER
 $activate_clause
 -- Focus-settle 1.2s (was 0.5): give the IDE time to become fully frontmost
 -- before the first keystroke. A back-to-back spawn leaves macOS mid focus-
--- transition, and 0.5s let the first Ctrl+Shift+\` leak to the desktop →
+-- transition, and 0.5s let the first keystroke leak to the desktop →
 -- stray empty Terminal.app window. Caught 2026-06-08 (study-buddy + ingest).
 delay 1.2
 tell application "System Events"
   $tell_process_clause
-    -- Step 1: Create a NEW terminal via Ctrl+Shift+\` (workbench shortcut,
-    -- focus-independent — workbench.action.terminal.new in VS Code-family IDEs).
-    keystroke "\`" using {control down, shift down}
-    delay 0.8
-    -- Defensive: if Antigravity shows a shell-picker on first terminal creation,
-    -- Enter selects the default. Harmless if no picker appears (just emits an
-    -- empty newline at the fresh terminal's prompt).
+    -- Step 1: Create a NEW terminal via the Command Palette (keybinding-
+    -- independent; Ctrl+Shift+backtick is unbound in Antigravity — see header).
+    keystroke "P" using {command down, shift down}
+    delay 0.7
+    keystroke "Terminal: Create New Terminal"
+    delay 0.7
     keystroke return
-    delay 1
+    delay 1.4
 
     -- Step 2: Rename the new terminal via command palette. Focus is now in
     -- the just-created terminal, so Cmd+Shift+P opens the palette reliably.
