@@ -15,7 +15,7 @@
 
 ## 2026-06-14 — spawn wrapper: layout-independent terminal creation (Command Palette + paste)
 
-`hash: PENDING`
+`hash: 8d43b2f`
 
 > **The `spawn` wrapper silently assumed a US keyboard layout.** It created the IDE terminal with `Ctrl+Shift+\`` and *typed* the launcher — both break on non-US layouts (Spanish LA/ES confirmed, others likely): the backtick chord maps to a different physical key (no terminal created) and `keystroke` garbles symbols/spaces (launcher corrupts). The result was the "leak" signature — the active tab gets renamed and the launcher spills into the parent session, no new worker. Surfaced on a LATAM operator's onboarding.
 >
