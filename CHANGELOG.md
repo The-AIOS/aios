@@ -13,6 +13,18 @@
 
 ---
 
+## 2026-06-15 — /housekeeping gains two silent-failure guards: dataview path-validity + session-insights cap [from a Fable 5 audit]
+
+`hash: 58c62d6`
+
+> **Two classes of silent rot that only surface when you happen to look.** (1) A dataview `FROM "folder"` clause that points at a renamed folder doesn't error — the table just renders **empty**, so a stale path can sit broken for weeks (caught 2026-06-15: 17 `FROM "04 - export/…"` clauses across 5 export indexes still pointed at the old folder name weeks after it became `03 - export` — the meetings index had been silently empty the whole time). (2) The session-insights buffer has caps (Emerging ≤10, Reinforced ≤5), but nothing *enforced* them as a hard check — an overflowing buffer means gardening is falling behind and signal gets cannibalized, with no signal that it's happening.
+>
+> **What changed:** `/housekeeping` gains two checks. **Bucket 7** now validates every dataview `FROM` path in `_index.md` against the actual vault tree and proposes the corrected path (or flags it) when the folder is missing — the structural sibling of Bucket 19's reference-integrity layer (dead *command* refs), now for dead *folder* refs. **Bucket 19** adds a hard cap finding (Emerging >10 / Reinforced >5) alongside its existing age-based backlog checks — count-overflow caught regardless of entry age.
+>
+> **What to do:** nothing — `/aios:update` brings the new `housekeeping.md`. Your next `/aios:housekeeping` will flag any silently-empty dataview index and any over-cap insight buffer. No migration.
+
+---
+
 ## 2026-06-15 — Spend capability wisely: spawn model tiers + a recalibration ritual + the arc-session pattern [from a Fable 5 audit]
 
 `hash: 306bfcb`
