@@ -118,7 +118,7 @@ Append to the daily note being closed (may be today or yesterday if closing afte
 **Review date:** {90 days from now}
 
 ### Carries forward
-- [ ] {Items that didn't get done or need follow-up — these feed tomorrow's /today. Format: `- [ ] {task} _(carried ×N, reason: {tag})_` where N = previous count + 1 (or 1 if new), and `{tag}` is one of: `strategic-deferral` / `blocked-on-{who}` / `needs-challenge` / `waiting-on-date`. Reason tags are set by the carry-triage prompt below — once tagged, /today stops re-asking.}
+- [ ] {Items that didn't get done or need follow-up — these feed tomorrow's /today. Format: `- [ ] {task} _(carried ×N, reason: {tag}, from: {origin})_` where N = previous count + 1 (or 1 if new), `{tag}` is one of: `strategic-deferral` / `blocked-on-{who}` / `needs-challenge` / `waiting-on-date`, and `{origin}` is the provenance stamp (see § Cascade ledger — where the item first came from, so it never reads as a mystery in tomorrow's plan). Reason tags are set by the carry-triage prompt below — once tagged, /today stops re-asking.}
 
 ### Observed
 - {Meta-patterns: energy, focus, what worked, what was avoided. Feed /drift.}
@@ -368,11 +368,37 @@ Scan today's daily note for all `- [ ]` items that show `_(carried ×N)_` where 
 If the user added tasks to the daily note that don't exist in any project note (user-added subtasks, ad-hoc items), suggest routing them:
 
 > **New tasks to route to projects:**
-> | Task | Suggested project | Action |
-> |------|------------------|--------|
-> | {task} | [[project]] | Add to {High/Normal} to-dos |
+> | Task | Suggested project | Action | Origin |
+> |------|------------------|--------|--------|
+> | {task} | [[project]] | Add to {High/Normal} to-dos | {where it came from — see provenance rule below} |
 
 Wait for confirmation before writing to project notes.
+
+## Cascade ledger (provenance + surfacing preview)
+
+> The trust layer on the cascade. Before the snapshots refresh makes anything surface in tomorrow's `/today`, present ONE consolidated, legible ledger of everything cascading into project notes + everything that will surface tomorrow — each line carrying its **origin**. This is what lets the operator trust the pipeline instead of re-auditing it: nothing surfaces tomorrow that wasn't shown + traceable tonight.
+
+**Provenance stamp (the rule).** Every item that cascades into a project note OR will surface in tomorrow's `/today` carries an inline origin tag: `_(from: {source} · {date})_`. Sources: `session-insight` (Reinforced/Emerging), a specific meeting or dev-report, an audit / `/ingest` finding, a carry from {date}, an explicit user request. **An item with no traceable origin is a bug — flag it, don't surface it silently.** (Worked example: a "Zineb fee in writing" task surfacing as `_(from: 2026-06-11 protocols audit · 6-F3)_` reads as a known suggestion, not a mystery — the difference between trust and "where did this come from?")
+
+**The ledger — present, then confirm (ONE pass; this consolidates the per-section project-note confirmations above into a single review):**
+
+> **📋 Cascade ledger — confirm before it surfaces tomorrow:**
+>
+> **Into project notes:**
+> | Project | What | Origin |
+> |---|---|---|
+> | {project} | {new to-do / status change / session-note entry} | {origin} |
+>
+> **Surfacing in tomorrow's `/today`** (carries forward + newly-added project to-dos):
+> | Item | Project | Origin |
+> |---|---|---|
+> | {task} | {project} | {origin} |
+>
+> Reply to confirm, or flag any line that looks wrong, orphaned, or shouldn't surface.
+
+- **Wait for confirmation.** On confirm → proceed to the snapshots refresh (which is what makes these surface in `/today`). On a flagged line → fix or drop it *before* it cascades.
+- **Why (kills the three cascade-trust failures):** *dropped ball* — the operator sees the full surfacing set and can spot the missing one; *weird tasks* — every item shows its origin; *"can't trust it so I re-check everything"* — traceability replaces re-audit. The compounding is untouched (insights still route, growth edges still get named) — it's just made **legible**.
+- **Non-interactive close** (no operator present): write the ledger into the close-of-day note as a record and proceed; tomorrow's `/today` still surfaces each item with its origin tag intact.
 
 ## Project snapshots refresh
 
