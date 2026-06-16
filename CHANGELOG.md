@@ -13,6 +13,18 @@
 
 ---
 
+## 2026-06-15 — CLAUDE.md compacted under the 40k-char load limit (no behavioral change)
+
+`hash: b63c9dd`
+
+> **CLAUDE.md crossed the 40k-char limit** at which Claude Code truncates/warns on load — meaning the *tail* of your behavioral contract risked being silently dropped at session start. (Today's audit-driven additions — spawn `--tier`, arc sessions, capability-recalibration — pushed it to 43.4k.) A truncated CLAUDE.md is a silent behavioral-loss bug, so this is correctness, not cosmetics.
+>
+> **What changed:** CLAUDE.md compacted **43.4k → 39.1k chars (~10%, ~900 char headroom)** with **zero behavioral change** — verbose prose tightened, redundant restatements merged, and duplicated navigational reference (command lists, structure-tree comments that also live in CHEATSHEET/TOOLS) compressed. Every rule, trigger, and instruction is preserved in meaning; verified all 35 section headers intact and each removed line maps to a tighter replacement.
+>
+> **What to do:** nothing — `/aios:update` brings the compacted CLAUDE.md (Tier-1, overwritten byte-identical to canonical). If your own CLAUDE.md was near the limit too, this is your cue it can be compacted the same way. No migration.
+
+---
+
 ## 2026-06-15 — /housekeeping gains two silent-failure guards: dataview path-validity + session-insights cap [from a Fable 5 audit]
 
 `hash: 58c62d6`
