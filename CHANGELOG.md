@@ -13,6 +13,22 @@
 
 ---
 
+## 2026-06-15 — Spend capability wisely: spawn model tiers + a recalibration ritual + the arc-session pattern [from a Fable 5 audit]
+
+`hash: 306bfcb`
+
+> **The harness was single-model, and the trust contract was calibrated for a previous generation.** Every spawned session ran on the frontier model — even a file sweep or an ingest, which doesn't need it. And `INTENT.md` framed trust as growing only with *context*, never with *capability* — so when the model jumped a generation, your autonomy levels silently stayed calibrated for the old one. Three coordinated changes, all one insight (match capability to the work, deliberately):
+>
+> **1. `spawn --tier mechanical|judgment`** (`-Tier` on Windows). Mechanical work routes to the *second-best* model (Sonnet 4.6 today — "aim second-best" auto-tracks the lineup as it evolves); judgment work (or no flag) keeps the frontier default. **Strictly additive** — no flag = byte-identical to before. *Use `--tier mechanical` for ingests, sweeps, transcription; omit it for anything needing real reasoning.*
+>
+> **2. A capability-recalibration ritual.** `INTENT.md` gains a **Recalibration log** + "trust grows with capability, not just context" framing. Your AI now glances at that log once per session and — if it's running a *newer* model generation than your last entry — gently prompts: *"you're on {model}; your last recalibration was for {older gen} — want to revisit which domains can move toward autonomous?"* You decide; it just surfaces the lag.
+>
+> **3. The arc-session pattern, named.** `CLAUDE.md` now names **arc sessions** as the long-context default for compounding work (audits, migrations, multi-pass investigations): one continuous 1M-context session that back-edits live beats N bootstrap-heavy small ones. The old "many short sessions" optimum was a small-context workaround. (Mechanical sub-work still fans out to `--tier mechanical` workers.)
+>
+> **What to do:** `/aios:update` brings the new wrapper + docs and **auto-re-runs the wrapper installer** (so `spawn --tier` is live in new terminals — open a fresh one). **`INTENT.md` is yours and is never overwritten** — so your AI won't auto-add the Recalibration log; on your next `/aios:update` it will *offer* to append the section (and a baseline entry for your current model) to your `INTENT.md`. Accept it once and the ritual is wired. No migration.
+
+---
+
 ## 2026-06-15 — /housekeeping now catches dead command/namespace refs in observed context [from a Fable 5 audit]
 
 `hash: adf6aa2`
