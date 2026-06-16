@@ -493,7 +493,7 @@ Some MCPs are AIOS-built, not vendored — `nano-banana-mcp`, `pdf-generator-mcp
 
 **The principle:** the observed-context lifecycle is two-layered — Tier A (patterns, preferences, business, antifragile) receives routed content from session-insights gardening; Tier B (growth, profile, ecosystem) is synthesized one layer above from Tier A + antifragile + daily notes. The forward mechanism (`/close-day`'s session-insights gardening + Tier A routing + Tier B digest) keeps both layers alive day-to-day. But silent drift can still accumulate when `/close-day` is skipped, when routing-execution gets perfunctory, or when individual operators run with older command versions. This bucket is the backstop: a periodic health check that surfaces backlog in both layers.
 
-**Detection (two layers):**
+**Detection (three layers):**
 
 **Tier A layer — Reinforced routing backlog:**
 1. Parse `vault/00 - notes/context/observed/session-insights.md` `## Reinforced` section.
@@ -511,6 +511,17 @@ Some MCPs are AIOS-built, not vendored — `nano-banana-mcp`, `pdf-generator-mcp
    - File >30 days stale AND `/close-day` has fired in last 7 days (forward digest should have updated; missing update suggests substance bar failing OR digest skipped)
    - File contains "Day-0 stub" markers (only frontmatter + seed text) AND vault is >30 days old → "fresh stub never written despite vault accumulating content"
 
+**Reference-integrity layer — dead command / namespace refs:**
+
+Observed-context files (especially `vault-routine.md`, which is read at *every* session start) drift silently when the framework renames a command or its plugin namespace — the operator's evolved copy keeps teaching the old token long after canonical moved on. This layer catches that class.
+
+1. Build the **live command set** from `plugins/aios/commands/*.md` basenames (the authoritative current command list), plus the known subcommand forms (`company --sync`, etc.).
+2. Scan every file under `vault/00 - notes/context/observed/*.md` (and `declared/*.md`) for command/namespace tokens: the literal dead namespace `vault-commands:` and any `aios:{cmd}` / `` `/{cmd}` `` reference whose `{cmd}` is **not** in the live set.
+3. Classify each hit:
+   - **Dead namespace** (`vault-commands:*`) → renamed to `aios:*` — unambiguous, propose the swap.
+   - **Renamed command** (`{cmd}` absent from live set but maps to a known successor — e.g. `sovra-sync` → `company --sync`, `vault-update` → `update`) → propose the rename. Maintain the successor map inline; when unsure of the successor, flag for operator decision rather than guessing.
+   - **Historical narration** (the dead token appears inside prose *describing* a past change — common in `antifragile.md`, whose "never delete, supersede" rule means old entries legitimately quote old names) → **do NOT propose a rewrite of the narration**; only flag *active instructions* (e.g. "→ invoke `Skill(vault-commands:close-session)`") that still tell a future session to call a dead token. The test: is the token an *instruction the session would act on*, or a *record of what happened*? Fix the former, leave the latter.
+
 **Proposal table format:**
 
 | # | Layer | File / Entry | Status | Backlog | Action |
@@ -519,6 +530,9 @@ Some MCPs are AIOS-built, not vendored — `nano-banana-mcp`, `pdf-generator-mcp
 | 19.2 | Tier A | `session-insights.md` → "Some other entry" | 🔴 Reinforced + no Route to: | 22 days untriaged | [ ] triage target file |
 | 19.3 | Tier B | `growth.md` | 🟡 stale | 31 days, last close-day 1 day ago | [ ] run Tier B digest catch-up |
 | 19.4 | Tier B | `ecosystem.md` | 🔴 stub | seed text only, vault 78 days old | [ ] write from accumulated business.md + daily notes |
+| 19.5 | Ref | `vault-routine.md` (×19) | 🔴 dead namespace | `vault-commands:*` (renamed to `aios:*`) | [ ] swap namespace (auto) |
+| 19.6 | Ref | `vault-routine.md` | 🟡 renamed command | `aios:vault-update` → `aios:update` | [ ] rename (auto) |
+| 19.7 | Ref | `antifragile.md` #N | 🟡 dead ref in active instruction | `Skill(vault-commands:close-session)` | [ ] fix token only — leave the surrounding lesson |
 
 **For approved Tier A routings:**
 - Same logic as `/close-day`'s Tier A routing enforcement (snapshot target files, write the entries, remove from buffer, add `<!-- ROUTED -->` comment).
@@ -528,9 +542,15 @@ Some MCPs are AIOS-built, not vendored — `nano-banana-mcp`, `pdf-generator-mcp
 - Same logic as `/close-day`'s Tier B observation pass + the Phase 9.7 catch-up from the migration playbook.
 - Snapshot all touched files, read feed-in sources, apply substance bar (timeline / uniqueness / evidence / essentiality), write autonomously.
 
+**For approved reference fixes:**
+- Snapshot the touched observed-context file first (per CLAUDE.md observed-context rules).
+- Dead-namespace + renamed-command swaps are mechanical text replacements — apply them across the file.
+- For active-instruction dead refs in `antifragile.md`, fix **only the token**, never the surrounding lesson (the "never delete, supersede" rule protects the lesson; the dead pointer inside it is a correctness fix, not a deletion).
+- Never rewrite historical narration — a record of "we renamed X → Y" must keep quoting the old name to stay legible.
+
 **Cadence:** weekly minimum (the forward mechanism in `/close-day` should keep both layers alive — Bucket 19 is the backstop for when daily ritual is skipped, when an old command version is in use, or when an operator wants explicit verification).
 
-**Why this bucket exists:** observed-context drift is invisible until you measure it (caught in chuy's vault 2026-05-23: growth.md 31d stale, profile.md 82d stale, ecosystem.md 63d stale, AND 5 Reinforced session-insights sat 11-49 days marked "Ready to route" but never executed). The forward `/close-day` mechanism (Tier A routing enforcement + Tier B observation pass) addresses the same gap proactively, but Bucket 19 is the periodic floor-check that ensures the forward mechanism is actually firing. Without it, an operator who skips `/close-day` for a week loses both layers silently.
+**Why this bucket exists:** observed-context drift is invisible until you measure it (caught in chuy's vault 2026-05-23: growth.md 31d stale, profile.md 82d stale, ecosystem.md 63d stale, AND 5 Reinforced session-insights sat 11-49 days marked "Ready to route" but never executed). The forward `/close-day` mechanism (Tier A routing enforcement + Tier B observation pass) addresses the same gap proactively, but Bucket 19 is the periodic floor-check that ensures the forward mechanism is actually firing. Without it, an operator who skips `/close-day` for a week loses both layers silently. The reference-integrity layer was added after a 2026-06-15 catch: an operator's `vault-routine.md` still taught the dead `vault-commands:*` namespace (renamed to `aios:*` weeks earlier) on every session start — canonical's seed was clean, but the operator's evolved copy never caught the rename. A renamed command or namespace is silent rot in exactly the files read at startup; this layer makes it self-surface instead of waiting for an audit.
 
 #### Bucket 20: Skill registration verification (NEW — sibling to Bucket 11)
 
