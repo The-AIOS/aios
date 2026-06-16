@@ -15,7 +15,7 @@
 
 ## 2026-06-16 — /close-day v2.1: Emerging-cap enforcement + surgical buffer excision + anti-skip principle
 
-`hash: PENDING`
+`hash: 3baa41a`
 
 > **Three fixes to `/close-day`, closing the gaps surfaced by running v2 on a heavy day.** v2 made **Reinforced→Routed** load-bearing (downstream leak fixed); the `## Emerging` buffer was still unbounded (observed ~31 vs the ≤10 cap), buffer excision was fragile hand-editing, and there was a (rejected) instinct to "lighten" close-day on quiet days.
 > - **Emerging-cap enforcement** (new, *additive* pass — does NOT touch the proven Reinforced/Tier-B/observed flow): when Emerging > 10, reinforce 2nd-instances, expire stale entries by an *inverse substance bar* (age + no-2nd-instance + not-90-day-relevant + not-essential; "when unsure, keep"), restore ≤10 or surface each over-cap entry's disposition.
