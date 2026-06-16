@@ -70,6 +70,16 @@ Individual snapshot and role-log files accumulate daily. This command:
       ```
    e. Zip all individual snapshot files (NOT the digest): `cd vault/00\ -\ notes/logs/observed-snapshots/{target-month} && zip {target-month}-snapshots.zip *.md -x '*-digest.md' && rm` the individual files (keep digest + zip)
 
+3.5. **Bound `antifragile.md` (size-gated — this check runs EVERY invocation, independent of the target month).**
+   `antifragile.md` is the one observed file that grows unbounded (the "never delete, supersede" rule) AND is read at *every* session start — so it gets a standing size bound. Unlike the log compaction above, this operates on the **live current file** and is gated by **size, not age**.
+   a. Count entries (`### ` / `## ` headers) + tokens in `vault/00 - notes/context/observed/antifragile.md`. If **≤ ~50 entries / ~40k tokens**, skip — within bounds.
+   b. If over: **snapshot first** — `cp` the current file to `00 - notes/logs/observed-snapshots/{current-month}/{today}-antifragile.md`. The snapshot IS the archive — no separate `-archive.md` file; `/trace` reads snapshots + git history.
+   c. Then compact the LIVE file, in this order:
+      - **Remove** entries whose lesson has **graduated into CLAUDE.md** (a rule now covers it → the lesson lives in CLAUDE.md, loaded every session → the entry is redundant).
+      - **Remove** entries that are **resolved/shipped or superseded** (the fix landed, or a later entry replaced it) — preserved in the snapshot + git, reachable via `/trace`.
+      - **Keep** the meta-pattern index + every **active, load-bearing, recent** lesson (last ~90 days or still-recurring).
+   d. Report: entries removed (graduated vs superseded), entries kept, before/after size. Each removal is safe — the 3.5b snapshot + git preserve the full pre-compaction file.
+
 4. **Compact role logs**:
    a. List all files in `00 - notes/logs/role-logs/{target-month}/`
    b. If no files exist, skip this section
@@ -138,5 +148,6 @@ logs/role-logs/2026-01/
 - **Always zip BEFORE deleting** — never delete without archiving
 - **Digest quality matters** — don't just list files. Summarize the arc: what changed, what patterns emerged, what growth happened
 - **If a month has < 3 files**, skip compaction — not worth it yet
+- **Antifragile (Step 3.5) is size-gated, not month-gated** — it runs every invocation and operates on the LIVE `antifragile.md` (the only compaction touching a current file, not a dated log). Always snapshot before compacting it; **"never delete" → "never delete without a snapshot."** Keep the meta-pattern index + active recent lessons; only remove graduated-into-CLAUDE.md or superseded entries.
 - If the digest or zip already exists for the target month, warn and skip (don't double-compact)
 - Use [[wiki-links]] for all project names, context files, and ventures mentioned.
