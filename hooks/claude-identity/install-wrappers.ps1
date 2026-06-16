@@ -222,14 +222,23 @@ function spawn {
     [CmdletBinding()]
     param(
         [Parameter(Position=0)] [string] $Name,
-        [Parameter(Position=1)] [string] $Task = 'Start session.'
+        [Parameter(Position=1)] [string] $Task = 'Start session.',
+        # -Tier mechanical|judgment. mechanical routes to the SECOND-BEST model
+        # (cheaper; "always aim second-best" auto-tracks the lineup). judgment/none
+        # keeps the frontier default (Invoke-ClaudeWithRespawn's CLAUDE_MODEL fallback).
+        # ValidateSet rejects unknown tiers for free.
+        [ValidateSet('mechanical','judgment')] [string] $Tier
     )
+
+    # Tier -> model id. $null = no override -> frontier default. Second-best = Sonnet 4.6.
+    $spawnModel = if ($Tier -eq 'mechanical') { 'claude-sonnet-4-6' } else { $null }
 
     # Empty name -> generate adj-animal handle + print onboarding tip
     if ([string]::IsNullOrEmpty($Name)) {
         $Name = Get-SpawnAdjAnimal
         Write-Host "[spawn] No name given -- using handle: $Name"
         Write-Host "[spawn] Tip: name a specific agent for matched expertise (e.g. ``spawn accountant``)."
+        Write-Host "[spawn] Tip: add ``-Tier mechanical`` for cheap/mechanical work (ingests, sweeps); omit it for judgment work."
         Write-Host "[spawn] See agents/_index.md for the full list."
         Write-Host "[spawn] Opening session: $Name"
     }
@@ -238,7 +247,15 @@ function spawn {
     Set-Content -Path $taskFile -Value $Task -Encoding UTF8
 
     if (-not $env:CLAUDECODE) {
-        Invoke-ClaudeWithRespawn -Name $Name -BootstrapFile $taskFile
+        # In-process path: set CLAUDE_MODEL for the call only, then restore (no leak).
+        if ($spawnModel) {
+            $prevModel = $env:CLAUDE_MODEL
+            $env:CLAUDE_MODEL = $spawnModel
+            try { Invoke-ClaudeWithRespawn -Name $Name -BootstrapFile $taskFile }
+            finally { $env:CLAUDE_MODEL = $prevModel }
+        } else {
+            Invoke-ClaudeWithRespawn -Name $Name -BootstrapFile $taskFile
+        }
         return
     }
 
@@ -251,8 +268,12 @@ function spawn {
     # profile → Invoke-ClaudeWithRespawn: command not found. Match the running
     # edition (Core = pwsh, Desktop = Windows PowerShell 5.1).
     $shell = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh' } else { 'powershell' }
+    # Inject the model into the new shell's env before it launches (mirrors the
+    # in-process path). Empty when no --tier override -> frontier default.
+    $modelStmt = if ($spawnModel) { "`$env:CLAUDE_MODEL = '$spawnModel'" } else { '' }
     $inner = @"
 . `$PROFILE
+$modelStmt
 Set-Location '$($PWD.Path)'
 Invoke-ClaudeWithRespawn -Name '$Name' -BootstrapFile '$taskFile'
 "@

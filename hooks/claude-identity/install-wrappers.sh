@@ -251,14 +251,41 @@ _spawn_adj_animal() {
 }
 
 spawn() {
+  # --tier mechanical|judgment — optional, position-independent. `mechanical` routes
+  # the spawned session to the SECOND-BEST model (cheaper; "always aim second-best"
+  # so it auto-tracks as the model lineup evolves — no hard-coding the frontier).
+  # `judgment` (or no flag) keeps the frontier default (_claude_with_respawn's
+  # CLAUDE_MODEL fallback). Strip the flag first, THEN parse positionals so
+  # `spawn name task` is byte-identical to before when no --tier is passed.
+  local tier=""
+  local -a _args=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --tier)   tier="$2"; shift 2 ;;
+      --tier=*) tier="${1#*=}"; shift ;;
+      *)        _args+=("$1"); shift ;;
+    esac
+  done
+  set -- "${_args[@]}"
+
   local name="$1"
   local task="${2:-Start session.}"
+
+  # Map tier → model id. Empty spawn_model = no override → _claude_with_respawn
+  # uses its frontier default. Second-best today = Sonnet 4.6.
+  local spawn_model=""
+  case "$tier" in
+    mechanical)  spawn_model='claude-sonnet-4-6' ;;
+    judgment|"") spawn_model="" ;;
+    *) echo "⚠️  spawn: unknown --tier '$tier' (use: mechanical | judgment)" >&2; return 1 ;;
+  esac
 
   # Empty name → generate adj-animal handle + print onboarding tip
   if [ -z "$name" ]; then
     name=$(_spawn_adj_animal)
     echo "[spawn] No name given — using handle: $name"
     echo "[spawn] Tip: name a specific agent for matched expertise (e.g. \`spawn accountant\`)."
+    echo "[spawn] Tip: add \`--tier mechanical\` for cheap/mechanical work (ingests, sweeps); omit it for judgment work."
     echo "[spawn] See agents/_index.md for the full list."
     echo "[spawn] Opening session: $name"
   fi
@@ -287,6 +314,7 @@ spawn() {
   cat > "$launcher" <<LAUNCHER
 #!$_sh
 [ -f "$_rc" ] && source "$_rc"
+${spawn_model:+export CLAUDE_MODEL='$spawn_model'}
 cd ~/aios 2>/dev/null
 _claude_with_respawn '$name' 'Read $task_file and follow the instructions inside.'
 LAUNCHER
@@ -411,7 +439,14 @@ APPLESCRIPT
       fi
     )
   else
-    _claude_with_respawn "$name" "Read $task_file and follow the instructions inside."
+    # In-shell path. A literal `VAR=val cmd` assignment-prefix must be WRITTEN
+    # literally — an EXPANDED `${x:+VAR=val}` is not re-parsed as an assignment
+    # (the shell would try to run `VAR=val` as a command). So branch explicitly.
+    if [ -n "$spawn_model" ]; then
+      CLAUDE_MODEL="$spawn_model" _claude_with_respawn "$name" "Read $task_file and follow the instructions inside."
+    else
+      _claude_with_respawn "$name" "Read $task_file and follow the instructions inside."
+    fi
   fi
 }
 

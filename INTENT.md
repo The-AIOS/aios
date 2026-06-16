@@ -6,6 +6,8 @@
 >
 > **Update this file when your trust level changes** — not on a schedule, but when you notice the AI is ready for more responsibility (or when you want to pull back). `/today` nudges you if this file hasn't been updated in 14+ days.
 >
+> **Trust grows with capability, not just context.** When the model underneath you jumps a generation, its judgment, reliability, and reach jump too — so the autonomy you calibrated for the *previous* generation is now miscalibrated (usually too conservative). Don't let that lag sit silently: when a new model generation lands, deliberately revisit your autonomy levels and ask *"what was 'draft for review' that's now safe to make 'autonomous'?"* — on your terms, recorded. See the **Recalibration log** at the bottom. (Your AI will prompt you when it notices it's running a newer generation than your last recalibration entry.)
+>
 > **How this contract works — and where it stops.** Loading this file into the AI's context is enough to *guide* it: it shapes judgment, autonomy, and focus every session. It is not, on its own, enough to *stop* it — adherence is soft, and how faithfully it's honored scales with the model you run. That's intentional: good judgment can't be hard-coded, only cultivated. So treat this as the **guidance** layer. When a boundary here is genuinely non-negotiable, elevate it into a **hard** rule in your AI tool's permission config (in Claude Code: `settings.json` → `permissions`) — `deny` (never), `ask` (confirm first), `allow` (go autonomous). Intent guides; permissions enforce. The strongest setups use both: this file for the judgment, permissions for the floor.
 >
 > Updated: {date}
@@ -169,3 +171,13 @@
 > Parked items. AI will not resurface these in `/today`, `/drift`, or `/emerge`. The carry system ignores them entirely. Remove items to reactivate.
 
 - *{item} — {reason} — {date parked}*
+
+---
+
+## Recalibration log
+
+> A dated record of deliberate autonomy changes, especially when the model generation underneath you changes. Trust grows with *capability*, not only with accumulated context — a generation jump is a moment to re-ask which domains have earned more autonomy. Append newest-first; never delete (the history is the trail of how the human–AI trust contract matured).
+>
+> **When to add an entry:** a new model generation lands, OR you consciously move a domain between draft / review / autonomous. Your AI prompts you when it detects it's running a newer generation than the last entry here — but you can recalibrate any time.
+
+- *{YYYY-MM-DD} — model: {generation/id} — changed: {domain X: review → autonomous; domain Y: held at review because …} — rationale: {one line}*
