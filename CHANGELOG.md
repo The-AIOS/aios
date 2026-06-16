@@ -13,6 +13,18 @@
 
 ---
 
+## 2026-06-15 — study-buddy recognizes the mirror-fork (a study session can output a decision, not just notes)
+
+`hash: 3af2fb5`
+
+> **A study session has two valid outcomes — and `study-buddy` now recognizes the fork.** Until now the agent ran one shape: read → brief → explain → discuss → write chapter notes (*absorption*). But sometimes a chapter isn't absorbed — it *triggers* something: a decision, a project, a change in how you'll act. The chapter was the spark, not the subject. The old agent steered back to "finish the brief," and the realization (the higher-value artifact) got lost.
+>
+> **What changed:** `study-buddy` now names two outcomes — **Absorption** (default → chapter notes) and **Mirror** (the chapter precipitates a personal decision/project → capture THAT as the session's primary output, in your words). On a mirror the reading queue still advances (the chapter is "done"); the deliverable is the realization, not a summary, and the chapter notes link to the decision/project note so the trail stays intact.
+>
+> **What to do:** nothing — `/aios:update` overwrites `agents/aios/personal/study-buddy.md` for you (Tier-1 infra). Your next study session, the agent recognizes a mirror moment instead of forcing absorption. No config, no migration.
+
+---
+
 ## 2026-06-14 — spawn wrapper layout-independence + AIOS Glass promoted to a required setup step
 
 `hash: 8c2ba67`
