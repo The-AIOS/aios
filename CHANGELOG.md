@@ -13,6 +13,23 @@
 
 ---
 
+## 2026-06-16 — /close-day v2.1: Emerging-cap enforcement + surgical buffer excision + anti-skip principle
+
+`hash: PENDING`
+
+> **Three fixes to `/close-day`, closing the gaps surfaced by running v2 on a heavy day.** v2 made **Reinforced→Routed** load-bearing (downstream leak fixed); the `## Emerging` buffer was still unbounded (observed ~31 vs the ≤10 cap), buffer excision was fragile hand-editing, and there was a (rejected) instinct to "lighten" close-day on quiet days.
+> - **Emerging-cap enforcement** (new, *additive* pass — does NOT touch the proven Reinforced/Tier-B/observed flow): when Emerging > 10, reinforce 2nd-instances, expire stale entries by an *inverse substance bar* (age + no-2nd-instance + not-90-day-relevant + not-essential; "when unsure, keep"), restore ≤10 or surface each over-cap entry's disposition.
+> - **Surgical excision helper** `hooks/route-insight.py` — removes exactly one `### ` buffer entry (refuses on no/ambiguous match), snapshot-first + validate-after, abort+restore on mismatch. Tier A routing + the new Emerging pass call it instead of fragile multi-line hand-edits.
+> - **Anti-skip principle** — encoded near the routing sections: close-day is the compounding ritual; the work is done so there's no token opportunity cost; never gate/skip routing/digest/gardening to save tokens (they self-scale — a quiet day finds nothing and is naturally cheap). *Lightness is an outcome of an empty buffer, never a goal.*
+>
+> **What to do:** nothing — autonomous, fires inside `/close-day`. `/aios:update` pulls the updated command + the new helper.
+
+### What changed
+- `plugins/aios/commands/close-day.md` — anti-skip principle (Observed-context section); `route-insight.py` wired into Tier A removal; new `### Emerging-cap enforcement` section after the Tier B pass.
+- `hooks/route-insight.py` (new) — surgical session-insights entry excision (snapshot + validate + abort-on-mismatch); tested on a buffer copy + dry-run on the live file.
+
+---
+
 ## 2026-06-15 — CLAUDE.md compacted under the 40k-char load limit (no behavioral change)
 
 `hash: b63c9dd`

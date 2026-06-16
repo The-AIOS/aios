@@ -500,6 +500,8 @@ Show the user a summary table before executing any changes:
 
 Not every day produces new observations — but never skip this check. The observed context is the compound value of the vault. Update when a **relevant, significant behavioral or strategic pattern** emerges. Don't update just because the day was productive — update because something was *understood* that wasn't understood before.
 
+> **The anti-skip principle (non-negotiable).** Close-day is the compounding ritual — the routing, the Tier-B digest, and the buffer gardening below are *where the AIOS gets smarter.* **The day's work is done, so there is no token/time opportunity cost left to optimize.** Never skip, gate, or "lighten" these passes to save tokens or feel faster — that trades the one thing we want (compounding) for a saving we explicitly don't care about, and risks stranding a routable insight on a day that merely *looked* light. The passes already **self-scale**: a quiet day finds nothing to route (the substance bars fail fast) and is naturally cheap. **Lightness is an outcome of an empty buffer, never a goal.** Run every pass, every close-day.
+
 Candidates:
 - `session-insights.md` — scan and garden the observation buffer (reinforce, add, route, clean up). Emerging → Reinforced → Routed lifecycle; ≤10 Emerging, ≤5 Reinforced. **See Tier A routing enforcement below — Reinforced entries with `Route to:` tags must be routed inline, not deferred.**
 - `growth.md` — new growth edge or confirmed pattern (Tier B — see digest pass below)
@@ -527,8 +529,13 @@ For each entry in `## Reinforced` section of `session-insights.md`:
 2. **If `Route to:` tag is present** — route autonomously, same posture as Tier B digest writes:
    - Snapshot target file(s) per the mandatory snapshot rule
    - Write the entry to each target file under the appropriate section (use the entry's content + evidence + cross-references to existing sections)
-   - Remove the entry from `## Reinforced` in session-insights
-   - Add a `<!-- ROUTED {date}: ... -->` comment in session-insights trailing the section, naming what routed where (preserves the trail)
+   - **Remove the entry from `## Reinforced` using the surgical excision helper** (do NOT hand-edit multi-line buffer blocks — it's fragile and risks corrupting the compounding file):
+     ```bash
+     uv run ~/aios/hooks/route-insight.py "$HOME/aios/vault/00 - notes/context/observed/session-insights.md" \
+       --match "<unique substring of the entry's ### heading>" \
+       --marker "<!-- ROUTED {date} (Tier A): {title} → [[{target}]]. Removed from buffer post-route. -->"
+     ```
+     The helper is snapshot-first + validate-after: it excises exactly one `### ` entry (refuses on no/ambiguous match), leaves the marker as the trail, verifies the entry is gone + the file is intact, and restores from snapshot on any mismatch. One reliable op per entry — never improvise a script.
 
 3. **If the entry routes to multiple targets** (common — e.g., `Route to: [[patterns]] AND [[preferences]] AND [[antifragile]]`): write to all targets in the same pass. The substance bar already validated cross-tier relevance when the entry was promoted to Reinforced.
 
@@ -593,6 +600,31 @@ For each Tier B file (`growth.md`, `profile.md`, `ecosystem.md`):
 - Doesn't write `antifragile.md` (Claude's system-rule layer; event-triggered on corrections, separate flow)
 
 **Connection to other commands:** `/close-session` captures Tier B candidates in its session-report's `Observed` section but does NOT write Tier B files directly — close-session lacks the cross-session view needed for the substance bar. `/close-day` is where the synthesis lands because it has the full daily + session reports context. `/emerge` (bi-weekly) revisits at a longer horizon for cleanup. `/drift` (weekly) uses `ecosystem.md` for declared-vs-actual gaps. Three altitudes, each clear.
+
+### Emerging-cap enforcement (the upstream buffer leak — additive pass)
+
+**Why this step exists:** Tier A routing made the **Reinforced → Routed** transition load-bearing. But the `## Emerging` layer had no enforcement — entries never expired and weren't force-reviewed, so the buffer bloated (observed 2026-06-15: ~31 Emerging against a ≤10 cap) while relying on `/emerge` (bi-weekly) to catch up. This pass closes the *upstream* leak the same way Tier A closed the downstream one: enforcement every close-day, not deferred.
+
+> **Additive-only guardrail (do NOT touch the proven path).** This pass operates **exclusively on the `## Emerging` layer.** It does not alter, reorder, or gate the Reinforced→Routed pass, the Tier-B digest, or any observed-context write above — those have been compounding with great value and stay exactly as-is. Emerging-cap is a separate, additive step.
+
+**Fire this AFTER Tier A routing + the Tier B digest** (so same-day promotions + Tier-B consumption have already happened), and BEFORE the snapshot/commit. Run only when `Emerging > 10`:
+
+1. **Reinforce** — for each Emerging entry that got a **2nd instance today** (a session block / meeting / observation that confirms it), promote it to `## Reinforced` with a `Route to:` tag. If it's clearly route-ready now, route it this pass via the Tier-A helper; otherwise it routes next close-day.
+2. **Expire** — for each remaining Emerging entry, apply the **inverse substance bar** (an entry expires only if ALL hold): (a) **age** — older than ~2 weeks / unreferenced across the last several close-days (don't expire fresh entries that haven't had a chance to reinforce); (b) **no 2nd instance** ever landed; (c) **wouldn't matter in 90 days** (fails the timeline test); (d) **not essential** — nothing real is lost. Expire via the surgical helper with an EXPIRED trail marker:
+   ```bash
+   uv run ~/aios/hooks/route-insight.py "$HOME/aios/vault/00 - notes/context/observed/session-insights.md" \
+     --match "<unique substring of the entry's ### heading>" \
+     --marker "<!-- EXPIRED {date}: never reinforced, fails inverse substance bar (age + no-2nd-instance + not-90-day-relevant). -->"
+   ```
+   **This is judgment, not automation** — Claude decides *which* entries expire; the helper only does the safe excision. When unsure whether an entry is stale-or-slow-burning, **keep it** (with a one-line reason in the close-day output) — under-expiring is cheap, wrongly deleting a slow-burn insight is not.
+3. **Cap restored** — after the pass, `## Emerging` is **≤ 10**, OR every still-over-cap entry is explicitly surfaced with its disposition (promoted / expired / kept-with-reason). The andon cord: if the pass can't get under cap honestly, it says so rather than force-expiring real signal.
+
+**Surface the result in close-day output:**
+```
+### Emerging-cap
+- Emerging: {before} → {after} (cap 10)
+- Promoted → Reinforced: {list} · Expired: {list} · Kept-with-reason: {list + why}
+```
 
 ### Snapshot before editing (mandatory)
 
