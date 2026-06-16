@@ -132,6 +132,8 @@ For every dataview table in `_index.md` files:
 
 Only propose trim for columns that are genuinely dead weight. Don't trim columns with occasional sparse data — those might become valuable as the vault grows.
 
+**Dataview path-validity check (rename-cascade catch).** For every `FROM "folder/path"` clause in any `_index.md` dataview block, verify the referenced folder actually exists in the vault. A `FROM` pointing at a renamed/moved folder fails *silently* — the table just renders empty, so a stale path can sit broken for weeks unnoticed (caught 2026-06-15: 17 `FROM "04 - export/…"` clauses across 5 export indexes still pointed at the old folder after it was renamed to `03 - export` — the meetings index had been silently empty for weeks). For each `FROM` whose folder is missing: propose the corrected path if an obvious rename target exists (same basename under a different parent — e.g. `04 - export` → `03 - export`), else flag it for the operator. This is the structural sibling of Bucket 19's reference-integrity layer (which catches dead *command* refs in observed context); this one catches dead *folder* refs in dataview queries. Cheap grep, high silent-failure payoff.
+
 #### Bucket 8: INTENT.md drift + autonomy opportunity gaps (NEW)
 
 Read `INTENT.md` and propose:
@@ -503,6 +505,8 @@ Some MCPs are AIOS-built, not vendored — `nano-banana-mcp`, `pdf-generator-mcp
    - Entry has `Route to:` tag AND days_since > 7 → "stale Reinforced, route now"
    - Entry has no `Route to:` tag AND days_since > 14 → "untriaged Reinforced, needs target file decision"
 
+**Tier A layer — hard cap enforcement (count check, not just age).** The buffer has explicit caps (CLAUDE.md: **Emerging ≤10, Reinforced ≤5**). The age checks above catch *stale* entries; this catches an *overflowing* buffer regardless of age — a buffer over cap means gardening is falling behind (insights aren't being routed/reinforced fast enough), which silently degrades the compounding. Count the `## Emerging` and `## Reinforced` entries; if either exceeds its cap, flag it (`"Emerging at {N}/10 — route or drop {N-10} before the buffer cannibalizes signal"` / `"Reinforced at {N}/5 — route the oldest to its target file"`). The fix is mechanical (route the routable, drop the resolved), same as the backlog flags above.
+
 **Tier B layer — observation freshness:**
 1. For each of `growth.md`, `profile.md`, `ecosystem.md`:
    - Read frontmatter `updated:` date.
@@ -533,6 +537,7 @@ Observed-context files (especially `vault-routine.md`, which is read at *every* 
 | 19.5 | Ref | `vault-routine.md` (×19) | 🔴 dead namespace | `vault-commands:*` (renamed to `aios:*`) | [ ] swap namespace (auto) |
 | 19.6 | Ref | `vault-routine.md` | 🟡 renamed command | `aios:vault-update` → `aios:update` | [ ] rename (auto) |
 | 19.7 | Ref | `antifragile.md` #N | 🟡 dead ref in active instruction | `Skill(vault-commands:close-session)` | [ ] fix token only — leave the surrounding lesson |
+| 19.8 | Tier A | `session-insights.md` `## Emerging` | 🔴 over cap | 13/10 entries | [ ] route routable + drop resolved to ≤10 |
 
 **For approved Tier A routings:**
 - Same logic as `/close-day`'s Tier A routing enforcement (snapshot target files, write the entries, remove from buffer, add `<!-- ROUTED -->` comment).
