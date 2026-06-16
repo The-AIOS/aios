@@ -394,6 +394,11 @@ Wait for confirmation before writing to project notes.
 > |---|---|---|
 > | {task} | {project} | {origin} |
 >
+> **Routed into observed context** (Tier A session-insights → target files — these change how Claude reads you, not what surfaces tomorrow; shown for traceability):
+> | Insight | Routed to | Origin |
+> |---|---|---|
+> | {Reinforced entry title} | [[{target file}]] | `_(from: session-insight · {first-seen date})_` {append `· auto-routed (2-day bound)` if it hit the untriaged bound} |
+>
 > Reply to confirm, or flag any line that looks wrong, orphaned, or shouldn't surface.
 
 - **Wait for confirmation.** On confirm → proceed to the snapshots refresh (which is what makes these surface in `/today`). On a flagged line → fix or drop it *before* it cascades.
@@ -515,7 +520,9 @@ The substance bar for Tier A routing is already passed by the time an entry reac
 
 For each entry in `## Reinforced` section of `session-insights.md`:
 
-1. **Check for `Route to:` tag** — every Reinforced entry should have one (added when promoted from Emerging). If missing, the entry hasn't actually been triaged — leave it in Reinforced and surface in close-day output: *"⚠️ Reinforced entry '{title}' missing Route to: tag — needs triage before routing."*
+1. **Check for `Route to:` tag** — every Reinforced entry should have one (added when promoted from Emerging). If missing, the entry hasn't actually been triaged. Apply the **two-close-day bound** (a Reinforced entry never survives a second close-day untriaged — closes the "linger forever" gap that re-creates the 11-49 day backlogs):
+   - **First close-day untriaged:** leave it in Reinforced, stamp `<!-- UNTRIAGED-SINCE {date} -->` on the entry, and surface in close-day output: *"⚠️ Reinforced entry '{title}' missing Route to: tag — needs triage; will auto-route next close-day if still untriaged."*
+   - **Second consecutive close-day (entry already carries an `UNTRIAGED-SINCE` stamp):** the bar is already passed (Reinforced = 2+ sessions of evidence) — the only thing missing is a human-picked target, and waiting longer just strands the lesson. **Infer the best target file** from the entry's content (the same Tier A targets: `patterns` / `preferences` / `business` / `antifragile`), route it autonomously per step 2, and surface the inference so the operator can redirect: *"🔁 Auto-routed untriaged Reinforced entry '{title}' → [[{inferred-target}]] (untriaged since {date}, 2-day bound). Flag if it belongs elsewhere — the snapshot is reversible."* This makes the bound **mechanical, not aspirational** — promotion Emerging→Reinforced stays human judgment, but once Reinforced, an entry always reaches a target within two close-days.
 
 2. **If `Route to:` tag is present** — route autonomously, same posture as Tier B digest writes:
    - Snapshot target file(s) per the mandatory snapshot rule
