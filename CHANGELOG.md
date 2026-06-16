@@ -13,7 +13,21 @@
 
 ---
 
-## 2026-06-15 — close-day's cascade is now trustable (provenance stamps + a confirm-first ledger)
+## 2026-06-15 — Reinforced session-insights are now bounded to a two-close-day auto-route [from a Fable 5 audit]
+
+`hash: 8a1061b`
+
+> **A Reinforced session-insight could linger forever if it never got a `Route to:` tag.** The lifecycle is *Emerging → Reinforced → routed to a target observed file → removed from buffer*. The previous close-day enforcement routed any Reinforced entry that carried a `Route to:` tag, but an entry **missing** that tag just got a nudge — and could sit untriaged for weeks (the same 11-49 day backlog the routing step was built to kill, re-entering through a side door). That's one of the "ball-dropping" anxieties the cascade-trust work named: an insight you flagged as real, quietly going nowhere.
+>
+> **What changed:** `/close-day` now enforces a **two-close-day bound** on Reinforced entries. First untriaged close-day: stamp `UNTRIAGED-SINCE` + nudge. Second consecutive close-day: the substance bar is already passed (Reinforced = 2+ sessions of evidence) and the only thing missing is a human-picked target — so close-day **infers the best target file and auto-routes**, surfacing the inference so you can redirect (the snapshot is reversible). Promotion Emerging→Reinforced stays human judgment; *reaching* a target becomes mechanical. The routing now also appears in the **Cascade ledger** as a third sub-table (insight → target file, with provenance) — so observed-context changes are as legible as project-note cascades.
+>
+> **Why it matters:** the Reinforced→Routed transition stops being aspirational. No Reinforced insight survives two close-days stranded, and every route is shown with its origin — the same trust contract the cascade ledger introduced, now extended to the observed-context layer.
+>
+> **What to do:** nothing — `/aios:update` brings the new `close-day.md`. Your next close-day surfaces any auto-routed insight (with a flag-to-redirect prompt) in the ledger. No migration.
+
+---
+
+## 2026-06-15 — close-day's cascade is now trustable (provenance stamps + a confirm-first ledger) [from a Fable 5 audit]
 
 `hash: b862bf6`
 
@@ -27,7 +41,7 @@
 
 ---
 
-## 2026-06-15 — antifragile.md is now bounded (size-gated compaction via /aios:compact)
+## 2026-06-15 — antifragile.md is now bounded (size-gated compaction via /aios:compact) [from a Fable 5 audit]
 
 `hash: 0e5d752`
 
@@ -39,7 +53,7 @@
 
 ---
 
-## 2026-06-15 — study-buddy recognizes the mirror-fork (a study session can output a decision, not just notes)
+## 2026-06-15 — study-buddy recognizes the mirror-fork (a study session can output a decision, not just notes) [from a Fable 5 audit]
 
 `hash: 3af2fb5`
 
