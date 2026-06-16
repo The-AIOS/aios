@@ -13,6 +13,18 @@
 
 ---
 
+## 2026-06-15 — antifragile.md is now bounded (size-gated compaction via /aios:compact)
+
+`hash: 0e5d752`
+
+> **`antifragile.md` grows forever and loads every session.** The "never delete, only supersede" rule (good — evolution is the value) means the file only grows; meanwhile CLAUDE.md tells Claude to scan it at every session start. On a mature vault it can hit ~70k tokens / 70+ entries — most of them old, settled, or already graduated into CLAUDE.md rules — so every session pays a growing tax to reload mostly-resolved history that drowns the genuinely-hot recent lessons.
+>
+> **What changed:** `/aios:compact` gains **Step 3.5 — a size-gated antifragile bound** (runs every invocation, not month-gated; operates on the live file). When `antifragile.md` exceeds ~50 entries / ~40k tokens, it **snapshots first**, then compacts: removes entries already graduated into CLAUDE.md (the rule loads every session anyway), drops superseded/resolved ones (preserved in the snapshot + git, reachable via `/trace`), and keeps the meta-pattern index + active recent lessons. The CLAUDE.md principle moves from *"never delete"* → *"never delete without a snapshot."* History stays **in the vault** (the snapshot) — never in machine-local memory — so the vault remains self-contained.
+>
+> **What to do:** nothing forced — `/aios:update` brings the new `compact.md` + CLAUDE.md rule. **If your `antifragile.md` is already large, run `/aios:compact` once** and it'll snapshot + lean it on the spot; otherwise it self-manages from here. No migration.
+
+---
+
 ## 2026-06-15 — study-buddy recognizes the mirror-fork (a study session can output a decision, not just notes)
 
 `hash: 3af2fb5`
