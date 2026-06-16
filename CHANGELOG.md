@@ -13,6 +13,18 @@
 
 ---
 
+## 2026-06-15 — /housekeeping now catches dead command/namespace refs in observed context [from a Fable 5 audit]
+
+`hash: adf6aa2`
+
+> **A renamed command rots silently in the files read at every session start.** When the framework renames a command or its plugin namespace (e.g. the `vault-commands:* → aios:*` rename), canonical's *seed* files update — but an operator's *evolved* observed-context copy (especially `vault-routine.md`, read at the top of every session) keeps teaching the old token indefinitely. Nothing surfaced it; you'd only notice when a `/aios:vault-update` you copied from your own cadence map failed to resolve. Caught 2026-06-15 on a vault-routine still listing `vault-commands:today … vault-commands:vault-update` weeks after the rename.
+>
+> **What changed:** `/housekeeping` Bucket 19 (observed-context lifecycle health) gains a **third detection layer — reference integrity.** It builds the live command set from `plugins/aios/commands/*.md`, scans `context/observed/*` + `declared/*` for dead tokens, and classifies each: **dead namespace** (`vault-commands:*` → propose `aios:*`), **renamed command** (`sovra-sync → company --sync`, `vault-update → update`), or **historical narration** (a record *describing* a past rename — left untouched). It fixes only *active instructions* that still tell a future session to call a dead token; it never rewrites history and never touches the surrounding lesson in `antifragile.md`. All proposals go through housekeeping's normal approve-before-apply.
+>
+> **What to do:** nothing forced — `/aios:update` brings the new `housekeeping.md`. **If you've been running a while, your next `/aios:housekeeping` will likely surface a 19.x reference-integrity row or two** (renamed commands you copied into your own cadence/preference notes); approve the swaps and your startup files stop teaching dead systems. No migration.
+
+---
+
 ## 2026-06-15 — Reinforced session-insights are now bounded to a two-close-day auto-route [from a Fable 5 audit]
 
 `hash: 8a1061b`
