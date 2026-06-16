@@ -13,6 +13,20 @@
 
 ---
 
+## 2026-06-15 — close-day's cascade is now trustable (provenance stamps + a confirm-first ledger)
+
+`hash: b862bf6`
+
+> **Close-day's compounding cascade ran opaquely.** Insights and tasks flow: session-insight → project note → `_index` snapshot → surfaces in tomorrow's `/today`. It works — but when a task appeared tomorrow, you couldn't see *where it came from* or whether the pipeline *dropped* something. Three failure modes followed: a dropped ball you never notice, a "weird task" you don't recognize, and the worst — *"if I can't trace it, do I have to re-check everything myself?"* That's trust collapsing, which defeats the whole point of the cascade.
+>
+> **What changed:** `/close-day` gains a **Cascade ledger** + a **provenance rule**. Every item that cascades into a project note or will surface in tomorrow's `/today` now carries an inline origin stamp — `_(from: {source} · {date})_` (a meeting, a dev-report, an audit/`/ingest` finding, a Reinforced session-insight, a carry, a user request). Before the snapshots-refresh makes anything surface, close-day presents ONE consolidated ledger — *everything going into project notes + everything surfacing tomorrow, each with its origin* — for a single confirm. An item with no traceable origin is treated as a bug, not surfaced silently.
+>
+> **Why it matters:** it kills all three — *dropped ball* (you see the full surfacing set, can spot the gap), *weird task* (every item shows its origin), *re-check-everything* (traceability replaces re-audit). The compounding itself is untouched — insights still route, growth edges still get named — it's just made legible. (Operator-specific overnight delegation stays in your `USER.md`, not canonical.)
+>
+> **What to do:** nothing — `/aios:update` brings the new `close-day.md`. Your next `/close-day` shows the ledger before anything surfaces; tomorrow's tasks arrive with their origins attached. No migration.
+
+---
+
 ## 2026-06-15 — antifragile.md is now bounded (size-gated compaction via /aios:compact)
 
 `hash: 0e5d752`
