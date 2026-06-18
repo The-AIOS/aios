@@ -15,7 +15,7 @@
 
 ## 2026-06-18 — "Agents can handle" consistency: no over-count, 🚀 on handoff, maximize toward delegation
 
-`hash: PENDING`
+`hash: d082998`
 
 > **The Glass "go with agents" count over-reported — it showed tasks that were already done.** Root cause: the `## Agents can handle` bullets are a checkbox-less *mirror* of tasks that also live in your Rhythm/ship list. The ledger strikes the canonical copy when work lands; nothing ever marked the mirror, so it looked perpetually pending. Three coordinated fixes (the Glass side — cross-section done-detection — shipped in the extension; this is the framework-contract half).
 > - **`/today` generation is now clean + self-maximizing.** The section is rebuilt fresh each day from genuinely-open delegatable tasks (the upstream gather from `projects/_index.md` + Google Tasks + calendar is unchanged), **excluding anything already `[x]`/struck** — so done tasks never reappear. New **maximize pass**: when the delegatable list is sparse (≤1) or empty, it augments toward ~2–3 — first from real open project to-dos not yet surfaced, then up to 2 context-grounded `_(suggested)_` research/prep tasks — under hard guardrails (never fabricate specifics, respect INTENT.md parked items, honesty-over-filling, cap +2).
