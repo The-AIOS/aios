@@ -13,6 +13,24 @@
 
 ---
 
+## 2026-06-18 — "Agents can handle" consistency: no over-count, 🚀 on handoff, maximize toward delegation
+
+`hash: PENDING`
+
+> **The Glass "go with agents" count over-reported — it showed tasks that were already done.** Root cause: the `## Agents can handle` bullets are a checkbox-less *mirror* of tasks that also live in your Rhythm/ship list. The ledger strikes the canonical copy when work lands; nothing ever marked the mirror, so it looked perpetually pending. Three coordinated fixes (the Glass side — cross-section done-detection — shipped in the extension; this is the framework-contract half).
+> - **`/today` generation is now clean + self-maximizing.** The section is rebuilt fresh each day from genuinely-open delegatable tasks (the upstream gather from `projects/_index.md` + Google Tasks + calendar is unchanged), **excluding anything already `[x]`/struck** — so done tasks never reappear. New **maximize pass**: when the delegatable list is sparse (≤1) or empty, it augments toward ~2–3 — first from real open project to-dos not yet surfaced, then up to 2 context-grounded `_(suggested)_` research/prep tasks — under hard guardrails (never fabricate specifics, respect INTENT.md parked items, honesty-over-filling, cap +2).
+> - **CLAUDE.md ledger now maintains the mirror.** On "go with agents" (conversational, same as the Glass button) → stamp 🚀 on each spawned line. On completion → strike the mirror `~~…~~ ✅` by core identity. Glass reads struck mirrors *and* struck canonicals, so striking either drops the count.
+> - **`/close-day` reconciles + excludes.** A new pass strikes any mirror whose canonical is done; the checked-items and carry scans now explicitly **exclude** the section (it's a regenerated mirror, never a carry/sync source).
+>
+> **What to do:** nothing — autonomous, fires inside `/today` and `/close-day`. `/aios:update` pulls the updated commands + CLAUDE.md.
+
+### What changed
+- `plugins/aios/commands/today.md` — § Agents can handle: generation hygiene (exclude done, never-carry), the maximize/complementary pass with guardrails; carry-extraction step now excludes the section.
+- `CLAUDE.md` — § Live daily-note ledger: mirror-maintenance rules (🚀 on go-with-agents; strike-by-identity on completion).
+- `plugins/aios/commands/close-day.md` — checked-items scan excludes the section; new Agents-can-handle reconciliation pass.
+
+---
+
 ## 2026-06-16 — /close-day v2.1: Emerging-cap enforcement + surgical buffer excision + anti-skip principle
 
 `hash: 3baa41a`

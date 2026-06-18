@@ -359,7 +359,10 @@ Check if `00 - notes/context/declared/role-expectations.md` exists.
 Before refreshing snapshots, sync today's daily note tasks back to project notes. This is the reverse flow — `/today` pulls from projects, `/close-day` pushes back.
 
 ### Checked items (mark done in project notes)
-Scan today's daily note for all `- [x]` items. For each, identify the source project (from the `_(project)_` tag, or infer from the task description matching a project's to-do list). If a matching `- [ ]` item exists in the project note, mark it `- [x]`.
+Scan today's daily note for all `- [x]` items. For each, identify the source project (from the `_(project)_` tag, or infer from the task description matching a project's to-do list). If a matching `- [ ]` item exists in the project note, mark it `- [x]`. **Exclude the `## Agents can handle` section from this scan** — it's a regenerated mirror, not a task source, so it must never be synced to project notes or carried.
+
+### Agents-can-handle reconciliation (keep the mirror honest)
+Scan the `## Agents can handle` section. For each suggestion whose canonical task is done elsewhere in the note (`[x]` or `~~struck~~`, matched by core task identity — ignore emojis, time slots, source tags), strike the suggestion line `~~…~~ ✅` if it isn't already marked. This keeps the closed note internally consistent so tomorrow's `/today` (which rebuilds the section fresh) and the Glass count never see a phantom delegatable task. Don't carry these lines forward — `/today` regenerates the section.
 
 ### Unchecked items with carry history (flag in project notes)
 Scan today's daily note for all `- [ ]` items that show `_(carried ×N)_` where N ≥ 3. For each, check if the item exists in the project note's to-dos. If it does, add `⚠️` flag if not already present — this surfaces chronic carries in the project view, not just the daily note. **Tagged-reason exception:** if the carry has `reason: strategic-deferral` and is aligned with INTENT.md focus pillars, suppress the ⚠️ — it's deliberate, not drift.

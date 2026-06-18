@@ -153,7 +153,7 @@ From the data already loaded — process everything in memory:
 - Use the project snapshots from `_index.md`: **active** → extract to-dos for Rhythm + Radar. **idea** → Radar bottom. **archived/deprioritized** → skip or minimal mention.
 - **If first run** (no project notes exist) and kickstart sources are configured: offer to import projects from external sources. Wait for user approval before creating.
 - **INTENT.md parked items check:** Before processing carries, read INTENT.md `## Explicitly NOT doing`. Any carried item that matches a parked entry is **removed entirely** — no carry, no count, no mention, no escalation. This runs BEFORE the carry logic below.
-- **Extract carry-forwards: ZERO TOLERANCE for dropped items.** Scan all unchecked `- [ ]` across ALL sections of the most-recent daily note — Rhythm, Parking lot, Horizon, Carries forward, AND the Close of Day `### Carries forward` subsection. Dedup by core task name (ignore emojis, time slots, source tags); keep highest carry count + most actionable version. After writing today's note, verify: every unique unchecked item from the previous note must appear somewhere (Rhythm / Parking lot / Horizon). If `previous_unique_carries > today_carries`, find what dropped and add it. Carries that have been silent 3+ days still surface.
+- **Extract carry-forwards: ZERO TOLERANCE for dropped items.** Scan all unchecked `- [ ]` across ALL sections of the most-recent daily note — Rhythm, Parking lot, Horizon, Carries forward, AND the Close of Day `### Carries forward` subsection. **Exclude the `## Agents can handle` section** — it's a regenerated mirror (`- 🤖` lines, not `- [ ]` tasks), rebuilt fresh below, never a carry source. Dedup by core task name (ignore emojis, time slots, source tags); keep highest carry count + most actionable version. After writing today's note, verify: every unique unchecked item from the previous note must appear somewhere (Rhythm / Parking lot / Horizon). If `previous_unique_carries > today_carries`, find what dropped and add it. Carries that have been silent 3+ days still surface.
 - **Smart carry triage** — a carry without a decision is guilt on a list. Carry format: `_(carried ×N, reason: {tag})_` where tag ∈ `strategic-deferral` / `blocked-on-{who}` / `needs-challenge` / `waiting-on-date`. A tagged carry has been triaged — respect it; count alone doesn't escalate.
 
 | Count | No reason tag | With reason tag |
@@ -314,6 +314,25 @@ If USER.md has no `### Growth routines` section: include one gentle line: "No gr
 - 🤖 {task} _(→ agent: [[agent-name]])_
 
 Say "go with agents" to spawn them all, or `/agent {name}` to wear the hat yourself in this session.
+
+**Generation rules for this section (read before writing it):**
+
+- **Built fresh, every day — never carried.** Assemble this list from the day's genuinely-open delegatable tasks (the Rhythm / "Today I ship" list + carries you already assembled above — which themselves draw from `projects/_index.md`, Google Tasks, and the calendar; that upstream gathering is unchanged). This section is a *regenerated mirror*, NOT a carry source: it is never scanned for carry-forwards and never synced to project notes (see § carries and `/close-day`).
+- **Exclude anything already done.** Skip any task marked `[x]` or `~~struck~~` in today's note, or completed in its source. Never re-list a finished task — that is the over-count bug this rule exists to prevent.
+- **Delegatable means an agent could realistically execute it** with available tools (research, draft, ingest, analysis, review) — not tasks that need the operator's presence, judgment call, or live participation.
+
+**Maximize — aim toward more of the day being delegable (trust-growth):**
+
+The long-term ideal is that as trust grows, more of each day can run through agents. So when the delegatable list is **sparse (≤1) or empty**, augment it toward ~2–3 — in strict priority:
+
+1. **Real open work first.** Pull open tasks from `projects/_index.md` + active project to-do lists that an agent could execute and that aren't already surfaced in today's note.
+2. **Then context-grounded suggestions.** If still sparse, add up to 2 — each traceable to a *real vault artifact* (an active project's next step, a recent reflection, a venture goal in `context/ventures/`, an upcoming calendar item). Frame as research / prep / analysis that adds value. Tag them `_(suggested)_` so they read as proactive offers, not commitments the operator made.
+
+**Guardrails (non-negotiable):**
+- **Never fabricate specifics** — no invented deadlines, contacts, numbers, or facts the source is silent on. Ground every suggestion in a real artifact, or don't make it.
+- **Respect INTENT.md `## Explicitly NOT doing`** — never suggest parked work.
+- **Honesty over filling.** If there is genuinely nothing real and valuable to add, leave the list as-is (even empty). The maximize pass *aims* toward more delegation; it never *forces* a number. Manufactured filler is the anti-value ("not a to-do list") — don't.
+- **Cap additions at +2.**
 
 ## Radar
 
