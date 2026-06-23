@@ -165,8 +165,6 @@ def main(self_path: str) -> None:
             "rc": r.returncode,
         })
 
-        notify(f"swapped from {email}: {reason}")
-
         # After a successful swap: write a swap-notification marker that the
         # statusLine renderer (context-monitor.py) surfaces as a prominent
         # in-session banner ("🔄 swapped j→cc Nm ago — restart pre-swap
@@ -185,38 +183,49 @@ def main(self_path: str) -> None:
         # respawn behavior. Only meaningful for unattended overnight agents
         # that MUST keep working past the cap without a human present to
         # restart. For interactive use it's strictly noisier.
-        if r.returncode == 0:
-            try:
-                marker = os.path.join(HOME, ".claude", "swap-notification.json")
-                with open(marker, "w") as f:
-                    json.dump({
-                        "from": email,
-                        "to": _read_active_email(),
-                        "ts": int(time.time()),
-                        "reason": reason,
-                    }, f)
-            except Exception as e:
-                log(f"swap-notification marker write failed: {type(e).__name__}: {e}")
+        if r.returncode != 0:
+            # Swap failed — most commonly because there's only one account in
+            # USER.md (rotation needs >= 2). Degrade quietly: no OS notification
+            # and no in-session banner, both of which would falsely claim a swap
+            # happened. The failed attempt is already in the swap-log + the
+            # "swap result: rc=..." line above. The session simply rides its own
+            # cap until the rate-limit window rolls over.
+            log(f"swap did not happen (rc={r.returncode}) — no notification sent")
+            return
 
-            if os.environ.get("CLAUDE_AUTOSWAP_RESPAWN") == "1":
-                resume_script = os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)), "_resume.py"
-                )
-                if os.path.exists(resume_script):
-                    try:
-                        rs = subprocess.run(
-                            [sys.executable, resume_script],
-                            capture_output=True,
-                            text=True,
-                            timeout=30,
-                        )
-                        log(f"resume (opt-in): {rs.stdout.strip() or '(no output)'}")
-                        if rs.stderr.strip():
-                            log(f"resume stderr: {rs.stderr.strip()}")
-                    except Exception as e:
-                        log(f"resume invoke failed: {type(e).__name__}: {e}")
-            else:
-                log("auto-respawn skipped (default; opt-in via CLAUDE_AUTOSWAP_RESPAWN=1)")
+        notify(f"swapped from {email}: {reason}")
+
+        try:
+            marker = os.path.join(HOME, ".claude", "swap-notification.json")
+            with open(marker, "w") as f:
+                json.dump({
+                    "from": email,
+                    "to": _read_active_email(),
+                    "ts": int(time.time()),
+                    "reason": reason,
+                }, f)
+        except Exception as e:
+            log(f"swap-notification marker write failed: {type(e).__name__}: {e}")
+
+        if os.environ.get("CLAUDE_AUTOSWAP_RESPAWN") == "1":
+            resume_script = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "_resume.py"
+            )
+            if os.path.exists(resume_script):
+                try:
+                    rs = subprocess.run(
+                        [sys.executable, resume_script],
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    log(f"resume (opt-in): {rs.stdout.strip() or '(no output)'}")
+                    if rs.stderr.strip():
+                        log(f"resume stderr: {rs.stderr.strip()}")
+                except Exception as e:
+                    log(f"resume invoke failed: {type(e).__name__}: {e}")
+        else:
+            log("auto-respawn skipped (default; opt-in via CLAUDE_AUTOSWAP_RESPAWN=1)")
 
     except Exception as e:
         # Never crash the launchd agent. Log and move on.
