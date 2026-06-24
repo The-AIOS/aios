@@ -17,47 +17,36 @@
 
 ---
 
-## 2026-06-24 — Marketplace must be vault-sourced (SETUP) + `/aios:company` registers venture plugins
+## 2026-06-24 — Plugin/marketplace registration hardened (version-agnostic paths · vault-sourced marketplace · venture-plugin + bundled-skill auto-registration)
 
-`hash: d57a437`
+`hash: d1fb9bf`
 
-> **The deeper root cause behind the version-lag + missing custom/venture plugins: SETUP told every operator to register a *frozen copy* of the marketplace, not the vault.** SETUP §6 hand-built `~/.claude/plugins/marketplaces/the-aios/` by copying **only** `plugins/aios` (hardcoded) + a one-time `plugin.json`, then `marketplace add`'d *that copy*. Consequences, all silent: the catalog **never tracks the vault** (so `marketplace update` is a self-referential no-op → frozen), it's **aios-only** (custom + venture plugins never appear), and it's **version-locked** at setup-time (the 0.1.0 lag). 
-> - **SETUP §6 fix:** `claude plugin marketplace add ~/aios` — point at the **vault** directly. `add` copies *selectively* (only `marketplace.json` + referenced plugin dirs, ~540K — not the multi-GB vault), so the vault's `marketplace.json` becomes one growing catalog across all three layers. Custom plugins (`plugins/custom/…`) and venture plugins (`/aios:company` → `plugins/{company}/…`) added later register in that same file and become loadable via `marketplace update` + `install` — no SETUP redo.
-> - **`/aios:company` fix:** new **Step 5.6** registers each newly-synced company plugin into the vault's `marketplace.json` (MERGE, never byte-replace) + `marketplace update` + `install` — the plugin mirror of Step 5.5 (skills). Includes the vault-sourced precondition + the re-point command if an operator is still on a frozen copy.
+> **One root cause, several faces: the *install silently lagged the source*.** Across the plugin pipeline, paths + registrations were frozen at setup-time and never tracked the live vault — all failing *silently*. Symptoms: a hard-pinned `0.1.0` cache path that broke the moment a machine reached `0.2.0`; a marketplace registered as a *frozen copy* of the vault (never tracked version bumps, never saw custom/venture plugins); newly-pulled bundled skills landing unregistered. Surfaced by a teammate on 0.2.0. The through-line fix: **the vault is the single source of truth, and every registration lane now tracks it.**
+> - **Version-agnostic plugin-cache path** — both `cp` sites in `/aios:update` (bulk command-sync + the Step-2.5 self-update guard) + the `/housekeeping` cache-verify now **glob the installed version dir** (`the-aios/aios/*/commands/`, `[ -d ]`-guarded). No path pins a version again.
+> - **Marketplace is vault-sourced** — SETUP §6 now does `claude plugin marketplace add ~/aios` (the **vault** directly; `add` copies *selectively* — only `marketplace.json` + referenced plugin dirs, ~540K, not the multi-GB vault). The vault's `marketplace.json` is one growing catalog across all three plugin layers; later additions register there and load via `marketplace update` + `install`. Never hand-copy a frozen marketplace dir again.
+> - **Venture plugins auto-register** — `/aios:company` new **Step 5.6** registers each synced company plugin into the vault's `marketplace.json` (MERGE) + refresh + install — the plugin mirror of Step 5.5 (skills).
+> - **Bundled skills auto-register on update** — `/aios:update` now gated-auto-runs `skills/setup.sh` when a bundled `SKILL.md` changes (symlinks into `~/.claude/skills`). The three lanes are now all sound: **plugins** (marketplace, vault-sourced) · **skills** (symlink registrar, auto-run on update + sync) · **agents** (glob — needs nothing).
 >
-> **Action required (your session checks its OWN state and acts ONLY if needed — fully idempotent; skip if you've already fixed it):**
-> 1. **CHECK the marketplace source:** run `claude plugin marketplace list` and find the `the-aios` entry's `Source:`.
->    - **If Source is your vault** (e.g. `Directory (/Users/<you>/aios)`) → **already correct. Do nothing.** (A new install, or you re-pointed already.) Stop here.
->    - **If Source is a frozen copy** (`Directory (…/.claude/plugins/marketplaces/the-aios)`) → it's the stale setup; re-point once (step 2).
-> 2. **Re-point (only if step 1 said frozen):**
+> **Action required (check-then-act — your session verifies its OWN state, acts ONLY if needed; no-op if already correct):**
+> The version-agnostic + skills fixes **auto-apply** (`/aios:update` pulls the corrected command files) — nothing to do. The marketplace re-point is the one stateful check:
+> 1. **CHECK:** `claude plugin marketplace list` → the `the-aios` `Source:`.
+>    - **Your vault** (`Directory (…/aios)`) → already correct, **do nothing** (fresh install, or already re-pointed).
+>    - **A frozen copy** (`Directory (…/.claude/plugins/marketplaces/the-aios)`) → re-point (step 2).
+> 2. **Re-point (only if frozen):**
 >    ```bash
 >    claude plugin marketplace remove the-aios
->    claude plugin marketplace add ~/aios          # the vault — copies selectively (~540K), not the whole vault
+>    claude plugin marketplace add ~/aios
 >    claude plugin marketplace update the-aios
 >    claude plugin install aios@the-aios
->    # reinstall any custom/venture plugins you already use: claude plugin install <name>@the-aios
+>    # + reinstall any custom/venture plugins you use: claude plugin install <name>@the-aios
 >    ```
-> 3. **VERIFY:** `claude plugin marketplace list` Source is now your vault, AND `claude plugin list | grep aios@the-aios` shows the current version (the re-point picks up whatever the vault's `marketplace.json` declares — no version is hard-pinned). Restart sessions to load.
->
-> New installs get this right from SETUP §6. Pairs with the version-agnostic-path fix below — same family: *the install silently lagged the source.* **This action is safe to run on every operator's machine** (incl. teammates who synced independently): it's a check-first, no-op-if-already-correct conditional, not a blind command.
+> 3. **VERIFY:** Source is now your vault + `claude plugin list` shows the current `aios@the-aios` version (no version is hard-pinned — it picks up whatever the vault's `marketplace.json` declares). Restart sessions to load. **Safe on every machine** — check-first, not a blind command.
 
 ### What changed
-- `SETUP.md` — §6 registers the vault as the marketplace source (was: hand-built frozen copy).
-- `plugins/aios/commands/company.md` — new Step 5.6 (register + install synced venture plugins; vault-sourced precondition).
-- `plugins/aios/commands/update.md` (`5c27c47`) — `/aios:update` now gated-auto-runs `skills/setup.sh` when a bundled `SKILL.md` (or the registrar) changes, so newly-pulled bundled skills are symlinked into `~/.claude/skills` instead of landing unregistered. Closes the third registration lane: **plugins** (marketplace, now vault-sourced) · **skills** (symlink registrar, now auto-run on update + sync) · **agents** (glob — needs nothing).
-
-## 2026-06-24 — Version-agnostic plugin-cache path (`/aios:update` + `/housekeeping`) — was hard-pinned `0.1.0`
-
-`hash: 011b5ae`
-
-> **The plugin-cache sync path was hard-coded to `0.1.0`, but the plugin is now `0.2.0`.** On any machine that reached 0.2.0, the command-sync `cp … 0.1.0/commands/` wrote to a folder that doesn't exist, and `/housekeeping`'s cache-verify matched nothing — a **silent** no-op. A machine still on 0.1.0 never saw it (which is why it hid this long); a 0.2.0 machine had auto-sync + verify quietly fail, and it would break on **every future version bump**. (Surfaced by a teammate on 0.2.0.)
-> - **Fix:** both `cp` sites in `/aios:update` (bulk command sync + the Step-2.5 self-update guard) and the cache-verify path in `/housekeeping` now **glob the installed version dir** — `the-aios/aios/*/commands/` with a `[ -d ]` guard. Version-agnostic; survives every bump. No path pins a version again.
->
-> **What to do:** nothing — `/aios:update` pulls the corrected commands. If you're on 0.2.0 and noticed command edits not reaching your runtime cache, this was the cause; it's fixed.
-
-### What changed
-- `plugins/aios/commands/update.md` — both plugin-cache `cp` sites → version-agnostic glob.
-- `plugins/aios/commands/housekeeping.md` — Bucket 11 cache-verify path → version-agnostic.
+- `plugins/aios/commands/update.md` (`011b5ae`, `5c27c47`, `d1fb9bf`) — version-agnostic plugin-cache `cp` (both sites); auto-run `skills/setup.sh` on bundled-skill change; CHANGELOG action-items are check-then-act.
+- `plugins/aios/commands/housekeeping.md` (`011b5ae`) — Bucket 11 cache-verify path → version-agnostic.
+- `SETUP.md` (`d57a437`) — §6 registers the **vault** as the marketplace source (was: hand-built frozen copy).
+- `plugins/aios/commands/company.md` (`d57a437`) — new Step 5.6 (register + install synced venture plugins; vault-sourced precondition).
 
 ## 2026-06-18 — "Agents can handle" consistency: no over-count, 🚀 on handoff, maximize toward delegation
 
