@@ -13,6 +13,19 @@
 
 ---
 
+## 2026-06-24 — Version-agnostic plugin-cache path (`/aios:update` + `/housekeeping`) — was hard-pinned `0.1.0`
+
+`hash: 011b5ae`
+
+> **The plugin-cache sync path was hard-coded to `0.1.0`, but the plugin is now `0.2.0`.** On any machine that reached 0.2.0, the command-sync `cp … 0.1.0/commands/` wrote to a folder that doesn't exist, and `/housekeeping`'s cache-verify matched nothing — a **silent** no-op. A machine still on 0.1.0 never saw it (which is why it hid this long); a 0.2.0 machine had auto-sync + verify quietly fail, and it would break on **every future version bump**. (Surfaced by a teammate on 0.2.0.)
+> - **Fix:** both `cp` sites in `/aios:update` (bulk command sync + the Step-2.5 self-update guard) and the cache-verify path in `/housekeeping` now **glob the installed version dir** — `the-aios/aios/*/commands/` with a `[ -d ]` guard. Version-agnostic; survives every bump. No path pins a version again.
+>
+> **What to do:** nothing — `/aios:update` pulls the corrected commands. If you're on 0.2.0 and noticed command edits not reaching your runtime cache, this was the cause; it's fixed.
+
+### What changed
+- `plugins/aios/commands/update.md` — both plugin-cache `cp` sites → version-agnostic glob.
+- `plugins/aios/commands/housekeeping.md` — Bucket 11 cache-verify path → version-agnostic.
+
 ## 2026-06-18 — "Agents can handle" consistency: no over-count, 🚀 on handoff, maximize toward delegation
 
 `hash: d082998`
