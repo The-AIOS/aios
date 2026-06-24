@@ -532,6 +532,32 @@ When skills did change, run the registrar (idempotent — skips names already li
 
 Report: *"Registered {N} new {company} skill(s) into `~/.claude/skills` — restart Claude Code sessions to load them."*
 
+### Step 5.6 — Register newly-synced company plugins (ONLY if a company plugin changed)
+
+**Plugins must be *registered*, not just landed** — the mirror of Step 5.5 for skills. Company-distributed plugins land at `plugins/{company}/<plugin>/` (Step 5 routing), but a folder on disk isn't a loadable plugin until it's both **(a)** an entry in the vault's `.claude-plugin/marketplace.json` and **(b)** installed from the marketplace.
+
+**Gate (mirror of 5.5):** run **only if** this sync added or changed a `plugins/{company}/<plugin>/.claude-plugin/plugin.json` (check the Step 3 diff). If no company *plugin* changed, **skip**.
+
+**Precondition — the `the-aios` marketplace MUST be vault-sourced** (per SETUP §6: `claude plugin marketplace add ~/aios`). Registration only propagates if the marketplace tracks the live vault. Verify: `claude plugin marketplace list` → the `the-aios` source should be the **vault path**, not `~/.claude/plugins/marketplaces/the-aios` (a frozen copy). If it's still a frozen copy, re-point first:
+```bash
+claude plugin marketplace remove the-aios && claude plugin marketplace add ~/aios
+# then reinstall already-installed plugins: claude plugin install aios@the-aios (+ any custom/venture already in use)
+```
+
+For each company plugin that landed/changed:
+1. **Register in the vault's `marketplace.json`** — **MERGE, never byte-replace** (preserve every existing bundled/custom/company entry; same rule as `/aios:update`). Add an entry, reading `name`/`version`/`description` from the plugin's own `plugins/{company}/<plugin>/.claude-plugin/plugin.json`:
+   ```json
+   { "name": "<plugin>", "source": "./plugins/{company}/<plugin>", "version": "<from plugin.json>", "description": "…", "category": "productivity", "keywords": ["{company}"] }
+   ```
+2. **Refresh + install:**
+   ```bash
+   claude plugin marketplace update the-aios
+   claude plugin install <plugin>@the-aios
+   ```
+3. Optionally add `"<plugin>@the-aios": true` to `enabledPlugins` in `~/.claude/settings.json`.
+
+Report: *"Registered + installed {N} {company} plugin(s) — restart Claude Code sessions to load their commands."*
+
 ### Step 6 — Update tracker + advisory
 
 Update the tracker at `vault/00 - notes/context/ventures/{name}/.{name}-sync` with new hash + today's date. **Always write to the venture-folder path — never to the vault root.** The tracker lives WITH the venture content it tracks; placing it at the root pollutes the operator's repo root and breaks the "read from venture folder" pattern that Step 1 uses to find it.

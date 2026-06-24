@@ -261,24 +261,18 @@ The pipeline executor (`hooks/pipeline-executor.py`) pre-loads Google Calendar, 
 
 ### 6. aios plugin
 
+Register the marketplace **pointing at your vault** (`~/aios`), then install the bundled plugin:
+
 ```bash
-mkdir -p ~/.claude/plugins/marketplaces/the-aios/.claude-plugin
-mkdir -p ~/.claude/plugins/marketplaces/the-aios/plugins/aios/{commands,.claude-plugin}
-
-cp ~/aios/plugins/aios/commands/*.md \
-  ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
-
-cp ~/aios/.claude-plugin/marketplace.json \
-  ~/.claude/plugins/marketplaces/the-aios/.claude-plugin/marketplace.json
-
-cp ~/aios/plugins/aios/.claude-plugin/plugin.json \
-  ~/.claude/plugins/marketplaces/the-aios/plugins/aios/.claude-plugin/plugin.json
-
-claude plugin marketplace add ~/.claude/plugins/marketplaces/the-aios/
+claude plugin marketplace add ~/aios
 claude plugin install aios@the-aios
 ```
 
 Add `"aios@the-aios": true` to `enabledPlugins` in `~/.claude/settings.json`.
+
+> **Point at the vault — never a hand-built copy.** `claude plugin marketplace add` copies *selectively*: only `.claude-plugin/marketplace.json` + the plugin folders its entries reference (~540K), **not** the multi-GB vault — so pointing at `~/aios` is safe. This is load-bearing: the vault's `marketplace.json` is your **single, growing catalog** across all three plugin layers — bundled `aios` now, plus any **custom** plugins you build (`plugins/custom/…`) or **venture** plugins you mount later (`/aios:company` → `plugins/{company}/…`). Each new plugin registers itself in that one `marketplace.json`, and `claude plugin marketplace update the-aios` + `claude plugin install <name>@the-aios` makes it loadable — no SETUP redo.
+>
+> **Do NOT** hand-copy a frozen `~/.claude/plugins/marketplaces/the-aios/` and register *that* (the old approach): a static copy never tracks the vault, so it froze every operator's catalog at setup-time — aios-only and version-locked — and silently missed every custom/venture plugin + every version bump. (See CHANGELOG 2026-06-24.)
 
 ### 7. Calendar folder
 
