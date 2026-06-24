@@ -118,7 +118,8 @@ Concrete rules for what's currently in the framework (the operator-environment-s
 - **Any `plugins/aios/commands/*.md` updated** → cp to both plugin pipeline locations:
   ```bash
   cp $HOME/aios/plugins/aios/commands/*.md $HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
-  cp $HOME/aios/plugins/aios/commands/*.md $HOME/.claude/plugins/cache/the-aios/aios/0.1.0/commands/
+  # cache path is VERSION-AGNOSTIC — glob the installed version dir (never hard-pin a version; the plugin bumps but this string outlives the bump). Guard handles the no-match case.
+  for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/*.md "$d"; done
   ```
 - **`mcps/setup.sh` or any other dep-installer updated** → surface in the report as a recommended manual step, with the exact command. Don't auto-run.
 
@@ -224,7 +225,8 @@ diff -q <(tr -d '\r' < "$HOME/aios/plugins/aios/commands/update.md") <(tr -d '\r
 2. Sync to BOTH plugin pipeline locations (marketplace + cache):
    ```bash
    cp $HOME/aios/plugins/aios/commands/update.md $HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/update.md
-   cp $HOME/aios/plugins/aios/commands/update.md $HOME/.claude/plugins/cache/the-aios/aios/0.1.0/commands/update.md
+   # cache path VERSION-AGNOSTIC — glob the installed version dir (was hard-pinned 0.1.0)
+   for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/update.md "$d"; done
    ```
 3. Clean up the temp clone (the re-invoke will re-clone fresh): `rm -rf /tmp/aios-update-check`.
 4. **Auto-re-invoke the command** via `Skill(aios:update)`. The re-invocation loads the NEW spec from the plugin cache (just synced) and processes all changed files from a clean state.

@@ -186,7 +186,7 @@ Read `~/.claude/settings.json` (global) and the project's `.claude/settings.loca
 The `plugins/aios/commands/` repo folder is the source of truth. Two derived locations must stay in sync — the plugin marketplace and the runtime cache:
 
 - `~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{name}.md`
-- `~/.claude/plugins/cache/the-aios/aios/0.1.0/commands/{name}.md`
+- `~/.claude/plugins/cache/the-aios/aios/<version>/commands/{name}.md` (the *installed* version dir — glob `the-aios/aios/*/commands/`, never a fixed version; the plugin bumps but this path must not pin a version)
 
 **Scan:** for each `plugins/aios/commands/{name}.md` in the repo, `diff` against both derived locations. Surface any drift:
 
