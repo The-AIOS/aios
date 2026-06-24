@@ -11,6 +11,10 @@
 >
 > Already-migrated operators (anyone who's synced past `bc80cf1`) can read top-down normally — `/aios:update`'s hash-based scan correctly identifies the migration entry as already-applied and won't re-surface it.
 
+> ## How to read (+ author) "Action required"
+>
+> Every **Action required** is written as **CHECK-THEN-ACT, idempotent** — your session verifies its *own* current state first and acts **only if needed**, no-op-ing (and saying so) when the fix is already in place. The same entry may reach you, a teammate who synced independently, a fresh install, or a machine that already self-healed — so a blind "run this" would be unsafe; a self-check is not. **Authors:** write actions that carry their own check (state the precondition + the test, e.g. *"run X; act only if Y"*), put any restart/reload step LAST, and never assume the reader's starting state.
+
 ---
 
 ## 2026-06-24 — Marketplace must be vault-sourced (SETUP) + `/aios:company` registers venture plugins
@@ -21,7 +25,21 @@
 > - **SETUP §6 fix:** `claude plugin marketplace add ~/aios` — point at the **vault** directly. `add` copies *selectively* (only `marketplace.json` + referenced plugin dirs, ~540K — not the multi-GB vault), so the vault's `marketplace.json` becomes one growing catalog across all three layers. Custom plugins (`plugins/custom/…`) and venture plugins (`/aios:company` → `plugins/{company}/…`) added later register in that same file and become loadable via `marketplace update` + `install` — no SETUP redo.
 > - **`/aios:company` fix:** new **Step 5.6** registers each newly-synced company plugin into the vault's `marketplace.json` (MERGE, never byte-replace) + `marketplace update` + `install` — the plugin mirror of Step 5.5 (skills). Includes the vault-sourced precondition + the re-point command if an operator is still on a frozen copy.
 >
-> **What to do:** **existing operators on a frozen-copy marketplace** (check: `claude plugin marketplace list` → `the-aios` source is `~/.claude/plugins/marketplaces/the-aios` instead of your vault) should re-point once: `claude plugin marketplace remove the-aios && claude plugin marketplace add ~/aios && claude plugin marketplace update the-aios && claude plugin install aios@the-aios` (+ reinstall any custom/venture plugins you use). New installs get it right from SETUP. Pairs with the version-agnostic-path fix below — same family: *the install silently lagged the source.*
+> **Action required (your session checks its OWN state and acts ONLY if needed — fully idempotent; skip if you've already fixed it):**
+> 1. **CHECK the marketplace source:** run `claude plugin marketplace list` and find the `the-aios` entry's `Source:`.
+>    - **If Source is your vault** (e.g. `Directory (/Users/<you>/aios)`) → **already correct. Do nothing.** (A new install, or you re-pointed already.) Stop here.
+>    - **If Source is a frozen copy** (`Directory (…/.claude/plugins/marketplaces/the-aios)`) → it's the stale setup; re-point once (step 2).
+> 2. **Re-point (only if step 1 said frozen):**
+>    ```bash
+>    claude plugin marketplace remove the-aios
+>    claude plugin marketplace add ~/aios          # the vault — copies selectively (~540K), not the whole vault
+>    claude plugin marketplace update the-aios
+>    claude plugin install aios@the-aios
+>    # reinstall any custom/venture plugins you already use: claude plugin install <name>@the-aios
+>    ```
+> 3. **VERIFY:** `claude plugin marketplace list` Source is now your vault, AND `claude plugin list | grep aios@the-aios` shows the current version (the re-point picks up whatever the vault's `marketplace.json` declares — no version is hard-pinned). Restart sessions to load.
+>
+> New installs get this right from SETUP §6. Pairs with the version-agnostic-path fix below — same family: *the install silently lagged the source.* **This action is safe to run on every operator's machine** (incl. teammates who synced independently): it's a check-first, no-op-if-already-correct conditional, not a blind command.
 
 ### What changed
 - `SETUP.md` — §6 registers the vault as the marketplace source (was: hand-built frozen copy).

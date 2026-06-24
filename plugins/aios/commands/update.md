@@ -195,6 +195,7 @@ Read `CHANGELOG.md` from the cloned repo root. If absent, skip silently. Otherwi
 2. For each entry newest first, check if synced via `git -C /tmp/aios-update-check merge-base --is-ancestor {entry_hash} {stored_hash}` (exit 0 = synced, stop scanning; exit 1 = new, collect; exit 128 = hash unreachable in cloned repo → fall back to content-comparison against local CHANGELOG.md by date header + title).
 3. If new entries exist, show them before applying changes — present **What changed** + **Action required** sections only (skip Why/FYI for brevity; full details in CHANGELOG.md). Aggregate + deduplicate Action required across all new entries.
 4. Execute the action items inline as part of this run — don't list them and wait for the operator to ask. This command IS the implementation arm of CHANGELOG action items.
+5. **Treat every action item as CHECK-THEN-ACT (idempotent).** Each operator's session verifies its OWN current state against the item's precondition, then acts ONLY if the condition holds — and reports "already satisfied, no action" when it doesn't. Many fixes self-resolve or were fixed another way (a teammate who synced independently, a fresh install, a prior run, a manual fix). **Never run a destructive or state-changing action blindly** — a well-written action item carries its own check (e.g. *"run `claude plugin marketplace list`; re-point only if the source is a frozen copy"*). This is what makes the CHANGELOG safe to execute on every operator's machine, regardless of how they got to their current state.
 
 ### 2. Find what changed
 
