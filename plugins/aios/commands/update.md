@@ -115,6 +115,7 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   ```
   Same idempotency. (Hard-coding `pwsh` fails the install on a stock machine — surfaced by a Windows operator 2026-05-27.)
 - **Any `hooks/claude-identity/install-*.sh` / `install-*.ps1` updated** (current + future installers in that path) → auto-run by the same rule, under the same platform guard (`.sh` on non-Windows, `.ps1` on Windows).
+- **A bundled skill changed — any `skills/{aios,anthropic,superpowers}/**/SKILL.md` added/changed in the diff, OR `skills/setup.sh` itself updated** → run the skills registrar (an Installer/state-producer: it symlinks skills into `~/.claude/skills`; a newly-pulled bundled skill is NOT loadable until registered). Platform-guarded like the wrapper installer — `bash $HOME/aios/skills/setup.sh` on macOS/Linux; on Windows try `pwsh -File $HOME/aios/skills/setup.ps1` then fall back to `powershell -File …`. Idempotent (skips names already linked; the scan is venture-aware — `skills/*/*/SKILL.md` minus `anthropic`/`superpowers` source-peers). **Gate:** run ONLY when the diff touched a bundled `SKILL.md` or `skills/setup.sh` — not on every sync. Report: *"Registered {N} new skill(s) into `~/.claude/skills` — restart sessions to load them."* (Mirrors `/aios:company` Step 5.5, which does this for venture skills on sync.)
 - **Any `plugins/aios/commands/*.md` updated** → cp to both plugin pipeline locations:
   ```bash
   cp $HOME/aios/plugins/aios/commands/*.md $HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
