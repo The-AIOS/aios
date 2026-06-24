@@ -13,6 +13,20 @@
 
 ---
 
+## 2026-06-24 — Marketplace must be vault-sourced (SETUP) + `/aios:company` registers venture plugins
+
+`hash: d57a437`
+
+> **The deeper root cause behind the version-lag + missing custom/venture plugins: SETUP told every operator to register a *frozen copy* of the marketplace, not the vault.** SETUP §6 hand-built `~/.claude/plugins/marketplaces/the-aios/` by copying **only** `plugins/aios` (hardcoded) + a one-time `plugin.json`, then `marketplace add`'d *that copy*. Consequences, all silent: the catalog **never tracks the vault** (so `marketplace update` is a self-referential no-op → frozen), it's **aios-only** (custom + venture plugins never appear), and it's **version-locked** at setup-time (the 0.1.0 lag). 
+> - **SETUP §6 fix:** `claude plugin marketplace add ~/aios` — point at the **vault** directly. `add` copies *selectively* (only `marketplace.json` + referenced plugin dirs, ~540K — not the multi-GB vault), so the vault's `marketplace.json` becomes one growing catalog across all three layers. Custom plugins (`plugins/custom/…`) and venture plugins (`/aios:company` → `plugins/{company}/…`) added later register in that same file and become loadable via `marketplace update` + `install` — no SETUP redo.
+> - **`/aios:company` fix:** new **Step 5.6** registers each newly-synced company plugin into the vault's `marketplace.json` (MERGE, never byte-replace) + `marketplace update` + `install` — the plugin mirror of Step 5.5 (skills). Includes the vault-sourced precondition + the re-point command if an operator is still on a frozen copy.
+>
+> **What to do:** **existing operators on a frozen-copy marketplace** (check: `claude plugin marketplace list` → `the-aios` source is `~/.claude/plugins/marketplaces/the-aios` instead of your vault) should re-point once: `claude plugin marketplace remove the-aios && claude plugin marketplace add ~/aios && claude plugin marketplace update the-aios && claude plugin install aios@the-aios` (+ reinstall any custom/venture plugins you use). New installs get it right from SETUP. Pairs with the version-agnostic-path fix below — same family: *the install silently lagged the source.*
+
+### What changed
+- `SETUP.md` — §6 registers the vault as the marketplace source (was: hand-built frozen copy).
+- `plugins/aios/commands/company.md` — new Step 5.6 (register + install synced venture plugins; vault-sourced precondition).
+
 ## 2026-06-24 — Version-agnostic plugin-cache path (`/aios:update` + `/housekeeping`) — was hard-pinned `0.1.0`
 
 `hash: 011b5ae`
