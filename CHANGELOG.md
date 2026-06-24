@@ -26,6 +26,7 @@
 ### What changed
 - `SETUP.md` — §6 registers the vault as the marketplace source (was: hand-built frozen copy).
 - `plugins/aios/commands/company.md` — new Step 5.6 (register + install synced venture plugins; vault-sourced precondition).
+- `plugins/aios/commands/update.md` (`5c27c47`) — `/aios:update` now gated-auto-runs `skills/setup.sh` when a bundled `SKILL.md` (or the registrar) changes, so newly-pulled bundled skills are symlinked into `~/.claude/skills` instead of landing unregistered. Closes the third registration lane: **plugins** (marketplace, now vault-sourced) · **skills** (symlink registrar, now auto-run on update + sync) · **agents** (glob — needs nothing).
 
 ## 2026-06-24 — Version-agnostic plugin-cache path (`/aios:update` + `/housekeeping`) — was hard-pinned `0.1.0`
 
