@@ -219,4 +219,4 @@ Rotation order = list order. `claude-switch` (no args) walks the list. `claude-s
 
 ---
 
-*This file is the operating index. The deeper docs (`README.md`, `SETUP.md`, `START-HERE.md`, `CLAUDE.md`, `TOOLS.md`, `FORTRESS.md`, `INTENT.md`, `USER.md`) carry the substance. Use this to find the right surface fast. When in doubt, spawn `onboarding-aios` — it knows the whole map.*
+*This file is the operating index. The deeper docs (`README.md`, `SETUP.md`, `START-HERE.md`, `CLAUDE.md`, `TOOLS.md`, `FORTRESS.md`, `INTENT.md`, `USER.md`) carry the substance — and the full **[Operating Manual](https://www.the-aios.com/#manual)** (www.the-aios.com/#manual) gathers the whole design language + behavioral contract into one readable document (online or PDF). Use this file to find the right surface fast. When in doubt, spawn `onboarding-aios` — it knows the whole map.*

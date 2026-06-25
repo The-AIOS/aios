@@ -33,7 +33,7 @@ When the upstream framework has new commits. `/today` and `/close-day` auto-dete
 
 Every file below is overwritten byte-identical to upstream. If the operator customized one, their version is backed up first (see § Backup-on-divergence below).
 
-- **Root docs:** `README.md`, `START-HERE.md`, `SETUP.md`, `CHEATSHEET.md`, `TOOLS.md`, `CHANGELOG.md`, `LICENSE`, `NOTICE`, `FORTRESS.md`, `.gitignore`
+- **Root docs:** `README.md`, `START-HERE.md`, `SETUP.md`, `CHEATSHEET.md`, `TOOLS.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `LICENSE`, `NOTICE`, `FORTRESS.md`, `.gitignore`
 - **CLAUDE.md** (vault-level instructions — moved here from Tier 2 on 2026-05-25 per the "infra is infra" principle)
 - **Templates:** `templates/aios/` (bundled templates, e.g. `templates/aios/about_me-template.md`) — never `templates/custom/` or `templates/<company>/`. (Moved from the layer root into `templates/aios/` to match the `{layer}/aios/` + `custom/` + `<company>/` convention used by agents, skills, and plugins.)
 - **Skills:** `skills/aios/`, `skills/anthropic/`, `skills/superpowers/` (never `skills/custom/`)
@@ -202,7 +202,7 @@ Read `CHANGELOG.md` from the cloned repo root. If absent, skip silently. Otherwi
 ```bash
 git -C /tmp/aios-update-check diff {stored_hash}..HEAD --name-only -- \
   "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
-  "CHANGELOG.md" "CLAUDE.md" "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
+  "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
   "templates/" "skills/" "hooks/" "mcps/" "plugins/" "agents/" \
   ".claude-plugin/" "vault/.obsidian/"
 ```
@@ -297,7 +297,7 @@ The tracker-diff (`stored..HEAD`, Step 2) is an optimization that assumes the st
 # "…/custom: name". Anchoring the drop on "^Only in $HOME/aios" sidesteps the
 # whole slash-vs-colon problem — it filters by SIDE, not by token.
 VAULT="$HOME/aios"
-for p in README.md START-HERE.md SETUP.md TOOLS.md CHEATSHEET.md CHANGELOG.md \
+for p in README.md START-HERE.md SETUP.md TOOLS.md CHEATSHEET.md CONTRIBUTING.md CHANGELOG.md \
          LICENSE NOTICE FORTRESS.md .gitignore CLAUDE.md \
          templates skills hooks mcps plugins agents .claude-plugin; do
   diff -rq "$VAULT/$p" "/tmp/aios-update-check/$p" 2>/dev/null

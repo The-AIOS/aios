@@ -8,7 +8,7 @@
 You're the executor — the human reads alongside, you do the heavy lifting. Sequence:
 
 1. **Setting up for the first time?** → read [SETUP.md](./SETUP.md), follow the "Reading this as Claude?" block at its top
-2. **Operator says "I'm lost" or "what is this?"** → invoke [`/agent onboarding-aios`](./agents/aios/personal/onboarding-aios.md) — that agent knows the full doc map (this README, SETUP, CHEATSHEET, FORTRESS, START-HERE, USER.md, INTENT.md, CLAUDE.md, plus the org-level CONTRIBUTING/SECURITY) and routes the operator to the right place without overwhelming them
+2. **Operator says "I'm lost" or "what is this?"** → invoke [`/agent onboarding-aios`](./agents/aios/personal/onboarding-aios.md) — that agent knows the full doc map (this README, SETUP, CHEATSHEET, FORTRESS, START-HERE, USER.md, INTENT.md, CLAUDE.md, plus CONTRIBUTING.md at repo root + the org-level SECURITY) and routes the operator to the right place without overwhelming them
 3. **Operator already set up, needs daily ritual?** → `/aios:today` (morning) · `/aios:close-day` (evening) · `/aios:close-session` (per task) — this is the compound loop
 4. **Anything else** → [CLAUDE.md](./CLAUDE.md) is the behavioral contract (session rituals, agentic culture, the 10 principles); [TOOLS.md](./TOOLS.md) is the full menu of commands/agents/skills/MCPs; [CHEATSHEET.md](./CHEATSHEET.md) is the day-to-day operating index
 
@@ -28,7 +28,7 @@ Claude reads [SETUP.md](./SETUP.md), clones the framework, walks every choice.
 
 **Don't have Claude Code yet?** → [SETUP.md → Prerequisites](./SETUP.md#prerequisites) for OS-specific install (~5-20 min). Then come back and run the line above.
 
-**Want the deeper "what is this and why?" before installing?** → keep reading.
+**Want the deeper "what is this and why?" before installing?** → keep reading, or read the full **[Operating Manual](https://www.the-aios.com/#manual)** — 17 sections from first principles to 24/7 containment, online or as a PDF.
 
 ---
 
@@ -196,7 +196,7 @@ If the [30-second version at the top](#get-started-the-30-second-version) was en
 
 **Day 1 onward:** `/aios:today` morning · `/aios:close-day` evening · `/aios:close-session` per task. That's the rhythm. The system compounds from there.
 
-See [SETUP.md](./SETUP.md) for prerequisites + the canonical 11-step flow · [START-HERE.md](./START-HERE.md) for the post-clone walkthrough framing + the three-repo model AIOS uses · [TOOLS.md](./TOOLS.md) for the full menu of commands, agents, skills, and bundled MCPs.
+See [SETUP.md](./SETUP.md) for prerequisites + the canonical 11-step flow · [START-HERE.md](./START-HERE.md) for the post-clone walkthrough framing + the three-repo model AIOS uses · [TOOLS.md](./TOOLS.md) for the full menu of commands, agents, skills, and bundled MCPs · the full **[Operating Manual](https://www.the-aios.com/#manual)** (www.the-aios.com/#manual) for the complete design language + behavioral contract in one document.
 
 ---
 

@@ -107,6 +107,10 @@ Three progressive stages await:
   2. Amplify — Gain bandwidth, do more (Month 1)
   3. Agency — Gain autonomy, do agentic (Quarter 1+)
 
+(Want the whole system in one read first? The Operating Manual —
+ www.the-aios.com/#manual — has all 17 sections, online or as a PDF.
+ Optional; this interview gets you running without it.)
+
 Ready?
 ```
 
@@ -413,6 +417,7 @@ One-shot. Run immediately after cloning AIOS. Optionally re-runnable to revisit 
 
 ## See also
 
+- [Operating Manual](https://www.the-aios.com/#manual) (www.the-aios.com/#manual) — the full system in one document (17 sections, online or PDF); the deepest single read for an operator who wants the whole picture
 - [[onboarding-aios]] — Day-N AIOS orientation agent (run after Week 1, Month 1, Quarter 1 milestones)
 - [[USER]] — the canonical personalization file this command writes to
 - [[INTENT]] — the trust contract this command calibrates

@@ -238,6 +238,8 @@ When the operator asks *"where is X documented?"* — route by role, don't read 
 
 **Plus 2 operator-owned files** Claude reads every session: [`USER.md`](./USER.md) (identity, sources, command overrides) + [`INTENT.md`](./INTENT.md) (trust contract — autonomy per domain).
 
+**Plus contribution/governance:** [`CONTRIBUTING.md`](./CONTRIBUTING.md) (repo root) — how to give work back to the framework: the two flavors (non-technical signal via Issue/email/Discussion · technical PR — canonical or company-distributed), the `custom/`-first rule, personal-hygiene, licensing. Trigger: *"How do I contribute / extend / upstream this?"*
+
 **Rule:** when the operator gets disoriented (*"I'm lost"* / *"what is this?"*), invoke [`/agent onboarding-aios`](./agents/aios/personal/onboarding-aios.md) — that agent knows the whole map and walks them through it without lecturing.
 
 ### Structure

@@ -17,6 +17,23 @@
 
 ---
 
+## 2026-06-25 — CONTRIBUTING.md added at repo root (two-flavor contribution guide) + wired into /aios:update
+
+`hash: 996a86d`
+
+> **The framework had no contribution guide of its own.** The onboarding agent pointed operators at an org `.github/CONTRIBUTING.md` that didn't exist, and a dead `the-aios.com/manual` URL (404 in prod) was linked from several docs. This adds a real `CONTRIBUTING.md` at repo root, fixes the surrounding doc drift, and teaches `/aios:update` to deliver it.
+>
+> **What changed:**
+> - **New `CONTRIBUTING.md`** at repo root — organized around two contribution flavors: **non-technical** (no PR — report a problem-*class* via Issue/email/Discussion; lightweight RFC for design forks) and **technical** (PR — canonical to `The-AIOS/aios`, or company-distributed via `/aios:company`). Covers `custom/`-first, the promotion path, how-to-add each infra layer, the testing/evidence bar + a before-you-PR checklist, personal hygiene (zero operator data), commit/CHANGELOG conventions, and licensing.
+> - **`/aios:update` now syncs `CONTRIBUTING.md`** as a Tier-1 root doc — added to the root-docs list, the tracker-diff, and the Step-6.5 completeness reconcile (so it lands on every vault and self-heals if missing).
+> - **Doc pointers corrected:** the CLAUDE.md doc-map, README, START-HERE, and `onboarding-aios` now point to `CONTRIBUTING.md` at repo root (was: a non-existent org `.github` file).
+> - **Manual URL fixed everywhere:** `the-aios.com/manual` (404) → `https://www.the-aios.com/#manual` (the manual is now a homepage section). 8 references across README, CHEATSHEET, CONTRIBUTING, `onboarding-aios`, `cold-start-interview`.
+> - **License reference corrected:** the framework is uniformly **GPL-2.0-or-later** (`onboarding-aios` had wrongly described the install as "Apache-2.0"; Apache applies only to vendored third-party dirs like `skills/anthropic/`).
+>
+> **Action required:** None. `/aios:update` delivers `CONTRIBUTING.md` + the corrected docs automatically (bundled command edits self-sync via update's command-sync step). If you'd locally edited any of these root docs, your version is backed up before overwrite — standard Tier-1 behavior.
+
+---
+
 ## 2026-06-24 — Plugin/marketplace registration hardened (version-agnostic paths · vault-sourced marketplace · venture-plugin + bundled-skill auto-registration)
 
 `hash: d1fb9bf`

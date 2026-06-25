@@ -181,6 +181,7 @@ Point at the doc that lives the answer:
 - "See `CHEATSHEET.md` §3 — Capture Loops"
 - "Read `CLAUDE.md` → § Operating Principles — that's the source"
 - "`TOOLS.md` lists every command — scan it once when you have 5 min"
+- "Want the whole thing in one place? The **Operating Manual** at [www.the-aios.com/#manual](https://www.the-aios.com/#manual) — 17 sections, online or PDF." (Route here for the *give-me-everything* operator, or anyone who learns better from one continuous document than the scattered repo docs.)
 
 Don't quote infra at them — give them the pointer + one sentence of why it matters TO THEM today.
 
@@ -201,14 +202,15 @@ You should be able to articulate these without reading the docs back to the oper
 
 | Repo | Role | When the operator needs it |
 |---|---|---|
-| [`aios`](https://github.com/The-AIOS/aios) | The framework. 24 slash commands · agents across 6 bundles · skills (aios · anthropic · superpowers · custom) · 10 bundled MCPs · hooks · templates · 7 framework docs. Apache-2.0 path-agnostic install at `~/aios/`. | Always. This IS the install. |
+| [`aios`](https://github.com/The-AIOS/aios) | The framework. 24 slash commands · agents across 6 bundles · skills (aios · anthropic · superpowers · custom) · 10 bundled MCPs · hooks · templates · 7 framework docs. GPL-2.0-or-later, path-agnostic install at `~/aios/`. | Always. This IS the install. |
 | [`company-template`](https://github.com/The-AIOS/company-template) | The venture-context scaffold. 10 canonical context files + 6 optional infra folders (agents/plugins/hooks/MCPs/skills/templates). | When operator runs `/aios:company --create` to scaffold a new company-context repo. |
-| [`.github`](https://github.com/The-AIOS/.github) | Org-level community health files — CONTRIBUTING (custom/ rule, CHANGELOG format, anti-personal-content discipline), SECURITY, PR + Issue templates. | When operator wants to contribute upstream — `/aios:update` won't touch their personal vault; PRs go through this template. |
+| [`.github`](https://github.com/The-AIOS/.github) | Org-level community health files — SECURITY, PR + Issue templates. (The full contribution guide lives in the `aios` repo root, not here — see `CONTRIBUTING.md` below.) | When operator wants to contribute upstream — `/aios:update` won't touch their personal vault; PRs go through this template. |
 
 ### The framework docs (in `~/aios/`)
 
 | Doc | Lives at | What it answers |
 |---|---|---|
+| **Operating Manual** | [www.the-aios.com/#manual](https://www.the-aios.com/#manual) | The single most complete artifact — 17 sections from first principles to 24/7 containment: the design language, architecture, fleet, rituals, and trust contract in one readable document (online or PDF). Point a curious or "give-me-the-whole-thing" operator here when the per-doc map feels piecemeal. |
 | **Org profile README** | [The-AIOS/.github/profile/README.md](https://github.com/The-AIOS) | What is The-AIOS? The journey, the 4 principles, the 3 progressive stages, and the 3-repo structure. The "why" + the map. |
 | **Repo README** | `README.md` (root of `~/aios`) | What is *this repo*? Five operational distinctions, the compound effect, the architecture principle. |
 | **SETUP.md** | `~/aios/SETUP.md` | How to install. Prerequisites (Obsidian + Antigravity IDE), the Claude-driven end-to-end flow, OS-specific steps. |
@@ -240,7 +242,7 @@ Beyond the docs above there's **AIOS Glass** — a docked IDE panel ([Open VSX](
 
 | Doc | Lives at | What it answers |
 |---|---|---|
-| **CONTRIBUTING.md** | [The-AIOS/.github/CONTRIBUTING.md](https://github.com/The-AIOS/.github/blob/main/CONTRIBUTING.md) | How to contribute to the framework. The `custom/` rule (operator extensions live in `custom/` subfolders, never in bundled paths). Personal-hygiene rules (no operator data in framework PRs). State→Ask→Act CHANGELOG format. |
+| **CONTRIBUTING.md** | `~/aios/CONTRIBUTING.md` (repo root) | How to contribute to the framework. The two flavors — non-technical (no PR: report a problem-class via Issue/email/Discussion) and technical (PR: canonical or company-distributed). The `custom/`-first rule, personal-hygiene rules (no operator data in shared contributions), licensing, and the State→Ask→Act CHANGELOG format. |
 | **SECURITY.md** | [The-AIOS/.github/SECURITY.md](https://github.com/The-AIOS/.github/blob/main/SECURITY.md) | Vulnerability reporting flow. What counts as a vulnerability, what doesn't. Supported versions. |
 | **PR / Issue templates** | `The-AIOS/.github/ISSUE_TEMPLATE/` + `PULL_REQUEST_TEMPLATE.md` | The structured forms used when contributing. The PR template's "Personal hygiene" checklist surfaces the no-personal-content rule. |
 

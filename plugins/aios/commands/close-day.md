@@ -571,7 +571,7 @@ This step makes Tier B updates work the same way `session-insights.md` gardening
 For each Tier B file (`growth.md`, `profile.md`, `ecosystem.md`):
 
 1. **Read feed-in sources** (file-specific):
-   - `growth.md` ← recent `antifragile.md` entries (last 7 days — Diego's cause-4 catch: growth content sometimes lands in antifragile by mistake) + Reinforced entries in `session-insights.md` with self-shape (about the operator changing, not about work mechanics) + close-day `### Observed` sections from the last 5 daily notes
+   - `growth.md` ← recent `antifragile.md` entries (last 7 days — note: growth content sometimes lands in antifragile by mistake) + Reinforced entries in `session-insights.md` with self-shape (about the operator changing, not about work mechanics) + close-day `### Observed` sections from the last 5 daily notes
    - `profile.md` ← cross-session identity signals in `session-insights.md` (consistent personality trait surfaced across 2+ sessions per CLAUDE.md trigger rule) + "## Core identity threads" candidates from recent daily notes
    - `ecosystem.md` ← recent `business.md` additions (venture relationship shifts) + new people/connections named in the last 7 days of daily notes
 

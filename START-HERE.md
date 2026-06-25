@@ -230,7 +230,7 @@ For the philosophy underneath, see [README.md](./README.md). For the full comman
 
 **When you want more (advanced):** [FORTRESS.md](./FORTRESS.md) — two-machine architecture for running 24/7 autonomous agents on a Mac mini alongside your MacBook. Skip this until you have a real need; the single-machine setup compounds beautifully without it.
 
-**When you feel lost (anytime):** spawn `/agent onboarding-aios` — that agent knows the full AIOS map (this file, README, SETUP, CLAUDE, CHEATSHEET, TOOLS, FORTRESS, the org's CONTRIBUTING/SECURITY, the self-update loop) and walks you through it without lecturing. Standing companion for Day 1 through Year 1+.
+**When you feel lost (anytime):** spawn `/agent onboarding-aios` — that agent knows the full AIOS map (this file, README, SETUP, CLAUDE, CHEATSHEET, TOOLS, FORTRESS, CONTRIBUTING.md at repo root, the org's SECURITY, the self-update loop) and walks you through it without lecturing. Standing companion for Day 1 through Year 1+.
 
 Welcome.
 
