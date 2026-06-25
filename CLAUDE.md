@@ -88,6 +88,7 @@ This CLAUDE.md flows from **ten principles of intelligence collaboration** ([ful
 - *Don't move information to authority. Move authority to information.*
 - *Trust = Speed / Cost.*
 - *Every failure is a system upgrade waiting to happen.*
+- *The operator's capacity is a design input, not an afterthought — paced work through a real quality gate isn't avoidance.*
 
 ### Anti-values
 

@@ -17,7 +17,7 @@
 
 ---
 
-## 2026-06-25 — CONTRIBUTING.md added at repo root (two-flavor contribution guide) + wired into /aios:update
+## 2026-06-25 — CONTRIBUTING.md at repo root + 3 bundled "other-wing" skills (systems/stewardship lenses)
 
 `hash: 996a86d`
 
@@ -30,7 +30,13 @@
 > - **Manual URL fixed everywhere:** `the-aios.com/manual` (404) → `https://www.the-aios.com/#manual` (the manual is now a homepage section). 8 references across README, CHEATSHEET, CONTRIBUTING, `onboarding-aios`, `cold-start-interview`.
 > - **License reference corrected:** the framework is uniformly **GPL-2.0-or-later** (`onboarding-aios` had wrongly described the install as "Apache-2.0"; Apache applies only to vendored third-party dirs like `skills/anthropic/`).
 >
-> **Action required:** None. `/aios:update` delivers `CONTRIBUTING.md` + the corrected docs automatically (bundled command edits self-sync via update's command-sync step). If you'd locally edited any of these root docs, your version is backed up before overwrite — standard Tier-1 behavior.
+> **Also shipped — 3 new bundled skills (`skills/aios/`), the "other-wing" systems/stewardship lenses** (the worldview-neutral mechanisms extracted to core; any lineage/worldview stays in an operator's own `USER.md`/template):
+> - **`leverage-points`** — Donella Meadows' lens for *where* to intervene in a system (push toward goals/rules/paradigm, away from parameters/buffers). The systems-science backing for "fix the system, not the symptom."
+> - **`sustainable-cadence`** — the operator's capacity/pace as a first-class design input; a test for telling *paced* work (legitimate quality gate / rhythm) apart from *avoidance*. The generative complement to the (all-defensive) anti-values.
+> - **`commons-governance`** — Elinor Ostrom's 8 commons design principles applied to AIOS shared substrate: multi-operator vaults, collaboration spaces, company-synced infra, and multiple agents writing one repo.
+> - Each ships a `references/` file citing the public source work. A new **sticky reminder** in `CLAUDE.md` ("the operator's capacity is a design input…") hooks the cadence lens. Skill counts bumped (`skills/aios/` 17→20; total bundled 42→45).
+>
+> **Action required:** None for the docs — `/aios:update` delivers `CONTRIBUTING.md`, the corrected root docs, and the 3 new skills automatically (root docs + `skills/` are Tier-1 sync; bundled command edits self-sync; the skills registrar re-runs on this update). **One reload:** after the update applies, **restart your Claude Code sessions** so the 3 new skills load. If you'd locally edited any of these root docs, your version is backed up before overwrite — standard Tier-1 behavior.
 
 ---
 
