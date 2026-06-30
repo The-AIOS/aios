@@ -28,7 +28,7 @@ The risk **sharpens as the loops get better.** Slow, error-prone agents force th
 ## How to apply (the workflow)
 
 1. **Detect agent-authored change.** What shipped this session that the operator did *not* write themselves — commits by spawned workers / other agent sessions, files written by background subagents, anything `/aios:update` or an autonomous loop changed. If the operator authored everything, there's no debt to surface — skip silently.
-2. **Surface as an offer.** Pose the core-test question. List the changes plainly. Don't interrogate; invite.
+2. **Recap first, then offer.** Lead with a tight bullet list of *everything* agent-authored that shipped — one line each: *what* · *what it does* · *where it lives*. The recap is mandatory and comes **before** the offer: the operator can't ask about what they don't know shipped, so an offer with no enumerated list is the failure mode ("you don't know what you don't know"). Then pose the core-test question as an invitation, not an interrogation.
 3. **Walk through what they ask about.** Explain at the altitude they need — the *why* and the *failure modes*, not a line reading. The goal is ownership, not coverage.
 4. **Roll the rest forward as debt.** What they decline to grasp carries forward (in the `/close-session` ledger → an open-threads carry), marked *un-grasped*, never *done*. `/close-day` and `/aios:housekeeping` resurface it.
 5. **Protect against the structural causes** — the prevention axis, not just detection:

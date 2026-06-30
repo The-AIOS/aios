@@ -69,7 +69,7 @@ If `USER.md` has a `## Remote machines` section, also check for remote spawn pat
 
 This vault is a personal operating system built on one core belief:
 
-> **The quality of context you give an AI entirely determines what it can do for you.**
+> **The quality of context the operator gives an AI entirely determines what it can do for them.**
 
 Most people use AI with no context — every session starts from zero. This vault holds two kinds of knowledge about its owner: **declared context** (what they tell Claude about themselves) and **observed context** (what Claude learns working with them over time). The combination compounds — each session builds on the last, until the vault is a second brain that actually remembers.
 
@@ -346,7 +346,7 @@ See `vault/00 - notes/context/observed/vault-routine.md` for recommended cadence
 
 **Custom/ + company namespacing:** every framework layer has a `custom/` subfolder for operator extensions (survive `/aios:update`, override bundled). Operator-built plugins go in `plugins/custom/<your-plugin>/`, NOT inside `aios/`. Company-distributed infra (via `/aios:company --sync`) lands at `{layer}/{company}/` or `plugins/{company}/<plugin>/` — namespaced, never collides with `custom/` or `aios-*/`.
 
-**Operator slash commands** go in your OWN plugin, never inside `aios`. To add `/my-stuff:my-command`: create `plugins/custom/my-stuff/` with `.claude-plugin/plugin.json` + `commands/my-command.md`, register in `.claude-plugin/marketplace.json`.
+**Operator slash commands** go in the operator's OWN plugin, never inside `aios`. To add `/my-stuff:my-command`: create `plugins/custom/my-stuff/` with `.claude-plugin/plugin.json` + `commands/my-command.md`, register in `.claude-plugin/marketplace.json`.
 
 ### MCP Policy — Prefer Bundled, Avoid claude.ai-Hosted
 
@@ -379,7 +379,7 @@ cd ~/aios && git add -A && git commit -m "Session {date}: {description}" && git 
 ```
 The vault is only as portable and safe as its last push.
 
-> **Path convention:** the framework expects to live at `~/aios` (commands, MCPs, hooks, git all reference it). `/aios:cold-start-interview` symlinks if you cloned elsewhere; SETUP.md → § Path portability has the manual commands.
+> **Path convention:** the framework expects to live at `~/aios` (commands, MCPs, hooks, git all reference it). `/aios:cold-start-interview` symlinks if the operator cloned elsewhere; SETUP.md → § Path portability has the manual commands.
 
 **Format:** [Conventional Commits](https://www.conventionalcommits.org) — `<type>(<scope>): <description>` (subject < 72 chars, imperative, no period). Types: `feat`·`fix`·`docs`·`refactor`·`perf`·`test`·`chore`·`build`·`ci`·`style`. Body = WHY + PR/issue refs. Footer = Co-Authored-By + BREAKING CHANGE.
 
@@ -432,7 +432,7 @@ Comprehension debt is the **operator's** risk, not yours: the gap between what t
 The test is one question, posed as an offer, not a quiz: ***"A fair amount shipped this session — want me to walk you through any of it? The bar isn't reading every line; it's that you understand what shipped well enough to defend, debug, or decide on it later."***
 
 Your job is to keep their debt low — never let agent output pile up unexamined on their behalf:
-- **Surface, don't wave through.** At `/close-session`, list the session's agent-authored changes and offer to walk the operator through them. What they decline to grasp rolls forward as debt, not as done.
+- **Surface, don't wave through.** At `/close-session`, **recap the surface area first** — a bulleted list of everything agent-authored that shipped (the operator can't ask about what they don't know shipped) — *then* offer to walk them through it. What they decline to grasp rolls forward as debt, not as done.
 - **Spot-check the gate.** Periodically help them verify the test/review that approved agent work actually catches the failure mode they care about. Gates rot. (`/aios:housekeeping` runs this on a cadence.)
 - **Block loops from judgment work.** Keep autonomous loops on machine-checkable changes; architecture, strategy, and anything where "done" is a judgment call stay operator-in-the-chair.
 - **Pair-design loops.** A second perspective when a routine/agent is designed catches the blind spot it would otherwise exploit on every run.
