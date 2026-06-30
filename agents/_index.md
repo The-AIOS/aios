@@ -21,12 +21,12 @@ Organized into **6 bundles by purpose**. Install only the bundles you need.
 | **`aios/sales/`** | Lead generation, proposals, CRM, brand monitoring | 4 |
 | **`aios/strategy/`** | Market research, advisory, company analysis, open-source governance | 4 |
 | **`aios/finance-legal/`** | Accounting, legal review, invoicing, compliance | 4 |
-| **`aios/engineering/`** | Code review, documentation, bug triage, security, building | 6 |
+| **`aios/engineering/`** | Code review, documentation, bug triage, security, building, growth, refactoring | 8 |
 | **`aios/communication/`** | Content, decks, emails, meeting prep, reports, design systems | 7 |
 | **`aios/personal/`** | Study, journaling, growth, decision-making, onboarding, crisis | 6 |
 | **`custom/`** | Your own agents (operator-specific extensions, never synced) | — |
 
-**Total bundled agents: 31.** Each bundle has a `README.md` describing its scope; this file is the master registry.
+**Total bundled agents: 33.** Each bundle has a `README.md` describing its scope; this file is the master registry.
 
 > **Standard:** all agents follow the [Agent Skills open standard](https://github.com/anthropics/skills) (138K⭐ — Anthropic's public canonical repo). Cross-platform compatible with Claude Code, Codex, Gemini CLI, Cursor, Antigravity.
 
@@ -56,6 +56,8 @@ When a session starts with a name that doesn't have an exact match, the spawn wr
 3. **No match** → general-purpose worker with session name as role context.
 
 When a fuzzy match is used, the session tells the user which agent was matched and why, so they can correct if wrong.
+
+**`archetype:` tags** (e.g. `archetype: maintainer`) mark an agent's *posture* — the [[../skills/aios/team-archetypes/SKILL|five product archetypes]] (Prototyper / Builder / Sweeper / Grower / Maintainer) — **orthogonally to its domain capability**. One agent can carry several (it shifts posture by project stage). They make *"who's my Builder / Maintainer?"* resolvable and let `/7plan` + `/emerge` check the deployed mix matches the project's lifecycle stage (not `/today` — daily routing is tactical, stage→mix is strategic). They are a *lens layered on top of* the domain bundles — never a reason to rename or restructure agents.
 
 ---
 
@@ -106,12 +108,14 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 
 | Agent | Purpose | Match keywords | Schedule |
 |---|---|---|---|
-| [[code-reviewer]] | Review PRs for security, quality, pattern consistency | review PR, code review, diff review | on-demand |
-| [[code-documenter]] | Generate/update README, CLAUDE.md, inline docs | update docs, document code, sync docs | on-demand |
-| [[bug-triager]] | Classify GitHub issues, suggest priority + assignee | triage issues, classify bugs, bug triage, issue backlog | on-demand / weekly |
-| [[security-engineer]] | STRIDE threat modeling, SAST setup, secrets management, vulnerability triage with prioritized remediation | threat model, STRIDE, SAST, semgrep, sonarqube, codeql, security review, secrets management, vault, vulnerability scan, CVSS, security audit | on-demand / quarterly |
-| [[technical-cofounder]] | Build real products end-to-end — discovery → ship → handoff | build app, build product, MVP, prototype, ship, launch | on-demand |
-| [[aios-builder]] | Scaffold a new custom AIOS element (agent/skill/plugin/command/template/hook/MCP) — compliant structure + registration | new agent, new skill, new plugin, new command, new template, new hook, new MCP, scaffold custom, add custom element | on-demand |
+| [[code-reviewer]] | Review PRs for security, quality, pattern consistency | review PR, code review, diff review, archetype: sweeper, archetype: maintainer | on-demand |
+| [[refactor-engineer]] | Proactively shrink a *mature* codebase — simplify, unship dead features, optimize perf | refactor, simplify, unship, dead code, performance, optimize, technical debt, complexity, cleanup, archetype: sweeper | on-demand / periodic |
+| [[code-documenter]] | Generate/update README, CLAUDE.md, inline docs | update docs, document code, sync docs, archetype: maintainer | on-demand |
+| [[bug-triager]] | Classify GitHub issues, suggest priority + assignee | triage issues, classify bugs, bug triage, issue backlog, archetype: maintainer | on-demand / weekly |
+| [[security-engineer]] | STRIDE threat modeling, SAST setup, secrets management, vulnerability triage with prioritized remediation | threat model, STRIDE, SAST, semgrep, sonarqube, codeql, security review, secrets management, vault, vulnerability scan, CVSS, security audit, archetype: maintainer | on-demand / quarterly |
+| [[technical-cofounder]] | Build real products end-to-end — discovery → ship → handoff | build app, build product, MVP, prototype, ship, launch, archetype: prototyper, archetype: builder | on-demand |
+| [[growth-engineer]] | Iterate a *shipped* product toward PMF — funnel, activation, retention, growth experiments | PMF, product-market fit, retention, activation, funnel, churn, conversion, growth, adoption, cohort, A/B test, north star, archetype: grower | on-demand |
+| [[aios-builder]] | Scaffold a new custom AIOS element (agent/skill/plugin/command/template/hook/MCP) — compliant structure + registration | new agent, new skill, new plugin, new command, new template, new hook, new MCP, scaffold custom, add custom element, archetype: builder | on-demand |
 
 ### aios/communication/ — Content, decks, emails, meetings, design
 

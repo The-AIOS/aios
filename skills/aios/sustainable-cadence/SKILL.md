@@ -1,6 +1,6 @@
 ---
 name: sustainable-cadence
-description: Treat the operator's capacity, pace, and rhythm as first-class design inputs — not afterthoughts to optimize away. Use when planning workload or cadence, deciding whether to push hard or pace deliberately, judging whether carried/slow/deferred work is genuine avoidance vs. a legitimate quality gate or rhythm, designing rituals and routines, sequencing a heavy week, or guarding against burnout-by-velocity. The generative complement to the system's defensive anti-values: it says what conditions let work (and the person doing it) sustain, not just what to never become.
+description: "Treat the operator's capacity, pace, and rhythm as first-class design inputs — not afterthoughts to optimize away. Use when planning workload or cadence, deciding whether to push hard or pace deliberately, judging whether carried/slow/deferred work is genuine avoidance vs. a legitimate quality gate or rhythm, designing rituals and routines, sequencing a heavy week, or guarding against burnout-by-velocity. The generative complement to the system's defensive anti-values: it says what conditions let work (and the person doing it) sustain, not just what to never become."
 ---
 
 # Sustainable Cadence — capacity as a design input

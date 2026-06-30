@@ -51,6 +51,8 @@ Every 2 weeks (bi-weekly cadence) to surface ideas that the vault implies but ne
 ### Agents that want to exist
 {Scan the full observed context — patterns.md, growth.md, working_style.md, ecosystem.md, session-insights.md — for recurring behaviors that could be served by a dedicated agent. Also check carried items ×6+ from recent daily notes as an urgency signal, but don't limit proposals to carried items.
 
+Also run an **archetype-coverage check (consult the `team-archetypes` skill):** map each active product to its lifecycle stage and compare against the archetypes of the agents actually deployed on it. Surface a coverage gap as a concrete proposal — e.g. a post-build product with no Grower (`growth-engineer`), or a mature system with no Sweeper (`refactor-engineer`). A missing archetype is only a *new-agent* proposal when it's a genuine capability gap; if an existing agent can take the posture, say so instead.
+
 For each proposed agent:
 - **{agent name}** — {why this agent would help, grounded in observed patterns}
   Evidence: {specific patterns, growth edges, working style traits, or carried items that support this}

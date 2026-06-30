@@ -1,6 +1,6 @@
 ---
 name: commons-governance
-description: Govern shared resources well using Elinor Ostrom's design principles for the commons — applied to AIOS shared substrate: multi-operator vaults, collaboration spaces, company-synced infrastructure, and multiple agents writing one git repo. Use when designing rules for a shared space, deciding who-decides-what across collaborators or agents, preventing tragedy-of-the-commons or write-collision dynamics, setting boundaries on a shared repo/folder, or standing up collab/company governance. Distributed authority done right, grounded in governance science rather than top-down control.
+description: "Govern shared resources well using Elinor Ostrom's design principles for the commons — applied to AIOS shared substrate: multi-operator vaults, collaboration spaces, company-synced infrastructure, and multiple agents writing one git repo. Use when designing rules for a shared space, deciding who-decides-what across collaborators or agents, preventing tragedy-of-the-commons or write-collision dynamics, setting boundaries on a shared repo/folder, or standing up collab/company governance. Distributed authority done right, grounded in governance science rather than top-down control."
 ---
 
 # Commons Governance — sharing a resource without a boss
