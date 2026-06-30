@@ -17,6 +17,28 @@
 
 ---
 
+## 2026-06-30 — Team-archetypes lens + comprehension-debt (compose the fleet · guard your understanding of it)
+
+`hash: 5a53c36`
+
+> **Two complementary additions, both about keeping a growing agent fleet healthy.** One gives you a lens to *compose* the fleet by lifecycle posture; the other guards *your understanding* of what that fleet ships without you.
+>
+> **Team-archetypes (#3, `6b45dd3`):**
+> - New **`skills/aios/team-archetypes`** — Cherny's five product archetypes (Prototyper / Builder / Sweeper / Grower / Maintainer); compose a team OR an agent fleet by lifecycle posture matched to product stage (with a `references/` source file).
+> - **Two new engineering agents** closing the lifecycle gap the lens exposed: **`growth-engineer`** (Grower) + **`refactor-engineer`** (Sweeper). Bundled agents 31→33.
+> - **`archetype:` tags** on agents (posture, orthogonal to domain capability); `/7plan` + `/emerge` can now check the deployed mix matches a project's stage. A YAML-frontmatter CI fix for two prior skills is folded in.
+>
+> **Comprehension-debt (#4, `5a53c36`):**
+> - New **`skills/aios/comprehension-debt`** — keep the operator's understanding from falling behind what their agents ship (the gap between what the vault/repos *contain* and what the operator *understands*). The defensive complement to *Arc sessions*; framed explicitly as the **operator's** risk, not the model's — the risk sharpens *as the loops get better*.
+> - **CLAUDE.md § VI** principle (recap-first offer; the *"could you defend, debug, or decide on this right now?"* test) + the Agentic-Culture sticky reminder corrected to *"our leadership culture"* (model + operator co-orchestrate — a genuinely shared referent).
+> - **`/close-session`** — comprehension-ledger step: recap the session's agent-authored changes as a bullet list FIRST (you can't ask about what you don't know shipped), then *offer* to walk through them; un-grasped work carries forward as debt, not done.
+> - **`/aios:housekeeping`** — Bucket 22 (agent-output gate health): spot-check that gates still catch the failure modes you care about ("gates rot") + a 30-day permission re-audit clock.
+> - Skill counts bumped across both additions (`skills/aios/` 20→22; total bundled 45→47).
+>
+> **Action required:** None — `/aios:update` delivers both skills, the two new agents, the CLAUDE.md + command edits, and the index updates automatically (skills + root docs are Tier-1 sync; bundled command/agent edits self-sync; the skills registrar re-runs). **One reload, LAST:** after the update applies, **restart your Claude Code sessions** so the new skills + agents load. If you'd locally edited any touched bundled file, your version is backed up before overwrite — standard Tier-1 behavior.
+
+---
+
 ## 2026-06-25 — CONTRIBUTING.md at repo root + 3 bundled "other-wing" skills (systems/stewardship lenses)
 
 `hash: 996a86d`
