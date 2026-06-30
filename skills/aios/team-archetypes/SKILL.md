@@ -1,6 +1,6 @@
 ---
 name: team-archetypes
-description: Compose a team (of people OR agents) by lifecycle posture, not job title, using the five product archetypes — Prototyper, Builder, Sweeper, Grower, Maintainer — and the rule that a healthy mix depends on product stage. Use when deciding which agents/people to deploy on a project, diagnosing why a team or agent bundle feels lopsided (all builders, no maintainers), choosing what posture to take on a given piece of work, staffing a pre-PMF vs growing vs mature product, or selecting an agent mix in /today, /7plan, /emerge. The team-composition complement to leverage-points: leverage-points says WHERE to intervene; this says WITH WHAT POSTURE.
+description: Compose a team (of people OR agents) by lifecycle posture, not job title, using the five product archetypes — Prototyper, Builder, Sweeper, Grower, Maintainer — and the rule that a healthy mix depends on product stage. Use when deciding which agents/people to deploy on a project, diagnosing why a team or agent bundle feels lopsided (all builders, no maintainers), choosing what posture to take on a given piece of work, staffing a pre-PMF vs growing vs mature product, or selecting an agent mix in /7plan or /emerge. The team-composition complement to leverage-points: leverage-points says WHERE to intervene; this says WITH WHAT POSTURE.
 ---
 
 # Team Archetypes — compose by posture, not by title
@@ -54,7 +54,7 @@ AIOS bundles agents by **domain** (sales / strategy / engineering / …). Archet
 
 ## Three use-sites
 
-1. **Agent/team selection** (`/today`, `/7plan`, `/emerge`): for each active project, name its stage, then check the deployed mix matches — and flag the gap if it doesn't.
+1. **Agent/team selection** — `/7plan` (weekly: name each project's stage, check the planned work matches the stage-appropriate mix) and `/emerge` (archetype-coverage gap → agent suggestion). *Not `/today`* — daily task-routing is tactical; stage→mix is a strategic concern.
 2. **Posture self-location** (an agent reading this skill): a builder agent on a *pre-PMF* project takes the **Prototyper** posture (churn, throwaway, speed); on a *scaling* project, the **Builder/Maintainer** posture (hardening, rigor). Same agent, stage-appropriate posture.
 3. **Project staging:** tag each project (Active / Idea) with a lifecycle stage so the mix-check has an input.
 

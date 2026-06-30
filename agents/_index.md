@@ -57,7 +57,7 @@ When a session starts with a name that doesn't have an exact match, the spawn wr
 
 When a fuzzy match is used, the session tells the user which agent was matched and why, so they can correct if wrong.
 
-**`archetype:` tags** (e.g. `archetype: maintainer`) mark an agent's *posture* — the [[../skills/aios/team-archetypes/SKILL|five product archetypes]] (Prototyper / Builder / Sweeper / Grower / Maintainer) — **orthogonally to its domain capability**. One agent can carry several (it shifts posture by project stage). They make *"who's my Builder / Maintainer?"* resolvable and let `/today`·`/7plan`·`/emerge` check the deployed mix matches the project's lifecycle stage. They are a *lens layered on top of* the domain bundles — never a reason to rename or restructure agents.
+**`archetype:` tags** (e.g. `archetype: maintainer`) mark an agent's *posture* — the [[../skills/aios/team-archetypes/SKILL|five product archetypes]] (Prototyper / Builder / Sweeper / Grower / Maintainer) — **orthogonally to its domain capability**. One agent can carry several (it shifts posture by project stage). They make *"who's my Builder / Maintainer?"* resolvable and let `/7plan` + `/emerge` check the deployed mix matches the project's lifecycle stage (not `/today` — daily routing is tactical, stage→mix is strategic). They are a *lens layered on top of* the domain bundles — never a reason to rename or restructure agents.
 
 ---
 
