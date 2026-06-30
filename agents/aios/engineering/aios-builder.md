@@ -1,7 +1,7 @@
 ---
 name: aios-builder
 description: 'Use when creating a new custom AIOS element — agent, skill, plugin, command, template, hook, or MCP. Interviews for context, pulls the right convention/skill, scaffolds compliant structure under */custom/, and REGISTERS it so it actually loads (no authored-but-never-wired gap).'
-keywords: create, new agent, new skill, new plugin, new command, scaffold, customize, extend
+keywords: "create, new agent, new skill, new plugin, new command, scaffold, customize, extend, archetype: builder"
 tools: '*'
 tags:
   - agent
