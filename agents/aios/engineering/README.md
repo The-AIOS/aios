@@ -9,6 +9,7 @@ Install this bundle if you write code, ship products, or manage an engineering p
 | Agent | What it does |
 |---|---|
 | [[code-reviewer]] | Review PRs for security, quality, pattern consistency. Reads diffs, surfaces issues, suggests fixes |
+| [[refactor-engineer]] | Proactively shrink a *mature* codebase — simplify tangled code, unship unused features, optimize measured hot paths. Behavior-preserving by default; evidence-driven |
 | [[code-documenter]] | Generate/update README, CLAUDE.md, inline docs from code changes. Keeps docs in sync with shipped reality |
 | [[bug-triager]] | Classify GitHub issues by severity, suggest priority + assignee. Run weekly to clear backlog drift |
 | [[security-engineer]] | Application security — STRIDE threat modeling, SAST setup (Semgrep/SonarQube/CodeQL), secrets management, vulnerability triage with prioritized remediation backlog |
@@ -17,7 +18,7 @@ Install this bundle if you write code, ship products, or manage an engineering p
 
 ## Archetype lens (compose by posture, not title)
 
-These agents are tagged with **product archetypes** (see the [[../../../skills/aios/team-archetypes/SKILL|team-archetypes skill]]) so you can ask *"who's my Builder / Maintainer?"* and so `/today`·`/7plan`·`/emerge` can check the mix matches a project's lifecycle stage. The bundle now spans the full build→grow→maintain lifecycle: **Prototyper** is a *mode* of [[technical-cofounder]] (pre-PMF); **Builder** = [[technical-cofounder]]/[[aios-builder]]; **Sweeper** = [[code-reviewer]] + `/simplify`; **Grower** = [[growth-engineer]] (PMF-iteration); **Maintainer** = [[security-engineer]]/[[bug-triager]]/[[code-documenter]]. Archetype is a lens *on top of* these agents, never a reason to rename or restructure them.
+These agents are tagged with **product archetypes** (see the [[../../../skills/aios/team-archetypes/SKILL|team-archetypes skill]]) so you can ask *"who's my Builder / Maintainer?"* and so `/today`·`/7plan`·`/emerge` can check the mix matches a project's lifecycle stage. The bundle now spans the full build→grow→maintain lifecycle: **Prototyper** is a *mode* of [[technical-cofounder]] (pre-PMF); **Builder** = [[technical-cofounder]]/[[aios-builder]]; **Sweeper** = [[refactor-engineer]] (+ [[code-reviewer]] / `/simplify`); **Grower** = [[growth-engineer]] (PMF-iteration); **Maintainer** = [[security-engineer]]/[[bug-triager]]/[[code-documenter]]. Archetype is a lens *on top of* these agents, never a reason to rename or restructure them.
 
 > **Spec-driven dev:** AIOS covers the SDD loop natively via the `superpowers/` skills (`brainstorming` → `writing-plans` → `executing-plans`/`test-driven-development` → `verification-before-completion`). If you want repo-resident spec artifacts beside the code, [OpenSpec](https://github.com/Fission-AI/OpenSpec) (MIT) is a compatible external layer you can install per project — AIOS doesn't bundle it (it would duplicate superpowers).
 

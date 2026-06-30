@@ -21,12 +21,12 @@ Organized into **6 bundles by purpose**. Install only the bundles you need.
 | **`aios/sales/`** | Lead generation, proposals, CRM, brand monitoring | 4 |
 | **`aios/strategy/`** | Market research, advisory, company analysis, open-source governance | 4 |
 | **`aios/finance-legal/`** | Accounting, legal review, invoicing, compliance | 4 |
-| **`aios/engineering/`** | Code review, documentation, bug triage, security, building, growth | 7 |
+| **`aios/engineering/`** | Code review, documentation, bug triage, security, building, growth, refactoring | 8 |
 | **`aios/communication/`** | Content, decks, emails, meeting prep, reports, design systems | 7 |
 | **`aios/personal/`** | Study, journaling, growth, decision-making, onboarding, crisis | 6 |
 | **`custom/`** | Your own agents (operator-specific extensions, never synced) | — |
 
-**Total bundled agents: 32.** Each bundle has a `README.md` describing its scope; this file is the master registry.
+**Total bundled agents: 33.** Each bundle has a `README.md` describing its scope; this file is the master registry.
 
 > **Standard:** all agents follow the [Agent Skills open standard](https://github.com/anthropics/skills) (138K⭐ — Anthropic's public canonical repo). Cross-platform compatible with Claude Code, Codex, Gemini CLI, Cursor, Antigravity.
 
@@ -109,6 +109,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | Agent | Purpose | Match keywords | Schedule |
 |---|---|---|---|
 | [[code-reviewer]] | Review PRs for security, quality, pattern consistency | review PR, code review, diff review, archetype: sweeper, archetype: maintainer | on-demand |
+| [[refactor-engineer]] | Proactively shrink a *mature* codebase — simplify, unship dead features, optimize perf | refactor, simplify, unship, dead code, performance, optimize, technical debt, complexity, cleanup, archetype: sweeper | on-demand / periodic |
 | [[code-documenter]] | Generate/update README, CLAUDE.md, inline docs | update docs, document code, sync docs, archetype: maintainer | on-demand |
 | [[bug-triager]] | Classify GitHub issues, suggest priority + assignee | triage issues, classify bugs, bug triage, issue backlog, archetype: maintainer | on-demand / weekly |
 | [[security-engineer]] | STRIDE threat modeling, SAST setup, secrets management, vulnerability triage with prioritized remediation | threat model, STRIDE, SAST, semgrep, sonarqube, codeql, security review, secrets management, vault, vulnerability scan, CVSS, security audit, archetype: maintainer | on-demand / quarterly |

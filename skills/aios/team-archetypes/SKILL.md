@@ -46,7 +46,7 @@ AIOS bundles agents by **domain** (sales / strategy / engineering / …). Archet
 |---|---|---|
 | Prototyper | `technical-cofounder` *(prototype mode)* | Throwaway-churn posture pre-PMF — explicitly *not* production-grade |
 | Builder | `technical-cofounder`, `aios-builder` | Production-grade, end-to-end |
-| Sweeper | `code-reviewer`, `/simplify` skill | Simplify, unship, optimize |
+| Sweeper | `refactor-engineer` (+ `code-reviewer`, `/simplify` skill) | Simplify, unship, optimize — proactive entropy reduction on a mature codebase |
 | Grower | `growth-engineer` | PMF-iteration on a *shipped* product — funnel, activation, retention, experiments |
 | Maintainer | `security-engineer`, `bug-triager`, `code-documenter` | Reliability, security, docs-in-sync |
 
