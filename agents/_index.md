@@ -57,6 +57,8 @@ When a session starts with a name that doesn't have an exact match, the spawn wr
 
 When a fuzzy match is used, the session tells the user which agent was matched and why, so they can correct if wrong.
 
+**`archetype:` tags** (e.g. `archetype: maintainer`) mark an agent's *posture* — the [[../skills/aios/team-archetypes/SKILL|five product archetypes]] (Prototyper / Builder / Sweeper / Grower / Maintainer) — **orthogonally to its domain capability**. One agent can carry several (it shifts posture by project stage). They make *"who's my Builder / Maintainer?"* resolvable and let `/today`·`/7plan`·`/emerge` check the deployed mix matches the project's lifecycle stage. They are a *lens layered on top of* the domain bundles — never a reason to rename or restructure agents.
+
 ---
 
 ## Agent vs Session
@@ -106,12 +108,12 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 
 | Agent | Purpose | Match keywords | Schedule |
 |---|---|---|---|
-| [[code-reviewer]] | Review PRs for security, quality, pattern consistency | review PR, code review, diff review | on-demand |
-| [[code-documenter]] | Generate/update README, CLAUDE.md, inline docs | update docs, document code, sync docs | on-demand |
-| [[bug-triager]] | Classify GitHub issues, suggest priority + assignee | triage issues, classify bugs, bug triage, issue backlog | on-demand / weekly |
-| [[security-engineer]] | STRIDE threat modeling, SAST setup, secrets management, vulnerability triage with prioritized remediation | threat model, STRIDE, SAST, semgrep, sonarqube, codeql, security review, secrets management, vault, vulnerability scan, CVSS, security audit | on-demand / quarterly |
-| [[technical-cofounder]] | Build real products end-to-end — discovery → ship → handoff | build app, build product, MVP, prototype, ship, launch | on-demand |
-| [[aios-builder]] | Scaffold a new custom AIOS element (agent/skill/plugin/command/template/hook/MCP) — compliant structure + registration | new agent, new skill, new plugin, new command, new template, new hook, new MCP, scaffold custom, add custom element | on-demand |
+| [[code-reviewer]] | Review PRs for security, quality, pattern consistency | review PR, code review, diff review, archetype: sweeper, archetype: maintainer | on-demand |
+| [[code-documenter]] | Generate/update README, CLAUDE.md, inline docs | update docs, document code, sync docs, archetype: maintainer | on-demand |
+| [[bug-triager]] | Classify GitHub issues, suggest priority + assignee | triage issues, classify bugs, bug triage, issue backlog, archetype: maintainer | on-demand / weekly |
+| [[security-engineer]] | STRIDE threat modeling, SAST setup, secrets management, vulnerability triage with prioritized remediation | threat model, STRIDE, SAST, semgrep, sonarqube, codeql, security review, secrets management, vault, vulnerability scan, CVSS, security audit, archetype: maintainer | on-demand / quarterly |
+| [[technical-cofounder]] | Build real products end-to-end — discovery → ship → handoff | build app, build product, MVP, prototype, ship, launch, archetype: prototyper, archetype: builder | on-demand |
+| [[aios-builder]] | Scaffold a new custom AIOS element (agent/skill/plugin/command/template/hook/MCP) — compliant structure + registration | new agent, new skill, new plugin, new command, new template, new hook, new MCP, scaffold custom, add custom element, archetype: builder | on-demand |
 
 ### aios/communication/ — Content, decks, emails, meetings, design
 

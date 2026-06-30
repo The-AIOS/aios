@@ -14,6 +14,12 @@ Install this bundle if you write code, ship products, or manage an engineering p
 | [[security-engineer]] | Application security — STRIDE threat modeling, SAST setup (Semgrep/SonarQube/CodeQL), secrets management, vulnerability triage with prioritized remediation backlog |
 | [[technical-cofounder]] | Build real products end-to-end — discovery → planning → building → polish → handoff. Flagship engineering agent for solo/founder operators |
 
+## Archetype lens (compose by posture, not title)
+
+These agents are tagged with **product archetypes** (see the [[../../../skills/aios/team-archetypes/SKILL|team-archetypes skill]]) so you can ask *"who's my Builder / Maintainer?"* and so `/today`·`/7plan`·`/emerge` can check the mix matches a project's lifecycle stage. This bundle skews **Builder + Maintainer + Sweeper** (a post-PMF posture); **Prototyper** is a *mode* of [[technical-cofounder]] (pre-PMF), and **Grower** (PMF-iteration) is a known capability gap — surface a candidate via `/emerge` if the need recurs. Archetype is a lens *on top of* these agents, never a reason to rename or restructure them.
+
+> **Spec-driven dev:** AIOS covers the SDD loop natively via the `superpowers/` skills (`brainstorming` → `writing-plans` → `executing-plans`/`test-driven-development` → `verification-before-completion`). If you want repo-resident spec artifacts beside the code, [OpenSpec](https://github.com/Fission-AI/OpenSpec) (MIT) is a compatible external layer you can install per project — AIOS doesn't bundle it (it would duplicate superpowers).
+
 ## When to install
 
 - You review PRs and want a structured first-pass
