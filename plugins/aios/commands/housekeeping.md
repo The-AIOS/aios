@@ -183,19 +183,21 @@ Read `~/.claude/settings.json` (global) and the project's `.claude/settings.loca
 
 #### Bucket 11: Plugin cache verification (NEW)
 
-The `plugins/aios/commands/` repo folder is the source of truth. Two derived locations must stay in sync — the plugin marketplace and the runtime cache:
+The `plugins/aios/commands/` repo folder is the source of truth. The runtime **cache** must stay in sync with it. A **marketplace** copy is a *second* derived location **only on a GitHub-source install**:
 
-- `~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{name}.md`
-- `~/.claude/plugins/cache/the-aios/aios/<version>/commands/{name}.md` (the *installed* version dir — glob `the-aios/aios/*/commands/`, never a fixed version; the plugin bumps but this path must not pin a version)
+- `~/.claude/plugins/cache/the-aios/aios/<version>/commands/{name}.md` (the *installed* version dir — glob `the-aios/aios/*/commands/`, never a fixed version; the plugin bumps but this path must not pin a version) — **always present, runtime-authoritative.**
+- `~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/{name}.md` — **only exists on a GitHub-source marketplace install.**
 
-**Scan:** for each `plugins/aios/commands/{name}.md` in the repo, `diff` against both derived locations. Surface any drift:
+> **Detect the marketplace source type FIRST** (`claude plugin marketplace list`). The **primary AIOS mode is a directory-source marketplace** (`the-aios` registered as `Directory → ~/aios`) — that's what carries ventures + `custom/`; a GitHub-source clone would miss them. On a **directory-source** install the marketplace *reads `~/aios` in place*: the `marketplaces/the-aios/…` path **does not exist**, the repo folder IS the marketplace source, and there is **nothing to copy or compare** there. So: if `marketplaces/the-aios/plugins/aios/commands` is absent (directory-source), **verify the cache only and skip the marketplace check entirely** — do not report the absent marketplace dir as drift. Only when that dir exists (GitHub-source) does the marketplace comparison apply.
 
-- **Repo file present, marketplace/cache file missing** → command was added but never synced
-- **Files exist in all 3 but content differs** → command was edited in source but not propagated
-- **Marketplace/cache file exists, repo file missing** → command was deleted in source but stale copy lingers in plugin paths
+**Scan:** for each `plugins/aios/commands/{name}.md` in the repo, `diff` against the cache (and the marketplace **only if its dir exists**). Surface any drift:
+
+- **Repo file present, cache file missing** (or marketplace-missing on a GitHub-source install) → command was added but never synced
+- **Files differ between repo and a present derived location** → command was edited in source but not propagated
+- **A present derived file has no repo counterpart** → command was deleted in source but stale copy lingers
 
 **Auto-apply candidates** (low-stakes, deterministic):
-- Repo → marketplace + cache copy when repo is the only authoritative source. Use `cp ~/aios/plugins/aios/commands/{name}.md ~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/` and the equivalent for cache. Confirm post-copy that all 3 files match (`diff -q`).
+- Repo → cache copy (always), and repo → marketplace copy **only if the marketplace dir exists**. Guard both with `[ -d ]`: `mp=~/.claude/plugins/marketplaces/the-aios/plugins/aios/commands; [ -d "$mp" ] && cp ~/aios/plugins/aios/commands/{name}.md "$mp/"` + the cache-glob equivalent. Confirm post-copy that the synced locations match (`diff -q`). On directory-source there's nothing to copy — the source is live.
 
 **Propose-only candidates** (need user judgment):
 - Plugin paths have content the repo doesn't — possible accidental delete, or in-progress refactor. Ask before removing.

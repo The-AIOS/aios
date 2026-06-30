@@ -35,6 +35,8 @@
 > - **`/aios:housekeeping`** — Bucket 22 (agent-output gate health): spot-check that gates still catch the failure modes you care about ("gates rot") + a 30-day permission re-audit clock.
 > - Skill counts bumped across both additions (`skills/aios/` 20→22; total bundled 45→47).
 >
+> **Plus — marketplace source-type fix (`/aios:update` + `/housekeeping` Bucket 11):** both commands hard-assumed a **GitHub-source** marketplace and hardcoded `~/.claude/plugins/marketplaces/the-aios/…` for the command-sync copy. But the **primary AIOS mode is a directory-source marketplace** (`the-aios` registered as `Directory → ~/aios`) — that's what carries ventures + `custom/` a GitHub clone would miss. On directory-source that path doesn't exist, so the marketplace copy silently no-op'd and Bucket 11 would mis-flag the absent dir as drift. Fix: the marketplace copy is now `[ -d ]`-guarded (cache is runtime-authoritative either way), and Bucket 11 detects the source type and verifies the **cache only** on directory-source. Found dogfooding this very update.
+>
 > **Action required:** None — `/aios:update` delivers both skills, the two new agents, the CLAUDE.md + command edits, and the index updates automatically (skills + root docs are Tier-1 sync; bundled command/agent edits self-sync; the skills registrar re-runs). **One reload, LAST:** after the update applies, **restart your Claude Code sessions** so the new skills + agents load. If you'd locally edited any touched bundled file, your version is backed up before overwrite — standard Tier-1 behavior.
 
 ---

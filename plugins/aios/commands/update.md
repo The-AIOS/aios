@@ -116,9 +116,10 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   Same idempotency. (Hard-coding `pwsh` fails the install on a stock machine — surfaced by a Windows operator 2026-05-27.)
 - **Any `hooks/claude-identity/install-*.sh` / `install-*.ps1` updated** (current + future installers in that path) → auto-run by the same rule, under the same platform guard (`.sh` on non-Windows, `.ps1` on Windows).
 - **A bundled skill changed — any `skills/{aios,anthropic,superpowers}/**/SKILL.md` added/changed in the diff, OR `skills/setup.sh` itself updated** → run the skills registrar (an Installer/state-producer: it symlinks skills into `~/.claude/skills`; a newly-pulled bundled skill is NOT loadable until registered). Platform-guarded like the wrapper installer — `bash $HOME/aios/skills/setup.sh` on macOS/Linux; on Windows try `pwsh -File $HOME/aios/skills/setup.ps1` then fall back to `powershell -File …`. Idempotent (skips names already linked; the scan is venture-aware — `skills/*/*/SKILL.md` minus `anthropic`/`superpowers` source-peers). **Gate:** run ONLY when the diff touched a bundled `SKILL.md` or `skills/setup.sh` — not on every sync. Report: *"Registered {N} new skill(s) into `~/.claude/skills` — restart sessions to load them."* (Mirrors `/aios:company` Step 5.5, which does this for venture skills on sync.)
-- **Any `plugins/aios/commands/*.md` updated** → cp to both plugin pipeline locations:
+- **Any `plugins/aios/commands/*.md` updated** → sync to the plugin pipeline. **The marketplace copy applies ONLY to a GitHub-source install** — the **primary AIOS mode is a directory-source marketplace** (the local vault registered as `Directory → ~/aios`, which is what lets it carry ventures + `custom/` that a GitHub-source clone would miss). On a directory-source install the marketplace *reads `~/aios` in place*, the `marketplaces/the-aios/…` path **does not exist**, and the copy must skip silently. The cache is runtime-authoritative either way. **Guard both copies with `[ -d ]`** so directory-source no-ops cleanly:
   ```bash
-  cp $HOME/aios/plugins/aios/commands/*.md $HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/
+  # GitHub-source only — directory-source has no marketplace dir (reads ~/aios in place). Guard → no-op on directory-source.
+  mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp $HOME/aios/plugins/aios/commands/*.md "$mp/"
   # cache path is VERSION-AGNOSTIC — glob the installed version dir (never hard-pin a version; the plugin bumps but this string outlives the bump). Guard handles the no-match case.
   for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/*.md "$d"; done
   ```
@@ -224,9 +225,9 @@ diff -q <(tr -d '\r' < "$HOME/aios/plugins/aios/commands/update.md") <(tr -d '\r
 1. Apply the replace for `update.md` immediately:
    - Backup local to `vault/04 - backups/aios-update-{date}/update.md` (operator divergence preserved per the standard rule).
    - Overwrite local `plugins/aios/commands/update.md` from upstream.
-2. Sync to BOTH plugin pipeline locations (marketplace + cache):
+2. Sync to the plugin pipeline (cache always; marketplace only if it's a GitHub-source install — directory-source reads `~/aios` in place, so its `marketplaces/…` path doesn't exist; both copies are `[ -d ]`-guarded):
    ```bash
-   cp $HOME/aios/plugins/aios/commands/update.md $HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands/update.md
+   mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp $HOME/aios/plugins/aios/commands/update.md "$mp/update.md"
    # cache path VERSION-AGNOSTIC — glob the installed version dir (was hard-pinned 0.1.0)
    for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/update.md "$d"; done
    ```
