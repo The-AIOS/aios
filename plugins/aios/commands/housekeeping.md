@@ -9,7 +9,7 @@ allowed-tools: mcp__obsidian__*, Read, Grep, Glob, Bash
 
 # /housekeeping — Vault Housekeeping
 
-Periodic care of the vault as it grows. Produces a review packet across 20 buckets — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
+Periodic care of the vault as it grows. Produces a review packet across 22 buckets — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification, file placement drift, agent-output gate health — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
 
 **When to run:** monthly as a rhythm, or whenever the vault feels heavy (lots of carries, too many active projects, stale snapshots). `/today` will suggest it when triggers fire.
 
@@ -33,7 +33,7 @@ Check if `00 - notes/logs/command-logs/housekeeping-*.md` exists. If not, this i
 
 ### Phase 1 — Scan (build the proposal packet)
 
-Gather evidence across **all 20 buckets — no skipping.** "Deferred to tooling" is banned; the scanning IS the tooling. If a bucket surfaces low signal, state that explicitly with evidence ("scanned N items, 0 merge candidates found") — don't hand-wave.
+Gather evidence across **all 22 buckets — no skipping.** "Deferred to tooling" is banned; the scanning IS the tooling. If a bucket surfaces low signal, state that explicitly with evidence ("scanned N items, 0 merge candidates found") — don't hand-wave.
 
 #### Bucket 1: Link repairs
 
@@ -598,6 +598,34 @@ Audits the vault against the **File Placement Router** (CLAUDE.md § IV) — the
 
 **Why this bucket exists:** placement drift is invisible until retrieval fails — the file exists but nobody finds it because it lives where it was *born*, not where it'll be *asked for*. Caught 2026-06-04 in the reference vault: a strategy-rich conference capture filed in `logs/` next to a machine-written bridge beacon — same folder, opposite species. The router (CLAUDE.md § IV) is the forward mechanism; this bucket is the periodic backstop.
 
+#### Bucket 22: Agent-output gate health (NEW — comprehension-debt sibling)
+
+Comprehension debt (CLAUDE.md § VI) compounds when the operator trusts a gate that no longer catches what it should. This bucket is the periodic spot-check: sample agent-shipped work and verify the test/review/build that approved it actually catches the failure mode the operator cares about. **"Gates rot"** — a suite that stays green while the behavior silently broke is worse than no gate, because it manufactures false confidence. Where the `/close-session` comprehension ledger catches un-grasped *output*, this catches un-verified *gates*.
+
+**The principle:** an unattended loop is an unattended attack surface; the defense is periodically confirming the gate still gates. The operator can't keep comprehension debt low if the thing supposedly catching agent mistakes has quietly stopped doing so.
+
+**Detection (scan in this order):**
+
+1. Identify project repos with autonomous / agent-driven changes in the last 30 days — commits by spawned workers, other agent sessions, or `/aios:update`, or projects whose Current State notes recent agent activity.
+2. For each, sample N (default 2–3) recently-merged agent-authored changes.
+3. For each sample, surface **what gate approved it** (test suite / typecheck / lint / build / human review) and pose the operator the spot-check question: *"does this gate actually catch the failure mode you care about here, or did it just pass?"*
+
+**Permission re-audit cadence (links Bucket 10).** Bucket 10 audits permission *content*; this adds the *clock* the comprehension-debt security note calls for — surface any project whose `.claude/settings.json` permissions haven't been reviewed in **30+ days**, and propose a Bucket-10 pass on it. (A loop tested read-only that quietly gained a write permission "for convenience" is the canonical scope-creep this catches.)
+
+**Proposal table format:**
+
+| # | Change (agent-shipped) | Approving gate | Spot-check verdict | Action |
+|---|---|---|---|---|
+| 22.1 | `[[project-X]]` auth refactor (#142) | test/auth suite | 🟢 catches the real failure | — |
+| 22.2 | `[[project-Y]]` webhook handler (#88) | lint + build only, no behavior test | 🔴 hollow — passes but wouldn't catch a bad payload | [ ] add a payload test to project to-dos |
+| 22.3 | `[[project-Z]]` `.claude/settings.json` | — | 🟡 permissions unreviewed 47 days | [ ] run Bucket 10 on this repo |
+
+**Propose-only — never auto-resolve.** The verification is the operator's judgment; the model can't certify a gate catches a failure mode the operator cares about. Where a gate is found hollow, propose a concrete follow-up (strengthen the test, add the missing case) routed to the project's to-dos — don't edit the test here.
+
+**Evidence discipline:** name the change, the exact gate, and what it would miss. *"#88 merged green on lint+build but has no test asserting webhook-signature rejection — a forged payload would pass"* beats *"webhook tests look weak."*
+
+**Why this bucket exists:** comprehension debt has a prevention axis, not just a detection axis. The `/close-session` ledger surfaces what the operator hasn't grasped; this bucket confirms the automated gates they're *trusting instead of grasping* still earn that trust. Gates that rot turn "the loop has it covered" into a false statement no one notices until production.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:
@@ -624,6 +652,8 @@ Categorize all findings into one review table:
 - CLAUDE.md + USER.md health check: {N} proposals
 - Upstream source freshness: {N} sources behind, {M} sources current
 - Skill registration verify: {N} auto-registered, {M} proposals (collisions/dangling)
+- File placement drift: {N} proposals
+- Agent-output gate health: {N} samples checked, {M} hollow gates / stale permission audits
 
 ### 🟢 Auto-applied (no approval needed)
 {Low-stakes mechanical fixes — link adds where unambiguous, snapshot timestamp updates, obvious [x] marks}
