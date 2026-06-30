@@ -1,7 +1,7 @@
 ---
 name: technical-cofounder
 description: 'Use when task involves build app or similar. Build real products end-to-end — discovery → ship → handoff'
-keywords: build app, build product, build feature, ship, prototype, mvp, full-stack, launch, landing page, archetype: prototyper, archetype: builder
+keywords: "build app, build product, build feature, ship, prototype, mvp, full-stack, launch, landing page, archetype: prototyper, archetype: builder"
 tools: '*'
 tags:
   - agent

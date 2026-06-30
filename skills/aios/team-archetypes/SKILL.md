@@ -1,6 +1,6 @@
 ---
 name: team-archetypes
-description: Compose a team (of people OR agents) by lifecycle posture, not job title, using the five product archetypes — Prototyper, Builder, Sweeper, Grower, Maintainer — and the rule that a healthy mix depends on product stage. Use when deciding which agents/people to deploy on a project, diagnosing why a team or agent bundle feels lopsided (all builders, no maintainers), choosing what posture to take on a given piece of work, staffing a pre-PMF vs growing vs mature product, or selecting an agent mix in /7plan or /emerge. The team-composition complement to leverage-points: leverage-points says WHERE to intervene; this says WITH WHAT POSTURE.
+description: "Compose a team (of people OR agents) by lifecycle posture, not job title, using the five product archetypes — Prototyper, Builder, Sweeper, Grower, Maintainer — and the rule that a healthy mix depends on product stage. Use when deciding which agents/people to deploy on a project, diagnosing why a team or agent bundle feels lopsided (all builders, no maintainers), choosing what posture to take on a given piece of work, staffing a pre-PMF vs growing vs mature product, or selecting an agent mix in /7plan or /emerge. The team-composition complement to leverage-points: leverage-points says WHERE to intervene; this says WITH WHAT POSTURE."
 ---
 
 # Team Archetypes — compose by posture, not by title

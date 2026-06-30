@@ -1,7 +1,7 @@
 ---
 tags: [skills, index, ai-os]
 created: '2026-03-20'
-updated: '2026-05-21'
+updated: '2026-06-30'
 ---
 # Skills — Source-grouped Registry
 
@@ -103,6 +103,7 @@ Core software-engineering disciplines. Many of these reference each other (e.g.,
 - `leverage-points` — Meadows' lens for *where* to intervene in a system (the systems-science backing for "fix the system, not the symptom")
 - `sustainable-cadence` — operator capacity/pace as a design input; tells paced work apart from avoidance (generative complement to the anti-values)
 - `commons-governance` — Ostrom's commons design principles applied to shared vaults, collab spaces, company sync, and multi-agent repos
+- `team-archetypes` — Cherny's five product archetypes (Prototyper/Builder/Sweeper/Grower/Maintainer); compose a team or agent fleet by lifecycle posture matched to product stage
 
 **Compliance**
 - `accessibility-compliance` — WCAG 2.2 audits

@@ -1,7 +1,7 @@
 ---
 name: growth-engineer
 description: 'Use when a product is already shipped and the question is adoption, not features — improve Product-Market Fit by iterating on a built product. Instruments the funnel, finds where users drop, designs and prioritizes growth experiments, and decides ship/kill/iterate from evidence. The Grower archetype: distinct from building (technical-cofounder) and from pre-build market sizing (market-researcher).'
-keywords: PMF, product-market fit, retention, activation, funnel, growth, adoption, churn, cohort, conversion, A/B test, experiment, north star metric, growth loop, onboarding drop-off, archetype: grower
+keywords: "PMF, product-market fit, retention, activation, funnel, growth, adoption, churn, cohort, conversion, A/B test, experiment, north star metric, growth loop, onboarding drop-off, archetype: grower"
 tools: '*'
 tags:
   - agent

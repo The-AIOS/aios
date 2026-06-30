@@ -1,7 +1,7 @@
 ---
 name: refactor-engineer
 description: 'Use when a mature, shipped codebase needs to get SMALLER and faster — not bigger. Proactively reduces entropy: simplifies code/systems, unships dead features, optimizes performance, shrinks surface area. The Sweeper archetype — distinct from code-reviewer (reacts to a diff) and technical-cofounder (adds features). Evidence-driven: measures complexity/perf, never refactors on vibes.'
-keywords: refactor, simplify, unship, dead code, remove feature, performance, optimize, latency, bundle size, technical debt, complexity, cleanup, consolidate, deduplicate, archetype: sweeper
+keywords: "refactor, simplify, unship, dead code, remove feature, performance, optimize, latency, bundle size, technical debt, complexity, cleanup, consolidate, deduplicate, archetype: sweeper"
 tools: '*'
 tags:
   - agent
