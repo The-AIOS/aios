@@ -47,10 +47,10 @@ AIOS bundles agents by **domain** (sales / strategy / engineering / …). Archet
 | Prototyper | `technical-cofounder` *(prototype mode)* | Throwaway-churn posture pre-PMF — explicitly *not* production-grade |
 | Builder | `technical-cofounder`, `aios-builder` | Production-grade, end-to-end |
 | Sweeper | `code-reviewer`, `/simplify` skill | Simplify, unship, optimize |
-| Grower | *(thin — PMF-iteration is a real capability gap)* | Surface a candidate via `/emerge` if the need is recurring |
+| Grower | `growth-engineer` | PMF-iteration on a *shipped* product — funnel, activation, retention, experiments |
 | Maintainer | `security-engineer`, `bug-triager`, `code-documenter` | Reliability, security, docs-in-sync |
 
-**Coverage read:** AIOS's engineering agents skew **Builder + Maintainer + Sweeper** (a post-PMF posture). **Prototyper and Grower are thin** — a real blind spot to fix with *posture-modes and one new capability*, never with a 6-bundle restructure.
+**Coverage read:** the engineering bundle now spans the full **build → grow → maintain** lifecycle. **Prototyper** is the one archetype with no dedicated agent — by design: it's a *posture-mode* of `technical-cofounder` (pre-PMF churn), not a missing capability. The rule it illustrates: fill a thin archetype with a posture-mode when the capability already exists, and a new agent only when a genuine capability is absent (as `growth-engineer` was) — never with a bundle restructure.
 
 ## Three use-sites
 
