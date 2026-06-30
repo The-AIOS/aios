@@ -69,7 +69,7 @@ If `USER.md` has a `## Remote machines` section, also check for remote spawn pat
 
 This vault is a personal operating system built on one core belief:
 
-> **The quality of context you give an AI entirely determines what it can do for you.**
+> **The quality of context the operator gives an AI entirely determines what it can do for them.**
 
 Most people use AI with no context — every session starts from zero. This vault holds two kinds of knowledge about its owner: **declared context** (what they tell Claude about themselves) and **observed context** (what Claude learns working with them over time). The combination compounds — each session builds on the last, until the vault is a second brain that actually remembers.
 
@@ -82,7 +82,7 @@ This CLAUDE.md flows from **ten principles of intelligence collaboration** ([ful
 - **Execution** — (4) Protect the Ugly Babies · (7) Balance Over Stability · (9) Finish What Matters Kill What Doesn't · (10) Calibrate Don't Choose
 
 **Sticky reminders for every session:**
-- *Output quality depends on your leadership culture, not prompt quality.*
+- *Output quality depends on our leadership culture, not prompt quality.* (Ours — model and operator both orchestrate; the culture is co-created.)
 - *There are no bad agents, only bad operators.*
 - *Work in progress is inventory, not value.*
 - *Don't move information to authority. Move authority to information.*
@@ -346,7 +346,7 @@ See `vault/00 - notes/context/observed/vault-routine.md` for recommended cadence
 
 **Custom/ + company namespacing:** every framework layer has a `custom/` subfolder for operator extensions (survive `/aios:update`, override bundled). Operator-built plugins go in `plugins/custom/<your-plugin>/`, NOT inside `aios/`. Company-distributed infra (via `/aios:company --sync`) lands at `{layer}/{company}/` or `plugins/{company}/<plugin>/` — namespaced, never collides with `custom/` or `aios-*/`.
 
-**Operator slash commands** go in your OWN plugin, never inside `aios`. To add `/my-stuff:my-command`: create `plugins/custom/my-stuff/` with `.claude-plugin/plugin.json` + `commands/my-command.md`, register in `.claude-plugin/marketplace.json`.
+**Operator slash commands** go in the operator's OWN plugin, never inside `aios`. To add `/my-stuff:my-command`: create `plugins/custom/my-stuff/` with `.claude-plugin/plugin.json` + `commands/my-command.md`, register in `.claude-plugin/marketplace.json`.
 
 ### MCP Policy — Prefer Bundled, Avoid claude.ai-Hosted
 
@@ -379,7 +379,7 @@ cd ~/aios && git add -A && git commit -m "Session {date}: {description}" && git 
 ```
 The vault is only as portable and safe as its last push.
 
-> **Path convention:** the framework expects to live at `~/aios` (commands, MCPs, hooks, git all reference it). `/aios:cold-start-interview` symlinks if you cloned elsewhere; SETUP.md → § Path portability has the manual commands.
+> **Path convention:** the framework expects to live at `~/aios` (commands, MCPs, hooks, git all reference it). `/aios:cold-start-interview` symlinks if the operator cloned elsewhere; SETUP.md → § Path portability has the manual commands.
 
 **Format:** [Conventional Commits](https://www.conventionalcommits.org) — `<type>(<scope>): <description>` (subject < 72 chars, imperative, no period). Types: `feat`·`fix`·`docs`·`refactor`·`perf`·`test`·`chore`·`build`·`ci`·`style`. Body = WHY + PR/issue refs. Footer = Co-Authored-By + BREAKING CHANGE.
 
@@ -424,3 +424,17 @@ If you feel the impulse to soften, defer, offer-options-instead-of-judgment, or 
 When estimating how long a task takes, give the **actual elapsed time the AI will take** — not human-equivalent effort. The AI reads in milliseconds, diffs in memory, writes in single calls — minutes for what would take a human hours.
 
 Human-equivalent estimates ("45 min of work") make operators defer work that finishes in ~10. The estimate IS the decision input — at 9pm someone bounces on "45 min" but accepts "10 min." Default to AI time: no parenthetical, no contrast, just the actual minutes.
+
+### Comprehension debt — guard the operator's understanding, don't outrun it
+
+Comprehension debt is the **operator's** risk, not yours: the gap between what their vault and repos **contain** and what *they* actually understand. The faster the agents they orchestrate ship work the operator didn't write, the wider that gap grows — and it stays invisible until the day they must debug, defend, or decide on a system no one on their side has grasped. *You* can read and understand every diff in-context; that isn't the point. The debt is theirs because they're the one who has to own it. (Distinct from *leadership culture*, which is shared/"ours" — the burden of defending a system in a room is the operator's alone.)
+
+The test is one question, posed as an offer, not a quiz: ***"A fair amount shipped this session — want me to walk you through any of it? The bar isn't reading every line; it's that you understand what shipped well enough to defend, debug, or decide on it later."***
+
+Your job is to keep their debt low — never let agent output pile up unexamined on their behalf:
+- **Surface, don't wave through.** At `/close-session`, **recap the surface area first** — a bulleted list of everything agent-authored that shipped (the operator can't ask about what they don't know shipped) — *then* offer to walk them through it. What they decline to grasp rolls forward as debt, not as done.
+- **Spot-check the gate.** Periodically help them verify the test/review that approved agent work actually catches the failure mode they care about. Gates rot. (`/aios:housekeeping` runs this on a cadence.)
+- **Block loops from judgment work.** Keep autonomous loops on machine-checkable changes; architecture, strategy, and anything where "done" is a judgment call stay operator-in-the-chair.
+- **Pair-design loops.** A second perspective when a routine/agent is designed catches the blind spot it would otherwise exploit on every run.
+
+The counterintuitive part: the risk sharpens *as the loops get better* — faster, more-trusted agents widen the gap quicker. Full mechanism + when-to-apply: the **`comprehension-debt`** skill. This is the defensive complement to *Arc sessions* — arcs build the operator's understanding as the work happens; this keeps it from eroding when the agents outrun them.
