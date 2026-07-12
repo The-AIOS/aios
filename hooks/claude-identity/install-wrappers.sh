@@ -255,15 +255,19 @@ spawn() {
   # the spawned session to the SECOND-BEST model (cheaper; "always aim second-best"
   # so it auto-tracks as the model lineup evolves — no hard-coding the frontier).
   # `judgment` (or no flag) keeps the frontier default (_claude_with_respawn's
-  # CLAUDE_MODEL fallback). Strip the flag first, THEN parse positionals so
-  # `spawn name task` is byte-identical to before when no --tier is passed.
-  local tier=""
+  # CLAUDE_MODEL fallback). --model <id> — optional, overrides --tier; pins an
+  # explicit/specialist model per-spawn (e.g. `--model claude-fable-5`) with NO
+  # global env mutation. Strip the flags first, THEN parse positionals so
+  # `spawn name task` is byte-identical to before when no flag is passed.
+  local tier="" model=""
   local -a _args=()
   while [ $# -gt 0 ]; do
     case "$1" in
-      --tier)   tier="$2"; shift 2 ;;
-      --tier=*) tier="${1#*=}"; shift ;;
-      *)        _args+=("$1"); shift ;;
+      --tier)    tier="$2"; shift 2 ;;
+      --tier=*)  tier="${1#*=}"; shift ;;
+      --model)   model="$2"; shift 2 ;;
+      --model=*) model="${1#*=}"; shift ;;
+      *)         _args+=("$1"); shift ;;
     esac
   done
   set -- "${_args[@]}"
@@ -279,6 +283,12 @@ spawn() {
     judgment|"") spawn_model="" ;;
     *) echo "⚠️  spawn: unknown --tier '$tier' (use: mechanical | judgment)" >&2; return 1 ;;
   esac
+  # --model <id> pins an explicit model (overrides --tier) — for a temporary or
+  # specialist model outside the tier ladder (e.g. --model claude-fable-5). It sets
+  # spawn_model, which the launcher exports as CLAUDE_MODEL for THIS spawn only —
+  # no global ~/.zshrc export (that hack risked leaving every future terminal
+  # pinned to the model if the revert was ever missed).
+  [ -n "$model" ] && spawn_model="$model"
 
   # Empty name → generate adj-animal handle + print onboarding tip
   if [ -z "$name" ]; then
@@ -286,6 +296,7 @@ spawn() {
     echo "[spawn] No name given — using handle: $name"
     echo "[spawn] Tip: name a specific agent for matched expertise (e.g. \`spawn accountant\`)."
     echo "[spawn] Tip: add \`--tier mechanical\` for cheap/mechanical work (ingests, sweeps); omit it for judgment work."
+    echo "[spawn] Tip: add \`--model <id>\` to pin a specific model (e.g. \`--model claude-fable-5\`) — no global env hack."
     echo "[spawn] See agents/_index.md for the full list."
     echo "[spawn] Opening session: $name"
   fi

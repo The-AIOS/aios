@@ -55,6 +55,8 @@ The `spawn` wrapper is the canonical way to launch a named worker session — it
 
 **Model tier (`--tier mechanical|judgment`).** Spawned sessions default to the frontier model. For **mechanical** work (ingests, file sweeps, transcription, deterministic transforms), `spawn --tier mechanical {name} "{task}"` routes to the *second-best* model (cheaper, fast, plenty for non-judgment work); omit it (or `--tier judgment`) for real reasoning. *Calibrate Don't Choose* applied to spend — don't pay frontier rates for a file sweep. (Windows: `-Tier mechanical`.)
 
+**Pin an explicit model (`--model <id>`).** To spawn on a model *outside* the tier ladder — a temporary or specialist model like Fable during an extension window — use `spawn --model claude-fable-5 {name} "{task}"`. `--model` overrides `--tier` and exports `CLAUDE_MODEL` **for that spawn's launcher only** — never a global `~/.zshrc` export. (The old workaround was to `export CLAUDE_MODEL` in your rc, spawn, then revert it; miss the revert and *every* future terminal launched on the pinned model. `--model` removes that footgun entirely.)
+
 **Killing a spawned worker:** `spawn-kill {name}` — atomic process-group kill (respawn loop + claude + descendants in one step), then closes the Terminal window (macOS). Use this, not SIGTERM (the respawn loop catches it and re-launches) or Cmd+W (triggers Terminal's modal + risks orphaning claude to launchd).
 
 For full cross-platform behavior (IDE-integrated tabs, Windows Terminal handling, respawn loop, parallel-spawn lock), see [`SETUP.md`](./SETUP.md) → **Spawn wrapper** section.

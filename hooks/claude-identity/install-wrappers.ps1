@@ -227,11 +227,17 @@ function spawn {
         # (cheaper; "always aim second-best" auto-tracks the lineup). judgment/none
         # keeps the frontier default (Invoke-ClaudeWithRespawn's CLAUDE_MODEL fallback).
         # ValidateSet rejects unknown tiers for free.
-        [ValidateSet('mechanical','judgment')] [string] $Tier
+        [ValidateSet('mechanical','judgment')] [string] $Tier,
+        # -Model <id> overrides -Tier; pins an explicit/specialist model (e.g.
+        # claude-fable-5) per-spawn with NO global env mutation (set for the call
+        # only, then restored below).
+        [string] $Model
     )
 
     # Tier -> model id. $null = no override -> frontier default. Second-best = Sonnet 4.6.
     $spawnModel = if ($Tier -eq 'mechanical') { 'claude-sonnet-4-6' } else { $null }
+    # -Model overrides -Tier: pin an explicit model outside the tier ladder.
+    if ($Model) { $spawnModel = $Model }
 
     # Empty name -> generate adj-animal handle + print onboarding tip
     if ([string]::IsNullOrEmpty($Name)) {
@@ -239,6 +245,7 @@ function spawn {
         Write-Host "[spawn] No name given -- using handle: $Name"
         Write-Host "[spawn] Tip: name a specific agent for matched expertise (e.g. ``spawn accountant``)."
         Write-Host "[spawn] Tip: add ``-Tier mechanical`` for cheap/mechanical work (ingests, sweeps); omit it for judgment work."
+        Write-Host "[spawn] Tip: add ``-Model <id>`` to pin a specific model (e.g. ``-Model claude-fable-5``) -- no global env hack."
         Write-Host "[spawn] See agents/_index.md for the full list."
         Write-Host "[spawn] Opening session: $Name"
     }

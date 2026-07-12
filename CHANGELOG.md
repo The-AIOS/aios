@@ -17,6 +17,21 @@
 
 ---
 
+## 2026-07-12 — `spawn --model <id>` / `-Model`: pin an explicit model, no global-env hack
+
+`hash: pending`
+
+> **`spawn` could pick a *tier* (`--tier mechanical|judgment`) but not an arbitrary model.** Pinning a temporary or specialist model — e.g. Fable during an extension window — meant `export CLAUDE_MODEL` in your `~/.zshrc`, spawn, then remember to revert. Miss the revert and *every* future terminal silently launches on the pinned model. This adds a first-class flag that reuses the wrapper's existing per-spawn export path, so there's no global state to leak.
+>
+> **What changed:**
+> - **`spawn --model <id>`** (and `--model=<id>`; Windows **`-Model <id>`**) — position-independent, parsed alongside `--tier`. Sets the spawned session's model directly and **overrides `--tier`** when both are passed. Exported as `CLAUDE_MODEL` in that spawn's launcher only (the wrapper already did this for `--tier mechanical` — `--model` just lets you name *any* model). Example: `spawn --model claude-fable-5 researcher "..."`.
+> - **CLAUDE.md § Spawning Sessions** — documents the flag + why it exists (kills the global-`~/.zshrc` dance and its stranding footgun).
+> - Both installers updated: `install-wrappers.sh` (bash/zsh) + `install-wrappers.ps1` (PowerShell).
+>
+> **Action required (CHECK-THEN-ACT, idempotent):** after `/aios:update` lands the new `hooks/claude-identity/install-wrappers.*`, check whether your live `spawn` already has the flag — macOS/Linux: `type spawn | grep -q -- '--model' && echo have || echo need`. If `need`, **re-run the installer** (`bash ~/aios/hooks/claude-identity/install-wrappers.sh`; Windows: `pwsh ~/aios/hooks/claude-identity/install-wrappers.ps1`) — idempotent (backup → strip → append → verify → auto-rollback). **LAST:** `source ~/.zshrc` / open a new terminal so the updated function loads (open shells keep the old one until re-sourced).
+
+---
+
 ## 2026-06-30 — Team-archetypes lens + comprehension-debt (compose the fleet · guard your understanding of it)
 
 `hash: 5a53c36`
