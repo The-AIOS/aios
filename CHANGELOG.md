@@ -19,7 +19,7 @@
 
 ## 2026-07-12 — `spawn --model <id>` / `-Model`: pin an explicit model, no global-env hack
 
-`hash: pending`
+`hash: 971bfc8`
 
 > **`spawn` could pick a *tier* (`--tier mechanical|judgment`) but not an arbitrary model.** Pinning a temporary or specialist model — e.g. Fable during an extension window — meant `export CLAUDE_MODEL` in your `~/.zshrc`, spawn, then remember to revert. Miss the revert and *every* future terminal silently launches on the pinned model. This adds a first-class flag that reuses the wrapper's existing per-spawn export path, so there's no global state to leak.
 >
