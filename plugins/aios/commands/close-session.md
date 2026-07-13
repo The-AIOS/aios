@@ -38,6 +38,7 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
 
 ### Steps
 
+0. **Truth-surface reconcile (ship-time truth-flip — see CLAUDE.md § Discipline).** For everything this session shipped, verify its truth surface already flipped: keyed items (grep the key's definition — a live `type: roadmap` file) show ✅ + their declared `ledger:` row appended; unkeyed items show done at their project note. Any miss → flip it now and note the miss in the session block. Close-session is the backstop, never the primary.
 1. Read today's daily note from `01 - calendar/{YYYY-MM}/{today YYYY-MM-DD}.md`
 2. Read `00 - notes/context/observed/session-insights.md` — check current content for snapshotting
 3. Infer a session label from the conversation: current time (HH:MM) + a 2–4 word topic. Present it to the user for confirmation: "Session label: **{HH:MM} | {Topic}** — correct, or adjust?"

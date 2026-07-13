@@ -411,6 +411,26 @@ Today's daily note is a live ledger, not a morning snapshot. The moment you comp
 - **On "go with agents."** When the operator says *"go with agents"* (or you otherwise spawn the suggested workers in-session), stamp 🚀 on each spawned line in that section — identical to what the Glass button does. The ball is now in an agent's court; 🚀 drops it from the Glass count and records the handoff.
 - **On completion.** When an agents-can-handle task finishes, strike its mirror line `~~…~~ ✅` (strike, not `[x]` — the line is checkbox-less by design, and a checkbox there would pollute carry-forwards). Match by the same core identity. Glass recognizes both struck mirror lines *and* a struck/`[x]` **canonical** copy elsewhere in the note (cross-section identity-match), so striking *either* the mirror or its canonical correctly drops it from the count — but strike the mirror too when you can, so the note text stays honest, not just the badge.
 
+### Ship-time truth-flip — the anti-drift contract
+
+Every tracked piece of work has exactly ONE surface that answers *"is this done?"* — its **truth surface**. For almost everything, **that surface is the project note** (Current State + to-dos) and nothing below requires any setup. Resolution order, mechanical:
+
+1. **Keyed?** If the item carries a stable key (e.g. `AB-12`) whose definition line lives in a **live roadmap file** (frontmatter `type: roadmap`, and `status:` not `archived`), that file owns DONE-vs-OPEN for it. Find the file by **grepping the key's definition** — never by a remembered path.
+2. **Else its project note** — the zero-config default.
+3. **Else it has no truth home** — either give it one, or it's daily-note/conversation-scoped. That's legitimate (it carries or dies by the carry rules); it just may not masquerade as tracked work.
+
+The rules:
+
+- **Flip at ship time.** The session that ships an item updates its truth surface **in that same session** — not at close-day. If the truth surface declares a ledger (frontmatter `ledger: "[[...]]"`), append the ledger row then too. No `ledger:` declared → **the git commit IS the ledger** (no extra ceremony).
+- **Derived surfaces only reference.** Daily notes, weekly plans, `_index` snapshots, and dashboards cite the truth surface (by key, when keyed) — they never accumulate competing status. The live daily-note ledger (above) and the project-note-before-index rule are instances of this law.
+- **Close rituals reconcile.** `/close-day` and `/close-session` diff the day's ships against their truth surfaces and flag misses — the backstop, never the primary writer.
+- **Workers don't flip; coordinators do.** Spawned workers report ships in their session capture; the coordinating session flips truth surfaces at harvest (single-writer discipline on shared surfaces).
+- **Out-of-session ships** (the operator shipped from a browser; an external party acted): the first session that learns of it flips it — close-day guarantees staleness never exceeds a day.
+- **Keyed items carry their key everywhere.** A project-note to-do that also has a roadmap key cites it inline (`- [ ] upload the interior (AB-12)`) so one grep connects both surfaces.
+- **Retirement is a checklist, not a flip.** A roadmap may only move to `status: archived` with zero open keys — every row done, killed, or re-homed to its project note first. `/aios:housekeeping` flags archived-with-open-keys, stale live roadmaps, and cross-file key collisions.
+
+**The keyed roadmap is opt-in**, for big multi-project pushes that want one prioritized surface over many notes: instantiate `templates/aios/roadmap-template.md` (stable per-family keys — keys are identity, list order is priority, never renumber). If you never use one, rule 1 never fires and everything above is just your project notes staying honest in real time.
+
 ### Deliverables land standalone
 
 Deliverables (drafts, answers, generated content the user asked for) go in a **standalone message or a file — never as text between tool calls in the same turn**. Mid-turn interleaved text can silently drop on some surfaces (routines, bridge/remote sessions): it's in Claude's context but never renders or persists. Corollary: if the user says they didn't see something, verify against the on-disk transcript before defending — context is not evidence of delivery.

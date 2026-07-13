@@ -9,7 +9,7 @@ allowed-tools: mcp__obsidian__*, Read, Grep, Glob, Bash
 
 # /housekeeping — Vault Housekeeping
 
-Periodic care of the vault as it grows. Produces a review packet across 22 buckets — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification, file placement drift, agent-output gate health — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
+Periodic care of the vault as it grows. Produces a review packet across 23 buckets — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification, file placement drift, agent-output gate health, truth-surface drift — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
 
 **When to run:** monthly as a rhythm, or whenever the vault feels heavy (lots of carries, too many active projects, stale snapshots). `/today` will suggest it when triggers fire.
 
@@ -33,7 +33,7 @@ Check if `00 - notes/logs/command-logs/housekeeping-*.md` exists. If not, this i
 
 ### Phase 1 — Scan (build the proposal packet)
 
-Gather evidence across **all 22 buckets — no skipping.** "Deferred to tooling" is banned; the scanning IS the tooling. If a bucket surfaces low signal, state that explicitly with evidence ("scanned N items, 0 merge candidates found") — don't hand-wave.
+Gather evidence across **all 23 buckets — no skipping.** "Deferred to tooling" is banned; the scanning IS the tooling. If a bucket surfaces low signal, state that explicitly with evidence ("scanned N items, 0 merge candidates found") — don't hand-wave.
 
 #### Bucket 1: Link repairs
 
@@ -628,6 +628,32 @@ Comprehension debt (CLAUDE.md § VI) compounds when the operator trusts a gate t
 
 **Why this bucket exists:** comprehension debt has a prevention axis, not just a detection axis. The `/close-session` ledger surfaces what the operator hasn't grasped; this bucket confirms the automated gates they're *trusting instead of grasping* still earn that trust. Gates that rot turn "the loop has it covered" into a false statement no one notices until production.
 
+#### Bucket 23: Truth-surface drift (NEW — ship-time truth-flip backstop)
+
+The ship-time truth-flip contract (CLAUDE.md § Discipline) *prevents* drift at ship time; this bucket *detects* what slipped through anyway — a session that ended before flipping, a ship performed outside any session (browser upload, a counterparty acting), a label that was already wrong. Two lanes:
+
+**Lane 1 — project-note freshness (every operator, zero config):**
+1. For each **active** project note with a `Code` path in its Current State: compare the repo's last-commit date (`git -C {path} log -1 --format=%cs`) against the note's frontmatter `updated` / file-modified date.
+2. Note older than its repo's recent activity → propose: *"note may lag reality — reconcile Current State + to-dos against the last {N} commits."*
+3. Inverse heuristic for Drive/non-coding projects: `status: active` but the note untouched for 21+ days → propose an honesty check (still active, or `maintenance`?).
+
+**Lane 2 — keyed-roadmap edge cases (only if any `type: roadmap` file exists in the vault; else report "no roadmap files — lane skipped, 0 proposals"):**
+- **Stale live roadmap:** status live but no key flipped in 14+ days → propose: reconcile or archive (via the retirement checklist — zero open keys).
+- **Archived with open keys:** `status: archived` but non-✅/❌ key rows remain → violation; propose re-homing each open key to its project note.
+- **Keys outside roadmap files:** key-definition-shaped lines (`^- [A-Z]{2,4}-\d+ ·`) in files *without* `type: roadmap` frontmatter → drift-bait; propose stamping the frontmatter or de-keying the list.
+- **Cross-file key collisions:** the same key defined in two live roadmap files → propose a prefix rename in the younger file.
+
+**Proposal table format:**
+
+| # | Finding | Evidence | Action |
+|---|---|---|---|
+| 23.1 | `[[project-X]]` note lags its repo | note updated {date} · repo last commit {date} (+{N} commits since) | [ ] reconcile |
+| 23.2 | roadmap `{file}` stale-live | no key movement in {N} days | [ ] reconcile or archive |
+
+**Propose-only.** Flips and re-homes are the operator's call at packet review.
+
+**Why this bucket exists:** every prevention needs its detection twin. Without this sweep, one missed flip silently re-opens the gap between what the vault says and what reality did — exactly the drift class the truth-flip contract exists to close.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:
@@ -656,6 +682,7 @@ Categorize all findings into one review table:
 - Skill registration verify: {N} auto-registered, {M} proposals (collisions/dangling)
 - File placement drift: {N} proposals
 - Agent-output gate health: {N} samples checked, {M} hollow gates / stale permission audits
+- Truth-surface drift: {N} lagging notes, {M} roadmap flags
 
 ### 🟢 Auto-applied (no approval needed)
 {Low-stakes mechanical fixes — link adds where unambiguous, snapshot timestamp updates, obvious [x] marks}

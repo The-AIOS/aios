@@ -17,6 +17,22 @@
 
 ---
 
+## 2026-07-13 — Ship-time truth-flip: the anti-drift contract (project notes stay honest in real time; keyed roadmaps opt-in)
+
+`hash: PENDING`
+
+> **What this heals.** Every vault accumulates the same silent gap: work ships, but the surface that tracks it finds out at the next close-day — or never. A session finishes something and moves on; the project note keeps saying "pending"; the daily note, the weekly plan, and an `_index` snapshot each hold their own version of the status; and days later nobody is sure which one is true without re-checking git. Drift like this was caught at scale in a real ground-truth audit (14 repos + 11 live surfaces vs. their tracking labels — a dozen items were done in reality but "pending" on paper, and one "shipped" build had never left a local branch). This update makes the fix structural instead of heroic.
+>
+> **What you're getting:**
+> - **CLAUDE.md § Discipline → "Ship-time truth-flip — the anti-drift contract."** Every tracked item has exactly ONE *truth surface* — for almost everything, **that's the project note you already have; nothing to configure.** The rule: the session that ships something updates its truth surface **in that same session** (not at close-day); daily notes / weekly plans / snapshots only *reference* it; `/close-day` + `/close-session` become **reconcilers** that verify and flag misses instead of being the only place status catches up. Includes the edge rules: spawned workers report ships in their capture and the coordinator flips at harvest; ships that happen outside any session (a browser upload, an external party acting) are flipped by the first session that learns of them.
+> - **`/aios:close-day` + `/aios:close-session`** each gain one reconcile step wired to the contract.
+> - **`/aios:housekeeping` Bucket 23 — truth-surface drift (buckets 22 → 23).** The detection twin: flags active project notes that are *older than their own repo's latest commits* ("note may lag reality"), plus roadmap-file edge cases. Zero config; lanes that don't apply to you report themselves skipped.
+> - **`templates/aios/roadmap-template.md` — the opt-in instrument.** For a big multi-project push that wants ONE prioritized surface over many notes: a *keyed roadmap* (stable per-family keys like `AB-1` — keys are identity, list order is priority, never renumber), self-declared via `type: roadmap` frontmatter, optional `ledger:` for a ship-CHANGELOG. When the push ends, a retirement checklist (close every key, then `status: archived`) hands ownership back to project notes automatically. **If you never instantiate it, nothing about your vault changes** — no ledger is required anywhere, because for unkeyed work *the git commit is the ledger*.
+>
+> **Action required (CHECK-THEN-ACT, idempotent):** none — this lands entirely through the synced files; defaults preserve current behavior everywhere. *(Optional, only if you run a large push:* instantiate `templates/aios/roadmap-template.md`, grep first so your key prefixes don't collide.*)* No restart needed.
+
+---
+
 ## 2026-07-12 — `spawn --model <id>` / `-Model`: pin an explicit model, no global-env hack
 
 `hash: 971bfc8`

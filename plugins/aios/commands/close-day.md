@@ -56,8 +56,9 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
 9. **Resolve handoff items** (see Handoff Resolution below)
 10. Ask the user: "What happened today that isn't in the notes? Anything on your mind?"
 11. Synthesize the review
-12. **Update weekly plan progress** (see Weekly Plan Progress Update below)
-13. **Sync Google Tasks** — use pre-loaded Tasks data (see Google Tasks Sync below)
+12. **Truth-surface reconcile (ship-time truth-flip — see CLAUDE.md § Discipline).** For each ship in today's note (the `### Shipped` candidates + `[x]` items), verify its truth surface already flipped: keyed items (grep the key's definition — a live `type: roadmap` file) show ✅ + their declared `ledger:` row appended; unkeyed items show done at their project note. Any miss → flip it now and record the miss in the Observed line (a repeated miss pattern is antifragile material). Close-day is the backstop, never the primary writer.
+13. **Update weekly plan progress** (see Weekly Plan Progress Update below)
+14. **Sync Google Tasks** — use pre-loaded Tasks data (see Google Tasks Sync below)
 
 ## Aios-update freshness rendering
 
