@@ -19,7 +19,7 @@
 
 ## 2026-07-13 — Ship-time truth-flip: the anti-drift contract (project notes stay honest in real time; keyed roadmaps opt-in)
 
-`hash: PENDING`
+`hash: 99c02e8`
 
 > **What this heals.** Every vault accumulates the same silent gap: work ships, but the surface that tracks it finds out at the next close-day — or never. A session finishes something and moves on; the project note keeps saying "pending"; the daily note, the weekly plan, and an `_index` snapshot each hold their own version of the status; and days later nobody is sure which one is true without re-checking git. Drift like this was caught at scale in a real ground-truth audit (14 repos + 11 live surfaces vs. their tracking labels — a dozen items were done in reality but "pending" on paper, and one "shipped" build had never left a local branch). This update makes the fix structural instead of heroic.
 >
