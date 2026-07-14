@@ -1,7 +1,7 @@
 ---
 tags: [hooks, index]
 created: '2026-03-28'
-updated: '2026-05-21'
+updated: '2026-07-13'
 ---
 # Hooks
 
@@ -21,12 +21,13 @@ updated: '2026-05-21'
 |------|-------|-------------|
 | `inject-datetime.sh` (`.ps1`) | `UserPromptSubmit` | Injects current system date/time/timezone into Claude's context before each prompt. Eliminates the "Claude infers time from conversational context instead of checking system clock" failure mode. See `antifragile.md` 2026-05-18 entry. Cross-platform: `.sh` for macOS/Linux, `.ps1` for Windows. |
 | `claude-identity/claude-identity.sh cache \| context-monitor.py` | `statusLine` | Writes rate-limit cache on every Claude turn (feeds the autopilot's fast-path quota detector) + powers the context-monitor status display. Wired in `~/.claude/settings.json` `statusLine.command`. |
+| `guard-venture-mount.py` | `PreToolUse` (Edit/Write/MultiEdit/NotebookEdit) | Blocks direct edits to company-context **mounts** — `context/ventures/{v}/` files carrying a `.{v}-sync` marker are synced copies of a `{v}-context` source repo; editing them is reverted on the next `/aios:company --sync`. Points at the source repo instead. The framework's first PreToolUse hook. **Fail-open** (never bricks editing), **deterministic** (~nil false-positives), escape hatch `AIOS_ALLOW_MOUNT_EDIT=1`; the rsync sync path is exempt (Bash, not Edit/Write). Wire per SETUP §10 Hook C. Born from `antifragile.md` #81. |
 
 ## Operator extensions
 
 - `custom/` — your own hooks (survive `/aios:update`). Documented in `custom/_index.md` with the registry table format.
 
-**Wiring:** event hooks are wired in `.claude/settings.json` (project-level) or `~/.claude/settings.json` (user-level). The vault ships a project-level `.claude/settings.json` that wires `inject-datetime.sh` to `UserPromptSubmit`. On Windows, replace `bash` with `pwsh -File` in the command path.
+**Wiring:** event hooks are wired in `.claude/settings.json` (project-level) or `~/.claude/settings.json` (user-level). The vault ships a project-level `.claude/settings.json` that wires `inject-datetime.sh` to `UserPromptSubmit`. On Windows, replace `bash` with `pwsh -File` in the command path. **`PreToolUse` hooks** (e.g. `guard-venture-mount.py`) wire the same way with a `matcher` — see SETUP §10 Hook C.
 
 ## Adding a hook
 

@@ -319,7 +319,7 @@ After install, run `spawn SESSION_NAME [TASK]` from any Claude Code session.
 
 ### 10. Wire the universal hooks (required — runs every operator)
 
-Two hooks every operator needs, regardless of OS or account count. Add them to `~/.claude/settings.json` (Claude does this for you during setup — shown here for transparency):
+Three hooks every operator needs, regardless of OS or account count. Add them to `~/.claude/settings.json` (Claude does this for you during setup — shown here for transparency):
 
 **Hook A — `inject-datetime` UserPromptSubmit hook** (eliminates the "Claude infers wrong weekday/time from conversation" failure mode). Adds a `<system-time>` block to every user prompt so Claude reads the real clock.
 
@@ -352,7 +352,28 @@ Windows operators use `pwsh -File "$HOME\aios\hooks\inject-datetime.ps1"` instea
 }
 ```
 
-**Verify both fired:** open a fresh Claude Code session, type *"what's today's date?"* — Claude should reply with the actual current date (proves the UserPromptSubmit hook ran). Check the statusLine at the bottom of the terminal — it should show context usage + quota state (proves the statusLine command ran).
+**Hook C — `guard-venture-mount` PreToolUse hook** (blocks direct edits to company-context **mounts**). Files under `vault/00 - notes/context/ventures/{v}/` that carry a `.{v}-sync` marker are synced copies of a `{v}-context` source repo — editing them in the vault is silently reverted on the next `/aios:company --sync` and never reaches the source. This hook stops that at the moment of edit and points you at the source repo. Add to `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          { "type": "command", "command": "python3 ~/aios/hooks/guard-venture-mount.py", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Merge `PreToolUse` alongside your existing `UserPromptSubmit` array — don't replace the `hooks` object. Windows operators use `python` (not `python3`). Design: **fail-open** (any error, or a `ventures/` folder with no `.{v}-sync` marker, → allows — it can never brick editing), **deterministic**, and reversible via `AIOS_ALLOW_MOUNT_EDIT=1` to intentionally edit a mount. Only operators with company mounts (`/aios:company`) will ever see it fire; for everyone else it's a silent no-op.
+
+**Verify hooks A + B fired:** open a fresh Claude Code session, type *"what's today's date?"* — Claude should reply with the actual current date (proves the UserPromptSubmit hook ran). Check the statusLine at the bottom of the terminal — it should show context usage + quota state (proves the statusLine command ran).
+
+**Verify Hook C fired:** ask Claude to edit any `vault/00 - notes/context/ventures/{v}/*.md` file — it should refuse and point you at the `{v}-context` source repo. (No company mounts yet? Skip — there's nothing for it to guard until you `/aios:company --mount`.) Requires a session restart after wiring, since PreToolUse registration loads at session start.
 
 If either hook silently failed: re-read the settings.json and confirm the `hooks.UserPromptSubmit` array + `statusLine.command` are exactly as above. Common gotcha: an existing settings.json with `hooks: {}` empty object — merge the array in, don't replace the empty value at the wrong nesting level.
 
