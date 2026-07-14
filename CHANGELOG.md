@@ -17,6 +17,32 @@
 
 ---
 
+## 2026-07-13 — Mount-guard: a PreToolUse hook that blocks editing company-context mounts
+
+`hash: 55403f8`
+
+> **What this heals.** Files under `vault/00 - notes/context/ventures/{v}/` are *mounts* of a `{v}-context` source repo — they arrive via `/aios:company --sync`. Editing the mount directly feels natural (it's right there in your vault), but the edit is silently reverted on the next sync and never reaches the source of truth other operators pull from. This is a documented trap that still recurred — twice, in the maintainers' own vault — because the guardrail lived in *recall* (a rule you had to remember before editing). This update moves it to *enforcement*.
+>
+> **What you're getting:**
+> - **`hooks/guard-venture-mount.py`** — the framework's first PreToolUse hook. On any Edit/Write/MultiEdit/NotebookEdit to a `context/ventures/{v}/` path carrying a `.{v}-sync` marker, it blocks and points you at the `{v}-context` source repo + `/aios:company --sync {v}`. Design guarantees: **fail-open** (any error, or a `ventures/` folder with no marker, → allows — it can never brick editing), **deterministic** (editing a mount is always wrong → ~nil false-positives), **escape hatch** (`AIOS_ALLOW_MOUNT_EDIT=1`), and the sync path is exempt (rsync runs via Bash, not Edit/Write).
+> - **SETUP.md §10 Hook C** + **`hooks/_index.md`** — wiring + docs.
+>
+> **Action required (CHECK-THEN-ACT, idempotent):**
+> 1. Confirm the script synced: `test -f ~/aios/hooks/guard-venture-mount.py && echo ok`. Prints nothing → your sync didn't complete; re-run `/aios:update`.
+> 2. Wire it **only if not already wired.** Check `~/.claude/settings.json` for a `hooks.PreToolUse` entry calling `guard-venture-mount.py`. If absent, merge this in — alongside your existing `UserPromptSubmit`, do **not** replace the `hooks` object:
+>    ```json
+>    "PreToolUse": [
+>      { "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+>        "hooks": [ { "type": "command", "command": "python3 ~/aios/hooks/guard-venture-mount.py", "timeout": 10 } ] }
+>    ]
+>    ```
+>    Windows: use `python` instead of `python3`. No-op if already present.
+> 3. **[do last — restart]** Restart your Claude Code session so the PreToolUse hook loads — scripts sync live, but hook *registration* only loads at session start, so until you restart the guard is inert. After restart, verify: ask Claude to edit any `context/ventures/{v}/*.md` — it should refuse with a source-repo pointer. (No company mounts? Nothing to test; the hook stays a silent no-op for you.)
+>
+> Background: `antifragile.md` #81 — guardrail placement (recall vs enforcement); the twice-recurring mount edit is what motivated moving the check into the harness.
+
+---
+
 ## 2026-07-13 — Ship-time truth-flip: the anti-drift contract (project notes stay honest in real time; keyed roadmaps opt-in)
 
 `hash: 99c02e8`
