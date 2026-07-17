@@ -409,9 +409,9 @@ $activate_clause
 delay 1.2
 tell application "System Events"
   $tell_process_clause
-    -- Robustness: force the IDE frontmost before any keystroke. `activate` alone can
+    -- Robustness: force the IDE frontmost before any keystroke. \`activate\` alone can
     -- lose the race when another window/app holds focus at spawn time (e.g. operator
-    -- typing in a separate terminal) — keystrokes then leak. `set frontmost to true`
+    -- typing in a separate terminal) — keystrokes then leak. \`set frontmost to true\`
     -- is the forceful guarantee; the extra settle lets the focus change land.
     set frontmost to true
     delay 0.5
