@@ -450,3 +450,71 @@ jobs:
             exit 1
           fi
           echo "OK: all capability-count claims match bundled ground truth"
+
+  skill_resolution:
+    name: Skill resolution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Every agent skill reference resolves to a bundled skill
+        run: |
+          python3 <<'PY'
+          import sys, glob, os, re
+
+          # Ground truth: a skill "resolves" if skills/<source>/<name>/SKILL.md exists.
+          # Source ∈ aios | anthropic | superpowers | custom (the source-grouped layout).
+          valid = set()
+          for skill_md in glob.glob("skills/*/*/SKILL.md"):
+              valid.add(os.path.basename(os.path.dirname(skill_md)))
+
+          # Parse each bundled agent's "## Skills" section and extract the skill each
+          # bullet names (the first backtick-quoted token on a "- `name` — ..." line).
+          skills_heading = re.compile(r'^## Skills\s*$')
+          section_end    = re.compile(r'^## ')          # next level-2 heading closes the section
+          bullet_skill   = re.compile(r'^-\s+`([^`]+)`')  # "- `skill-name` — description"
+
+          agent_files = [
+              p for p in glob.glob("agents/aios/*/*.md")
+              if os.path.basename(p) not in ("_index.md", "README.md")
+          ]
+
+          failures = []
+          for path in agent_files:
+              with open(path) as f:
+                  lines = f.read().splitlines()
+              in_section = False
+              for line in lines:
+                  if skills_heading.match(line):
+                      in_section = True
+                      continue
+                  if in_section and section_end.match(line):
+                      in_section = False
+                      continue
+                  if not in_section:
+                      continue
+                  m = bullet_skill.match(line)
+                  if not m:
+                      continue
+                  name = m.group(1).strip()
+                  # Plugin-namespaced references (e.g. `document-skills:xlsx`) point at
+                  # skills provided by Claude Code's plugin marketplace, not this repo's
+                  # bundled tree — out of scope for local resolution. Skip them.
+                  if ":" in name:
+                      continue
+                  if name not in valid:
+                      failures.append((path, name))
+
+          if failures:
+              print("::error::Agent(s) reference bundled skills that don't resolve to skills/*/<name>/SKILL.md:")
+              for path, name in failures:
+                  print(f"  - {path} -> `{name}`  (no skills/*/{name}/SKILL.md)")
+              print("")
+              print("A shipped agent must not point at a missing skill. Fix by authoring the skill under")
+              print("skills/<source>/<name>/ (source in aios|anthropic|superpowers|custom), or correct/remove")
+              print("the stale reference. Plugin-namespaced refs like `document-skills:xlsx` are intentionally")
+              print("skipped (resolved by the plugin marketplace, not this bundle).")
+              sys.exit(1)
+
+          print(f"OK: all bundled skill references across {len(agent_files)} agents resolve to skills/*/<name>/SKILL.md")
+          PY

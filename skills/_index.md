@@ -17,7 +17,7 @@ updated: '2026-06-30'
 
 | Folder | What | Upstream | License |
 |---|---|---|---|
-| [`skills/aios/`](./aios/) | AIOS-bundled skills (22) — high-signal coding/Obsidian/meta/systems after the 2026-05-21 audit. See "What got pruned" below for what was removed. | This framework | GPL-2.0-or-later |
+| [`skills/aios/`](./aios/) | AIOS-bundled skills (23) — high-signal coding/Obsidian/meta/systems after the 2026-05-21 audit. See "What got pruned" below for what was removed. | This framework | GPL-2.0-or-later |
 | [`skills/anthropic/`](./anthropic/) | Anthropic's example skills (11) — skill-creator, claude-api, mcp-builder, frontend-design, theme-factory, doc-coauthoring, internal-comms, web-artifacts-builder, webapp-testing, algorithmic-art, slack-gif-creator | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
 | [`skills/superpowers/`](./superpowers/) | Core software-engineering workflows (14) — TDD, debugging, code review, plans, brainstorming, worktrees, subagent dispatching | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
 | [`skills/custom/`](./custom/) | Your own skill extensions — survive `/aios:update` | Operator | Operator's choice |
@@ -74,7 +74,7 @@ Core software-engineering disciplines. Many of these reference each other (e.g.,
 
 ## AIOS-bundled (this framework)
 
-22 high-signal skills, post-2026-05-21 pruning. The bundle targets *load-bearing operator workflows* — daily reference + Obsidian power-user + meta + systems/stewardship — not generic technical reference (that's Claude's training).
+23 high-signal skills, post-2026-05-21 pruning. The bundle targets *load-bearing operator workflows* — daily reference + Obsidian power-user + meta + systems/stewardship — not generic technical reference (that's Claude's training).
 
 **Coding & API**
 - `karpathy-coding` — behavioral rules for any coding session (think before, simplicity, surgical changes)
@@ -95,6 +95,7 @@ Core software-engineering disciplines. Many of these reference each other (e.g.,
 - `json-canvas` — `.canvas` files with nodes/edges/groups
 
 **Meta**
+- `deep-research` — multi-source research for acting under uncertainty; maps the operator's corpus first, sweeps several angles, triangulates, and returns ranked what/why/how proposals (each with an output mode). The harness behind the strategy agents (`market-researcher`, `company-analyst`, `consultant`, `protocol-steward`)
 - `prompt-engineering-patterns` — production LLM prompting
 - `data-presentation` — storytelling + dashboard design (consolidated)
 - `infographic-builder` — turn a structured doc (ingest, role report, weekly learnings) into a self-contained HTML one-pager; brand-first theming with [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) as the fallback library

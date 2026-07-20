@@ -29,7 +29,6 @@ Generate and update project documentation (README, CLAUDE.md, inline docs) to ac
 ## Skills
 
 Lean on these registered skills:
-- `explain-code` — understand + clearly explain code before documenting it
 - `obsidian-markdown` — when docs live in the vault (wikilinks, callouts, frontmatter)
 
 
