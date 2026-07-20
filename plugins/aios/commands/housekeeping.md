@@ -654,6 +654,27 @@ The ship-time truth-flip contract (CLAUDE.md § Discipline) *prevents* drift at 
 
 **Why this bucket exists:** every prevention needs its detection twin. Without this sweep, one missed flip silently re-opens the gap between what the vault says and what reality did — exactly the drift class the truth-flip contract exists to close.
 
+#### Bucket 24: Memory-pressure channeling (NEW — cache-vs-database hygiene)
+
+Auto-memory (`MEMORY.md` + its note files) has a hard ceiling (~25KB / 200 lines). Past ~18KB or ~150 entries, a compaction that only *trims* silently drops durable context. This bucket catches the pressure early and proposes the non-lossy fix — channel WHAT to the vault, compact the HOW (CLAUDE.md § Context Hierarchy → *Memory-pressure channeling*).
+
+1. Measure `MEMORY.md` size + index-entry count (`wc -c` + count of index lines).
+2. If **> ~18KB OR > ~150 entries** → propose a **channeling pass**, not a bare compaction:
+   - Triage the index: mark each entry *WHAT* (a fact with a canonical vault home) or *HOW* (tool/process rule).
+   - For each WHAT: name its authoritative vault home (an observed-context file or the project note's Current State) via the File Placement Router.
+   - Then compact the HOW residue (merge dupes, drop graduated rules).
+
+**Proposal table format:**
+
+| # | Finding | Evidence | Action |
+|---|---|---|---|
+| 24.1 | `MEMORY.md` near ceiling | {KB}KB · {N} entries (ceiling ~25KB / 200) | [ ] channeling pass (channel WHAT → vault, compact HOW) |
+| 24.2 | `{memory-entry}` is WHAT, not HOW | duplicates `{vault-file}` (correlated staleness) | [ ] channel to `{home}`, remove from memory |
+
+**Propose-only.** The operator confirms which entries channel where at packet review — memory-vs-vault authority is a judgment call.
+
+**Why this bucket exists:** a full cache is a *silent* failure mode — above the ceiling the index loads only partially and the model quietly stops "remembering" whatever fell off the end, with no error to either party. Detecting the pressure *before* it tips, and channeling durable facts to their canonical home, keeps memory a lean HOW-cache and the vault the authoritative WHAT-database.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:
