@@ -50,3 +50,14 @@ done
 echo ""
 echo "Done — linked $linked, skipped $skipped."
 echo "Restart Claude Code sessions to load newly-registered skills."
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Wiring convention (for skill authors) — a bundled skill earns its keep by being
+# NAMED at the judgment moment it serves: inline in a command step, or in an
+# agent's `## Skills` section, in the greppable backtick form (e.g. "consult the
+# `team-archetypes` skill"). Name it where the call is made — never as a generic
+# "skills available" preamble (that's noise; named-where-needed, it's a checklist).
+# The CI skill-resolution job (.github/workflows/validate.yml) verifies every
+# agent `## Skills` reference resolves to a shipped SKILL.md; an orphan skill
+# (shipped but named by nobody) is a candidate for skills/custom/.
+# ─────────────────────────────────────────────────────────────────────────────

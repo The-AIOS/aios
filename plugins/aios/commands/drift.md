@@ -11,6 +11,8 @@ allowed-tools: mcp__obsidian__*, Read
 
 You are scanning the user's vault to find what's being quietly avoided or neglected.
 
+**Before labeling anything "avoidance" (consult the `sustainable-cadence` skill):** distinguish genuine avoidance from *legitimate* pacing — a window-cadence carry, a quality-gate deferral, a deliberately slow rhythm, or capacity-protection is NOT drift. This discrimination is the skill's declared use case; mislabeling paced work as avoidance is the failure mode that makes /drift feel like guilt instead of a mirror.
+
 ## When to use
 
 Mid-week or when something feels off — the avoidance detector. Honest scan of what's being quietly avoided based on gaps in notes. Trust this one to surface things you've been not-naming.

@@ -110,6 +110,8 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `react-nextjs-patterns` | `skills/aios/` | "Build this Next.js / React feature" |
 | `tailwind-design-system` | `skills/aios/` | "Style this with Tailwind tokens" |
 | `prompt-engineering-patterns` | `skills/aios/` | "Improve this prompt" |
+| `deep-research` | `skills/aios/` | "What should we write / build / do next?" — multi-source research that returns ranked what/why/how proposals |
+| `orchestration-ladder` | `skills/aios/` | "Should this be one agent, a parallel fan-out, or a workflow?" |
 | `systematic-debugging` | `skills/superpowers/` | "Help me debug this systematically" |
 | `test-driven-development` | `skills/superpowers/` | "Let's write tests first" |
 | `code-review-excellence` | marketplace plugin | "Review this code thoroughly" — install via `/plugin install code-review@claude-plugins-official` |
@@ -166,7 +168,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `accessibility-compliance` | `skills/aios/` | "Check this for accessibility (WCAG, ARIA, contrast)" |
 | `pci-compliance` | `skills/aios/` | "Audit this for PCI compliance" |
 
-**Source folders:** `skills/aios/` (AIOS-built — 22 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 47. Browse `skills/_index.md` for the full registry.
+**Source folders:** `skills/aios/` (AIOS-built — 24 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 49. Browse `skills/_index.md` for the full registry.
 
 **Marketplace skills** (NOT in `skills/`, install via `/plugin install`): `canvas-design`/`docx`/`pdf`/`pptx`/`xlsx` (via `document-skills` plugin) · `code-review-excellence` (via `code-review@claude-plugins-official`) · `defuddle` (via Anthropic skills marketplace) · `superpowers` full marketplace (`obra/superpowers-marketplace`).
 

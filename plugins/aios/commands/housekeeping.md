@@ -654,6 +654,48 @@ The ship-time truth-flip contract (CLAUDE.md § Discipline) *prevents* drift at 
 
 **Why this bucket exists:** every prevention needs its detection twin. Without this sweep, one missed flip silently re-opens the gap between what the vault says and what reality did — exactly the drift class the truth-flip contract exists to close.
 
+#### Bucket 24: Memory-pressure channeling (NEW — cache-vs-database hygiene)
+
+Auto-memory (`MEMORY.md` + its note files) has a hard ceiling (~25KB / 200 lines). Past ~18KB or ~150 entries, a compaction that only *trims* silently drops durable context. This bucket catches the pressure early and proposes the non-lossy fix — channel WHAT to the vault, compact the HOW (CLAUDE.md § Context Hierarchy → *Memory-pressure channeling*).
+
+1. Measure `MEMORY.md` size + index-entry count (`wc -c` + count of index lines).
+2. If **> ~18KB OR > ~150 entries** → propose a **channeling pass**, not a bare compaction:
+   - Triage the index: mark each entry *WHAT* (a fact with a canonical vault home) or *HOW* (tool/process rule).
+   - For each WHAT: name its authoritative vault home (an observed-context file or the project note's Current State) via the File Placement Router.
+   - Then compact the HOW residue (merge dupes, drop graduated rules).
+
+**Proposal table format:**
+
+| # | Finding | Evidence | Action |
+|---|---|---|---|
+| 24.1 | `MEMORY.md` near ceiling | {KB}KB · {N} entries (ceiling ~25KB / 200) | [ ] channeling pass (channel WHAT → vault, compact HOW) |
+| 24.2 | `{memory-entry}` is WHAT, not HOW | duplicates `{vault-file}` (correlated staleness) | [ ] channel to `{home}`, remove from memory |
+
+**Propose-only.** The operator confirms which entries channel where at packet review — memory-vs-vault authority is a judgment call.
+
+**Why this bucket exists:** a full cache is a *silent* failure mode — above the ceiling the index loads only partially and the model quietly stops "remembering" whatever fell off the end, with no error to either party. Detecting the pressure *before* it tips, and channeling durable facts to their canonical home, keeps memory a lean HOW-cache and the vault the authoritative WHAT-database.
+
+#### Bucket 25: Spawned-output placement drift (NEW — spawn-brief destination discipline)
+
+Spawned workers can't see the vault's placement conventions — output drifts, or lands provisionally in the `_inbox`, unless the brief routed it by type (CLAUDE.md § Spawning Sessions). This bucket empties the inbox and catches anything mis-filed — **especially an export that got dropped as if it were a reflection.**
+
+1. **Empty the `_inbox`.** Scan `vault/00 - notes/reflections/_inbox/` (the provisional landing zone) for anything sitting there → propose its real home via the File Placement Router: **is it audience-facing? → `03 - export/{type-or-venture}/`** (the export safety net); one project's state → the project note; compounds → the best-matching `reflections/{subfolder}` (`research`, `audits`, …). Nothing should live in `_inbox` past one sweep cycle.
+2. **Catch exports mis-filed as reflections.** Scan `reflections/**` for files that read as audience-facing deliverables (a deck, a client-facing report, an EPK) → propose moving to `03 - export/`. This is the specific miss the `_inbox` fallback can't prevent on its own — a worker (or a hurried brief) that filed an export into reflections.
+3. **Catch output that missed the vault entirely.** Agent-produced artifacts referenced from scratch paths, `/tmp`, or worker-cwd in recent daily notes → propose relocating into their router home (or `_inbox` if genuinely unclassifiable yet).
+4. **Fix the source.** Any spawn pattern that repeatedly drifts (same agent, same wrong place) → propose adding an explicit destination line to that agent's brief template, so prevention improves over time.
+
+**Proposal table format:**
+
+| # | Finding | Evidence | Action |
+|---|---|---|---|
+| 25.1 | `reflections/_inbox/{file}` awaiting filing | landed {date}, {N} days idle | [ ] route to `export/` · project note · `reflections/{sub}` |
+| 25.2 | export mis-filed as a reflection | `{file}` is audience-facing, sits in `reflections/` | [ ] move to `03 - export/{type}/` |
+| 25.3 | spawned output outside the vault | `{path}` referenced in {daily-note} | [ ] relocate to its router home |
+
+**Propose-only.** Re-homes are the operator's call at packet review.
+
+**Why this bucket exists:** the spawn-brief routing rule (§ Spawning) *prevents* drift at spawn time; this is its detection twin. The `_inbox` guarantees nothing is ever lost, but a provisional zone only works if it's actually emptied — this sweep empties it, and its export-check (step 2) is what stops an audience-facing deliverable from silently decaying in `reflections/` because a worker guessed wrong.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:

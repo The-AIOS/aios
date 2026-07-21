@@ -128,7 +128,7 @@ Append to the daily note being closed (may be today or yesterday if closing afte
 
 ## Carry-reason triage prompt
 
-Before writing `### Carries forward`, scan each item crossing into tomorrow. For any carry where `N+1 ≥ 6` and there is no `reason:` tag yet (or the existing tag has become stale — e.g. `blocked-on-X` but no activity on X for 30+ days), **ask the user inline**:
+Before writing `### Carries forward`, scan each item crossing into tomorrow. **(Consult the `sustainable-cadence` skill before pathologizing a carry:** a window-cadence or quality-gate carry is *paced* work, not drift — the count is context, not guilt. Discriminate a legitimate rhythm from genuine avoidance first.) For any carry where `N+1 ≥ 6` and there is no `reason:` tag yet (or the existing tag has become stale — e.g. `blocked-on-X` but no activity on X for 30+ days), **ask the user inline**:
 
 ```
 ⚠️ Carry triage — these need a reason tag before they cross tomorrow:
@@ -574,17 +574,19 @@ For each Tier B file (`growth.md`, `profile.md`, `ecosystem.md`):
 1. **Read feed-in sources** (file-specific):
    - `growth.md` ← recent `antifragile.md` entries (last 7 days — note: growth content sometimes lands in antifragile by mistake) + Reinforced entries in `session-insights.md` with self-shape (about the operator changing, not about work mechanics) + close-day `### Observed` sections from the last 5 daily notes
    - `profile.md` ← cross-session identity signals in `session-insights.md` (consistent personality trait surfaced across 2+ sessions per CLAUDE.md trigger rule) + "## Core identity threads" candidates from recent daily notes
-   - `ecosystem.md` ← recent `business.md` additions (venture relationship shifts) + new people/connections named in the last 7 days of daily notes
+   - `ecosystem.md` ← recent `business.md` additions (venture relationship shifts) + new people/connections named in the last 7 days of daily notes + **relationship-shift lines in project notes changed in the window** (`git diff` of `vault/00 - notes/projects/*` over the last 7 days; scan the diff for person/org names — this is where shifts actually land and silently bypass a 7-day daily-note scan) + **`USER.md` relationship tables** (the Forum / agent-DID identity table, `## Companies (mounted)`, Sources/collaborators) + **`profile.md` relationship threads** added since ecosystem's last `updated:` date. **`ecosystem.md` is a derived aggregate (a relationship map), not a stream of atomic facts — so it also needs the periodic full-map re-derivation in the aggregate sub-step below, which atomic event-routing structurally cannot deliver.**
 
 2. **Run the substance bar** — observation only fires when it passes ALL four tests:
    - **Timeline test** — will this observation matter in 90 days? (not just a today-mood)
-   - **Uniqueness test** — is this NOT already named in the target Tier B file? (paraphrasing existing content is noise; novel synthesis is signal)
+   - **Uniqueness test** — is this NOT already named in the target Tier B file? (paraphrasing existing content is noise; novel synthesis is signal). **Exception — aggregate redraws:** this test does NOT apply to a full-map re-derivation of `ecosystem.md` (or a `profile.md` identity re-synthesis). A map's value is the synthesis and the *relationships between* nodes, not the novelty of any single node — re-synthesizing nodes that already exist elsewhere is precisely the point of a redraw. Applying the atomic uniqueness test to a map redraw is the bug that let ecosystem decay silently.
    - **Evidence test** — does this connect to 2+ sessions or a clear cross-source pattern? (one-off observations live in `session-insights.md`, not Tier B)
    - **Essentiality test** — if removed in 90 days, would the file lose something real? (essential = write; replaceable = don't)
 
 3. **If passes the bar → WRITE.** Claude observes autonomously. No approval prompt. Same posture as `antifragile.md` on a system catch. Snapshot the file first (per the mandatory snapshot rule), then write the observation. Use [[wiki-links]] where natural.
 
 4. **If nothing passes the bar → DON'T WRITE.** Don't manufacture content to keep the file warm. The staleness counter keeps ticking; that's honest data, not failure.
+
+4b. **Aggregate re-derivation (ecosystem, and partly profile) — periodic + holistic, NOT atomic.** Steps 1–4 are *atomic-append*: they capture new points, one event at a time. But `ecosystem.md` is a **derived aggregate** — a relationship map — and a map cannot be kept current by point-appends alone (a redraw re-synthesizes nodes that already exist elsewhere, so the atomic uniqueness test rejects it, and shifts filed to project notes / `USER.md` / `profile.md` never trigger a redraw at all). So on top of the atomic pass, an aggregate file gets a **full-map re-derivation** whenever the staleness alarm (below) marks it past its aggregate threshold (**21 days**): re-read the entire relationship graph across *every* widened feed-in surface (project-note changes + `USER.md` tables + `profile.md` threads + `business.md`) and **redraw the map wholesale**, then reset `updated:`. Log the mode in the digest — *atomic-append* (event-triggered, steps 1–4) vs *aggregate-rederive* (periodic, holistic). The natural home for a *scheduled* monthly re-derivation is `/aios:compact` or an `/aios:housekeeping` bucket; until that lands, the staleness alarm makes close-day the reliable backstop that guarantees the redraw happens rather than waiting on a cadence command.
 
 5. **Surface the digest result in close-day output** (always, regardless of write/no-write):
 
@@ -595,7 +597,9 @@ For each Tier B file (`growth.md`, `profile.md`, `ecosystem.md`):
    - ecosystem.md    — last touched {N} days ago. Digest: {result}
    ```
 
-   This is the trail data — operator sees the digest fired AND its outcome, so silent drift can't hide. If a file is >30 days stale AND the digest has surfaced "nothing passed substance bar" 3+ close-days in a row, append a softer escalation: *"⚠️ growth.md has been cold across 3 consecutive digests. Either growth genuinely paused this period, or the digest is missing something. `/emerge` (bi-weekly) revisits at a longer altitude; consider running it now if this feels wrong."*
+   This is the trail data — operator sees the digest fired AND its outcome, so silent drift can't hide.
+
+   **Staleness alarm (streak-independent — replaces the old ">30d AND 3-in-a-row" escalation).** Read the `updated:` frontmatter of every `observed/*.md` file and compute days-since. Flag any file past its threshold — **21 days for aggregate Tier B files (`ecosystem.md`; `profile.md` insofar as it's an identity synthesis), 30 days for all other observed files** — *regardless of any digest streak*: *"⚠️ ecosystem.md is {N}d stale (threshold 21d) — run the aggregate re-derivation now (redraw the map wholesale per step 4b), or add an explicit 'map current, verified {date}' digest line if it's genuinely unchanged."* This alarm depends only on the file's own `updated:` stamp — **not** on the digest trail existing. The retired rule required un-persisted streak state (a count of consecutive "nothing passed" digests that lives only in the trail lines); when the pass silently stopped emitting the trail, the streak could never reach 3, so the alarm structurally never fired. The dumb `updated:`-based check is the reliable-over-clever backstop. The same alarm also surfaces at `/today` (see `today.md`), so a stale aggregate is caught at both ends of the day.
 
 **What this step does NOT do:**
 - Doesn't gate writes on operator approval (that's Ruinous Empathy disguised as care; CLAUDE.md → Anti-values catches this)
@@ -604,6 +608,8 @@ For each Tier B file (`growth.md`, `profile.md`, `ecosystem.md`):
 - Doesn't write `antifragile.md` (Claude's system-rule layer; event-triggered on corrections, separate flow)
 
 **Connection to other commands:** `/close-session` captures Tier B candidates in its session-report's `Observed` section but does NOT write Tier B files directly — close-session lacks the cross-session view needed for the substance bar. `/close-day` is where the synthesis lands because it has the full daily + session reports context. `/emerge` (bi-weekly) revisits at a longer horizon for cleanup. `/drift` (weekly) uses `ecosystem.md` for declared-vs-actual gaps. Three altitudes, each clear.
+
+**This pass is load-bearing in every close-day** — exact parity with the Tier A routing-enforcement step above (which is load-bearing "the same way `antifragile.md` writes are load-bearing on every user correction"). The `### Tier B digest` block is a **required close-day output**, not an optional nicety: it emits one line per Tier B file (`growth` / `profile` / `ecosystem`), each stating last-touched-days + outcome (`wrote` / `nothing passed` / `already current` / `re-derived` / `verified current`). **The close does not complete without it** — if the day's close-of-day lacks a `### Tier B digest` block, self-reject and complete the pass before commit (see the Self-update verification checklist). This hard gate exists because the pass had been *soft* (prose + a "when warranted" checklist line) and silently stopped firing across a run of close-days — six ran with zero digest emitted — which also disabled the old streak-based alarm, since the streak it counted lives only in the (now-absent) trail. Restoring the trail is what restores the safety net; the gate is what guarantees the trail.
 
 ### Emerging-cap enforcement (the upstream buffer leak — additive pass)
 
@@ -648,6 +654,8 @@ Before commit, walk the CLAUDE.md Session End rules to confirm the observed-cont
 
 - [ ] Snapshotted observed-context files I modified (per CLAUDE.md → "Session End → Snapshot before editing")
 - [ ] Updated `session-insights.md` per CLAUDE.md → "Self-Update → Observed Context Rules" — Emerging / Reinforced / Routed lifecycle; ≤10 Emerging, ≤5 Reinforced
+- [ ] **Emitted the `### Tier B digest` block (HARD GATE — the close does not complete without it).** One line per Tier B file (`growth` / `profile` / `ecosystem`), each stating last-touched-days + outcome. If the close-of-day lacks this block, self-reject and run the Tier B observation pass before commit. This is load-bearing parity with the Tier A routing step — not a "when warranted" nicety.
+- [ ] **Checked the observed-context staleness alarm** — read every `observed/*.md` `updated:` frontmatter; flagged any past its threshold (21d aggregate Tier B, 30d others), *independent of any digest streak*. For a stale aggregate file, ran the full-map re-derivation (step 4b) or logged an explicit "map current, verified {date}" line.
 - [ ] Updated other observed files when warranted (per CLAUDE.md → "Observed Context Rules" — patterns / preferences / business / ecosystem / growth / profile)
 - [ ] Wrote to `antifragile.md` if the user corrected me OR I caught my own system-level mistake (per CLAUDE.md mandatory triggers)
 - [ ] Asked "What was most useful?" if the day was substantive (per CLAUDE.md Session End step 4); verbatim answer captured in the close-of-day `### Most useful` field

@@ -15,6 +15,7 @@ The largest bundle — covers everything that ships externally on your behalf or
 | [[meeting-prepper]] | Prepare context-rich briefings for upcoming meetings — disambiguation, demo-vs-discovery flow, materials checklist |
 | [[report-drafter]] | Draft status reports and board updates from vault activity — pulls from project notes + daily notes |
 | [[design-md-author]] | Author `design.md` files per Google's spec — interview-driven, validates via `npx @google/design.md lint`, optional Stitch upload |
+| [[animation-composer]] | Own the deck-animation component library — audit, build-to-house-contract, mine sources for gaps; headless-verified; final placement stays the operator's call |
 
 ## When to install
 

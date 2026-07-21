@@ -117,6 +117,7 @@ Fire ALL of these as direct parallel tool calls in **one single message**:
 **Observed context — all in the same parallel batch, but use `limit:50` per file:**
 - `growth.md`, `profile.md`, `patterns.md`, `session-insights.md`, `ecosystem.md`, `business.md`, `vault-routine.md`
 - /today only needs the latest observations, not full history. If a file's key content is truncated, do a second targeted read for the missing section.
+- **Observed-context staleness check (streak-independent backstop).** The `limit:50` reads already surface each file's `updated:` frontmatter — from it, compute days-since-update per `observed/*.md` and flag any file past its threshold: **21 days for aggregate Tier B files (`ecosystem.md`, `profile.md`), 30 days for the rest**. This is the dumb, reliable alarm: it depends only on the `updated:` stamp, *not* on any close-day digest trail existing (the old ">30d AND 3-in-a-row digest" rule silently never fired once the trail stopped being written). Carry any flags into Message 2 to surface.
 
 **Daily notes:**
 - **Most recent daily note** (NOT hardcoded to yesterday's date): list files in `01 - calendar/{YYYY-MM}/` and pick the latest file that matches the `YYYY-MM-DD.md` pattern (exactly 10-char date prefix) and is before today. **Exclude** weekly plans (`W{N}-plan.md`, `W{N}-summary.md`) and any other non-daily files. If no daily note exists in the current month, check the previous month. This handles weekends, holidays, and any gap. **Critical — this is where carry-forwards come from. If this file isn't found, carried items are silently dropped.**
@@ -184,6 +185,7 @@ Place triage decisions at the top of Parking lot, not buried in Rhythm.
 - Count drift counters (days an item has been carried)
 - Determine the **command suggestion of the day** (see Command Discovery Engine below)
 - Identify one **observed nudge** (see Observed Nudges below)
+- **Surface any observed-context staleness flags** from Message 1b (a Tier B aggregate — `ecosystem.md` / `profile.md` — past 21d, or any observed file past 30d). Put it in Claude's take or the Energy note: *"⚠️ ecosystem.md is {N}d stale (threshold 21d) — its relationship map may have drifted; `/close-day` will re-derive it, or run `/emerge` for a longer-altitude pass."* Only surface real threshold crossings — never manufacture a flag to seem thorough.
 - Synthesize a **daily opener** — radically candid, grounded in observed context
 - Identify the **one thing to ship**
 - Sort all tasks into energy blocks: Morning (create), Afternoon (operate), Evening (grow)

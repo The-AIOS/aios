@@ -80,6 +80,8 @@ Claude routes to `/collaborate` when the user says things like:
 
 ## Steps (default flow)
 
+> **Every space is a commons (consult the `commons-governance` skill):** when you scaffold `collaborate.md` (the operating protocol), write its rules with the science open — clear boundaries (who's a member), nested rules (space rules must not contradict the host substrate's or the framework's), a monitor (the sync/drift surface), and a conflict path. A space without governance defaults drifts into ambiguity the first time two collaborators disagree.
+
 > **Before executing:** Read `USER.md` → `## Sources` for substrate preferences, `## Command personalizations` → `### /collaborate` for any user overrides, and `INTENT.md` for autonomy levels (especially if substrate access changes are involved).
 >
 > **Subcommand routing:** if invoked with `--add-project` → jump to § Subcommand: --add-project. If `--status` → jump to § Subcommand: --status. If `--dry-run` → continue with default flow but skip all write operations in step 4 onward (output the scaffold plan and exit).

@@ -33,6 +33,9 @@ Create a new **custom** AIOS element — agent · skill · plugin · command · 
 - `writing-skills` — superpowers method for authoring + verifying skills
 - `writing-plans` — plan before scaffolding anything non-trivial
 - `document-skills:mcp-builder` — when building an MCP server
+- `comprehension-debt` — **at scaffold-complete:** agent-authored infra the operator must later defend — offer the walkthrough before calling it done
+
+**Default namespace — always `custom/`.** Every element you scaffold targets the operator's `custom/` tree (`agents/custom/`, `skills/custom/`, `plugins/custom/<name>/`, `templates/custom/`, `hooks/custom/`, `mcps/custom/`) — **never** the bundled `aios/` paths. Bundled paths are framework-authored and get overwritten by `/aios:update`; operator infra lives in `custom/` so it survives every sync.
 
 ## Instructions
 

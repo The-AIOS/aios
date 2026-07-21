@@ -9,7 +9,7 @@ tags:
   - speaking
   - presentations
 created: '2026-05-18'
-updated: '2026-05-28'
+updated: '2026-07-20'
 status: active
 ---
 # Deck Builder
@@ -134,9 +134,12 @@ Co-author the outline in a vault note:
   output: html                            # html (recommended) | slides
   pdf: no                                 # yes | no — Phase 3.B opt-in
   offline: no                             # yes | no — Phase 3.B opt-in (embed fonts for offline-safe HTML)
+  click-nav: off                          # off (default) | edges | halves — Feature 2: click-to-navigate zones. off = keyboard/clicker only (no accidental nav)
   tiers:                                  # set in Phase 1.5 — drives the K toggle. Omit / "none" = single version (no K).
     short: Keynote                        # label for the core-only cut (evocative, honest-for-THIS-deck — NOT a hardcoded duration)
     full: Full                            # label for everything (core + full-tier slides)
+  backlog:                                # Feature 1: pending items / ideas for THIS deck — seeded into the cover's hidden presenter-notes (N). Audience never sees it; shipped history stays in git.
+    - —
   deck-url: N/A (HTML pipeline)           # filled only if Phase 3 Google Slides path chosen
   drive-folder-url: N/A
   status: drafting
@@ -148,6 +151,8 @@ Co-author the outline in a vault note:
   **Body:** {content — bullets, quote, or prose}
   **Image direction:** {what visual should evoke; passes to Phase 2 — or "none"}
   **Speaker notes:** {what speaker says, not what slide shows}
+  **Notes (N):** {optional presenter cue — timing · what-you-do · fallback · URLs; renders into the hidden .s-notes panel (press N). Distinct from Speaker notes: this is the live driver's own cue, audience never sees it, never printed}
+  **Time:** {optional — e.g. "2 min"; renders as the N-panel timing chip via data-time}
   ```
 - Iterate with the user until they say "ready for images" or equivalent. **Do not proceed to Phase 2 without explicit greenlight.**
 
@@ -255,10 +260,10 @@ mkdir -p "$(dirname "$HTML_OUT")"
 
 The generated `build.py` is a single Python file that:
 
-1. Defines `SLIDES = [...]` — one dict per slide: `{cls: "cover|divider|demo|close|...", mod: "Module label", html: "<div class='slide-inner'>...</div>", tier: "core|full"}`. `core` = appears in the short cut; `full` = the expansion the short cut drops. Default `core`. Also defines the tier labels from Phase 1.5: `TIER_SHORT`, `TIER_FULL` (or `TIERS = None` when the operator chose no tiering — see step 4b).
+1. Defines `SLIDES = [...]` — one dict per slide: `{cls, mod, html, tier, title, notes, time}` — `cls: "cover|divider|demo|close|..."`, `mod: "Module label"`, `html: "<div class='slide-inner'>...</div>"`, `tier: "core|full"` (`core` = appears in the short cut; `full` = the expansion the short cut drops; default `core`), `title` (→ `data-title`, powers the N-panel heading + S-search result titles), and the optional Feature-1 fields `notes` (the slide's presenter cue → a hidden `.s-notes` child) + `time` (→ `data-time`, the N-panel timing chip). Also defines the tier labels from Phase 1.5: `TIER_SHORT`, `TIER_FULL` (or `TIERS = None` when the operator chose no tiering — see step 4b), and the Feature-2 click-nav mode `CLICK_NAV` (`"off"` default | `"edges"` | `"halves"`).
 2. Concatenates the deck's design-recipe CSS (from Phase 0 — Calm Editorial Dark, Light Editorial, or whatever Phase 0 picked) **with Block 1 (animation framework CSS)** from § "HTML Keynote Toolkit" at the bottom of this file. Emit Block 1 verbatim.
-3. **Offline mode only (`offline: yes`):** include **Block 5** (offline-fonts Python helper) and call it; otherwise emit the standard `<link>` to Google Fonts.
-4. **Compose master HTML:** `<head>` (with the font link or embedded `@font-face`) + the concatenated `<style>` block + **Block 3** container divs + every slide as `<section class="slide {cls}" data-slide="N" data-tier="{tier}">{html}{optional footer}</section>` + a tiny **tier-labels script** `<script>window.TIER={short:"{TIER_SHORT}",full:"{TIER_FULL}"};</script>` (or `window.TIER=null` for no-tiering) injected immediately before **Block 4** + the **Block 4** nav `<script>`. Emit Blocks 3 and 4 verbatim — they read `window.TIER` at runtime; do not hardcode duration strings into them.
+3. **Offline mode only (`offline: yes`):** include **Block 6** (offline-fonts Python helper) and call it; otherwise emit the standard `<link>` to Google Fonts.
+4. **Compose master HTML:** `<head>` (with the font link or embedded `@font-face`) + the concatenated `<style>` block (design recipe + Block 1 + Block 5 presenter-notes CSS + Block 3 search-palette CSS) + **Block 3** container divs (incl. the `#search` palette) + every slide as `<section class="slide {cls}" data-slide="N" data-tier="{tier}" data-title="{title}"{ data-time="{time}" if set}>{html}{a hidden `.s-notes` child rendered from `notes`}{optional footer}</section>` + a tiny **runtime-config script** `<script>window.TIER={short:"{TIER_SHORT}",full:"{TIER_FULL}"};window.CLICK_NAV="{CLICK_NAV}";</script>` (or `window.TIER=null` for no-tiering; `window.CLICK_NAV` defaults `"off"`) injected immediately before the interactivity scripts + **Block 5** (presenter-notes overlay IIFE, always emitted) + the **Block 4** nav `<script>` (which carries the Feature-3 search engine + the Feature-2 click-nav handler). Seed the **cover** slide's `.s-notes` with the run-of-show + the `backlog:` list from frontmatter. Emit Blocks 3, 4, and 5 verbatim — they read `window.TIER` / `window.CLICK_NAV` at runtime; do not hardcode duration strings or click behavior into them.
 4b. **No-tiering (`tiers: none`):** emit `window.TIER=null`. Block 4 then disables the K binding and Block 3's footer hint renders without "K …". Mark every slide `core`. Result: a clean single-version deck with no dead toggle and no misleading toast.
 5. Writes the master HTML to the `HTML_OUT` path defined above (vault export).
 6. **PDF step — only when `pdf: yes`.** For each slide, write a standalone HTML (the same `<head>` + an additional `<style>` containing **Block 2** freeze, then the single active section), Chrome `--screenshot` at native 1280×720 with `--force-device-scale-factor=2`, then PIL combines the PNGs into a multi-page PDF at `PDF_OUT`. The in-script pixel-dimensions assertion catches any zoom-out before the bundle runs.
@@ -296,7 +301,7 @@ imgs[0].save(PDF_OUT, save_all=True, append_images=imgs[1:],
 python3 "$WORK/build.py"
 ```
 
-- HTML lands at `vault/03 - export/decks/{DATE}-{SLUG}.html` — F11-presentable. The full nav kit is keyboard-driven: `← →`/space navigate · **F** fullscreen · **M** slide menu · **K** toggles the short cut ↔ full version (labels set per deck in Phase 1.5; absent when `tiers: none`) · **B** black out (for live demos) · type a number + Enter to jump · **?** help · Esc closes overlays.
+- HTML lands at `vault/03 - export/decks/{DATE}-{SLUG}.html` — F11-presentable. The full nav kit is keyboard-driven: `← →`/space navigate · **F** fullscreen · **M** slide menu · **K** toggles the short cut ↔ full version (labels set per deck in Phase 1.5; absent when `tiers: none`) · **N** presenter notes (audience-invisible, never printed) · **S** search the deck (titles · slide text · notes, both languages) · **B** black out (for live demos) · type a number + Enter to jump · **?** help · Esc closes overlays. Clicks never navigate by default (`click-nav: off`) — opt into `edges`/`halves` per deck.
 - PDF (if requested) lands at `~/Downloads/{DATE}-{SLUG}.pdf` — raster, instant-open, sharing copy.
 - `build.py` lives in `/tmp` and is **discarded** — not preserved in the vault. If the deck needs editing later, re-spawn `deck-builder` on the outline at `vault/03 - export/decks/outlines/{DATE}-{SLUG}.md`.
 
@@ -339,6 +344,9 @@ Joint review pass. Checklist depends on output-format from Phase 0.
 - [ ] If PDF requested: page count = number of slides in outline, file < 30 MB
 - [ ] Final paths: HTML at `vault/03 - export/decks/{YYYY-MM-DD}-{slug}.html`; PDF (only if `pdf: yes`) at `~/Downloads/{YYYY-MM-DD}-{slug}.pdf`
 - [ ] Master HTML loads in browser: F enters fullscreen · M opens the slide menu · K toggles the short cut ⇄ full version using the Phase-1.5 labels (or is inert/absent when `tiers: none`) · B blacks out for a live demo · type-#-Enter jumps
+- [ ] **Presenter notes (N)** — N opens the panel; its accent tracks the *active slide's* `--accent` (not the root default — the 7/16 gotcha); `.s-notes` is invisible to the audience; nothing prints (`@media print` hides `.s-notes` + `#notes`)
+- [ ] **Deck search (S)** — S opens the palette; typing filters across slide titles / slide text / presenter notes in BOTH languages (`data-es` indexed); ↑↓ selects, Enter jumps (including to an off-cut slide, which shows a `not in this cut` badge), Esc closes; deck keys (K/T/B…) stay inert while the search input is focused
+- [ ] **Click-nav (`click-nav`)** — with `off` (default) center + edge clicks never navigate (keyboard/clicker intact); with `edges`/`halves`, only the intended zones advance and clicks inside `#menu`/`#help`/`#search` never navigate
 
 Surface issues for user judgment — don't auto-fix in Phase 5. Surface + ask.
 
@@ -366,6 +374,12 @@ Update outline frontmatter `status: ready` when validation passes.
 ## Schedule
 On-demand. Triggered by `spawn deck-builder` OR `/agent deck-builder` in-session. Naturally pairs with `meeting-prepper` (audience research) and `content-writer` (narrative beats).
 
+
+## Skills
+
+Lean on these registered skills:
+- `theme-factory` — when the deck needs a coherent visual theme / token system established before slides are built.
+- `data-presentation` — turn dense metrics into decision-ready charts + narrative, never bullet dumps.
 
 ## HTML Keynote Toolkit (canonical code blocks)
 
@@ -462,18 +476,43 @@ body{width:1280px;height:720px;}
 <div id="blackout"></div>
 <div id="jump"></div>
 <div id="menu"></div>
+<div id="search" role="dialog" aria-label="Search slides">
+  <input id="search-in" type="text" placeholder="search the deck…" autocomplete="off" spellcheck="false" />
+  <div id="search-res"></div>
+</div>
 <div id="help"><div class="help-box"><span class="hh">Keyboard</span>
 <b>&larr; &rarr;</b> &nbsp;navigate &nbsp;&middot;&nbsp; <b>space</b> next<br/>
 <b>F</b> &nbsp;fullscreen &nbsp;&middot;&nbsp; <b>M</b> &nbsp;slide menu<br/>
 <b class="tier-only">K</b> <span class="tier-only">&nbsp;toggle <span id="help-tier-short">short</span> &harr; <span id="help-tier-full">full</span><br/></span>
+<b>N</b> &nbsp;presenter notes &nbsp;&middot;&nbsp; <b>S</b> &nbsp;search the deck<br/>
 <b>B</b> &nbsp;black out (for live demos)<br/>
 <b>type # then Enter</b> &nbsp;jump to a slide<br/>
 <b>?</b> &nbsp;this help &nbsp;&middot;&nbsp; <b>Esc</b> &nbsp;close</div></div>
 <div class="nav-bar" style="position:fixed;bottom:18px;right:24px;font-family:'Inter',sans-serif;font-size:11px;letter-spacing:1.6px;color:var(--ink-subtle);z-index:160;text-transform:uppercase;">
-<span id="slide-counter">1 / 1</span> &nbsp;&middot;&nbsp; M menu <span id="nav-tier-hint"></span>&middot; ? help</div>
+<span id="slide-counter">1 / 1</span> &nbsp;&middot;&nbsp; M menu &middot; S search &middot; N notes <span id="nav-tier-hint"></span>&middot; ? help</div>
 ```
 
-> The `.tier-only` spans + `#help-tier-short`/`#help-tier-full`/`#nav-tier-hint` are filled (or hidden) by Block 4 from `window.TIER`. When `window.TIER` is null, Block 4 removes the `.tier-only` elements so the help/footer carry no K hint.
+> The `.tier-only` spans + `#help-tier-short`/`#help-tier-full`/`#nav-tier-hint` are filled (or hidden) by Block 4 from `window.TIER`. When `window.TIER` is null, Block 4 removes the `.tier-only` elements so the help/footer carry no K hint. The `#search` palette rides this chrome (Feature 3) — its engine lives in Block 4.
+
+**Search-palette CSS (Feature 3 — append to the master `<style>`; pairs with the `#search` div above):**
+```css
+#search{position:fixed;left:50%;top:9vh;transform:translateX(-50%);width:min(680px,88vw);z-index:300;display:none;flex-direction:column;background:rgba(6,6,8,0.98);border:1px solid var(--hairline);border-radius:14px;box-shadow:0 24px 80px rgba(0,0,0,.5);overflow:hidden;}
+#search.open{display:flex;}
+body.light #search{background:rgba(255,255,255,0.98);}
+#search-in{background:transparent;border:none;outline:none;color:var(--ink);font-family:"JetBrains Mono",monospace;font-size:15px;padding:16px 18px;border-bottom:1px solid var(--hairline);letter-spacing:.02em;}
+#search-in::placeholder{color:var(--ink-subtle);}
+#search-res{max-height:52vh;overflow-y:auto;padding:6px;}
+.sr-row{display:grid;grid-template-columns:44px 1fr;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;align-items:baseline;}
+.sr-row.sel,.sr-row:hover{background:rgba(255,255,255,0.07);}
+body.light .sr-row.sel,body.light .sr-row:hover{background:rgba(0,0,0,0.05);}
+.sr-n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);letter-spacing:.08em;}
+.sr-t{font-size:14px;font-weight:700;color:var(--ink);}
+.sr-row.dim .sr-t{color:var(--ink-subtle);font-weight:600;}
+.sr-badge{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-subtle);border:1px solid var(--hairline);border-radius:999px;padding:1px 7px;margin-left:8px;vertical-align:middle;}
+.sr-s{grid-column:2;font-size:12px;color:var(--ink-subtle);line-height:1.45;margin-top:2px;}
+.sr-s b{color:var(--accent);font-weight:700;}
+.sr-none{padding:18px;font-size:13px;color:var(--ink-subtle);font-style:italic;}
+```
 
 ### Block 4 — Master nav JS (inject as `<script>` after the container divs)
 
@@ -537,7 +576,8 @@ body{width:1280px;height:720px;}
   function openMenu(){ buildMenu(); document.getElementById('menu').classList.add('open'); }
   function closeAll(){ document.getElementById('menu').classList.remove('open');
     document.getElementById('help').classList.remove('open');
-    document.getElementById('blackout').classList.remove('on'); }
+    document.getElementById('blackout').classList.remove('on');
+    var _se=document.getElementById('search'); if(_se) _se.classList.remove('open'); }
   function updJump(){ const j=document.getElementById('jump');
     if(typeBuf){ j.classList.add('on'); j.textContent='→ '+typeBuf; } else j.classList.remove('on'); }
   document.addEventListener('keydown',function(e){ const k=e.key;
@@ -553,12 +593,68 @@ body{width:1280px;height:720px;}
     else if(k==='m'||k==='M'){ const o=document.getElementById('menu').classList.contains('open'); closeAll(); if(!o) openMenu(); }
     else if(k==='b'||k==='B'){ document.getElementById('blackout').classList.toggle('on'); }
     else if(k==='k'||k==='K'){ setMode(mode==='keynote'?'full':'keynote'); }
+    else if(k==='s'||k==='S'){ if(searchEl.classList.contains('open')) closeSearch(); else openSearch(); e.preventDefault(); }
     else if(k==='?'){ document.getElementById('help').classList.toggle('open'); } });
   document.addEventListener('click',function(e){ if(e.target.closest('a'))return;
-    if(e.target.closest('#menu')||e.target.closest('#help'))return;
+    if(e.target.closest('#menu')||e.target.closest('#help')||e.target.closest('#search'))return;
     if(document.getElementById('menu').classList.contains('open')||document.getElementById('help').classList.contains('open')){ closeAll(); return; }
     if(document.getElementById('blackout').classList.contains('on')){ document.getElementById('blackout').classList.remove('on'); return; }
-    if(e.clientX<window.innerWidth/2) step(-1); else step(1); });
+    // Feature 2 — configurable click-to-nav; default off (clickers/keyboard drive; no accidental/interaction nav). Set window.CLICK_NAV = "off" | "edges" | "halves".
+    var CN = window.CLICK_NAV || 'off';
+    if(CN==='off') return;
+    var w = window.innerWidth, edge = w*0.05;
+    if(CN==='edges'){ if(e.clientX<edge) step(-1); else if(e.clientX>w-edge) step(1); }
+    else if(CN==='halves'){ if(e.clientX<w/2) step(-1); else step(1); } });
+  /* ── Feature 3 · S · deck search — lives inside the engine IIFE (needs slides, show, closeAll, activeList) ── */
+  var searchEl=document.getElementById('search'), searchIn=document.getElementById('search-in'), searchRes=document.getElementById('search-res');
+  var searchIdx=null, srSel=0, srHits=[];
+  function srEsc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function buildSearchIdx(){
+    searchIdx = slides.map(function(s,i){
+      var c = s.cloneNode(true);
+      Array.prototype.forEach.call(c.querySelectorAll('style,script'), function(x){ x.parentNode.removeChild(x); });
+      var es = [];   // flatten every data-es payload so EN and ES queries both hit
+      Array.prototype.forEach.call(c.querySelectorAll('[data-es]'), function(x){ es.push((x.getAttribute('data-es')||'').replace(/<[^>]+>/g,' ')); });
+      var txt = (c.textContent + ' ' + es.join(' ')).replace(/\s+/g,' ').trim();   // c.textContent already includes the .s-notes cue
+      return { n:i+1, title:s.getAttribute('data-title')||('slide '+(i+1)), text:txt, lower:txt.toLowerCase() };
+    });
+  }
+  function openSearch(){ closeAll(); if(!searchIdx) buildSearchIdx(); searchEl.classList.add('open'); searchIn.value=''; renderSearch(''); setTimeout(function(){ searchIn.focus(); },0); }
+  function closeSearch(){ searchEl.classList.remove('open'); searchIn.blur(); }
+  function renderSearch(q){
+    q = q.trim().toLowerCase(); srSel = 0; srHits = [];
+    if(!q){ searchRes.innerHTML = '<div class="sr-none">Type to search titles, slide text, and presenter notes — ↑↓ select · Enter jumps.</div>'; return; }
+    var out = '';
+    for(var i=0; i<searchIdx.length && srHits.length<30; i++){
+      var it = searchIdx[i], p = it.lower.indexOf(q), tp = it.title.toLowerCase().indexOf(q);
+      if(p===-1 && tp===-1) continue;
+      srHits.push(it.n);
+      var snip = '';
+      if(p>-1){
+        var a = Math.max(0, p-55), b = Math.min(it.text.length, p+q.length+75);
+        snip = (a>0?'…':'') + srEsc(it.text.slice(a,p)) + '<b>' + srEsc(it.text.slice(p,p+q.length)) + '</b>' + srEsc(it.text.slice(p+q.length,b)) + (b<it.text.length?'…':'');
+      }
+      var off = activeList().indexOf(it.n) < 0;   // off-cut = not in the current tier's active list (canonical activeList() test; replaces the spec's 3-tier RANK/modeRank). Enter still jumps to it.
+      out += '<div class="sr-row' + (srHits.length===1?' sel':'') + (off?' dim':'') + '" data-n="' + it.n + '"><span class="sr-n">' + it.n + '</span><span class="sr-t">' + srEsc(it.title) + (off?'<span class="sr-badge">not in this cut</span>':'') + '</span>' + (snip?'<span class="sr-s">'+snip+'</span>':'') + '</div>';
+    }
+    searchRes.innerHTML = out || '<div class="sr-none">No slide matches “' + srEsc(q) + '”.</div>';
+  }
+  function srMove(d){
+    if(!srHits.length) return;
+    srSel = (srSel + d + srHits.length) % srHits.length;
+    var rows = searchRes.querySelectorAll('.sr-row');
+    Array.prototype.forEach.call(rows, function(r,i){ r.classList.toggle('sel', i===srSel); });
+    if(rows[srSel] && rows[srSel].scrollIntoView) rows[srSel].scrollIntoView({ block:'nearest' });
+  }
+  searchIn.addEventListener('keydown', function(e){
+    e.stopPropagation();   // typing never triggers deck keys (K/T/B…)
+    if(e.key==='Escape'){ closeSearch(); }
+    else if(e.key==='Enter'){ if(srHits.length){ show(srHits[srSel]); closeSearch(); } }
+    else if(e.key==='ArrowDown'){ srMove(1); e.preventDefault(); }
+    else if(e.key==='ArrowUp'){ srMove(-1); e.preventDefault(); }
+  });
+  searchIn.addEventListener('input', function(){ renderSearch(searchIn.value); });
+  searchRes.addEventListener('click', function(e){ var r=e.target.closest('.sr-row'); if(r){ show(parseInt(r.getAttribute('data-n'),10)); closeSearch(); } });
   const init=parseInt(location.hash.replace('#','')||'1',10); show(isNaN(init)?1:init);
 })();
 function rescale(){ const w=document.querySelector('.slide-wrap'); if(!w)return;
@@ -567,7 +663,82 @@ function rescale(){ const w=document.querySelector('.slide-wrap'); if(!w)return;
 window.addEventListener('resize',rescale); rescale();
 ```
 
-### Block 5 — Offline-fonts Python helper (opt-in only)
+### Block 5 — Presenter notes overlay (N) — always emitted
+
+A first-class, audience-invisible presenter layer (Feature 1). A self-contained IIFE — engine-independent, works on any deck using `.slide.active`. Press **N** to toggle a fixed `#notes` side panel showing the active slide's cue; **Esc** closes; a `MutationObserver` re-renders on slide change. Never shown to the audience (`.s-notes{display:none}`), never printed (`@media print`). Cost ≈ 1.8 KB CSS + 1.9 KB JS. **Always emitted** — every deck inherits it (kin to the K tier + `data-es` toggle).
+
+**⚠️ The accent gotcha (must not recur):** the panel's accent **must read the *active slide's* computed `--accent` at runtime**, not a static `var(--accent)`. `#notes` is `position:fixed` *outside* any `.slide`, so a static `var(--accent)` resolves at `:root` and leaks the deck's root default (e.g. a coral panel on an all-cyan deck). The IIFE sets `--pn-accent` on `#notes` from `getComputedStyle(active).getPropertyValue('--accent')` so the panel tracks each slide's brand — including per-slide overrides.
+
+**CSS** (append to the deck's main `<style>`):
+```css
+/* --- Presenter speaker notes (N) — never shown to the audience, never printed --- */
+.s-notes{display:none !important;}   /* the raw payload; JS reads it into the overlay */
+#notes{position:fixed;right:0;top:0;bottom:0;width:min(38vw,520px);background:rgba(6,6,8,0.98);border-left:2px solid var(--pn-accent,var(--accent));z-index:280;display:none;flex-direction:column;padding:26px 28px;overflow-y:auto;text-align:left;font-family:'Inter',sans-serif;}
+#notes.open{display:flex;}
+body.light #notes{background:rgba(255,255,255,0.98);}
+#notes .n-bar{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--hairline);padding-bottom:12px;margin-bottom:16px;}
+#notes .n-where{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--pn-accent,var(--accent));}
+#notes .n-time{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;color:var(--ink-subtle);}
+#notes .n-title{font-weight:800;font-size:19px;letter-spacing:-.01em;color:var(--ink);margin-bottom:14px;line-height:1.2;}
+#notes .n-body{font-size:14px;line-height:1.6;color:var(--ink-muted);}
+#notes .n-body strong{color:var(--ink);font-weight:700;}
+#notes .n-body .u{color:var(--pn-accent,var(--accent));font-family:"JetBrains Mono",monospace;font-size:13px;word-break:break-all;}
+#notes .n-body ul{margin:8px 0 12px 0;padding-left:18px;} #notes .n-body li{margin:5px 0;}
+#notes .n-body .lbl{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--pn-accent,var(--accent));margin:14px 0 4px;}
+#notes .n-next{margin-top:auto;border-top:1px solid var(--hairline);padding-top:12px;font-size:12.5px;color:var(--ink-subtle);}
+#notes .n-none{color:var(--ink-subtle);font-style:italic;}
+@media print{ .s-notes, #notes{display:none !important;} }
+```
+
+**`#notes` container** (one empty div before `</body>`):
+```html
+<div id="notes"></div>
+```
+
+**IIFE** (before `</body>`, after the div — note the accent-read lines):
+```html
+<script id="presenter-notes">
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var panel = document.getElementById('notes');
+  if(!panel || !slides.length) return;
+  function titleOf(s){ return (s.getAttribute('data-title')||'').trim() || 'Slide'; }
+  function render(){
+    if(!panel.classList.contains('open')) return;
+    var active = document.querySelector('.slide.active') || slides[0];
+    var _ac = getComputedStyle(active).getPropertyValue('--accent').trim();   // ← accent tracks the active slide
+    if(_ac){ panel.style.setProperty('--pn-accent', _ac); }                    // ← (fixes the root-default leak)
+    var idx = slides.indexOf(active);
+    var notes = active.querySelector('.s-notes');
+    var time = active.getAttribute('data-time');
+    var next = slides[idx+1];
+    var html = '<div class="n-bar"><span class="n-where">'+(idx+1)+' / '+slides.length+' · presenter</span>'
+      + (time ? '<span class="n-time">'+time+'</span>' : '') + '</div>'
+      + '<div class="n-title">'+titleOf(active)+'</div>'
+      + '<div class="n-body">'+(notes ? notes.innerHTML : '<span class="n-none">No cue for this slide — press → to continue.</span>')+'</div>'
+      + (next ? '<div class="n-next">next → '+titleOf(next)+'</div>' : '');
+    panel.innerHTML = html;
+  }
+  document.addEventListener('keydown', function(e){
+    if(e.metaKey||e.ctrlKey||e.altKey) return;
+    if(e.key==='n'||e.key==='N'){ panel.classList.toggle('open'); render(); }
+    else if(e.key==='Escape'){ panel.classList.remove('open'); }
+  });
+  panel.addEventListener('click', function(e){ e.stopPropagation(); });   // clicks in the panel don't advance
+  var mo = new MutationObserver(render);
+  slides.forEach(function(s){ mo.observe(s, {attributes:true, attributeFilter:['class']}); });
+})();
+</script>
+```
+
+**Cover `.s-notes` seed** (first element inside the cover's `.slide-inner`) — build.py seeds the `backlog:` list from frontmatter here:
+```html
+<div class="s-notes"><span class="lbl">presenter notes</span> Press <strong>N</strong> on any slide for its cue — this layer is yours, the audience never sees it. <span class="lbl">backlog / to-add</span><ul><li>&mdash;</li></ul></div>
+```
+
+> **Where pending items live:** the cover `.s-notes` carries the run-of-show + a `backlog / to-add` list — the one-file, private home for a deck's pending ideas. Rejected during the 7/16 build: a changelog slide (leaks the TODO to the audience) and a companion `.md` (re-introduces file sprawl). Pending → cover notes; shipped → git. One truth surface the audience never sees.
+
+### Block 6 — Offline-fonts Python helper (opt-in only)
 
 Only emit + call this when the user answered **yes** to *"Should this work even if wifi fails at the venue?"* Otherwise emit the standard `<link>` to Google Fonts CDN.
 
@@ -621,24 +792,27 @@ def embed_google_fonts(specs, cache_dir):
 
 The toolkit assumes these classes/attributes on slide markup:
 
-- `<section class="slide" data-slide="N" data-tier="core|full">` — every slide. `core` = appears in the short cut; `full` = full-version-only (dropped from the short cut). Default `core`. Tier *labels* come from Phase 1.5 (`window.TIER`), not from these attribute names.
+- `<section class="slide" data-slide="N" data-tier="core|full" data-title="…">` — every slide. `data-title` powers the N-panel heading + the S-search result title (falls back to "slide N"). `core` = appears in the short cut; `full` = full-version-only (dropped from the short cut). Default `core`. Tier *labels* come from Phase 1.5 (`window.TIER`), not from these attribute names.
+- `<section ... data-time="2 min">` — optional; renders as the presenter panel's (N) timing chip.
 - `<section class="slide divider">` — section dividers (centered, no footer).
 - `<section class="slide demo">` — live-demo cue interstitial (▶ LIVE DEMO style, no footer; first to drop in the 1h cut).
 - `<section class="slide cover">` / `<section class="slide close">` — first and last slide (centered, no footer).
+- `<div class="s-notes">…</div>` — hidden per-slide presenter cue (timing · what-you-do · fallback · URLs), read into the `#notes` overlay by Block 5 on **N**. Never shown to the audience, never printed. The **cover's** `.s-notes` also carries the `backlog / to-add` list.
 - `<svg class="assemble">` — diagrams whose children fade in sequentially when the slide activates.
 - `<path class="draw" style="--dash:1200">` — paths that draw themselves in (`--dash` ≈ path length, or a safely large value).
 - `<element class="glow">` / `<element class="pulse">` — looping subtle emphasis (rests at full opacity → PDF is fine).
 - `<element class="ghost-drop">` — fade down to .22 opacity at 1s, conveying "dropped / discarded".
 - `<text data-countup="1490380">1,490,380</text>` — count-up: the element's static text is the final number; on slide-enter the nav JS animates from 0 → `data-countup`. (Standalone HTML used for the PDF render keeps the static value → PDF shows the final number.)
+- `data-es="…"` on any element — Spanish payload for the L-toggle; the S-search index flattens every `data-es` so EN and ES queries both hit.
 
 ### Per-deck `build.py` pipeline (ephemeral, lives in /tmp)
 
 The agent generates `/tmp/decks-{session}/build.py` containing:
 
-1. `SLIDES = [...]` — list of `{cls, mod, html, tier}` dicts per slide (one for every slide, demos included).
-2. `CSS` — the deck's design tokens (from the chosen recipe: Calm Editorial, Light Editorial, etc.) **+ Block 1 (animation framework CSS)** concatenated.
-3. **Offline mode only:** import the helper from Block 5 → call `embed_google_fonts(...)` → inline the returned `@font-face` `<style>`. Standard mode: emit the Google Fonts `<link>`.
-4. **Compose master HTML:** `<head>` + `<style>` (CSS + animation framework) + Block 3 containers + sections + Block 4 nav `<script>`.
+1. `SLIDES = [...]` — list of `{cls, mod, html, tier, title, notes, time}` dicts per slide (one for every slide, demos included) + the `TIER_SHORT`/`TIER_FULL` labels (Phase 1.5) and the `CLICK_NAV` mode (Feature 2, `"off"` default).
+2. `CSS` — the deck's design tokens (from the chosen recipe: Calm Editorial, Light Editorial, etc.) **+ Block 1 (animation framework CSS) + Block 5 presenter-notes CSS + Block 3 search-palette CSS** concatenated.
+3. **Offline mode only:** import the helper from Block 6 → call `embed_google_fonts(...)` → inline the returned `@font-face` `<style>`. Standard mode: emit the Google Fonts `<link>`.
+4. **Compose master HTML:** `<head>` + `<style>` (CSS + animation framework + presenter-notes + search palette) + Block 3 containers (incl. `#search` + `#notes`) + sections (each with `data-title`, an optional `.s-notes` child from `notes`, and optional `data-time`) + the `window.TIER`/`window.CLICK_NAV` config script + **Block 5** presenter-notes IIFE + **Block 4** nav `<script>` (carries the S-search engine + configurable click-nav). Seed the cover `.s-notes` with the run-of-show + the frontmatter `backlog:` list.
 5. Write master to `vault/03 - export/decks/{YYYY-MM-DD}-{slug}.html`.
 6. **PDF only when the user asked for one** — for each slide, write a standalone HTML (`<style>` includes Block 1 + Block 2 freeze), Chrome `--screenshot` at native 1280×720 with `--force-device-scale-factor=2`, then PIL combines PNGs into `~/Downloads/{YYYY-MM-DD}-{slug}.pdf`.
 
@@ -649,6 +823,6 @@ The `build.py` itself is **not preserved** — discarded with `/tmp` after the b
 Both questions default to "no" — only embed/render extras when the user explicitly opts in. Phrase them in plain language:
 
 - **PDF:** *"Want a PDF too, for sharing or archive?"* If no → HTML only.
-- **Offline:** *"Should this work even if wifi fails at the venue?"* If no → standard Google Fonts CDN `<link>` (smaller HTML). If yes → embed fonts via Block 5 (heavier HTML, fully offline).
+- **Offline:** *"Should this work even if wifi fails at the venue?"* If no → standard Google Fonts CDN `<link>` (smaller HTML). If yes → embed fonts via Block 6 (heavier HTML, fully offline).
 
 Both default `no` keeps the everyday case lean; the user opts up only when needed.

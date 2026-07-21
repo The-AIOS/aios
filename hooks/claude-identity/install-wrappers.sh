@@ -301,6 +301,28 @@ spawn() {
     echo "[spawn] Opening session: $name"
   fi
 
+  # Arg-pass / stale-shell guard. A parent shell that sourced an OLDER spawn()
+  # (before --tier/--model existed) treats "--tier" as the NAME positional and
+  # "mechanical" as the TASK — silently producing a junk worker named "--tier"
+  # (task file /tmp/spawn-task---tier.md == "mechanical"), while the real agent
+  # name + task are shifted off and lost. The generic ^[a-zA-Z0-9_-]+$ check
+  # below ACCEPTS "--tier" (- is legal anywhere in it), so the misfire stays
+  # silent. Reject flag-shaped names + bare-tier-word tasks so it surfaces
+  # loudly; the fix is always the same: reload the current spawn().
+  if [[ "$name" == -* ]]; then
+    echo "⚠️  spawn: session name '$name' looks like a flag (leading '-')." >&2
+    echo "    Likely a STALE parent shell running an old spawn() that treats the" >&2
+    echo "    flag as the name. Run 'source ~/.zshrc' (or open a fresh terminal)," >&2
+    echo "    then re-spawn." >&2
+    return 1
+  fi
+  if [ "$task" = "mechanical" ] || [ "$task" = "judgment" ]; then
+    echo "⚠️  spawn: task is the bare word '$task' — a stale parent shell likely" >&2
+    echo "    dropped your real task ('$task' is a --tier value, not a task)." >&2
+    echo "    Run 'source ~/.zshrc' (or open a fresh terminal), then re-spawn." >&2
+    return 1
+  fi
+
   if [[ ! "$name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
     echo "⚠️  spawn: invalid session name '$name'. Use only letters, digits, _, -" >&2
     return 1
@@ -409,12 +431,18 @@ $activate_clause
 delay 1.2
 tell application "System Events"
   $tell_process_clause
-    -- Robustness: force the IDE frontmost before any keystroke. `activate` alone can
+    -- Robustness: force the IDE frontmost before any keystroke. \`activate\` alone can
     -- lose the race when another window/app holds focus at spawn time (e.g. operator
-    -- typing in a separate terminal) — keystrokes then leak. `set frontmost to true`
+    -- typing in a separate terminal) — keystrokes then leak. \`set frontmost to true\`
     -- is the forceful guarantee; the extra settle lets the focus change land.
     set frontmost to true
     delay 0.5
+    -- Palette-leak guard: a single Escape (key code 53 — physical key, layout-
+    -- independent) before opening the palette. If a stray palette / quick-open
+    -- from a prior misfire is still open, the create-command paste would append
+    -- INTO it and leak; Escape clears it first. A no-op at a normal editor prompt.
+    key code 53
+    delay 0.3
     -- Step 1: open the command palette (Cmd+Shift+P — letter chord, layout-safe).
     keystroke "p" using {command down, shift down}
     delay 0.8
@@ -437,7 +465,15 @@ tell application "System Events"
   end tell
 end tell
 APPLESCRIPT
-        osascript "$applescript_file"
+        # osascript stderr → a per-session log (not the terminal) so a benign
+        # AppleScript warning never masquerades as a spawn failure, and `|| true`
+        # keeps this subshell from aborting on a non-zero osascript. If an OLDER
+        # loaded spawn() ever leaks "spawn:NN: command not found: activate", it is
+        # COSMETIC and NON-FATAL — the session STILL launches with its task. Verify
+        # before ever declaring spawn broken:  pgrep -fl "--name $name"  (and the
+        # task file /tmp/spawn-task-$name.md exists). Never fire a duplicate worker
+        # off the activate error alone — that races the real session on one repo.
+        osascript "$applescript_file" 2>>"/tmp/spawn-osascript-$name.log" || true
         # Hold the lock ~1.5s after the AppleScript returns so a consecutive spawn
         # can't re-activate the IDE while these keystrokes are still in flight.
         # Caught 2026-06-08.
