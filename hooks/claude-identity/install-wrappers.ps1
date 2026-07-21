@@ -250,6 +250,21 @@ function spawn {
         Write-Host "[spawn] Opening session: $Name"
     }
 
+    # Arg-pass / stale-shell guard (mirror of the bash wrapper). A parent shell
+    # running an OLDER spawn() can bind a flag as the name or a bare tier word as
+    # the task, silently producing a junk worker. Surface it loudly; the fix is
+    # to reload the profile ( . $PROFILE ) or open a fresh shell, then re-spawn.
+    if ($Name -like '-*') {
+        Write-Host "[spawn] session name '$Name' looks like a flag (leading '-')." -ForegroundColor Yellow
+        Write-Host "[spawn] Likely a STALE shell running an old spawn(). Run '. `$PROFILE' (or open a fresh shell), then re-spawn." -ForegroundColor Yellow
+        return
+    }
+    if ($Task -in 'mechanical','judgment') {
+        Write-Host "[spawn] task is the bare word '$Task' — a stale shell likely dropped your real task ('$Task' is a -Tier value, not a task)." -ForegroundColor Yellow
+        Write-Host "[spawn] Run '. `$PROFILE' (or open a fresh shell), then re-spawn." -ForegroundColor Yellow
+        return
+    }
+
     $taskFile = Join-Path $env:TEMP "spawn-task-$Name.md"
     Set-Content -Path $taskFile -Value $Task -Encoding UTF8
 
