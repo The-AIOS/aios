@@ -71,6 +71,7 @@
 > - **Glass:** cut version + submit to marketplace BEFORE this hash is set/pushed; fill step 5's mechanism (confirm Open VSX vs VS Code Marketplace for Antigravity).
 > - **Tier-A close (2026-07-20):** `AI-12` (stewardship wiring) + `AI-44` (spawned-output) **LANDED** (authored by hand, no subagents, CI-verified). **Deferred with cause:** `AI-24` company-template addons → belong in the **separate `The-AIOS/company-template` repo**, not this one (do in a company-template session) · `AI-42` `/study:transcribe` → **blocked**: Luigi's `video-watch.py` source isn't in-repo, no `/study:` namespace exists, and the flow is Mac-only (ffmpeg → mlx-whisper) — needs his source + a namespace decision (`/aios:transcribe` vs a new `study` plugin) before it can be ported faithfully.
 > - **AI-7** (Glass needs-input amber bucket): pending Chuy's keep/simplify/drop — reconcile the amber-vs-working color collision before it ships.
+> - **Close community PRs #5 + #2** (The-AIOS/aios) with the resolvable import-commit link (`d425ec2` or its post-rebase SHA) — acknowledgment comments already posted 2026-07-20; the close was deliberately deferred to push-time so the "imported" claim + SHA are truthful.
 
 ---
 
