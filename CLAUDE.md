@@ -53,6 +53,8 @@ The `spawn` wrapper is the canonical way to launch a named worker session — it
 
 **When the user asks to spawn with a task** (*"spawn an agent to review Q1 financials"*), match intent to an agent name, then pass the full task as the second argument: `spawn accountant "Help me analyze Q1 financials"`. The session receives identity + first assignment in one shot.
 
+**Name the output destination in the brief (spawned-output discipline).** A spawned worker can't see your vault conventions — if the brief doesn't say *where* its deliverable lands, the output drifts to the worker's cwd, a scratch path, or an invented folder, and you find it later (or never). So every spawn brief that produces a durable artifact must state the destination path explicitly. Routing: project-state → the project note · a deliverable that ships outward → `03 - export/` · a one-shot analysis/research/audit with no more-specific home → **`vault/00 - notes/reflections/analysis/`** (the spawned-output landing zone, kept distinct from operator-authored reflections). The rule: *the brief names the path, or the output defaults to `reflections/analysis/` — never the worker's guess.*
+
 **Model tier (`--tier mechanical|judgment`).** Spawned sessions default to the frontier model. For **mechanical** work (ingests, file sweeps, transcription, deterministic transforms), `spawn --tier mechanical {name} "{task}"` routes to the *second-best* model (cheaper, fast, plenty for non-judgment work); omit it (or `--tier judgment`) for real reasoning. *Calibrate Don't Choose* applied to spend — don't pay frontier rates for a file sweep. (Windows: `-Tier mechanical`.)
 
 **Pin an explicit model (`--model <id>`).** To spawn on a model *outside* the tier ladder — a temporary or specialist model like Fable during an extension window — use `spawn --model claude-fable-5 {name} "{task}"`. `--model` overrides `--tier` and exports `CLAUDE_MODEL` **for that spawn's launcher only** — never a global `~/.zshrc` export. (The old workaround was to `export CLAUDE_MODEL` in your rc, spawn, then revert it; miss the revert and *every* future terminal launched on the pinned model. `--model` removes that footgun entirely.)
@@ -283,6 +285,7 @@ Before writing any new file, route it — never default to "wherever feels close
 | **Made for an audience / ships outward?** (deliverable + its HTML source) | `03 - export/{type-or-venture}/` |
 | **Time-bound narrative?** (what happened today) | `01 - calendar/` daily note |
 | **Compounds — will be re-read for meaning?** | `00/reflections/` (or the project note if it's one project's state; `ideas/` if it's a seed) |
+| **Analysis a *spawned worker* produced?** (research / audit / review output, no more-specific home) | `00/reflections/analysis/` — the spawned-output landing zone (see § Spawning Sessions) |
 | **About who the operator is / how to work with them?** | `00/context/` |
 
 **The retrieval test:** place by *the question you'll ask later*, not by where the file came from. A conference capture answers "what did we learn about X?" → `reflections/` — not `logs/`, even though it's date-stamped. **Date-stamped ≠ log.**

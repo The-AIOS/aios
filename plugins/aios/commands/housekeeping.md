@@ -675,6 +675,25 @@ Auto-memory (`MEMORY.md` + its note files) has a hard ceiling (~25KB / 200 lines
 
 **Why this bucket exists:** a full cache is a *silent* failure mode — above the ceiling the index loads only partially and the model quietly stops "remembering" whatever fell off the end, with no error to either party. Detecting the pressure *before* it tips, and channeling durable facts to their canonical home, keeps memory a lean HOW-cache and the vault the authoritative WHAT-database.
 
+#### Bucket 25: Spawned-output placement drift (NEW — spawn-brief destination discipline)
+
+Spawned workers can't see the vault's placement conventions — output drifts unless the brief named a destination (CLAUDE.md § Spawning Sessions). This bucket catches what landed wrong.
+
+1. Scan `vault/00 - notes/reflections/analysis/` (the spawned-output landing zone) for files sitting unrouted 14+ days → propose re-homing each to its real home (a project note if it's project-state · `03 - export/` if it ships · a proper `reflections/` subfolder if it compounds) or archiving if spent.
+2. Scan for agent-produced analysis that landed OUTSIDE any conventional home (scratch paths referenced in daily notes, `/tmp` mentions, worker-cwd artifacts) → propose relocating into `reflections/analysis/` or its real home.
+3. Flag any spawn pattern that repeatedly drifts (same agent, same wrong place) → propose adding a destination line to that agent's brief template.
+
+**Proposal table format:**
+
+| # | Finding | Evidence | Action |
+|---|---|---|---|
+| 25.1 | `reflections/analysis/{file}` unrouted | landed {date}, no project link, {N} days idle | [ ] re-home to `{target}` or archive |
+| 25.2 | spawned output outside conventions | `{path}` referenced in {daily-note} | [ ] relocate to `reflections/analysis/` |
+
+**Propose-only.** Re-homes are the operator's call at packet review.
+
+**Why this bucket exists:** the spawn-brief destination line (§ Spawning) *prevents* drift at spawn time; this is its detection twin — output that slipped through (a brief that forgot the line, an older worker) gets found and re-homed instead of silently accumulating in a landing zone nobody revisits.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:
