@@ -202,5 +202,11 @@ The design.md spec is just the format. The inspiration comes from curated DESIGN
 
 **Recommended workflow:** open VoltAgent/awesome-design-md → browse 5-10 systems → find the closest match to the operator's desired feel → fork that DESIGN.md as a starting point → adapt tokens and prose via the interview steps below. Faster + higher-quality than starting from blank.
 
+## Skills
+
+Lean on these registered skills:
+- `frontend-design` — translate the design tokens into distinctive, non-templated UI direction when the brand needs to be *seen*, not just specified.
+- `tailwind-design-system` — express the design.md tokens as a Tailwind token layer (v4 `@theme`, component patterns) when the downstream surface is Tailwind.
+
 ## Schedule
 On-demand. Particularly useful during `/company --create` (when scaffolding a new venture-context repo), during product launch design phases, or when the operator senses the brand has drifted from its design.md baseline.

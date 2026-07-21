@@ -24,7 +24,7 @@ When the operator has formed a position, decision, or thesis and wants to genuin
 1. Parse the position from the user's argument
 2. Read relevant context and project notes for the topic
 3. Find the strongest arguments FOR the current position (steel-man it first)
-4. Build the strongest possible argument AGAINST it using vault evidence
+4. Build the strongest possible argument AGAINST it using vault evidence — **(consult the `leverage-points` skill:** the strongest counter is often *"you're intervening at a low-leverage point"* — the goal is right but the chosen lever [a parameter, a buffer] won't move it; name the higher-leverage place instead)
 5. Surface blind spots and untested assumptions
 
 ## Output

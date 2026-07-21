@@ -63,6 +63,7 @@ Fire ALL of these as direct parallel tool calls:
 ### Message 3 — Synthesize + write weekly plan (no read calls)
 From the data already loaded — process everything in memory:
 - **Stage→mix check (consult the `team-archetypes` skill):** for each active project, name its lifecycle stage (pre-PMF / growing / scaling) and flag where the week's planned work doesn't match the stage-appropriate archetype mix — e.g. planning new features (Builder) on a post-PMF product that actually needs growth (Grower) or simplification (Sweeper). Surface any mismatch under *This week's challenge*.
+- **Load-shape + leverage check (consult the `sustainable-cadence` and `leverage-points` skills):** is the week's plan *sustainable* for the operator — capacity is a design input, not an afterthought, and carried/slow/deferred work can be a legitimate quality-gate or rhythm, not drift — and do its priorities sit on the **highest-leverage** places (goals, rules, self-organization) rather than low-leverage busywork? Flag an over-full or low-leverage week under *This week's challenge*.
 1. Synthesize into the 7-day plan and write to `01 - calendar/{YYYY-MM}/{YYYY}-W{WW}-plan.md`
 2. After writing, ask: **"Want me to create daily note skeletons for the week?"**
    - If yes → create daily notes (see **Daily Notes Generation** below), then commit

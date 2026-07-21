@@ -38,6 +38,7 @@ Provide structured strategic advisory on business challenges using proven framew
 Lean on these registered skills:
 - `deep-research` — when the advisory needs multi-source, verified evidence
 - `data-presentation` — present frameworks/analysis in decision-ready form
+- `leverage-points` — WHERE to intervene is the consultant's core move: push toward high-leverage places (goals, rules, self-organization, paradigm), away from low-leverage ones (parameters, buffers, taxes/subsidies)
 
 
 ## Instructions

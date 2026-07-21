@@ -37,6 +37,7 @@ Lean on these registered skills as the build calls for them:
 - `python-best-practices` / `react-nextjs-patterns` — stack-specific craft when relevant
 - `verification-before-completion` — evidence the change works before claiming done
 - `finishing-a-development-branch` — merge / PR / cleanup discipline at ship time; don't leave the branch dangling
+- `comprehension-debt` — **at ship/handoff:** an end-to-end build is the single largest debt generator — recap the surface area and offer the operator the walkthrough, so they can defend, debug, or decide on what shipped without having written it
 
 
 ## Instructions

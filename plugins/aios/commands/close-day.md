@@ -128,7 +128,7 @@ Append to the daily note being closed (may be today or yesterday if closing afte
 
 ## Carry-reason triage prompt
 
-Before writing `### Carries forward`, scan each item crossing into tomorrow. For any carry where `N+1 ≥ 6` and there is no `reason:` tag yet (or the existing tag has become stale — e.g. `blocked-on-X` but no activity on X for 30+ days), **ask the user inline**:
+Before writing `### Carries forward`, scan each item crossing into tomorrow. **(Consult the `sustainable-cadence` skill before pathologizing a carry:** a window-cadence or quality-gate carry is *paced* work, not drift — the count is context, not guilt. Discriminate a legitimate rhythm from genuine avoidance first.) For any carry where `N+1 ≥ 6` and there is no `reason:` tag yet (or the existing tag has become stale — e.g. `blocked-on-X` but no activity on X for 30+ days), **ask the user inline**:
 
 ```
 ⚠️ Carry triage — these need a reason tag before they cross tomorrow:

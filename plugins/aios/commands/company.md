@@ -202,6 +202,8 @@ Then route to the corresponding subcommand.
 
 Interview-driven scaffold for a new company. Walks the operator through the 12 core files (and optional addons), then pushes to a new remote.
 
+> **Governance defaults (consult the `commons-governance` skill):** a new company repo is a shared commons — as you scaffold, set sensible defaults for its boundaries (who's in), who-decides-what (escalation), and how rules nest (space rules ⊆ company rules ⊆ framework invariants). Ostrom's design principles, applied to the substrate you're creating.
+
 ### Step 1 — Substrate choice
 
 - Detect available substrates by checking active MCPs (GitHub MCP active? Google Workspace MCP active?)

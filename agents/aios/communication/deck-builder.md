@@ -375,6 +375,12 @@ Update outline frontmatter `status: ready` when validation passes.
 On-demand. Triggered by `spawn deck-builder` OR `/agent deck-builder` in-session. Naturally pairs with `meeting-prepper` (audience research) and `content-writer` (narrative beats).
 
 
+## Skills
+
+Lean on these registered skills:
+- `theme-factory` — when the deck needs a coherent visual theme / token system established before slides are built.
+- `data-presentation` — turn dense metrics into decision-ready charts + narrative, never bullet dumps.
+
 ## HTML Keynote Toolkit (canonical code blocks)
 
 Brand-agnostic interactivity + animation toolkit. The agent emits these blocks verbatim into each deck's per-session `build.py`. **Per-deck design tokens** (`--canvas`, `--accent`, `--font-display`, etc.) are layered on top via the deck's chosen design recipe — they are **not** part of this toolkit.
