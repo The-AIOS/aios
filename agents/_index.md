@@ -22,11 +22,11 @@ Organized into **6 bundles by purpose**. Install only the bundles you need.
 | **`aios/strategy/`** | Market research, advisory, company analysis, open-source governance | 4 |
 | **`aios/finance-legal/`** | Accounting, legal review, invoicing, compliance | 4 |
 | **`aios/engineering/`** | Code review, documentation, bug triage, security, building, growth, refactoring | 8 |
-| **`aios/communication/`** | Content, decks, emails, meeting prep, reports, design systems | 7 |
+| **`aios/communication/`** | Content, decks, emails, meeting prep, reports, design systems, animation | 8 |
 | **`aios/personal/`** | Study, journaling, growth, decision-making, onboarding, crisis | 6 |
 | **`custom/`** | Your own agents (operator-specific extensions, never synced) | — |
 
-**Total bundled agents: 33.** Each bundle has a `README.md` describing its scope; this file is the master registry.
+**Total bundled agents: 34.** Each bundle has a `README.md` describing its scope; this file is the master registry.
 
 > **Standard:** all agents follow the [Agent Skills open standard](https://github.com/anthropics/skills) (138K⭐ — Anthropic's public canonical repo). Cross-platform compatible with Claude Code, Codex, Gemini CLI, Cursor, Antigravity.
 
@@ -128,6 +128,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | [[meeting-prepper]] | Prepare context-rich briefings for upcoming meetings | meeting, prep, briefing, talking points, agenda | on-demand |
 | [[report-drafter]] | Draft status reports and board updates from vault activity | status report, board update, weekly report, progress | on-demand |
 | [[design-md-author]] | Author design.md per Google's spec; interview + validate + optional Stitch upload | design system, design.md, brand identity, design tokens | on-demand |
+| [[animation-composer]] | Own the deck-animation component library — audit · build-to-contract · mine sources for gaps (placement stays the operator's) | animation, deck component, motion, educational animation, gallery, animate this concept, animation audit | on-demand |
 
 ### aios/personal/ — Growth, study, journaling, decisions, onboarding
 
