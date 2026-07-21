@@ -20,9 +20,9 @@ You are running a session capture. This command auto-detects where you're runnin
 
 When finishing a focused work session — agent session, dev session, ad-hoc spawn. Lightweight capture that bridges back to the daily note + project notes. Feeds the next /close-day. Run it whenever the work has a clear stopping point.
 
-## Non-interactive `--auto` mode (used by `/close-all`)
+## Non-interactive `--auto` mode (used by the Glass "Close all" button)
 
-When invoked as `/close-session --auto` (the `/close-all` broadcast fires this in each selected session), run with **no prompts** so the session self-closes cleanly and returns to **idle** (which is what lets `/close-all`'s optional "kill after" fire safely — only *after* the capture is done):
+When invoked as `/close-session --auto` (the Glass Close-all broadcast fires this in each selected session), run with **no prompts** so the session self-closes cleanly and returns to **idle** (which is what lets the button's optional "kill after" fire safely — only *after* the capture is done):
 
 - **Infer** the label from the conversation (`{HH:MM} | {topic}`) — do NOT ask to confirm it.
 - **Skip every step that waits for user input** — no *"Session label — correct?"*, no *"What was most useful?"*, no *"Worth filing?"*. (A broadcast has no one present to answer N prompts.)
@@ -55,7 +55,7 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
 2. Read `00 - notes/context/observed/session-insights.md` — check current content for snapshotting
 3. Infer a session label from the conversation: current time (HH:MM) + a 2–4 word topic. Present it to the user for confirmation: "Session label: **{HH:MM} | {Topic}** — correct, or adjust?"
 4. Wait for user response on label
-5. **Append the session block via the race-safe helper — never write the note directly** (a concurrent `/close-all` fires several vault sessions at once; a direct read-append-write would clobber). Write the block (format below) to a temp file, then:
+5. **Append the session block via the race-safe helper — never write the note directly** (a concurrent Close-all broadcast fires several vault sessions at once; a direct read-append-write would clobber). Write the block (format below) to a temp file, then:
    ```bash
    ~/aios/hooks/aios-note-append \
      --note "$HOME/aios/vault/01 - calendar/{YYYY-MM}/{YYYY-MM-DD}.md" \
@@ -176,7 +176,7 @@ If yes → write the pages (with `[[wiki-links]]`, proper frontmatter, source at
 1. Determine the project name from the repo (read `package.json` name, or `CLAUDE.md` title, or folder name)
 2. **Date rule:** If the current time is between midnight and 7:00 AM, ask the user which date the report belongs to — late-night sessions usually belong to the previous day. After 7:00 AM, use today's date.
 3. Infer session content from the conversation
-4. Write the report to **`~/aios/.claude/session-report-{YYYY-MM-DD}-{project}-{session}.md`** — `{project}` is a filesystem-safe slug of the repo name (from step 1), `{session}` is `$CLAUDE_AGENT_NAME` (fallback: a short session-id or pid if unset). **Both suffixes are load-bearing at a shared dir:** `{project}` keeps two *different* repos' sessions from colliding in the one harvest dir, and `{session}` keeps a `/close-all` broadcast's N workers in the *same* repo from clobbering each other. Write it to `~/aios/.claude/` **even though the session runs in another repo** — that's the whole point: one dir close-day always scans, no registration needed. (`~/aios/.claude/` is fully gitignored, so the report never leaks into any repo's git.) Then commit your session's own scoped work via `~/aios/hooks/aios-commit -m "..." -- <paths>` (never `git add -A`).
+4. Write the report to **`~/aios/.claude/session-report-{YYYY-MM-DD}-{project}-{session}.md`** — `{project}` is a filesystem-safe slug of the repo name (from step 1), `{session}` is `$CLAUDE_AGENT_NAME` (fallback: a short session-id or pid if unset). **Both suffixes are load-bearing at a shared dir:** `{project}` keeps two *different* repos' sessions from colliding in the one harvest dir, and `{session}` keeps a Close-all broadcast's N workers in the *same* repo from clobbering each other. Write it to `~/aios/.claude/` **even though the session runs in another repo** — that's the whole point: one dir close-day always scans, no registration needed. (`~/aios/.claude/` is fully gitignored, so the report never leaks into any repo's git.) Then commit your session's own scoped work via `~/aios/hooks/aios-commit -m "..." -- <paths>` (never `git add -A`).
 5. Confirm: "Session report written to `~/aios/.claude/session-report-{date}-{project}-{session}.md`. `/close-day` will pick it up tonight."
 
 ### Session report format (Mode B)
@@ -248,7 +248,7 @@ duration: {estimated hours}
 
 ### Mode B rules
 - **All reports land in the one canonical dir `~/aios/.claude/`** — never the running repo's `.claude/`. That single location is what makes harvest coverage complete: close-day scans it and nothing strands, regardless of which repo the session ran in.
-- One report **per (project, session)** — the `-{project}-{session}` suffix. `{project}` prevents two *different* repos colliding in the shared dir; `{session}` lets a `/close-all` fire N workers in the *same* repo without clobbering. If the *same* session runs `/close-session` twice on one date, overwrite its own file.
+- One report **per (project, session)** — the `-{project}-{session}` suffix. `{project}` prevents two *different* repos colliding in the shared dir; `{session}` lets a Close-all broadcast fire N workers in the *same* repo without clobbering. If the *same* session runs `/close-session` twice on one date, overwrite its own file.
 - These files are gitignored — never commit them. `~/aios/.claude/` is already fully gitignored in the vault (`.claude/` line in `.gitignore`), so no per-repo `.gitignore` entry is needed anymore.
 - Be specific: names, numbers, error messages
 - Write in the same language the session was conducted in

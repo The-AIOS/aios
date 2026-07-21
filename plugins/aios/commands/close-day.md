@@ -180,7 +180,7 @@ For each file that exists:
 - **"Observed"** (if present) → route to the appropriate Tier A observed context file (`patterns.md`, `preferences.md`, `business.md`, `antifragile.md`). Snapshot before editing. This is how Tier A observations from standalone project sessions reach the vault — no context is lost even when Claude isn't running in the vault terminal.
 - **"Observed (Tier B candidates)"** (if present) → DO NOT write to `growth.md` / `profile.md` / `ecosystem.md` directly from this routing. Instead, feed these candidates into the Tier B digest pass (see § Tier B observation pass below). The digest enforces the substance bar across all sessions for the day before any Tier B write fires — preventing per-session-noise amplification.
 
-> **Mode A daily-note blocks carry the same candidates under a broadcast — harvest them too.** A `/close-all` closes *vault* sessions with `/close-session --auto`, which (to avoid a parallel-write race on the shared observed files) **defers** its Tier A/B routing into the daily-note block instead of writing inline. So when reading the daily note's `## Session —` blocks, harvest each block's **`Observed (Tier A candidates)`** (→ route to the target Tier A file, snapshot first — identical to a report's "Observed", skipping any marked "Routed inline" which an interactive close already wrote) and **`Observed (Tier B candidates)`** (→ feed the Tier B digest). This is what makes close-day the **single writer** of observed context under a broadcast: N parallel `--auto` closes each only wrote their own locked block, and close-day does all the shared-file routing once — race-free by construction.
+> **Mode A daily-note blocks carry the same candidates under a broadcast — harvest them too.** The Glass Close-all button closes *vault* sessions with `/close-session --auto`, which (to avoid a parallel-write race on the shared observed files) **defers** its Tier A/B routing into the daily-note block instead of writing inline. So when reading the daily note's `## Session —` blocks, harvest each block's **`Observed (Tier A candidates)`** (→ route to the target Tier A file, snapshot first — identical to a report's "Observed", skipping any marked "Routed inline" which an interactive close already wrote) and **`Observed (Tier B candidates)`** (→ feed the Tier B digest). This is what makes close-day the **single writer** of observed context under a broadcast: N parallel `--auto` closes each only wrote their own locked block, and close-day does all the shared-file routing once — race-free by construction.
 
 **If the summary includes a `## Project Note Updates` section:**
 - **Current State:** merge into the project note's `## Current State` section (replace or complement — use judgement)
@@ -209,7 +209,7 @@ Then continue with agent session reports.
 
 Check for close-session reports from agent/spawned sessions. These follow the same pattern as dev session reports but originate from `spawn` or `/agent` workflows.
 
-**Where to look — the CANONICAL harvest dir.** **Every** project/worker/agent `/close-session` (Mode B) writes its report to **`~/aios/.claude/session-report-{YYYY-MM-DD}-{project}-{session}.md`** — one dir for all of them, so this single glob catches every Mode B report regardless of which repo it ran in (no dependency on the repo being a registered Dev project — this is the seam-2 fix). Run `ls ~/aios/.claude/session-report-{YYYY-MM-DD}-*.md` (the `-*` globs every project+session; a `/close-all` broadcast lands one file per session), then `Read` each. **After harvesting, delete the consumed report files** (they're transient bridges; `rm` them so the next day starts clean).
+**Where to look — the CANONICAL harvest dir.** **Every** project/worker/agent `/close-session` (Mode B) writes its report to **`~/aios/.claude/session-report-{YYYY-MM-DD}-{project}-{session}.md`** — one dir for all of them, so this single glob catches every Mode B report regardless of which repo it ran in (no dependency on the repo being a registered Dev project — this is the seam-2 fix). Run `ls ~/aios/.claude/session-report-{YYYY-MM-DD}-*.md` (the `-*` globs every project+session; a Close-all broadcast lands one file per session), then `Read` each. **After harvesting, delete the consumed report files** (they're transient bridges; `rm` them so the next day starts clean).
 
 **For each agent report found:**
 - Route output the same way as dev session reports (shipped → Shipped, pendientes → Carries, notes → Learned)
@@ -681,7 +681,7 @@ CHANGED=$(git status --porcelain -- "vault/" ".aios-update" 2>/dev/null | awk '{
 [ -n "$CHANGED" ] && ~/aios/hooks/aios-commit -m "Close day {date}" -- $CHANGED
 ```
 
-`aios-commit` stages only those paths via a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. Run `/close-day` when active sessions have closed (that's what `/close-all` is for) so nothing is mid-write.
+`aios-commit` stages only those paths via a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. Run `/close-day` when active sessions have closed (that's what the Glass Close-all button is for) so nothing is mid-write.
 
 ## Rules
 - **Shipped is binary.** Don't soften "didn't ship" into "made progress." Honesty compounds.
