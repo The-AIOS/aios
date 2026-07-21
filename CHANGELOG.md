@@ -15,6 +15,10 @@
 >
 > Every **Action required** is written as **CHECK-THEN-ACT, idempotent** — your session verifies its *own* current state first and acts **only if needed**, no-op-ing (and saying so) when the fix is already in place. The same entry may reach you, a teammate who synced independently, a fresh install, or a machine that already self-healed — so a blind "run this" would be unsafe; a self-check is not. **Authors:** write actions that carry their own check (state the precondition + the test, e.g. *"run X; act only if Y"*), put any restart/reload step LAST, and never assume the reader's starting state.
 
+> ## Author every entry with a "What you can now do" section
+>
+> A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
+
 ---
 
 ## 2026-07-20 — 🚧 WIP (drafting, not consolidated, NOT pushed) — Tier-A authoring cut + AIOS Glass v-next
@@ -37,16 +41,19 @@
 
 > ⚠️ **Update your Glass extension.** This canonical release ships alongside a new AIOS Glass version. VS Code / Antigravity extension auto-update is unreliable — so **canonical is the channel that tells you**: a new Glass is out, update it (Action required, step 5).
 
-**📋 Comprehension-debt — the full surface area shipped (so nothing lands unseen).**
-This cut is large and mostly agent-authored then coordinator-verified. The complete list, so you can defend / debug / decide on your own system:
-- **New skills:** `deep-research` · `orchestration-ladder` (+ a CI gate that fails the build on any agent → missing-skill reference).
-- **New agent:** `animation-composer`. **Enhanced agents:** `study-buddy` (Study Atlas output format) · `deck-builder` (presenter notes · click-nav-off · S-search) · `onboarding-aios` (concierge + install-doctor) · + stewardship-skill wiring across 10 agents.
-- **Behavioral contract — CLAUDE.md + commands (the highest-attention changes):** observed-context Tier-B staleness hardening (`/close-day` + `/today`) · memory-pressure channeling (`/housekeeping` Bucket 24) · spawned-output placement discipline (Bucket 25) · stewardship wiring across 6 commands (`/close-day` · `/drift` · `/7plan` · `/challenge` · `/company` · `/collaborate`).
-- **Ingest:** the two macOS media enhancements (long-form transcription + screen-comprehension) above.
-- **Papercuts / docs:** spawn fixes · `AGENTS.md` · `LICENSE-AUDIT` · `EXTENSION-MAP`.
-- **AIOS Glass (separate extension version):** per-folder sort · smart-route · kill-guard · session post-its · status card · Explorer i18n.
+**📋 What you can now do (the practical read — new capabilities in plain language).**
+*You shouldn't have to read a skill's source to know what it adds to your day.* Concretely, this version lets you:
+- **Ingest a video and have Claude read the SCREEN, not just the audio** *(macOS)*. Paste a talk and say *"ingest this and **read the slides** — there's code on screen"*: Claude grabs the transcript AND reads each slide verbatim — the `~1e24 FLOPS · 6,000 GPUs · $2M` on a slide the narrator never spoke aloud, the code with `C001` intact — then files the merged result. Slide decks, coding screencasts, and whiteboard talks stop losing half their signal. *(Plain `/ingest <video>` stays audio-only + fast — the screen layer is opt-in, triggered by "read the slides / code on screen.")*
+- **Transcribe long-form audio/video locally** *(macOS)* — a 49-min interview or lecture, on-device (mlx-whisper), any length, no third party. *(MarkItDown still handles short clips + YouTube captions on every platform — it stays the default.)*
+- **Ask "what should I write / build / do next?" and get researched, ranked answers** — the new `deep-research` skill maps your existing vault first (no repeats), sweeps the field, and returns ranked angles each with a *why* + *how*. Try: *"what should our next post be about?"* Your strategy agents (consultant, market-researcher…) now run this under the hood.
+- **Study a book into one living atlas, not a scattered pile of briefs** — `study the next chapter` grows one interactive `{book}-atlas.html` you navigate + revisit, instead of loose chapter notes.
+- **Stop losing context when auto-memory fills up** — as memory nears its ceiling, Claude now offers to *channel* durable facts into your vault (their real home) before compacting, instead of silently dropping whatever falls off the end.
+- **Trust Claude to reach for the right judgment-lens at the right moment** — `/drift` won't mislabel paced or quality-gated work as avoidance · `/7plan` checks the week is *sustainable* + high-leverage · `/challenge` tests whether you're intervening at a low-leverage point. *(That's `orchestration-ladder` + the stewardship wiring — you never invoke them; they make Claude wiser at the decision moments, so a one-shot task doesn't balloon into a workflow and a 20-file migration doesn't get crammed into one agent.)*
+- **In AIOS Glass** *(update the extension — Action step 5)*: sort any workspace folder by name or newest-first (remembered per folder) · a **Status card** shows whether your skills/commands are actually wired · kill-guard confirms before you close a busy session · read the post-its you jot on sessions.
 
-> **The load-bearing pieces worth an actual read** (they change how every session behaves): the **CLAUDE.md deltas** (memory-channeling · aggregate-observed-context · spawned-output routing) and the **`/close-day` hard-gate** (the Tier-B digest block is now a *required* output — close-day self-rejects without it). Everything else is additive or opt-in.
+**The full surface area** (for the record — everything agent-authored + coordinator-verified this cut): 2 new skills (`deep-research` · `orchestration-ladder`) + a CI gate · 1 new agent (`animation-composer`) · 4 enhanced agents (`study-buddy` · `deck-builder` · `onboarding-aios` + stewardship wiring on 10) · CLAUDE.md + command changes (Tier-B staleness · memory-channeling `/housekeeping` B24 · spawned-output B25 · stewardship on 6 commands) · the 2 macOS ingest hooks · papercuts (`AGENTS.md` · `LICENSE-AUDIT` · `EXTENSION-MAP` · spawn fixes) · Glass (separate extension).
+
+> **Worth an actual read** (these change how every session behaves): the **CLAUDE.md deltas** (memory-channeling · aggregate observed-context · spawned-output routing) + the **`/close-day` hard-gate** — the Tier-B observed-context refresh is now a *required* close-day output, so your `ecosystem`/`profile`/`growth` files can't silently rot. Everything else is additive or opt-in.
 
 **Action required (CHECK-THEN-ACT, idempotent):**
 1. **New skills** — register them after this sync: `bash ~/aios/skills/setup.sh` (idempotent; wires `deep-research` + `orchestration-ladder` into `~/.claude/skills`). No-op if your setup auto-runs it.
