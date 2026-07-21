@@ -83,8 +83,12 @@ fi
 # stage ONLY the given paths into the temp index (adds · modifications · deletions)
 GIT_INDEX_FILE="$TMPIDX" git add --all -- "${PATHS[@]}" || die "failed to stage the given paths"
 
-# no-op guard: paths given but nothing actually changed vs HEAD
-if [ "${#PARENTS[@]}" -gt 0 ] && GIT_INDEX_FILE="$TMPIDX" git diff-index --quiet HEAD --; then
+# no-op guard: paths given but nothing actually changed vs HEAD.
+# --cached is LOAD-BEARING: without it, diff-index compares HEAD against the WORKING TREE
+# (the temp index has a zeroed stat cache from read-tree, so git content-scans every tracked
+# file) — and any unrelated dirty file in the tree (Obsidian always leaves one) makes the guard
+# miss the no-op and write an EMPTY commit. --cached compares the temp index to HEAD directly.
+if [ "${#PARENTS[@]}" -gt 0 ] && GIT_INDEX_FILE="$TMPIDX" git diff-index --quiet --cached HEAD --; then
   echo "aios-commit: no changes in the given paths — nothing to commit."
   exit 0
 fi
