@@ -4,7 +4,7 @@ tags:
   - command
   - daily
 description: Broadcast /close-session to selected sessions — the "wrap up now" fan-out
-argument-hint: "[session-name ...]  (no args = every session except this one)"
+argument-hint: "[session-name ...] [--close-day] [--kill]  (no names = every session except this one)"
 allowed-tools: Bash(pgrep:*), Bash(ls:*), Read
 ---
 
@@ -30,7 +30,9 @@ Each `/close-session` the broadcast fires writes to a **different place** — a 
 **CLI — this command.** Argument-driven:
 - **`/close-all`** (no args) → every active named session **except the one running this command**. Enumerate: `pgrep -fl "claude .*--remote-control --name"`; drop your own session's name; confirm the list before sending.
 - **`/close-all name-a name-b`** → **only** the named sessions (e.g. `/close-all chuy-lens content-writer`).
-- Send `/close-session` to each selected session over the Remote-Control channel the `spawn` wrapper set up, **sequentially, not in parallel** (that path is clipboard-mediated; parallel sends race — see `feedback_spawn_sequential_not_parallel`). Each session self-closes (own report / merge-appends its own block + `aios-commit`s its own work). If no Remote-Control send exists in your setup, tell the operator to use the Glass picker or run `/close-session` in each terminal.
+- **`--close-day`** → after the selected sessions finish, run `/close-day` once **in this (main) session** to consolidate.
+- **`--kill`** → after each **selected, non-self** session finishes its capture (watch it return to idle — never mid-capture), `spawn-kill {name}` it. **Never** kills this session or any unselected one.
+- Send **`/close-session --auto`** (non-interactive — infers its label, skips the prompts, so it completes and idles) to each selected session over the Remote-Control channel the `spawn` wrapper set up, **sequentially, not in parallel** (that path is clipboard-mediated; parallel sends race — see `feedback_spawn_sequential_not_parallel`). Each session self-closes (own report / merge-appends its own block + `aios-commit`s its own work). If no Remote-Control send exists in your setup, tell the operator to use the Glass picker.
 
 **Then:** run **`/close-day`** (once) to consolidate — it harvests every `.claude/session-report-{date}-*.md` (the `-*` catches all per-session files) and writes the day's one narrative.
 

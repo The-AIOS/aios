@@ -20,6 +20,17 @@ You are running a session capture. This command auto-detects where you're runnin
 
 When finishing a focused work session — agent session, dev session, ad-hoc spawn. Lightweight capture that bridges back to the daily note + project notes. Feeds the next /close-day. Run it whenever the work has a clear stopping point.
 
+## Non-interactive `--auto` mode (used by `/close-all`)
+
+When invoked as `/close-session --auto` (the `/close-all` broadcast fires this in each selected session), run with **no prompts** so the session self-closes cleanly and returns to **idle** (which is what lets `/close-all`'s optional "kill after" fire safely — only *after* the capture is done):
+
+- **Infer** the label from the conversation (`{HH:MM} | {topic}`) — do NOT ask to confirm it.
+- **Skip every step that waits for user input** — no *"Session label — correct?"*, no *"What was most useful?"*, no *"Worth filing?"*. (A broadcast has no one present to answer N prompts.)
+- **Keep every step that captures / routes / commits** — Mode A merge-appends its block via `aios-note-append`; Mode B writes its per-session report; session-insights + observed-context routing runs per the normal rules; the commit is `aios-commit`.
+- **Finish promptly** — completion → idle is the contract `--auto` exists to honor.
+
+The rest of this command is the **interactive** (manual `/close-session`) flow. Under `--auto`, skip each input-waiting step, run each capture/route/commit step.
+
 
 ## Mode detection
 
