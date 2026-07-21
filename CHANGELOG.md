@@ -17,6 +17,42 @@
 
 ---
 
+## 2026-07-20 — 🚧 WIP (drafting, not consolidated, NOT pushed) — Tier-A authoring cut + AIOS Glass v-next
+
+`hash: {PENDING — set at consolidation once Glass is cut + this is finalized}`
+
+> **🚧 LIVE DRAFT.** This entry is being assembled incrementally as the 2026-07-20 execution sprint lands. It is **not final and not pushed.** Do not act on it until the 🚧 marker is removed at consolidation. Kept here so nothing built today is forgotten.
+
+> **What this delivers.** A consolidated "Fable-week authoring" cut — specs designed across the Fable weeks, authored into canonical in ONE coherent release — paired with a new **AIOS Glass** extension version. Bundled deliberately (one release, one changelog) so operators get one coherent update, not a drip of dozens of entries.
+
+**What you're getting — canonical framework:**
+- **New skills (2):** `deep-research` (multi-source research harness — the engine behind the strategy agents) · `orchestration-ladder` (agent → parallel → workflow decision lens). Plus a **CI skill-resolution gate** that fails the build if any bundled agent references a skill that isn't shipped (already caught two latent dangling refs).
+- **Agents:** `animation-composer` (NEW — owns the deck-animation component library) · `study-buddy` → the **Study Atlas** format (one interactive `{slug}-atlas.html` + one `{slug}-source.md` spine, replacing the old brief-pile) · `deck-builder` → presenter-notes + backlog + click-nav-default-off + `S` deck-search · `onboarding-aios` → concierge + install-doctor (detects App/terminal/IDE, troubleshoots installs + updates).
+- **Framework internals:** observed-context **Tier-B staleness** hardening (`/aios:close-day` + `/aios:today` + CLAUDE.md) · **memory-pressure channeling** doctrine (CLAUDE.md § Context Hierarchy + `/aios:housekeeping` **Bucket 24** — when auto-memory nears its ceiling, channel WHAT to the vault before compacting HOW, so a full cache never silently drops durable context).
+- **Papercuts + docs:** spawn wrapper fixes (arg-pass stale-shell guard · `activate` non-fatal · palette-leak escape) · `AGENTS.md` portable contract · `LICENSE-AUDIT` · `EXTENSION-MAP`.
+
+**What you're getting — AIOS Glass (new extension version):**
+- Explorer **per-folder sort** (name / last-modified, persisted per folder) · **smart-route** terminal default · **kill-guard** (always-confirm on close) · **session post-its** (create · view · delete · harvest-on-kill) · **status card** (framework/vault/account/skills-commands wiring) · Explorer **i18n** (es/pt-br).
+
+> ⚠️ **Update your Glass extension.** This canonical release ships alongside a new AIOS Glass version. VS Code / Antigravity extension auto-update is unreliable — so **canonical is the channel that tells you**: a new Glass is out, update it (Action required, step 5).
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **New skills** — register them after this sync: `bash ~/aios/skills/setup.sh` (idempotent; wires `deep-research` + `orchestration-ladder` into `~/.claude/skills`). No-op if your setup auto-runs it.
+2. **Command updates** (`/aios:today`, `/aios:close-day`, `/aios:housekeeping` changed) — refresh the plugin cache so you run the new versions: `claude plugin update aios@the-aios`. No-op if already current.
+3. **Spawn wrapper fixes** — only if you use `spawn`: re-run `bash ~/aios/hooks/claude-identity/install-wrappers.sh`, then `source ~/.zshrc` in open shells. No-op if already current.
+4. **[do last — restart]** Restart your Claude Code session so the updated CLAUDE.md loads.
+5. **[Glass — separate surface]** Update the AIOS Glass extension in VS Code / Antigravity: {exact mechanism TBD at cut — Open VSX / VS Code Marketplace}.
+
+> **🔧 Maintainer integration notes (NOT operator actions — resolve + REMOVE this block before consolidation/push):**
+> - **deep-research custom→bundled:** remove the vault's `skills/custom/deep-research/` + its `_index` row (promoted to `skills/aios/`; leaving both = duplicate).
+> - **CLAUDE.md:** two-repo byte-identical mirror (canonical + vault).
+> - **Commands:** 3-location sync (`plugins/aios/commands/` → marketplace → cache) before push.
+> - **Glass:** cut version + submit to marketplace BEFORE this hash is set/pushed; fill step 5's mechanism (confirm Open VSX vs VS Code Marketplace for Antigravity).
+> - **Not-yet-landed Tier-A papercuts:** `AI-12` (stewardship-trio wiring) · `AI-24` (company-template addons) · `AI-42` (`/study:transcribe`) · `AI-44` (spawned-output placement) — decide fold-in-now vs Tier-B/defer.
+> - **AI-7** (Glass needs-input amber bucket): pending Chuy's keep/simplify/drop — reconcile the amber-vs-working color collision before it ships.
+
+---
+
 ## 2026-07-13 — Mount-guard: a PreToolUse hook that blocks editing company-context mounts
 
 `hash: 55403f8`
