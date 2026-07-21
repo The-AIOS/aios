@@ -168,7 +168,9 @@ If yes → write the pages (with `[[wiki-links]]`, proper frontmatter, source at
 
 ## Dev session reports
 
-If `USER.md` → `## Sources` has a `### Dev projects` table, read **all** `.claude/session-report-{YYYY-MM-DD}-*.md` (today's date — the `-*` globs **every session's** report; a `/close-all` broadcast lands one file per session) from each project's local directory. `ls` them first, then `Read` each — one project can have several. Use absolute paths (expand `~`, e.g., `/Users/{username}/code/{project}/.claude/session-report-2026-03-16-{session}.md`).
+> **Canonical location:** every project/worker `/close-session` now writes its report to the **one dir `~/aios/.claude/`** (see § Agent session reports below — that scan is the primary harvest and catches **all** Mode B reports regardless of which repo they ran in). The per-repo `.claude/` scan below is a **legacy fallback** — kept only to catch reports written in-repo by an older close-session version or other tooling; on a current setup it usually finds nothing, and that's fine.
+
+If `USER.md` → `## Sources` has a `### Dev projects` table, also read **all** `.claude/session-report-{YYYY-MM-DD}-*.md` (today's date — the `-*` globs **every session's** report) from each project's local directory. `ls` them first, then `Read` each — one project can have several. Use absolute paths (expand `~`, e.g., `/Users/{username}/code/{project}/.claude/session-report-2026-03-16-{project}-{session}.md`).
 
 For each file that exists:
 - **"What shipped"** → include in Close of Day > Shipped section
@@ -207,7 +209,7 @@ Then continue with agent session reports.
 
 Check for close-session reports from agent/spawned sessions. These follow the same pattern as dev session reports but originate from `spawn` or `/agent` workflows.
 
-**Where to look:** Agent sessions spawned at the vault root write their close-session reports to **`~/aios/.claude/session-report-{YYYY-MM-DD}-*.md`** — the `-*` globs every session (a `/close-all` broadcast lands one file per agent). Run `ls ~/aios/.claude/session-report-{YYYY-MM-DD}-*.md`, then `Read` each. Also check Dev project paths for session reports naming an agent from `agents/_index.md` or `agents/custom/_index.md`. **After harvesting, delete the consumed report files** (they're transient bridges; `rm` them so the next day starts clean).
+**Where to look — the CANONICAL harvest dir.** **Every** project/worker/agent `/close-session` (Mode B) writes its report to **`~/aios/.claude/session-report-{YYYY-MM-DD}-{project}-{session}.md`** — one dir for all of them, so this single glob catches every Mode B report regardless of which repo it ran in (no dependency on the repo being a registered Dev project — this is the seam-2 fix). Run `ls ~/aios/.claude/session-report-{YYYY-MM-DD}-*.md` (the `-*` globs every project+session; a `/close-all` broadcast lands one file per session), then `Read` each. **After harvesting, delete the consumed report files** (they're transient bridges; `rm` them so the next day starts clean).
 
 **For each agent report found:**
 - Route output the same way as dev session reports (shipped → Shipped, pendientes → Carries, notes → Learned)

@@ -169,15 +169,15 @@ If yes → write the pages (with `[[wiki-links]]`, proper frontmatter, source at
 
 ## Mode B — Project Terminal (Session Bridge)
 
-**Goal:** Write a structured session report to `.claude/session-report-{date}.md` in the current project repo. `/close-day` reads these files automatically and routes content to the vault.
+**Goal:** Write a structured session report to the **single canonical harvest dir `~/aios/.claude/`** (NOT the current repo's `.claude/`). `/close-day` scans that one dir and routes content to the vault — so a session in *any* repo lands where close-day looks, with **zero dependency on the repo being registered** in USER.md's Dev-projects table. (This is the seam-2 fix: an unregistered repo's report used to be written in-repo and never harvested — stranding it. One canonical dir dissolves that.)
 
 ### Steps
 
 1. Determine the project name from the repo (read `package.json` name, or `CLAUDE.md` title, or folder name)
 2. **Date rule:** If the current time is between midnight and 7:00 AM, ask the user which date the report belongs to — late-night sessions usually belong to the previous day. After 7:00 AM, use today's date.
 3. Infer session content from the conversation
-4. Write the report to **`.claude/session-report-{YYYY-MM-DD}-{session}.md`** — where `{session}` is `$CLAUDE_AGENT_NAME` (fallback: a short session-id or pid if unset). The **per-session suffix is load-bearing**: it's what lets a `/close-all` broadcast fire N workers in the *same* repo and land N distinct reports instead of clobbering one. Then commit your session's own scoped work via `~/aios/hooks/aios-commit -m "..." -- <paths>` (never `git add -A`).
-5. Confirm: "Session report written to `.claude/session-report-{date}-{session}.md`. `/close-day` will pick it up tonight."
+4. Write the report to **`~/aios/.claude/session-report-{YYYY-MM-DD}-{project}-{session}.md`** — `{project}` is a filesystem-safe slug of the repo name (from step 1), `{session}` is `$CLAUDE_AGENT_NAME` (fallback: a short session-id or pid if unset). **Both suffixes are load-bearing at a shared dir:** `{project}` keeps two *different* repos' sessions from colliding in the one harvest dir, and `{session}` keeps a `/close-all` broadcast's N workers in the *same* repo from clobbering each other. Write it to `~/aios/.claude/` **even though the session runs in another repo** — that's the whole point: one dir close-day always scans, no registration needed. (`~/aios/.claude/` is fully gitignored, so the report never leaks into any repo's git.) Then commit your session's own scoped work via `~/aios/hooks/aios-commit -m "..." -- <paths>` (never `git add -A`).
+5. Confirm: "Session report written to `~/aios/.claude/session-report-{date}-{project}-{session}.md`. `/close-day` will pick it up tonight."
 
 ### Session report format (Mode B)
 
@@ -247,8 +247,9 @@ duration: {estimated hours}
 ```
 
 ### Mode B rules
-- One report **per session** (the `-{session}` suffix) — a `/close-all` fires several at once, so each writes its own file and never overwrites another's. If the *same* session runs `/close-session` twice on one date, overwrite its own file.
-- These files are gitignored — never commit them. Ensure `.gitignore` has `.claude/session-report-*.md` (the `-{session}` variants match).
+- **All reports land in the one canonical dir `~/aios/.claude/`** — never the running repo's `.claude/`. That single location is what makes harvest coverage complete: close-day scans it and nothing strands, regardless of which repo the session ran in.
+- One report **per (project, session)** — the `-{project}-{session}` suffix. `{project}` prevents two *different* repos colliding in the shared dir; `{session}` lets a `/close-all` fire N workers in the *same* repo without clobbering. If the *same* session runs `/close-session` twice on one date, overwrite its own file.
+- These files are gitignored — never commit them. `~/aios/.claude/` is already fully gitignored in the vault (`.claude/` line in `.gitignore`), so no per-repo `.gitignore` entry is needed anymore.
 - Be specific: names, numbers, error messages
 - Write in the same language the session was conducted in
 - Include enough context for someone reading this without the session history
