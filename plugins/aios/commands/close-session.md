@@ -79,7 +79,7 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
    - New preference discovered → `preferences.md`
    - Strategic insight about ventures → `business.md`
    - System failure or user correction → `antifragile.md`
-   Snapshot before editing. Not every session produces observations — but never skip this check for speed. The observed context is the compound value of the vault.
+   Snapshot before editing **and set the edited file's `updated:` frontmatter to today** (the snapshot-and-stamp rule — CLAUDE.md § Session End; the staleness alarm reads that stamp). Not every session produces observations — but never skip this check for speed. The observed context is the compound value of the vault.
 
    **Tier B files (growth / profile / ecosystem) — capture candidates, do NOT write directly.** These files live one synthesis layer above session-insights — observations about the operator (not about work mechanics). A single session lacks the cross-session view needed to clear the substance bar (timeline + uniqueness + evidence + essentiality tests). Instead:
    - Note Tier B candidates in this session's daily-note block under `**Observed (Tier B candidates):**` — e.g. *"possible growth edge: re-secuenciar > apurar el cierre, 3rd instance this month"*. One line each. Date + evidence. No write to growth/profile/ecosystem.md.
@@ -97,7 +97,7 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
 
 9. **Self-update verification** — before commit, walk the CLAUDE.md Session End rules to confirm step 7 wasn't skipped. The compounding promise of the AI-OS lives in routing, not logging.
 
-   - [ ] Snapshotted observed-context files I modified (per CLAUDE.md → "Session End → Snapshot before editing")
+   - [ ] Snapshotted observed-context files I modified **AND set each one's `updated:` to today** (per CLAUDE.md → "Session End → Snapshot before editing, stamp after")
    - [ ] Updated `session-insights.md` per CLAUDE.md → "Self-Update → Observed Context Rules" — Emerging / Reinforced / Routed lifecycle; ≤10 Emerging, ≤5 Reinforced
    - [ ] Updated other observed files when warranted (per CLAUDE.md → "Observed Context Rules" — patterns / preferences / business / ecosystem / growth / profile)
    - [ ] Wrote to `antifragile.md` if the user corrected me OR I caught my own system-level mistake (per CLAUDE.md mandatory triggers)

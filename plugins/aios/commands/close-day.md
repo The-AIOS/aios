@@ -584,7 +584,7 @@ For each Tier B file (`growth.md`, `profile.md`, `ecosystem.md`):
    - **Evidence test** — does this connect to 2+ sessions or a clear cross-source pattern? (one-off observations live in `session-insights.md`, not Tier B)
    - **Essentiality test** — if removed in 90 days, would the file lose something real? (essential = write; replaceable = don't)
 
-3. **If passes the bar → WRITE.** Claude observes autonomously. No approval prompt. Same posture as `antifragile.md` on a system catch. Snapshot the file first (per the mandatory snapshot rule), then write the observation. Use [[wiki-links]] where natural.
+3. **If passes the bar → WRITE.** Claude observes autonomously. No approval prompt. Same posture as `antifragile.md` on a system catch. Snapshot the file first, write the observation, **then set its `updated:` frontmatter to today** (the snapshot-and-stamp rule — this is the exact write path where the growth/profile/ecosystem stamps silently drifted). Use [[wiki-links]] where natural.
 
 4. **If nothing passes the bar → DON'T WRITE.** Don't manufacture content to keep the file warm. The staleness counter keeps ticking; that's honest data, not failure.
 
@@ -654,7 +654,7 @@ This creates a timeline of how observations evolve — valuable for `/trace`, `/
 
 Before commit, walk the CLAUDE.md Session End rules to confirm the observed-context updates above weren't skipped. The compounding promise of the AI-OS lives in routing, not logging.
 
-- [ ] Snapshotted observed-context files I modified (per CLAUDE.md → "Session End → Snapshot before editing")
+- [ ] Snapshotted observed-context files I modified **AND set each one's `updated:` frontmatter to today** (per CLAUDE.md → "Session End → Snapshot before editing, stamp after"). The staleness alarm below reads *only* these stamps — a body edit without a stamp bump feeds the backstop a lie.
 - [ ] Updated `session-insights.md` per CLAUDE.md → "Self-Update → Observed Context Rules" — Emerging / Reinforced / Routed lifecycle; ≤10 Emerging, ≤5 Reinforced
 - [ ] **Emitted the `### Tier B digest` block (HARD GATE — the close does not complete without it).** One line per Tier B file (`growth` / `profile` / `ecosystem`), each stating last-touched-days + outcome. If the close-of-day lacks this block, self-reject and run the Tier B observation pass before commit. This is load-bearing parity with the Tier A routing step — not a "when warranted" nicety.
 - [ ] **Checked the observed-context staleness alarm** — read every `observed/*.md` `updated:` frontmatter; flagged any past its threshold (21d aggregate Tier B, 30d others), *independent of any digest streak*. For a stale aggregate file, ran the full-map re-derivation (step 4b) or logged an explicit "map current, verified {date}" line.
