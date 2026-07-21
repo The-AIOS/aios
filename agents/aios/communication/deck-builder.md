@@ -134,7 +134,7 @@ Co-author the outline in a vault note:
   output: html                            # html (recommended) | slides
   pdf: no                                 # yes | no — Phase 3.B opt-in
   offline: no                             # yes | no — Phase 3.B opt-in (embed fonts for offline-safe HTML)
-  click-nav: off                          # off (default) | edges | halves — Feature 2: click-to-navigate zones. off = keyboard/clicker only (no accidental nav)
+  click-nav: off                          # off (default) | edges | halves — Feature 2: DESKTOP click-to-navigate zones. off = keyboard/clicker only. MOBILE always gets tap-nav ('halves') regardless — touch has no keyboard
   tiers:                                  # set in Phase 1.5 — drives the K toggle. Omit / "none" = single version (no K).
     short: Keynote                        # label for the core-only cut (evocative, honest-for-THIS-deck — NOT a hardcoded duration)
     full: Full                            # label for everything (core + full-tier slides)
@@ -346,7 +346,7 @@ Joint review pass. Checklist depends on output-format from Phase 0.
 - [ ] Master HTML loads in browser: F enters fullscreen · M opens the slide menu · K toggles the short cut ⇄ full version using the Phase-1.5 labels (or is inert/absent when `tiers: none`) · B blacks out for a live demo · type-#-Enter jumps
 - [ ] **Presenter notes (N)** — N opens the panel; its accent tracks the *active slide's* `--accent` (not the root default — the 7/16 gotcha); `.s-notes` is invisible to the audience; nothing prints (`@media print` hides `.s-notes` + `#notes`)
 - [ ] **Deck search (S)** — S opens the palette; typing filters across slide titles / slide text / presenter notes in BOTH languages (`data-es` indexed); ↑↓ selects, Enter jumps (including to an off-cut slide, which shows a `not in this cut` badge), Esc closes; deck keys (K/T/B…) stay inert while the search input is focused
-- [ ] **Click-nav (`click-nav`)** — with `off` (default) center + edge clicks never navigate (keyboard/clicker intact); with `edges`/`halves`, only the intended zones advance and clicks inside `#menu`/`#help`/`#search` never navigate
+- [ ] **Click-nav (`click-nav`)** — DESKTOP: with `off` (default) center + edge clicks never navigate (keyboard/clicker intact); with `edges`/`halves`, only the intended zones advance and clicks inside `#menu`/`#help`/`#search` never navigate. **MOBILE (touch / coarse pointer): always `halves` — tap-right advances, tap-left back — regardless of the config, so phone users (no keyboard) aren't stuck on slide 1**
 
 Surface issues for user judgment — don't auto-fix in Phase 5. Surface + ask.
 
@@ -599,8 +599,9 @@ body.light .sr-row.sel,body.light .sr-row:hover{background:rgba(0,0,0,0.05);}
     if(e.target.closest('#menu')||e.target.closest('#help')||e.target.closest('#search'))return;
     if(document.getElementById('menu').classList.contains('open')||document.getElementById('help').classList.contains('open')){ closeAll(); return; }
     if(document.getElementById('blackout').classList.contains('on')){ document.getElementById('blackout').classList.remove('on'); return; }
-    // Feature 2 — configurable click-to-nav; default off (clickers/keyboard drive; no accidental/interaction nav). Set window.CLICK_NAV = "off" | "edges" | "halves".
-    var CN = window.CLICK_NAV || 'off';
+    // Feature 2 — configurable click-to-nav. DESKTOP default off (clickers/keyboard drive; no accidental/interaction nav). MOBILE (touch / coarse pointer) ALWAYS gets tap-nav ('halves': tap-right advances, tap-left back) — touch has no keyboard, so without this a phone user is stuck on slide 1. Set window.CLICK_NAV = "off" | "edges" | "halves" for desktop.
+    var isMobile = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+    var CN = isMobile ? 'halves' : (window.CLICK_NAV || 'off');
     if(CN==='off') return;
     var w = window.innerWidth, edge = w*0.05;
     if(CN==='edges'){ if(e.clientX<edge) step(-1); else if(e.clientX>w-edge) step(1); }
