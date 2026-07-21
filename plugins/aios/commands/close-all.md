@@ -25,7 +25,7 @@ Each `/close-session` the broadcast fires writes to a **different place** — a 
 
 `/close-all` **never closes the session it runs in**, and both surfaces let you pick *which* sessions to close — so it can't accidentally end the session you're working in or a session mid-task you want left alone.
 
-**Primary — the Glass "Close all" button.** Opens a **multi-select picker** (like "go with agents") of every live Claude session. **All are checked by default EXCEPT your active session** (flagged `⟵ active — you're here`, off by default). **Working sessions** (busy — the amber dot, read from `~/.claude/sessions/<pid>.json`) are flagged `🟡 working` so you can uncheck them (`sendText` *queues* `/close-session`, so a busy session finishes its task then closes — it is never interrupted). You confirm the set; Glass sends `/close-session` to each checked session's terminal.
+**Primary — the Glass "Close all" button.** Opens a **multi-select picker** (like "go with agents") of every live Claude session. Each row carries the running-card **status dot** — 🟢 green idle · 🟡 amber working · 🔵 blue needs-input — so you see what you're closing. **All are checked by default EXCEPT your PRIMARY session** (buddai — resolved by `primaryName()`, the same identity the "launch primary" button uses, NOT "whatever's focused") **and the active terminal** — both default-unchecked and flagged `primary` / `active`. Selecting a protected session still closes it (it appends its block); it just can **never be killed**. `sendText` *queues* `/close-session --auto`, so a busy session finishes its task then closes — never interrupted. Glass sends `/aios:close-session --auto` to each checked session's terminal. **Kill = dispose the integrated terminal** (the trash-icon path: `term.dispose()` SIGHUPs claude + the respawn loop + the shell) — NOT `spawn-kill` in a stray terminal (that only killed the claude process and left the terminal open).
 
 **CLI — this command.** Argument-driven:
 - **`/close-all`** (no args) → every active named session **except the one running this command**. Enumerate: `pgrep -fl "claude .*--remote-control --name"`; drop your own session's name; confirm the list before sending.
@@ -37,7 +37,7 @@ Each `/close-session` the broadcast fires writes to a **different place** — a 
 **Then:** run **`/close-day`** (once) to consolidate — it harvests every `.claude/session-report-{date}-*.md` (the `-*` catches all per-session files) and writes the day's one narrative.
 
 ## Rules
-- **Never close the session running `/close-all`** — drop it from the set (CLI) / default it unchecked (Glass).
+- **Never close the session running `/close-all`** — drop it from the set (CLI) / default the primary + active unchecked (Glass), and never kill either even if selected.
 - **Never write the daily note from here.** `/close-all` only triggers; sessions capture themselves; `/close-day` is the sole note-writer.
 - **Working sessions aren't interrupted** — `/close-session` queues after the current task. Uncheck them if you'd rather they finish untouched.
 - **Sequential** over Remote-Control (parallel = clipboard race). The Glass picker drives terminals directly, so it has no such constraint.
