@@ -21,11 +21,9 @@
 
 ---
 
-## 2026-07-20 — 🚧 WIP (drafting, not consolidated, NOT pushed) — Tier-A authoring cut + AIOS Glass v-next
+## 2026-07-20 — Tier-A authoring cut + AIOS Glass v0.4.0
 
-`hash: {PENDING — set at consolidation once Glass is cut + this is finalized}`
-
-> **🚧 LIVE DRAFT.** This entry is being assembled incrementally as the 2026-07-20 execution sprint lands. It is **not final and not pushed.** Do not act on it until the 🚧 marker is removed at consolidation. Kept here so nothing built today is forgotten.
+`hash: f2787d7`
 
 > **What this delivers.** A consolidated "Fable-week authoring" cut — specs designed across the Fable weeks, authored into canonical in ONE coherent release — paired with a new **AIOS Glass** extension version. Bundled deliberately (one release, one changelog) so operators get one coherent update, not a drip of dozens of entries.
 
@@ -62,16 +60,6 @@
 3. **Spawn wrapper fixes** — only if you use `spawn`: re-run `bash ~/aios/hooks/claude-identity/install-wrappers.sh`, then `source ~/.zshrc` in open shells. No-op if already current.
 4. **[do last — restart]** Restart your Claude Code session so the updated CLAUDE.md loads.
 5. **[Glass — separate surface]** Update the AIOS Glass extension in Antigravity (or your OSS editor) from **Open VSX** — the extension publishes to Open VSX only. (Extensions auto-update but need a manual editor restart to load the new version.)
-
-> **🔧 Maintainer integration notes (NOT operator actions — resolve + REMOVE this block before consolidation/push):**
-> - **deep-research custom→bundled:** remove the vault's `skills/custom/deep-research/` + its `_index` row (promoted to `skills/aios/`; leaving both = duplicate).
-> - **Media hooks custom→canonical (AI-42b):** remove the vault's `hooks/custom/{transcribe.py, video-watch.py, ocr-image.swift, video-watch-guide.md}` + registry rows + the two `USER.md → ### /ingest` routes (transcribe + video-watch) — they graduated to canonical `hooks/` + the `/aios:ingest` command. Do this **at consolidation** (Chuy's tool keeps working from `hooks/custom/` until canonical is pushed + `/aios:update`d — don't orphan it early). Operator install note (macOS): `python3 -m venv ~/aios/hooks/.venv && ~/aios/hooks/.venv/bin/pip install mlx-whisper pillow`.
-> - **CLAUDE.md:** two-repo byte-identical mirror (canonical + vault).
-> - **Commands:** 3-location sync (`plugins/aios/commands/` → marketplace → cache) before push.
-> - **Glass:** cut version + publish to **Open VSX ONLY** (`ovsx publish`, never `vsce publish` to the MS Marketplace — Chuy 07-20) BEFORE this hash is set/pushed.
-> - **Tier-A close (2026-07-20):** `AI-12` (stewardship wiring) + `AI-44` (spawned-output) **LANDED** (authored by hand, no subagents, CI-verified). **Deferred with cause:** `AI-24` company-template addons → belong in the **separate `The-AIOS/company-template` repo**, not this one (do in a company-template session) · `AI-42` `/study:transcribe` → **blocked**: Luigi's `video-watch.py` source isn't in-repo, no `/study:` namespace exists, and the flow is Mac-only (ffmpeg → mlx-whisper) — needs his source + a namespace decision (`/aios:transcribe` vs a new `study` plugin) before it can be ported faithfully.
-> - **AI-7** (Glass needs-input amber bucket): **DROPPED** (Chuy 07-20) — redundant with Glass's native status-string "needs input" detection + the amber-vs-working collision; removed from `glass-vnext` cleanly (tsc clean, zero dangling refs). Not in the Glass feature list above. *(Also folded in this session: the Health card renamed from "Setup" + its Foam check swapped for a "Skills & commands wired" check.)*
-> - **Close community PRs #5 + #2** (The-AIOS/aios) with the resolvable import-commit link (`d425ec2` or its post-rebase SHA) — acknowledgment comments already posted 2026-07-20; the close was deliberately deferred to push-time so the "imported" claim + SHA are truthful.
 
 ---
 
