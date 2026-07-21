@@ -3,7 +3,8 @@ tags:
   - aios
   - command
   - daily
-description: Broadcast /close-session to every active session — the "wrap up now" fan-out
+description: Broadcast /close-session to selected sessions — the "wrap up now" fan-out
+argument-hint: "[session-name ...]  (no args = every session except this one)"
 allowed-tools: Bash(pgrep:*), Bash(ls:*), Read
 ---
 
@@ -20,19 +21,22 @@ You are firing a **broadcast**, not a consolidation. `/close-all` tells **every 
 
 Each `/close-session` the broadcast fires writes to a **different place** — a **vault** session merge-appends its block into today's note under a per-file lock (so N land in turn, zero clobber), and a **project/worker** session writes its own `.claude/session-report-{date}-{session}.md`. So there is no shared file two things fight over. Every commit underneath is `aios-commit` (mutex + scoped staging + throwaway-index plumbing). Scenario 2 (many sessions closing at once) is dissolved, not locked around.
 
-## How to broadcast
+## It's a selector, not a nuke
 
-**Primary — the Glass "Close all" button.** Glass owns the terminal handles: it iterates every live Claude terminal and sends `/close-session` to each. One click wraps the whole fleet. This is the intended UX.
+`/close-all` **never closes the session it runs in**, and both surfaces let you pick *which* sessions to close — so it can't accidentally end the session you're working in or a session mid-task you want left alone.
 
-**CLI — this command.** When run in a terminal (no Glass), enumerate the active named sessions and send each the `/close-session` command over the Remote-Control channel the `spawn` wrapper set up:
+**Primary — the Glass "Close all" button.** Opens a **multi-select picker** (like "go with agents") of every live Claude session. **All are checked by default EXCEPT your active session** (flagged `⟵ active — you're here`, off by default). **Working sessions** (busy — the amber dot, read from `~/.claude/sessions/<pid>.json`) are flagged `🟡 working` so you can uncheck them (`sendText` *queues* `/close-session`, so a busy session finishes its task then closes — it is never interrupted). You confirm the set; Glass sends `/close-session` to each checked session's terminal.
 
-1. List active sessions: `pgrep -fl "claude .*--remote-control --name"` → the running named sessions (name is on the command line).
-2. Send `/close-session` to **each** named session over its Remote-Control channel. **Sequentially, not in parallel** — the spawn/remote-control path is clipboard-mediated and parallel sends race (see `feedback_spawn_sequential_not_parallel`). One at a time; each session self-closes (writes its own report / merge-appends its own block + `aios-commit`s its own work).
-3. If no Remote-Control send is available in your setup, tell the operator: *"Use the Glass 'Close all' button, or run `/close-session` in each terminal — each self-closes safely (per-session reports + aios-commit)."*
+**CLI — this command.** Argument-driven:
+- **`/close-all`** (no args) → every active named session **except the one running this command**. Enumerate: `pgrep -fl "claude .*--remote-control --name"`; drop your own session's name; confirm the list before sending.
+- **`/close-all name-a name-b`** → **only** the named sessions (e.g. `/close-all chuy-lens content-writer`).
+- Send `/close-session` to each selected session over the Remote-Control channel the `spawn` wrapper set up, **sequentially, not in parallel** (that path is clipboard-mediated; parallel sends race — see `feedback_spawn_sequential_not_parallel`). Each session self-closes (own report / merge-appends its own block + `aios-commit`s its own work). If no Remote-Control send exists in your setup, tell the operator to use the Glass picker or run `/close-session` in each terminal.
 
-**Then:** the coordinating session runs **`/close-day`** to consolidate — it harvests every `.claude/session-report-{date}-*.md` (the `-*` catches all the per-session files) and writes the day's one narrative.
+**Then:** run **`/close-day`** (once) to consolidate — it harvests every `.claude/session-report-{date}-*.md` (the `-*` catches all per-session files) and writes the day's one narrative.
 
 ## Rules
-- **Never write the daily note from here.** `/close-all` only triggers; sessions capture themselves; `/close-day` is the sole note-writer for the consolidation.
-- **Sequential broadcast** over Remote-Control (parallel = clipboard race). The Glass button doesn't have this constraint (it drives terminals directly).
-- **Idempotent per session.** A session already closed just re-writes its own report/block — no cross-effect.
+- **Never close the session running `/close-all`** — drop it from the set (CLI) / default it unchecked (Glass).
+- **Never write the daily note from here.** `/close-all` only triggers; sessions capture themselves; `/close-day` is the sole note-writer.
+- **Working sessions aren't interrupted** — `/close-session` queues after the current task. Uncheck them if you'd rather they finish untouched.
+- **Sequential** over Remote-Control (parallel = clipboard race). The Glass picker drives terminals directly, so it has no such constraint.
+- **Idempotent per session** — a session already closed just re-writes its own report/block; no cross-effect (the per-session filename + the locks guarantee it, exactly like a `/close-all` — see the note-append + aios-commit design).
