@@ -4,7 +4,7 @@ tags:
   - command
   - daily
 description: End-of-session capture — detects vault vs project terminal, writes to the right place
-allowed-tools: mcp__obsidian__*, Bash(cd ~/aios && git:*), Bash(pwd), Bash(ls *), Bash(cat *), Read
+allowed-tools: mcp__obsidian__*, Bash(~/aios/hooks/aios-commit:*), Bash(~/aios/hooks/aios-note-append:*), Bash(cd ~/aios && git:*), Bash(pwd), Bash(ls *), Bash(cat *), Read
 ---
 
 # /close-session — Session Capture
@@ -43,10 +43,15 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
 2. Read `00 - notes/context/observed/session-insights.md` — check current content for snapshotting
 3. Infer a session label from the conversation: current time (HH:MM) + a 2–4 word topic. Present it to the user for confirmation: "Session label: **{HH:MM} | {Topic}** — correct, or adjust?"
 4. Wait for user response on label
-5. Append the session block to today's daily note:
-   - **Before** `## Close of Day` if it exists
-   - **After** the last `## Session —` block if others exist
-   - Otherwise at the end of the note
+5. **Append the session block via the race-safe helper — never write the note directly** (a concurrent `/close-all` fires several vault sessions at once; a direct read-append-write would clobber). Write the block (format below) to a temp file, then:
+   ```bash
+   ~/aios/hooks/aios-note-append \
+     --note "$HOME/aios/vault/01 - calendar/{YYYY-MM}/{YYYY-MM-DD}.md" \
+     --before "## Close of Day" \
+     -m "session: {HH:MM} {Topic}" \
+     --block-file /tmp/aios-session-block.$$.md
+   ```
+   The helper takes a **per-file lock + merge-appends**: under the lock it re-reads the *latest* note and inserts the block before `## Close of Day` (or at the end if that marker is absent — omit `--before` then), then commits the note via `aios-commit`. So N sessions closing at once each land their block **in turn** — ordered, zero clobber, all visible immediately. (Then `rm` the temp block file.)
 6. Update `session-insights.md` (observation buffer — not a log):
    - **Scan existing entries first:**
      - Does this session **reinforce** an Emerging insight? → move it to Reinforced with the new date
@@ -90,10 +95,12 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
 
    **Logging is not routing.** Don't commit until each insight from this session lives in `session-insights.md` (or routed onward to its target observed file). The daily-note "What I learned" is a holding cell, not a destination. The AI-OS compounds on routing — capture-only is stranded.
 
-10. Commit and push:
+10. **Commit any observed-context you touched via `aios-commit`** (the note block was already committed by `aios-note-append` in step 5). **NEVER `git add -A`** — in a concurrently-written vault it sweeps other sessions' + the human's in-flight files into your commit (scrambled attribution). Commit only the paths you changed:
    ```bash
-   cd ~/aios && git add -A && git commit -m "Session {date}: {topic}" && git push
+   ~/aios/hooks/aios-commit -m "session: {date} {topic}" -- \
+     "vault/00 - notes/context/observed/session-insights.md" {any other files you edited}
    ```
+   `aios-commit` stages ONLY the given paths via a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. It is the one sanctioned commit path — it replaces `git add -A` everywhere.
 
 ### Session block format (Mode A)
 
@@ -154,8 +161,8 @@ If yes → write the pages (with `[[wiki-links]]`, proper frontmatter, source at
 1. Determine the project name from the repo (read `package.json` name, or `CLAUDE.md` title, or folder name)
 2. **Date rule:** If the current time is between midnight and 7:00 AM, ask the user which date the report belongs to — late-night sessions usually belong to the previous day. After 7:00 AM, use today's date.
 3. Infer session content from the conversation
-4. Write the report to `.claude/session-report-{YYYY-MM-DD}.md`
-5. Confirm: "Session report written to `.claude/session-report-{date}.md`. `/close-day` will pick it up tonight."
+4. Write the report to **`.claude/session-report-{YYYY-MM-DD}-{session}.md`** — where `{session}` is `$CLAUDE_AGENT_NAME` (fallback: a short session-id or pid if unset). The **per-session suffix is load-bearing**: it's what lets a `/close-all` broadcast fire N workers in the *same* repo and land N distinct reports instead of clobbering one. Then commit your session's own scoped work via `~/aios/hooks/aios-commit -m "..." -- <paths>` (never `git add -A`).
+5. Confirm: "Session report written to `.claude/session-report-{date}-{session}.md`. `/close-day` will pick it up tonight."
 
 ### Session report format (Mode B)
 
@@ -225,8 +232,8 @@ duration: {estimated hours}
 ```
 
 ### Mode B rules
-- One report per day per project — if called twice on the same date, overwrite that day's report
-- This file is gitignored — never commit it. Ensure `.gitignore` has `.claude/session-report-*.md`
+- One report **per session** (the `-{session}` suffix) — a `/close-all` fires several at once, so each writes its own file and never overwrites another's. If the *same* session runs `/close-session` twice on one date, overwrite its own file.
+- These files are gitignored — never commit them. Ensure `.gitignore` has `.claude/session-report-*.md` (the `-{session}` variants match).
 - Be specific: names, numbers, error messages
 - Write in the same language the session was conducted in
 - Include enough context for someone reading this without the session history

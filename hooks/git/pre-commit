@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# pre-commit — the AIOS attribution guard. In a concurrently-written repo, a raw
+# `git commit` (which implies `git add -A`-style staging) is exactly the race that
+# scrambles attribution. This hook BLOCKS it so every automated caller is forced through
+# `aios-commit` (which builds via plumbing/commit-tree and never trips this hook).
+# A human committing deliberately sets AIOS_HUMAN=1.
+set -uo pipefail
+
+if [ "${AIOS_HUMAN:-0}" = "1" ]; then
+  SCAN="$(cd "$(dirname "$0")" && pwd)/secret-scan.sh"     # still secret-scan a human commit
+  [ -x "$SCAN" ] && exec "$SCAN"
+  exit 0
+fi
+
+cat >&2 <<'EOF'
+──────────────────────────────────────────────────────────────────────────────
+ BLOCKED: raw `git commit` in a concurrently-written AIOS repo.
+
+ Two actors sharing one working tree + `git add -A` = scrambled attribution
+ (whoever commits first sweeps everyone else's in-flight files). Use:
+
+     aios-commit -m "message" <path> [<path> ...]
+
+ It stages ONLY those paths and commits them without touching the working tree,
+ so it can never sweep another session's or the human's live edits.
+
+ Deliberate human commit?   AIOS_HUMAN=1 git commit …
+──────────────────────────────────────────────────────────────────────────────
+EOF
+exit 1

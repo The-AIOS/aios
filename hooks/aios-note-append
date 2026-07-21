@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# aios-note-append — race-safe append of a block into a shared markdown note (the daily
+# note), for concurrent /close-session writers. It serializes via a per-FILE mkdir mutex
+# and MERGE-APPENDS: under the lock it re-reads the LATEST note, then inserts. So when
+# /close-all fires N sessions at once, each lands its block in turn (A, then B reads the
+# note *with* A and appends after it, then C) — ordered, zero clobber, all visible now.
+# Inserts BEFORE the first line containing --before (e.g. "## Close of Day"), else appends
+# at end. Then commits the note via aios-commit (scoped — never touches other files).
+#
+# Usage:
+#   aios-note-append --note <path> --block-file <path> [--before "<marker>"] [-m "<msg>"] [--no-push]
+#   (block content comes from a FILE to avoid arg-size / newline issues)
+set -uo pipefail
+die(){ echo "aios-note-append: $*" >&2; exit 1; }
+
+NOTE=""; BEFORE=""; MSG=""; BLOCKFILE=""; NOPUSH=()
+while [ $# -gt 0 ]; do case "$1" in
+  --note)       NOTE="$2"; shift 2 ;;
+  --before)     BEFORE="$2"; shift 2 ;;
+  --block-file) BLOCKFILE="$2"; shift 2 ;;
+  -m)           MSG="$2"; shift 2 ;;
+  --no-push)    NOPUSH=(--no-push); shift ;;
+  *) die "unknown arg: $1" ;;
+esac; done
+[ -n "$NOTE" ] || die "need --note <path>"
+[ -f "$NOTE" ] || die "note does not exist: $NOTE"
+[ -n "$BLOCKFILE" ] && [ -f "$BLOCKFILE" ] || die "need --block-file <existing file>"
+[ -n "$MSG" ] || MSG="session: append capture block"
+
+SELF="$(cd "$(dirname "$0")" && pwd)"
+AC="$SELF/aios-commit"
+[ -x "$AC" ] || die "aios-commit not found next to this script"
+
+# ── per-file mutex (mkdir; dead-holder reclaim) ──
+LOCK="${NOTE}.aios-lock"
+acquire(){ local t=0 h; while ! mkdir "$LOCK" 2>/dev/null; do
+    h=$(cat "$LOCK/pid" 2>/dev/null || true)
+    if [ -n "$h" ] && ! kill -0 "$h" 2>/dev/null; then rm -rf "$LOCK" 2>/dev/null; continue; fi
+    t=$((t+1)); [ "$t" -gt 600 ] && die "note lock timeout on $NOTE"; sleep 0.1
+  done; echo "$$" > "$LOCK/pid"; }
+LOCKED=0
+release(){ [ "$LOCKED" = 1 ] && { rm -rf "$LOCK" 2>/dev/null; LOCKED=0; }; }
+trap release EXIT
+acquire; LOCKED=1
+
+# ── merge-append: re-read the LATEST note under the lock, then insert ──
+if [ -n "$BEFORE" ] && grep -qF -- "$BEFORE" "$NOTE"; then
+  awk -v marker="$BEFORE" -v bf="$BLOCKFILE" '
+    BEGIN{ blk=""; while((getline l < bf) > 0) blk = blk l "\n" }
+    !done && index($0, marker) { printf "%s%s\n", blk, $0; done=1; next }
+    { print }
+  ' "$NOTE" > "$NOTE.aiostmp" && mv "$NOTE.aiostmp" "$NOTE"
+else
+  printf '\n' >> "$NOTE"; cat "$BLOCKFILE" >> "$NOTE"
+fi
+
+# ── commit the note via aios-commit (its own repo-mutex; lock order note→repo, no deadlock) ──
+"$AC" -m "$MSG" "${NOPUSH[@]}" -- "$NOTE" || die "aios-commit failed"
+release; trap - EXIT
+exit 0

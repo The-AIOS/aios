@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# aios-commit — the ONLY sanctioned commit path in an AIOS repo that is written
+# concurrently by the human (through Obsidian) + many agent sessions + scheduled routines.
+#
+# WHY IT EXISTS
+#   `git add -A && git commit` encodes a single-writer assumption ("everything dirty is
+#   mine") that is false the moment two actors share the working tree: whoever commits
+#   first sweeps everyone else's in-flight files into ITS commit. No data is lost, but
+#   attribution/blame/audit is scrambled. aios-commit fixes it STRUCTURALLY (poka-yoke) —
+#   no per-actor discipline required, because the broad commit is made impossible:
+#     • per-repo mkdir mutex (macOS ships no flock) w/ dead-holder reclaim → serialises commits
+#     • stages ONLY the given paths (never `git add -A`) → kills the cross-sweep race
+#     • builds the commit from a THROWAWAY INDEX via plumbing (read-tree → add → write-tree →
+#       commit-tree → update-ref): THE WORKING TREE IS NEVER TOUCHED, so Obsidian's live copy
+#       is never disturbed and there is no dirty-tree rebase hazard
+#     • self-scans for secrets (plumbing skips the pre-commit hook, so aios-commit scans itself)
+#     • push-retry: on offline / diverged remote it KEEPS THE COMMIT LOCAL and defers the push
+#       → never orphans, never loses.
+#
+# USAGE
+#   aios-commit -m "message" [--no-push] [--] <path> [<path> ...]
+#
+# Design contributed by an AIOS operator (2026-06-21), de-personalized + built into core.
+set -uo pipefail
+
+die(){ echo "aios-commit: $*" >&2; exit 1; }
+
+MSG=""; NO_PUSH=0; PATHS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -m)   MSG="${2:-}"; shift 2 ;;
+    -m*)  MSG="${1#-m}"; shift ;;
+    --no-push) NO_PUSH=1; shift ;;
+    --)   shift; while [ $# -gt 0 ]; do PATHS+=("$1"); shift; done ;;
+    *)    PATHS+=("$1"); shift ;;
+  esac
+done
+[ -n "$MSG" ] || die "need -m <message>"
+[ ${#PATHS[@]} -gt 0 ] || die "need at least one path — aios-commit never stages -A (that is the bug it prevents)"
+
+git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
+GIT_DIR=$(git rev-parse --absolute-git-dir)
+TOPLEVEL=$(git rev-parse --show-toplevel)
+cd "$TOPLEVEL" || die "cannot cd to repo root"
+
+# ── per-repo mutex: mkdir is atomic; a stale lock from a dead holder is reclaimed ──
+LOCK="$GIT_DIR/aios-commit.lock"
+acquire(){
+  local tries=0 holder
+  while ! mkdir "$LOCK" 2>/dev/null; do
+    holder=$(cat "$LOCK/pid" 2>/dev/null || true)
+    if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+      rm -rf "$LOCK" 2>/dev/null; continue        # dead holder → reclaim
+    fi
+    tries=$((tries+1)); [ "$tries" -gt 600 ] && die "lock timeout (held by pid ${holder:-?})"
+    sleep 0.1
+  done
+  echo "$$" > "$LOCK/pid"
+}
+LOCKED=0
+release(){ [ "$LOCKED" = 1 ] && { rm -rf "$LOCK" 2>/dev/null; LOCKED=0; }; }
+TMPIDX=""
+cleanup(){ [ -n "$TMPIDX" ] && rm -f "$TMPIDX"; release; }
+trap cleanup EXIT
+acquire; LOCKED=1
+
+# ── secret self-scan (plumbing bypasses the pre-commit hook, so scan here) ──
+SCAN="$(cd "$(dirname "$0")" && pwd)/git/secret-scan.sh"
+if [ -x "$SCAN" ]; then
+  "$SCAN" "${PATHS[@]}" || die "secret scan blocked the commit (see the finding above)"
+fi
+
+# ── build the commit from a throwaway index — the working tree is NEVER touched ──
+TMPIDX=$(mktemp "${TMPDIR:-/tmp}/aios-commit-idx.XXXXXX")
+if git rev-parse -q --verify HEAD >/dev/null 2>&1; then
+  GIT_INDEX_FILE="$TMPIDX" git read-tree HEAD
+  PARENTS=(-p HEAD)
+else
+  GIT_INDEX_FILE="$TMPIDX" git read-tree --empty
+  PARENTS=()
+fi
+
+# stage ONLY the given paths into the temp index (adds · modifications · deletions)
+GIT_INDEX_FILE="$TMPIDX" git add --all -- "${PATHS[@]}" || die "failed to stage the given paths"
+
+# no-op guard: paths given but nothing actually changed vs HEAD
+if [ "${#PARENTS[@]}" -gt 0 ] && GIT_INDEX_FILE="$TMPIDX" git diff-index --quiet HEAD --; then
+  echo "aios-commit: no changes in the given paths — nothing to commit."
+  exit 0
+fi
+
+TREE=$(GIT_INDEX_FILE="$TMPIDX" git write-tree) || die "write-tree failed"
+COMMIT=$(git commit-tree "$TREE" "${PARENTS[@]}" -m "$MSG") || die "commit-tree failed"
+git update-ref HEAD "$COMMIT" || die "update-ref failed"
+
+# sync the REAL index for the committed paths only → `git status` shows them clean;
+# every other actor's in-flight file is left exactly as it was.
+git add --all -- "${PATHS[@]}" 2>/dev/null || true
+
+echo "aios-commit: ${COMMIT:0:9} — $(printf '%s' "$MSG" | head -1)"
+
+# release the lock BEFORE the (slow, network) push so other commits don't wait on it
+release; trap cleanup EXIT
+
+# ── push-retry — never orphan ──
+[ "$NO_PUSH" = 1 ] && exit 0
+git remote | grep -q . || exit 0
+git symbolic-ref --short HEAD >/dev/null 2>&1 || exit 0   # detached HEAD → skip push
+if git push -q 2>/dev/null; then
+  echo "aios-commit: pushed."
+else
+  echo "aios-commit: push deferred (offline or remote diverged) — commit is safe locally; it pushes on the next aios-commit or a manual push." >&2
+fi
+exit 0

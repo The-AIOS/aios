@@ -168,7 +168,7 @@ If yes → write the pages (with `[[wiki-links]]`, proper frontmatter, source at
 
 ## Dev session reports
 
-If `USER.md` → `## Sources` has a `### Dev projects` table, read `.claude/session-report-{YYYY-MM-DD}.md` (using today's date) from each project's local directory. Use the `Read` tool with absolute paths — expand `~` to the full home path (e.g., `/Users/{username}/code/{project}/.claude/session-report-2026-03-16.md`).
+If `USER.md` → `## Sources` has a `### Dev projects` table, read **all** `.claude/session-report-{YYYY-MM-DD}-*.md` (today's date — the `-*` globs **every session's** report; a `/close-all` broadcast lands one file per session) from each project's local directory. `ls` them first, then `Read` each — one project can have several. Use absolute paths (expand `~`, e.g., `/Users/{username}/code/{project}/.claude/session-report-2026-03-16-{session}.md`).
 
 For each file that exists:
 - **"What shipped"** → include in Close of Day > Shipped section
@@ -205,7 +205,7 @@ Then continue with agent session reports.
 
 Check for close-session reports from agent/spawned sessions. These follow the same pattern as dev session reports but originate from `spawn` or `/agent` workflows.
 
-**Where to look:** Agent sessions spawned at the vault root write their close-session reports to `~/aios/.claude/session-report-{YYYY-MM-DD}.md` (same directory, possibly multiple reports if several agents ran). Use `Read` with absolute path. Also check for any session reports in Dev project paths that mention an agent name from `agents/_index.md` (canonical registry across all bundles) or `agents/custom/_index.md`.
+**Where to look:** Agent sessions spawned at the vault root write their close-session reports to **`~/aios/.claude/session-report-{YYYY-MM-DD}-*.md`** — the `-*` globs every session (a `/close-all` broadcast lands one file per agent). Run `ls ~/aios/.claude/session-report-{YYYY-MM-DD}-*.md`, then `Read` each. Also check Dev project paths for session reports naming an agent from `agents/_index.md` or `agents/custom/_index.md`. **After harvesting, delete the consumed report files** (they're transient bridges; `rm` them so the next day starts clean).
 
 **For each agent report found:**
 - Route output the same way as dev session reports (shipped → Shipped, pendientes → Carries, notes → Learned)
@@ -666,9 +666,17 @@ If any unchecked, complete it now before commit.
 
 ### Commit and push
 
+**Never `git add -A`.** Close-day is the day's consolidator; by now the workers have closed + committed their own work via `aios-commit`. Commit the vault paths *this close-day* changed — which is close-day's own writes **plus the human's ambient Obsidian edits** (this scoped sweep is what replaces the dropped 2-min autosave: the human's live edits are captured here, at end of day, not by a background timer). Exclude per-machine runtime/state files.
+
 ```bash
-cd ~/aios && git add -A && git commit -m "Close day {date}" && git push
+cd ~/aios
+# the vault paths dirty right now = close-day's writes + the human's live edits; never -A
+CHANGED=$(git status --porcelain -- "vault/" ".aios-update" 2>/dev/null | awk '{print $2}' \
+  | grep -vE '\.glass/|workspace\.json|graph\.json|notebook-navigator' )
+[ -n "$CHANGED" ] && ~/aios/hooks/aios-commit -m "Close day {date}" -- $CHANGED
 ```
+
+`aios-commit` stages only those paths via a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. Run `/close-day` when active sessions have closed (that's what `/close-all` is for) so nothing is mid-write.
 
 ## Rules
 - **Shipped is binary.** Don't soften "didn't ship" into "made progress." Honesty compounds.
