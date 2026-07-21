@@ -29,12 +29,24 @@
 - **New skills (2):** `deep-research` (multi-source research harness — the engine behind the strategy agents) · `orchestration-ladder` (agent → parallel → workflow decision lens). Plus a **CI skill-resolution gate** that fails the build if any bundled agent references a skill that isn't shipped (already caught two latent dangling refs).
 - **Agents:** `animation-composer` (NEW — owns the deck-animation component library) · `study-buddy` → the **Study Atlas** format (one interactive `{slug}-atlas.html` + one `{slug}-source.md` spine, replacing the old brief-pile) · `deck-builder` → presenter-notes + backlog + click-nav-default-off + `S` deck-search · `onboarding-aios` → concierge + install-doctor (detects App/terminal/IDE, troubleshoots installs + updates).
 - **Framework internals:** observed-context **Tier-B staleness** hardening (`/aios:close-day` + `/aios:today` + CLAUDE.md) · **memory-pressure channeling** doctrine (CLAUDE.md § Context Hierarchy + `/aios:housekeeping` **Bucket 24** — when auto-memory nears its ceiling, channel WHAT to the vault before compacting HOW, so a full cache never silently drops durable context) · **stewardship-skill wiring** (4 previously-orphaned skills — `sustainable-cadence` · `leverage-points` · `commons-governance` · `comprehension-debt` — now named at the judgment moment across 10 agents + 6 commands; the CI gate enforces it) · **spawned-output placement discipline** (spawn briefs name the output destination; `reflections/analysis/` default landing zone + `/aios:housekeeping` **Bucket 25**).
+- **Ingest — media comprehension (macOS enhancements to `/aios:ingest`):** `transcribe.py` (long-form local audio/video via mlx-whisper — MarkItDown's one audio weakness) + `video-watch.py` + `ocr-image.swift` (reads the video *screen* — slides/code/diagrams MarkItDown discards entirely; on-device Apple Vision OCR + `claude -p` VLM, Fortress-clean, no API key). **MarkItDown stays the universal cross-platform default** — these are surgical macOS add-ons; non-Mac never regresses (MarkItDown handles everything it already did, YouTube captions included).
 - **Papercuts + docs:** spawn wrapper fixes (arg-pass stale-shell guard · `activate` non-fatal · palette-leak escape) · `orchestration-ladder` decision-lens skill · `AGENTS.md` portable contract · `LICENSE-AUDIT` · `EXTENSION-MAP`.
 
 **What you're getting — AIOS Glass (new extension version):**
 - Explorer **per-folder sort** (name / last-modified, persisted per folder) · **smart-route** terminal default · **kill-guard** (always-confirm on close) · **session post-its** (create · view · delete · harvest-on-kill) · **status card** (framework/vault/account/skills-commands wiring) · Explorer **i18n** (es/pt-br).
 
 > ⚠️ **Update your Glass extension.** This canonical release ships alongside a new AIOS Glass version. VS Code / Antigravity extension auto-update is unreliable — so **canonical is the channel that tells you**: a new Glass is out, update it (Action required, step 5).
+
+**📋 Comprehension-debt — the full surface area shipped (so nothing lands unseen).**
+This cut is large and mostly agent-authored then coordinator-verified. The complete list, so you can defend / debug / decide on your own system:
+- **New skills:** `deep-research` · `orchestration-ladder` (+ a CI gate that fails the build on any agent → missing-skill reference).
+- **New agent:** `animation-composer`. **Enhanced agents:** `study-buddy` (Study Atlas output format) · `deck-builder` (presenter notes · click-nav-off · S-search) · `onboarding-aios` (concierge + install-doctor) · + stewardship-skill wiring across 10 agents.
+- **Behavioral contract — CLAUDE.md + commands (the highest-attention changes):** observed-context Tier-B staleness hardening (`/close-day` + `/today`) · memory-pressure channeling (`/housekeeping` Bucket 24) · spawned-output placement discipline (Bucket 25) · stewardship wiring across 6 commands (`/close-day` · `/drift` · `/7plan` · `/challenge` · `/company` · `/collaborate`).
+- **Ingest:** the two macOS media enhancements (long-form transcription + screen-comprehension) above.
+- **Papercuts / docs:** spawn fixes · `AGENTS.md` · `LICENSE-AUDIT` · `EXTENSION-MAP`.
+- **AIOS Glass (separate extension version):** per-folder sort · smart-route · kill-guard · session post-its · status card · Explorer i18n.
+
+> **The load-bearing pieces worth an actual read** (they change how every session behaves): the **CLAUDE.md deltas** (memory-channeling · aggregate-observed-context · spawned-output routing) and the **`/close-day` hard-gate** (the Tier-B digest block is now a *required* output — close-day self-rejects without it). Everything else is additive or opt-in.
 
 **Action required (CHECK-THEN-ACT, idempotent):**
 1. **New skills** — register them after this sync: `bash ~/aios/skills/setup.sh` (idempotent; wires `deep-research` + `orchestration-ladder` into `~/.claude/skills`). No-op if your setup auto-runs it.
@@ -45,6 +57,7 @@
 
 > **🔧 Maintainer integration notes (NOT operator actions — resolve + REMOVE this block before consolidation/push):**
 > - **deep-research custom→bundled:** remove the vault's `skills/custom/deep-research/` + its `_index` row (promoted to `skills/aios/`; leaving both = duplicate).
+> - **Media hooks custom→canonical (AI-42b):** remove the vault's `hooks/custom/{transcribe.py, video-watch.py, ocr-image.swift, video-watch-guide.md}` + registry rows + the two `USER.md → ### /ingest` routes (transcribe + video-watch) — they graduated to canonical `hooks/` + the `/aios:ingest` command. Do this **at consolidation** (Chuy's tool keeps working from `hooks/custom/` until canonical is pushed + `/aios:update`d — don't orphan it early). Operator install note (macOS): `python3 -m venv ~/aios/hooks/.venv && ~/aios/hooks/.venv/bin/pip install mlx-whisper pillow`.
 > - **CLAUDE.md:** two-repo byte-identical mirror (canonical + vault).
 > - **Commands:** 3-location sync (`plugins/aios/commands/` → marketplace → cache) before push.
 > - **Glass:** cut version + submit to marketplace BEFORE this hash is set/pushed; fill step 5's mechanism (confirm Open VSX vs VS Code Marketplace for Antigravity).

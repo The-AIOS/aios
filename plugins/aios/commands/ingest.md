@@ -46,10 +46,26 @@ Then read the converted markdown. Supported formats: PDF, Word (.docx), Excel (.
 - URL → `WebFetch` to retrieve content
 - PDF/Word/Excel/PowerPoint/EPUB → MarkItDown conversion → read markdown
 - Image → MarkItDown (OCR + EXIF) → read markdown
-- Audio → MarkItDown (transcription) → read markdown
-- YouTube URL → MarkItDown (transcript extraction) → read markdown
+- YouTube URL → MarkItDown (`_youtube_converter` — caption extraction, fast, cross-platform) → read markdown
+- Short audio → MarkItDown (transcription) → read markdown
+- **Long-form audio/video, or a video whose SCREEN carries signal** → see **Media enhancements** below
 - Markdown/text → read directly
 - Pasted text → process directly
+
+**Media enhancements (macOS — optional local upgrades; MarkItDown stays the cross-platform default).**
+MarkItDown is the universal converter and remains **primary for every format above** — documents, images, YouTube captions, and short audio all go through it, on every platform. Two *macOS-only* enhancements handle the exact two things MarkItDown can't; neither demotes it:
+
+1. **Long-form transcription — `hooks/transcribe.py` (macOS · mlx-whisper).** MarkItDown's audio path single-shots the whole file to Google Web Speech — fine for a sentence, useless for a 49-min talk. **On macOS**, route *long-form* local audio/video through the local transcriber instead:
+   ```bash
+   python3 ~/aios/hooks/transcribe.py <media-file-or-direct-URL> /tmp/ingest-transcript.txt
+   ```
+   `ffmpeg → mlx-whisper (large-v3-turbo)`, on-device, arbitrary length, no third party. **YouTube still goes through MarkItDown captions first** (faster); fall back to `transcribe.py` only if captions yield nothing. **Non-macOS:** MarkItDown handles it — the long-form-local-audio gap is MarkItDown's own, unchanged (a `faster-whisper` cross-platform build is future work).
+
+2. **Video screen-comprehension — `hooks/video-watch.py` (macOS · opt-in).** A transcript is audio-only — it discards everything *shown* (slides, code, diagrams, terminal, charts). When a video's on-screen content carries signal the narration doesn't, layer the frame reader **on top of** the transcript (from MarkItDown captions OR `transcribe.py`):
+   ```bash
+   python3 ~/aios/hooks/video-watch.py <file-or-URL> --transcript /tmp/ingest-transcript.txt --reader ocr --code
+   ```
+   `ffmpeg` scene-keyframes → pHash dedup → per-frame reader (`ocr` = verbatim via Apple Vision · `vlm` = structure via `claude -p` · `both`) → merged timeline. Ingest the **merged** Markdown instead of the transcript alone. Fortress-clean (on-device OCR + `claude -p`, no API key). **Opt-in** — trigger only when the request signals the screen matters (*"read the slides," "there's code on screen," "watch this tutorial"*) or the content is slide/code/whiteboard-heavy; a plain talking-head stays audio-only. **Non-macOS:** the `vlm` reader (`claude -p`) is cross-platform and works; the `ocr` reader needs Apple Vision — use `--reader vlm` off-Mac (the script says so + degrades, never crashes). Guide: `hooks/video-watch-guide.md`.
 
 **Standalone MarkItDown usage (outside /ingest):**
 ```bash
