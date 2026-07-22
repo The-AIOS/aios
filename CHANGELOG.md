@@ -21,9 +21,9 @@
 
 ---
 
-## 2026-07-21 — Race-safe session close + the `aios-commit` primitive (AI-2)
+## 2026-07-21 — Race-safe session close (AI-2) · update-completeness · tracked `.obsidian`
 
-`hash: 3d6c222`
+`hash: 59755d5`
 
 > **What this delivers.** Closing sessions is now **structurally race-safe** — many sessions can wrap up at once (a Glass "Close all" broadcast, or several manual closes) without scrambling each other's git attribution or clobbering the daily note. The fix is a new commit primitive, `aios-commit`, that replaces the old "never `git add -A`" *discipline* with a *poka-yoke*: the unsafe broad commit is now **impossible**, not just discouraged.
 
@@ -35,6 +35,9 @@
 - **Self-update stamp fix** — every observed-context write now bumps its `updated:` frontmatter, co-located with the mandatory snapshot. The staleness alarm reads *only* that stamp, and it had drifted up to 17 days — so the "reliable backstop" was being fed stale data. Fixed at the choke point (the snapshot rule).
 - **CLAUDE.md** — § Discipline's two `git add -A` commands are replaced with `aios-commit --vault` (the discipline→structural swap this release exists for).
 - **`/aios:update` now commits its own applied files** (atomic apply→advance→commit, via `aios-commit` scoped to exactly the Tier-1 files it applied + the tracker). So after any update the vault is always committed + pushable — never sitting applied-but-uncommitted (which would drift the vault from canonical for anyone who pulls it). Framework-sync commits stay distinct from session-work commits, and `aios-commit --vault` stays scoped to vault *content*.
+- **Update-completeness fix — `/aios:update` now ships EVERY root doc, not a hardcoded subset.** Three reference docs — **`AGENTS.md`** (portable operating contract for non-Claude tools · Codex/Cursor/Aider), **`EXTENSION-MAP.md`** (the how-to-extend reference: bundled/custom/company × every infra type), **`LICENSE-AUDIT.md`** (the open-core license boundary) — had shipped to canonical but **silently never reached vaults**: they weren't in `/aios:update`'s enumerated root-docs list, and the completeness reconcile used the *same* list, so the backstop shared the primary's blind spot. Now **Step 6.5's reconcile diffs *every* root `*.md` generically** (+ an explicit existence test — a bare `diff` on a missing file only errors to stderr, which is exactly why the gap was invisible), a **CI guard** fails the build if a syncable root doc isn't in the sync list, and the three docs are wired into the doc map (CLAUDE.md · README · CONTRIBUTING · NOTICE). A new root doc can never be added-but-not-shipped again. *(`USER.md`/`INTENT.md` are explicitly excluded from the reconcile — they're your filled-in files, never overwritten with the templates.)*
+- **`vault/.obsidian/` is now tracked** (config · plugins · graph layout · navigator state) — portable across machines; only the per-click pane-layout (`workspace.json` / `workspace-mobile.json`) stays ignored, and `aios-commit --vault` sweeps the rest so it never nags as uncommitted. Resolves the tracked-but-ignored contradiction where already-committed `.obsidian` files kept showing modified under a broad ignore.
+- **Regression test for the commit primitives** (`tests/aios-commit.test.sh` → new CI job) — locks the `--cached` no-op, the `--vault` space/rename-safe sweep + machine-local excludes, scoped staging, the secret-scan, and note-append before-marker/end-append, so these can't silently regress.
 
 **What you're getting — AIOS Glass v0.4.1:**
 - A **"Close all"** title-bar button (shown only when a session is running): a multi-select picker of every live session — **all selected by default**, each with its true status dot (🟢 idle · 🟡 working · 🔵 needs-input). Broadcasts `/close-session --auto`; two optional post-actions — **run `/close-day`** (in your primary session) and **kill the terminals** (every selected *except* your primary). Plus a **"Launch primary"** fix (reveals a running primary by pid-ancestry instead of no-op'ing).
@@ -45,6 +48,7 @@
 - **Wrap up your whole fleet in one move** — hit **Close all** in Glass, pick which sessions, and each one captures itself (its daily-note block, or its own report in `~/aios/.claude/`) and returns to idle — safely, in parallel. Optionally consolidate the day and kill the terminals in the same pass; your primary session is always protected.
 - **Stop worrying about concurrent commits** — you-in-Obsidian, agent sessions, and routines can all commit at once now; `aios-commit` serialises them and each commit carries only its own author's paths. The old "never `git add -A`" rule is enforced *structurally*, not by memory.
 - **Trust the staleness alarm again** — `growth` / `profile` / `ecosystem` staleness is measured from *real* edits (the `updated:` stamp is maintained on every write), so `/today` and `/close-day` stop crying wolf on files that were actually just updated.
+- **Trust that updates ship everything** — `AGENTS.md`, `EXTENSION-MAP.md`, `LICENSE-AUDIT.md` (which had been stranded in canonical) now land in your vault, and the reconcile catches *any* future root doc automatically. Ask *"how do I add an agent/skill?"* → I route you to `EXTENSION-MAP.md`; *"what can I redistribute?"* → `LICENSE-AUDIT.md`.
 
 **Action required (CHECK-THEN-ACT, idempotent):**
 1. **Install the commit guard** — this is what turns the discipline into enforcement. Run the installer for **your OS** (it sets the repo's `core.hooksPath` + puts `aios-commit` on PATH; idempotent — re-running is safe):
@@ -54,7 +58,12 @@
    After install, a raw `git commit` is blocked with a pointer to `aios-commit` (bypass once with `AIOS_HUMAN=1 git commit …` if you ever must — it still secret-scans). Verify: a raw `git commit` in `~/aios` is now refused.
 2. **Command updates** (`/aios:close-session`, `/aios:close-day` changed) — refresh the plugin cache: `claude plugin update aios@the-aios`. No-op if already current.
 3. **[Glass — separate surface]** Update **AIOS Glass to v0.4.1** from **Open VSX** (Antigravity / OSS editors; publishes to Open VSX only), then restart the editor to load it — this is what gives you the **Close all** button.
-4. **[do last — restart]** Restart your Claude Code session so the updated CLAUDE.md loads.
+4. **Verify the three formerly-stranded reference docs landed.** This same `/aios:update` should have pulled them (via the new generic reconcile); confirm:
+   ```bash
+   for f in AGENTS.md EXTENSION-MAP.md LICENSE-AUDIT.md; do [ -f "$HOME/aios/$f" ] && echo "✓ $f" || echo "✗ MISSING $f"; done
+   ```
+   All ✓ → done. Any ✗ MISSING → re-run `/aios:update`; Step 6.5's reconcile pulls it (report it if it doesn't — that would mean the reconcile itself regressed). **Also:** if you'd added personal rules to `.gitignore` (e.g. a private-reports ignore), re-confirm they survived — `.gitignore` is framework-overwritten on update, so personal ignores are safest in `.git/info/exclude` (which updates never touch).
+5. **[do last — restart]** Restart your Claude Code session so the updated CLAUDE.md loads.
 
 ---
 
