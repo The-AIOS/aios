@@ -101,7 +101,7 @@ None of this requires extra work. The context builds as a natural byproduct of y
 
 ## Extend your AIOS — bring your company, your team, your tools
 
-The framework ships canonical infrastructure (commands, agents, skills, MCPs, hooks, plugins, templates) that's identical for every operator. **What makes the framework yours is the extension layer.** Two patterns, both first-class:
+The framework ships canonical infrastructure (commands, agents, skills, MCPs, hooks, plugins, templates) that's identical for every operator. **What makes the framework yours is the extension layer.** Two patterns, both first-class — and the complete how-to-extend reference (every infra type × the three layers, with exactly how to add each) is **[`EXTENSION-MAP.md`](./EXTENSION-MAP.md)**:
 
 **`custom/`** — your personal extensions. Every infra layer has a `custom/` subfolder reserved for *your* additions: agents you build, skills you write, plugins you scaffold, hooks you wire, templates you author, MCPs you vendor. The framework's `/aios:update` never touches anything inside `custom/` — your extensions survive every framework update. Build whatever you need; AIOS just absorbs it.
 
@@ -179,7 +179,10 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 ├── CHEATSHEET.md            ← Day-to-day operating index (launch/spawn, daily loop, capture/export, personalization)
 ├── TOOLS.md                 ← Full menu of every command, agent, skill, MCP, and standalone tool
 ├── FORTRESS.md              ← Advanced: two-machine architecture for 24/7 autonomous agents
-└── CHANGELOG.md             ← What changed in shared infra, when, and what to do (read by /aios:update)
+├── CHANGELOG.md             ← What changed in shared infra, when, and what to do (read by /aios:update)
+├── AGENTS.md                ← Portable operating contract for non-Claude tools (Codex/Cursor/Aider)
+├── EXTENSION-MAP.md         ← How to extend AIOS: bundled/custom/company model per infra type + how to add each
+└── LICENSE-AUDIT.md         ← Open-core license boundary (GPL · vendored-upstream · private vault · company)
 ```
 
 **Architecture principle:** Everything shared lives in the repo and is identical for all users. Everything personal lives in `USER.md` (your command personalizations), `INTENT.md` (your autonomy rules), and `vault/` (your daily life content).

@@ -1,6 +1,6 @@
 # EXTENSION-MAP — where every infra layer lives, resolves, and survives
 
-> **Stopgap reference.** A single map of the three-layer model — **bundled** (`aios`/source), **custom** (operator), **company** (synced) — across all six infra types. It consolidates what `CLAUDE.md` (§ *Structure*, § *Hooks · Skills · Plugins*, § *Custom/ + company namespacing*) and `CONTRIBUTING.md` state in pieces. Interim until the model is formalized in `TOOLS.md`; when this and `CLAUDE.md` disagree, `CLAUDE.md` wins.
+> **The how-to-extend reference.** A single map of the three-layer model — **bundled** (`aios`/source), **custom** (operator), **company** (synced) — across all six infra types. It's the sibling of `TOOLS.md`: that answers *what exists*; this answers *how to add your own*. It consolidates what `CLAUDE.md` (§ *Structure*, § *Hooks · Skills · Plugins*, § *Custom/ + company namespacing*) and `CONTRIBUTING.md` state in pieces; when this and `CLAUDE.md` disagree, `CLAUDE.md` wins.
 
 ---
 

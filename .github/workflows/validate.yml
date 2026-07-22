@@ -25,6 +25,27 @@ jobs:
           done
           echo "OK: all required top-level files present"
 
+      - name: Every root doc is in the /aios:update sync list
+        run: |
+          set -e
+          # A root *.md that isn't named in update.md's Step-2 diff never ships to operator vaults
+          # (the class that stranded AGENTS.md / EXTENSION-MAP.md / LICENSE-AUDIT.md). Step 6.5's
+          # reconcile now catches these generically at runtime, but this guard keeps the enumerated
+          # fast-path list complete + fails the build if a new root doc is added without wiring it in.
+          U=plugins/aios/commands/update.md
+          MISSING=""
+          # Exclude Tier-2 operator files (USER.md, INTENT.md — the /aios:update denylist; they are
+          # NEVER synced, so they must NOT be in the sync list) + archival HISTORY-PRE-*.md.
+          for f in $(ls *.md | grep -vE '^(HISTORY-PRE-.*|USER\.md|INTENT\.md)$'); do
+            grep -qF "\"$f\"" "$U" || MISSING="$MISSING $f"
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::Root docs NOT in the /aios:update sync list — they would never reach operator vaults:$MISSING"
+            echo "Add each (quoted) to update.md's Step-2 diff + its Tier-1 root-docs list."
+            exit 1
+          fi
+          echo "OK: every root *.md is named in the /aios:update sync list"
+
       - name: Required infra folders + custom/ subfolders exist
         run: |
           set -e

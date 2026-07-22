@@ -94,7 +94,7 @@ For commands, the promotion candidate is flagged by `/aios:housekeeping` after a
 
 ## How to add each kind of infra
 
-The mechanical "how" for a technical contribution. Each layer has a personal home (`custom/`), a company home (`<company>/`), and a canonical home (the PR target).
+The mechanical "how" for a technical contribution. Each layer has a personal home (`custom/`), a company home (`<company>/`), and a canonical home (the PR target). → For the at-a-glance map of **every infra type × the three layers** (bundled · `custom/` · `<company>/`) with the exact add-steps for each, see **[`EXTENSION-MAP.md`](./EXTENSION-MAP.md)**.
 
 ### A command (`/aios:<name>`)
 1. **Personal:** `plugins/custom/<your-plugin>/commands/<name>.md` + a `.claude-plugin/plugin.json`, registered in `.claude-plugin/marketplace.json`. Never add operator commands inside `aios/`.
@@ -167,7 +167,7 @@ There is no CI in this repo today — contributions are specs executed by Claude
 
 The framework is **GPL-2.0-or-later** — uniformly. `LICENSE` (GPL v2), `NOTICE`, the marketplace manifest, and the plugin manifest all agree. Your contributions to canonical are accepted under the same license.
 
-**Vendored third-party components keep their upstream license.** Some directories vendor external open-source work that ships under a different license (e.g. `skills/anthropic/` and some `mcps/*-mcp/` upstreams are Apache-2.0). When you vendor or compose third-party open-source into a contribution: **preserve the upstream license, attribute it in the folder, and keep provenance clean.** Don't relicense someone else's work by absorbing it, and don't add an upstream whose license is incompatible with GPL-2.0-or-later distribution.
+**Vendored third-party components keep their upstream license.** Some directories vendor external open-source work that ships under a different license (e.g. `skills/anthropic/` and some `mcps/*-mcp/` upstreams are Apache-2.0). When you vendor or compose third-party open-source into a contribution: **preserve the upstream license, attribute it in the folder, and keep provenance clean.** Don't relicense someone else's work by absorbing it, and don't add an upstream whose license is incompatible with GPL-2.0-or-later distribution. → The full per-repo, per-subtree license map — what's GPL vs Apache/MIT-vendored vs private-vault vs company-licensed, plus the redistribution checklist (e.g. the **proprietary** Anthropic skills that must *never* be vendored) — is **[`LICENSE-AUDIT.md`](./LICENSE-AUDIT.md)**.
 
 ---
 

@@ -14,3 +14,9 @@ GNU General Public License (LICENSE file in this repo) for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program; if not, see <https://www.gnu.org/licenses/>.
+
+Vendored third-party subtrees (e.g. skills/anthropic/ = Apache-2.0, skills/superpowers/
+= MIT, and some mcps/*-mcp/ upstreams) keep their own upstream licenses, preserved
+in-folder. For the full per-repo, per-subtree license boundary — what is GPL vs
+vendored-upstream vs the operator's private vault vs company-distributed — see
+LICENSE-AUDIT.md.

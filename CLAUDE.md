@@ -249,6 +249,11 @@ When the operator asks *"where is X documented?"* — route by role, don't read 
 
 **Plus contribution/governance:** [`CONTRIBUTING.md`](./CONTRIBUTING.md) (repo root) — how to give work back to the framework: the two flavors (non-technical signal via Issue/email/Discussion · technical PR — canonical or company-distributed), the `custom/`-first rule, personal-hygiene, licensing. Trigger: *"How do I contribute / extend / upstream this?"*
 
+**Plus 3 reference docs** (linked from the above; route to them on demand):
+- [`AGENTS.md`](./AGENTS.md) — the **portable operating contract** for non-Claude tools that read the `AGENTS.md` convention (Codex/Cursor/Aider). A derived subset of *this* file; `CLAUDE.md` wins on conflict. Trigger: *"does my other AI tool follow these rules?"*
+- [`EXTENSION-MAP.md`](./EXTENSION-MAP.md) — **how to extend AIOS**: the bundled / custom / company three-layer model per infra type + exactly how to add each. Sibling to `TOOLS.md` (that = *what exists*; this = *how to add your own*). Trigger: *"how do I add an agent / skill / plugin / MCP?"*
+- [`LICENSE-AUDIT.md`](./LICENSE-AUDIT.md) — the **open-core license boundary**: what's GPL vs vendored-upstream (Apache/MIT) vs private vault vs company-licensed, and the redistribution do's-and-don'ts (e.g. never vendor the proprietary Anthropic skills). Trigger: *"what license governs X / can I redistribute this?"*
+
 **Rule:** when the operator gets disoriented (*"I'm lost"* / *"what is this?"*), invoke [`/agent onboarding-aios`](./agents/aios/personal/onboarding-aios.md) — that agent knows the whole map and walks them through it without lecturing.
 
 ### Structure

@@ -33,7 +33,7 @@ When the upstream framework has new commits. `/today` and `/close-day` auto-dete
 
 Every file below is overwritten byte-identical to upstream. If the operator customized one, their version is backed up first (see § Backup-on-divergence below).
 
-- **Root docs:** `README.md`, `START-HERE.md`, `SETUP.md`, `CHEATSHEET.md`, `TOOLS.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `LICENSE`, `NOTICE`, `FORTRESS.md`, `.gitignore`
+- **Root docs:** `README.md`, `START-HERE.md`, `SETUP.md`, `CHEATSHEET.md`, `TOOLS.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `AGENTS.md`, `EXTENSION-MAP.md`, `LICENSE-AUDIT.md`, `LICENSE`, `NOTICE`, `FORTRESS.md`, `.gitignore` — **and, generically, every other `*.md` at the repo root.** This enumeration is the fast path; Step 6.5's reconcile diffs **all** root `*.md` against the vault, so a newly-added root doc ships (and self-heals a stale list) even before it's named here. (`validate.yml` also fails the build if a root doc is missing from this list — belt + suspenders.)
 - **CLAUDE.md** (vault-level instructions — moved here from Tier 2 on 2026-05-25 per the "infra is infra" principle)
 - **Templates:** `templates/aios/` (bundled templates, e.g. `templates/aios/about_me-template.md`) — never `templates/custom/` or `templates/<company>/`. (Moved from the layer root into `templates/aios/` to match the `{layer}/aios/` + `custom/` + `<company>/` convention used by agents, skills, and plugins.)
 - **Skills:** `skills/aios/`, `skills/anthropic/`, `skills/superpowers/` (never `skills/custom/`)
@@ -204,7 +204,8 @@ Read `CHANGELOG.md` from the cloned repo root. If absent, skip silently. Otherwi
 ```bash
 git -C /tmp/aios-update-check diff {stored_hash}..HEAD --name-only -- \
   "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
-  "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
+  "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "AGENTS.md" "EXTENSION-MAP.md" "LICENSE-AUDIT.md" \
+  "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
   "templates/" "skills/" "hooks/" "mcps/" "plugins/" "agents/" \
   ".claude-plugin/" "vault/.obsidian/"
 ```
@@ -298,12 +299,28 @@ The tracker-diff (`stored..HEAD`, Step 2) is an optimization that assumes the st
 # with a COLON after the dir, so a `custom/` (slash) exclusion does NOT match
 # "…/custom: name". Anchoring the drop on "^Only in $HOME/aios" sidesteps the
 # whole slash-vs-colon problem — it filters by SIDE, not by token.
-VAULT="$HOME/aios"
-for p in README.md START-HERE.md SETUP.md TOOLS.md CHEATSHEET.md CONTRIBUTING.md CHANGELOG.md \
-         LICENSE NOTICE FORTRESS.md .gitignore CLAUDE.md \
-         templates skills hooks mcps plugins agents .claude-plugin; do
-  diff -rq "$VAULT/$p" "/tmp/aios-update-check/$p" 2>/dev/null
-done \
+VAULT="$HOME/aios"; CLONE="/tmp/aios-update-check"
+{
+  # Root docs — GENERIC: every *.md at the canonical root (+ the non-md root infra files), so a
+  # newly-added root doc can NEVER be silently missed by a stale hardcoded list. (This is the fix
+  # for the class where AGENTS.md / EXTENSION-MAP.md / LICENSE-AUDIT.md shipped to canonical but
+  # never reached vaults — they weren't in the enumerated list, and the reconcile used the SAME
+  # list, so the backstop shared the primary's blind spot.) A bare `diff -rq file file` on a file
+  # MISSING from the vault only errors to stderr — it does NOT flag the gap — so test existence
+  # explicitly and emit an "Only in $CLONE" line when the root doc is absent.
+  # EXCLUDE Tier-2 operator files (USER.md, INTENT.md — the denylist): canonical ships them as
+  # EXAMPLE-ONLY templates, the operator's vault copies are their filled-in personal files, so they
+  # ALWAYS "differ" — flagging them here would drive the apply to overwrite operator data with the
+  # template. Never reconcile them. (HISTORY-PRE-*.md are archival, also skipped.)
+  for p in $(cd "$CLONE" && ls *.md 2>/dev/null | grep -vE '^(HISTORY-PRE-.*|USER\.md|INTENT\.md)$') LICENSE NOTICE .gitignore; do
+    if [ ! -e "$VAULT/$p" ]; then echo "Only in $CLONE: $p"
+    else diff -q "$VAULT/$p" "$CLONE/$p" 2>/dev/null; fi
+  done
+  # Layer dirs — diff -rq surfaces both "Files … differ" and dir-side "Only in …" (missing) lines.
+  for p in templates skills hooks mcps plugins agents .claude-plugin; do
+    diff -rq "$VAULT/$p" "$CLONE/$p" 2>/dev/null
+  done
+} \
   | grep -vF "Only in $VAULT" \
   | grep -vE "/custom(/|: )" \
   | grep -vE "(/|: )(\.venv|__pycache__|node_modules|auth|\.DS_Store)(/|$)" \
