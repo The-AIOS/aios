@@ -80,7 +80,7 @@ if [ "$VAULT_MODE" = 1 ]; then
   while IFS= read -r p; do
     [ -n "$p" ] || continue
     case "$p" in
-      .glass/*|vault/.obsidian/workspace.json|vault/.obsidian/graph.json|*notebook-navigator*) continue ;;
+      .glass/*|vault/.obsidian/workspace.json|vault/.obsidian/workspace-mobile.json) continue ;;
     esac
     PATHS+=("$p")
   done < <( { git -c core.quotePath=false diff --name-only HEAD -- 'vault/' '.aios-update' 2>/dev/null

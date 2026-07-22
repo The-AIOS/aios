@@ -55,7 +55,10 @@ mcps/google-workspace-mcp/oauth.json
 # The framework ships none of this; each operator's instance is their own source of truth.
 .claude/
 
-# Obsidian config (operator-personal, per-machine — treated symmetrically with .claude/)
-# Operators manage their own Obsidian (plugins, snippets, hotkeys, graph filters, daily-note
-# template path, attachment folder, theme, etc.). Never shipped via the framework.
-vault/.obsidian/
+# Obsidian per-machine UI state — ONLY the volatile pane-layout files (they rewrite on every
+# pane move / note open, so tracking them would churn constantly + conflict across machines;
+# /aios:update also treats workspace.json as machine-local). The REST of vault/.obsidian/
+# (app.json, plugins, hotkeys, appearance, graph layout, plugin data) IS tracked, so an
+# operator's Obsidian setup is portable + syncs via the vault repo.
+vault/.obsidian/workspace.json
+vault/.obsidian/workspace-mobile.json
