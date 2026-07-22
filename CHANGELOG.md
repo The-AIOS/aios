@@ -21,6 +21,42 @@
 
 ---
 
+## 2026-07-21 — Race-safe session close + the `aios-commit` primitive (AI-2)
+
+`hash: 3d6c222`
+
+> **What this delivers.** Closing sessions is now **structurally race-safe** — many sessions can wrap up at once (a Glass "Close all" broadcast, or several manual closes) without scrambling each other's git attribution or clobbering the daily note. The fix is a new commit primitive, `aios-commit`, that replaces the old "never `git add -A`" *discipline* with a *poka-yoke*: the unsafe broad commit is now **impossible**, not just discouraged.
+
+**What you're getting — canonical framework:**
+- **`aios-commit`** — the one sanctioned commit path (`hooks/aios-commit`). Per-repo **mutex** (serialises concurrent commits), stages ONLY the paths you name via a **throwaway index** (*the working tree is never touched* — Obsidian's live copy is safe), **self-scans for secrets**, and **defers the push** on offline / diverged-remote (never orphans a commit). A **`--vault`** mode sweeps the session's changed vault paths for you — **space- AND rename-safe** (no more `git status | awk` truncating `vault/00 - notes/…` and staging nothing).
+- **`aios-note-append`** — a locked merge-append helper: N sessions closing at once each land their daily-note block *in turn* (per-file lock), ordered and clobber-free.
+- **`/close-session --auto`** — a non-interactive self-close (infers its label, skips prompts) so a broadcast completes and returns to idle. Vault sessions merge-append their block; project/worker sessions write their own report to the **one canonical dir `~/aios/.claude/`** — so a session in *any* repo gets harvested, with no dependency on registering it.
+- **`/close-day` is now the single writer of observed context.** Under a broadcast, every close-session *defers* its Tier A/B routing into its own surface; close-day harvests them all and routes **once** — so parallel closes can't race on `growth.md` / `patterns.md` / etc.
+- **Self-update stamp fix** — every observed-context write now bumps its `updated:` frontmatter, co-located with the mandatory snapshot. The staleness alarm reads *only* that stamp, and it had drifted up to 17 days — so the "reliable backstop" was being fed stale data. Fixed at the choke point (the snapshot rule).
+- **CLAUDE.md** — § Discipline's two `git add -A` commands are replaced with `aios-commit --vault` (the discipline→structural swap this release exists for).
+
+**What you're getting — AIOS Glass v0.4.1:**
+- A **"Close all"** title-bar button (shown only when a session is running): a multi-select picker of every live session — **all selected by default**, each with its true status dot (🟢 idle · 🟡 working · 🔵 needs-input). Broadcasts `/close-session --auto`; two optional post-actions — **run `/close-day`** (in your primary session) and **kill the terminals** (every selected *except* your primary). Plus a **"Launch primary"** fix (reveals a running primary by pid-ancestry instead of no-op'ing).
+
+> ⚠️ **Update your Glass extension to v0.4.1** (Open VSX). The "Close all" button needs *this* canonical update's `--auto` close-session + single-writer `/close-day` to work end-to-end — ship them together.
+
+**📋 What you can now do (the practical read):**
+- **Wrap up your whole fleet in one move** — hit **Close all** in Glass, pick which sessions, and each one captures itself (its daily-note block, or its own report in `~/aios/.claude/`) and returns to idle — safely, in parallel. Optionally consolidate the day and kill the terminals in the same pass; your primary session is always protected.
+- **Stop worrying about concurrent commits** — you-in-Obsidian, agent sessions, and routines can all commit at once now; `aios-commit` serialises them and each commit carries only its own author's paths. The old "never `git add -A`" rule is enforced *structurally*, not by memory.
+- **Trust the staleness alarm again** — `growth` / `profile` / `ecosystem` staleness is measured from *real* edits (the `updated:` stamp is maintained on every write), so `/today` and `/close-day` stop crying wolf on files that were actually just updated.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Install the commit guard** — this is what turns the discipline into enforcement. Run the installer for **your OS** (it sets the repo's `core.hooksPath` + puts `aios-commit` on PATH; idempotent — re-running is safe):
+   - **macOS / Linux:** `bash ~/aios/hooks/install-git-hooks.sh`
+   - **Windows:** `pwsh -File $HOME\aios\hooks\install-git-hooks.ps1` — and **if `pwsh` isn't found** (a stock Win11 ships only Windows PowerShell 5.1, not PowerShell 7), use `powershell -File $HOME\aios\hooks\install-git-hooks.ps1` instead. The guard scripts themselves are bash and run under **Git Bash** (Git for Windows always ships it; git invokes hooks via `sh` on every platform), so the `.ps1` only does the per-machine `git config` + writes an `aios-commit.cmd` shim to `$HOME\bin` — **ensure `$HOME\bin` is on your PATH**.
+
+   After install, a raw `git commit` is blocked with a pointer to `aios-commit` (bypass once with `AIOS_HUMAN=1 git commit …` if you ever must — it still secret-scans). Verify: a raw `git commit` in `~/aios` is now refused.
+2. **Command updates** (`/aios:close-session`, `/aios:close-day` changed) — refresh the plugin cache: `claude plugin update aios@the-aios`. No-op if already current.
+3. **[Glass — separate surface]** Update **AIOS Glass to v0.4.1** from **Open VSX** (Antigravity / OSS editors; publishes to Open VSX only), then restart the editor to load it — this is what gives you the **Close all** button.
+4. **[do last — restart]** Restart your Claude Code session so the updated CLAUDE.md loads.
+
+---
+
 ## 2026-07-20 — Tier-A authoring cut + AIOS Glass v0.4.0
 
 `hash: f2787d7`
