@@ -519,3 +519,12 @@ jobs:
 
           print(f"OK: all bundled skill references across {len(agent_files)} agents resolve to skills/*/<name>/SKILL.md")
           PY
+
+  primitives:
+    name: Commit primitives
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: aios-commit / aios-note-append / secret-scan regression test
+        run: bash tests/aios-commit.test.sh
