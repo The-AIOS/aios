@@ -19,24 +19,32 @@
 #
 # USAGE
 #   aios-commit -m "message" [--no-push] [--] <path> [<path> ...]
+#   aios-commit -m "message" --vault [--no-push]
+#     --vault sweeps the changed vault paths for you (space- AND rename-safe: it enumerates
+#     `git diff --name-only HEAD` ∪ untracked under vault/ + .aios-update, minus machine-local
+#     noise) — so callers never hand-roll a `git status | awk` sweep that truncates paths with
+#     spaces ("00 - notes"). This is the sanctioned "commit the session's vault work" invocation.
 #
 # Design contributed by an AIOS operator (2026-06-21), de-personalized + built into core.
 set -uo pipefail
 
 die(){ echo "aios-commit: $*" >&2; exit 1; }
 
-MSG=""; NO_PUSH=0; PATHS=()
+MSG=""; NO_PUSH=0; VAULT_MODE=0; PATHS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     -m)   MSG="${2:-}"; shift 2 ;;
     -m*)  MSG="${1#-m}"; shift ;;
     --no-push) NO_PUSH=1; shift ;;
+    --vault) VAULT_MODE=1; shift ;;
     --)   shift; while [ $# -gt 0 ]; do PATHS+=("$1"); shift; done ;;
     *)    PATHS+=("$1"); shift ;;
   esac
 done
 [ -n "$MSG" ] || die "need -m <message>"
-[ ${#PATHS[@]} -gt 0 ] || die "need at least one path — aios-commit never stages -A (that is the bug it prevents)"
+# --vault populates PATHS from the scoped sweep (below, under the lock). Otherwise ≥1 explicit
+# path is required — aios-commit NEVER stages -A (that is the bug it prevents).
+[ "$VAULT_MODE" = 1 ] || [ ${#PATHS[@]} -gt 0 ] || die "need at least one path (or --vault) — aios-commit never stages -A"
 
 git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
 GIT_DIR=$(git rev-parse --absolute-git-dir)
@@ -63,6 +71,22 @@ TMPIDX=""
 cleanup(){ [ -n "$TMPIDX" ] && rm -f "$TMPIDX"; release; }
 trap cleanup EXIT
 acquire; LOCKED=1
+
+# ── --vault: build PATHS from the scoped vault sweep, under the lock so it's atomic vs a sibling
+#    commit. Space-safe (core.quotePath=false + one path per line, read into an array) and
+#    rename-safe (diff --name-only yields the new path). Union of tracked-changed-vs-HEAD +
+#    untracked (gitignore-respecting) under vault/ + .aios-update, minus machine-local noise. ──
+if [ "$VAULT_MODE" = 1 ]; then
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    case "$p" in
+      .glass/*|vault/.obsidian/workspace.json|vault/.obsidian/graph.json|*notebook-navigator*) continue ;;
+    esac
+    PATHS+=("$p")
+  done < <( { git -c core.quotePath=false diff --name-only HEAD -- 'vault/' '.aios-update' 2>/dev/null
+              git -c core.quotePath=false ls-files --others --exclude-standard -- 'vault/' '.aios-update' 2>/dev/null; } | sort -u )
+  if [ ${#PATHS[@]} -eq 0 ]; then echo "aios-commit: no vault changes to commit."; exit 0; fi
+fi
 
 # ── secret self-scan (plumbing bypasses the pre-commit hook, so scan here) ──
 SCAN="$(cd "$(dirname "$0")" && pwd)/git/secret-scan.sh"

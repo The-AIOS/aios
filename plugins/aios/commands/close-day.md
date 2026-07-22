@@ -674,14 +674,10 @@ If any unchecked, complete it now before commit.
 **Never `git add -A`.** Close-day is the day's consolidator; by now the workers have closed + committed their own work via `aios-commit`. Commit the vault paths *this close-day* changed — which is close-day's own writes **plus the human's ambient Obsidian edits** (this scoped sweep is what replaces the dropped 2-min autosave: the human's live edits are captured here, at end of day, not by a background timer). Exclude per-machine runtime/state files.
 
 ```bash
-cd ~/aios
-# the vault paths dirty right now = close-day's writes + the human's live edits; never -A
-CHANGED=$(git status --porcelain -- "vault/" ".aios-update" 2>/dev/null | awk '{print $2}' \
-  | grep -vE '\.glass/|workspace\.json|graph\.json|notebook-navigator' )
-[ -n "$CHANGED" ] && ~/aios/hooks/aios-commit -m "Close day {date}" -- $CHANGED
+cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Close day {date}"
 ```
 
-`aios-commit` stages only those paths via a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. Run `/close-day` when active sessions have closed (that's what the Glass Close-all button is for) so nothing is mid-write.
+`--vault` sweeps the dirty vault paths for you — **space- and rename-safe** (it enumerates `git diff --name-only HEAD` ∪ untracked under `vault/` + `.aios-update`, minus the machine-local noise), so it never truncates a path like `vault/00 - notes/…` the way a `git status | awk '{print $2}'` sweep would. It stages only those paths via a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. Run `/close-day` when active sessions have closed (that's what the Glass Close-all button is for) so nothing is mid-write.
 
 ## Rules
 - **Shipped is binary.** Don't soften "didn't ship" into "made progress." Honesty compounds.

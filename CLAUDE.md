@@ -192,7 +192,7 @@ After any session that produces meaningful work or insight:
 2. **Update `session-insights.md`.** Scan existing first: reinforced Emerging → Reinforced (new date); contradicted → remove; Reinforced with clear evidence → route to target file + remove; new pattern → add to Emerging with date + evidence. Caps: Emerging ≤10, Reinforced ≤5. Snapshot only on change. Session summaries go in the daily note, not here.
 3. **Update other observed files when warranted** — never skip for speed; observed context is the compound value. See § III for the trigger map.
 4. **"What was most useful?" (substantive sessions only).** If >30 min + meaningful work, ask once before commit and log in session-insights.md. Skip for quick fixes.
-5. **Commit and push** — `cd ~/aios && git add -A && git commit -m "Session {date}: {brief description}" && git push`. Never end with uncommitted vault changes.
+5. **Commit and push via `aios-commit --vault`** — the one sanctioned commit path (never `git add -A`; see § VI): `cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Session {date}: {brief description}"`. It sweeps the changed vault paths for you (space- + rename-safe), stages only those through a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. Never end with uncommitted vault changes.
 
 **Privacy:** observed context is personal and private. Never shared with teammates or committed to a shared repository.
 
@@ -382,11 +382,11 @@ Every note Claude generates must use `[[wiki-links]]` for project names, context
 
 ### Git & Commit Conventions
 
-After any session that modifies vault notes, commit and push:
+After any session that modifies vault notes, commit and push **via `aios-commit`** — the one sanctioned commit path. It **never `git add -A`** (that scrambles attribution when the vault is written concurrently by you-in-Obsidian + agent sessions + routines): it stages only named paths through a throwaway index (working tree untouched), under a per-repo mutex, with a secret self-scan + defer-on-offline push. For the whole session's vault work, `--vault` sweeps the changed paths for you (space- + rename-safe, machine-local noise excluded):
 ```bash
-cd ~/aios && git add -A && git commit -m "Session {date}: {description}" && git push
+cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Session {date}: {description}"
 ```
-The vault is only as portable and safe as its last push.
+Enforced by the git pre-commit hook once installed (`hooks/install-git-hooks.sh` on macOS/Linux · `hooks/install-git-hooks.ps1` on Windows). The vault is only as portable and safe as its last push.
 
 > **Path convention:** the framework expects to live at `~/aios` (commands, MCPs, hooks, git all reference it). `/aios:cold-start-interview` symlinks if the operator cloned elsewhere; SETUP.md → § Path portability has the manual commands.
 
