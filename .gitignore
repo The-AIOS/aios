@@ -62,3 +62,11 @@ mcps/google-workspace-mcp/oauth.json
 # operator's Obsidian setup is portable + syncs via the vault repo.
 vault/.obsidian/workspace.json
 vault/.obsidian/workspace-mobile.json
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Your own ignores go BELOW the marker line — `/aios:update` MERGES everything after
+# it (it never overwrites your personal rules). Put private-data / machine-local
+# patterns here (e.g. private financial reports, company-asset mirrors). For ignores
+# that must never reach ANY clone (a secret, an OAuth cache), prefer .git/info/exclude
+# (local-only — updates never touch it).
+# ═══ AIOS-OPERATOR-IGNORES (keep this line; /aios:update preserves everything below it) ═══

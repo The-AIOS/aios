@@ -43,6 +43,7 @@ Every file below is overwritten byte-identical to upstream. If the operator cust
 - **Plugins:** `plugins/aios/**` (full plugin folder replace, INCLUDING `plugins/aios/commands/*` — these are framework commands, not operator content) except `plugins/aios/commands/custom/`
 - **Other bundled plugins** at top level except `plugins/custom/`, `plugins/aios/`, and `plugins/<company>/`
 - **Marketplace manifest:** `.claude-plugin/marketplace.json` — **MERGE, never byte-replace.** This file is dual-owned: the framework owns the bundled plugin entries (e.g. `aios`), but CLAUDE.md instructs operators to register their own `plugins/custom/<name>/` (and `/aios:company` registers `plugins/<company>/`) entries in the SAME file. Merge rule: parse both versions as JSON → take upstream's top-level fields + upstream's entries for bundled plugins → preserve every local entry whose `source` points into `./plugins/custom/` or a company namespace → write the union. A byte-replace here silently deregisters every operator/company plugin on every sync (caught 2026-06-05 registering the first `plugins/custom/` command).
+- **`.gitignore`** — **MERGE, never overwrite** (dual-owned, exactly like `marketplace.json`). The framework owns the rules **above** the `# ═══ AIOS-OPERATOR-IGNORES … ═══` marker line; the operator owns **everything below it** (private-data / machine-local patterns). Merge rule: take upstream's `.gitignore` (framework rules + the marker) and **append the operator's lines from below the marker in the LOCAL file**. A plain overwrite silently drops the operator's private-data ignores (e.g. a `vault/03 - export/reports/.private/` rule → financial data becomes committable — the class caught 2026-07-21). Truly-never-share ignores (a secret, an OAuth cache) belong in `.git/info/exclude`, which updates never touch.
 - **Obsidian config baseline:** `vault/.obsidian/*.json` except `workspace.json`, plus `vault/.obsidian/snippets/*`
 
 ### Tier 2: Operator content (never touched — denylist)
@@ -252,7 +253,20 @@ For each changed Tier 1 file:
    - If `local == baseline` → operator never touched it → overwrite silently, **no backup**.
    - If `local != baseline` → operator personalized → **backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{YYYY-MM-DD}/{flattened-path}.md` BEFORE overwrite.
    - If baseline unreachable (cross-repo hash or `stored_hash=initial`) → conservative fallback: backup.
-3. **Overwrite** using the right tool:
+2.7. **Dual-owned files MERGE, never overwrite** — `.gitignore` and `.claude-plugin/marketplace.json` (see their Tier-1 entries). **Skip the three-way backup for these** (the merge itself preserves operator content). For **`.gitignore`**: keep upstream's file (framework rules + the `AIOS-OPERATOR-IGNORES` marker) and append the operator's below-marker lines —
+   ```bash
+   SENT='AIOS-OPERATOR-IGNORES'
+   if grep -qF "$SENT" "$HOME/aios/.gitignore"; then
+     { cat /tmp/aios-update-check/.gitignore; awk -v s="$SENT" 'f{print} $0 ~ s {f=1}' "$HOME/aios/.gitignore"; } \
+       > "$HOME/aios/.gitignore.new" && mv "$HOME/aios/.gitignore.new" "$HOME/aios/.gitignore"
+   else
+     # legacy local without the marker → take upstream (it ships the marker now); tell the operator to
+     # move any personal ignores below the marker (their old .gitignore is in this run's backup dir).
+     cp /tmp/aios-update-check/.gitignore "$HOME/aios/.gitignore"
+   fi
+   ```
+   For `marketplace.json`: apply the JSON union (its Tier-1 entry). These two never take the plain overwrite below.
+3. **Overwrite** (every OTHER changed file) using the right tool:
    - `.md` files **inside** `vault/` → `mcp__obsidian__write_note` (keeps Obsidian graph consistent)
    - `.md` files **outside** `vault/` (root + `hooks/`, `mcps/`, `plugins/`, `skills/`, `agents/`, `templates/`) → `Bash cp` or `Write`
    - All other extensions (`.json`, `.css`, `.py`, `.sh`, `.plist`, `.yml`) → `Bash cp` (preserves file mode — load-bearing for executable scripts under `hooks/`)
@@ -312,7 +326,10 @@ VAULT="$HOME/aios"; CLONE="/tmp/aios-update-check"
   # EXAMPLE-ONLY templates, the operator's vault copies are their filled-in personal files, so they
   # ALWAYS "differ" — flagging them here would drive the apply to overwrite operator data with the
   # template. Never reconcile them. (HISTORY-PRE-*.md are archival, also skipped.)
-  for p in $(cd "$CLONE" && ls *.md 2>/dev/null | grep -vE '^(HISTORY-PRE-.*|USER\.md|INTENT\.md)$') LICENSE NOTICE .gitignore; do
+  # NOTE: .gitignore is DUAL-OWNED (merged in Step 2.7, not reconciled here) — else the operator's
+  # below-marker lines would flag as perpetual "drift" every run. marketplace.json (dual-owned too)
+  # is filtered out below. Both are handled by the merge rule, never a reconcile overwrite.
+  for p in $(cd "$CLONE" && ls *.md 2>/dev/null | grep -vE '^(HISTORY-PRE-.*|USER\.md|INTENT\.md)$') LICENSE NOTICE; do
     if [ ! -e "$VAULT/$p" ]; then echo "Only in $CLONE: $p"
     else diff -q "$VAULT/$p" "$CLONE/$p" 2>/dev/null; fi
   done
@@ -324,7 +341,8 @@ VAULT="$HOME/aios"; CLONE="/tmp/aios-update-check"
   | grep -vF "Only in $VAULT" \
   | grep -vE "/custom(/|: )" \
   | grep -vE "(/|: )(\.venv|__pycache__|node_modules|auth|\.DS_Store)(/|$)" \
-  | grep -vE "\.(log|pyc)$|oauth|egg-info|\.session$"
+  | grep -vE "\.(log|pyc)$|oauth|egg-info|\.session$" \
+  | grep -vE "(\.gitignore|marketplace\.json)"   # dual-owned — merged in Step 2.7, never plain-reconciled
 # `/custom(/|: )` drops the operator namespace in BOTH line shapes — a
 # `Files …/custom/_index.md … differ` (framework ships a custom/_index.md SEED;
 # the operator's customized copy is Tier-2 denylist, never overwritten) AND any
