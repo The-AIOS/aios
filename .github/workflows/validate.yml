@@ -90,12 +90,13 @@ jobs:
             esac
           done
 
-          # hooks/ — allowed: claude-identity + custom (files are layer-level; only subfolders checked)
+          # hooks/ — allowed: claude-identity + git (aios-commit pre-commit guard + secret-scan) + custom
+          # (files are layer-level; only subfolders checked)
           for dir in hooks/*/; do
             name=$(basename "$dir")
             case "$name" in
-              claude-identity|custom) ;;
-              *) FOUND+=$'\n  - hooks/'"$name"'/  (expected: claude-identity/ or custom/)' ;;
+              claude-identity|git|custom) ;;
+              *) FOUND+=$'\n  - hooks/'"$name"'/  (expected: claude-identity/, git/, or custom/)' ;;
             esac
           done
 
