@@ -260,9 +260,19 @@ For each changed Tier 1 file:
      { cat /tmp/aios-update-check/.gitignore; awk -v s="$SENT" 'f{print} $0 ~ s {f=1}' "$HOME/aios/.gitignore"; } \
        > "$HOME/aios/.gitignore.new" && mv "$HOME/aios/.gitignore.new" "$HOME/aios/.gitignore"
    else
-     # legacy local without the marker → take upstream (it ships the marker now); tell the operator to
-     # move any personal ignores below the marker (their old .gitignore is in this run's backup dir).
-     cp /tmp/aios-update-check/.gitignore "$HOME/aios/.gitignore"
+     # LEGACY local WITHOUT the marker (first update to the merge-aware version) → migrate SAFELY.
+     # A plain overwrite here would DROP the operator's personal ignores (e.g. a private-reports rule
+     # → financial data becomes committable) — the exact class this fix exists to prevent. So:
+     #   1. BACK UP the old .gitignore (guarantee: nothing is lost even if the carry below misclassifies)
+     #   2. AUTO-CARRY the operator's personal lines (in local but NOT in the last-synced baseline)
+     #      below the new marker, so private-data ignores survive the very first migration.
+     bk="$HOME/aios/vault/04 - backups/aios-update-$(date +%F)"; mkdir -p "$bk"; cp "$HOME/aios/.gitignore" "$bk/.gitignore"
+     git -C /tmp/aios-update-check show {stored_hash}:.gitignore 2>/dev/null | tr -d '\r' | sort -u > /tmp/aios-gi-base || : > /tmp/aios-gi-base
+     ops=$(comm -13 /tmp/aios-gi-base <(tr -d '\r' < "$HOME/aios/.gitignore" | sort -u) | grep -vE '^[[:space:]]*(#|$)')
+     { cat /tmp/aios-update-check/.gitignore
+       [ -n "$ops" ] && printf '\n# (auto-migrated from your previous .gitignore on the first merge-aware update — review/reorganize)\n%s\n' "$ops"
+     } > "$HOME/aios/.gitignore.new" && mv "$HOME/aios/.gitignore.new" "$HOME/aios/.gitignore"; rm -f /tmp/aios-gi-base
+     # Report: old .gitignore backed up to vault/04 - backups/…; personal rules carried below the marker — review them.
    fi
    ```
    For `marketplace.json`: apply the JSON union (its Tier-1 entry). These two never take the plain overwrite below.
