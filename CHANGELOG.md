@@ -23,7 +23,7 @@
 
 ## 2026-07-23 — Spawn survives Claude Code's Bash sandbox (silent keystroke-drop fix)
 
-`hash: 825e5f0`
+`hash: 2baa2d4`
 
 > **What this delivers.** A recent Claude Code auto-update turned **Bash-tool sandboxing on by default** (macOS `sandbox-exec`). A sandboxed process can read the accessibility tree but its **synthetic keystrokes to another app are silently dropped** — so agent-invoked `spawn` drove the IDE command palette into the void: no terminal, no worker, *no error*. Since agent-invoked spawn is the basis of orchestration, this quietly broke fleets. The wrapper installer now self-heals the operator's machine-local config, and `spawn` itself fails **loudly** instead of silently when the palette never opens.
 
