@@ -21,6 +21,20 @@
 
 ---
 
+## 2026-07-23 — Spawn survives Claude Code's Bash sandbox (silent keystroke-drop fix)
+
+`hash: 825e5f0`
+
+> **What this delivers.** A recent Claude Code auto-update turned **Bash-tool sandboxing on by default** (macOS `sandbox-exec`). A sandboxed process can read the accessibility tree but its **synthetic keystrokes to another app are silently dropped** — so agent-invoked `spawn` drove the IDE command palette into the void: no terminal, no worker, *no error*. Since agent-invoked spawn is the basis of orchestration, this quietly broke fleets. The wrapper installer now self-heals the operator's machine-local config, and `spawn` itself fails **loudly** instead of silently when the palette never opens.
+
+**What you can now do:**
+- **Spawn workers from an agent session again — without hand-editing anything.** Re-run the wrapper installer (`hooks/claude-identity/install-wrappers.sh`, or `.ps1` on Windows) and it ensures `~/.claude/settings.json` carries `sandbox.excludedCommands: ["spawn *", "spawn-kill *", "osascript *"]` — the sandbox stays ON globally, only the orchestration commands run un-sandboxed so their keystrokes land. Example: after re-running the installer and restarting your session, `spawn accountant "review Q1"` opens a real IDE terminal exactly as it did before the regression.
+- **Get told what's wrong instead of staring at nothing.** If a spawned worker never appears within ~12s, `spawn` now prints the exact diagnosis (the sandbox dropped its keystrokes) and the surgical fix — instead of failing silently.
+
+**Component list:** `hooks/claude-identity/install-wrappers.sh` — new `ensure_sandbox_exclusion()` (python3; backs up to `settings.json.bak-sandbox`, merges, never clobbers an existing `enabled` value or other excludes) run at install time, plus a post-spawn `pgrep` verification loop that warns loudly on silent failure · `hooks/claude-identity/install-wrappers.ps1` — PowerShell-native mirror (no python3 dependency; `osascript *` kept for cross-platform list-parity, harmless no-op on Windows).
+
+**Action required (CHECK-THEN-ACT, idempotent):** Re-run the wrapper installer for your OS — `bash hooks/claude-identity/install-wrappers.sh` (macOS/Linux) or `powershell -File hooks/claude-identity/install-wrappers.ps1` (Windows). It reads your `~/.claude/settings.json` first and **only adds** the three exclusions if missing (no-ops with "already excluded — no change" when you're already fixed), backing up before any write. **Then RESTART your Claude Code sessions LAST** so the sandbox config reloads — sandbox settings are read at session start, not live. If you never invoke `spawn` from inside an agent session, this is optional: a human-typed `spawn` in a normal terminal was never sandboxed and never broke.
+
 ## 2026-07-22 — Personal-account setup guide for the Google Workspace MCP
 
 `hash: 7ac52f6`
