@@ -21,6 +21,20 @@
 
 ---
 
+## 2026-07-22 — Personal-account setup guide for the Google Workspace MCP
+
+`hash: 7ac52f6`
+
+> **What this delivers.** A battle-tested, step-by-step guide for wiring the bundled **Google Workspace MCP to a personal Google account** — the setup an *agent machine* needs when the agent has its own gmail (its own Drive/Calendar/Tasks/Gmail, plus anything **shared with** it). Written from a live fortress-machine setup, so it front-loads the two 403 traps that eat the most time.
+
+**What you can now do:**
+- **Give a fortress/agent machine its own Google identity in ~15 minutes.** Follow `mcps/google-workspace-mcp/personal-account-setup.md`: create an External-consent project *under the personal account*, add it as a Test user (no app verification needed — Testing is the correct permanent state), create a Desktop OAuth client, and register the MCP with `--single-user` + a `600`-protected secret file. Example: give your overnight agent a gmail, share a Drive folder with it, and its sessions can read/file documents there — without touching your primary account's OAuth.
+- **Debug the classic failures from a table** — `403 org_internal`, `403 access_denied`, `redirect_uri_mismatch`, the silent "consent URL never prints" stdout-buffer trap, "scope has changed", and remote-consent via `ssh -L 8000:localhost:8000`.
+
+**Component list:** new `mcps/google-workspace-mcp/personal-account-setup.md` · pointer added in `mcps/_index.md` (next to the TROUBLESHOOTING reference).
+
+**Action required:** none — the guide lands with your next `/aios:update` (docs only, no wiring changes to existing setups). Read it only when you're ready to give an agent its own Google account.
+
 ## 2026-07-21 — Race-safe session close (AI-2) · update-completeness · tracked `.obsidian`
 
 `hash: 742f049`
