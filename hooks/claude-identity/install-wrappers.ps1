@@ -146,6 +146,12 @@ function Invoke-ClaudeWithRespawn {
     )
     $env:CLAUDE_AGENT_NAME = $Name
     $env:CLAUDE_RESPAWN_CAPABLE = '1'
+    # A spawned worker is an INDEPENDENT named session, not a sub-agent child. Clear any
+    # inherited CLAUDE_CODE_CHILD_SESSION marker (which turns off transcript saving AND the
+    # session-registry entry that AIOS Glass's Running card reads) and force persistence, so
+    # every worker is a first-class, resumable, Glass-visible session. (2026-07-23)
+    $env:CLAUDE_CODE_CHILD_SESSION = $null
+    $env:CLAUDE_CODE_FORCE_SESSION_PERSIST = '1'
     $marker  = Join-Path $env:TEMP "swap-respawn-$Name.flag"
     $sidFile = Join-Path $env:TEMP "swap-respawn-$Name.session"
     $resumeArgs = @()
@@ -268,7 +274,12 @@ function spawn {
     $taskFile = Join-Path $env:TEMP "spawn-task-$Name.md"
     Set-Content -Path $taskFile -Value $Task -Encoding UTF8
 
-    if (-not $env:CLAUDECODE) {
+    # In-process (in-shell) when NOT inside a Claude Code session, OR when this is an
+    # AIOS-Glass-made terminal ($env:AIOS_GLASS_TERM). Glass created the terminal natively
+    # (e.g. fulfilling a spawn-inbox request), so boot the worker in-place rather than
+    # opening a redundant Windows Terminal window. The $env:CLAUDECODE check alone isn't
+    # enough — a Glass terminal inherits it when the IDE was launched from a Claude session.
+    if ((-not $env:CLAUDECODE) -or $env:AIOS_GLASS_TERM) {
         # In-process path: set CLAUDE_MODEL for the call only, then restore (no leak).
         if ($spawnModel) {
             $prevModel = $env:CLAUDE_MODEL
@@ -407,60 +418,6 @@ function $PRIMARY_NAME {
 Add-Content -Path $RC -Value $PRIMARY_FN -Encoding UTF8
 
 Write-Host "[ok] Appended new wrapper block + $PRIMARY_NAME() shorthand to $RC"
-
-# ---- Ensure Bash-sandbox exclusion for the spawn orchestration path ----
-# Mirror of install-wrappers.sh's ensure_sandbox_exclusion, PowerShell-native
-# (no python3 dependency). Recent Claude Code sandboxes Bash tool calls; a
-# sandboxed process's synthetic keystrokes to another app are silently DROPPED,
-# so agent-invoked spawn fires into the void -- no terminal, no worker, no error.
-# The surgical fix keeps the sandbox ENABLED globally and excludes ONLY the
-# orchestration commands. settings.json is the operator's protected machine-local
-# config (the AI's own Edit/Write tools are correctly blocked from touching it),
-# so this operator-run installer is the right vehicle: it BACKS UP, MERGES (never
-# clobbers an existing `enabled` value or other exclusions), and REPORTS. The
-# `osascript *` entry is a no-op on Windows (macOS-only) but kept for cross-
-# platform list-parity with the .sh -- an unmatched prefix is harmless.
-# (Diagnosed 2026-07-23: a Claude Code auto-update turned Bash sandboxing on by
-# default and silently broke agent-invoked spawn -- the basis of orchestration.)
-$settingsPath = Join-Path $HOME ".claude\settings.json"
-$wantExcludes = @("spawn *", "spawn-kill *", "osascript *")
-try {
-    $data = $null
-    if (Test-Path $settingsPath) {
-        try {
-            $data = Get-Content $settingsPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-        } catch {
-            Write-Host "[warn] settings.json unreadable ($($_.Exception.Message)) - left untouched." -ForegroundColor Yellow
-            $data = $null
-        }
-        if ($null -ne $data) { Copy-Item -Path $settingsPath -Destination "$settingsPath.bak-sandbox" -Force }
-    } else {
-        $dir = Split-Path $settingsPath -Parent
-        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-        $data = [PSCustomObject]@{}
-    }
-    if ($null -ne $data) {
-        if (-not ($data.PSObject.Properties.Name -contains 'sandbox') -or $null -eq $data.sandbox -or $data.sandbox -isnot [PSCustomObject]) {
-            $data | Add-Member -NotePropertyName 'sandbox' -NotePropertyValue ([PSCustomObject]@{ enabled = $true; excludedCommands = @() }) -Force
-        }
-        $sb = $data.sandbox
-        if (-not ($sb.PSObject.Properties.Name -contains 'excludedCommands') -or $sb.excludedCommands -isnot [System.Array]) {
-            $sb | Add-Member -NotePropertyName 'excludedCommands' -NotePropertyValue @() -Force
-        }
-        $existing = @($sb.excludedCommands)
-        $added = @($wantExcludes | Where-Object { $existing -notcontains $_ })
-        if ($added.Count -gt 0) {
-            $sb.excludedCommands = @($existing + $added)
-            ($data | ConvertTo-Json -Depth 20) | Set-Content -Path $settingsPath -Encoding UTF8
-            $bk = if (Test-Path "$settingsPath.bak-sandbox") { " (backup: settings.json.bak-sandbox)" } else { "" }
-            Write-Host "[ok] sandbox exclusion: added $($added -join ', ') to settings.json$bk - restart sessions to load"
-        } else {
-            Write-Host "[ok] sandbox exclusion: spawn/osascript already excluded - no change"
-        }
-    }
-} catch {
-    Write-Host "[warn] sandbox-exclusion patch failed ($($_.Exception.Message)) - settings.json not modified." -ForegroundColor Yellow
-}
 
 # ---- Verify by inspecting profile content ----
 # Why we don't use Get-Command here: this installer runs in the parent shell,

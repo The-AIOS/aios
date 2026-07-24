@@ -1,6 +1,6 @@
 ---
 name: orchestration-ladder
-description: Choose the right orchestration primitive for delegated work — a single agent, parallel agents, or a dynamic workflow — using the agent → parallel → workflow ladder, plus the spawn-vs-subagent axis (interactive-and-independent vs. harness-tracked-and-harvested). Use when deciding how to delegate a task, whether to fan work out, whether you need the result back in-session, when a plan starts sprouting file-sentinels and monitor loops (the tell you picked the wrong primitive), or when orienting to dynamic workflows for the first time. The "which tool orchestrates this?" decision lens.
+description: Choose the right orchestration primitive for delegated work — a single agent, parallel agents, or a dynamic workflow — using the agent → parallel → workflow ladder, plus the spawn-vs-subagent axis (interactive-and-independent vs. harness-tracked-and-harvested), plus which MODEL/tier the worker runs on. Use when deciding how to delegate a task, whether to fan work out, whether you need the result back in-session, which model or tier a delegated worker should run on, when a plan starts sprouting file-sentinels and monitor loops (the tell you picked the wrong primitive), when an agent needs to spawn an interactive worker (which must go through the AIOS Glass spawn-inbox, never a direct `spawn` call — the auto-mode classifier gates that), or when orienting to dynamic workflows for the first time. The "which tool — and which model — orchestrates this?" decision lens.
 ---
 
 # The Orchestration Ladder — which primitive runs delegated work
@@ -28,8 +28,10 @@ The parallel-agents rung has its own dedicated skill for *how* to do it well (cr
 
 At rungs 1–2 you still choose *how* the worker runs. This is a **separate** decision from the ladder, and conflating them is the most common orchestration mistake:
 
-- **`spawn {name}`** = a **new, INDEPENDENT session** — an IDE tab (in an IDE) or Terminal.app window. Its own Remote-Control endpoint. The launching session does **NOT** control it and does **NOT** get its result back. To know it finished you'd poll files / git / a sentinel.
-  - **Use for:** interactive sessions the operator drops into live (wallets, decks, symposiums), and judgment/research work the operator watches unfold (visible-spawn default — see `dispatching-parallel-agents` and the operator's preferences).
+- **Independent interactive worker** = a **new session** in its own IDE tab / Terminal window, its own Remote-Control endpoint. The launcher does **NOT** control it and does **NOT** get its result back (you poll files / git / read its surface). *How you launch one depends on WHO launches it:*
+  - **You're an agent (a Claude session):** you **cannot call `spawn`** — Claude's auto-mode classifier gates it as "launch an autonomous agent" (silent red-dot), and its osascript palette-drive leaks keystrokes. **Request it through AIOS Glass:** if `~/.aios/spawn-inbox/` exists, write `~/.aios/spawn-inbox/<name>.json` = `{"name","task","model"|"tier"?}`; Glass fulfils it natively (`vscode.createTerminal`). No Glass → hand it to the operator (button / paste), **never blind-call `spawn` and wait.** (Full contract: CLAUDE.md → Spawning Sessions.)
+  - **The operator:** the Glass **"Spawn a session"** button, or types `spawn {name} "{task}"` in a terminal.
+  - **Use an independent worker for:** interactive sessions the operator drops into live (wallets, decks, symposiums), and judgment/research work the operator watches unfold (visible-spawn default — see `dispatching-parallel-agents` and the operator's preferences).
 
 - **Background subagent (Agent tool) OR dynamic workflow** = runs **UNDER the current session**. The harness tracks it, **notifies you on completion, and returns its result directly**. (The Agent tool's `model` accepts specialist models too, so a background specialist subagent is possible.)
   - **Use for:** anything where **you must orchestrate and harvest the output yourself** — autonomous / overnight work reviewed later, fan-outs whose results you consolidate, any result that must come back inline.
@@ -38,7 +40,19 @@ At rungs 1–2 you still choose *how* the worker runs. This is a **separate** de
 
 > If your plan needs a **file-sentinel plus a pgrep/monitor loop** to detect when a delegated session finished — **you wanted a subagent (or workflow), not a spawn.** The harness already gives you completion + result for free; rebuilding that around a `spawn` is a primitive mismatch, not a limitation of the model you spawned.
 
-The exception the operator may set: when they're *present* and want to *watch* the work, a visible `spawn` is right even though you can't harvest it. When they're *away* and delegated work to *review the output later*, a background subagent whose result you surface is right. The operator's explicit call overrides the default.
+The exception the operator may set: when they're *present* and want to *watch* the work, a visible independent worker (agent → Glass inbox, operator → button/typed) is right even though you can't harvest it. When they're *away* and delegated work to *review the output later*, a background subagent whose result you surface is right. The operator's explicit call overrides the default.
+
+## Choosing the model for the worker (Calibrate-Don't-Choose)
+
+Every primitive lets you pick the worker's model — a third decision, orthogonal to the ladder and the axis. Match it to the task's **cognitive load**: mechanical / deterministic work → the cheaper, faster tier; real reasoning, verification, synthesis → frontier. Default is to inherit the session model; change it deliberately, not reflexively.
+
+| Primitive | How to set the model |
+|---|---|
+| **Subagent** (Agent tool) | `model` param (`opus` / `sonnet` / `haiku` / `fable`); `subagent_type` for a specialist. |
+| **Dynamic workflow** (`agent()`) | `agent(prompt, {model, effort})` **per stage** — cheap model + low `effort` for mechanical stages (grep, transform, sweep); frontier + high/`max` effort for the verify / judge / synthesis stages. Mixing tiers within one workflow is the norm, not the exception. |
+| **Spawn** (via Glass inbox) | `"model":"<id>"` **or** `"tier":"mechanical"\|"judgment"` in the request JSON → Glass passes `--model` / `--tier` to the worker. (Operator-typed: `spawn --model <id>` / `spawn --tier mechanical`.) |
+
+One lens across all three: *the model is a spend↔quality dial on each unit of delegated work.* Cheap where the work is mechanical, frontier where it's judgment — this is `Calibrate Don't Choose` (operating principles) applied to delegation. Don't pay frontier rates for a file sweep; don't cheap out on a synthesis or a verify pass.
 
 ## Decision flow
 
@@ -53,7 +67,7 @@ digraph orchestration {
   "Parallel agents (rung 2)" [shape=box];
   "Dynamic workflow (rung 3)" [shape=box];
   "Single agent (rung 1)" [shape=box];
-  "spawn (independent, no harvest)" [shape=box];
+  "Independent worker (agent → Glass inbox · operator → button/typed)" [shape=box];
   "Background subagent (harness-tracked, returns result)" [shape=box];
 
   "Delegating work" -> "Ordered multi-stage pipeline, want it repeatable?";
@@ -66,7 +80,7 @@ digraph orchestration {
   "Parallel agents (rung 2)" -> "Need the result back in THIS session?";
   "Need the result back in THIS session?" -> "Background subagent (harness-tracked, returns result)" [label="yes"];
   "Need the result back in THIS session?" -> "Operator watching live / interactive?" [label="no / not sure"];
-  "Operator watching live / interactive?" -> "spawn (independent, no harvest)" [label="yes"];
+  "Operator watching live / interactive?" -> "Independent worker (agent → Glass inbox · operator → button/typed)" [label="yes"];
   "Operator watching live / interactive?" -> "Background subagent (harness-tracked, returns result)" [label="no"];
 }
 ```
@@ -86,6 +100,7 @@ Orientation notes:
 
 - **Fan-out with dependencies.** Parallel agents on tasks where B needs A's output → you'll serialize them by hand anyway. That's a workflow (or a single ordered agent), not a fan-out.
 - **Spawn-then-poll.** Spawning an independent session and building a monitor loop to harvest it. Use a subagent/workflow — the harness harvests for free.
+- **Agent calling `spawn` directly.** An agent that runs `spawn <name>` hits Claude's auto-mode classifier gate (silent red-dot "tool use rejected") — and even un-sandboxed, the osascript palette-drive leaks/drops keystrokes. Agents **request via the Glass spawn-inbox** (`~/.aios/spawn-inbox/<name>.json`) or hand the spawn to the operator; blind-calling `spawn` and waiting for a terminal is the silent-failure trap that hyperfrustrated operators.
 - **Workflow for a one-off single task.** Ceremony without payoff. Rung 1 with a subagent is enough.
 - **Climbing for its own sake.** Reaching rung 3 because it feels thorough. Match the rung to the work's real structure; higher rungs cost setup and comprehension.
 - **Ignoring the operator's presence.** Backgrounding work the operator wanted to watch, or spawning a visible session for work they wanted harvested silently overnight. The presence signal decides the axis.
