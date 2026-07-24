@@ -23,7 +23,7 @@
 
 ## 2026-07-23 — Agent orchestration through AIOS Glass: the spawn-inbox command bus
 
-`hash: TBD`
+`hash: fbcce4f`
 
 > **What this delivers.** The day's real fix — it **supersedes the same-day settings-patch attempt below (`2baa2d4`)**, which didn't hold in auto mode. A recent Claude Code update broke agent-invoked `spawn` two ways at once: its **Bash sandbox** silently dropped the osascript keystrokes `spawn` used to open an IDE terminal (the keystroke-*leak* that hyperfrustrated operators — keystrokes landing in the wrong window), and its **auto-mode classifier** now gates `spawn`/`spawn-kill` outright, reading them as "launch/kill an autonomous agent" and denying with a **silent red dot, no prompt**. The classifier can't be talked, configured, or self-modified past agents-spawning-agents — by design (an agent can't author its own autonomy grant). So the fix moves the mechanism out of the agent's hands entirely: **an agent orchestrates real terminal sessions through the AIOS Glass command bus** — it drops a JSON request in `~/.aios/spawn-inbox/` and Glass (a user-trusted IDE extension) fulfils it **natively** (`vscode.createTerminal` / `sendText`) — no synthetic keystrokes, no gate. *Request, don't spawn.*
 
