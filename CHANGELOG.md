@@ -21,6 +21,27 @@
 
 ---
 
+## 2026-07-25 — `/close-session` silently lost its capture on stock-bash Macs — fixed, and the class is now CI-guarded
+
+`hash: afe0832`
+
+> **What this delivers.** Two canonical hooks expanded a possibly-empty array as `"${arr[@]}"` under `set -u`. On **bash 3.2** — the bash Apple still ships at `/bin/bash`, and what `#!/usr/bin/env bash` resolves to on a stock Mac — that counts as an *unbound variable*, so the script aborts. It failed **mid-operation**, which is what made it expensive: `aios-note-append` died *after* writing the session block into your daily note and *before* committing it, so `/close-session` looked like it worked, committed nothing, and the natural retry **duplicated the block**. Separately, the very first commit in a fresh repo failed outright (`PARENTS` is empty with no `HEAD`). Reported and fixed by an operator who hit it in a real `/close-session`; the maintainer machines could not reproduce it, because their `env bash` is Homebrew 5.x — which is exactly why the CI guard below matters more than the two-line fix.
+
+**What you can now do:**
+- **Run `/close-session` on a stock Mac and actually get your capture committed.** If you'd seen a bare `NOPUSH[@]: unbound variable` — or found session blocks sitting uncommitted in a daily note, sometimes twice — that's this bug, and it's gone. Nothing to clean up going forward; if you have a duplicated block from a past retry, delete the extra one by hand.
+- **Initialize AIOS commit primitives in a brand-new repo.** `aios-commit` can now create the *first* commit in a fresh repo (previously: `PARENTS[@]: unbound variable` → `commit-tree failed`).
+- **Trust that this class can't come back silently.** CI now runs the commit-primitives suite twice — on ubuntu (bash 5) **and** under real bash 3.2 on macOS — with `bash` pinned on PATH so the hooks themselves are serviced by 3.2, not just the test harness. Verified honestly: with the fix reverted, the two new cases fail; with it in place, 10/10 pass on both 3.2 and 5.3.
+- **Know the rule when you write a hook.** `CONTRIBUTING.md` now has a *Shell portability* section: any array that can legitimately be empty uses `${arr[@]+"${arr[@]}"}`. Arrays with a proven length guard don't need it — don't widen a diff speculatively.
+
+**Component list:** `hooks/aios-commit:124` (`PARENTS`) + `hooks/aios-note-append:62` (`NOPUSH`) → portable empty-safe expansion, with inline comments explaining *why* the form looks odd so it doesn't get "cleaned up" later (community PR #6) · `tests/aios-commit.test.sh` → two new cases covering the root-commit and default-push paths, neither of which the suite previously exercised (every existing call passes `--no-push`, so `NOPUSH` was never empty) · `.github/workflows/validate.yml` → new `primitives_bash32` job (macos-latest, PATH-pinned to `/bin/bash`, asserts `BASH_VERSINFO[0] -eq 3` so the lane can't go vacuous) · `CONTRIBUTING.md` → *Shell portability* section + the stale *"There is no CI in this repo today"* claim corrected to describe the 10 jobs that actually run.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Nothing to run — `/aios:update` applies both hooks.** Verify: `grep -c 'arr\[@\]+' hooks/aios-note-append hooks/aios-commit` should return a non-zero count for each.
+2. **Only if you saw the failure:** check today's and recent daily notes for a duplicated `## Session —` block from a retry, and delete the extra. `grep -c '^## Session' "vault/01 - calendar/$(date +%Y-%m)/$(date +%F).md" 2>/dev/null` — compare against how many sessions you actually closed.
+3. **Only if you author hooks:** read `CONTRIBUTING.md` → *Shell portability*, and run `/bin/bash tests/aios-commit.test.sh` locally before proposing hook changes — that's the 3.2 path CI now enforces.
+
+---
+
 ## 2026-07-25 — Your execution surface is a CHOICE: the AIOS App **or** the IDE + Glass
 
 `hash: a041056`

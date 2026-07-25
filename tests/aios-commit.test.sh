@@ -76,6 +76,37 @@ R=$(newrepo); ( cd "$R"; printf 'only a header\n' > note.md; git add -A; git com
   tail -3 note.md | grep -q "## Session B" ) && ok "note-append falls back to end-append" || no "end-append failed"
 rm -rf "$R"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Empty-array expansion class (#6). On bash 3.2 — the bash macOS ships at /bin/bash,
+# and what `#!/usr/bin/env bash` resolves to on a stock Mac — `"${arr[@]}"` on an EMPTY
+# array is an unbound variable under `set -u`, so the script ABORTS mid-operation.
+# Both cases below aborted before the fix; neither was covered by the tests above,
+# because every call there passes --no-push (so NOPUSH is never empty) and the CI
+# `primitives` job runs on ubuntu/bash 5 (where the plain form is harmless).
+# Run under the 3.2 lane in validate.yml, these are the regression guard for the class.
+# ─────────────────────────────────────────────────────────────────────────────
+
+echo "── aios-commit: ROOT commit, no HEAD yet (PARENTS empty) ──"
+R=$(newrepo); ( cd "$R"; echo v1>f
+  "$AC" -m "root" --no-push -- f >/dev/null 2>&1
+  git rev-parse HEAD >/dev/null 2>&1 && git show --stat --format='' HEAD | grep -q 'f' ) \
+  && ok "first commit in a fresh repo succeeds (empty PARENTS[@])" || no "root commit failed — PARENTS[@] unbound"
+rm -rf "$R"
+
+echo "── aios-note-append: default path, NO --no-push (NOPUSH empty — the /close-session path) ──"
+R=$(newrepo); ( cd "$R"; printf 'top\n' > note.md; git add -A; git commit -qm init
+  printf '\n## Session C\nbody\n' > blk.md
+  H0=$(git rev-parse HEAD)
+  # No remote configured: aios-commit commits, then defers the push. Assert HEAD ADVANCED and the
+  # block is in the COMMITTED tree — not merely that note.md appears in the last commit, which the
+  # init commit already satisfies (that weaker assertion passed against the unpatched hook, i.e. it
+  # proved nothing). Pre-fix, the expansion aborts *after* the write and *before* the commit, so the
+  # block is on disk but HEAD never moves — and the instinctive retry duplicates it.
+  "$ANA" --note note.md -m "s" --block-file blk.md >/dev/null 2>&1
+  [ "$H0" != "$(git rev-parse HEAD)" ] && git show HEAD:note.md | grep -q "## Session C" ) \
+  && ok "note-append commits on the default push path (empty NOPUSH[@])" || no "note-append aborted — NOPUSH[@] unbound; block written to disk but never committed"
+rm -rf "$R"
+
 echo ""
-echo "── RESULT: $PASS passed, $FAIL failed ──"
+echo "── RESULT: $PASS passed, $FAIL failed  (bash $BASH_VERSION) ──"
 [ "$FAIL" = "0" ] || exit 1

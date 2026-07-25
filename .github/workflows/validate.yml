@@ -549,3 +549,36 @@ jobs:
 
       - name: aios-commit / aios-note-append / secret-scan regression test
         run: bash tests/aios-commit.test.sh
+
+  primitives_bash32:
+    # The same regression suite under bash 3.2 — the bash Apple ships at /bin/bash on every
+    # macOS, and what `#!/usr/bin/env bash` resolves to on a stock Mac. The `primitives` job
+    # above runs on ubuntu (bash 5), where `"${arr[@]}"` on an empty array is harmless — so it
+    # structurally could NOT catch #6 (empty-array expansion aborting under `set -u`). Neither
+    # could any maintainer whose PATH has Homebrew bash first. This lane is the one that can.
+    name: Commit primitives (bash 3.2 — macOS system bash)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pin `bash` on PATH to the 3.2 system bash
+        # Load-bearing: the hooks under test carry `#!/usr/bin/env bash`, so without this the
+        # runner's Homebrew bash 5 would service them and the lane would silently prove nothing.
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/bash32"
+          ln -sf /bin/bash "$RUNNER_TEMP/bash32/bash"
+          echo "$RUNNER_TEMP/bash32" >> "$GITHUB_PATH"
+
+      - name: Confirm the toolchain really is 3.2
+        run: |
+          set -e
+          echo "/bin/bash    → $(/bin/bash --version | head -1)"
+          echo "env bash     → $(env bash --version | head -1)"
+          env bash -c '[ "${BASH_VERSINFO[0]}" -eq 3 ]' || {
+            echo "::error::Expected bash 3.x on PATH for this lane — the guard would be vacuous otherwise."
+            exit 1
+          }
+
+      - name: Regression suite under bash 3.2
+        run: /bin/bash tests/aios-commit.test.sh

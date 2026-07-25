@@ -131,8 +131,24 @@ New bundled plugins register in `.claude-plugin/marketplace.json` (`name`, `disp
 - **Concurrency matters.** The AIOS often runs several agents at once, and they all read and write the same vault — a single shared git repo. If your contribution touches git, files, or shared state, test it with **2+ agents running in parallel** before you ship it.
 - **Don't claim it passes without showing the command + output.** Evidence before assertions, always.
 
+### Shell portability — write for bash 3.2, not just the bash you have
+
+Anything with a `#!/usr/bin/env bash` shebang (every hook in `hooks/`) may be serviced by **bash 3.2** — the bash Apple still ships at `/bin/bash`, and what a stock Mac resolves to. If your PATH has Homebrew bash first, *your machine cannot reproduce this class of bug*, and neither could most maintainers.
+
+The one that bites, because our hooks run `set -u`:
+
+```bash
+arr=()
+"${arr[@]}"                 # ✗ bash 3.2: "arr[@]: unbound variable" → the script ABORTS
+${arr[@]+"${arr[@]}"}       # ✓ portable empty-safe form; no-op on bash 4+, quoting preserved
+```
+
+Use the `+alternate` form for **any array that can legitimately be empty** — optional flags, optional parents, collected varargs. An array with a proven length guard above it (`[ ${#arr[@]} -eq 0 ] && …`) doesn't need it; don't widen a diff speculatively.
+
+Why this earns a section: it fails **mid-operation**, not at startup. `#6` aborted `aios-note-append` *after* the block was written into the note and *before* it was committed — so `/close-session` silently lost its capture on stock-bash Macs, and the natural retry duplicated the block. `tests/aios-commit.test.sh` now covers both empty-array paths, and CI runs that suite under real 3.2 on macOS (`primitives_bash32`).
+
 ### Before-you-open-a-PR checklist
-There is no CI in this repo today — contributions are specs executed by Claude at runtime, so review is human and the discipline is author-run. Before opening a PR, confirm:
+CI (`.github/workflows/validate.yml`) covers repo structure, manifests, frontmatter, personalization + credential guards, migration drift, capability counts, skill resolution, and the commit-primitives regression suite — on ubuntu **and** under bash 3.2 on macOS. It's a floor, not a substitute: most of what matters here is a spec executed by Claude at runtime, so review stays human and the discipline stays author-run. Before opening a PR, confirm:
 
 - [ ] It lives in the right home (`custom/` / `<company>/` / canonical) for who needs it.
 - [ ] Zero operator data anywhere in the diff (see § Personal hygiene). Grep your own diff.
