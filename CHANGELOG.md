@@ -21,6 +21,24 @@
 
 ---
 
+## 2026-07-25 — `/aios:compact` can actually hold the antifragile bound (condense, don't just delete)
+
+`hash: ffbfb03`
+
+> **What this delivers.** `antifragile.md` is read at *every* session start, so it carries a size bound — but the bound couldn't be met. Running the real thing on a vault at **88 entries / ~64k tokens** exposed the gap: Step 3.5's only lever was *removal*, and the two tiers it could remove from were nearly empty. Explicitly-marked entries freed ~4k tokens; the pre-90-day entries the spec would surface for confirmation averaged **5.6 lines each** — already tombstone-sized, so deleting all 28 would have freed ~8k while orphaning five `#N` pointers cited from USER.md and two commands. The weight was never in the old entries; it was in the **recent, load-bearing** ones the spec correctly says to keep (60 entries averaging 13 lines). A bound that can only be met by deleting the wisdom you're supposed to keep isn't a bound — it's a standing false alarm. This entry adds the missing lever (**condensation**) and re-bases the threshold on the thing that actually costs (**tokens**, not entry count).
+
+**What you can now do:**
+- **Get your antifragile file under budget without losing a single lesson.** `/aios:compact` now condenses verbose entries into tight *what-broke / why / fix* triplets instead of only deleting. Real run on this vault: **88 entries / ~64k tokens → 88 entries / ~33k tokens** — every entry number, the full meta-pattern index, and all exact commands, paths and hashes preserved. Roughly half the per-session read cost, zero wisdom removed.
+- **Stop the alarm crying wolf.** The old bound (~50 entries / ~40k tokens) treated entry count as a first-class limit; it was only ever a proxy for size. The bound is now **~45k tokens (≈1,000 lines), or ~120 entries — whichever trips first**, so a file of many *terse* entries reads as healthy, which it is.
+- **Trust that your `#N` cross-references survive a compaction.** Entry numbers are now explicitly identity: graduated/superseded entries get **tombstoned** (number + title + pointer retained), never renumbered. If your USER.md says *"Antifragile #17"* or a project note links `[[antifragile]] #42`, it still resolves after the pass — and the command now verifies exactly that (entry-set unchanged, index intact, no dangling `#N`, load-bearing commands still grep-able) before it writes.
+
+**Component list:** `plugins/aios/commands/compact.md` → Step 3.5a (token-primary threshold + the `wc -c ÷ 3.7` / `grep -c` measurement recipe), Step 3.5c (**three tiers** — tombstone · **condense** · surface-for-confirmation — plus the pre-write verification checklist), Step 3.5d (report tokens AND entries), and two Rules (condense-as-a-lever; entry-numbers-are-identity-never-renumber). `CLAUDE.md` → § III Self-Update, antifragile **Bounded** clause — token-primary bound + the two levers, with *condensation is the primary lever* stated explicitly.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Nothing to run — `/aios:update` applies both files.** They're framework infra; this sync puts them live in your vault. Verify if you like: `grep -c '45k tokens' CLAUDE.md plugins/aios/commands/compact.md` should return 1 for each.
+2. **Check whether your own antifragile is over the new bound, and compact if so.** `F="vault/00 - notes/context/observed/antifragile.md"; echo "$(( $(wc -c < "$F") / 3700 ))k tokens, $(grep -c '^### [0-9]' "$F") entries"` — if it's over ~45k tokens or ~120 entries, run `/aios:compact` (Step 3.5 is size-gated and fires on any invocation, independent of which month you're compacting). If you're under, it no-ops and says so.
+3. **No restart needed** — command specs are read per-invocation. If your plugin cache is version-pinned and lagging, `claude plugin update aios@the-aios` refreshes it.
+
 ## 2026-07-25 — Every session knows the command bus (verbs, addressing, and a self-documenting inbox)
 
 `hash: 658a2d1`
