@@ -21,6 +21,27 @@
 
 ---
 
+## 2026-07-25 — Your execution surface is a CHOICE: the AIOS App **or** the IDE + Glass
+
+`hash: a041056`
+
+> **What this delivers.** SETUP.md described Antigravity IDE + AIOS Glass as required, with Glass called *"a core part of the AIOS, not an optional extra."* That was true when the IDE was the only way to point-and-click the AIOS. It stopped being true when the **AIOS App** shipped — and it was about to cause a concrete failure, not just read as stale. The app hands setup off to a Claude session, and **that session reads this doc**: its step 1 would have walked an app user through downloading a whole IDE they don't need and installing an extension that duplicates the window they were already looking at. A newcomer cannot tell that's unnecessary, because the doc said *required*. Obsidian stays required on every path (it's what the bundled Obsidian MCP talks to); the **execution** surface is now an explicit pick-one.
+
+**What you can now do:**
+- **Set up the AIOS without installing an IDE at all.** If you use the AIOS App, that IS your execution surface — skip Antigravity and skip AIOS Glass entirely. Concretely: `brew install --cask obsidian`, drag the app's `.dmg` to Applications, install Claude Code, done. Two apps, not three-plus-an-extension.
+- **Trust a Claude-driven setup not to misroute you.** Step 1 of the Claude-facing sequence now tells the session, in as many words, *not* to send an operator who arrived from the app off to install an IDE or Glass. Say *"set up my AI-OS"* from the app and you'll be walked through your own path.
+- **Still choose the IDE deliberately, and know why.** Antigravity + Glass remains the right pick if you also write code or want the AIOS docked beside a real editor — the doc now says that instead of implying the app path doesn't exist. Both surfaces drive the same vault through the same Claude Code, so it's a preference, not a fork, and either can be added later without redoing anything.
+- **Know where you stand on Windows and Linux.** The app is macOS-only today, so the IDE + Glass is your surface there. That was previously implicit; it's now stated in both OS blocks.
+
+**Component list:** `SETUP.md` → the Claude-facing 11-step block (step 1: one execution surface, plus the explicit instruction not to misroute app users) · *"The two things you'll use daily"* (renamed from *"Two apps you'll use daily — both required"*; two overlapping tables merged into one that carries both the choice and the reasons) · the AIOS Glass note (scoped to the IDE path, with an explicit skip for app users) · the **macOS** block (split into *Obsidian, always* + *one execution surface, a) or b)*, with the app's releases URL) · the **Windows** and **Linux** blocks (IDE stated as the only surface, with the reason).
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Nothing to run — `/aios:update` applies the doc.** Verify if you like: `grep -c 'pick this \*\*or\*\*' SETUP.md` should return `2`.
+2. **Only if you previously followed the old prerequisites AND you use the AIOS App:** you may have installed Antigravity and AIOS Glass you don't need. Nothing is broken — both surfaces coexist happily on one vault — so remove them only if you want the disk space back. Check what you actually have: `ls -d /Applications/Antigravity*.app 2>/dev/null || echo "no IDE installed — nothing to do"`.
+3. **No restart needed** — this is documentation.
+
+---
+
 ## 2026-07-25 — `/aios:compact` can actually hold the antifragile bound (condense, don't just delete)
 
 `hash: 7d71f79`
