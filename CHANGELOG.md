@@ -23,7 +23,7 @@
 
 ## 2026-07-25 — Every session knows the command bus (verbs, addressing, and a self-documenting inbox)
 
-`hash: 3e37aa5`
+`hash: 658a2d1`
 
 > **What this delivers.** The bus shipped on 07-23 worked — but only for a session willing to excavate it. Two real failures showed the gap: one session spent **six tool calls** grepping Glass's source to derive the `send` schema before it could message a peer, and another looked for a live session with **`pgrep`**, got a name that lies for a *resumed* session, and nearly declared a working peer dead. Both are knowledge gaps, not mechanism gaps — the bus was fine; nothing told sessions how to *address* each other or what the other two verbs even were (CLAUDE.md documented `spawn` only). This entry closes that in three layers: the **always-loaded contract** gains the `send`/`kill` verbs plus the addressing rule, the **orchestration-ladder skill** gains a full bus reference and the trigger phrases that actually match ("message session X", "who's running", "reply to whoever spawned me"), and the **inbox now documents itself** — Glass writes `~/.aios/spawn-inbox/README.md` on activation, so the component implementing the dispatch is the only thing describing it and the doc can't drift from the handler.
 
