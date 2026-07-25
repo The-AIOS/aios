@@ -21,6 +21,26 @@
 
 ---
 
+## 2026-07-25 — Every session knows the command bus (verbs, addressing, and a self-documenting inbox)
+
+`hash: 3e37aa5`
+
+> **What this delivers.** The bus shipped on 07-23 worked — but only for a session willing to excavate it. Two real failures showed the gap: one session spent **six tool calls** grepping Glass's source to derive the `send` schema before it could message a peer, and another looked for a live session with **`pgrep`**, got a name that lies for a *resumed* session, and nearly declared a working peer dead. Both are knowledge gaps, not mechanism gaps — the bus was fine; nothing told sessions how to *address* each other or what the other two verbs even were (CLAUDE.md documented `spawn` only). This entry closes that in three layers: the **always-loaded contract** gains the `send`/`kill` verbs plus the addressing rule, the **orchestration-ladder skill** gains a full bus reference and the trigger phrases that actually match ("message session X", "who's running", "reply to whoever spawned me"), and the **inbox now documents itself** — Glass writes `~/.aios/spawn-inbox/README.md` on activation, so the component implementing the dispatch is the only thing describing it and the doc can't drift from the handler.
+
+**What you can now do:**
+- **Message another session without archaeology.** Say *"send a message to vivid-otter"* and your session already knows the verb and schema — it writes `{"action":"send","name":"vivid-otter","prompt":"hi from over here"}` into `~/.aios/spawn-inbox/` and Glass delivers it into that terminal as a new prompt. No grepping the extension source first. `{"action":"kill","name":"vivid-otter"}` retires it the same way.
+- **Stop wrongly declaring live sessions dead.** The contract now names the one source of truth: live names come from the **session registry** `~/.claude/sessions/*.json` (`name` · `pid` · `status` · `sessionId`) — never `pgrep`, never a terminal tab's title, because a *resumed* session keeps whatever its tab was called. Example: a coordinator checking on a worker it spawned two hours ago finds it by registry name and gets a real answer, instead of an empty `pgrep` and a wrong conclusion.
+- **Let a spawned worker answer you.** A worker replies to its coordinator with `send` to the coordinator's registry name, so the loop closes even when the coordinator is long-lived or resumed — agents hold real multi-turn conversations rather than fire-and-forget.
+- **Read the bus reference at the point of need.** `~/.aios/spawn-inbox/README.md` (written by Glass 0.4.4, refreshed every activation) carries the three verbs with exact JSON, the addressing rule, how to reply, and the gotchas that each cost a bug — one-line prompts, "file vanished = picked up, not succeeded" (verify from the target's transcript at `~/.claude/projects/*/<sessionId>.jsonl`), and same-window reach.
+- **Get the right skill to fire.** `orchestration-ladder` used to describe itself only as a *choose-a-primitive* lens, so a plain "say hi to session X" never loaded it. Its triggers now include session-to-session messaging, checking who's live, killing a worker, and replying to a spawner.
+
+**Component list:** `CLAUDE.md` → *Spawning Sessions* — two new bullets: the `send`/`kill` verbs (with schemas) and the addressing rule (registry-is-truth, one-line prompts, consumed≠succeeded, transcript verification). `skills/aios/orchestration-ladder/SKILL.md` — widened `description` triggers (session-to-session messaging, who's-live, kill, reply-to-spawner) + a new **The command bus — how sessions actually reach each other** section (three verbs, addressing, replying, four failure modes, and the pointer to the self-written README). **AIOS Glass 0.4.4** (Open VSX) — writes/refreshes `~/.aios/spawn-inbox/README.md` on activation beside the `mkdirSync` that creates the inbox, plus a smoke guard so a refactor can't silently drop it.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Nothing for the framework half — `/aios:update` already applied it.** The CLAUDE.md contract and the skill are framework files; they're live in your vault as of this sync. Verify if you like: `grep -c 'action":"send' CLAUDE.md` should be ≥ 1.
+2. **Update AIOS Glass to 0.4.4 for the self-documenting inbox — `/aios:update` does NOT deliver it.** Glass ships via **Open VSX**, and `~/.aios/spawn-inbox/` is machine-local runtime state, not a repo path, so nothing in this tree can place that README — Glass writes it, which is exactly why it can't drift from the handler. Check your installed version first; skip if already ≥ 0.4.4. Without it you still have the full contract (layers 1 + 2) — you just don't get the copy that lives in the folder.
+3. **Restart the IDE (last step).** The README appears — or refreshes to match the running handler — on Glass's next activation.
+
 ## 2026-07-23 — Agent orchestration through AIOS Glass: the spawn-inbox command bus
 
 `hash: fbcce4f`

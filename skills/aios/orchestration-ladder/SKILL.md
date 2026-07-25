@@ -1,6 +1,6 @@
 ---
 name: orchestration-ladder
-description: Choose the right orchestration primitive for delegated work — a single agent, parallel agents, or a dynamic workflow — using the agent → parallel → workflow ladder, plus the spawn-vs-subagent axis (interactive-and-independent vs. harness-tracked-and-harvested), plus which MODEL/tier the worker runs on. Use when deciding how to delegate a task, whether to fan work out, whether you need the result back in-session, which model or tier a delegated worker should run on, when a plan starts sprouting file-sentinels and monitor loops (the tell you picked the wrong primitive), when an agent needs to spawn an interactive worker (which must go through the AIOS Glass spawn-inbox, never a direct `spawn` call — the auto-mode classifier gates that), or when orienting to dynamic workflows for the first time. The "which tool — and which model — orchestrates this?" decision lens.
+description: Choose the right orchestration primitive for delegated work — a single agent, parallel agents, or a dynamic workflow — using the agent → parallel → workflow ladder, plus the spawn-vs-subagent axis (interactive-and-independent vs. harness-tracked-and-harvested), plus which MODEL/tier the worker runs on. ALSO the reference for talking to other sessions through the AIOS Glass spawn-inbox command bus. Use when deciding how to delegate a task, whether to fan work out, whether you need the result back in-session, which model or tier a delegated worker should run on, when a plan starts sprouting file-sentinels and monitor loops (the tell you picked the wrong primitive), when orienting to dynamic workflows for the first time, and whenever one session must reach another — "send a message to session X", "say hi to <session>", "message/nudge/ping a running agent", "reply to the session that spawned me", "hand this off to another session", "check who is running / which sessions are live", "kill or close a worker", or spawning an interactive worker (all of which go through the spawn-inbox, never a direct `spawn` call — the auto-mode classifier gates that). The "which tool — which model — and how do sessions talk to each other?" lens.
 ---
 
 # The Orchestration Ladder — which primitive runs delegated work
@@ -41,6 +41,27 @@ At rungs 1–2 you still choose *how* the worker runs. This is a **separate** de
 > If your plan needs a **file-sentinel plus a pgrep/monitor loop** to detect when a delegated session finished — **you wanted a subagent (or workflow), not a spawn.** The harness already gives you completion + result for free; rebuilding that around a `spawn` is a primitive mismatch, not a limitation of the model you spawned.
 
 The exception the operator may set: when they're *present* and want to *watch* the work, a visible independent worker (agent → Glass inbox, operator → button/typed) is right even though you can't harvest it. When they're *away* and delegated work to *review the output later*, a background subagent whose result you surface is right. The operator's explicit call overrides the default.
+
+## The command bus — how sessions actually reach each other
+
+The spawn-inbox is not spawn-only: it is a **command bus with three verbs**, and it is how one session talks to another at all. Drop a `*.json` file in `~/.aios/spawn-inbox/` (filename arbitrary but distinct; Glass consumes and deletes it):
+
+- **spawn** (the default — no `action` key): `{"name":"designer","task":"design the hero","tier":"mechanical"}` — `task` is the optional first prompt; `"model":"<id>"` or `"tier":"mechanical"|"judgment"` route the worker by cognitive load. A name already live is *revealed*, not duplicated.
+- **send**: `{"action":"send","name":"designer","prompt":"ship it"}` — delivers a prompt into that live session's terminal.
+- **kill**: `{"action":"kill","name":"designer"}` — closes its terminal (shell + claude + respawn loop).
+
+**Addressing — the registry is the only truth.** Live sessions and their real names come from `~/.claude/sessions/*.json` (each: `name` · `pid` · `status` · `sessionId` · `cwd`). **Never `pgrep`, never a terminal tab title.** A *resumed* session keeps whatever its tab was called, so matching by process or tab name silently fails — it makes a live peer look dead, and the usual outcome is wrongly declaring a session closed. Glass resolves the target by **pid → process ancestry**, which is why messaging a long-lived coordinator works.
+
+**Replying to whoever requested you.** A spawned worker answers its coordinator with `send` to the coordinator's registry name; the reply lands there as a new prompt. That closes the loop — real multi-turn conversation between sessions, no polling.
+
+**Failure modes worth knowing** (each cost a real bug):
+
+- Keep `prompt` on **one line** — multi-line text is typed into a terminal as multiple Enters.
+- The request file vanishing means Glass **picked it up**, not that the work succeeded. To verify what a session actually did, read its transcript: `~/.claude/projects/*/<sessionId>.jsonl` (`sessionId` from its registry file) — status alone won't tell you.
+- `send`/`kill` reach terminals in the Glass window that consumed the request; with several IDE windows open, whichever wins the race acts.
+- Malformed or name-less requests are ignored (logged to the *AIOS Glass* output channel) — a silent no-op, so check the channel if nothing happens.
+
+The always-current reference lives in the inbox itself: **`~/.aios/spawn-inbox/README.md`**, written by Glass on activation (the component that implements the dispatch is the one that documents it, so it can't drift). If that file is absent, Glass isn't installed → there is no watcher and no bus; hand the spawn to the operator.
 
 ## Choosing the model for the worker (Calibrate-Don't-Choose)
 
