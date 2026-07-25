@@ -7,7 +7,7 @@ Get the full system running in under 10 minutes (after the prereqs install).
 
 Operator said *"set up my AI-OS from this repo"* or similar. You're the executor. The flow:
 
-1. Confirm Prerequisites are installed (Obsidian + Antigravity IDE/VS Code + Node/Git/gh/Python/uv/Claude Code) — if not, walk OS-specific block from "Prerequisites" §
+1. Confirm Prerequisites are installed — Obsidian + Node/Git/gh/Python/uv/Claude Code, **plus ONE execution surface**: the **AIOS App** *or* Antigravity IDE/VS Code with AIOS Glass. If the operator reached you from the AIOS App, that surface is already satisfied — do **not** send them to install an IDE or Glass. If anything else is missing, walk the OS-specific block from "Prerequisites" §
 2. Clone to `~/aios` (default) and create private GitHub repo `{username}/aios` (or whatever the operator names it) — see "The Setup" §1 below
 3. Bulk MCP deps: `bash mcps/setup.sh` · Register bundled skills: `bash skills/setup.sh` (Windows: `pwsh skills/setup.ps1`) — symlinks AIOS skills into `~/.claude/skills` so Claude Code loads them (restart sessions after)
 4. Guided MCP auth: invoke `/aios:mcps-setup`
@@ -37,24 +37,27 @@ Operator said *"set up my AI-OS from this repo"* or similar. You're the executor
 
 ## Prerequisites
 
-Pick your OS path. Each installs the same toolchain (Node, Git, GitHub CLI, Python, uv, Obsidian, Antigravity IDE, Claude Code CLI). After this section the Claude-driven flow is OS-agnostic.
+Pick your OS path. Each installs the same toolchain (Node, Git, GitHub CLI, Python, uv, Obsidian, Claude Code CLI) plus one execution surface. After this section the Claude-driven flow is OS-agnostic.
 
 > **Already have Claude Code CLI working?** Skip ahead to **[The Setup](#the-setup-claude-driven)** above.
 
-### Two apps you'll use daily — both required
+### The two things you'll use daily
 
-The AIOS is *one filesystem, two surfaces*. Install both:
+The AIOS is *one filesystem, two surfaces*: somewhere to **read and think**, and somewhere to **execute and ship**.
 
-| App | Role | Why |
+| What | Role | Why it earns its place |
 |---|---|---|
-| **[Obsidian](https://obsidian.md/)** | User-friendly *note reading* | Beautiful read of your vault — daily notes, project notes, observed context, reflections. Wikilinks resolve, graph view shows connections, the markdown structure compounds visually. You think + reflect here. |
-| **[Antigravity IDE](https://antigravity.google/product/antigravity-ide)** | User-friendly *file editing + agent spawning* | Bundles Claude Code natively — agents run in IDE terminals (one per spawn), Obsidian vault opens as a project, file edits + git ops feel native. You execute + ship here. Use VS Code as the alternative if you prefer it; Antigravity is just batteries-included. |
+| **[Obsidian](https://obsidian.md/)** — **required on every path** | *Reading and thinking* | Beautiful read of your vault — daily notes, project notes, observed context, reflections. Wikilinks resolve, graph view shows connections, the markdown structure compounds visually. It is also what the bundled Obsidian MCP talks to, so it is not a preference. |
+| **[AIOS App](https://github.com/The-AIOS/aios-app/releases)** — *pick this **or** the IDE* | *Executing, the simplest way* | The AIOS as a normal Mac app: rituals, agents, sessions, terminals and your vault in one window, point-and-click. **No IDE and no extension** — it is its own glass layer, so skip the Antigravity and AIOS Glass steps below entirely. |
+| **[Antigravity IDE](https://antigravity.google/product/antigravity-ide) + AIOS Glass** — *pick this **or** the app* | *Executing, beside a real editor* | Bundles Claude Code natively — agents run in IDE terminals (one per spawn), file edits and git ops feel native. Choose this if you also write code. VS Code works as the alternative; Antigravity is just batteries-included. Then add Glass (below). |
 
-You don't pick one — you run them side-by-side. Obsidian on the left for context, Antigravity IDE on the right for execution. Same vault, both windows.
+**Pick ONE execution surface.** Both drive the same vault through the same Claude Code, so this is a preference, not a fork — and you can add the other later without redoing anything.
 
-> **Then add the glass layer — a core part of the AIOS, not an optional extra.** **AIOS Glass** is a docked panel inside Antigravity that turns the AIOS into a *point-and-click* surface — run rituals, launch agents, browse skills/commands, mount companies, manage spaces, all without typing terminal commands. *Glass, not engine:* it just triggers your existing AIOS through Claude. It's the front door for everyone, and the difference between using the AIOS and bouncing off the terminal for anyone who isn't terminal-native.
+Run your two side-by-side: Obsidian on the left for context, your execution surface on the right. Same vault, both windows.
+
+> **If you chose the IDE, add the glass layer — for that path it is core, not an optional extra.** (On the **AIOS App** path, skip this whole note: the app already *is* this surface.) **AIOS Glass** is a docked panel inside Antigravity that turns the AIOS into a *point-and-click* surface — run rituals, launch agents, browse skills/commands, mount companies, manage spaces, all without typing terminal commands. *Glass, not engine:* it just triggers your existing AIOS through Claude. It's the front door for everyone, and the difference between using the AIOS and bouncing off the terminal for anyone who isn't terminal-native.
 >
-> **Install it once the AIOS is set up** (it surfaces what's already there — so it comes after, but it's still a required part of the setup, not a "maybe later"): Extensions view (`⌘⇧X`/`Ctrl+Shift+X`) → search **"AIOS Glass"** → **Install** (auto-installs the **Foam** dependency + auto-updates) → reload → **click the `AIOS Glass` item in the bottom status bar to open it**, then move it to the secondary side bar. Works in any Open VSX editor (Antigravity / VSCodium / Cursor / Windsurf). On **stock Microsoft VS Code**, sideload the `.vsix` from the [latest release](https://github.com/The-AIOS/aios-glass/releases). Full walkthrough: [`START-HERE.md`](./START-HERE.md) → *Step 4* + the [aios-glass INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md).
+> **Install it once the AIOS is set up** (it surfaces what's already there — so it comes after, but on the IDE path it is a required part of the setup, not a "maybe later"): Extensions view (`⌘⇧X`/`Ctrl+Shift+X`) → search **"AIOS Glass"** → **Install** (auto-installs the **Foam** dependency + auto-updates) → reload → **click the `AIOS Glass` item in the bottom status bar to open it**, then move it to the secondary side bar. Works in any Open VSX editor (Antigravity / VSCodium / Cursor / Windsurf). On **stock Microsoft VS Code**, sideload the `.vsix` from the [latest release](https://github.com/The-AIOS/aios-glass/releases). Full walkthrough: [`START-HERE.md`](./START-HERE.md) → *Step 4* + the [aios-glass INSTALL.md](https://github.com/The-AIOS/aios-glass/blob/main/INSTALL.md).
 
 ### macOS (~5 min)
 
@@ -65,14 +68,19 @@ You don't pick one — you run them side-by-side. Obsidian on the left for conte
 # 2. Toolchain
 brew install node git gh python uv
 
-# 3. The two daily apps (see "Two apps you'll use daily" above)
+# 3. Obsidian — required on every path (it is also what the Obsidian MCP talks to)
 brew install --cask obsidian
-# Download Antigravity IDE from https://antigravity.google/product/antigravity-ide (no brew cask yet — drag .dmg to Applications)
 
-# 4. Claude Code CLI
+# 4. ONE execution surface — pick a) or b), not both (see "The two things you'll use daily")
+# a) AIOS App — simplest: download the .dmg from https://github.com/The-AIOS/aios-app/releases
+#    and drag it to Applications. Nothing else; skip the Glass step later.
+# b) Antigravity IDE — download from https://antigravity.google/product/antigravity-ide
+#    (no brew cask yet — drag the .dmg to Applications), then install AIOS Glass.
+
+# 5. Claude Code CLI
 npm install -g @anthropic-ai/claude-code
 
-# 5. Auth (each opens a browser tab)
+# 6. Auth (each opens a browser tab)
 gh auth login
 claude
 ```
@@ -90,7 +98,8 @@ winget install Git.Git
 winget install GitHub.cli
 winget install Python.Python.3.12
 
-# 2. The two daily apps (Obsidian + IDE — see "Two apps you'll use daily" above)
+# 2. Obsidian + your execution surface (see "The two things you'll use daily" above).
+#    The AIOS App is macOS-only for now, so on Windows the surface is the IDE + AIOS Glass.
 winget install Obsidian.Obsidian
 # For Antigravity IDE (recommended — Claude Code bundled): download from https://antigravity.google/product/antigravity-ide
 # For VS Code as the IDE alternative: winget install Microsoft.VisualStudioCode
@@ -126,7 +135,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # 3. Claude Code CLI
 sudo npm install -g @anthropic-ai/claude-code
 
-# 4. The two daily apps (see "Two apps you'll use daily" above)
+# 4. Obsidian + your execution surface (see "The two things you'll use daily" above).
+#    The AIOS App is macOS-only for now, so on Linux the surface is the IDE + AIOS Glass.
 # Obsidian — download the AppImage from https://obsidian.md/download
 # Antigravity IDE (recommended, Claude Code bundled) — https://antigravity.google/product/antigravity-ide
 #   or VS Code as the alternative: sudo snap install code --classic
