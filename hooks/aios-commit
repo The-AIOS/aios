@@ -118,7 +118,10 @@ if [ "${#PARENTS[@]}" -gt 0 ] && GIT_INDEX_FILE="$TMPIDX" git diff-index --quiet
 fi
 
 TREE=$(GIT_INDEX_FILE="$TMPIDX" git write-tree) || die "write-tree failed"
-COMMIT=$(git commit-tree "$TREE" "${PARENTS[@]}" -m "$MSG") || die "commit-tree failed"
+# ${PARENTS[@]+"${PARENTS[@]}"} — PARENTS is EMPTY on a root commit (no HEAD yet), and bash 3.2
+# (the macOS system bash) treats "${arr[@]}" on an empty array as unbound under `set -u` → the
+# very first commit in a fresh repo aborts. The +alternate form is empty-safe on 3.2 and 4+.
+COMMIT=$(git commit-tree "$TREE" ${PARENTS[@]+"${PARENTS[@]}"} -m "$MSG") || die "commit-tree failed"
 git update-ref HEAD "$COMMIT" || die "update-ref failed"
 
 # sync the REAL index for the committed paths only → `git status` shows them clean;

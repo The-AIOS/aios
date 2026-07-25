@@ -55,6 +55,10 @@ else
 fi
 
 # ── commit the note via aios-commit (its own repo-mutex; lock order note→repo, no deadlock) ──
-"$AC" -m "$MSG" "${NOPUSH[@]}" -- "$NOTE" || die "aios-commit failed"
+# ${arr[@]+"${arr[@]}"} — bash 3.2 (the macOS system bash) treats "${arr[@]}" on an EMPTY
+# array as an unbound variable under `set -u`, so a plain expansion aborts HERE: after the
+# note was already written, before it was committed. The +alternate form is the portable
+# empty-safe expansion (no-op on bash 4+).
+"$AC" -m "$MSG" ${NOPUSH[@]+"${NOPUSH[@]}"} -- "$NOTE" || die "aios-commit failed"
 release; trap - EXIT
 exit 0
