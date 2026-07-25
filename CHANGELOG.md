@@ -23,7 +23,7 @@
 
 ## 2026-07-25 — `/aios:compact` can actually hold the antifragile bound (condense, don't just delete)
 
-`hash: ffbfb03`
+`hash: 7d71f79`
 
 > **What this delivers.** `antifragile.md` is read at *every* session start, so it carries a size bound — but the bound couldn't be met. Running the real thing on a vault at **88 entries / ~64k tokens** exposed the gap: Step 3.5's only lever was *removal*, and the two tiers it could remove from were nearly empty. Explicitly-marked entries freed ~4k tokens; the pre-90-day entries the spec would surface for confirmation averaged **5.6 lines each** — already tombstone-sized, so deleting all 28 would have freed ~8k while orphaning five `#N` pointers cited from USER.md and two commands. The weight was never in the old entries; it was in the **recent, load-bearing** ones the spec correctly says to keep (60 entries averaging 13 lines). A bound that can only be met by deleting the wisdom you're supposed to keep isn't a bound — it's a standing false alarm. This entry adds the missing lever (**condensation**) and re-bases the threshold on the thing that actually costs (**tokens**, not entry count).
 
