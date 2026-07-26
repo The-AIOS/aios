@@ -46,13 +46,20 @@ fi
 # Operator can re-run this script after personalizing USER.md.
 detect_primary_session() {
   local user_md="$HOME/aios/USER.md"
+  local name=""
   if [ -f "$user_md" ]; then
-    # Extract first session name from the ## Identity table's second column.
-    # Backtick-OPTIONAL: matches both | `name` | (vault format) and | name |
-    # (README example format). A strict backtick-required match silently fell
-    # back to the placeholder for operators who followed the README's plain
-    # format — see CHANGELOG "install-wrappers: backtick-optional USER.md parse."
-    local name
+    # Extract the first session name from the ## Identity table's second column.
+    #
+    # Backtick-OPTIONAL: matches both | `name` | (vault format) and | name | (README format).
+    #
+    # And it must SKIP EXAMPLE ROWS. USER.md ships examples marked "EXAMPLE ONLY (Claude: ignore
+    # these)" — but the reader here is awk, which cannot take a hint. It scraped the example row,
+    # stripped the backticks and kept the markdown emphasis, and wrote `*buddy*` into the shell rc
+    # as a primary session name. zsh reads that as a glob, so every new terminal opened with
+    # `no matches found: *buddy*` — on the operator's machine, forever, from an installer that
+    # reported success. Hours went into diagnosing that as a "broken .zshrc" before its author
+    # turned out to be us. This file's example convention is markdown emphasis, so emphasis is the
+    # signal: a cell wrapped in * or _ is an example, not an answer.
     name=$(awk -F'|' '
       /^## Identity/ { in_section=1; next }
       /^## / && in_section { exit }
@@ -60,19 +67,23 @@ detect_primary_session() {
         raw = $2
         gsub(/`/, "", raw)                       # strip backticks if present
         gsub(/^[ \t]+|[ \t]+$/, "", raw)         # trim surrounding whitespace
-        # Skip the header row (| Name |) and separator rows (|---|)
-        if (raw != "" && raw != "Name" && raw !~ /^[ -]+$/) {
-          print raw
-          exit
-        }
+        if (raw ~ /^[*_].*[*_]$/) next           # emphasis == EXAMPLE ONLY, skip it
+        if (raw != "" && raw != "Name" && raw !~ /^[ -]+$/) { print raw; exit }
       }
     ' "$user_md")
-    if [ -n "$name" ]; then
-      echo "$name"
-      return
-    fi
   fi
-  echo "aios"
+
+  # THE GUARD THAT MATTERS. Whatever the parser returns, only a plain session-name shape may reach
+  # a shell rc: lowercase letters, digits and hyphens. The parse above will be wrong again — a new
+  # table format, a stray character, an operator writing something unexpected — and this makes the
+  # blast radius "we fall back to aios" instead of "every terminal errors on startup". A validator
+  # is cheaper than the class of bug it prevents.
+  case "$name" in
+    ''|*[!a-z0-9-]*) name="" ;;                  # empty, or anything outside the allowed set
+    -*|*-) name="" ;;                            # must not start or end with a hyphen
+  esac
+  [ -n "$name" ] || name="aios"
+  printf '%s' "$name"
 }
 
 PRIMARY_NAME="$(detect_primary_session)"

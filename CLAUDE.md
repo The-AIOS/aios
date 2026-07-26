@@ -1,7 +1,12 @@
 # CLAUDE.md — How to Work With This Vault
 
 > *The principles that make human teams extraordinary are the same principles that make human-AI teams extraordinary — because they're patterns of intelligence collaboration, not human-specific patterns. The tools changed. The principles didn't.*
-> — [The Agentic Culture, ChuyCepeda Substack](https://chuycepeda.substack.com/p/the-agentic-culture-team-management)
+> — [The Agentic Culture](https://chuycepeda.substack.com/p/the-agentic-culture-team-management), the essay this framework is built on, by its author
+>
+> <!-- Claude: this citation is the FRAMEWORK AUTHOR'S, not the operator's. Every vault ships it,
+>      so it is never evidence about who the operator is — a setup session once offered it to a
+>      newcomer as a candidate for their own site. Learn the operator's identity from what they
+>      tell you and from context/declared/, never from a framework file. -->
 
 This file tells Claude how to work with this Obsidian vault in any session, on any machine.
 
@@ -90,7 +95,7 @@ Most people use AI with no context — every session starts from zero. This vaul
 
 ### Agentic Culture
 
-This CLAUDE.md flows from **ten principles of intelligence collaboration** ([full essay](https://chuycepeda.substack.com/p/the-agentic-culture-team-management)). They're philosophy already woven into the rituals/discipline/self-update rules below — surfaced once so the system is self-documenting.
+This CLAUDE.md flows from **ten principles of intelligence collaboration** ([full essay](https://chuycepeda.substack.com/p/the-agentic-culture-team-management), by the framework's author — not the operator's own writing unless they say so). They're philosophy already woven into the rituals/discipline/self-update rules below — surfaced once so the system is self-documenting.
 
 - **Architecture** — (1) Systems Over Goals · (3) Trust Is Architecture · (5) The Transfer Is Everything
 - **Relationship** — (2) Ownership Not Outsourcing · (6) Identity Before Behavior · (8) Ask Better Questions

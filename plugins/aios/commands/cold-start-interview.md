@@ -14,6 +14,14 @@ A 15-25 minute interview that turns a freshly-cloned AIOS template into your per
 
 > **When to run:** immediately after `git clone git@github.com:The-AIOS/aios.git ~/aios` (or equivalent). Run once. If you skip it, the system still works — you'll just spend more time figuring things out yourself.
 
+
+> **Never infer the operator's identity from a framework file.** Every vault ships the same
+> `CLAUDE.md`, `README.md` and templates, so anything found in them belongs to the framework's
+> author, not to the person you are interviewing. A setup session once offered a newcomer the
+> author's Substack as a candidate for their own site — it asked rather than assumed, which was
+> right, but it should not have been a candidate at all. Identity comes from what the operator
+> tells you and from `context/declared/`, nowhere else.
+
 ## When to use
 
 Immediately after the first clone of an AIOS vault — turns the freshly-cloned template into the operator's personalized vault. 15-25 minute interactive interview walking through identity (USER.md), declared context, INTENT.md, bundles, MCPs. Run once; re-runnable to revisit specific sections.
