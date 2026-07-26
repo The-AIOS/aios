@@ -23,7 +23,7 @@
 
 ## 2026-07-26 — The fix for the last bug renamed an operator's shell function (uppercase session names)
 
-`hash: PENDING`
+`hash: 2addb2e`
 
 > **What this delivers.** Yesterday's validator (`98a017c`) stopped a globbing `*buddy*` from reaching your shell rc. It also accepted **lowercase only** — so an operator whose primary session is `ALI` failed the check, fell through to the fallback, and had the installer **rewrite `ALI()` to `aios()` in his rc**. Months-old shorthand, gone on update, from an installer reporting success. Nothing errors; the only way to notice is spotting that a function you type every day has vanished. **Case was never the hazard** — glob and shell-special characters are (`*`, `_emphasis_`, spaces, quotes, `;`, `$()`), and `ALI() { … }` is a perfectly valid non-globbing function name in zsh and bash alike. Reported by an operator with the diagnosis, the one-character fix, and both-direction verification already done.
 
