@@ -21,6 +21,27 @@
 
 ---
 
+## 2026-07-25 — Tier 0 named: the folders that live in canonical and never reach your vault
+
+`hash: 4aa6be3`
+
+> **What this delivers.** Two folders — `tests/` and `.github/` — exist in the canonical repo but are **never synced to an operator vault**. That has always been true, and until now nothing anywhere *said* so: they were excluded purely by **omission** from `/aios:update`'s Tier-1 allowlist. An operator who noticed `tests/` on GitHub, ran `/aios:update`, and didn't find it in their vault had no document to consult — the behaviour was correct but unexplained. Worse, the omission is invisible to whoever edits the allowlist next, and there's a live precedent for that biting: the Tier-1 **root-docs** rule started as a hardcoded list, silently missed `AGENTS.md` / `EXTENSION-MAP.md` / `LICENSE-AUDIT.md`, and was correctly generalized to *"every other `*.md` at the repo root."* Apply that same reasonable instinct one level up — *"why is the layer list hardcoded? let's diff all top-level dirs"* — and CI scaffolding ships into every vault on the next sync. This entry converts *safe by accident* into *safe by declaration*.
+
+**What you can now do:**
+- **Understand why a folder you can see on GitHub isn't in your vault.** `update.md` now has a **§ Tier 0** section beside Tiers 1–3 naming the category, its two members, and the reason: they serve **CI and contributors**, not operators. Your vault has no CI, so shipping them would add files you can neither run nor maintain. If you ever wondered whether your sync was incomplete — it wasn't.
+- **Add a canonical-only folder without it becoming folklore.** Contributing a `benchmarks/`, `fixtures/`, or docs-site build that shouldn't reach vaults? Name it in § Tier 0 in the same PR. The section also states the converse: Tier 0 is *not* a parking spot for undecided content — anything that should reach operators belongs in Tier 1.
+- **Rely on CI to enforce it, not just prose.** A new guard fails the build if either folder enters Step 2's sync pathspec or the Step 6.5 reconcile loop — *and* if the § Tier 0 section is ever deleted. Documentation that can silently vanish isn't a guarantee, so the guard protects the doc too.
+- **Run the hook regression suite yourself** (contributors): `tests/` stays canonical-only, so run it from your clone of the framework repo — `/bin/bash tests/aios-commit.test.sh` — not from your vault, where it deliberately doesn't exist.
+
+**Component list:** `plugins/aios/commands/update.md` → new **§ Tier 0: Repo infrastructure (canonical-only — never reaches a vault)**, placed between Tier 2 and Tier 3, with the explicit standing instruction to denylist `tests/` + `.github/` if the pathspec or reconcile ever goes directory-generic · `.github/workflows/validate.yml` → new *"Tier-0 canonical-only folders are not in the /aios:update sync path"* step in the **Repo structure** job (three assertions: not in the pathspec, not in the reconcile loop, § Tier 0 still documented). Guard verified in both directions — it fails on a reconcile-loop entry, fails on a pathspec entry, fails when the section is removed, and passes clean otherwise.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Nothing to run.** This is spec + CI only; no vault file behaves differently. Confirm the doc landed after syncing: `grep -c '^### Tier 0' plugins/aios/commands/update.md` → `1`.
+2. **Only if you were confused by a missing folder:** verify your vault is genuinely complete rather than assuming — `/aios:update` and check that its Step 6.5 completeness reconcile reports clean. `tests/` and `.github/` being absent is correct and is not drift.
+3. **Only if you contribute framework infra:** read `update.md` → § Tier 0 before adding any new top-level folder, so the sync classification is a decision rather than an accident.
+
+---
+
 ## 2026-07-25 — `/close-session` silently lost its capture on stock-bash Macs — fixed, and the class is now CI-guarded
 
 `hash: afe0832`
