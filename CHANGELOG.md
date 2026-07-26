@@ -21,6 +21,27 @@
 
 ---
 
+## 2026-07-25 — Setup installs what you need, not everything we bundle (ten MCPs → one)
+
+`hash: 2e9fb2c`
+
+> **What this delivers.** Setting up AIOS used to begin by installing **all ten bundled MCPs** — `bash mcps/setup.sh` was step 3 of SETUP.md and step 1 of `/aios:mcps-setup`. On a fresh machine that is multiple Chrome-for-Testing downloads, several Python venvs, a pip editable install that fails on this repo's own `pyproject` layout, and minutes of output in which a long download is indistinguishable from a hang and one failure reads as a crash. Observed on a genuinely new account: the operator could not tell whether setup had finished, stalled, or broken — and concluded it was stuck. None of it was needed. The only MCP the vault actually requires is the **Obsidian** one, which is a published package registered directly with `claude mcp add` and is not in `mcps/` at all — so the bulk install could never satisfy the check it appeared to serve. Slack, Atlassian, Google Workspace, image generation and the rest are convenience, and `/aios:mcps-setup` already asks *"want this?"* one at a time. Installing all ten before anyone was asked inverted that command's own premise.
+
+**What you can now do:**
+- **Finish setup in the first few minutes instead of waiting on downloads you did not ask for.** Setup now registers the Obsidian MCP and stops: `claude mcp add obsidian -- npx -y @mauricio.wolff/mcp-obsidian@latest ~/aios/vault`. Everything else waits until you want it.
+- **Install exactly one MCP, whenever you decide you want it.** `bash mcps/setup.sh slack-mcp` installs just that one — idempotent, no effect on the other nine. `bash mcps/setup.sh --list` shows what is bundled. With no arguments it still installs everything, so nothing is taken away from anyone who prefers that; it is now an explicit choice rather than the default.
+- **Trust `/aios:mcps-setup` to ask before it spends your time.** The opt-in question now comes *first*, and only a yes triggers that MCP's dependency install. It also warns you when one is heavy (NotebookLM and Playwright each download a Chromium build), so a slow install never reads as a hang, and a failed optional integration no longer stops the walkthrough.
+- **Set up from the AIOS App without hitting any of this.** The app's Setup tab repairs the Obsidian MCP with the one-line registration instead of the ten-MCP script it used to run — a button that could not fix the check it was attached to.
+
+**Component list:** `mcps/setup.sh` → optional MCP-name arguments (`bash mcps/setup.sh <name>…`), `--list`, a `want()` gate on all ten per-MCP blocks, and a header stating why selection exists; no-argument behaviour byte-for-byte unchanged · `SETUP.md` → step 3 registers the Obsidian MCP and carries an explicit **do not run the bulk install here** callout; the end-to-end flow's step 2 likewise · `plugins/aios/commands/mcps-setup.md` → §1 rewritten from *"install dependencies first"* to *"do NOT bulk-install anything"*, per-MCP dependency install moved into the opt-in flow ahead of auth/register (several per-MCP flows reference a `.venv/bin/python` that does not exist until it runs), heavy-install warning, continue-on-failure, and a stale *"already registered during setup.sh"* line removed. Selection verified: a named run touches only that MCP, a bare run is unchanged.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Confirm the Obsidian MCP is registered** (it is what the vault needs, and older setups may have assumed the bulk script provided it): `claude mcp list | grep -i obsidian`. If nothing matches, register it — `claude mcp add obsidian -- npx -y @mauricio.wolff/mcp-obsidian@latest ~/aios/vault` (substitute your vault path if you cloned elsewhere). If it already appears, no-op.
+2. **Nothing to undo.** Any MCP you already installed stays installed and registered; this changes what setup *starts* with, not what exists. Your venvs are untouched.
+3. **Only if you have been putting off an integration:** `bash mcps/setup.sh --list`, then `bash mcps/setup.sh <name>` for the one you want, then `/aios:mcps-setup` to authenticate and register it.
+
+---
+
 ## 2026-07-25 — Tier 0 named: the folders that live in canonical and never reach your vault
 
 `hash: 4aa6be3`
