@@ -1,10 +1,41 @@
 #!/bin/bash
-# MCP Setup — creates virtual environments and installs dependencies for all bundled MCPs.
-# Run once after cloning, or after /aios:update adds a new MCP.
-# Usage: bash mcps/setup.sh
+# MCP Setup — creates virtual environments and installs dependencies for bundled MCPs.
+# Run after /aios:update adds a new MCP, or when you decide you want one.
+#
+# Usage: bash mcps/setup.sh              # every bundled MCP (the old behaviour, unchanged)
+#        bash mcps/setup.sh slack-mcp    # just these — one or more names
+#        bash mcps/setup.sh --list       # what is available
+#
+# WHY selection exists: run with no arguments this installs TEN MCPs. On a new machine that
+# means multiple Chrome-for-Testing downloads, several venvs and a few minutes of output in
+# which one failure looks like a crash and a long download looks like a hang. A newcomer needs
+# NONE of it — the vault only needs the Obsidian MCP, which is a published package registered
+# directly with `claude mcp add` and is not even in this directory. Everything here is
+# convenience: Slack, Atlassian, Google, image generation. They are worth installing WHEN the
+# operator wants them, which is what /aios:mcps-setup asks. Making that the deferred path
+# keeps the first ten minutes of AIOS about the AIOS.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-echo "Setting up MCPs in $SCRIPT_DIR..."
+
+if [ "$1" = "--list" ]; then
+  echo "Bundled MCPs in $SCRIPT_DIR:"
+  for d in "$SCRIPT_DIR"/*-mcp; do [ -d "$d" ] && echo "  $(basename "$d")"; done
+  echo ""
+  echo "Install one:  bash mcps/setup.sh <name>"
+  echo "Install all:  bash mcps/setup.sh"
+  exit 0
+fi
+
+# No arguments → everything, exactly as before. Arguments → only those, so a later
+# "I do want Slack after all" is one command instead of a ten-MCP reinstall.
+WANTED="$*"
+want() {
+  [ -z "$WANTED" ] && return 0
+  case " $WANTED " in *" $1 "*) return 0 ;; esac
+  return 1
+}
+
+if [ -n "$WANTED" ]; then echo "Setting up selected MCPs in $SCRIPT_DIR: $WANTED"; else echo "Setting up ALL bundled MCPs in $SCRIPT_DIR..."; fi
 echo ""
 # NOTE: intentionally no `set -e` — each MCP block is independent. One failure
 # shouldn't kill the rest. Errors are surfaced per block.
@@ -37,7 +68,7 @@ if [ -z "$PY" ]; then
 fi
 
 # --- Google Workspace MCP (Python) ---
-if [ -d "$SCRIPT_DIR/google-workspace-mcp" ] && [ ! -d "$SCRIPT_DIR/google-workspace-mcp/.venv" ]; then
+if want google-workspace-mcp && [ -d "$SCRIPT_DIR/google-workspace-mcp" ] && [ ! -d "$SCRIPT_DIR/google-workspace-mcp/.venv" ]; then
   echo "→ google-workspace-mcp..."
   (cd "$SCRIPT_DIR/google-workspace-mcp" && $PY -m venv .venv && "$(vbin)/pip" install -e . -q) \
     && echo "  ✓ installed" \
@@ -45,7 +76,7 @@ if [ -d "$SCRIPT_DIR/google-workspace-mcp" ] && [ ! -d "$SCRIPT_DIR/google-works
 fi
 
 # --- Slack MCP (Node/NPM — invoked via npx at runtime, no install needed) ---
-if [ -d "$SCRIPT_DIR/slack-mcp" ]; then
+if want slack-mcp && [ -d "$SCRIPT_DIR/slack-mcp" ]; then
   echo "→ slack-mcp..."
   if ! command -v npx >/dev/null 2>&1; then
     echo "  ⚠ npx not found — install Node.js first"
@@ -57,7 +88,7 @@ if [ -d "$SCRIPT_DIR/slack-mcp" ]; then
 fi
 
 # --- NotebookLM MCP ---
-if [ -d "$SCRIPT_DIR/notebooklm-mcp" ] && [ ! -d "$SCRIPT_DIR/notebooklm-mcp/.venv" ]; then
+if want notebooklm-mcp && [ -d "$SCRIPT_DIR/notebooklm-mcp" ] && [ ! -d "$SCRIPT_DIR/notebooklm-mcp/.venv" ]; then
   echo "→ notebooklm-mcp..."
   cd "$SCRIPT_DIR/notebooklm-mcp"
   $PY -m venv .venv
@@ -68,7 +99,7 @@ if [ -d "$SCRIPT_DIR/notebooklm-mcp" ] && [ ! -d "$SCRIPT_DIR/notebooklm-mcp/.ve
 fi
 
 # --- Playwright MCP ---
-if [ -d "$SCRIPT_DIR/playwright-mcp" ] && [ ! -d "$SCRIPT_DIR/playwright-mcp/.venv" ]; then
+if want playwright-mcp && [ -d "$SCRIPT_DIR/playwright-mcp" ] && [ ! -d "$SCRIPT_DIR/playwright-mcp/.venv" ]; then
   echo "→ playwright-mcp..."
   cd "$SCRIPT_DIR/playwright-mcp"
   $PY -m venv .venv
@@ -78,7 +109,7 @@ if [ -d "$SCRIPT_DIR/playwright-mcp" ] && [ ! -d "$SCRIPT_DIR/playwright-mcp/.ve
 fi
 
 # --- Atlassian MCP (vendored via pipx/uvx) ---
-if [ -d "$SCRIPT_DIR/atlassian-mcp" ]; then
+if want atlassian-mcp && [ -d "$SCRIPT_DIR/atlassian-mcp" ]; then
   echo "→ atlassian-mcp..."
   if ! command -v uvx >/dev/null 2>&1 && ! command -v pipx >/dev/null 2>&1; then
     echo "  ⚠ neither uvx nor pipx found — install one (brew install uv or brew install pipx), then re-run"
@@ -94,7 +125,7 @@ if [ -d "$SCRIPT_DIR/atlassian-mcp" ]; then
 fi
 
 # --- GitHub MCP (vendored via npx, no install needed) ---
-if [ -d "$SCRIPT_DIR/github-mcp" ]; then
+if want github-mcp && [ -d "$SCRIPT_DIR/github-mcp" ]; then
   echo "→ github-mcp..."
   if ! command -v npx >/dev/null 2>&1; then
     echo "  ⚠ npx not found — install Node.js first"
@@ -105,7 +136,7 @@ if [ -d "$SCRIPT_DIR/github-mcp" ]; then
 fi
 
 # --- Nano Banana MCP (Gemini image gen) ---
-if [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && [ ! -d "$SCRIPT_DIR/nano-banana-mcp/.venv" ]; then
+if want nano-banana-mcp && [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && [ ! -d "$SCRIPT_DIR/nano-banana-mcp/.venv" ]; then
   echo "→ nano-banana-mcp..."
   cd "$SCRIPT_DIR/nano-banana-mcp"
   $PY -m venv .venv
@@ -114,7 +145,7 @@ if [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && [ ! -d "$SCRIPT_DIR/nano-banana-mcp/.
 fi
 
 # --- PDF Generator MCP ---
-if [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && [ ! -d "$SCRIPT_DIR/pdf-generator-mcp/.venv" ]; then
+if want pdf-generator-mcp && [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && [ ! -d "$SCRIPT_DIR/pdf-generator-mcp/.venv" ]; then
   echo "→ pdf-generator-mcp..."
   cd "$SCRIPT_DIR/pdf-generator-mcp"
   $PY -m venv .venv
@@ -125,7 +156,7 @@ if [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && [ ! -d "$SCRIPT_DIR/pdf-generator-m
 fi
 
 # --- Spotify DJ MCP ---
-if [ -d "$SCRIPT_DIR/spotify-dj-mcp" ] && [ ! -d "$SCRIPT_DIR/spotify-dj-mcp/.venv" ]; then
+if want spotify-dj-mcp && [ -d "$SCRIPT_DIR/spotify-dj-mcp" ] && [ ! -d "$SCRIPT_DIR/spotify-dj-mcp/.venv" ]; then
   echo "→ spotify-dj-mcp..."
   cd "$SCRIPT_DIR/spotify-dj-mcp"
   $PY -m venv .venv
@@ -134,7 +165,7 @@ if [ -d "$SCRIPT_DIR/spotify-dj-mcp" ] && [ ! -d "$SCRIPT_DIR/spotify-dj-mcp/.ve
 fi
 
 # --- Stitch MCP (Google AI-native design — runs via npx, no install needed) ---
-if [ -d "$SCRIPT_DIR/stitch-mcp" ]; then
+if want stitch-mcp && [ -d "$SCRIPT_DIR/stitch-mcp" ]; then
   echo "→ stitch-mcp..."
   if ! command -v npx >/dev/null 2>&1; then
     echo "  ⚠ npx not found — install Node.js first"

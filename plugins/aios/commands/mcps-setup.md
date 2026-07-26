@@ -52,9 +52,20 @@ On every run: read `~/.zshrc`, if the block exists, replace it; if not, append. 
 
 ## Steps
 
-### 1. Install dependencies first
+### 1. Do NOT bulk-install anything
 
-Run `bash mcps/setup.sh` — idempotent. Installs Python venvs for the MCPs that need them, confirms Node / uvx / pipx / pandoc / Chrome are present. This step has no auth — if it succeeds, move on.
+**There is no upfront install step.** Dependencies are installed per MCP, *after* the operator
+says they want that one — never before. `bash mcps/setup.sh` with no arguments installs all ten
+bundled MCPs: multiple Chrome-for-Testing downloads, several venvs, minutes of output in which
+a long download is indistinguishable from a hang and one failure reads as a crash. A newcomer
+watching that cannot tell whether setup finished, stalled or broke — and an operator who wanted
+two MCPs paid for ten. Worse, it inverts this command's own premise: it asks "want this?" *after*
+having already installed everything.
+
+So the sequence is: inventory (step 2) → ask (step 3) → **install just that one** with
+`bash mcps/setup.sh <name>` → auth → register → verify. `bash mcps/setup.sh --list` shows what
+is available. An operator who genuinely wants everything can still run it bare, but that is
+their explicit choice, not this command's default.
 
 ### 2. Inventory: what's already bundled and working?
 
@@ -68,6 +79,14 @@ Run `bash mcps/setup.sh` — idempotent. Installs Python venvs for the MCPs that
 ### 3. Walk through each MCP needing setup
 
 For each one, follow the per-MCP flow below. **Always start with the opt-in question** — "Want [service] for [purpose]? (y/skip)". If they skip, move on silently, don't pester.
+
+**On a yes, install that MCP's dependencies first**: `bash mcps/setup.sh <name>-mcp` (e.g.
+`bash mcps/setup.sh slack-mcp`). It is idempotent, it only touches that one, and it must come
+before the auth and register steps — several per-MCP flows below reference a `.venv/bin/python`
+that does not exist until it runs. Say what you are doing and roughly how long it takes when it
+is a heavy one (NotebookLM and Playwright each download a Chromium build), so a slow install
+never reads as a hang. If it fails, say so and move to the next MCP rather than stopping the
+whole walkthrough — one broken optional integration must not block the rest.
 
 If they want it:
 1. Open the token URL with `open <url>` so the user lands on the right page
@@ -193,7 +212,7 @@ Creates a dedicated Slack app. Messages post AS THE BOT, not as the user. Requir
 - **Ask first:** "Want NotebookLM MCP (turn vault content, research, or links into audio overviews / podcasts)? (y/skip)"
 - No token here either. Needs `notebooklm login` which opens a browser.
 - After deps installed: `source ~/aios/mcps/notebooklm-mcp/.venv/bin/activate && notebooklm login`
-- Already registered via skill install during `setup.sh`.
+- Registration happens here, in this flow — not as a side effect of a bulk install that no longer runs.
 
 ### Playwright (browser-auth capability — NOT a registered MCP)
 
