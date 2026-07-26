@@ -199,7 +199,7 @@ If the [30-second version at the top](#get-started-the-30-second-version) was en
 
 **Day 1 onward:** `/aios:today` morning · `/aios:close-day` evening · `/aios:close-session` per task. That's the rhythm. The system compounds from there.
 
-See [SETUP.md](./SETUP.md) for prerequisites + the canonical 11-step flow · [START-HERE.md](./START-HERE.md) for the post-clone walkthrough framing + the three-repo model AIOS uses · [TOOLS.md](./TOOLS.md) for the full menu of commands, agents, skills, and bundled MCPs · the full **[Operating Manual](https://www.the-aios.com/#manual)** (www.the-aios.com/#manual) for the complete design language + behavioral contract in one document.
+See [SETUP.md](./SETUP.md) for prerequisites + the canonical setup flow · [START-HERE.md](./START-HERE.md) for the post-clone walkthrough framing + the three-repo model AIOS uses · [TOOLS.md](./TOOLS.md) for the full menu of commands, agents, skills, and bundled MCPs · the full **[Operating Manual](https://www.the-aios.com/#manual)** (www.the-aios.com/#manual) for the complete design language + behavioral contract in one document.
 
 ---
 

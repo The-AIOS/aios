@@ -3,7 +3,14 @@
 Get the full system running in under 10 minutes (after the prereqs install).
 
 <details>
-<summary><strong>📍 Reading this as Claude?</strong> (Operator said "set up my AI-OS" — click for your 11-step execution sequence)</summary>
+<summary><strong>📍 Reading this as Claude?</strong> (Operator said "set up my AI-OS" — click for your execution sequence)</summary>
+
+<!-- Deliberately NOT "the N-step sequence". The count was 11, then two necessary steps were added
+     (write the update tracker, register the plugin) and it became 13 — while this line, README.md
+     and the AIOS App's own handover prompt all went on saying 11. A setup session noticed the
+     mismatch and had to decide which to believe. A number repeated across three files, two of
+     them in a different repo, is a number that drifts; the list below is the source of truth and
+     it counts itself. -->
 
 Operator said *"set up my AI-OS from this repo"* or similar. You're the executor. The flow:
 
