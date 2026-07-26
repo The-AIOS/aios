@@ -21,6 +21,31 @@
 
 ---
 
+## 2026-07-25 — Setup no longer ends half-wired: the update tracker and the plugin
+
+`hash: b832474`
+
+> **What this delivers.** Two gaps that only a genuinely new machine could reveal — both invisible to anyone who already has a working vault, because their vault was wired years of commits ago. A newcomer finished the whole 11-step setup and landed with the update surface reporting *"no config"* and the framework unable to notice its own releases. Found by running the setup end to end on a fresh macOS account.
+
+**What you can now do:**
+- **Know when the framework moves, from your first day.** Setup now writes `.aios-update` with the exact commit you installed from. Until now that file was only ever written by `/aios:update` — which a fresh install never runs — so a new operator had no way to learn they were behind except being told. A brand-new install is the one moment the hash is known for certain, so it is recorded then. `repo=` deliberately points at the FRAMEWORK upstream, not your own vault remote: the question it answers is *"has the framework moved"*, not *"have I pushed"*.
+- **Run `/aios:today` on the first try.** Plugin registration (`claude plugin marketplace add ~/aios && claude plugin install aios@the-aios`) was missing from the step list entirely. The rituals ARE the plugin's commands, so a setup that skipped it ended with an operator whose very first instruction failed — the worst possible first impression, and a silent one.
+- **Answer the cold-start interview by picking, not composing.** Wherever a question has recognisable answers — role, industry, how you work, which bundles — the session now offers a short numbered list with a *"let me describe it"* escape. Someone meeting AIOS for the first time does not yet know the vocabulary it wants, and a blank prompt asks them to guess it. Free text stays wherever a list would flatten the answer.
+
+**Component list:** `SETUP.md` → new step 4 (write `.aios-update`, with the reason it is not optional and a `cat` to confirm the hash is a real 40-character commit rather than a placeholder — a placeholder reads as "you are behind" forever) · new step 5 (register the AIOS plugin) · step 10 gains the choice-first interview directive · the list renumbers to 13, and the two cross-references that pointed into it were corrected with it (the MCP callout's "step 4" → 6, the defaults paragraph's "§7" → §9). Section references (§10, §11) point at document sections and were unaffected.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **If you set up before today, you probably have no update tracker.** Check: `cat ~/aios/.aios-update`. If it is missing, or its `hash=` is not a 40-character commit, write it once —
+   ```bash
+   printf 'repo=git@github.com:The-AIOS/aios.git\nhash=%s\nsynced=%s\n' \
+     "$(git -C ~/aios rev-parse HEAD)" "$(date +%F)" > ~/aios/.aios-update
+   ```
+   If it already has a real hash, no-op — `/aios:update` maintains it from here.
+2. **Confirm the plugin is registered:** `claude plugin list | grep -i aios`. If nothing matches, `claude plugin marketplace add ~/aios && claude plugin install aios@the-aios`. If `/aios:today` already works for you, this is already true.
+3. **Nothing to restart.** Both are state, not code.
+
+---
+
 ## 2026-07-25 — Setup installs what you need, not everything we bundle (ten MCPs → one)
 
 `hash: 2e9fb2c`
