@@ -579,6 +579,13 @@ jobs:
       - name: aios-commit / aios-note-append / secret-scan regression test
         run: bash tests/aios-commit.test.sh
 
+      - name: install-wrappers detect_primary_session regression test
+        # The name this returns is written into the operator's shell rc, so a wrong answer
+        # silently redefines a function they type daily. Two shipped incidents (a globbing
+        # `*buddy*`, then a lowercase-only validator renaming `ALI()` → `aios()`) — both
+        # reported by operators, neither catchable here because nothing tested this file.
+        run: bash tests/install-wrappers.test.sh
+
   primitives_bash32:
     # The same regression suite under bash 3.2 — the bash Apple ships at /bin/bash on every
     # macOS, and what `#!/usr/bin/env bash` resolves to on a stock Mac. The `primitives` job
@@ -611,3 +618,7 @@ jobs:
 
       - name: Regression suite under bash 3.2
         run: /bin/bash tests/aios-commit.test.sh
+
+      - name: install-wrappers regression under bash 3.2
+        # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.
+        run: /bin/bash tests/install-wrappers.test.sh

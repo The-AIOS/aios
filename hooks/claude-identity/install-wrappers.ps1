@@ -46,6 +46,7 @@ function Get-PrimarySessionName {
     $userMd = Join-Path $HOME 'aios\USER.md'
     if (-not (Test-Path $userMd)) { return 'aios' }
     $inSection = $false
+    $parsed = ''
     foreach ($line in Get-Content $userMd) {
         if ($line -match '^## Identity') { $inSection = $true; continue }
         if ($inSection -and $line -match '^## ') { break }
@@ -57,9 +58,33 @@ function Get-PrimarySessionName {
             $candidate = $Matches[1].Trim()
             # Skip header/separator rows (| Name | / | --- |)
             if ($candidate -and $candidate -notmatch '^(Name|[\s\-]+)$') {
-                return $candidate
+                # EXAMPLE ROWS. USER.md ships examples marked "EXAMPLE ONLY (Claude: ignore
+                # these)" -- a hint for Claude, invisible to a regex. This file's example
+                # convention is markdown emphasis, so emphasis is the signal. Parity with
+                # the .sh parser, which shipped this after `*buddy*` reached a shell rc.
+                if ($candidate -match '^[*_].*[*_]$') { continue }
+                $parsed = $candidate
+                break
             }
         }
+    }
+
+    # THE GUARD THAT MATTERS -- and it matters MORE here than in the .sh, because this name is
+    # interpolated into GENERATED CODE below: `function $PRIMARY_NAME {` and three
+    # `-Name '$PRIMARY_NAME'` arguments inside single quotes. A name carrying a quote or a brace
+    # does not merely misname a function -- it breaks or rewrites the operator's profile. Allowed:
+    # letters (EITHER CASE), digits, and interior hyphens.
+    #
+    # CASE IS NOT THE HAZARD. The .sh shipped this validator lowercase-only and silently renamed an
+    # operator's `ALI()` to `aios()` on update. `ALI` is a perfectly valid function name; globs and
+    # shell-special characters are the hazard. Fixed in both installers together, 2026-07-26.
+    if ($parsed -match '^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$') { return $parsed }
+
+    # SAY IT OUT LOUD. A validator that substitutes a different answer while reporting success is
+    # discoverable only by noticing your own function vanished. Write-Warning uses the warning
+    # stream, so it cannot contaminate this function's return value the way Write-Output would.
+    if ($parsed) {
+        Write-Warning "install-wrappers: session name '$parsed' from USER.md is not a plain name (letters, digits, hyphens) -- using 'aios' instead."
     }
     return 'aios'
 }

@@ -21,6 +21,28 @@
 
 ---
 
+## 2026-07-26 — The fix for the last bug renamed an operator's shell function (uppercase session names)
+
+`hash: PENDING`
+
+> **What this delivers.** Yesterday's validator (`98a017c`) stopped a globbing `*buddy*` from reaching your shell rc. It also accepted **lowercase only** — so an operator whose primary session is `ALI` failed the check, fell through to the fallback, and had the installer **rewrite `ALI()` to `aios()` in his rc**. Months-old shorthand, gone on update, from an installer reporting success. Nothing errors; the only way to notice is spotting that a function you type every day has vanished. **Case was never the hazard** — glob and shell-special characters are (`*`, `_emphasis_`, spaces, quotes, `;`, `$()`), and `ALI() { … }` is a perfectly valid non-globbing function name in zsh and bash alike. Reported by an operator with the diagnosis, the one-character fix, and both-direction verification already done.
+
+**What you can now do:**
+- **Keep an uppercase or mixed-case session name.** `ALI`, `Ali`, `app-walker`, `buddai` all survive; `*buddy*`, `_example_`, `my name`, `a;b`, `a$(id)` and leading/trailing hyphens still fall back to `aios`. If your rc was rewritten, re-run the installer and your name comes back.
+- **Hear it when the installer disagrees with you.** The fallback is no longer silent: a name that fails validation prints `install-wrappers: session name "…" from USER.md is not a plain name — using "aios" instead.` on **stderr** (stdout is the return value, so a message there would *become* the session name). An example row the parser correctly skips stays silent — nothing was rejected, so there's nothing to announce.
+- **Get the same protection on Windows — for the first time.** `install-wrappers.ps1` had **no validator and no example-row skip at all**, so the original `*buddy*` bug was never fixed there. It matters more on Windows: the name is interpolated into *generated code* (`function $PRIMARY_NAME {` plus three `-Name '$PRIMARY_NAME'` arguments inside single quotes), so a name carrying a quote or brace doesn't just misname a function — it breaks or rewrites the profile. Both installers now share one rule.
+- **Trust that this file is tested at all now.** `detect_primary_session` had **zero** coverage — which is exactly why a lowercase-only test set never exercised a capital. It now has 20 assertions in CI, on ubuntu **and** under bash 3.2, the stock-Mac shell this installer actually writes to.
+
+**Component list:** `hooks/claude-identity/install-wrappers.sh` → validator widened to `[!A-Za-z0-9-]` (hyphen rules untouched); a non-empty rejected name is announced on stderr · `hooks/claude-identity/install-wrappers.ps1` → gains the example-row skip **and** an equivalent anchored validator (`^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$`) with `Write-Warning` (warning stream — cannot contaminate the return value the way `Write-Output` would) · `tests/install-wrappers.test.sh` (new) → 20 assertions pairing *valid names survive* with *hostile ones still rejected*, plus stdout-not-polluted and example-row-stays-silent · `.github/workflows/validate.yml` → the suite runs in `primitives` and in the bash-3.2 macOS lane.
+
+**Verification:** the test fails on the pre-fix code (4 failures: both uppercase cases + the silent fallback) and passes 20/20 after, on bash 5.3.9 **and** 3.2.57. The `.ps1` change is **regex-verified against the same case matrix but not execution-verified** — no PowerShell on the authoring machine. A `pwsh` lane on the ubuntu runner is the honest next step and is not yet built.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Only if your `USER.md` identity name contains uppercase:** check whether your shell function was renamed — `grep -n 'aios()' ~/.zshrc ~/.zprofile 2>/dev/null` (Windows: look for `function aios` in `$PROFILE`). If you find `aios` where you expect your own name, re-run the installer for your platform, then `source ~/.zshrc` (or reopen PowerShell). All-lowercase name → never affected, no-op.
+2. **Nothing else.** The validator change is strictly *wider*; no previously-accepted name is now rejected.
+
+---
+
 ## 2026-07-26 — The wrapper installer was breaking your shell startup, quietly, on every install
 
 `hash: 98a017c`

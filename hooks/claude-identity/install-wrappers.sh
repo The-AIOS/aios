@@ -74,15 +74,31 @@ detect_primary_session() {
   fi
 
   # THE GUARD THAT MATTERS. Whatever the parser returns, only a plain session-name shape may reach
-  # a shell rc: lowercase letters, digits and hyphens. The parse above will be wrong again — a new
-  # table format, a stray character, an operator writing something unexpected — and this makes the
-  # blast radius "we fall back to aios" instead of "every terminal errors on startup". A validator
-  # is cheaper than the class of bug it prevents.
+  # a shell rc: letters (either case), digits and hyphens. The parse above will be wrong again — a
+  # new table format, a stray character, an operator writing something unexpected — and this makes
+  # the blast radius "we fall back to aios" instead of "every terminal errors on startup". A
+  # validator is cheaper than the class of bug it prevents.
+  #
+  # CASE IS NOT THE HAZARD. The first version of this guard allowed lowercase only, which silently
+  # renamed an operator's `ALI()` function to `aios()` on update — months-old shorthand gone, no
+  # error, installer reporting success. The hazard this exists to stop is glob and shell-special
+  # characters (*, _emphasis_, spaces, quotes, ;, $()); `ALI() { … }` is a perfectly valid,
+  # non-globbing function name in zsh and bash alike. Reported by an operator 2026-07-26.
+  local parsed="$name"
   case "$name" in
-    ''|*[!a-z0-9-]*) name="" ;;                  # empty, or anything outside the allowed set
+    ''|*[!A-Za-z0-9-]*) name="" ;;               # empty, or anything outside the allowed set
     -*|*-) name="" ;;                            # must not start or end with a hyphen
   esac
-  [ -n "$name" ] || name="aios"
+  if [ -z "$name" ]; then
+    name="aios"
+    # SAY IT OUT LOUD. A validator that substitutes a different answer while reporting success is
+    # only discoverable by noticing your own shell function vanished — the operator has to catch
+    # our silence. Announce on STDERR: stdout is this function's return value, so a message there
+    # would become the session name. (Same operator's second point, and the sharper one.)
+    if [ -n "$parsed" ]; then
+      printf 'install-wrappers: session name "%s" from USER.md is not a plain name (letters, digits, hyphens) — using "aios" instead.\n' "$parsed" >&2
+    fi
+  fi
   printf '%s' "$name"
 }
 
