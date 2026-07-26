@@ -50,6 +50,16 @@ Every file below is overwritten byte-identical to upstream. If the operator cust
 
 See the callout at the top. Hard denylist — this command refuses to write to any path under it.
 
+### Tier 0: Repo infrastructure (canonical-only — never reaches a vault)
+
+`tests/` and `.github/` exist in the canonical repo but are **never synced to an operator vault**. They serve **CI and contributors**, not operators: `tests/aios-commit.test.sh` is the regression suite for the commit primitives (run by `validate.yml` on ubuntu *and* under bash 3.2 on macOS), and `.github/` is the workflow definitions themselves. An operator's vault has no CI, so shipping them would add noise they can neither run nor maintain.
+
+**Today they are excluded by *omission* from the Tier-1 allowlist — this entry makes that deliberate rather than incidental.** The distinction matters because of a real precedent: the Tier-1 **root-docs** rule started as a hardcoded list, silently missed `AGENTS.md` / `EXTENSION-MAP.md` / `LICENSE-AUDIT.md`, and was correctly generalized to *"every other `*.md` at the repo root."* Applying that same instinct one level up — *"why is the layer list hardcoded? diff all top-level dirs"* — would sweep `tests/` and `.github/` into every vault on the next update. So:
+
+> **If Step 2's path list or Step 6.5's reconcile is ever made generic over directories, `tests/` and `.github/` MUST be denylisted explicitly.** The exclusion is currently invisible to anyone reading the allowlist; this is the note that makes it visible.
+
+Adding a new canonical-only folder (benchmarks, fixtures, a docs-site build) → name it here in the same PR, so the category stays complete rather than becoming folklore. Conversely, anything that *should* reach operators belongs in Tier 1 — Tier 0 is not a parking spot for undecided content.
+
 ### Tier 3: Advisory only (template evolution flags)
 
 When a template under `templates/aios/*-template.md` gains a new section, advise the operator that their corresponding filled-in file (`vault/00 - notes/context/declared/{file}.md`) is missing that section. No file is touched. Same for `USER.md` template gaining sections vs operator's USER.md.

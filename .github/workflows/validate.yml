@@ -46,6 +46,35 @@ jobs:
           fi
           echo "OK: every root *.md is named in the /aios:update sync list"
 
+      - name: Tier-0 canonical-only folders are not in the /aios:update sync path
+        run: |
+          set -e
+          # tests/ and .github/ are repo infrastructure — CI + contributors, never operator vaults.
+          # They're excluded from /aios:update by OMISSION from the Tier-1 allowlist, which is
+          # invisible to anyone reading that list. This guard makes the omission enforced:
+          # if a future change adds them to Step 2's path list or Step 6.5's reconcile loop,
+          # the build fails instead of silently shipping CI scaffolding to every operator.
+          # (Same belt-and-suspenders shape as the root-docs sync-list check above.)
+          U=plugins/aios/commands/update.md
+          BAD=""
+          # Step 2's git-diff pathspec + Step 6.5's `for p in …` reconcile loop are the two
+          # places a directory can enter the sync path. Neither may name a Tier-0 folder.
+          if grep -nE '^\s*(git -C .*diff|.*")(.*")?(tests|\.github)/?"' "$U" | grep -q .; then
+            BAD="$BAD\n  - a Tier-0 folder appears in a sync pathspec"
+          fi
+          if grep -E '^\s*for p in .*(tests|\.github)' "$U" | grep -q .; then
+            BAD="$BAD\n  - a Tier-0 folder appears in the Step 6.5 reconcile loop"
+          fi
+          if [ -n "$BAD" ]; then
+            printf "::error::tests/ or .github/ entered the /aios:update sync path:%b\n" "$BAD"
+            echo "These are Tier 0 (canonical-only) — see update.md § Tier 0. Operators have no CI;"
+            echo "shipping them adds files they can neither run nor maintain. Denylist explicitly instead."
+            exit 1
+          fi
+          # And the category must stay documented — folklore is how the last blind spot happened.
+          grep -q "^### Tier 0" "$U" || { echo "::error::update.md lost its § Tier 0 section — the canonical-only category must stay documented"; exit 1; }
+          echo "OK: tests/ + .github/ remain canonical-only, and Tier 0 is documented"
+
       - name: Required infra folders + custom/ subfolders exist
         run: |
           set -e
