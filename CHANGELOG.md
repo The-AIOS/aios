@@ -21,6 +21,26 @@
 
 ---
 
+## 2026-07-26 — The wrapper installer was breaking your shell startup, quietly, on every install
+
+`hash: 98a017c`
+
+> **What this delivers.** If a new terminal has ever greeted you with `no matches found: *buddy*`, that was us. `install-wrappers.sh` reads your primary session name from `USER.md`'s Identity table — and it read the EXAMPLE row, which is marked *"EXAMPLE ONLY (Claude: ignore these)"*. That marker is for Claude; the reader is `awk`, which cannot take a hint. It stripped the backticks, kept the markdown emphasis, and wrote `*buddy*` into your shell rc as a session name. zsh reads that as a glob pattern, so every new terminal errored on startup — from an installer that reported success. Found because an operator's own setup session read the installer's output and questioned it.
+
+**What you can now do:**
+- **Open a terminal without an error.** If your rc carries a bogus primary-session block, re-run `bash ~/aios/hooks/claude-identity/install-wrappers.sh` — it rewrites the block, and the name it writes is now validated.
+- **Trust the name it picks.** Example rows are skipped (markdown emphasis is this file's example convention), and whatever the parser returns, only a plain session name may reach your shell — lowercase letters, digits and hyphens, no leading or trailing hyphen. Anything else falls back to `aios`. The parse will be wrong again someday; the validator makes that mean "fell back to aios" instead of "every terminal errors".
+- **Have your own identity asked for, not guessed at.** Every vault ships the same `CLAUDE.md`, so a setup session offered a newcomer the framework author's Substack as a candidate for *their* site. It asked rather than assumed, which was right — but it should never have been a candidate. The citation is now marked as the author's, and `/aios:cold-start-interview` is explicit: identity comes from you and from `context/declared/`, never from a file that is byte-identical in every vault.
+
+**Component list:** `hooks/claude-identity/install-wrappers.sh` → `detect_primary_session` skips emphasis-wrapped cells and validates the result against `[a-z0-9-]` with no leading/trailing hyphen, falling back to `aios`; verified against the shipped template (now `aios`, previously `*buddy*`), a real identity row (`buddai`), and a hostile row containing glob characters (`aios`) · `CLAUDE.md` → the Agentic Culture citation is attributed to the framework's author, with a note to Claude that it is never evidence about the operator · `plugins/aios/commands/cold-start-interview.md` → the same rule, stated where identity is actually gathered.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Check whether your shell rc carries the bad name:** `grep -n 'primary-session' ~/.zshrc ~/.zprofile 2>/dev/null` and look for a name wrapped in `*` or `_`. Also just open a new terminal — if it prints `no matches found`, that is this bug.
+2. **Only if it does:** re-run `bash ~/aios/hooks/claude-identity/install-wrappers.sh`, then `source ~/.zshrc`. The block is rewritten in place; nothing else in your rc is touched.
+3. **If your primary session name comes out as `aios` and you wanted something else:** put a real row in `USER.md` → `## Identity` (plain, no `*emphasis*` — that marks a row as an example) and re-run the installer.
+
+---
+
 ## 2026-07-25 — Setup no longer ends half-wired: the update tracker and the plugin
 
 `hash: b832474`
