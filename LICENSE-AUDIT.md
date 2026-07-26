@@ -13,6 +13,7 @@ AIOS is **open-core**: the *framework* is open source; the operator's *content* 
 | Layer | Repo | Open or closed | License |
 |---|---|---|---|
 | **Framework infra** | `The-AIOS/aios` (this repo) | **Open** | GPL-2.0-or-later (+ vendored upstreams under their own licenses — §3) |
+| **Surfaces** (how you use it) | `The-AIOS/aios-app` (desktop) · `The-AIOS/aios-glass` (editor extension) | **Open** | GPL-2.0-or-later — same terms as the framework they surface. Each carries its own `LICENSE-AUDIT.md` for its dependency tree; neither vendors third-party source |
 | **Operator's vault** | operator's private repo (e.g. a personal `obsidian` repo) | **Closed** — never distributed | Operator-owned; not licensed for redistribution |
 | **Company-distributed infra** | a company's `*-context` repo (mounted via `/aios:company`) | **Closed by default** — private to mounters | Company's discretion (§4) |
 | **Company scaffold** | `The-AIOS/company-template` (separate repo — not in this tree) | Open (presumed) | **CONFIRM** — see §4 flag |
