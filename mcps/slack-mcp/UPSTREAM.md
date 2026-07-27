@@ -29,7 +29,7 @@ cp -R ~/.npm/_npx/*/node_modules/@jtalk22/slack-mcp/{src,lib,package.json,README
 
 ```bash
 # Option 1: Use vendored copy (recommended)
-cd ~/Dev/internal-vault/mcps/slack-mcp && npm install
+cd ~/aios/mcps/slack-mcp && npm install
 
 # Option 2: Use upstream directly
 npx -y @jtalk22/slack-mcp --setup

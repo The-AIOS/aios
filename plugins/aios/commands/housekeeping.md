@@ -442,7 +442,7 @@ Comprehensive integrity check of the two operating files that govern every sessi
 - **Medium** — orphan personalizations, missing recent activity for listed identities. Suggests drift but not broken.
 - **Low** — example-only links, unverified-but-plausible config. Informational.
 
-**Cadence:** monthly minimum; trigger immediately after any major restructure (like the 2026-05-21 agents folder move). Auto-runs as part of post-migration sanity check on first `/housekeeping` after the cutover.
+**Cadence:** monthly minimum; trigger immediately after any major restructure (a folder move, a layer rename, a bulk path change).
 
 **Why this bucket exists:** CLAUDE.md and USER.md are the two highest-blast-radius files in the system. Bucket 13 already covered USER.md drift; Bucket 17 extends to CLAUDE.md + comprehensive cross-file checks (path consistency, ref resolution, section completeness, personal-slug leakage). The 2026-05-21 leakage cleanup (`813aa68`, `679843a`) caught 11 canonical files with personal-slug refs that had silently shipped — this bucket prevents that recurrence by running the check proactively, not reactively.
 
@@ -546,7 +546,7 @@ Observed-context files (especially `vault-routine.md`, which is read at *every* 
 - Routing-execution is mechanical — substance bar already passed at Reinforced promotion.
 
 **For approved Tier B catch-up:**
-- Same logic as `/close-day`'s Tier B observation pass + the Phase 9.7 catch-up from the migration playbook.
+- Same logic as `/close-day`'s Tier B observation pass, run as a catch-up over the accumulated backlog rather than one day's worth.
 - Snapshot all touched files, read feed-in sources, apply substance bar (timeline / uniqueness / evidence / essentiality), write autonomously.
 
 **For approved reference fixes:**

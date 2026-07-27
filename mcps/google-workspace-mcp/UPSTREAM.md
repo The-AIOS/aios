@@ -53,7 +53,7 @@ rm -rf /tmp/gwm
 
 ```bash
 # Option 1: Use vendored copy (recommended)
-cd ~/Dev/internal-vault/mcps/google-workspace-mcp && uv pip install -e .
+cd ~/aios/mcps/google-workspace-mcp && uv pip install -e .
 
 # Option 2: Use upstream directly (not recommended — unpinned)
 uvx workspace-mcp --single-user
