@@ -4,7 +4,9 @@
 # What this does:
 # 1. Detects rc file ($HOME/.zshrc or $HOME/.bashrc)
 # 2. Backs it up with a timestamped filename
-# 3. Strips old _claude_with_respawn(), buddai(), spawn() function definitions
+# 3. Strips the blocks it manages: banner-wrapped wrapper + primary-session blocks,
+#    plus inline _claude_with_respawn() / spawn() defs from a first-time install.
+#    It does NOT strip a primary-session function it did not write.
 # 4. Appends the canonical wrapper block (resilient version with circuit-breaker,
 #    parallel-spawn lock, $ide_app fix, launcher-script pattern)
 # 5. Sources the rc file in-place verification
