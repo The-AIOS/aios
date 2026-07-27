@@ -1,4 +1,4 @@
-# UserPromptSubmit hook (PowerShell port) — inject current system date/time into Claude's context.
+# UserPromptSubmit hook (PowerShell port) -- inject current system date/time into Claude's context.
 #
 # Hook event: UserPromptSubmit (runs after user submits prompt, before Claude reads it).
 # stdout from this hook is appended to Claude's view of the prompt as additional context.
@@ -6,7 +6,7 @@
 # Eliminates the failure mode: Claude infers time-of-day from conversational context
 # instead of checking the system clock. Ref: antifragile.md 2026-05-18.
 #
-# Cross-platform sibling of inject-datetime.sh — same output format.
+# Cross-platform sibling of inject-datetime.sh -- same output format.
 # Encoding: ASCII-only (avoid CP1252 reinterpretation on Windows PowerShell 5.1).
 
 $ErrorActionPreference = "Stop"

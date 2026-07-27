@@ -622,3 +622,118 @@ jobs:
       - name: install-wrappers regression under bash 3.2
         # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.
         run: /bin/bash tests/install-wrappers.test.sh
+
+  windows_installer:
+    # The Windows installer had NO execution lane. `install-wrappers.ps1` shipped
+    # twice on regex-inspection alone ("regex-verified against the same case matrix
+    # but not execution-verified -- no PowerShell on the authoring machine"), and the
+    # second time it shipped a file that Windows PowerShell 5.1 could not parse at all,
+    # from an installer whose own verification reported four green checks. A content
+    # check cannot catch that; only running it can.
+    name: Windows wrapper installer (Windows PowerShell 5.1)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm the lane really is Windows PowerShell 5.1
+        # Load-bearing: pwsh 7 assumes UTF-8 for BOM-less scripts and would decode
+        # every file here correctly, making this lane prove nothing. 5.1 is the
+        # edition a stock Windows 11 ships, and the only one that reproduces the bug.
+        shell: powershell
+        run: |
+          $PSVersionTable.PSVersion
+          if ($PSVersionTable.PSEdition -ne 'Desktop') {
+            Write-Host "::error::Expected Windows PowerShell (Desktop edition) for this lane."
+            exit 1
+          }
+
+      - name: The hazard is real (negative control)
+        # Proves the invariant this lane guards is not theoretical: a BOM-less .ps1
+        # carrying one em dash inside a string does not parse under 5.1, because the
+        # ANSI decode turns its third byte into U+201D and PowerShell treats curly
+        # quotes as string delimiters. If this control ever stops failing, the
+        # ASCII-only rule below has become vacuous and should be revisited.
+        shell: powershell
+        run: |
+          $f = Join-Path $env:RUNNER_TEMP 'hazard.ps1'
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes("Write-Host `"a `u{2014} b`"`r`n")
+          [System.IO.File]::WriteAllBytes($f, $bytes)   # UTF-8, deliberately no BOM
+          $errs = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($f, [ref]$null, [ref]$errs) | Out-Null
+          if (-not $errs) {
+            Write-Host "::error::A BOM-less em dash parsed cleanly -- the encoding hazard no longer reproduces."
+            exit 1
+          }
+          Write-Host "ok: BOM-less non-ASCII fails to parse, as expected ($($errs.Count) error(s))"
+
+      - name: Every .ps1 is ASCII-only or carries a UTF-8 BOM
+        # The rule install-wrappers.ps1 states in its own header and then stopped
+        # obeying -- 11 em dashes crept in, because nothing enforced it.
+        shell: powershell
+        run: |
+          $bad = @()
+          Get-ChildItem -Recurse -Filter *.ps1 -File | ForEach-Object {
+            $bytes = [System.IO.File]::ReadAllBytes($_.FullName)
+            $hasBom = $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF
+            $nonAscii = ($bytes | Where-Object { $_ -gt 0x7F }).Count
+            if ($nonAscii -gt 0 -and -not $hasBom) {
+              $bad += "$($_.FullName.Replace($PWD.Path + '\','')) ($nonAscii non-ASCII byte(s), no BOM)"
+            }
+          }
+          if ($bad.Count -gt 0) {
+            Write-Host "::error::BOM-less .ps1 files contain non-ASCII -- Windows PowerShell 5.1 will corrupt them at parse time:"
+            $bad | ForEach-Object { Write-Host "  $_" }
+            exit 1
+          }
+          Write-Host "ok: no BOM-less .ps1 carries non-ASCII"
+
+      - name: install-wrappers.ps1 produces a profile that PARSES
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\hooks\claude-identity\install-wrappers.ps1
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::error::Installer exited $LASTEXITCODE"
+            exit 1
+          }
+          $errs = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($PROFILE, [ref]$null, [ref]$errs) | Out-Null
+          if ($errs) {
+            Write-Host "::error::Installer reported success but the profile does not parse:"
+            $errs | ForEach-Object { Write-Host "  line $($_.Extent.StartLineNumber): $($_.Message)" }
+            exit 1
+          }
+          Write-Host "ok: profile parses cleanly after install"
+
+      - name: A real shell loads the profile and gets the functions
+        # The parse check above reads the file; this one proves a NEW shell -- the
+        # thing the operator actually opens -- ends up with the wrappers defined.
+        shell: powershell
+        run: |
+          # Single quotes inside the probe on purpose: double quotes are stripped
+          # by the command-line parser on the way into `powershell -Command`, which
+          # turns the string list into bare tokens and fails with MissingArgument.
+          $probe = "foreach (`$f in 'Invoke-ClaudeWithRespawn','spawn','spawn-kill') { if (-not (Get-Command `$f -ErrorAction SilentlyContinue)) { Write-Host ('MISSING ' + `$f); exit 1 } }; Write-Host 'ALL PRESENT'"
+          $out = & powershell -NoLogo -Command $probe 2>&1 | Out-String
+          Write-Host $out.Trim()
+          if ($out -notmatch 'ALL PRESENT') {
+            Write-Host "::error::A fresh Windows PowerShell did not get the wrapper functions from the profile."
+            exit 1
+          }
+
+      - name: Re-running the installer is idempotent and still parses
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\hooks\claude-identity\install-wrappers.ps1
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::Second run exited $LASTEXITCODE"; exit 1 }
+          $errs = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($PROFILE, [ref]$null, [ref]$errs) | Out-Null
+          if ($errs) {
+            Write-Host "::error::Profile stopped parsing on the second install -- damage compounds across runs:"
+            $errs | ForEach-Object { Write-Host "  line $($_.Extent.StartLineNumber): $($_.Message)" }
+            exit 1
+          }
+          $n = (Select-String -Path $PROFILE -Pattern '^function spawn \{').Count
+          if ($n -ne 1) { Write-Host "::error::Expected exactly 1 spawn definition after re-run, found $n"; exit 1 }
+          Write-Host "ok: idempotent, still parses, exactly one spawn definition"

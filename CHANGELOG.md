@@ -21,6 +21,29 @@
 
 ---
 
+## 2026-07-27 — The Windows installer wrote a profile PowerShell can't parse, and called it a success
+
+`hash: (stamped on merge)`
+
+> **What this delivers.** On Windows, `install-wrappers.ps1` has been corrupting the profile it writes. The file is stored **UTF-8 without a BOM** and carries 11 non-ASCII characters — so Windows PowerShell 5.1, which assumes the system ANSI codepage for a BOM-less script, mangles every em dash *while parsing the installer itself*, before a single byte is written. One of those em dashes lives inside a `Write-Host` string; the ANSI decode turns its third byte into `”`, PowerShell treats curly quotes as string delimiters, and the profile stops parsing mid-string. The whole file is then dead at shell startup: `spawn`, `spawn-kill` and the operator's own session shorthand all vanish. The installer's four verification checks passed the entire time, because they `-match` for text rather than asking whether the result is valid PowerShell. The file's own header says *"ASCII-only on purpose"* and explains this exact hazard — nothing enforced it, so it drifted. Reported with a live reproduction in [#8](https://github.com/The-AIOS/aios/issues/8).
+
+**What you can now do:**
+- **Open a new terminal on Windows and actually have `spawn`.** If your profile is currently broken — a wall of `Token 'is' unexpected` / `Missing closing '}'` on startup — re-run `powershell -File ~/aios/hooks/claude-identity/install-wrappers.ps1` and it rewrites the block cleanly. Windows PowerShell 5.1 (the only edition a stock Windows 11 ships) is the affected one; pwsh 7 assumes UTF-8 and was always fine, which is why this survived so long.
+- **Trust "installed successfully" to mean the shell can run it.** The installer now parses the finished profile with `[Parser]::ParseFile` before declaring victory, prints the real parse errors with line numbers when they exist, and **rolls back to the timestamped backup it already writes**. It had everything it needed to catch this; it just never asked. A content check answers *"is the text there"*, never *"can PowerShell run this"* — and this failure class is silent precisely because those two answers diverge.
+- **Stop losing a manual repair to a routine sync.** Because `/aios:update` auto-runs this installer whenever it appears in the diff, a Windows operator who had hand-fixed their profile got it re-broken by the next sync, with no action of their own. That loop is closed.
+- **Get a Windows lane in CI at all.** `install-wrappers.ps1` shipped twice on regex inspection alone — the last entry admits it: *"regex-verified against the same case matrix but not execution-verified — no PowerShell on the authoring machine."* The second of those shipped a file 5.1 cannot parse. There is now a `windows-latest` job that runs the installer end-to-end under 5.1, parse-checks the profile it produced, opens a fresh shell to confirm the functions are really defined, and re-runs it to prove idempotency.
+
+**Component list:** `hooks/claude-identity/install-wrappers.ps1` → ASCII-only restored (11 characters: em dashes → `--`, one `→` → `->`); parse gate + rollback added to the verification block; `-Encoding UTF8` on all three `Get-Content` reads (the profile round-trip, the verification read, and the `USER.md` read in `detect_primary_session`, where an accented session name would otherwise be mangled) · `hooks/inject-datetime.ps1`, `hooks/install-git-hooks.ps1`, `skills/setup.ps1` → same ASCII-only restoration; their non-ASCII sits in comments so it never broke parsing, but the invariant should hold repo-wide rather than per-file · `.github/workflows/validate.yml` → new `windows_installer` job: edition guard (the lane is worthless under pwsh 7), a **negative control** proving a BOM-less em dash genuinely fails to parse under 5.1, the repo-wide ASCII-or-BOM check, the end-to-end install, a fresh-shell function probe, and an idempotency re-run.
+
+**Verification:** executed on Windows 11, Windows PowerShell 5.1.26100.8875, es-MX locale — the edition and codepage that reproduce it. **Before:** the installer prints four green checks and `[ok] Wrappers installed successfully` over a profile with 12 mojibake characters that does not parse. **After:** `profile parses cleanly: 1`, profile is ASCII-only, a fresh `powershell` gets all four functions, a second run leaves exactly one `spawn` definition. **Rollback path tested directly** by re-injecting a single em dash into the fixed installer and running it: the four content checks still pass, the parse gate reports `0`, the real parse errors print with line numbers, the backup is restored, and the profile hash is byte-identical to before the run — exit `1`.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Windows only, and only if your profile is broken.** Check first: `powershell -Command "$e=$null; [System.Management.Automation.Language.Parser]::ParseFile($PROFILE,[ref]$null,[ref]$e)|Out-Null; if($e){'BROKEN'}else{'OK'}"`. If it says `OK`, no-op — nothing to do. macOS/Linux → never affected; `install-wrappers.sh` moves bytes through `awk` and `cat >>` without ever decoding them.
+2. **Only if it said `BROKEN`:** `/aios:update` applies the fixed installer and auto-runs it, which repairs the profile in place. If you'd rather not sync yet, run it directly: `powershell -File ~/aios/hooks/claude-identity/install-wrappers.ps1`. Either way the parse gate now refuses to leave you with a broken file.
+3. **Reopen your terminal (last step).** Open shells keep the old profile until they're restarted.
+
+---
+
 ## 2026-07-26 — The fix for the last bug renamed an operator's shell function (uppercase session names)
 
 `hash: 2addb2e`

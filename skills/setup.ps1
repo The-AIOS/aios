@@ -1,11 +1,11 @@
-# Skill registration (Windows) — directory junctions into ~/.claude/skills so
+# Skill registration (Windows) -- directory junctions into ~/.claude/skills so
 # Claude Code auto-loads AIOS-origin skills. Junctions are used instead of
 # symlinks because they do NOT require admin / Developer Mode. Idempotent.
 # Usage:  pwsh skills/setup.ps1
 #
 # Mirrors skills/setup.sh: registers every source EXCEPT anthropic/ and
 # superpowers/ (marketplace-provided), and skips any name already present in
-# ~/.claude/skills. Skills register standalone — they do not touch the `aios`
+# ~/.claude/skills. Skills register standalone -- they do not touch the `aios`
 # commands plugin. Restart Claude Code to pick up new links.
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
