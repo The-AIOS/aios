@@ -21,9 +21,13 @@
 
 ---
 
-## 2026-07-27 — The Windows installer wrote a profile PowerShell can't parse, and called it a success
+## 2026-07-27 — Four checks that reported a state they never examined
 
-`hash: (stamped on merge)`
+`hash: c29d296 · fc17ef9 · 5b408cc · 487eaeb`
+
+> **The day's theme, because it is one bug wearing four costumes.** A Windows installer printed four green checks over a profile PowerShell could not parse. `/aios:update` read `diff`'s "I could not run" as "the file differs". `aios-commit` explained a failed push by naming a cause it never read. And a CI negative control — written specifically to catch vacuous checks — was itself vacuous. Each one *reported a state it never actually measured*, and each was invisible on the happy path, because a passing check looks identical whether it is discriminating or empty. Two of the four came in from operators who diagnosed them independently.
+
+### The Windows installer half
 
 > **What this delivers.** On Windows, `install-wrappers.ps1` has been corrupting the profile it writes. The file is stored **UTF-8 without a BOM** and carries 11 non-ASCII characters — so Windows PowerShell 5.1, which assumes the system ANSI codepage for a BOM-less script, mangles every em dash *while parsing the installer itself*, before a single byte is written. One of those em dashes lives inside a `Write-Host` string; the ANSI decode turns its third byte into `”`, PowerShell treats curly quotes as string delimiters, and the profile stops parsing mid-string. The whole file is then dead at shell startup: `spawn`, `spawn-kill` and the operator's own session shorthand all vanish. The installer's four verification checks passed the entire time, because they `-match` for text rather than asking whether the result is valid PowerShell. The file's own header says *"ASCII-only on purpose"* and explains this exact hazard — nothing enforced it, so it drifted. Reported with a live reproduction in [#8](https://github.com/The-AIOS/aios/issues/8).
 
@@ -41,6 +45,25 @@
 1. **Windows only, and only if your profile is broken.** Check first: `powershell -Command "$e=$null; [System.Management.Automation.Language.Parser]::ParseFile($PROFILE,[ref]$null,[ref]$e)|Out-Null; if($e){'BROKEN'}else{'OK'}"`. If it says `OK`, no-op — nothing to do. macOS/Linux → never affected; `install-wrappers.sh` moves bytes through `awk` and `cat >>` without ever decoding them.
 2. **Only if it said `BROKEN`:** `/aios:update` applies the fixed installer and auto-runs it, which repairs the profile in place. If you'd rather not sync yet, run it directly: `powershell -File ~/aios/hooks/claude-identity/install-wrappers.ps1`. Either way the parse gate now refuses to leave you with a broken file.
 3. **Reopen your terminal (last step).** Open shells keep the old profile until they're restarted.
+
+### The sync half — `/aios:update` and `aios-commit`
+
+> **What this delivers.** `/aios:update` compared files with `diff -q <(tr …) <(tr …)` in three places. `diff` exits `0`=same, `1`=differ, **`2`=trouble**, and all three sites read it as a boolean — so a comparison that never ran became "the file differs". Under a sandboxed tool call it never runs, because `diff` needs a seekable regular file and spools a `/dev/fd` pipe to its own temp file, which the sandbox denies. A real sync reported a phantom self-update *and* a phantom personalization in the same run. Separately, `aios-commit` answered every failed push with `"push deferred (offline or remote diverged)"` — a diagnosis asserted without reading the error. It sent two sessions to investigate a divergence that did not exist while the real blocker was network egress, and it promised a retry that cannot happen inside a sandbox, where the next `aios-commit` fails identically. Nothing anywhere swept the deferral, so "it pushes next time" had no mechanism behind it at all.
+
+**What you can now do:**
+- **Trust what `/aios:update` tells you it found.** Comparisons are content hashes now (`tr -d '\r' | shasum -a 256`) — they stream, so there is no temp file and nothing for a sandbox to deny, and a failed read is distinguishable from a real difference. An inconclusive compare is **reported as inconclusive** instead of being written up as an edit you never made.
+- **Stop losing an update to a stopped sync.** No compare outcome aborts the run. An inconclusive one takes the conservative-but-applying branch — back up, then apply — because a sync that stops leaves the vault half-applied while one that applies with a loud label is recoverable by reading the report.
+- **Find out why a push actually failed.** The failure is classified — blocked egress · offline · diverged · auth — and the git error is always printed. The egress case names the fix, and warns it will not retry itself.
+- **Never end a day on a silently unpushed vault.** A failed push leaves `.git/aios-push-pending`, and `/today`, `/close-session` and `/close-day` each retry it and surface it if it is still stuck.
+- **Keep your private ignores through a first-time `.gitignore` migration.** The legacy path failed *open*: every error produced an empty carry list, indistinguishable from "this operator has no personal rules", so their private-data ignores were dropped. An unreachable baseline now carries **all** prior rules and says so — an over-carried `.gitignore` is noisy and reviewable; a dropped one silently makes secrets committable.
+
+**Component list:** `plugins/aios/commands/update.md` → `h_file`/`h_git` streaming-hash compares replace all three `diff <(…)` sites (`h_git` probes with `cat-file -e` first, because a failed `git show` prints nothing and `sha256("")` is a real hash that would compare equal to an empty file); self-update recursion bounded by `AIOS_UPDATE_REINVOKED` rather than by the compare succeeding; `.gitignore` legacy migration fails toward noise; clone + scratch paths use `${TMPDIR:-/tmp}` · `hooks/aios-commit` → push-failure classification + `.git/aios-push-pending` marker, exit stays `0` in every branch since the commit did succeed · `plugins/aios/commands/{today,close-session,close-day}.md` → marker sweep, each flagged as needing network · `.github/workflows/validate.yml` → the negative control's em dash was written as `` `u{2014} ``, a PowerShell 6+ escape that degrades to the literal text `u{2014}` under 5.1, so the file carried no non-ASCII and the control passed on nothing.
+
+**Verification:** `tests/aios-commit.test.sh` 10/10 under bash 3.2.57 (the shell CI runs on macOS) + `bash -n` clean. CI 11/11 on the merge. The Windows lane now prints its ANSI codepage: it is **1252**, and the end-to-end BOM-less em dash *does* fail there — so the runner's codepage was never a contributing cause, only the pwsh-6 escape was. That was measured rather than assumed, and it contradicted the first diagnosis, which the commit history records.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+4. **Only if you run Claude Code with the Bash sandbox enabled AND see `PUSH BLOCKED (no network egress)`.** Check first: `git -C ~/aios rev-list --count @{u}..HEAD` — `0` means nothing is stranded, no-op. Otherwise add the git **transport** host to your sandbox network allowlist in `~/.claude/settings.json` → `sandbox`. It must be `github.com`; **`api.github.com` is the REST host and does not cover `git push`**, which is why an allowlist that looks like it permits GitHub can block exactly the one thing `aios-commit` needs. While you are there, drop entries you do not use — an unused host is open egress buying nothing.
+5. **Only if you have stranded commits right now:** `git -C ~/aios push` with network access, then `rm -f "$(git -C ~/aios rev-parse --absolute-git-dir)/aios-push-pending"`. From here the rituals do this for you.
 
 ---
 
@@ -168,7 +191,7 @@
 **Component list:** `hooks/aios-commit:124` (`PARENTS`) + `hooks/aios-note-append:62` (`NOPUSH`) → portable empty-safe expansion, with inline comments explaining *why* the form looks odd so it doesn't get "cleaned up" later (community PR #6) · `tests/aios-commit.test.sh` → two new cases covering the root-commit and default-push paths, neither of which the suite previously exercised (every existing call passes `--no-push`, so `NOPUSH` was never empty) · `.github/workflows/validate.yml` → new `primitives_bash32` job (macos-latest, PATH-pinned to `/bin/bash`, asserts `BASH_VERSINFO[0] -eq 3` so the lane can't go vacuous) · `CONTRIBUTING.md` → *Shell portability* section + the stale *"There is no CI in this repo today"* claim corrected to describe the 10 jobs that actually run.
 
 **Action required (CHECK-THEN-ACT, idempotent):**
-1. **Nothing to run — `/aios:update` applies both hooks.** Verify: `grep -c 'arr\[@\]+' hooks/aios-note-append hooks/aios-commit` should return a non-zero count for each.
+1. **Nothing to run — `/aios:update` applies both hooks.** Verify: `grep -c 'arr\[@\]+' hooks/aios-note-append` returns a non-zero count. *(Corrected 2026-07-27: this originally also named `hooks/aios-commit` and said both should be non-zero. `aios-commit` returns `0` — it guards array length explicitly instead, so it never needed the idiom. The file was always correct; the verification string was wrong, which would have sent anyone who ran it hunting a bug that does not exist.)*
 2. **Only if you saw the failure:** check today's and recent daily notes for a duplicated `## Session —` block from a retry, and delete the extra. `grep -c '^## Session' "vault/01 - calendar/$(date +%Y-%m)/$(date +%F).md" 2>/dev/null` — compare against how many sessions you actually closed.
 3. **Only if you author hooks:** read `CONTRIBUTING.md` → *Shell portability*, and run `/bin/bash tests/aios-commit.test.sh` locally before proposing hook changes — that's the 3.2 path CI now enforces.
 
