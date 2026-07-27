@@ -649,19 +649,19 @@ jobs:
 
       - name: The hazard is real (negative control)
         # Proves the ASCII-only rule below guards something real, so the check is not
-        # decoration. The hazard is a CHAIN of two links, and only one of them is
-        # universal -- so each is asserted on its own terms:
-        #   1. DECODE (codepage-dependent): UTF-8 bytes read under a legacy ANSI
-        #      codepage yield mojibake whose third character is U+201D. Asserted
-        #      against CP1252 EXPLICITLY, because a runner whose ACP is already
-        #      UTF-8 (65001) decodes correctly and does NOT reproduce it -- the
-        #      operator machine that surfaced this bug is es-MX; the runner is not.
-        #   2. PARSE (universal): PowerShell treats a curly quote as a string
-        #      delimiter, so a script carrying one inside a string fails to parse.
-        # Asserting the links separately makes this control deterministic on any
-        # runner, instead of silently depending on the runner sharing the operator's
-        # codepage. If either link stops holding, the ASCII-only rule has gone
-        # vacuous and should be revisited.
+        # decoration. The hazard is a CHAIN of two links, asserted separately so this
+        # control never depends on the runner's environment matching the operator's:
+        #   1. DECODE: UTF-8 bytes read under a legacy ANSI codepage yield mojibake
+        #      whose third character is U+201D. Asserted against CP1252 EXPLICITLY
+        #      rather than through whatever the runner's own ACP happens to be.
+        #      windows-latest is ACP 1252 today, so the end-to-end path DOES
+        #      reproduce here (see the note this step prints) -- but a runner moved
+        #      to UTF-8 (65001) would decode correctly and silently stop exercising
+        #      this link at all, with the lane still green.
+        #   2. PARSE: PowerShell treats a curly quote as a string delimiter, so a
+        #      script carrying one inside a string fails to parse.
+        # If either link stops holding, the ASCII-only rule has gone vacuous and
+        # should be revisited.
         shell: powershell
         run: |
           # Diagnostic, not an assertion: record what this runner actually decodes with.
