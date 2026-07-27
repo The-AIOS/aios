@@ -11,6 +11,21 @@
 >
 > **Retired 2026-07-27:** the 1,002-line `2026-05-23 — Migration playbook` entry (moving off the pre-extraction `{user}/aios` / `{org}/internal-vault` lineage) was removed. It could only ever apply to operators who migrated in May 2026, and it was 45% of this file's lines — read in full by every `/aios:update` on every sync, forever, by everyone it could never apply to. Full text remains in git: `git show b98e84c:CHANGELOG.md`.
 
+> ## Releases → entries
+>
+> Entries here are **date-keyed**. Releases are **tagged in git** with full notes, and published as GitHub Releases. A release contains every entry dated up to and including its tag date, back to the previous release:
+>
+> - **Unreleased** — entries dated after `2026-07-25`
+> - **[v0.4.0](https://github.com/The-AIOS/aios/releases/tag/v0.4.0)** — tagged `2026-07-25` — covers `2026-05-26` → `2026-07-25`
+> - **[v0.2.0](https://github.com/The-AIOS/aios/releases/tag/v0.2.0)** — tagged `2026-05-25` — covers `2026-05-24` → `2026-05-25`
+> - **[v0.1.0](https://github.com/The-AIOS/aios/releases/tag/v0.1.0)** — tagged `2026-05-21` — first tagged shape; predates every entry still in this file
+>
+> **`0.3.0` was never cut** (`0.2.0` → `0.4.0` directly), so a missing 0.3.0 is not a gap in your history.
+>
+> Two version numbers exist and they are **not** the same thing: the **framework** version in `plugins/aios/.claude-plugin/plugin.json`, and **AIOS Glass** (the editor extension, versioned independently on Open VSX). Both happen to read `0.4.0` right now — where an entry says "Glass", it means the extension.
+>
+> The release number is a milestone marker for humans. **What you actually have is the hash in `.aios-update`**, which is finer-grained — a vault normally sits *between* releases, and `/aios:update` works off that hash, never off the version.
+
 > ## How to read (+ author) "Action required"
 >
 > Every **Action required** is written as **CHECK-THEN-ACT, idempotent** — your session verifies its *own* current state first and acts **only if needed**, no-op-ing (and saying so) when the fix is already in place. The same entry may reach you, a teammate who synced independently, a fresh install, or a machine that already self-healed — so a blind "run this" would be unsafe; a self-check is not. **Authors:** write actions that carry their own check (state the precondition + the test, e.g. *"run X; act only if Y"*), put any restart/reload step LAST, and never assume the reader's starting state.
@@ -354,7 +369,7 @@
 
 ---
 
-## 2026-07-20 — Tier-A authoring cut + AIOS Glass v0.4.0
+## 2026-07-20 — Tier-A authoring cut + AIOS Glass v0.4.0 (the extension, not the framework)
 
 `hash: f2787d7`
 
