@@ -679,17 +679,6 @@ cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Close day {date}"
 
 `--vault` sweeps the dirty vault paths for you — **space- and rename-safe** (it enumerates `git diff --name-only HEAD` ∪ untracked under `vault/` + `.aios-update`, minus the machine-local noise), so it never truncates a path like `vault/00 - notes/…` the way a `git status | awk '{print $2}'` sweep would. It stages only those paths via a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. Run `/close-day` when active sessions have closed (that's what the Glass Close-all button is for) so nothing is mid-write.
 
-**Then sweep the pending-push marker — close-day is the day's last chance to catch an unpushed commit.** `aios-commit` writes `.git/aios-push-pending` when a push fails. Some causes are transient (offline) and some are NOT (a sandboxed call has no network egress, and every later sandboxed `aios-commit` fails identically), so without this sweep a committed-but-unpushed day can sit indefinitely while the deferral message reads as handled.
-
-```bash
-p="$(git -C ~/aios rev-parse --absolute-git-dir 2>/dev/null)/aios-push-pending"
-if [ -f "$p" ]; then
-  if git -C ~/aios push; then rm -f "$p"; echo "pending-push: cleared"; else echo "pending-push: STILL blocked (marked $(cat "$p"))"; fi
-else echo "pending-push: none"; fi
-```
-
-> **This step needs NETWORK.** If your Bash tool calls are sandboxed, run this one with network access — otherwise the sweep fails for the very reason it exists. If it is still blocked, say so in the close-day report with the commit count (`git -C ~/aios rev-list --count @{u}..HEAD`); an unpushed vault is the one failure that silently outlives the session.
-
 ## Rules
 - **Shipped is binary.** Don't soften "didn't ship" into "made progress." Honesty compounds.
 - **Rhythm check reflects reality.** If Evening — Grow was skipped 3 days in a row, say it. That's data for /drift.

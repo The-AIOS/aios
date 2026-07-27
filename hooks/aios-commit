@@ -53,6 +53,24 @@ GIT_DIR=$(git rev-parse --absolute-git-dir)
 TOPLEVEL=$(git rev-parse --show-toplevel)
 cd "$TOPLEVEL" || die "cannot cd to repo root"
 
+# ── pending-push sweep: recover commits an EARLIER run could not push ──
+# Deliberately placed BEFORE the "nothing to commit" early-exits below, because
+# those exits are exactly how a stranded commit stayed stranded: they never reach
+# the push at the end of this script. Every aios-commit invocation is therefore a
+# sweep point, whether or not it has anything of its own to commit.
+# Costs a single stat when nothing is pending.
+PENDING="$GIT_DIR/aios-push-pending"
+if [ "$NO_PUSH" != 1 ] && [ -f "$PENDING" ] \
+   && git remote | grep -q . && git symbolic-ref --short HEAD >/dev/null 2>&1; then
+  SWEEP_N=$(git rev-list --count @{u}..HEAD 2>/dev/null || echo '?')
+  if git push -q 2>/dev/null; then
+    rm -f "$PENDING"
+    echo "aios-commit: swept a pending push from an earlier run — $SWEEP_N commit(s) now on the remote."
+  fi
+  # Still blocked → keep the marker. If this run commits, the push at the end
+  # reports the classified cause; if it exits early, the next invocation retries.
+fi
+
 # ── per-repo mutex: mkdir is atomic; a stale lock from a dead holder is reclaimed ──
 LOCK="$GIT_DIR/aios-commit.lock"
 acquire(){
@@ -139,9 +157,6 @@ release; trap cleanup EXIT
 [ "$NO_PUSH" = 1 ] && exit 0
 git remote | grep -q . || exit 0
 git symbolic-ref --short HEAD >/dev/null 2>&1 || exit 0   # detached HEAD → skip push
-
-GITDIR=$(git rev-parse --absolute-git-dir 2>/dev/null) || GITDIR=$(git rev-parse --git-dir 2>/dev/null) || GITDIR=".git"
-PENDING="$GITDIR/aios-push-pending"
 
 PUSH_ERR=$(git push 2>&1); PUSH_RC=$?
 if [ "$PUSH_RC" = 0 ]; then
