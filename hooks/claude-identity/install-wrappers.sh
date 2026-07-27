@@ -121,11 +121,6 @@ awk '
   /^# ==== claude-primary-session/,/^# ==== END claude-primary-session/ { next }
   /^_claude_with_respawn[[:space:]]*\(\)[[:space:]]*\{/,/^\}$/        { next }
   /^spawn[[:space:]]*\(\)[[:space:]]*\{/,/^\}$/                       { next }
-  # Legacy strip for chuycepeda/aios pre-extraction `buddai()` left in operator
-  # rcs from earlier installs (before banner-wrapped primary-session blocks).
-  # Safe no-op if not present. New installs use banner-wrap above, so this only
-  # cleans up legacy state.
-  /^buddai[[:space:]]*\(\)[[:space:]]*\{/,/^\}$/                      { next }
   { print }
 ' "$RC" > "${RC}.tmp"
 
