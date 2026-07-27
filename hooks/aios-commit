@@ -14,8 +14,10 @@
 #       commit-tree → update-ref): THE WORKING TREE IS NEVER TOUCHED, so Obsidian's live copy
 #       is never disturbed and there is no dirty-tree rebase hazard
 #     • self-scans for secrets (plumbing skips the pre-commit hook, so aios-commit scans itself)
-#     • push-retry: on offline / diverged remote it KEEPS THE COMMIT LOCAL and defers the push
-#       → never orphans, never loses.
+#     • push-retry: on a failed push it KEEPS THE COMMIT LOCAL → never orphans, never loses.
+#       The failure is CLASSIFIED (blocked egress · offline · diverged · auth) because only
+#       some causes self-heal on the next run; a persistent one gets the action to take, plus
+#       a .git/aios-push-pending marker the close rituals sweep.
 #
 # USAGE
 #   aios-commit -m "message" [--no-push] [--] <path> [<path> ...]
@@ -133,13 +135,48 @@ echo "aios-commit: ${COMMIT:0:9} — $(printf '%s' "$MSG" | head -1)"
 # release the lock BEFORE the (slow, network) push so other commits don't wait on it
 release; trap cleanup EXIT
 
-# ── push-retry — never orphan ──
+# ── push-retry — never orphan, and never mis-name the cause ──
 [ "$NO_PUSH" = 1 ] && exit 0
 git remote | grep -q . || exit 0
 git symbolic-ref --short HEAD >/dev/null 2>&1 || exit 0   # detached HEAD → skip push
-if git push -q 2>/dev/null; then
+
+GITDIR=$(git rev-parse --absolute-git-dir 2>/dev/null) || GITDIR=$(git rev-parse --git-dir 2>/dev/null) || GITDIR=".git"
+PENDING="$GITDIR/aios-push-pending"
+
+PUSH_ERR=$(git push 2>&1); PUSH_RC=$?
+if [ "$PUSH_RC" = 0 ]; then
   echo "aios-commit: pushed."
+  rm -f "$PENDING"
 else
-  echo "aios-commit: push deferred (offline or remote diverged) — commit is safe locally; it pushes on the next aios-commit or a manual push." >&2
+  # Classify by whether the blocker is TRANSIENT (deferring genuinely self-heals)
+  # or PERSISTENT (it does not, so name the action instead of promising a retry).
+  # The old single message said "offline or remote diverged" for every failure —
+  # a diagnosis asserted without ever reading the error. It sent two separate
+  # sessions to investigate a divergence that did not exist while the real cause
+  # was blocked egress, and it promised a self-heal that cannot happen inside a
+  # sandbox, because the next aios-commit is sandboxed too.
+  case "$PUSH_ERR" in
+    *"peration not permitted"*|*"roxy"*"enied"*)
+      echo "aios-commit: PUSH BLOCKED (no network egress) — $(git rev-parse --short HEAD) is committed locally but NOT pushed." >&2
+      echo "aios-commit: this will NOT retry on its own in a sandboxed call. Either allow the git TRANSPORT host in the sandbox network allowlist (e.g. github.com — api.github.com is the REST host and does NOT cover git push), or re-run with network access: git -C \"$(pwd)\" push" >&2
+      ;;
+    *"ould not resolve host"*|*"etwork is unreachable"*|*"onnection timed out"*|*"ailed to connect"*)
+      echo "aios-commit: push deferred — offline (transient). Retries on the next aios-commit or a manual push." >&2
+      ;;
+    *"rejected"*|*"non-fast-forward"*|*"etch first"*)
+      echo "aios-commit: push rejected — the remote has diverged. Pull/rebase, then push. Commit is safe locally." >&2
+      ;;
+    *"ermission denied"*|*"publickey"*|*"uthentication failed"*)
+      echo "aios-commit: push failed — authentication (ssh key / agent / token). Commit is safe locally." >&2
+      ;;
+    *)
+      echo "aios-commit: push failed — cause not recognized; the git error follows. Commit is safe locally." >&2
+      ;;
+  esac
+  printf '%s\n' "$PUSH_ERR" >&2
+  # Durable marker so an unpushed commit is never invisible. /today, /close-session
+  # and /close-day sweep this and retry the push with network access. Lives inside
+  # .git/ so it is never committed and needs no ignore rule.
+  date -u +%Y-%m-%dT%H:%M:%SZ > "$PENDING" 2>/dev/null || :
 fi
 exit 0
