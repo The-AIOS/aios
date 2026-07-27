@@ -254,6 +254,25 @@ Report to operator at the end: *"`/aios:update` self-updated and re-ran automati
 
 ### 3. Apply ALL Tier 1 changes (auto-apply)
 
+> **Iterate the file list SAFELY — the session's shell may be zsh, and `for f in $LIST` does not word-split there.** The changed-file list comes from `git diff --name-only` (Step 2), i.e. **newline-separated paths**. On macOS the session's shell is **zsh**, which — unlike bash — performs **no word splitting on unquoted parameter expansion**. So the intuitive `for f in $FILES` hands the *entire list* to the body as ONE string, and the `mkdir -p "$(dirname "$f")"` below then creates a single directory whose name contains literal newlines:
+>
+> ```
+> 'CHANGELOG.md\nCLAUDE.md\nhooks'      # ← one directory, in the vault root
+> ```
+>
+> The failure is **silent and cumulative**: the stray directories are empty, break nothing, sit in the vault root, and are invisible to Step 6.5 — the reconcile drops every vault-side `Only in` line by design, so its own backstop cannot see them. Two such directories were found in a real vault, their names spelling out the changed-file lists of *earlier* syncs.
+>
+> **Use this loop (portable across bash and zsh):**
+>
+> ```bash
+> printf '%s\n' "${FILES[@]}" | while IFS= read -r f; do
+>   [ -z "$f" ] && continue
+>   # … per-file logic below …
+> done
+> ```
+>
+> Never `for f in $(git diff --name-only …)` and never `for f in $UNQUOTED_LIST`. The same rule applies anywhere this command turns a path list into a loop.
+
 For each changed Tier 1 file:
 
 1. **Diff local vs upstream HEAD.** If byte-identical, skip (no work needed — operator already has this version somehow).
@@ -371,6 +390,14 @@ VAULT="$HOME/aios"; CLONE="/tmp/aios-update-check"
 # appear as vault-side extras, never as Files-differ).
 # Whatever remains = genuine framework drift: differing framework files +
 # framework files/dirs present in the clone but missing from the vault.
+#
+# COROLLARY (why Step 3 has a shell-safety note): dropping every vault-side
+# "Only in" line is CORRECT — operator extras are never framework-drift-to-pull
+# — but it also means this reconcile can NEVER see junk the sync itself created
+# in the vault (e.g. a stray newline-named directory from a non-word-splitting
+# `for f in $LIST`). Malformed output of this command is structurally invisible
+# to its own backstop, so that class must be PREVENTED at the write site, not
+# detected here. See the iteration note at the top of Step 3.
 ```
 
 For each genuine framework drift surfaced (a Tier-1 file that **differs**, or a bundled file/dir present in the clone but **missing** from the vault — i.e. a `Files … differ` line or a clone-side `Only in /tmp/aios-update-check/…` line):
