@@ -47,7 +47,7 @@ function Get-PrimarySessionName {
     if (-not (Test-Path $userMd)) { return 'aios' }
     $inSection = $false
     $parsed = ''
-    foreach ($line in Get-Content $userMd) {
+    foreach ($line in Get-Content $userMd -Encoding UTF8) {
         if ($line -match '^## Identity') { $inSection = $true; continue }
         if ($inSection -and $line -match '^## ') { break }
         # Backtick-OPTIONAL: matches both | `name` | (vault format) and | name |
@@ -113,7 +113,12 @@ Write-Host "[ok] Backup: $BACKUP"
 # ---- Strip old wrapper content ----
 # Two patterns covered: banner-wrapped block (from previous installer runs),
 # and inline function defs (from first-time manual install).
-$content = Get-Content $RC -Raw -ErrorAction SilentlyContinue
+# -Encoding UTF8 pairs with the Set-Content below: we write UTF-8, so we must
+# read UTF-8. Windows PowerShell 5.1 honors a BOM but otherwise assumes the
+# system ANSI codepage, and pwsh 7's -Encoding UTF8 writes NO BOM -- so an
+# install under pwsh followed by one under 5.1 would decode this file wrong
+# and rewrite the damage back to disk, compounding on every run.
+$content = Get-Content $RC -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
 if (-not $content) { $content = '' }
 
 # Strip banner block: # ==== claude-spawn-wrappers ... # ==== END claude-spawn-wrappers
@@ -182,20 +187,20 @@ function Invoke-ClaudeWithRespawn {
     $resumeArgs = @()
     if ($InitialSessionId -eq '--continue') { $resumeArgs = @('--continue') }
     elseif ($InitialSessionId) { $resumeArgs = @('--resume', $InitialSessionId) }
-    # Model selection — AIOS default is 1M-context Opus (see install-wrappers.sh
+    # Model selection -- AIOS default is 1M-context Opus (see install-wrappers.sh
     # comment for the why). Override via $env:CLAUDE_MODEL (Sonnet, 3P, etc.).
     $modelToUse = if ($env:CLAUDE_MODEL) { $env:CLAUDE_MODEL } else { 'claude-opus-4-8[1m]' }
     $modelArgs = @('--model', $modelToUse)
     # Resolve the claude EXECUTABLE explicitly (not via function lookup) to
-    # avoid recursion if the operator NAMES their session "claude" in USER.md —
+    # avoid recursion if the operator NAMES their session "claude" in USER.md --
     # then `function claude { Invoke-ClaudeWithRespawn ... }` is defined and a
     # bare `& claude` would re-resolve to the function. (The default fallback is
-    # now "aios", which never shadows the CLI — see Get-PrimarySessionName;
+    # now "aios", which never shadows the CLI -- see Get-PrimarySessionName;
     # this guard now covers only the explicit "claude" session-name edge case.)
     # Get-Command -CommandType Application forces PATH-binary resolution.
     # Mirrors the `command claude` guard in install-wrappers.sh.
     # CAUTION: npm on Windows installs BOTH claude.cmd AND an extensionless
-    # Unix shim 'claude' into %AppData%\Roaming\npm\ — Get-Command matches
+    # Unix shim 'claude' into %AppData%\Roaming\npm\ -- Get-Command matches
     # both, .Source becomes a 2-element array, and `& $claudeExe` collapses
     # it into one bogus path -> CommandNotFoundException (spawn/zai dead).
     # Resolve deterministically: prefer .cmd, then .exe, then .bat; fall
@@ -291,7 +296,7 @@ function spawn {
         return
     }
     if ($Task -in 'mechanical','judgment') {
-        Write-Host "[spawn] task is the bare word '$Task' — a stale shell likely dropped your real task ('$Task' is a -Tier value, not a task)." -ForegroundColor Yellow
+        Write-Host "[spawn] task is the bare word '$Task' -- a stale shell likely dropped your real task ('$Task' is a -Tier value, not a task)." -ForegroundColor Yellow
         Write-Host "[spawn] Run '. `$PROFILE' (or open a fresh shell), then re-spawn." -ForegroundColor Yellow
         return
     }
@@ -303,7 +308,7 @@ function spawn {
     # AIOS-Glass-made terminal ($env:AIOS_GLASS_TERM). Glass created the terminal natively
     # (e.g. fulfilling a spawn-inbox request), so boot the worker in-place rather than
     # opening a redundant Windows Terminal window. The $env:CLAUDECODE check alone isn't
-    # enough — a Glass terminal inherits it when the IDE was launched from a Claude session.
+    # enough -- a Glass terminal inherits it when the IDE was launched from a Claude session.
     if ((-not $env:CLAUDECODE) -or $env:AIOS_GLASS_TERM) {
         # In-process path: set CLAUDE_MODEL for the call only, then restore (no leak).
         if ($spawnModel) {
@@ -320,10 +325,10 @@ function spawn {
     # Build the script the new shell will run. Pass via -EncodedCommand because
     # wt.exe treats unescaped semicolons as tab separators -- a -Command string
     # with multiple statements would be split across phantom tabs.
-    # Open the SAME PowerShell edition the wrapper was installed under — not
+    # Open the SAME PowerShell edition the wrapper was installed under -- not
     # just "pwsh if it exists". The wrapper lives in this edition's $PROFILE;
     # opening the other edition would dot-source a different (wrapper-less)
-    # profile → Invoke-ClaudeWithRespawn: command not found. Match the running
+    # profile -> Invoke-ClaudeWithRespawn: command not found. Match the running
     # edition (Core = pwsh, Desktop = Windows PowerShell 5.1).
     $shell = if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh' } else { 'powershell' }
     # Inject the model into the new shell's env before it launches (mirrors the
@@ -376,9 +381,9 @@ function spawn-kill {
     # holds the _claude_with_respawn loop) to take down the respawn cycle, then
     # kill claude itself to mop up any orphan that didn't cascade.
     #
-    # Note: Windows Terminal doesn't expose a per-tab close API — the tab will
+    # Note: Windows Terminal doesn't expose a per-tab close API -- the tab will
     # remain visible after the agent process exits. The tab can be closed
-    # manually (Ctrl+Shift+W). The agent process itself is dead — that's the
+    # manually (Ctrl+Shift+W). The agent process itself is dead -- that's the
     # part that matters for stopping work.
     #
     # Needs Windows validation on PS 5.1 + PS 7+. Untested on Windows as of
@@ -386,7 +391,7 @@ function spawn-kill {
     [CmdletBinding()]
     param([Parameter(Mandatory, Position=0)] [string] $Name)
 
-    # PowerShell doesn't expose process command lines via Get-Process — use CIM.
+    # PowerShell doesn't expose process command lines via Get-Process -- use CIM.
     # claude.exe on Windows is the Claude Code binary; node.exe is a possible
     # fallback for some install paths.
     $claudeProc = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
@@ -451,11 +456,27 @@ Write-Host "[ok] Appended new wrapper block + $PRIMARY_NAME() shorthand to $RC"
 # false negative even when the wrapper was correctly written. Verifying file
 # content (mirroring install-wrappers.sh's content-check approach) avoids
 # this entire class of false-negative.
-$profileText = Get-Content $RC -Raw
+#
+# -Encoding UTF8 is load-bearing: without it, Windows PowerShell 5.1 falls back
+# to the system ANSI codepage for a BOM-less profile, so the text we verify is
+# not the text on disk.
+$profileText = Get-Content $RC -Raw -Encoding UTF8
 $RESPAWN_FN_OK  = if ($profileText -match 'function\s+Invoke-ClaudeWithRespawn') { 1 } else { 0 }
 $SPAWN_FN_OK    = if ($profileText -match 'function\s+spawn\s*\{') { 1 } else { 0 }
 $RESPAWN_LOOP_OK = if ($profileText -match 'CLAUDE_RESPAWN_CAPABLE') { 1 } else { 0 }
 $SPAWN_WT_OK    = if ($profileText -match 'WindowsTerminal') { 1 } else { 0 }
+
+# Content checks answer "is the text present" -- NOT "can PowerShell run this".
+# A profile can contain every marker above and still be syntactically invalid,
+# in which case the shell aborts the whole file at startup and the operator
+# loses every function it defines, from an installer that reported success.
+# That is not hypothetical: a BOM-less .ps1 carrying a non-ASCII glyph decoded
+# under the ANSI codepage produces a curly quote, PowerShell treats curly
+# quotes as string delimiters, and the profile stops parsing mid-string.
+# So the last word belongs to the parser, not to a regex.
+$parseErrors = $null
+[System.Management.Automation.Language.Parser]::ParseFile($RC, [ref]$null, [ref]$parseErrors) | Out-Null
+$PARSE_OK = if ($parseErrors -and $parseErrors.Count -gt 0) { 0 } else { 1 }
 
 Write-Host ""
 Write-Host "Verification (profile-content check):"
@@ -463,9 +484,19 @@ Write-Host "  Invoke-ClaudeWithRespawn defined: $RESPAWN_FN_OK (expect 1)"
 Write-Host "  spawn defined:                    $SPAWN_FN_OK (expect 1)"
 Write-Host "  CLAUDE_RESPAWN_CAPABLE present:   $RESPAWN_LOOP_OK (expect 1)"
 Write-Host "  WindowsTerminal foreground logic: $SPAWN_WT_OK (expect 1)"
+Write-Host "  profile parses cleanly:           $PARSE_OK (expect 1)"
 Write-Host ""
 
-if ($RESPAWN_FN_OK -eq 1 -and $SPAWN_FN_OK -eq 1 -and $RESPAWN_LOOP_OK -eq 1 -and $SPAWN_WT_OK -eq 1) {
+if ($PARSE_OK -eq 0) {
+    Write-Host "[fail] The profile does not parse. Reporting the errors, then rolling back." -ForegroundColor Red
+    foreach ($e in $parseErrors) {
+        Write-Host ("    line {0}: {1}" -f $e.Extent.StartLineNumber, $e.Message) -ForegroundColor Red
+    }
+    Write-Host ""
+    Write-Host "  This is a bug in the installer, not in your setup -- please report it." -ForegroundColor Red
+}
+
+if ($PARSE_OK -eq 1 -and $RESPAWN_FN_OK -eq 1 -and $SPAWN_FN_OK -eq 1 -and $RESPAWN_LOOP_OK -eq 1 -and $SPAWN_WT_OK -eq 1) {
     Write-Host "[ok] Wrappers installed successfully."
     Write-Host ""
     Write-Host "Next steps:"

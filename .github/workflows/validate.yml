@@ -622,3 +622,159 @@ jobs:
       - name: install-wrappers regression under bash 3.2
         # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.
         run: /bin/bash tests/install-wrappers.test.sh
+
+  windows_installer:
+    # The Windows installer had NO execution lane. `install-wrappers.ps1` shipped
+    # twice on regex-inspection alone ("regex-verified against the same case matrix
+    # but not execution-verified -- no PowerShell on the authoring machine"), and the
+    # second time it shipped a file that Windows PowerShell 5.1 could not parse at all,
+    # from an installer whose own verification reported four green checks. A content
+    # check cannot catch that; only running it can.
+    name: Windows wrapper installer (Windows PowerShell 5.1)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm the lane really is Windows PowerShell 5.1
+        # Load-bearing: pwsh 7 assumes UTF-8 for BOM-less scripts and would decode
+        # every file here correctly, making this lane prove nothing. 5.1 is the
+        # edition a stock Windows 11 ships, and the only one that reproduces the bug.
+        shell: powershell
+        run: |
+          $PSVersionTable.PSVersion
+          if ($PSVersionTable.PSEdition -ne 'Desktop') {
+            Write-Host "::error::Expected Windows PowerShell (Desktop edition) for this lane."
+            exit 1
+          }
+
+      - name: The hazard is real (negative control)
+        # Proves the ASCII-only rule below guards something real, so the check is not
+        # decoration. The hazard is a CHAIN of two links, asserted separately so this
+        # control never depends on the runner's environment matching the operator's:
+        #   1. DECODE: UTF-8 bytes read under a legacy ANSI codepage yield mojibake
+        #      whose third character is U+201D. Asserted against CP1252 EXPLICITLY
+        #      rather than through whatever the runner's own ACP happens to be.
+        #      windows-latest is ACP 1252 today, so the end-to-end path DOES
+        #      reproduce here (see the note this step prints) -- but a runner moved
+        #      to UTF-8 (65001) would decode correctly and silently stop exercising
+        #      this link at all, with the lane still green.
+        #   2. PARSE: PowerShell treats a curly quote as a string delimiter, so a
+        #      script carrying one inside a string fails to parse.
+        # If either link stops holding, the ASCII-only rule has gone vacuous and
+        # should be revisited.
+        shell: powershell
+        run: |
+          # Diagnostic, not an assertion: record what this runner actually decodes with.
+          $acp = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Nls\CodePage' -Name ACP).ACP
+          Write-Host "runner ANSI codepage (ACP): $acp   PSVersion: $($PSVersionTable.PSVersion)"
+
+          # --- Link 1: UTF-8 em dash bytes, decoded as CP1252, yield U+201D ---
+          # The bytes are written out literally. Do NOT use "`u{2014}" here: that
+          # escape is PowerShell 6+ only, and under 5.1 it degrades to the literal
+          # text "u{2014}", leaving the file pure ASCII. This control did exactly
+          # that and so asserted nothing -- vacuous in the way it exists to prevent.
+          $emdashUtf8 = [byte[]]@(0xE2, 0x80, 0x94)
+          $mojibake = [System.Text.Encoding]::GetEncoding(1252).GetString($emdashUtf8)
+          if ($mojibake.IndexOf([char]0x201D) -lt 0) {
+            Write-Host "::error::UTF-8 em dash decoded as CP1252 no longer yields U+201D (got '$mojibake') -- the mojibake mechanism changed."
+            exit 1
+          }
+          Write-Host "ok: UTF-8 em dash decoded as CP1252 -> '$mojibake' (contains U+201D)"
+
+          # --- Link 2: a curly quote inside a string breaks the parser ---
+          # Written WITH a BOM on purpose: this asserts the PARSER's treatment of the
+          # character, not the decode, so the read must be faithful on any ACP.
+          $f = Join-Path $env:RUNNER_TEMP 'curly.ps1'
+          $utf8Bom = New-Object System.Text.UTF8Encoding($true)
+          [System.IO.File]::WriteAllText($f, "Write-Host `"a $([char]0x201D) b`"`r`n", $utf8Bom)
+          $errs = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($f, [ref]$null, [ref]$errs) | Out-Null
+          if (-not $errs) {
+            Write-Host "::error::A curly quote inside a string parsed cleanly -- PowerShell no longer treats it as a delimiter."
+            exit 1
+          }
+          Write-Host "ok: curly quote inside a string fails to parse ($($errs.Count) error(s))"
+
+          # --- Informational: does the end-to-end path reproduce on THIS runner? ---
+          # Deliberately NOT asserted. On a UTF-8-ACP runner it will not, and that is
+          # fine: links 1 and 2 already carry the proof for operators on a legacy ACP.
+          $g = Join-Path $env:RUNNER_TEMP 'hazard.ps1'
+          $pre = [System.Text.Encoding]::UTF8.GetBytes('Write-Host "a ')
+          $post = [System.Text.Encoding]::UTF8.GetBytes(" b`"`r`n")
+          [System.IO.File]::WriteAllBytes($g, ($pre + $emdashUtf8 + $post))
+          $e2 = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($g, [ref]$null, [ref]$e2) | Out-Null
+          if ($e2) { Write-Host "note: BOM-less em dash also fails end-to-end on this runner (ACP $acp)" }
+          else     { Write-Host "note: BOM-less em dash parses on this runner (ACP $acp) -- expected when ACP is UTF-8; links 1+2 carry the proof" }
+
+      - name: Every .ps1 is ASCII-only or carries a UTF-8 BOM
+        # The rule install-wrappers.ps1 states in its own header and then stopped
+        # obeying -- 11 em dashes crept in, because nothing enforced it.
+        shell: powershell
+        run: |
+          $bad = @()
+          Get-ChildItem -Recurse -Filter *.ps1 -File | ForEach-Object {
+            $bytes = [System.IO.File]::ReadAllBytes($_.FullName)
+            $hasBom = $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF
+            $nonAscii = ($bytes | Where-Object { $_ -gt 0x7F }).Count
+            if ($nonAscii -gt 0 -and -not $hasBom) {
+              $bad += "$($_.FullName.Replace($PWD.Path + '\','')) ($nonAscii non-ASCII byte(s), no BOM)"
+            }
+          }
+          if ($bad.Count -gt 0) {
+            Write-Host "::error::BOM-less .ps1 files contain non-ASCII -- Windows PowerShell 5.1 will corrupt them at parse time:"
+            $bad | ForEach-Object { Write-Host "  $_" }
+            exit 1
+          }
+          Write-Host "ok: no BOM-less .ps1 carries non-ASCII"
+
+      - name: install-wrappers.ps1 produces a profile that PARSES
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\hooks\claude-identity\install-wrappers.ps1
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::error::Installer exited $LASTEXITCODE"
+            exit 1
+          }
+          $errs = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($PROFILE, [ref]$null, [ref]$errs) | Out-Null
+          if ($errs) {
+            Write-Host "::error::Installer reported success but the profile does not parse:"
+            $errs | ForEach-Object { Write-Host "  line $($_.Extent.StartLineNumber): $($_.Message)" }
+            exit 1
+          }
+          Write-Host "ok: profile parses cleanly after install"
+
+      - name: A real shell loads the profile and gets the functions
+        # The parse check above reads the file; this one proves a NEW shell -- the
+        # thing the operator actually opens -- ends up with the wrappers defined.
+        shell: powershell
+        run: |
+          # Single quotes inside the probe on purpose: double quotes are stripped
+          # by the command-line parser on the way into `powershell -Command`, which
+          # turns the string list into bare tokens and fails with MissingArgument.
+          $probe = "foreach (`$f in 'Invoke-ClaudeWithRespawn','spawn','spawn-kill') { if (-not (Get-Command `$f -ErrorAction SilentlyContinue)) { Write-Host ('MISSING ' + `$f); exit 1 } }; Write-Host 'ALL PRESENT'"
+          $out = & powershell -NoLogo -Command $probe 2>&1 | Out-String
+          Write-Host $out.Trim()
+          if ($out -notmatch 'ALL PRESENT') {
+            Write-Host "::error::A fresh Windows PowerShell did not get the wrapper functions from the profile."
+            exit 1
+          }
+
+      - name: Re-running the installer is idempotent and still parses
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\hooks\claude-identity\install-wrappers.ps1
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::Second run exited $LASTEXITCODE"; exit 1 }
+          $errs = $null
+          [System.Management.Automation.Language.Parser]::ParseFile($PROFILE, [ref]$null, [ref]$errs) | Out-Null
+          if ($errs) {
+            Write-Host "::error::Profile stopped parsing on the second install -- damage compounds across runs:"
+            $errs | ForEach-Object { Write-Host "  line $($_.Extent.StartLineNumber): $($_.Message)" }
+            exit 1
+          }
+          $n = (Select-String -Path $PROFILE -Pattern '^function spawn \{').Count
+          if ($n -ne 1) { Write-Host "::error::Expected exactly 1 spawn definition after re-run, found $n"; exit 1 }
+          Write-Host "ok: idempotent, still parses, exactly one spawn definition"

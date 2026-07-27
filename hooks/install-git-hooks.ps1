@@ -1,7 +1,7 @@
-# install-git-hooks.ps1 — Windows sibling of install-git-hooks.sh.
+# install-git-hooks.ps1 -- Windows sibling of install-git-hooks.sh.
 # Wires a concurrently-written AIOS repo to the attribution guard (hooks/git/pre-commit).
 # The guard scripts themselves are bash + run under Git Bash (Git for Windows always ships
-# it; git runs hooks through sh on every platform) — so there is no PowerShell rewrite of the
+# it; git runs hooks through sh on every platform) -- so there is no PowerShell rewrite of the
 # LOGIC, only of the per-machine install (git config is not version-controlled).
 # Usage:  pwsh -File hooks/install-git-hooks.ps1 [repoPath]   (default: $HOME\aios)
 param([string]$Repo = (Join-Path $HOME 'aios'))
