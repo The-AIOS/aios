@@ -114,6 +114,15 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
    ```
    `aios-commit` stages ONLY the given paths via a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. It is the one sanctioned commit path — it replaces `git add -A` everywhere.
 
+11. **Sweep the pending-push marker.** If a push failed (here or in an earlier session), `aios-commit` left `.git/aios-push-pending`. Retry it — a sandboxed call has no network egress, and *every* later sandboxed `aios-commit` fails the same way, so this never self-heals on its own:
+   ```bash
+   p="$(git -C ~/aios rev-parse --absolute-git-dir 2>/dev/null)/aios-push-pending"
+   if [ -f "$p" ]; then
+     if git -C ~/aios push; then rm -f "$p"; echo "pending-push: cleared"; else echo "pending-push: STILL blocked (marked $(cat "$p"))"; fi
+   else echo "pending-push: none"; fi
+   ```
+   **Needs NETWORK** — if your Bash calls are sandboxed, run this one with network access, or it fails for the reason it exists. If it stays blocked, say so in the session capture rather than ending on a silent unpushed commit.
+
 ### Session block format (Mode A)
 
 Append this to the daily note:
