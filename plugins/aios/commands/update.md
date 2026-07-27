@@ -277,8 +277,10 @@ a=$(h_file "$LOCAL_MD") && b=$(h_file "$CLONE/plugins/aios/commands/update.md") 
    for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/update.md "$d"; done
    ```
 3. Clean up the temp clone (the re-invoke will re-clone fresh): `rm -rf ${TMPDIR:-/tmp}/aios-update-check`.
-4. **Auto-re-invoke the command** via `Skill(aios:update)`, with `AIOS_UPDATE_REINVOKED=1` set for the inner run. The re-invocation loads the NEW spec from the plugin cache (just synced) and processes all changed files from a clean state.
-5. **Exit the current run** after the re-invocation returns — its work is done by the inner run.
+4. **Load the new spec by READING IT, not by re-invoking the skill.** `Read` the just-applied `$HOME/aios/plugins/aios/commands/update.md` and follow *that* for the rest of this run, treating `AIOS_UPDATE_REINVOKED=1` as set.
+
+   > **Why not `Skill(aios:update)`:** a skill already loaded in the current session is **not re-read from disk** — the harness answers *"already loaded above; instructions unchanged"* and the run silently continues on the OLD spec, which is the precise failure this step exists to prevent. Verified 2026-07-27. `Skill()` re-invocation only picks up a new spec in a *fresh* session, so it cannot be the mechanism. Reading the file is unconditional and works in-session.
+5. **Continue this run under the new spec** (do not exit expecting an inner run to do the work). If for any reason the new spec cannot be read, finish the sync under the current spec and tell the operator to re-run `/aios:update` in a **fresh session** to pick up the new logic — the update still lands either way.
 
 Report to operator at the end: *"`/aios:update` self-updated and re-ran automatically with the new spec — {summary of what the inner run processed}."* No operator action required; the outer run handed off cleanly.
 
@@ -402,6 +404,23 @@ The tracker-diff (`stored..HEAD`, Step 2) is an optimization that assumes the st
 # "…/custom: name". Anchoring the drop on "^Only in $HOME/aios" sidesteps the
 # whole slash-vs-colon problem — it filters by SIDE, not by token.
 VAULT="$HOME/aios"; CLONE="${TMPDIR:-/tmp}/aios-update-check"
+
+# ── PRECONDITION, NOT OPTIONAL: a missing clone must never read as "clean" ──
+# `diff -rq` on a nonexistent directory writes to stderr, which the `2>/dev/null`
+# below swallows — so every comparison silently produces NOTHING, the filter chain
+# emits zero lines, and this reconcile reports "0 drift" having examined nothing.
+# It would then advance the tracker on the strength of a check that never ran.
+#
+# This is not hypothetical: `$TMPDIR` is NOT stable across tool calls in a sandboxed
+# harness (a sandboxed call sees a different $TMPDIR than an un-sandboxed one), so the
+# clone written in Step 1 can be invisible here while the path still "looks" right.
+# Assert, and re-clone rather than continue.
+if [ ! -d "$CLONE/plugins" ] || [ ! -d "$CLONE/agents" ]; then
+  echo "FATAL: clone not found at $CLONE — the reconcile cannot run." >&2
+  echo "Re-clone (Step 1) with the SAME shell/sandbox context, then re-run the reconcile." >&2
+  echo "Do NOT advance the tracker: an empty drift list here proves nothing." >&2
+  exit 1
+fi
 {
   # Root docs — GENERIC: every *.md at the canonical root (+ the non-md root infra files), so a
   # newly-added root doc can NEVER be silently missed by a stale hardcoded list. (This is the fix
@@ -512,10 +531,11 @@ If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update
 - **Backup-on-divergence is the safety net.** Operator customizations to Tier 1 files are preserved in `vault/04 - backups/aios-update-{date}/` but are NOT auto-restored. If they want their edits back, they manually merge from the backup.
 - **Scripts must run.** A script update that doesn't get executed is half a sync. The wrapper installer is the canonical example — bringing the file without running it leaves the operator's shell on the old code path.
 - **Completeness reconcile is the source of truth, not the tracker.** Step 6.5 always runs (even on the "current" path) — it compares the vault against canonical HEAD directly, so a desynced tracker self-heals instead of orphaning content. The tracker advances only on a clean, fully-applied run; it is NEVER hand-edited.
+- **An empty drift list only counts if the reconcile actually ran.** "0 drift" and "the clone wasn't there" are the same output, because `diff`'s errors go to `/dev/null` — so Step 6.5 asserts the clone exists *before* comparing and refuses to continue if it doesn't. **Never advance the tracker on an empty result you did not first prove was a real measurement.** Related trap: `${TMPDIR:-/tmp}` is **not stable across tool calls** in a sandboxed harness — a sandboxed call resolves a different `$TMPDIR` than an un-sandboxed one, so a clone written in Step 1 can be invisible in Step 6.5 while the path expression still looks correct. Clone and reconcile in the same context, or re-clone.
 - **This command owns the framework-sync commit (atomic apply→advance→commit).** After a clean apply it commits exactly the Tier-1 files it applied + the tracker, via `aios-commit` (scoped). So the vault is always committed + pushable after an update — never applied-but-uncommitted — and a session-end / `/close-day` `aios-commit --vault` stays scoped to vault *content*, never framework infra. Framework-sync and session-work commits are separate concerns with separate owners.
 - **Duplicate cleanup is opt-in (`--cleanup`) + report-first.** Post-migration scaffolding, off the default path. The bundled folder structure (`agents/aios/{bundle}/`, `skills/superpowers/`, etc.) is canonical; `custom/` is for genuinely operator-unique extensions only.
 - **Tier 2 (operator content) is sacred.** Never touched. Includes everything under the denylist.
-- **Self-update is auto-re-invoking + bootstrap-safe.** When `update.md` itself is in the diff, apply + sync to plugin pipeline FIRST, then auto-re-invoke `Skill(aios:update)` with `AIOS_UPDATE_REINVOKED=1`. The inner run loads the new spec, processes everything cleanly, returns. **Recursion is bounded structurally by that env flag, not by the compare succeeding** — the content-compare still short-circuits the normal path (after self-apply local matches upstream → Case A → no re-invoke), but an *indeterminate* compare would otherwise keep answering "not identical" forever. The flag makes at-most-once independent of the measurement. Operator sees one report from the outer run; no manual re-invocation needed. See Step 2.5.
+- **Self-update is bootstrap-safe by READING the new spec, not by re-invoking the skill.** When `update.md` itself is in the diff, apply + sync to the plugin pipeline FIRST, then `Read` the applied file and continue this run under it (treat `AIOS_UPDATE_REINVOKED=1` as set). A `Skill(aios:update)` re-invocation does **not** reload an already-loaded skill in the same session — it returns *"instructions unchanged"* and the run continues on the OLD spec, silently defeating the guard. **Recursion is bounded structurally by that env flag, not by the compare succeeding** — the content-compare still short-circuits the normal path (after self-apply local matches upstream → Case A → no re-invoke), but an *indeterminate* compare would otherwise keep answering "not identical" forever. The flag makes at-most-once independent of the measurement. Operator sees one report from the outer run; no manual re-invocation needed. See Step 2.5.
 - **Cross-repo cascades.** When CHANGELOG hashes don't exist in the cloned repo (common for operators syncing from a fork or downstream mirror), fall back to content-comparison via date header + title (see Step 1.5).
 - **Clean up temp clone.** Always `rm -rf ${TMPDIR:-/tmp}/aios-update-check` at end, even on error.
 - Use `[[wiki-links]]` for project names, context files, ventures mentioned in the report.

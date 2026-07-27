@@ -156,7 +156,13 @@ else
   # was blocked egress, and it promised a self-heal that cannot happen inside a
   # sandbox, because the next aios-commit is sandboxed too.
   case "$PUSH_ERR" in
-    *"peration not permitted"*|*"roxy"*"enied"*)
+    *"peration not permitted"*|*"roxy"*"enied"* \
+      |*"authentication method negotiation failed"*|*"Connection closed by UNKNOWN"*)
+      # The last two are the SSH-through-a-sandbox-proxy signature. A sandboxed call
+      # routes egress through a proxy that SSH cannot negotiate with, so `git push`
+      # over git@ fails here even when the domain is allowlisted -- an allowlist entry
+      # governs domains, not the ssh transport. Observed 2026-07-27; it previously fell
+      # through to "cause not recognized", which is how it was found.
       echo "aios-commit: PUSH BLOCKED (no network egress) — $(git rev-parse --short HEAD) is committed locally but NOT pushed." >&2
       echo "aios-commit: this will NOT retry on its own in a sandboxed call. Either allow the git TRANSPORT host in the sandbox network allowlist (e.g. github.com — api.github.com is the REST host and does NOT cover git push), or re-run with network access: git -C \"$(pwd)\" push" >&2
       ;;
