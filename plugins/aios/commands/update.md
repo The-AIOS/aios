@@ -71,19 +71,40 @@ Before overwriting any Tier 1 file, do a **three-way compare** to distinguish op
 The right comparison: **local vs operator's last-synced BASELINE** (the version they had after their last successful `/aios:update`).
 
 ```bash
-# For each changed Tier 1 file, get THREE versions:
+# For each changed Tier 1 file, get THREE content identities:
 #   (a) baseline — what upstream looked like at stored_hash (operator's last sync)
 #   (b) local    — what's in operator's vault now
 #   (c) upstream — what's at upstream HEAD (target of this update)
+#
+# Compare by STREAMING HASH — never `diff` on a process substitution. Two reasons,
+# and the second silently corrupted this command's own verdicts before it was found:
+#
+#   1. `diff` needs a seekable regular file, so given a /dev/fd pipe it spools the
+#      input to its OWN temp file — which a sandboxed Bash tool denies outright
+#      ("Operation not permitted"). `tr` and `shasum` stream, so they never do.
+#   2. `diff` exits 0=same, 1=differ, 2=TROUBLE. Read as a boolean, TROUBLE becomes
+#      "differ" — so a comparison that never completed is indistinguishable from a
+#      real difference, and this command then backs up (or re-invokes itself) on the
+#      strength of a measurement it never actually took.
+#
+# Do NOT "simplify" these back to `diff <(…) <(…)`.
 
-# Fetch baseline content from the same clone we already have (no second clone needed):
-git -C /tmp/aios-update-check show {stored_hash}:{path} > /tmp/aios-baseline-{flattened-path}
+CLONE="${TMPDIR:-/tmp}/aios-update-check"
 
-# Compare local vs baseline (line-ending-normalized — see CRLF note below):
-diff -q <(tr -d '\r' < "$HOME/aios/{path}") <(tr -d '\r' < /tmp/aios-baseline-{flattened-path})
+# CRLF-normalized content hash of a working-tree file. Non-zero return = unreadable.
+h_file(){ [ -f "$1" ] || return 1; tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1; }
+
+# CRLF-normalized content hash of a git object (the baseline). Probe existence
+# FIRST: a failed `git show` prints nothing, and sha256("") is a real hash
+# (e3b0c442…) that would compare EQUAL to a genuinely-empty file.
+h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1
+         git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | shasum -a 256 | cut -d' ' -f1; }
+
+BASE=$(h_git "{stored_hash}:{path}") || BASE=""   # "" = baseline unreachable
+LOCAL=$(h_file "$HOME/aios/{path}")
 ```
 
-> **CRLF note (Windows).** On Windows, Git's `core.autocrlf` converts LF→CRLF on checkout, so vault files have `\r\n` line endings while `git show {hash}:{path}` (and the temp clone's working tree) may not — a raw `diff -q` then reports "differ" for byte-identical content, flooding `vault/04 - backups/` with false personalizations on every sync. **Every content comparison in this command strips `\r` before diffing** (`tr -d '\r'` via process substitution, as above). This applies to the self-update guard (Step 2.5) and the duplicate-cleanup content-compares (§ Duplicate cleanup) too — normalize line endings, then compare.
+> **CRLF note (Windows).** On Windows, Git's `core.autocrlf` converts LF→CRLF on checkout, so vault files have `\r\n` line endings while `git show {hash}:{path}` (and the temp clone's working tree) may not — an unnormalized compare then reports "differ" for byte-identical content, flooding `vault/04 - backups/` with false personalizations on every sync. **Every content comparison in this command strips `\r` before hashing** (`tr -d '\r'`, as in `h_file`/`h_git` above). This applies to the self-update guard (Step 2.5) and the duplicate-cleanup content-compares (§ Duplicate cleanup) too — normalize line endings, then compare.
 
 **Three outcomes:**
 
@@ -91,7 +112,7 @@ diff -q <(tr -d '\r' < "$HOME/aios/{path}") <(tr -d '\r' < /tmp/aios-baseline-{f
 |---|---|---|
 | **Identical** | Operator never touched this file — they just had an older synced version | **Overwrite silently. No backup.** The "diff vs upstream HEAD" is just stale, not personalization. |
 | **Different** | Operator made local edits AFTER last sync | **Backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{date}/{flattened-path}` BEFORE overwrite. Tell operator what was preserved. |
-| **Baseline doesn't exist in clone** (cross-repo case, OR `stored_hash` is `initial`) | Can't establish baseline | **Conservative fallback:** treat as personalization → backup before overwrite. Better to over-backup once than risk losing operator edits. |
+| **Baseline unreachable** (cross-repo case, `stored_hash` is `initial`, or the object is missing) | Can't establish a baseline — the compare is **inconclusive**, which is NOT the same as a detected difference | **Conservative fallback, and the file still applies:** back up, then overwrite. Report it as *"baseline unreachable — backed up conservatively"*, never as a personalization. Telling the operator an edit was found when none was measured is the failure this wording exists to prevent. |
 
 **Exempt from backup entirely — `CHANGELOG.md`.** It is append-only **canonical history, mandated byte-identical across every repo** (no operator ever personalizes it — there is nothing in it that is theirs to keep). A local diff on `CHANGELOG.md` is therefore *always* stale-not-personalized, even when the three-way compare reports "Different" (e.g. a WIP entry an operator's earlier session left mid-edit). So `CHANGELOG.md` is **always a clean overwrite, never backed up** — skip the three-way compare for it and never write it to `vault/04 - backups/`. (Backing it up just produces noise files that duplicate canonical history.)
 
@@ -150,7 +171,7 @@ For each layer in `agents`, `skills`, `plugins`, `mcps`, `templates`, `hooks`:
 2. Scan `{layer}/custom/*` for any file whose basename appears in the bundled set AND is not `_index.md`. **For each match: apply the stale-vs-personalized test, then remove.**
    - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the CURRENT bundled file (`{layer}/{bundled-subfolder}/{name}.md`). **Normalize line endings first** (`tr -d '\r'` both sides — see CRLF note in § Backup-on-divergence) so Windows CRLF checkouts don't read as differences.
    - **If byte-identical to current bundled** (after CRLF-normalization — true duplicate, no operator value): remove silently, no backup needed.
-   - **If different from current bundled → check if it's a stale-bundled version** (not a personalization): scan recent upstream history for any past version of the bundled file matching this content. Use `git -C /tmp/aios-update-check log --all -p -- {bundled-path}` and compare against the past few revisions of the file. If a match is found in upstream history → the file is just a stale bundled copy (migration leftover) → remove silently, no backup.
+   - **If different from current bundled → check if it's a stale-bundled version** (not a personalization): scan recent upstream history for any past version of the bundled file matching this content. Use `git -C ${TMPDIR:-/tmp}/aios-update-check log --all -p -- {bundled-path}` and compare against the past few revisions of the file. If a match is found in upstream history → the file is just a stale bundled copy (migration leftover) → remove silently, no backup.
    - **Else** (different from current AND no match in upstream history): treat as real personalization → backup-on-divergence: copy operator's version to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-custom-{name}.md` FIRST, then remove.
    - Log either way: *"Removed `agents/custom/lawyer.md` — duplicate of bundled `agents/aios/finance-legal/lawyer.md`. [Backed up to vault/04 - backups/aios-update-2026-05-25/duplicates/agents-custom-lawyer.md — your version didn't match current or any past bundled; restore manually if you had intentional edits.]"* (bracketed clause only when backed up).
 3. Scan `{layer}/*.md` at the top level (outside any subfolder). Skip `_index.md` (layer-root index is intentional, not an orphan). If a remaining top-level file's basename matches a bundled file → **same stale-vs-personalized test as step 2.** If byte-identical or matches a past bundled version → silent remove. Else → backup to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-root-{name}.md` then remove. Log: *"Removed `templates/project-template.md` — duplicate of bundled `templates/aios/project-template.md`."*
@@ -194,17 +215,17 @@ esac
 # file) + degraded changelog detection. A full clone is text-only, lands in
 # /tmp, and is deleted at the end — the depth optimization traded correctness
 # for a clone-time saving that doesn't matter for an occasional command.
-rm -rf /tmp/aios-update-check && git clone --single-branch "$clone_url" /tmp/aios-update-check 2>&1
+rm -rf ${TMPDIR:-/tmp}/aios-update-check && git clone --single-branch "$clone_url" ${TMPDIR:-/tmp}/aios-update-check 2>&1
 ```
 
-If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git@github.com:org/repo` → `https://github.com/org/repo`). Get current HEAD: `git -C /tmp/aios-update-check rev-parse HEAD`. If HEAD matches stored hash → run the **completeness reconcile** (§ Step 6.5 — catches drift even when the tracker says "current") → if also clean, "Your vault infrastructure is current (synced {date})." → clean up → done.
+If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git@github.com:org/repo` → `https://github.com/org/repo`). Get current HEAD: `git -C ${TMPDIR:-/tmp}/aios-update-check rev-parse HEAD`. If HEAD matches stored hash → run the **completeness reconcile** (§ Step 6.5 — catches drift even when the tracker says "current") → if also clean, "Your vault infrastructure is current (synced {date})." → clean up → done.
 
 ### 1.5. Show changelog context
 
 Read `CHANGELOG.md` from the cloned repo root. If absent, skip silently. Otherwise:
 
 1. Parse `## ` entries (each is `## YYYY-MM-DD — title` followed by `` `hash: {short_hash}` ``).
-2. For each entry newest first, check if synced via `git -C /tmp/aios-update-check merge-base --is-ancestor {entry_hash} {stored_hash}` (exit 0 = synced, stop scanning; exit 1 = new, collect; exit 128 = hash unreachable in cloned repo → fall back to content-comparison against local CHANGELOG.md by date header + title).
+2. For each entry newest first, check if synced via `git -C ${TMPDIR:-/tmp}/aios-update-check merge-base --is-ancestor {entry_hash} {stored_hash}` (exit 0 = synced, stop scanning; exit 1 = new, collect; exit 128 = hash unreachable in cloned repo → fall back to content-comparison against local CHANGELOG.md by date header + title).
 3. If new entries exist, show them before applying changes — **lead with each entry's "What you can now do" section** (the plain-language capability read — this is the part that actually tells the operator what the new version unlocks; read it back to them, don't make them open the file), then **Action required** (skip Why/FYI for brevity; full details in CHANGELOG.md). Aggregate + deduplicate Action required across all new entries. If an entry predates the convention and has no "What you can now do" section, fall back to its "What changed" / "What you're getting".
 4. Execute the action items inline as part of this run — don't list them and wait for the operator to ask. This command IS the implementation arm of CHANGELOG action items.
    - **After applying, close with a one-line-per-capability recap** — *"This update lets you: {do X}, {do Y}, {do Z}."* — so the operator leaves the sync knowing what they gained, not just that files changed. (This is the comprehension-debt guard for the framework's own release channel: an update the operator can't translate into a capability is debt, not a gift.)
@@ -213,7 +234,7 @@ Read `CHANGELOG.md` from the cloned repo root. If absent, skip silently. Otherwi
 ### 2. Find what changed
 
 ```bash
-git -C /tmp/aios-update-check diff {stored_hash}..HEAD --name-only -- \
+git -C ${TMPDIR:-/tmp}/aios-update-check diff {stored_hash}..HEAD --name-only -- \
   "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
   "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "AGENTS.md" "EXTENSION-MAP.md" "LICENSE-AUDIT.md" \
   "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
@@ -228,12 +249,23 @@ If no Tier 1 files changed in the tracker-diff → **still run the completeness 
 **Before processing anything else, content-compare local `plugins/aios/commands/update.md` against the cloned upstream version.** This is the bootstrap-safety check: when `update.md` itself changes, the current run is executing OLD spec — we need the NEW spec to land + re-process everything, without operator action.
 
 ```bash
-diff -q <(tr -d '\r' < "$HOME/aios/plugins/aios/commands/update.md") <(tr -d '\r' < /tmp/aios-update-check/plugins/aios/commands/update.md)
+# Streaming-hash compare — same primitives + same reasoning as § Backup-on-divergence.
+# NEVER `diff <(…) <(…)` here: a compare that merely FAILED would read as "different"
+# and spuriously re-invoke the whole command.
+CLONE="${TMPDIR:-/tmp}/aios-update-check"
+LOCAL_MD="$HOME/aios/plugins/aios/commands/update.md"
+h_file(){ [ -f "$1" ] || return 1; tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1; }
+
+SAME=0
+a=$(h_file "$LOCAL_MD") && b=$(h_file "$CLONE/plugins/aios/commands/update.md") \
+  && [ -n "$a" ] && [ "$a" = "$b" ] && SAME=1
 ```
 
-**Case A — Identical (no self-update needed):** local already matches upstream. Skip the rest of this step, proceed to Step 3 with current logic. This is the normal path AND the path taken by an auto-re-invocation (because the first run already applied update.md).
+**Case 0 — one-shot guard (check FIRST).** If `AIOS_UPDATE_REINVOKED=1` is already set in the environment, **this run is the inner run**: behave as Case A (proceed to Step 3) regardless of what the compare said, and never re-invoke again. This makes at-most-once structural rather than a property of the measurement.
 
-**Case B — Different (update.md was updated upstream):**
+**Case A — Identical (`SAME=1`, no self-update needed):** local already matches upstream. Skip the rest of this step, proceed to Step 3 with current logic. This is the normal path AND the path taken by an auto-re-invocation (because the first run already applied update.md).
+
+**Case B — Different OR indeterminate (`SAME=0`):** either upstream genuinely changed `update.md`, or the compare could not be completed. **Both take the same branch** — apply and re-invoke once — because the cost of re-invoking unnecessarily is one wasted run, while the cost of *not* applying a real new spec is the whole update running on stale logic. The Case 0 guard makes this safe to bias this way.
 
 1. Apply the replace for `update.md` immediately:
    - Backup local to `vault/04 - backups/aios-update-{date}/update.md` (operator divergence preserved per the standard rule).
@@ -244,13 +276,13 @@ diff -q <(tr -d '\r' < "$HOME/aios/plugins/aios/commands/update.md") <(tr -d '\r
    # cache path VERSION-AGNOSTIC — glob the installed version dir (was hard-pinned 0.1.0)
    for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/update.md "$d"; done
    ```
-3. Clean up the temp clone (the re-invoke will re-clone fresh): `rm -rf /tmp/aios-update-check`.
-4. **Auto-re-invoke the command** via `Skill(aios:update)`. The re-invocation loads the NEW spec from the plugin cache (just synced) and processes all changed files from a clean state.
+3. Clean up the temp clone (the re-invoke will re-clone fresh): `rm -rf ${TMPDIR:-/tmp}/aios-update-check`.
+4. **Auto-re-invoke the command** via `Skill(aios:update)`, with `AIOS_UPDATE_REINVOKED=1` set for the inner run. The re-invocation loads the NEW spec from the plugin cache (just synced) and processes all changed files from a clean state.
 5. **Exit the current run** after the re-invocation returns — its work is done by the inner run.
 
 Report to operator at the end: *"`/aios:update` self-updated and re-ran automatically with the new spec — {summary of what the inner run processed}."* No operator action required; the outer run handed off cleanly.
 
-**Why content-compare instead of a state-flag:** the content IS the state. On auto-re-invocation, local update.md is already byte-identical to upstream → Case A fires → no recursion. The pattern is self-terminating by design.
+**Why a one-shot guard and not the content-compare alone.** The content IS the state, and on a clean re-invocation local matches upstream so Case A fires — that self-termination is real, **but it holds only while the compare is reliable.** An indeterminate compare that keeps answering "not identical" is the one input that could loop this command, and a compare *can* fail (an unreadable file, a missing hashing tool, a sandbox denial). `AIOS_UPDATE_REINVOKED` moves at-most-once out of the measurement and into the control flow: an inconclusive compare then biases toward **landing the new spec** rather than aborting, and still cannot recurse.
 
 ### 3. Apply ALL Tier 1 changes (auto-apply)
 
@@ -278,30 +310,47 @@ For each changed Tier 1 file:
 1. **Diff local vs upstream HEAD.** If byte-identical, skip (no work needed — operator already has this version somehow).
 2. **Three-way compare to decide on backup** (see § Backup-on-divergence above):
    - **`CHANGELOG.md` → skip this compare entirely: overwrite silently, never back up** (append-only canonical history — never a personalization).
-   - Get baseline via `git -C /tmp/aios-update-check show {stored_hash}:{path}`.
+   - Get baseline via `git -C ${TMPDIR:-/tmp}/aios-update-check show {stored_hash}:{path}`.
    - If `local == baseline` → operator never touched it → overwrite silently, **no backup**.
    - If `local != baseline` → operator personalized → **backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{YYYY-MM-DD}/{flattened-path}.md` BEFORE overwrite.
    - If baseline unreachable (cross-repo hash or `stored_hash=initial`) → conservative fallback: backup.
 2.7. **Dual-owned files MERGE, never overwrite** — `.gitignore` and `.claude-plugin/marketplace.json` (see their Tier-1 entries). **Skip the three-way backup for these** (the merge itself preserves operator content). For **`.gitignore`**: keep upstream's file (framework rules + the `AIOS-OPERATOR-IGNORES` marker) and append the operator's below-marker lines —
    ```bash
    SENT='AIOS-OPERATOR-IGNORES'
+   CLONE="${TMPDIR:-/tmp}/aios-update-check"; T="${TMPDIR:-/tmp}"
    if grep -qF "$SENT" "$HOME/aios/.gitignore"; then
-     { cat /tmp/aios-update-check/.gitignore; awk -v s="$SENT" 'f{print} $0 ~ s {f=1}' "$HOME/aios/.gitignore"; } \
+     { cat "$CLONE/.gitignore"; awk -v s="$SENT" 'f{print} $0 ~ s {f=1}' "$HOME/aios/.gitignore"; } \
        > "$HOME/aios/.gitignore.new" && mv "$HOME/aios/.gitignore.new" "$HOME/aios/.gitignore"
    else
      # LEGACY local WITHOUT the marker (first update to the merge-aware version) → migrate SAFELY.
      # A plain overwrite here would DROP the operator's personal ignores (e.g. a private-reports rule
      # → financial data becomes committable) — the exact class this fix exists to prevent. So:
      #   1. BACK UP the old .gitignore (guarantee: nothing is lost even if the carry below misclassifies)
-     #   2. AUTO-CARRY the operator's personal lines (in local but NOT in the last-synced baseline)
-     #      below the new marker, so private-data ignores survive the very first migration.
+     #   2. CARRY the operator's personal lines below the new marker.
      bk="$HOME/aios/vault/04 - backups/aios-update-$(date +%F)"; mkdir -p "$bk"; cp "$HOME/aios/.gitignore" "$bk/.gitignore"
-     git -C /tmp/aios-update-check show {stored_hash}:.gitignore 2>/dev/null | tr -d '\r' | sort -u > /tmp/aios-gi-base || : > /tmp/aios-gi-base
-     ops=$(comm -13 /tmp/aios-gi-base <(tr -d '\r' < "$HOME/aios/.gitignore" | sort -u) | grep -vE '^[[:space:]]*(#|$)')
-     { cat /tmp/aios-update-check/.gitignore
-       [ -n "$ops" ] && printf '\n# (auto-migrated from your previous .gitignore on the first merge-aware update — review/reorganize)\n%s\n' "$ops"
-     } > "$HOME/aios/.gitignore.new" && mv "$HOME/aios/.gitignore.new" "$HOME/aios/.gitignore"; rm -f /tmp/aios-gi-base
-     # Report: old .gitignore backed up to vault/04 - backups/…; personal rules carried below the marker — review them.
+     # Real files, no process substitution (see § Backup-on-divergence for why).
+     tr -d '\r' < "$HOME/aios/.gitignore" | sort -u > "$T/aios-gi-local"
+     : > "$T/aios-gi-base"
+     git -C "$CLONE" cat-file -e "{stored_hash}:.gitignore" 2>/dev/null \
+       && git -C "$CLONE" show "{stored_hash}:.gitignore" 2>/dev/null | tr -d '\r' | sort -u > "$T/aios-gi-base"
+     if [ -s "$T/aios-gi-base" ]; then
+       # Baseline known → carry only what the operator ADDED since it.
+       ops=$(comm -13 "$T/aios-gi-base" "$T/aios-gi-local" | grep -vE '^[[:space:]]*(#|$)')
+       note='# (auto-migrated from your previous .gitignore on the first merge-aware update — review/reorganize)'
+     else
+       # Baseline UNREACHABLE (cross-repo hash, stored_hash=initial, or the object is gone).
+       # FAIL TOWARD NOISE: carry EVERY prior rule, never none. An over-carried .gitignore is
+       # noisy and reviewable; a DROPPED private-data ignore silently makes secrets committable.
+       # This is the branch where an empty `ops` used to be indistinguishable from "the operator
+       # had no personal rules" — the same measurement/failure conflation the hash compares fix.
+       ops=$(grep -vE '^[[:space:]]*(#|$)' "$HOME/aios/.gitignore")
+       note='# (baseline unreachable — carried ALL prior rules verbatim; de-duplicate by hand)'
+     fi
+     { cat "$CLONE/.gitignore"
+       [ -n "$ops" ] && printf '\n%s\n%s\n' "$note" "$ops"
+     } > "$HOME/aios/.gitignore.new" && mv "$HOME/aios/.gitignore.new" "$HOME/aios/.gitignore"
+     rm -f "$T/aios-gi-base" "$T/aios-gi-local"
+     # Report: old .gitignore backed up to vault/04 - backups/…, and say WHICH carry path ran.
    fi
    ```
    For `marketplace.json`: apply the JSON union (its Tier-1 entry). These two never take the plain overwrite below.
@@ -352,7 +401,7 @@ The tracker-diff (`stored..HEAD`, Step 2) is an optimization that assumes the st
 # with a COLON after the dir, so a `custom/` (slash) exclusion does NOT match
 # "…/custom: name". Anchoring the drop on "^Only in $HOME/aios" sidesteps the
 # whole slash-vs-colon problem — it filters by SIDE, not by token.
-VAULT="$HOME/aios"; CLONE="/tmp/aios-update-check"
+VAULT="$HOME/aios"; CLONE="${TMPDIR:-/tmp}/aios-update-check"
 {
   # Root docs — GENERIC: every *.md at the canonical root (+ the non-md root infra files), so a
   # newly-added root doc can NEVER be silently missed by a stale hardcoded list. (This is the fix
@@ -400,7 +449,7 @@ VAULT="$HOME/aios"; CLONE="/tmp/aios-update-check"
 # detected here. See the iteration note at the top of Step 3.
 ```
 
-For each genuine framework drift surfaced (a Tier-1 file that **differs**, or a bundled file/dir present in the clone but **missing** from the vault — i.e. a `Files … differ` line or a clone-side `Only in /tmp/aios-update-check/…` line):
+For each genuine framework drift surfaced (a Tier-1 file that **differs**, or a bundled file/dir present in the clone but **missing** from the vault — i.e. a `Files … differ` line or a clone-side `Only in ${TMPDIR:-/tmp}/aios-update-check/…` line):
 - Apply it exactly like a Step-3 Tier-1 file (three-way backup decision, then overwrite/add; CRLF-normalize the compare).
 - Sync any recovered command file to the plugin pipeline (marketplace + cache).
 - **Report it loudly** — this drift means the tracker was lying; name the files recovered so the operator knows a gap self-healed.
@@ -415,7 +464,7 @@ CRLF-normalize when comparing file *contents* (`tr -d '\r'`) per the § Backup-o
 ```bash
 cd ~/aios && ~/aios/hooks/aios-commit -m "sync: framework → {short-HEAD} (via /aios:update)" -- {the Tier-1 paths applied this run} .aios-update
 ```
-If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update`. **Framework-sync commits stay DISTINCT from operator session-work commits** (clean attribution), and `aios-commit --vault` at session-end / `/close-day` stays scoped to vault *content* — never framework infra, which is THIS command's domain. Finally `rm -rf /tmp/aios-update-check`.
+If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update`. **Framework-sync commits stay DISTINCT from operator session-work commits** (clean attribution), and `aios-commit --vault` at session-end / `/close-day` stays scoped to vault *content* — never framework infra, which is THIS command's domain. Finally `rm -rf ${TMPDIR:-/tmp}/aios-update-check`.
 
 > **The tracker is written ONLY by this command, as its final step, after a clean fully-applied run. NEVER hand-edit `.aios-update`** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65).
 
@@ -459,15 +508,16 @@ If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update
 ## Rules
 
 - **Auto-apply, never ask.** Tier 1 changes are mandatory infra — the command does not present diff approval flows. The operator sees a report of what was done, not a multiple-choice menu.
+- **The update always lands — no compare outcome aborts the run.** Every content comparison in this command has THREE outcomes (identical · different · **could not be determined**), and the third one never stops the sync. It degrades to the conservative-but-applying branch — back up then apply, or carry-all then merge — and is **reported as inconclusive** rather than silently mislabeled as a personalization. The reasoning is asymmetric: a sync that stops leaves the vault half-applied and the operator without the fix; a sync that applies with a loud label is recoverable by reading the report. Corollary, and the reason this rule exists: **never read a failed measurement as a substantive result.** `diff` returns 0/1/**2**, and collapsing that to a boolean turned "the comparison did not run" into "the file differs" — which is how this command once reported a phantom self-update and a phantom personalization in the same run.
 - **Backup-on-divergence is the safety net.** Operator customizations to Tier 1 files are preserved in `vault/04 - backups/aios-update-{date}/` but are NOT auto-restored. If they want their edits back, they manually merge from the backup.
 - **Scripts must run.** A script update that doesn't get executed is half a sync. The wrapper installer is the canonical example — bringing the file without running it leaves the operator's shell on the old code path.
 - **Completeness reconcile is the source of truth, not the tracker.** Step 6.5 always runs (even on the "current" path) — it compares the vault against canonical HEAD directly, so a desynced tracker self-heals instead of orphaning content. The tracker advances only on a clean, fully-applied run; it is NEVER hand-edited.
 - **This command owns the framework-sync commit (atomic apply→advance→commit).** After a clean apply it commits exactly the Tier-1 files it applied + the tracker, via `aios-commit` (scoped). So the vault is always committed + pushable after an update — never applied-but-uncommitted — and a session-end / `/close-day` `aios-commit --vault` stays scoped to vault *content*, never framework infra. Framework-sync and session-work commits are separate concerns with separate owners.
 - **Duplicate cleanup is opt-in (`--cleanup`) + report-first.** Post-migration scaffolding, off the default path. The bundled folder structure (`agents/aios/{bundle}/`, `skills/superpowers/`, etc.) is canonical; `custom/` is for genuinely operator-unique extensions only.
 - **Tier 2 (operator content) is sacred.** Never touched. Includes everything under the denylist.
-- **Self-update is auto-re-invoking + bootstrap-safe.** When `update.md` itself is in the diff, apply + sync to plugin pipeline FIRST, then auto-re-invoke `Skill(aios:update)`. The inner run loads the new spec, processes everything cleanly, returns. Content-comparison guards against recursion (after self-apply, local matches upstream → Case A fires → no loop). Operator sees one report from the outer run; no manual re-invocation needed. See Step 2.5.
+- **Self-update is auto-re-invoking + bootstrap-safe.** When `update.md` itself is in the diff, apply + sync to plugin pipeline FIRST, then auto-re-invoke `Skill(aios:update)` with `AIOS_UPDATE_REINVOKED=1`. The inner run loads the new spec, processes everything cleanly, returns. **Recursion is bounded structurally by that env flag, not by the compare succeeding** — the content-compare still short-circuits the normal path (after self-apply local matches upstream → Case A → no re-invoke), but an *indeterminate* compare would otherwise keep answering "not identical" forever. The flag makes at-most-once independent of the measurement. Operator sees one report from the outer run; no manual re-invocation needed. See Step 2.5.
 - **Cross-repo cascades.** When CHANGELOG hashes don't exist in the cloned repo (common for operators syncing from a fork or downstream mirror), fall back to content-comparison via date header + title (see Step 1.5).
-- **Clean up temp clone.** Always `rm -rf /tmp/aios-update-check` at end, even on error.
+- **Clean up temp clone.** Always `rm -rf ${TMPDIR:-/tmp}/aios-update-check` at end, even on error.
 - Use `[[wiki-links]]` for project names, context files, ventures mentioned in the report.
 
 ## Relationship to /company
