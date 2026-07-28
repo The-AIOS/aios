@@ -22,6 +22,13 @@
 # USAGE
 #   aios-commit -m "message" [--no-push] [--] <path> [<path> ...]
 #   aios-commit -m "message" --vault [--no-push]
+#   aios-commit -m "message" --untrack <path> [--untrack <path>] [--] [<path> ...]
+#     --untrack records a path's REMOVAL from tracking while LEAVING THE FILE ON DISK — the
+#     "I just gitignored something that was already tracked" case. `git add` cannot express it
+#     (it stages what the working tree has, so a file that still exists gets re-added; and once
+#     the path is ignored git refuses to add it at all), which used to force a raw `git commit`
+#     past the attribution guard. Combine freely with normal paths: a typical call commits the
+#     .gitignore edit AND the untrack in one commit.
 #     --vault sweeps the changed vault paths for you (space- AND rename-safe: it enumerates
 #     `git diff --name-only HEAD` ∪ untracked under vault/ + .aios-update, minus machine-local
 #     noise) — so callers never hand-roll a `git status | awk` sweep that truncates paths with
@@ -32,13 +39,20 @@ set -uo pipefail
 
 die(){ echo "aios-commit: $*" >&2; exit 1; }
 
-MSG=""; NO_PUSH=0; VAULT_MODE=0; PATHS=()
+MSG=""; NO_PUSH=0; VAULT_MODE=0; PATHS=(); UNTRACK=()
 while [ $# -gt 0 ]; do
   case "$1" in
     -m)   MSG="${2:-}"; shift 2 ;;
     -m*)  MSG="${1#-m}"; shift ;;
     --no-push) NO_PUSH=1; shift ;;
     --vault) VAULT_MODE=1; shift ;;
+    # --untrack: record a path's REMOVAL from tracking while leaving the file on disk.
+    # `git add` cannot express this — it stages what the WORKING TREE has, so a file that
+    # still exists gets re-added, and once the path is gitignored git refuses to add it at
+    # all ("use -f if you really want to"). That made "gitignore something already tracked"
+    # impossible through the one sanctioned commit path, forcing a raw `git commit`.
+    # Repeatable. Operates on the throwaway index only — the working tree is never touched.
+    --untrack) [ -n "${2:-}" ] || die "--untrack needs a path"; UNTRACK+=("$2"); shift 2 ;;
     --)   shift; while [ $# -gt 0 ]; do PATHS+=("$1"); shift; done ;;
     *)    PATHS+=("$1"); shift ;;
   esac
@@ -46,7 +60,7 @@ done
 [ -n "$MSG" ] || die "need -m <message>"
 # --vault populates PATHS from the scoped sweep (below, under the lock). Otherwise ≥1 explicit
 # path is required — aios-commit NEVER stages -A (that is the bug it prevents).
-[ "$VAULT_MODE" = 1 ] || [ ${#PATHS[@]} -gt 0 ] || die "need at least one path (or --vault) — aios-commit never stages -A"
+[ "$VAULT_MODE" = 1 ] || [ ${#PATHS[@]} -gt 0 ] || [ ${#UNTRACK[@]} -gt 0 ] || die "need at least one path (or --vault / --untrack) — aios-commit never stages -A"
 
 git rev-parse --git-dir >/dev/null 2>&1 || die "not inside a git repo"
 GIT_DIR=$(git rev-parse --absolute-git-dir)
@@ -109,8 +123,10 @@ if [ "$VAULT_MODE" = 1 ]; then
 fi
 
 # ── secret self-scan (plumbing bypasses the pre-commit hook, so scan here) ──
+# Scan only PATHS — never UNTRACK. An untracked path's content is leaving the repo, not
+# entering it, and it may be gitignored or unreadable; scanning it could block a removal.
 SCAN="$(cd "$(dirname "$0")" && pwd)/git/secret-scan.sh"
-if [ -x "$SCAN" ]; then
+if [ -x "$SCAN" ] && [ ${#PATHS[@]} -gt 0 ]; then
   "$SCAN" "${PATHS[@]}" || die "secret scan blocked the commit (see the finding above)"
 fi
 
@@ -125,7 +141,17 @@ else
 fi
 
 # stage ONLY the given paths into the temp index (adds · modifications · deletions)
-GIT_INDEX_FILE="$TMPIDX" git add --all -- "${PATHS[@]}" || die "failed to stage the given paths"
+if [ ${#PATHS[@]} -gt 0 ]; then
+  GIT_INDEX_FILE="$TMPIDX" git add --all -- "${PATHS[@]}" || die "failed to stage the given paths"
+fi
+
+# --untrack paths: drop them from the temp index so the commit records a REMOVAL, while the
+# file stays on disk. --cached is what keeps the working tree untouched; --ignore-unmatch makes
+# it idempotent (re-running on an already-untracked path is a no-op, caught by the guard below).
+if [ ${#UNTRACK[@]} -gt 0 ]; then
+  GIT_INDEX_FILE="$TMPIDX" git rm --cached -rf --quiet --ignore-unmatch -- "${UNTRACK[@]}" \
+    || die "failed to untrack the given paths"
+fi
 
 # no-op guard: paths given but nothing actually changed vs HEAD.
 # --cached is LOAD-BEARING: without it, diff-index compares HEAD against the WORKING TREE
@@ -146,7 +172,28 @@ git update-ref HEAD "$COMMIT" || die "update-ref failed"
 
 # sync the REAL index for the committed paths only → `git status` shows them clean;
 # every other actor's in-flight file is left exactly as it was.
-git add --all -- "${PATHS[@]}" 2>/dev/null || true
+#
+# The emptiness guard is LOAD-BEARING, not defensive: `git add --all --` with NO pathspec
+# stages the ENTIRE tree (measured: 2/2 files in a scratch repo). On an --untrack-only
+# invocation PATHS is empty, so an unguarded line here would be a literal `git add -A` on
+# the shared index — the precise failure this whole tool exists to prevent, reintroduced by
+# the flag that was meant to close a gap.
+if [ ${#PATHS[@]} -gt 0 ]; then
+  git add --all -- "${PATHS[@]}" 2>/dev/null || true
+fi
+
+# ...and the --untrack counterpart. Without this the real index still lists the file while
+# HEAD says it is gone, so `git status` reads "AM" and the NEXT commit by any actor silently
+# re-adds it — the untrack would not stick. Scoped to the named paths, --cached so the file
+# stays on disk, inside the lock so it cannot race a sibling commit.
+#
+# -f is REQUIRED, not laziness: `git rm --cached` refuses a path whose staged content differs
+# from BOTH the file and HEAD ("use -f to force removal") — the normal case here, since the file
+# is typically modified-then-ignored while HEAD no longer carries it. Nothing is lost: --cached
+# never touches the working tree, and keeping the file on disk is the entire point.
+if [ ${#UNTRACK[@]} -gt 0 ]; then
+  git rm --cached -rf --quiet --ignore-unmatch -- "${UNTRACK[@]}" 2>/dev/null || true
+fi
 
 echo "aios-commit: ${COMMIT:0:9} — $(printf '%s' "$MSG" | head -1)"
 

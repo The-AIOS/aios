@@ -63,10 +63,26 @@ mcps/google-workspace-mcp/oauth.json
 vault/.obsidian/workspace.json
 vault/.obsidian/workspace-mobile.json
 
+# AIOS Glass per-machine UI state — same species as workspace.json above, for the editor
+# extension instead of Obsidian. Glass writes this at runtime; the framework ships none of it.
+# shell.json holds font sizes, theme, locale, card visibility and workspaceFolders as ABSOLUTE
+# paths; state.json holds folder sort orders, frequent-task counters and scratch session notes.
+# None of it is portable to another machine, and tracking it churns on every font-size nudge —
+# one such change is enough to show a dirty tree forever and train you to ignore git status.
+.glass/
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Your own ignores go BELOW the marker line — `/aios:update` MERGES everything after
 # it (it never overwrites your personal rules). Put private-data / machine-local
 # patterns here (e.g. private financial reports, company-asset mirrors). For ignores
 # that must never reach ANY clone (a secret, an OAuth cache), prefer .git/info/exclude
 # (local-only — updates never touch it).
+#
+# ⚠️ AND THE CONVERSE, which is the easier mistake: anything you add ABOVE this marker
+# is framework-owned territory and WILL BE REPLACED on the next `/aios:update` — the
+# merge takes upstream's file wholesale above the marker and only re-appends your lines
+# from below it. It happens silently, and the rule you lose is by definition one you
+# thought was protecting something. If a pattern matters to you, it goes BELOW. If you
+# believe a pattern belongs to the framework, contribute it upstream instead of pinning
+# it locally, or the next sync quietly reverts you.
 # ═══ AIOS-OPERATOR-IGNORES (keep this line; /aios:update preserves everything below it) ═══

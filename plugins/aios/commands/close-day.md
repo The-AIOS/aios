@@ -31,6 +31,7 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
 1. **Run executor + read vault** — fire these in **one parallel batch**:
    - `Bash(uv run ~/aios/hooks/pipeline-executor.py --command close-day)` — pre-loads Calendar (detailed, with attachments), Calendar next 7 days, Tasks, Slack
    - `Bash(cfg=~/aios/.aios-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && { hr=$(echo "$repo" | sed -E 's#git@github\.com:#https://github.com/#'); r=$(git ls-remote "$hr" HEAD 2>/dev/null | awk '{print $1}'); }; [ -z "$r" ] && echo "aios-update: unreachable" || { [ "$h" = "$r" ] && echo "aios-update: synced" || echo "aios-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "aios-update: no-config"; fi)` — **infrastructure freshness check** (mirror of `/today`'s morning check; SSH `ls-remote` falls back to public HTTPS so a fresh HTTPS clone with no SSH keys still resolves). Render per § Aios-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before sarah's overnight queue (or first thing tomorrow)".
+   - `Bash(python3 ~/aios/hooks/bus-dead-letters.py)` — **bus dead-letter check** (same script `/today` runs — one implementation, so the two surfaces can't drift; requires `python3`). Retirement to `.undelivered` stops a request *blocking another surface*; it does not deliver it, and nothing reads that directory. At close-day this matters more than in the morning: an undelivered handoff means a worker was never told to start, so whatever it was meant to produce **will not exist overnight** — and the sender still believes it landed. Render per § Bus dead-letter rendering below.
    - `Read` → `USER.md` (for dev project paths, growth routines, session cascade, organization, and `### /close-day` command personalizations)
    - `Read` → `INTENT.md` (if it exists — for focus alignment check, parked item handling in carries)
    - Read the daily note to close: list files in `01 - calendar/{YYYY-MM}/`, pick the **most recent `YYYY-MM-DD.md`** (exclude weekly plans like `W{N}-plan.md`). If it's after midnight and no note exists for today, the most recent note is yesterday's — close that one. If it already has a `## Close of Day` section, update it (merge new info, don't duplicate). **Always tell the user which date you're closing:** "Closing {date}."
@@ -59,6 +60,17 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
 12. **Truth-surface reconcile (ship-time truth-flip — see CLAUDE.md § Discipline).** For each ship in today's note (the `### Shipped` candidates + `[x]` items), verify its truth surface already flipped: keyed items (grep the key's definition — a live `type: roadmap` file) show ✅ + their declared `ledger:` row appended; unkeyed items show done at their project note. Any miss → flip it now and record the miss in the Observed line (a repeated miss pattern is antifragile material). Close-day is the backstop, never the primary writer.
 13. **Update weekly plan progress** (see Weekly Plan Progress Update below)
 14. **Sync Google Tasks** — use pre-loaded Tasks data (see Google Tasks Sync below)
+
+## Bus dead-letter rendering
+
+Apply the result from step 1's dead-letter check:
+
+- **`bus-dead-letters: none`** → silent.
+- **One or more items** → surface in the `## Close of Day` block, above the verdict line, one line each: `> 📮 **Undelivered handoff** — a request to `{name}` ({action}) was retired undelivered: *{reason}* ({at}). That work **did not happen, and nobody was told.**` Then ask whether to re-drop it or discard — never auto-re-drop, and never carry it silently into tomorrow's plan as though it were in flight.
+
+**Then REMOVE the file in the same turn** (`rm` it, or move it under `logs/` if it's worth keeping as evidence; a re-drop means writing a fresh `<name>.json` first, since fulfillers only read `.json`). Nothing consumes a `.undelivered` file, so a handled one re-surfaces every single run until someone deletes it — and a check that always fires is a check the operator stops reading. See `/today` § Bus dead-letter rendering for the full mechanics.
+
+**Why close-day specifically:** overnight work is generated from the state you leave behind. A handoff that was retired instead of delivered means the worker was never told to begin, so its output won't exist by morning — while every surface that *sent* it reads as though it succeeded. Catching it now is the difference between a lost evening and a lost night.
 
 ## Aios-update freshness rendering
 

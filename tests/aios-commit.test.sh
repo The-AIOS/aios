@@ -107,6 +107,35 @@ R=$(newrepo); ( cd "$R"; printf 'top\n' > note.md; git add -A; git commit -qm in
   && ok "note-append commits on the default push path (empty NOPUSH[@])" || no "note-append aborted — NOPUSH[@] unbound; block written to disk but never committed"
 rm -rf "$R"
 
+echo "── aios-commit --untrack: gitignore-an-already-tracked-path (the case git add cannot express) ──"
+R=$(newrepo); ( cd "$R"; mkdir .glass; echo '{"f":14}' > .glass/shell.json; echo k > keep.txt
+  git add -A; git commit -qm init
+  # the real-world shape: file MODIFIED, then path IGNORED, with a sibling actor's staged work present
+  echo '.glass/' > .gitignore; echo '{"f":15}' > .glass/shell.json
+  echo sib > sibling.txt; git add sibling.txt
+  # --no-push BEFORE `--`: everything after `--` is a pathspec (git convention), so a flag
+  # placed there would be treated as a file and the staging step would fail.
+  "$AC" -m "untrack" --no-push --untrack .glass -- .gitignore >/dev/null 2>&1
+  # removal recorded · untrack STICKS in the real index · file survives on disk · sibling untouched
+  [ "$(git ls-tree -r --name-only HEAD | grep -c '^\.glass/')" = 0 ] \
+    && [ "$(git ls-files .glass/ | wc -l | tr -d ' ')" = 0 ] \
+    && [ -f .glass/shell.json ] \
+    && [ "$(git show --name-only --format= HEAD | grep -c sibling)" = 0 ] \
+    && git ls-files --cached sibling.txt | grep -q . ) \
+  && ok "--untrack: removal committed, sticks in the index, file kept on disk, sibling's staging preserved" \
+  || no "--untrack broken (re-added by git add, or index not synced so the untrack won't stick, or sibling swept)"
+rm -rf "$R"
+
+echo "── aios-commit --untrack ONLY (no paths): must NOT degenerate into git add -A ──"
+R=$(newrepo); ( cd "$R"; echo t > tracked.txt; git add tracked.txt; git commit -qm init
+  echo s1 > stray1.txt; echo s2 > stray2.txt            # must never be swept
+  "$AC" -m "untrack only" --untrack tracked.txt --no-push >/dev/null 2>&1
+  [ "$(git show --name-only --format= HEAD | grep -c stray)" = 0 ] \
+    && [ "$(git show --name-status --format= HEAD | tr -d ' \t\n')" = "Dtracked.txt" ] ) \
+  && ok "--untrack-only commits just the removal; untracked strays not swept (empty-pathspec guard holds)" \
+  || no "--untrack-only swept the tree — `git add --all --` with no pathspec stages EVERYTHING"
+rm -rf "$R"
+
 echo ""
 echo "── RESULT: $PASS passed, $FAIL failed  (bash $BASH_VERSION) ──"
 [ "$FAIL" = "0" ] || exit 1
