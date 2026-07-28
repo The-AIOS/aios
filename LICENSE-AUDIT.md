@@ -56,7 +56,8 @@ Vendored open-source work ships under **its own** upstream license, preserved in
 
 | Subtree | Origin | License |
 |---|---|---|
-| Google Workspace, Slack, Atlassian, GitHub, NotebookLM (`mcps/*-mcp/`) | Vendored upstream | **MIT** (each has an in-folder `LICENSE` + `.upstream-sync`) |
+| Slack, Atlassian, GitHub, NotebookLM (`mcps/*-mcp/`) | Vendored upstream | **MIT** (each has an in-folder `LICENSE` + `.upstream-sync`) |
+| Google Workspace (`mcps/google-workspace-mcp/`) | **Upstream, NOT vendored** — installed from PyPI at runtime (`uvx workspace-mcp`); the folder holds only AIOS-authored config + docs | Upstream is **MIT**, but we redistribute **none** of it, so no in-folder upstream `LICENSE`/`.upstream-sync` applies. Our files in that folder: **GPL-2.0-or-later** |
 | Nano Banana, PDF Generator, Spotify DJ, Playwright (`mcps/*-mcp/`) | AIOS-built | **GPL-2.0-or-later** |
 | `mcps/custom/` | Operator | Operator's choice |
 

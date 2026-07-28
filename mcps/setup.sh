@@ -67,12 +67,17 @@ if [ -z "$PY" ]; then
   echo ""
 fi
 
-# --- Google Workspace MCP (Python) ---
-if want google-workspace-mcp && [ -d "$SCRIPT_DIR/google-workspace-mcp" ] && [ ! -d "$SCRIPT_DIR/google-workspace-mcp/.venv" ]; then
-  echo "→ google-workspace-mcp..."
-  (cd "$SCRIPT_DIR/google-workspace-mcp" && $PY -m venv .venv && "$(vbin)/pip" install -e . -q) \
-    && echo "  ✓ installed" \
-    || echo "  ✗ failed — check google-workspace-mcp/README.md"
+# --- Google Workspace MCP: NOTHING TO INSTALL (runtime is `uvx workspace-mcp`, from PyPI) ---
+# This used to `python -m venv .venv && pip install -e .` against a vendored copy of the
+# upstream server. It built ~196MB per operator for code that the registration never ran:
+# SETUP.md registered the vendored tree, setup.sh's own summary advertised uvx, and
+# mcps/_index.md called it "vendored" — three surfaces, three different answers about what
+# the runtime was. The vendored copy had meanwhile frozen at 1.15.0 (upstream: 1.22.2) and
+# imported a `gappsscript` module that was never vendored, so enabling that service would
+# have crashed. uvx resolves the published package on demand — no venv, no staleness, no
+# second copy to drift. Do not reintroduce a build step here.
+if want google-workspace-mcp; then
+  echo "→ google-workspace-mcp: no build needed (installed on demand via 'uvx workspace-mcp')"
 fi
 
 # --- Slack MCP (Node/NPM — invoked via npx at runtime, no install needed) ---

@@ -243,7 +243,17 @@ claude mcp add obsidian -- npx -y @mauricio.wolff/mcp-obsidian@latest ~/aios/vau
 
 ### 2. Google Workspace MCP (optional but recommended)
 
-Enables Google Calendar, Tasks, Drive, Docs, Sheets, and Slides access. The OAuth app credentials are **bundled in the repo** at `mcps/google-workspace-mcp/oauth.json`.
+Enables Google Calendar, Tasks, Drive, Docs, Sheets, Slides, Gmail, Contacts and Forms.
+
+**First, create your own OAuth client.** OAuth credentials are per-person secrets, so the repo cannot ship them — it ships a template and gitignores the filled-in file. Follow [`mcps/google-workspace-mcp/personal-account-setup.md`](./mcps/google-workspace-mcp/personal-account-setup.md) (steps 0–4) to create a **Desktop app** OAuth client in Google Cloud Console, then:
+
+```bash
+cd ~/aios
+cp mcps/google-workspace-mcp/oauth.json.template mcps/google-workspace-mcp/oauth.json
+# edit oauth.json — paste your client_id + client_secret (the file is gitignored)
+```
+
+**Then register the server.** The server itself is installed on demand from PyPI by `uvx` — nothing to build, and you stay current with upstream (which ships frequently):
 
 ```bash
 cd ~/aios
@@ -256,11 +266,16 @@ claude mcp add google-workspace \
   -e MCP_SINGLE_USER_MODE=true \
   -e USER_GOOGLE_EMAIL="you@company.io" \
   -e WORKSPACE_MCP_CREDENTIALS_DIR="$HOME/.google_workspace_mcp/credentials" \
-  -- uv run --directory ~/aios/mcps/google-workspace-mcp python -m main --single-user --permissions \
-  drive:full sheets:full slides:full docs:full calendar:full tasks:full
+  -- uvx workspace-mcp --single-user --permissions \
+  drive:full sheets:full slides:full docs:full calendar:full tasks:full \
+  gmail:full contacts:full forms:full
 ```
 
 On first use, Claude opens a browser for Google OAuth consent.
+
+> **Register it once, from your vault.** `claude mcp add` defaults to **local** scope, which is *per-directory* — the registration only applies to sessions started in that directory. Run it from `~/aios` and that covers vault sessions, which is where this MCP is used. Adding it again from another directory creates a **second, independent copy that silently drifts** (two registrations diverged exactly this way — one grew Gmail, the other didn't, and neither surface said so). If you genuinely want it everywhere, use one `--scope user` registration instead of several local ones.
+>
+> **Google Chat is supported but off by default.** The upstream server ships Chat tools (list spaces, read/search/send messages, reactions, attachments); this permission list omits them. To enable, add `chat:full` (or `chat:readonly`) — it requests **new OAuth scopes, so it triggers a fresh consent prompt**. Note that Google restricts *sending* to some space types when using user credentials rather than an app, so verify sending against your own spaces before relying on it.
 
 ### 3. GitHub CLI
 

@@ -8,7 +8,7 @@ This is the **canonical list** referenced by `CLAUDE.md` → MCP Policy. When yo
 
 | MCP | Folder | What it does | Auth |
 |-----|--------|-------------|------|
-| Google Workspace | `google-workspace-mcp/` | Calendar, Tasks, Drive, Docs, Sheets, Slides, Gmail, Contacts, Forms | OAuth |
+| Google Workspace | `google-workspace-mcp/` (config + docs only — server runs from PyPI via `uvx`) | Calendar, Tasks, Drive, Docs, Sheets, Slides, Gmail, Contacts, Forms — **Chat supported upstream but off by default** (add `chat:full`; needs re-consent) | OAuth |
 | Slack | `slack-mcp/` | Send/read messages AS YOU, search channels, DMs, threads, unreads | Chrome token extraction (default) or bot token (advanced) |
 | Atlassian | `atlassian-mcp/` | Jira issues + Confluence pages | API token (scoped recommended for least-privilege, classic also works) |
 | GitHub | `github-mcp/` | Repos, issues, PRs, files, branches, workflows | PAT |
@@ -27,7 +27,7 @@ MCPs come from two places: **vendored** from an upstream open-source repo (we tr
 
 | MCP | Origin | Upstream | License |
 |---|---|---|---|
-| Google Workspace | vendored | [taylorwilsdon/google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp) | MIT |
+| Google Workspace | **PyPI at runtime** (`uvx workspace-mcp`) — not vendored, no code redistributed | [taylorwilsdon/google_workspace_mcp](https://github.com/taylorwilsdon/google_workspace_mcp) | MIT (upstream's own; we ship none of it) |
 | Slack | vendored | [jtalk22/slack-mcp-server](https://github.com/jtalk22/slack-mcp-server) | MIT |
 | Atlassian | vendored | [sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian) | MIT |
 | GitHub | vendored (Anthropic) | [modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers) → `src/github` | MIT |

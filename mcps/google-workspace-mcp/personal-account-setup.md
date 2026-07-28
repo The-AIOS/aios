@@ -1,8 +1,8 @@
 # Google Workspace MCP — Personal-Account Setup
 
-> **Purpose.** Wire the bundled `google-workspace-mcp` to a **personal Google account** (e.g. an agent's own gmail like `your-agent@gmail.com`), so the agent can read/act on Drive, Docs, Sheets, Slides, Calendar, Tasks, and Gmail for that account — including folders **shared with** it.
+> **Purpose.** Wire the `google-workspace-mcp` to a **personal Google account** (e.g. an agent's own gmail like `your-agent@gmail.com`), so the agent can read/act on Drive, Docs, Sheets, Slides, Calendar, Tasks, and Gmail for that account — including folders **shared with** it.
 >
-> Written from a real setup (2026-07-22) on a fortress agent machine. Uses the **bundled** MCP per the AIOS MCP policy — not the claude.ai-hosted Google connector (which is bound to the active claude.ai OAuth grant and breaks on account switch).
+> Written from a real setup (2026-07-22) on a fortress agent machine. Uses the **local** MCP (its own OAuth client, `uvx`-launched) per the AIOS MCP policy — not the claude.ai-hosted Google connector, which is bound to the active claude.ai OAuth grant and breaks on account switch.
 
 ## The two traps (read first — they cost the most time)
 
@@ -32,10 +32,7 @@
 
 ## Part B — Wire it (the agent runs)
 
-Let `MCP=~/aios/mcps/google-workspace-mcp` and install the vendored server once:
-```bash
-cd "$MCP" && python3 -m venv .venv && .venv/bin/pip install -e . -q
-```
+**Nothing to install** — the server is fetched from PyPI on demand by `uvx` (see [`UPSTREAM.md`](./UPSTREAM.md)). Skip straight to the credentials.
 
 Stash the downloaded client securely (out of Downloads, machine-local, never in the vault):
 ```bash
@@ -50,7 +47,7 @@ claude mcp add google-workspace --scope user \
   --env GOOGLE_CLIENT_SECRET_PATH="$HOME/.google_workspace_mcp/client_secret.json" \
   --env OAUTHLIB_INSECURE_TRANSPORT=1 \
   --env OAUTHLIB_RELAX_TOKEN_SCOPE=1 \
-  -- "$MCP/.venv/bin/workspace-mcp" --single-user --tool-tier core
+  -- uvx workspace-mcp --single-user --tool-tier core
 ```
 - **`--single-user`** = bypass multi-user session mapping; use the one token in the credentials dir. Right for an agent that IS one account.
 - **`GOOGLE_CLIENT_SECRET_PATH`** > inline `GOOGLE_OAUTH_CLIENT_ID/SECRET` — keeps the secret in a `600` file, not the process args.
