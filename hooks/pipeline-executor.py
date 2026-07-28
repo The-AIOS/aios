@@ -36,12 +36,29 @@ from threading import Lock
 from zoneinfo import ZoneInfo
 
 # --- Config ---
-VAULT_PATH = Path.home() / "obsidian" / "vault"
-SOURCES_PATH = Path.home() / "obsidian" / "USER.md"
+# SELF-LOCATE the framework root. This file lives at {root}/hooks/pipeline-executor.py,
+# so the root is two parents up — true wherever the operator cloned, with or without a
+# symlink. `.resolve()` follows links, so it lands on the REAL directory rather than the
+# alias — correct either way, because the real directory is where the files actually are.
+#
+# WHY NOT A LITERAL PATH. These three were hardcoded to `Path.home()/"obsidian"` — a
+# leftover from the layout of the machine this framework was extracted from. It never
+# generalized, so on any vault NOT at ~/obsidian the effect was silent and doubly so:
+# USER.md did not resolve, the executor logged "not found — using defaults" and ran with
+# defaults (every configured calendar, account and channel ignored), and that warning was
+# written to LOG_PATH — in the same nonexistent directory — inside a `try/except: pass`.
+# The diagnostic failed by the same cause as the fault, so `/today` looked like it worked.
+# Swapping in `~/aios` would only move the hardcode: the docs prescribed a symlink as the
+# "portability fix" precisely because this path was never parameterised. Self-location
+# removes the convention instead of restating it. Reported by an operator 2026-07-28.
+AIOS_ROOT = Path(__file__).resolve().parent.parent
+SOURCES_PATH = AIOS_ROOT / "USER.md"
+# These stay home-relative on purpose — they are NOT framework-root paths. The MCP servers
+# own these locations, so they do not move when the vault does.
 GOOGLE_CREDS_DIR_PRIMARY = Path.home() / ".google_workspace_mcp" / "credentials"
 GOOGLE_CREDS_DIR_PERSONAL = Path.home() / ".google_workspace_mcp" / "credentials-personal"
 SLACK_TOKENS_PATH = Path.home() / ".slack-mcp-tokens.json"
-LOG_PATH = Path.home() / "obsidian" / "hooks" / "pipeline-executor.log"
+LOG_PATH = AIOS_ROOT / "hooks" / "pipeline-executor.log"
 MAX_LOG_LINES = 500
 
 PIPELINE_COMMANDS = {"today", "close-day"}
@@ -51,8 +68,19 @@ MAX_MSG_TEXT_LENGTH = 300  # truncate Slack message text in recap output
 _creds_lock = Lock()
 
 
+_log_broken = False  # so an unwritable log warns once, not once per call
+
+
 def log(msg):
-    """Append to log file with rotation."""
+    """Append to log file with rotation.
+
+    Never fatal — a broken log must not take down the pipeline. But it announces itself
+    once on stderr instead of vanishing: this function used to swallow every failure, so
+    when the log path did not exist the messages explaining WHY the run was degraded were
+    written into the same missing directory they were reporting on. A diagnostic channel
+    that can fail by the same cause as the fault is not a diagnostic channel.
+    """
+    global _log_broken
     try:
         with open(LOG_PATH, "a") as f:
             f.write(f"{datetime.now().isoformat()} | {msg}\n")
@@ -60,8 +88,10 @@ def log(msg):
         if LOG_PATH.stat().st_size > 100_000:  # ~100KB
             lines = LOG_PATH.read_text().splitlines()
             LOG_PATH.write_text("\n".join(lines[-MAX_LOG_LINES:]) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        if not _log_broken:
+            _log_broken = True
+            print(f"⚠️  pipeline log unwritable at {LOG_PATH} ({e}) — continuing", file=sys.stderr)
 
 
 def parse_sources():
@@ -77,7 +107,12 @@ def parse_sources():
         "slack_recap_enabled": False,
     }
     if not SOURCES_PATH.exists():
-        log(f"USER.md not found at {SOURCES_PATH} — using defaults")
+        # Loud on stderr, not only in the log. Running on defaults means every calendar,
+        # account, timezone and Slack channel the operator configured is being ignored —
+        # the run still "succeeds", which is precisely why this must not be quiet.
+        msg = f"USER.md not found at {SOURCES_PATH} — running on defaults (configured sources ignored)"
+        print(f"⚠️  {msg}", file=sys.stderr)
+        log(msg)
         return config
 
     content = SOURCES_PATH.read_text()
