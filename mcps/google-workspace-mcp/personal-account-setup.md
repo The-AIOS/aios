@@ -18,8 +18,12 @@
 
 **1. New project** — project dropdown → New Project → name it (e.g. `my-agent-workspace-mcp`) → **Location: No organization** → Create → select it.
 
-**2. Enable APIs** — APIs & Services → **Library** → enable each (search → Enable). The 7 this MCP uses:
-> **Drive · Docs · Sheets · Slides · Calendar · Tasks · Gmail** APIs
+**2. Enable APIs** — APIs & Services → **Library** → enable each (search → Enable). **Enable one API per service you put in `--permissions`** — the two lists must match, or the server starts fine and the tools 403 at call time:
+> **Drive · Docs · Sheets · Slides · Calendar · Tasks · Gmail** — the core seven
+> **People API** ← required for `contacts:full` · **Forms API** ← required for `forms:full` · **Google Chat API** ← required for `chat:full`
+
+*A mismatch here fails late and confusingly.* The scope is granted, OAuth consent succeeds, the tool is exposed — and then the call returns `403 SERVICE_DISABLED: <API> has not been used in project <N> before or it is disabled`, which reads like an auth problem but isn't. If you see that, the error text carries a direct activation URL; open it, enable, wait a minute, retry. No re-consent needed — enabling an API is a project setting, not a scope change.
+
 *(Other AIOS tools use other Google APIs — Generative Language/Gemini for nano-banana, YouTube Data, Analytics — enable those only if you use those tools; they're not needed for this MCP.)*
 
 **3. OAuth consent screen** (new UI may call this **Google Auth Platform**):
