@@ -36,6 +36,33 @@
 
 ---
 
+## 2026-07-28 — The vault path the framework never actually parameterised
+
+`hash: 86a7a10`
+
+> **What this delivers.** `hooks/pipeline-executor.py` — the script `/today` and `/close-day` run *before* Claude sees anything — resolved your `USER.md` from a hardcoded `~/obsidian`, the layout of the machine this framework was originally extracted from. **If your vault is anywhere else, your `USER.md` was never read.** Both commands ran on built-in defaults, silently ignoring every calendar, Google account, timezone and Slack channel you configured. And the warning that would have told you was written to a log file *in the same nonexistent directory*, inside a bare `except: pass` — so the diagnostic failed by the same cause as the fault, and `/today` still printed a confident, plausible, wrong result.
+
+**What you can now do:**
+- **Trust that `/today` is reading your config.** The script now derives the framework root from **its own location** (`Path(__file__).resolve().parent.parent` — it lives at `{root}/hooks/`), so it finds `USER.md` wherever you cloned, and through a symlink. Concretely: a vault at `~/work/my-aios` now loads `~/work/my-aios/USER.md`; before, it looked for `~/obsidian/USER.md`, found nothing, and used `UTC` with no accounts.
+- **Delete the symlink workaround, if you made one.** Operators who hit this and fixed it by pointing `~/obsidian` at their real vault no longer need that link *for this reason*. (Keep it if anything else of yours depends on it — the `~/aios` convention is separate and still stands.)
+- **See a misconfiguration instead of inferring it.** A missing `USER.md` now prints `⚠️ USER.md not found at {path} — running on defaults (configured sources ignored)` on stderr, where your session actually reads it. An unwritable log says so once, then continues — never fatal, never silent.
+- **Notice what this does *not* change.** The other home-relative paths (Google MCP credentials, Slack tokens) were always correct: those belong to the MCP servers, not the vault, so they stay `~/`-anchored.
+
+**For the record — what changed:** one file, `hooks/pipeline-executor.py`. `AIOS_ROOT` replaces the hardcoded prefix for `SOURCES_PATH` and `LOG_PATH`; the dead `VAULT_PATH` constant (defined, never read) is deleted; `log()` and the missing-`USER.md` branch both surface on stderr. **Why not just swap in `~/aios`:** that relocates the hardcode instead of removing it. The symlink was only ever prescribed *because* this path was never parameterised — self-location retires the convention rather than restating it.
+
+**Known, and newly visible:** a *never-customized* `USER.md` still reads as "everything configured" to the parser, because its `*EXAMPLE ONLY*` lines match the loose substring checks (`"Google Calendar" in content`) while the actual values stay empty. That's pre-existing and it degrades gracefully — those sections are skipped, nothing crashes — but before this fix, operators outside `~/obsidian` never reached the parser at all, so you may see it for the first time. Fill in your real values under `## Sources` and it resolves. A stricter parser that ignores example lines is a separate change, deliberately not bundled here.
+
+**Action required — verify your sources actually load (1 min, idempotent).** This is a check, not a repair; the fix is already in the file `/aios:update` just gave you.
+
+1. Run `uv run ~/aios/hooks/pipeline-executor.py --command today` and read the first lines.
+2. **If you see the `⚠️ USER.md not found` warning** — your `USER.md` is not at your framework root. Move it there (it belongs beside `CLAUDE.md`), then re-run.
+3. **If you see no warning and your own calendars/accounts appear** — you are correctly configured; nothing to do. Operators whose vault *is* at `~/obsidian` will see no change at all: this was always working for them, which is exactly why it went unnoticed.
+4. **If your `USER.md` was never being read until now**, re-read your `## Sources` section once — timezone and account emails are the two that quietly change `/today`'s output the most.
+
+*Reported by an operator whose vault is not at `~/obsidian` — the failure is invisible on any machine where it happens to be.*
+
+---
+
 ## 2026-07-27 — Four checks that reported a state they never examined
 
 `hash: c29d296 · fc17ef9 · 5b408cc · 487eaeb · e459d82 · 9ba70dc`
