@@ -469,6 +469,27 @@ jobs:
           fi
           echo "OK: no programmatic assembly of the retired vault folder name"
 
+      # `~/aios` IS the documented install path, so this is not a retired-name check — shell
+      # commands and docs may reference it freely, and this step deliberately does not look at
+      # *.sh / *.md. The rule is narrower: framework CODE that can locate itself must not depend
+      # on the symlink being present. When it did, the failure was silent and self-inflicted —
+      # two MCP servers joined the home dir to a literal "aios" segment and then called
+      # mkdir(parents=True), so with no symlink they CREATED a phantom ~/aios/vault tree and
+      # wrote the operator's PDFs and images into it while reporting success. Deriving the root
+      # from __file__ cannot do that. Scoped to code files; `~/.cache/aios/...` (a genuinely
+      # home-owned cache) does not match, because the pattern requires "aios" as a whole segment.
+      - name: Framework code must self-locate, not hardcode the ~/aios install path
+        run: |
+          set -e
+          if grep -rlnE "(Path\.home\(\)|homedir|home_dir\(\)).{0,20}['\"]aios['\"]|expanduser\(['\"]~/aios" \
+            --include="*.py" --include="*.js" --include="*.ts" \
+            --exclude-dir=.git --exclude-dir=.venv --exclude-dir=node_modules --exclude-dir=site-packages \
+            --exclude-dir=vault --exclude-dir=.github .; then
+            echo "::error::Framework code is hardcoding the ~/aios install path (see files above). That depends on the operator's symlink existing, and a mkdir(parents=True) on such a path silently creates a phantom vault instead of failing. Derive the root from the file's own location — e.g. Path(__file__).resolve().parents[N] — counting parents from where the file actually lives."
+            exit 1
+          fi
+          echo "OK: framework code self-locates instead of hardcoding ~/aios"
+
   counts:
     name: Capability counts
     runs-on: ubuntu-latest

@@ -18,7 +18,14 @@ if not API_KEY:
     print("ERROR: GEMINI_API_KEY env var not set. Get one at https://aistudio.google.com/apikey", file=sys.stderr)
     sys.exit(1)
 
-DEFAULT_OUTPUT_DIR = Path.home() / "aios" / "vault" / "02 - assets" / "generated"
+# SELF-LOCATE the vault — this file lives at {root}/mcps/nano-banana-mcp/server.py, so the
+# framework root is three parents up. Correct wherever the operator cloned, and through the
+# ~/aios symlink. It used to join the home directory to a literal "aios" segment: with no
+# symlink in place the mkdir(parents=True) at the write site did not fail, it CREATED a phantom
+# ~/aios/vault tree and wrote generated images there instead of into the real vault — silently,
+# while reporting success. Self-location removes the symlink dependency.
+AIOS_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_OUTPUT_DIR = AIOS_ROOT / "vault" / "02 - assets" / "generated"
 
 mcp = FastMCP("nano-banana")
 client = genai.Client(api_key=API_KEY)
@@ -34,7 +41,7 @@ def generate_image(
 
     Args:
         prompt: Natural-language description of the desired image.
-        output_path: Where to save the PNG. Defaults to ~/aios/vault/02 - assets/generated/{timestamp}.png
+        output_path: Where to save the PNG. Defaults to your vault's 02 - assets/generated/{timestamp}.png
         aspect_ratio: One of "1:1", "16:9", "9:16", "4:3", "3:4". Default "1:1".
 
     Returns:

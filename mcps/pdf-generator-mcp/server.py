@@ -7,7 +7,18 @@ from datetime import datetime
 
 from mcp.server.fastmcp import FastMCP
 
-DEFAULT_OUTPUT_DIR = Path.home() / "aios" / "vault" / "03 - export" / "generated"
+# SELF-LOCATE the vault. This file lives at {root}/mcps/pdf-generator-mcp/server.py, so the
+# framework root is three parents up — correct wherever the operator cloned, and through the
+# ~/aios symlink (.resolve() lands on the real directory).
+#
+# It previously joined the home directory to a literal "aios" segment. That is the documented
+# install path, so it worked for anyone whose symlink was in place — but when it was not, the
+# `mkdir(parents=True)` below did not fail, it CREATED ~/aios/vault/03 - export/generated and
+# wrote the operator's PDFs into a directory tree that is not their vault. A silent wrong
+# destination is worse than a missing one, because the tool still reports success. Deriving the
+# root from this file's location removes the dependency on the symlink entirely.
+AIOS_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_OUTPUT_DIR = AIOS_ROOT / "vault" / "03 - export" / "generated"
 CHROME_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 mcp = FastMCP("pdf-generator")
@@ -44,7 +55,7 @@ def markdown_to_pdf(
 
     Args:
         markdown: The markdown content to convert.
-        output_path: Where to save the PDF. Defaults to ~/aios/vault/03 - export/generated/{timestamp}.pdf
+        output_path: Where to save the PDF. Defaults to your vault's 03 - export/generated/{timestamp}.pdf
         title: Optional title used in pandoc's HTML <title> tag.
 
     Returns:
@@ -76,7 +87,7 @@ def html_to_pdf(html: str, output_path: str | None = None) -> dict:
 
     Args:
         html: The full HTML document (with inline CSS, fonts, etc.) to render.
-        output_path: Where to save the PDF. Defaults to ~/aios/vault/03 - export/generated/{timestamp}.pdf
+        output_path: Where to save the PDF. Defaults to your vault's 03 - export/generated/{timestamp}.pdf
 
     Returns:
         Dict with keys: path (str), size_bytes (int).
