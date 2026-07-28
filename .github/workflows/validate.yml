@@ -446,6 +446,29 @@ jobs:
           fi
           echo "OK: no ~/obsidian hardcoded paths — framework is install-path-agnostic with ~/aios canonical default"
 
+      # The check above greps for the path as TEXT. It therefore passed for two months while
+      # hooks/pipeline-executor.py resolved USER.md from `Path.home() / "obsidian"` — the same
+      # retired path, assembled programmatically, so not one of the textual patterns matched.
+      # The guard reported "no hardcoded paths" about a state it had never examined, and an
+      # operator whose vault was elsewhere silently lost their entire USER.md config on every
+      # /today. A guard that only knows one spelling of the thing it forbids is not a guard.
+      - name: No programmatic hardcoding of the retired vault folder name
+        run: |
+          set -e
+          # Matches home-dir + literal "obsidian" joined in code, any language/quoting:
+          #   Path.home() / "obsidian"   ·   Path.home()/'obsidian'   ·   os.path.expanduser + join
+          #   $(HOME)/obsidian in make/shell   ·   home_dir().join("obsidian")
+          # NOTE: `.{0,40}` not `[^\n]{0,40}` — in a POSIX bracket expression `\n` is the two
+          # literal characters, so `[^\n]` excludes the LETTER n. grep is line-based anyway.
+          if grep -rlnE "(Path\.home\(\)|expanduser|homedir|home_dir\(\)|HOME).{0,40}['\"]obsidian['\"]" \
+            --include="*.md" --include="*.py" --include="*.sh" --include="*.ps1" --include="*.json" --include="*.yml" --include="*.yaml" \
+            --exclude="CHANGELOG.md" --exclude="HISTORY-PRE-*.md" \
+            --exclude-dir=.git --exclude-dir=vault --exclude-dir=.github .; then
+            echo "::error::The retired vault folder name is being assembled programmatically (see files above). Derive the framework root from the file's own location instead — e.g. Path(__file__).resolve().parent.parent — so it works wherever the operator cloned."
+            exit 1
+          fi
+          echo "OK: no programmatic assembly of the retired vault folder name"
+
   counts:
     name: Capability counts
     runs-on: ubuntu-latest

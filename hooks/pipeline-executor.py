@@ -41,16 +41,21 @@ from zoneinfo import ZoneInfo
 # symlink. `.resolve()` follows links, so it lands on the REAL directory rather than the
 # alias — correct either way, because the real directory is where the files actually are.
 #
-# WHY NOT A LITERAL PATH. These three were hardcoded to `Path.home()/"obsidian"` — a
-# leftover from the layout of the machine this framework was extracted from. It never
-# generalized, so on any vault NOT at ~/obsidian the effect was silent and doubly so:
-# USER.md did not resolve, the executor logged "not found — using defaults" and ran with
-# defaults (every configured calendar, account and channel ignored), and that warning was
-# written to LOG_PATH — in the same nonexistent directory — inside a `try/except: pass`.
-# The diagnostic failed by the same cause as the fault, so `/today` looked like it worked.
-# Swapping in `~/aios` would only move the hardcode: the docs prescribed a symlink as the
-# "portability fix" precisely because this path was never parameterised. Self-location
-# removes the convention instead of restating it. Reported by an operator 2026-07-28.
+# WHY NOT A LITERAL PATH. These three used to be built from the home directory plus a
+# fixed vault folder name — a leftover from the layout of the machine this framework was
+# extracted from. It never generalized, so for any vault living somewhere else the effect
+# was silent and doubly so: USER.md did not resolve, the executor logged "not found —
+# using defaults" and ran with defaults (every configured calendar, account and channel
+# ignored), and that warning was written to LOG_PATH — in the same nonexistent directory —
+# inside a `try/except: pass`. The diagnostic failed by the same cause as the fault, so
+# /today looked like it worked. Swapping in another fixed name would only move the
+# hardcode: a symlink was prescribed as the "portability fix" precisely because this path
+# was never parameterised. Self-location retires the convention instead of restating it.
+#
+# The CI "Migration drift" guard did not catch the original, because it grepped for the
+# TEXTUAL path forms while the real hardcode was built programmatically from Path.home().
+# The guard now covers that construction too — see .github/workflows. Keep these paths
+# derived; do not reintroduce a literal vault folder name here. Reported 2026-07-28.
 AIOS_ROOT = Path(__file__).resolve().parent.parent
 SOURCES_PATH = AIOS_ROOT / "USER.md"
 # These stay home-relative on purpose — they are NOT framework-root paths. The MCP servers
