@@ -96,12 +96,51 @@ def get_git_status():
         return ""
 
 
+def resolve_context_window(data):
+    """Resolve the context window from the statusline payload.
+
+    Returns (size, assumed) — `assumed` True means we GUESSED and the caller must
+    render it distinguishably.
+
+    Claude Code passes the real number on stdin as
+    `context_window.context_window_size` ("Context window size for current model").
+    Use it. Do NOT infer the window from a model name.
+
+    WHY THIS IS NOT A LOOKUP TABLE ANY MORE. The previous version keyed off
+    `model.display_name` and returned 1_000_000 only if that marketing string
+    happened to contain "1M", else 200_000 — with identical confidence for a model
+    it recognised and one it had never seen. On a 1M-window model that is a 5x
+    underestimate, so the bar read 100% at ~20% used. Adding the current model to
+    the table is the same defect one release later: the code was measuring the NAME
+    when the requirement was the WINDOW, and a name is not a window.
+
+    Fallback order, each step less trustworthy than the last:
+      1. payload `context_window.context_window_size`  → exact, assumed=False
+      2. `model.id` prefix match                       → stable ids beat display
+                                                          names, still a guess
+      3. 200_000                                       → assumed=True, always
+    """
+    cw = data.get("context_window") or {}
+    size = cw.get("context_window_size")
+    if isinstance(size, (int, float)) and size > 0:
+        return int(size), False
+
+    # Older CLI without context_window in the payload. Key off the stable model ID,
+    # never the display name — ids ("claude-opus-5") survive rebrands, display
+    # strings ("Opus 5", "Claude Opus 5 (1M context)") differ per release and surface.
+    model_id = (data.get("model", {}) or {}).get("id", "") or ""
+    if "[1m]" in model_id.lower() or "-1m" in model_id.lower():
+        return 1_000_000, True
+
+    return 200_000, True
+
+
 def get_context_window(model_name=""):
-    """Return context window size based on model. Defaults to 200K for unknown models."""
-    if "1M" in model_name or "1m" in model_name:
-        return 1_000_000
-    elif "opus" in model_name.lower() or "sonnet" in model_name.lower():
-        return 200_000
+    """DEPRECATED — kept only so an out-of-tree caller does not crash.
+
+    Never returns a trustworthy number: it infers a window from a display name,
+    which is the defect `resolve_context_window` exists to remove. Call that instead.
+    """
     return 200_000
 
 
@@ -249,7 +288,14 @@ def get_context_display(context_info):
     reset = "\033[0m"
     alert_str = f" ⚠ {alert}" if alert else ""
 
-    return f"{icon} {color}{percent:.0f}% {bar}{alert_str}{reset}"
+    # An ASSUMED window renders with a trailing "?" — the percentage is only as good
+    # as the window it was divided by, and the old code presented a guessed window
+    # with exactly the same confidence as a known one. That silence WAS the bug: a
+    # 5x-wrong window showed 100% at ~20% used and looked authoritative. If you see
+    # "?", the denominator is an assumption, not a fact.
+    assumed_str = "?" if context_info.get("window_assumed") else ""
+
+    return f"{icon} {color}{percent:.0f}%{assumed_str} {bar}{alert_str}{reset}"
 
 
 def get_people_display(role_counts, duration_ms):
@@ -535,10 +581,25 @@ def main():
         rate_limits = data.get("rate_limits", {})
         duration_ms = cost_data.get("total_duration_ms", 0) if cost_data else 0
 
-        context_window = get_context_window(model_name)
+        context_window, window_assumed = resolve_context_window(data)
         parsed = parse_transcript(transcript_path, context_window)
 
         context_info = parsed["context"]
+        # The payload's own `used_percentage` is pre-calculated by the CLI against the
+        # real window — authoritative when present, so it wins over our transcript
+        # arithmetic. It is null before the first API response; only then do we fall
+        # back to what parse_transcript computed.
+        cw_payload = data.get("context_window") or {}
+        used_pct = cw_payload.get("used_percentage")
+        if isinstance(used_pct, (int, float)) and context_info:
+            context_info["percent"] = float(used_pct)
+            context_info["method"] = "payload"
+            total_in = cw_payload.get("total_input_tokens")
+            if isinstance(total_in, (int, float)) and total_in > 0:
+                context_info["tokens"] = int(total_in)
+        # Surface an assumed window instead of presenting a guess as a fact.
+        if window_assumed and context_info:
+            context_info["window_assumed"] = True
         context_display = get_context_display(context_info)
         people_display = get_people_display(parsed["role_counts"], duration_ms)
         directory = get_directory_display(workspace)

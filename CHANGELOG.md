@@ -38,7 +38,47 @@
 
 ## 2026-07-27 — Four checks that reported a state they never examined
 
-`hash: c29d296 · fc17ef9 · 5b408cc · 487eaeb`
+`hash: c29d296 · fc17ef9 · 5b408cc · 487eaeb · e459d82 · 9ba70dc`
+
+```
+********************************
+**  AIOS APP FOR MAC IS LIVE  **
+** if you downloaded before,  **
+** you'll get a notification  **
+**    — quit, wait, reopen    **
+********************************
+```
+
+### The statusline half — it reported 100% context when barely a fifth was used
+
+> **What this delivers.** The context bar inferred your context window from the model's **display name**: it returned 1,000,000 only if that marketing string literally contained `"1M"`, and 200,000 for everything else — including models whose window really is 1M. That is a **5× underestimate**, so the bar hit **100% at roughly 20% used**, complete with the red alarm icon, early in a session with most of the window still free. Worse, it returned the 200,000 guess for an unrecognised model with *exactly the same confidence* as a known one, so there was no way to tell a measurement from an assumption.
+
+**What you can now do:**
+- **Believe the number.** Claude Code already passes the real window on stdin as `context_window.context_window_size`, and the pre-calculated `used_percentage` alongside it. The statusline now uses those. The lookup table is gone, not extended — **adding the current model to a name table is the same defect one release later**, because the code was measuring the *name* when the requirement was the *window*.
+- **See when it is guessing.** If the window ever has to be assumed (an older CLI whose payload omits `context_window`), the percentage renders with a trailing **`?`** — e.g. `100%? ▓▓▓▓▓▓`. The silence was the real bug; an assumption now looks like one.
+- **Survive the next model release without a patch.** The fallback keys off the stable **model ID** (`claude-opus-5`), never the display name — ids outlive rebrands, display strings differ per release and per surface.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Nothing to run — `/aios:update` applies it.** `hooks/claude-identity/context-monitor.py` is Tier-1, so the sync installs it.
+2. **No restart needed, and this is worth knowing generally.** Your statusline runs as a **fresh subprocess on every render**, so it re-reads the hook file each time — the corrected percentage appears on the next redraw, with no session restart and no `/statusline` re-registration. (Contrast a **skill**, which is loaded once at session start and *does* need a restart. Same sync, different reload semantics — verified in both directions on a live machine: swapping the file changed the output immediately, and reverting it changed it back.)
+3. **Verify on yourself, since this is a display bug and your own eyes are the test.** After the sync, glance at the bar: on a 1M-window model it should read a plausible figure rather than a red `100%`. If it still reads `100%` *with a trailing `?`*, the window is being **assumed** — that means the payload arrived without `context_window`, which points at an older CLI, not at this fix.
+
+**Verification:** measured before changing anything — the payload schema was read out of the CLI itself rather than inferred, which is how the pre-calculated `used_percentage` turned up and made most of the arithmetic unnecessary. Reproduced the reported symptom exactly: at 200,000 tokens used on a 1M window, the old code renders **100%**, the new code **20%**. Six resolver cases pass (payload present · 200k model · payload absent · id-marked 1M · empty payload · null size), then end-to-end through the real statusline against a live 6 MB transcript — green `21%` with the payload, and `100%?` *with the question mark* when the window has to be assumed.
+
+### The App half — AIOS for Mac is live, and it updates itself
+
+> **What this delivers.** **v0.7.2** is out: **code-signed with a Developer ID certificate, hardened runtime, notarized and stapled** — so it opens without a Gatekeeper wall — and it **self-updates over the wire** (verified in the field upgrading `0.6.0` → `0.7.1`, and `0.7.2` was then delivered **entirely through the in-app pill**, which is the update path proving itself rather than being promised). Download: **[the-aios.com](https://www.the-aios.com)** or the `.dmg` on the [v0.7.2 release](https://github.com/The-AIOS/aios-app/releases/tag/v0.7.2).
+
+**What you can now do:**
+- **Run AIOS as an app, not a terminal.** Vault explorer, one-click rituals, and a real terminal — the graphical front door for operators who never wanted a CLI.
+- **Get updates without hunting for a download.** From **0.7.1 onward** an in-app pill offers the update and applies it in one click — `0.7.2` shipped that way end to end.
+- **Read a terminal you just switched to.** `0.7.2` fixes garbled glyphs when switching to a terminal that was *actively working* (an idle one was always fine, and it self-healed after ~a second). The data was never wrong — only the painted frame was stale, because a hidden pane lost its WebGL renderer and the glyph atlas is shared across terminals rather than private to each.
+- **Stop chasing `v0.7.0`.** It is superseded and could never have updated you: its manifest published only a `.dmg`, and electron-updater's macOS path requires a `.zip` — so the update check found nothing installable. `v0.7.1` ships `AIOS-arm64.zip` alongside the `.dmg`, which is the fix.
+
+**Action required (CHECK-THEN-ACT, idempotent):**
+1. **Already on 0.7.2?** Check the About panel — if it reads `0.7.2`, **no action**, stop here. **On `0.7.1`?** The in-app pill offers `0.7.2` and applies it in one click; nothing else to do.
+2. **New install** → grab it from [the-aios.com](https://www.the-aios.com) or the release `.dmg`. Nothing else to do.
+3. **Only if you installed a build BEFORE 0.7.1** (the pill did not exist yet, so the update arrives as a **macOS notification**): **quit the app → wait a few seconds → open it again.** ⚠️ **The wait is not optional and it is not a formality.** The swap happens *after* the process exits and it copies ~123 MB, so quitting and immediately reopening lands you back on the old version, still notified — reopen too fast and it looks like a broken update when it is simply unfinished. If you already did that, quit once more and give it a moment. From 0.7.1 onward the pill removes this dance entirely.
 
 > **The day's theme, because it is one bug wearing four costumes.** A Windows installer printed four green checks over a profile PowerShell could not parse. `/aios:update` read `diff`'s "I could not run" as "the file differs". `aios-commit` explained a failed push by naming a cause it never read. And a CI negative control — written specifically to catch vacuous checks — was itself vacuous. Each one *reported a state it never actually measured*, and each was invisible on the happy path, because a passing check looks identical whether it is discriminating or empty. Two of the four came in from operators who diagnosed them independently.
 
