@@ -1,6 +1,18 @@
 ---
 name: watch-video
-description: Actually watch or listen to a video/audio source and hold it in context so you can answer questions about it, summarise it, pull quotes, or act on what it says — a QUICK COMPREHENSION action, not a filing pipeline. Covers the local media hooks Claude cannot otherwise discover: hooks/transcribe.py (long-form audio → text, on-device) and hooks/video-watch.py (the VISUAL channel — slides, code, diagrams, terminal, on-screen text that a transcript throws away). Use when the operator shares a video, recording, talk, screencast, demo, lecture, meeting capture or YouTube URL and wants you to engage with its CONTENT — "watch this", "what does this video say", "does he mention X", "summarise this talk", "is this worth my time", "listen to this recording", "transcribe this", "what's on the slides", "pull the code from this screencast". Also the reference for which tool to reach for: documents → MarkItDown or the document-skills · long audio → transcribe.py · video where the SCREEN carries signal → video-watch.py on top of the transcript. NOT for filing a source into the vault as a permanent note — that is /aios:ingest, and this skill hands off to it rather than duplicating it.
+description: >-
+  Actually watch or listen to a video/audio source and hold it in context so you can answer questions about it,
+  summarise it, pull quotes, or act on what it says — a QUICK COMPREHENSION action, not a filing pipeline.
+  Covers the local media hooks Claude cannot otherwise discover: hooks/transcribe.py (long-form audio → text,
+  on-device) and hooks/video-watch.py (the VISUAL channel — slides, code, diagrams, terminal, on-screen text
+  that a transcript throws away). Use when the operator shares a video, recording, talk, screencast, demo,
+  lecture, meeting capture or YouTube URL and wants you to engage with its CONTENT — "watch this", "what does
+  this video say", "does he mention X", "summarise this talk", "is this worth my time", "listen to this
+  recording", "transcribe this", "what's on the slides", "pull the code from this screencast". Also the
+  reference for which tool to reach for: documents → MarkItDown or the document-skills · long audio →
+  transcribe.py · video where the SCREEN carries signal → video-watch.py on top of the transcript. NOT for
+  filing a source into the vault as a permanent note — that is /aios:ingest, and this skill hands off to it
+  rather than duplicating it.
 ---
 
 # Watch a video — comprehension, not ingestion
