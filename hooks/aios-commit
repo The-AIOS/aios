@@ -88,13 +88,35 @@ fi
 # ── per-repo mutex: mkdir is atomic; a stale lock from a dead holder is reclaimed ──
 LOCK="$GIT_DIR/aios-commit.lock"
 acquire(){
-  local tries=0 holder
+  local tries=0 holder saw_lock=0
   while ! mkdir "$LOCK" 2>/dev/null; do
-    holder=$(cat "$LOCK/pid" 2>/dev/null || true)
-    if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
-      rm -rf "$LOCK" 2>/dev/null; continue        # dead holder → reclaim
+    # mkdir fails for two unrelated reasons and only one is contention:
+    #   EEXIST        → somebody holds it. Retrying is right.
+    #   EACCES/ENOENT → we can never create it (unwritable $GIT_DIR — a sandboxed
+    #                   Bash tool, a read-only checkout — or a non-dir squatting
+    #                   on the lock path). Retrying cannot help.
+    # Distinguish by OBSERVATION, not by parsing mkdir's stderr: those strings are
+    # locale-dependent, and a check that knows only one spelling of what it forbids
+    # is not a check. `saw_lock` is sticky — one sighting of a real lock directory
+    # means every later failure is treated as contention forever after, so a holder
+    # that releases mid-loop can never be misread as a permission fault.
+    if [ -d "$LOCK" ]; then
+      saw_lock=1
+      holder=$(cat "$LOCK/pid" 2>/dev/null || true)
+      if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+        rm -rf "$LOCK" 2>/dev/null; continue      # dead holder → reclaim
+      fi
+    else
+      holder=""
     fi
-    tries=$((tries+1)); [ "$tries" -gt 600 ] && die "lock timeout (held by pid ${holder:-?})"
+    tries=$((tries+1))
+    # Never observed a lock across 20 consecutive failures (~2s) → not contention.
+    # Fail now with the real cause instead of spinning 60s and then blaming a pid
+    # that never existed.
+    if [ "$saw_lock" -eq 0 ] && [ "$tries" -ge 20 ]; then
+      die "cannot create $LOCK — $tries attempts, no lock ever present: this is NOT contention. $GIT_DIR is likely not writable (sandboxed session? read-only checkout?), or a non-directory occupies the lock path."
+    fi
+    [ "$tries" -gt 600 ] && die "lock timeout (held by pid ${holder:-unknown})"
     sleep 0.1
   done
   echo "$$" > "$LOCK/pid"

@@ -136,6 +136,57 @@ R=$(newrepo); ( cd "$R"; echo t > tracked.txt; git add tracked.txt; git commit -
   || no "--untrack-only swept the tree — `git add --all --` with no pathspec stages EVERYTHING"
 rm -rf "$R"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Lock-failure CLASSIFICATION. `mkdir` fails for two unrelated reasons and the
+# loop used to treat both as contention: an unwritable $GIT_DIR (sandboxed Bash
+# tool, read-only checkout) spun 600×0.1s and then died "lock timeout (held by
+# pid ?)" — blaming a process that never existed and sending the operator to
+# hunt it. The `?` was the tell: there was no lock, so no pid to read.
+#
+# Tested by OBSERVATION, not by chmod: `chmod a-w` is a no-op against NTFS ACLs
+# in Git Bash, so a permission-based test would silently pass on Windows without
+# exercising anything. A regular FILE squatting on the lock path reproduces the
+# same class identically on all three platforms — mkdir fails EEXIST, `[ -d ]`
+# is false, so the lock is unobservable exactly as in the unwritable case.
+# ─────────────────────────────────────────────────────────────────────────────
+
+echo "── aios-commit: unusable lock path fails FAST with the real cause (not 'held by pid ?') ──"
+R=$(newrepo); ( cd "$R"; echo v1>f; git add -A; git commit -qm init; echo v2>f
+  G=$(git rev-parse --absolute-git-dir); : > "$G/aios-commit.lock"   # a FILE, not a dir
+  S=$(date +%s)
+  OUT=$("$AC" -m "unusable lock" --no-push -- f 2>&1); E=$(date +%s)
+  # fast (well under the 60s spin) AND names the real cause, never a phantom pid
+  [ $((E-S)) -lt 20 ] && echo "$OUT" | grep -q "NOT contention" && ! echo "$OUT" | grep -q "held by pid" ) \
+  && ok "unusable lock path: fails <20s naming the real cause, no phantom pid" \
+  || no "still spins to 'lock timeout (held by pid ?)' — classification regressed"
+rm -rf "$R"
+
+echo "── aios-commit: a LIVE holder is contention — must keep retrying, never early-die ──"
+R=$(newrepo); ( cd "$R"; echo v1>f; git add -A; git commit -qm init; echo v2>f
+  G=$(git rev-parse --absolute-git-dir); mkdir -p "$G/aios-commit.lock"
+  sleep 600 & LIVE=$!; echo "$LIVE" > "$G/aios-commit.lock/pid"     # a real, running pid
+  "$AC" -m "contended" --no-push -- f >/dev/null 2>&1 & AC_PID=$!
+  sleep 3
+  # still alive after 3s = it is patiently retrying. The early-die (~2s) must NOT
+  # have fired: the lock was observed, so saw_lock pins it to the contention path.
+  if kill -0 "$AC_PID" 2>/dev/null; then RES=0; else RES=1; fi
+  kill "$AC_PID" "$LIVE" 2>/dev/null; wait "$AC_PID" "$LIVE" 2>/dev/null
+  exit $RES ) \
+  && ok "live holder: still retrying at 3s (sticky saw_lock prevents a false permission verdict)" \
+  || no "early-die fired on genuine contention — the fix misclassifies a real lock"
+rm -rf "$R"
+
+echo "── aios-commit: dead holder still reclaimed (classification didn't break recovery) ──"
+R=$(newrepo); ( cd "$R"; echo v1>f; git add -A; git commit -qm init; echo v2>f
+  G=$(git rev-parse --absolute-git-dir); mkdir -p "$G/aios-commit.lock"
+  D=$(sh -c 'echo $$')                       # a pid that has already exited
+  echo "$D" > "$G/aios-commit.lock/pid"
+  H0=$(git rev-parse HEAD)
+  "$AC" -m "reclaim" --no-push -- f >/dev/null 2>&1
+  [ "$H0" != "$(git rev-parse HEAD)" ] ) \
+  && ok "dead holder reclaimed and the commit landed" || no "reclaim broken by the classification change"
+rm -rf "$R"
+
 echo ""
 echo "── RESULT: $PASS passed, $FAIL failed  (bash $BASH_VERSION) ──"
 [ "$FAIL" = "0" ] || exit 1
