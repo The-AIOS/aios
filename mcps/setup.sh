@@ -145,7 +145,7 @@ if want nano-banana-mcp && [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && [ ! -d "$SCRI
   echo "→ nano-banana-mcp..."
   cd "$SCRIPT_DIR/nano-banana-mcp"
   $PY -m venv .venv
-  "$(vbin)/pip" install google-genai mcp -q
+  "$(vbin)/pip" install -r requirements.txt -q
   echo "  ✓ installed (requires GEMINI_API_KEY — see README)"
 fi
 
@@ -154,7 +154,7 @@ if want pdf-generator-mcp && [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && [ ! -d "$
   echo "→ pdf-generator-mcp..."
   cd "$SCRIPT_DIR/pdf-generator-mcp"
   $PY -m venv .venv
-  "$(vbin)/pip" install mcp -q
+  "$(vbin)/pip" install -r requirements.txt -q
   command -v pandoc >/dev/null 2>&1 || echo "  ⚠ pandoc not found — brew install pandoc"
   [ -d "/Applications/Google Chrome.app" ] || echo "  ⚠ Google Chrome not found — install from https://google.com/chrome"
   echo "  ✓ installed (requires pandoc + Chrome)"
@@ -165,7 +165,7 @@ if want spotify-dj-mcp && [ -d "$SCRIPT_DIR/spotify-dj-mcp" ] && [ ! -d "$SCRIPT
   echo "→ spotify-dj-mcp..."
   cd "$SCRIPT_DIR/spotify-dj-mcp"
   $PY -m venv .venv
-  "$(vbin)/pip" install spotipy mcp -q
+  "$(vbin)/pip" install -r requirements.txt -q
   echo "  ✓ installed (requires Spotify Dev app + SPOTIFY_CLIENT_ID/SECRET — see README)"
 fi
 

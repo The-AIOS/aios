@@ -36,6 +36,27 @@
 
 ---
 
+## 2026-07-29 — Three bundled MCPs stopped installing, and setup.sh reported success anyway
+
+`hash: TBD`
+
+> **What this delivers.** `mcps/setup.sh` installed `spotify-dj`, `pdf-generator` and `nano-banana` with an **unpinned** `pip install … mcp`. All three import `from mcp.server.fastmcp import FastMCP`, and **`mcp` 2.0 removed that module**. Where that unpinned install resolves to 2.x, it produces a venv that builds cleanly, prints `✓ installed`, and then dies at import — surfacing much later, somewhere else, as `Failed to connect` in `claude mcp list`. Existing vaults are unaffected: a venv created before 2.0 keeps its old resolution and keeps working. **The operators exposed are the ones onboarding, rebuilding a machine, or setting up a second box** — exactly the people with the least context to diagnose it.
+>
+> **Scope of verification, stated plainly:** reproduced on macOS with Python 3.12, where a bare `pip install mcp` today resolves to 2.0.0 and all three servers fail to import. Whether every platform and interpreter resolves the same way has **not** been tested here, so read the blast radius as *"wherever pip resolves `mcp` to 2.x"* rather than as a claim about every machine. The fix is correct either way — pinning a dependency the servers demonstrably require is right independent of how many environments currently break without it.
+
+**What you can now do:**
+- **Set up a new machine and have the MCPs actually run.** Each of the three now ships a `requirements.txt` pinning `mcp==1.28.1` (plus `spotipy==2.26.0` and `google-genai==2.8.0` where they apply), and `setup.sh` installs from it. Verified by deleting each venv, re-running `setup.sh`, and importing each `server.py`.
+- **Diagnose this if you already hit it.** Symptom: `claude mcp list` shows `✘ Failed to connect` for one of the three while its folder and `.venv` clearly exist. Confirm with `mcps/<name>-mcp/.venv/bin/python -c "import server"` — a `ModuleNotFoundError: No module named 'mcp.server.fastmcp'` is this bug. Fix: `rm -rf mcps/<name>-mcp/.venv && bash mcps/setup.sh <name>-mcp`.
+- **Know what was deliberately left alone.** `notebooklm-mcp` and `playwright-mcp` also install unpinned, but neither imports the removed module, so neither is broken today. Widening the diff to them would be speculative rather than tested — they are named here so the next person sees them, not silently fixed.
+
+**For the record — what changed:** three new `requirements.txt` files (`pdf-generator-mcp`, `spotify-dj-mcp`, `nano-banana-mcp`) and three lines in `mcps/setup.sh` changed from a literal package list to `-r requirements.txt`. No server code changed. `telegram`-style pinned requirements were already the pattern elsewhere in the tree; this brings the three stragglers in line with the pinning policy `mcps/_index.md` already states — *"Floating `@latest`/unpinned is forbidden: these servers run with live credentials."* The policy was written; these three were simply never brought under it.
+
+**The general lesson, which is not about `mcp`.** A pinning policy that lives only in prose protects nothing — it has to be executable. The failure here was invisible in the worst way: the installer's own `✓` was printed by an `echo` that ran unconditionally after `pip`, so success was asserted by position in the script rather than by anything about the artifact. **An installer that cannot fail cannot be trusted when it passes.** The narrow fix is the pins; the durable one is that a setup step should verify the thing it just built does the one thing it exists to do — here, import.
+
+**Action required — only if you are installing fresh.** Existing venvs are untouched and keep working; there is no need to rebuild a machine that is currently fine. On a new install, `bash mcps/setup.sh` now does the right thing with no extra steps.
+
+---
+
 ## 2026-07-28 — Paths and runtimes the framework asserted but never checked
 
 `hash: 86a7a10 · fd5fb5b · 19b1fe2`
