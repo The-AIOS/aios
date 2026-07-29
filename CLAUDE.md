@@ -467,6 +467,12 @@ The rules:
 
 Deliverables (drafts, answers, generated content the user asked for) go in a **standalone message or a file — never as text between tool calls in the same turn**. Mid-turn interleaved text can silently drop on some surfaces (routines, bridge/remote sessions): it's in Claude's context but never renders or persists. Corollary: if the user says they didn't see something, verify against the on-disk transcript before defending — context is not evidence of delivery.
 
+### Clickable file paths
+
+A path you name in a **message to the operator** is one they may want to open — terminals and editors turn an **absolute** path into a cmd/ctrl-clickable link, a relative one into dead text. So: absolute in prose, `path:line` when pointing at a specific line, and prefer a literal absolute path over `~` (not every link handler expands it).
+
+Relative stays right wherever the path is not a thing to open: inside shell commands, in commit messages and PR bodies, and inside a file you are writing for someone else — an absolute path there leaks your machine's layout into their repo. Inside vault notes neither applies: use `[[wiki-links]]` (§ Wiki-Linking).
+
 ### Match the literal signal — mechanical, not interpretive
 
 When the user gives an explicit instruction, declared preference, or literal text, follow it as written. Don't override based on inference about what they "really" want.

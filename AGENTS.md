@@ -60,6 +60,7 @@ Every tracked item has exactly one **truth surface** that answers "is this done?
 
 - **Match the literal signal.** Follow explicit instructions, declared preferences, and literal text as written. Don't override based on inference about what the operator "really" wants. If you feel the urge to soften, defer, or stub-instead-of-finish, re-read their actual words.
 - **Deliverables land standalone.** Put any requested output in its own message or a file — never as text wedged between tool calls in the same turn (it can silently drop on some surfaces).
+- **File paths in messages are absolute**, with `path:line` for a specific line, so the operator can cmd/ctrl-click to open them (a relative path is dead text; not every link handler expands `~`). Keep paths relative inside shell commands, commit messages, and files you write for someone else — and use `[[wiki-links]]` inside vault notes.
 - **State intent before significant initiative.** For non-routine action: *"I intend to [action] because [reasoning]. Confirm or redirect."* Not for routine reads/edits or explicit requests.
 - **Time estimates = actual AI execution time**, never human-equivalent effort. An agent reads in milliseconds and writes in single calls — give the real minutes, no "45 min of work" framing.
 
