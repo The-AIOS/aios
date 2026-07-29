@@ -36,9 +36,9 @@
 
 ---
 
-## 2026-07-29 — File paths your session prints are now clickable
+## 2026-07-29 — Clickable file paths, and a lock that blamed the wrong thing
 
-`hash: 0cf0888`
+`hash: 0cf0888 · d997c40`
 
 > **What this delivers.** Your Claude session names files constantly — in findings, summaries, session recaps, "here's where I put it." It has been naming them **relative** (`vault/00 - notes/context/observed/patterns.md`), which is dead text in a terminal: to open one you had to read the path, reconstruct the full location, and type it. Written **absolute**, the same path becomes a cmd/ctrl-clickable link in iTerm2, Terminal, the VS Code / Antigravity integrated terminal, and Claude Code's own UI. One click, file open. This entry is one short rule that makes that the default.
 
@@ -52,6 +52,23 @@
 **Why it needed the exclusions to be short rather than absent.** The naive version — *"always use absolute paths"* — collides head-on with **§ Wiki-Linking**, which exists so generated notes never become isolated nodes in your graph. An agent applying "always absolute" would start writing filesystem paths into daily notes and quietly undo it. The rule is two paragraphs because the second one is load-bearing, not because the first was underspecified.
 
 **Nothing to run.** `CLAUDE.md` and `AGENTS.md` are read at session start, so the next session after this sync already behaves this way. No restart, no registration, no config.
+
+### `aios-commit` said "lock timeout (held by pid ?)" when nothing held the lock
+
+> **What this delivers.** `aios-commit` serialises concurrent commits with a `mkdir`-based mutex. `mkdir` fails for two unrelated reasons and the loop treated both as contention: **EEXIST** (someone holds it — retrying is right) and **EACCES/ENOENT** (it can never be created — retrying is futile). So when `$GIT_DIR` was not writable, the command spun for 60 seconds and died with **`lock timeout (held by pid ?)`** — sending you to hunt a concurrent process that never existed. The `?` was the tell: there was no lock, so there was no pid to read.
+
+**What you can now do:**
+- **Read the error and know the cause.** An unusable lock path now fails in about two seconds with what actually happened — *"no lock ever present: this is NOT contention. `$GIT_DIR` is likely not writable (sandboxed session? read-only checkout?)"* — instead of a minute of silence followed by a phantom pid.
+- **Hit this at all, which you increasingly will.** Claude Code sandboxes Bash-tool calls **by default**. Any repo outside your sandbox write-allowlist reproduces this on the first `aios-commit`. If you have seen a mysterious lock timeout on a repo you were sure nothing else was touching, this was it — and the fix is usually to add that path to your sandbox allowlist (`/sandbox`), not to hunt a process.
+- **Trust that genuine contention still waits.** A real holder is unchanged: still retried, still reclaimed if the holder is dead, still a 60-second ceiling before a *true* timeout.
+
+**For the record — what changed:** `hooks/aios-commit` → `acquire()`. A sticky `saw_lock` flag: one sighting of a real lock directory pins every later failure to the contention path, so a holder releasing mid-loop can never be misread as a permission fault. Twenty consecutive failures with the lock never observed (~2s) fails fast with the real cause. Plus three tests in `tests/aios-commit.test.sh`.
+
+**Why not the two obvious implementations.** Parsing `mkdir`'s stderr for `"File exists"` is locale-dependent — a French or Spanish operator gets a different string, which is the *"a check that knows only one spelling of the thing it forbids is not a check"* failure from the 2026-07-28 entry, re-committed inside the fix for its sibling. Probing `[ -w "$GIT_DIR" ]` up front looks right and is worse: Seatbelt and bubblewrap deny the write *syscall*, while `access(W_OK)` reads POSIX permission bits that still say writable — so the probe passes and the fix silently no-ops for the exact case that motivated it. Both were tried and rejected before the observation-based version.
+
+**How it was tested, and the honest limit.** The classification test was **run against the unpatched script first and confirmed to fail there** — a test that passes on the bug it exists for is worse than no test, because it also certifies safety. It provokes the fault by squatting a regular **file** on the lock path rather than by `chmod`: `chmod` is a no-op against NTFS ACLs under Git Bash, so a permission-based test would pass on Windows without exercising anything, while a file-squat reproduces the class identically on all three platforms. Green on bash 5.3 and on bash 3.2 (the bash macOS ships). **Not yet proven on Windows:** CI's Windows lane covers only the PowerShell wrapper installer, so the bash primitives suite has never run under Git Bash. The test was written to be portable — no `chmod`, no `test -w`, no error-string matching — but portable-by-design is a claim, not a measurement.
+
+**Nothing to run.** The next `aios-commit` uses the new logic.
 
 ## 2026-07-28 — Paths and runtimes the framework asserted but never checked
 
