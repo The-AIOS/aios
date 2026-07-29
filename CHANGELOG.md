@@ -36,6 +36,23 @@
 
 ---
 
+## 2026-07-29 — File paths your session prints are now clickable
+
+`hash: 0cf0888`
+
+> **What this delivers.** Your Claude session names files constantly — in findings, summaries, session recaps, "here's where I put it." It has been naming them **relative** (`vault/00 - notes/context/observed/patterns.md`), which is dead text in a terminal: to open one you had to read the path, reconstruct the full location, and type it. Written **absolute**, the same path becomes a cmd/ctrl-clickable link in iTerm2, Terminal, the VS Code / Antigravity integrated terminal, and Claude Code's own UI. One click, file open. This entry is one short rule that makes that the default.
+
+**What you can now do:**
+- **Click any file your session mentions.** Ask *"where does the ecosystem map live?"* and you get `/Users/you/aios/vault/00 - notes/context/observed/ecosystem.md` — cmd-click and it opens, spaces in `00 - notes` and all. Previously you got `context/observed/ecosystem.md`, which only resolves if your shell happens to be sitting in the right directory.
+- **Jump to the line, not just the file.** When a session points at a specific place it appends `:line` — `…/api/_guards.mjs:48` — and the click lands you on it. Most useful in code reviews and audits, where "the bug is in the guards file" costs you a search and `:48` costs you nothing.
+- **Notice where it deliberately does *not* apply.** Paths stay relative in the three places absolute would be wrong: inside shell commands you're meant to run from a known directory (`git add audits/`), inside commit messages and PR bodies, and inside any file being written for someone else — an absolute path there would leak your machine's layout into their repo. And inside vault notes, `[[wiki-links]]` still win, so the Obsidian graph keeps its edges.
+
+**For the record — what changed:** two files, no code. `CLAUDE.md` gains **§ VI → Clickable file paths** (six lines, after *Deliverables land standalone*); `AGENTS.md` gains the one-line portable form under *Execution discipline*, so non-Claude tools reading the `AGENTS.md` convention follow the same rule.
+
+**Why it needed the exclusions to be short rather than absent.** The naive version — *"always use absolute paths"* — collides head-on with **§ Wiki-Linking**, which exists so generated notes never become isolated nodes in your graph. An agent applying "always absolute" would start writing filesystem paths into daily notes and quietly undo it. The rule is two paragraphs because the second one is load-bearing, not because the first was underspecified.
+
+**Nothing to run.** `CLAUDE.md` and `AGENTS.md` are read at session start, so the next session after this sync already behaves this way. No restart, no registration, no config.
+
 ## 2026-07-28 — Paths and runtimes the framework asserted but never checked
 
 `hash: 86a7a10 · fd5fb5b · 19b1fe2`
