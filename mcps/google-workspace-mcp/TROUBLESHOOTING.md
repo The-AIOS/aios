@@ -18,6 +18,9 @@
 | "Invalid or expired OAuth state parameter" | State token expired (~5 min lifespan); OR URL is from a previous attempt; OR a stale MCP process holds port 8000 | Generate a fresh auth URL; kill stale MCP processes |
 | Auth completes but tool calls still 401 | Cached token poisoned; MCP server in a bad state | Local — delete cached token, restart MCP |
 | Worked yesterday, intermittent today | MCP version added new scopes since last successful auth | Local — check MCP version, then sync scopes in console |
+| `403 … has not been used in project <N> before or it is disabled` (`SERVICE_DISABLED`) | **Not auth.** The service is in your `--permissions` but its Google API is not enabled in the project. Consent succeeded, the tool is exposed, the call fails. | Open the activation URL in the error itself → Enable → wait ~1 min → retry. **No re-consent needed** — enabling an API is a project setting, not a scope change. |
+| `GOOGLE_PSE_API_KEY environment variable not set` | `search:full` is registered but Programmable Search needs two **env vars**, not OAuth | See `README.md` → Programmable Search. Enabling the Custom Search API is necessary but not sufficient. |
+| Consent prompt appears right after you edited `--permissions` | **Expected, not a fault.** You added a service, so the cached token lacks its scopes. | Approve once — see *Adding a service later* below. |
 
 ---
 
@@ -46,13 +49,63 @@ When auth was working and now isn't. This 4-step fix resolved a stuck auth state
 
 ---
 
+## Adding a service later — the expected one-time re-consent
+
+Distinct from everything above: nothing is broken. You edited `--permissions` to add a
+service, so the server now requests scopes your cached token was never issued. Google's
+answer to that is a consent prompt, which looks alarming mid-session and isn't.
+
+**Two independent things must both be true for a service to work.** They fail differently,
+and confusing them is what turns a two-minute change into an hour:
+
+| | Where it lives | Cost to change | Symptom when missing |
+|---|---|---|---|
+| **The scope** | your OAuth token | **re-consent** (browser) | consent prompt, or `400 invalid_request` |
+| **The API** | the Cloud project | none — a project setting | `403 SERVICE_DISABLED` at call time |
+
+So: adding `contacts:full` to a project that already has People API enabled → re-consent
+only. Enabling People API when the scope was already granted → **no** re-consent. Adding a
+brand-new service like `chat` or `appscript` → both.
+
+**The procedure:**
+
+1. Edit the `--permissions` list (re-register, or edit the registration in place).
+2. **Enable the matching Google API** for each service you added — People for `contacts`,
+   Forms for `forms`, Google Chat for `chat`, Apps Script for `appscript`, Custom Search for
+   `search`. Do this *before* re-consenting, so you don't approve scopes and then still 403.
+3. **Restart Claude Code.** A running MCP server keeps its old command line; re-registering
+   does not reload it in place.
+4. Trigger any tool call → approve the consent prompt (incognito if you're signed into
+   several Google accounts).
+5. **Verify per service, not in aggregate** — call one *native* tool for each. This is the
+   step people skip, and it hides real failures: `list_spreadsheets` and `search_docs` both
+   go through the **Drive** API, so they pass even when Sheets and Docs are disabled. Use
+   `read_sheet_values` for Sheets, `get_presentation` for Slides, `inspect_doc_structure`
+   for Docs, `get_form` for Forms, `list_contacts` for Contacts.
+
+**Removing a service needs no re-consent** — the token keeps the scope, the tool just stops
+being exposed. So narrowing is always cheap and reversible; widening costs one prompt.
+
+---
+
 ## DAY 0 — setting up the Google Cloud Console project (from scratch)
 
 ### 1. Create the project
 console.cloud.google.com → project dropdown → NEW PROJECT → name it (e.g. "workspace-mcp") → CREATE → **confirm the dropdown now shows the new project selected** (Google sometimes keeps you on the old one).
 
 ### 2. Enable required APIs
-APIs & Services → Library → enable each: Calendar, Docs, Drive, Gmail, Slides, Sheets, Tasks, People (for contacts), Forms (optional). Every scope the MCP requests must have its API enabled, or Google rejects OAuth with a generic 400.
+APIs & Services → Library → **enable one API per service in your `--permissions` list**, or the tool is exposed and 403s at call time:
+
+| Service | Google API |
+|---|---|
+| `calendar` · `docs` · `drive` · `gmail` · `sheets` · `slides` · `tasks` | Calendar · Docs · Drive · Gmail · Sheets · Slides · Tasks |
+| `contacts` | **People API** |
+| `forms` | **Google Forms API** |
+| `chat` | **Google Chat API** |
+| `appscript` | **Apps Script API** |
+| `search` | **Custom Search API** (+ two env vars — see `README.md`) |
+
+Enable only what you list. A missing API produces `403 SERVICE_DISABLED` *at call time* (not at startup, and not an auth error); a missing *scope* is the different failure covered in § *Adding a service later*.
 
 ### 3. Configure the OAuth consent screen
 APIs & Services → OAuth consent screen → **External** (for personal Gmail) → CREATE. Fill Branding (app name + your email ×2). On the Audience tab, **leave publishing status as "Testing"** (avoids the multi-week verification review) and **add your email under Test users**.
@@ -60,7 +113,7 @@ APIs & Services → OAuth consent screen → **External** (for personal Gmail) �
 **Testing-mode caveats:** refresh tokens expire every 7 days (re-consent weekly); each test user sees an "Unverified app" warning and must click Advanced → Continue (unsafe). Safe for personal use. **Don't click PUBLISH APP** unless distributing to non-test users — it triggers Google verification and can block all auth until complete.
 
 ### 4. Add scopes
-APIs & Services → OAuth consent screen → Data Access → ADD OR REMOVE SCOPES → "Manually add scopes" textbox → paste the full list (see Reference below) → Add to table → UPDATE → SAVE. **All 23 scopes are needed** — each maps to a specific MCP capability; drop one and its tools fail. Note: the scope view can be limited to 10 rows — adjust the view to see/select all.
+APIs & Services → OAuth consent screen → Data Access → ADD OR REMOVE SCOPES → "Manually add scopes" textbox → paste the list (§ *Reference — scopes*) → Add to table → UPDATE → SAVE. **Add every scope the services you listed require** — each maps to specific tools; drop one and those tools fail. Don't chase a fixed number: the required set is a function of your `--permissions` list, and the baseline in § Reference covers the core nine only (`chat` / `appscript` / `search` add more). Note: the scope view can be limited to 10 rows — adjust the view to see/select all.
 
 ### 5. Create OAuth 2.0 Client ID
 APIs & Services → Credentials → + CREATE CREDENTIALS → OAuth client ID → **Application type: Desktop app** (uses RFC 8252 native-app flow with PKCE; Google auto-handles `localhost` redirects — no manual URI registration). Name it → CREATE → copy the client ID + secret.
@@ -88,7 +141,20 @@ Trigger any tool call → MCP emits an "ACTION REQUIRED" auth URL → open it, s
 
 ---
 
-## Reference — the 23 scopes
+## Reference — scopes
+
+> **Don't trust a scope count written in a doc, including this one.** The set is a function
+> of your `--permissions` list, so it changes whenever you add a service — this section said
+> "the 23 scopes" while a live token held 28, because the list was enumerated once and never
+> recomputed. **Read your own token instead:**
+>
+> ```bash
+> python3 -c "import json,os;d=json.load(open(os.path.expanduser('~/.google_workspace_mcp/credentials/YOUR-EMAIL.json')));s=d.get('scopes') or [];print(len(s));print('\n'.join(sorted(s)))"
+> ```
+>
+> That is the authoritative answer to *"what has this token actually been granted?"* — which
+> is the question you have when auth misbehaves. The list below is the **core-nine baseline**
+> (no `chat` / `appscript` / `search`), kept as a sanity reference, not as a target.
 
 ```
 https://www.googleapis.com/auth/spreadsheets

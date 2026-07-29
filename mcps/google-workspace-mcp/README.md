@@ -41,6 +41,21 @@ Services: `calendar` · `chat` · `contacts` · `docs` · `drive` · `forms` · 
 
 **Google Chat is off by default.** Add `chat:full` (or `chat:readonly`) for spaces, message read/search/send, reactions and attachments. One caveat to test before depending on it: Google restricts *sending* to some space types when using user credentials rather than a Chat app.
 
+**Two things gate every service — don't confuse them.** The **scope** lives in your OAuth token and changing it costs a browser re-consent; the **API** lives in the Cloud project and enabling it costs nothing. Missing scope → consent prompt or `400`. Missing API → `403 SERVICE_DISABLED` *at call time*, which reads like an auth failure and isn't. Full procedure for adding a service later: [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md) → *Adding a service later*.
+
+### `search` needs two env vars, not OAuth
+
+`search:full` exposes Programmable Search Engine (`search_custom`, `get_search_engine_info`). Unlike every other service, **enabling the Custom Search API is not sufficient** — the module reads credentials from the environment and fails with `GOOGLE_PSE_API_KEY environment variable not set` without them. There is **no API for creating a search engine**, so the `cx` id is necessarily a console step:
+
+1. **Create the engine** → [programmablesearchengine.google.com](https://programmablesearchengine.google.com/) → *Add* → name it, choose *Search the entire web* (or restrict to sites) → Create. Copy the **Search engine ID** (`cx`).
+2. **Create an API key** → Cloud Console → *APIs & Services → Credentials → + Create Credentials → API key*. Restrict it to the **Custom Search API** so a leaked key can't do anything else.
+3. **Add both to the registration** (they are env vars, so they belong beside the OAuth ones):
+   ```bash
+   -e GOOGLE_PSE_API_KEY="…" -e GOOGLE_PSE_ENGINE_ID="…"
+   ```
+
+Free tier is **100 queries/day**; beyond that it bills per thousand. If you already have a general web-search tool in your session, `search:full` is usually redundant — and a registered service that can't authenticate is worse than an absent one, because the tool appears and always fails. Either finish the two steps above or drop `search:full`.
+
 ## When it breaks
 
 [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md) — local-first recovery (stale token, scope mismatch, port held by a dead process). Failures here are almost always local state rather than lost credentials, so start there before opening the Cloud Console.
