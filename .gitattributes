@@ -1,0 +1,47 @@
+# Line-ending policy — load-bearing on Windows, invisible everywhere else.
+#
+# Git for Windows installs with `core.autocrlf=true` by default, which rewrites LF -> CRLF on
+# checkout for anything Git considers text. For a shell script that is not cosmetic, it is fatal:
+# Git Bash reads `#!/usr/bin/env bash\r` and fails with `bad interpreter: no such file or
+# directory`, or `$'\r': command not found` on every line. So a Windows operator who cloned this
+# repo received an `aios-commit` that could not execute at all, and nothing in CI could notice —
+# until now the suite had never been run on Windows (see the primitives_windows lane).
+#
+# `eol=lf` forces these paths to LF in the working tree regardless of the operator's autocrlf
+# setting. It changes nothing for macOS/Linux, where LF was already what they got.
+
+# Shell scripts must be LF, always.
+*.sh            text eol=lf
+*.bash          text eol=lf
+
+# Extensionless executables under hooks/ are shell scripts too (aios-commit, aios-note-append).
+hooks/aios-commit       text eol=lf
+hooks/aios-note-append  text eol=lf
+
+# Python hooks: CRLF is survivable for the interpreter but breaks `#!` shebang invocation the
+# same way, and these are invoked directly by settings.json and by other scripts.
+*.py            text eol=lf
+
+# PowerShell is the mirror image — Windows Powershell is happiest with CRLF, and these files are
+# only ever executed on Windows. Left explicit so a future eol=lf sweep does not catch them.
+*.ps1           text eol=crlf
+
+# Markdown, YAML and JSON are normalized to LF in the repo. Editors on all three platforms
+# handle LF fine, and it keeps diffs clean across the team.
+*.md            text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+*.json          text eol=lf
+
+# Binaries — never touch.
+*.png           binary
+*.jpg           binary
+*.jpeg          binary
+*.gif           binary
+*.pdf           binary
+*.woff          binary
+*.woff2         binary
+*.ttf           binary
+*.otf           binary
+*.zip           binary
+*.icns          binary

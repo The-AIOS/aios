@@ -98,6 +98,20 @@
 
 **Nothing to run.** `CLAUDE.md` and `AGENTS.md` are read at session start, so the next session after this sync already behaves this way. No restart, no registration, no config.
 
+### On Windows, a CRLF checkout made the hooks unrunnable — and nothing could have noticed
+
+> **What this delivers.** `hooks/aios-commit` is a bash script, and Windows operators run it under **Git Bash**. Git for Windows installs with `core.autocrlf=true`, which rewrites LF → CRLF on checkout for anything it treats as text. For a shell script that is not cosmetic — Git Bash reads `#!/usr/bin/env bash\r` and dies with `bad interpreter: no such file or directory`, or `$'\r': command not found` on every line. The repo shipped **no `.gitattributes`**, so a Windows operator who cloned it could receive hooks that never execute. And CI could not have caught it: the commit-primitives suite ran on ubuntu (POSIX) and macOS (bash 3.2) — **never on Windows**, in any form.
+
+**What you can now do:**
+- **Run the hooks on Windows at all.** A new `.gitattributes` pins shell scripts, extensionless `hooks/` executables and `*.py` to `eol=lf` regardless of your `autocrlf` setting, and pins `*.ps1` to `eol=crlf` (where CRLF is the correct answer, so a future LF sweep can't break the PowerShell installer). No effect on macOS/Linux, which already had LF.
+- **Find out when it regresses.** A fourth CI lane — **Commit primitives (Windows / Git Bash)** — runs the full suite under `shell: bash` on `windows-latest`, which *is* Git for Windows' bash: the operator's real shell, not a POSIX emulator chosen for CI convenience. It first asserts `uname -s` is `MINGW`/`MSYS` (borrowing the bash-3.2 lane's vacuity guard — a lane that silently ran under WSL would be green and worthless), then **measures** that no tracked script carries a CR after checkout, then runs the suite.
+
+**For the record — canonical-only, with one exception.** The lane lives in `.github/` (Tier 0 — never synced to a vault, costs operators nothing). `.gitattributes` is the exception: it is not synced by `/aios:update` either, but operators *clone this repo* to create their vault, so it reaches them through that clone. The repo was already 100% CR-free at the time of the change, so this is purely protective — it introduces no renormalization and no diff.
+
+**Action required — Windows operators only, and only if `aios-commit` has ever failed oddly for you.** In your vault: `grep -c $'\r' hooks/aios-commit`. **`0` means you are fine, nothing to do.** A non-zero count means your checkout mangled the line endings, which is why it never ran: after pulling this change, run `git add --renormalize . && git checkout -- .` to rewrite the working tree with the now-declared endings. macOS and Linux operators: nothing to check, nothing to do.
+
+*Honest limitation: this lane has never executed. CI runs only on `push`/`pull_request` to `main`, so the Windows result is unknown until this reaches a PR — the change is written to be portable, not yet demonstrated to be. The four other hazards specific to Git Bash (MSYS pids under `kill -0`, `mktemp -d` path translation, fractional `sleep`, NTFS exec bits) are un-probed for the same reason.*
+
 ### `aios-commit` said "lock timeout (held by pid ?)" when nothing held the lock
 
 > **What this delivers.** `aios-commit` serialises concurrent commits with a `mkdir`-based mutex. `mkdir` fails for two unrelated reasons and the loop treated both as contention: **EEXIST** (someone holds it — retrying is right) and **EACCES/ENOENT** (it can never be created — retrying is futile). So when `$GIT_DIR` was not writable, the command spun for 60 seconds and died with **`lock timeout (held by pid ?)`** — sending you to hunt a concurrent process that never existed. The `?` was the tell: there was no lock, so there was no pid to read.
