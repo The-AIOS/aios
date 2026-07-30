@@ -36,6 +36,38 @@
 
 ---
 
+## 2026-07-30 — Scaffolding a company repo was quietly declaring its private context GPL-2.0
+
+`hash: 7f091c1 · company-template@3003833c`
+
+> **What this delivers.** `/aios:company --create` scaffolds by cloning `The-AIOS/company-template` — which is genuine GPL-2.0-or-later framework infra and ships the GPL as its root `LICENSE`. Nothing in the scaffold removed it. So **every company repo created this way carries the framework's GPL at its root**, and a root `LICENSE` is read as *"this whole repository is under these terms"* — over brand, pricing, positioning, personas, offerings. The framework's own `LICENSE-AUDIT.md` § 4 says the opposite in as many words (*"Company-distributed infra — company's discretion"*), so the documented policy and the shipped behaviour disagreed, and the behaviour won. It also **passed CI**, because that CI required a `LICENSE` unconditionally — which is exactly why it went unnoticed: the wrong state was the enforced state. Deleting the file instead just turned the build red. Compliant-and-green was unreachable.
+
+**What you can now do:**
+- **Scaffold a company repo without accidentally licensing your business.** `--create` now moves the GPL text to **`LICENSE-TEMPLATE`** and drops the template marker. **Moved, not deleted** — the scaffolding you received stays licensed and attributed, while the root `LICENSE` slot is freed for your company's own terms, or left empty. Concretely: `acme/venture-context` no longer announces itself as GPL-2.0 to anyone who opens it.
+- **Get told when it's wrong instead of guessing.** The template's CI is now role-aware: in the template repo it *requires* the GPL `LICENSE`; in a scaffolded repo it **fails** if the framework's GPL is at the root and requires `LICENSE-TEMPLATE` instead. Both states are now enforceable, so a company repo can be correct *and* green.
+- **Keep a clean history.** The scaffold starts a fresh git history rather than re-pointing the template's remote. Previously every template commit landed in your private repo, which also meant the GPL-at-root persisted in your log even after a later fix.
+- **Read a licence boundary that matches reality.** `LICENSE-AUDIT.md` § 4 moves from FLAG to **CONFIRMED**: the template is GPL-2.0-or-later (its `LICENSE` is byte-identical to canonical's), and a repo scaffolded from it is **not** GPL. The § 5 checklist item is closed and replaced with the live invariant — *is the split still enforced* — because a permanently-answered question is dead weight in a recurring audit.
+
+**Action required — only if you have ALREADY scaffolded a company repo (check takes 20 seconds).** Repos created before today are in the state described above, and the two halves must be fixed **in one commit**: moving the licence while the old CI is still in place turns that repo red.
+
+1. **Check** — in each company-context repo: `ls LICENSE LICENSE-TEMPLATE .aios-template-repo 2>&1`. If you see `LICENSE` present *and* the other two absent, this applies to you. If you see `LICENSE-TEMPLATE`, you're already correct — nothing to do.
+2. **Confirm it's actually the framework's GPL** and not a licence you chose deliberately: `head -2 LICENSE` showing *"GNU GENERAL PUBLIC LICENSE / Version 2"* at ~17,984 bytes is the inherited one. **If your company deliberately licensed the repo GPL, stop here** — that's a legitimate choice and this action does not apply.
+3. **Fix both halves together:**
+   ```bash
+   # from the company-context repo
+   curl -fsSL https://raw.githubusercontent.com/The-AIOS/company-template/main/.github/workflows/validate.yml \
+     -o .github/workflows/validate.yml     # role-aware licence check
+   git mv LICENSE LICENSE-TEMPLATE          # keeps the scaffolding licensed + attributed
+   git commit -am "fix(license): stop asserting GPL over company context (AIOS 2026-07-30)"
+   git push
+   ```
+4. **Add your own root `LICENSE` only if your company wants one** — any terms, or none. That slot is yours now.
+5. **Note what this is and isn't.** Company context repos are normally **private**, and GPL obligations attach to *distributing* a work, not to holding it. So a private repo in this state is a **mislabel to correct at your convenience, not a licence you have already granted to the world**. It matters most if the repo is public, shared outside the company, or ever becomes so. *This is a description of how the template ships, not legal advice — if the boundary matters commercially, have counsel look at it.*
+
+*Reported by an operator reviewing the licence boundary. The report named the contradiction exactly; the audit then found the shipped default was the silent-and-green horn rather than the red-build one, and that no part of the scaffold touched licensing at all.*
+
+---
+
 ## 2026-07-29 — Clickable file paths, and a lock that blamed the wrong thing
 
 `hash: 0cf0888 · d997c40`
