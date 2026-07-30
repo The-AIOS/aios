@@ -667,6 +667,53 @@ jobs:
         # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.
         run: /bin/bash tests/install-wrappers.test.sh
 
+  primitives_windows:
+    # The same regression suite under GIT BASH — the shell Windows operators actually run
+    # `aios-commit` in. The windows_installer lane below covers only the PowerShell installer,
+    # so until this lane existed NOTHING had ever executed the commit primitives on Windows:
+    # ubuntu proves POSIX, macOS proves bash 3.2, and neither can see an MSYS-specific fault.
+    # `shell: bash` on windows-latest resolves to Git for Windows' bash — the operator's real
+    # shell, not a POSIX emulator picked for CI convenience.
+    name: Commit primitives (Windows / Git Bash)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm the lane really is Git Bash (else it proves nothing)
+        # Mirrors the bash-3.2 lane's toolchain guard. If `shell: bash` ever resolved to WSL or
+        # a bundled POSIX shell instead of MSYS, every assertion below would still pass while
+        # testing a platform no operator uses — green, and vacuous.
+        shell: bash
+        run: |
+          set -e
+          echo "uname -s → $(uname -s)"
+          echo "bash     → $(bash --version | head -1)"
+          case "$(uname -s)" in
+            MINGW*|MSYS*) : ;;
+            *) echo "::error::Expected MINGW/MSYS (Git Bash) on windows-latest — got '$(uname -s)'. This lane would be vacuous."; exit 1 ;;
+          esac
+
+      - name: Line endings survived checkout (the fault this lane was built to catch)
+        # Git for Windows defaults to core.autocrlf=true, which rewrites LF -> CRLF on checkout.
+        # For a shell script that is fatal, not cosmetic: Git Bash reads `#!/usr/bin/env bash\r`
+        # and dies with `bad interpreter`. `.gitattributes` pins these paths to eol=lf; this step
+        # MEASURES that rather than trusting it, because the failure is silent until execution and
+        # it hits real Windows operators who cloned the repo, not just CI.
+        shell: bash
+        run: |
+          set -e
+          echo "core.autocrlf → $(git config --get core.autocrlf || echo '(unset)')"
+          rc=0
+          for f in hooks/aios-commit hooks/aios-note-append hooks/git/secret-scan.sh tests/aios-commit.test.sh; do
+            if grep -qU $'\r' "$f"; then echo "::error::$f contains CR after checkout — Git Bash cannot execute it. Check .gitattributes."; rc=1
+            else echo "  ok (LF): $f"; fi
+          done
+          exit $rc
+
+      - name: Regression suite under Git Bash
+        shell: bash
+        run: bash tests/aios-commit.test.sh
+
   windows_installer:
     # The Windows installer had NO execution lane. `install-wrappers.ps1` shipped
     # twice on regex-inspection alone ("regex-verified against the same case matrix
