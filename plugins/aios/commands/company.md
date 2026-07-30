@@ -382,10 +382,30 @@ Default (a) if no answer in 60s.
 
 ### Step 5 — Push to remote
 
-- `git clone The-AIOS/company-template /tmp/{company}-scaffold/`
-- Overlay drafted files
-- `git remote set-url origin {new-remote}`
-- Commit + push
+> **The scaffold must RE-LICENSE, not just copy.** The template is GPL-2.0-or-later framework infra and ships the GPL as its root `LICENSE`. The repo you are creating holds the company's **private business context** — brand, pricing, positioning, personas — which per `LICENSE-AUDIT.md` § 4 is *the company's discretion and not GPL*. A root `LICENSE` is read as "this whole repository is under these terms", so cloning it unchanged **silently declares a company's private material GPL-2.0**. It also used to pass the template's CI, which is why it went unnoticed; the template now fails that state instead (`.aios-template-repo` absent + GPL at root → error). Do the three lines below and the new repo is correct *and* green on first push.
+
+```bash
+# 1. Shallow clone — the company repo wants the FILES, not the template's commit history.
+#    (A plain clone + `remote set-url` carried every template commit into the company's
+#    private repo, which also means the GPL-at-root stays in their history even after you
+#    move it. Starting a fresh history avoids both.)
+git clone --depth=1 https://github.com/The-AIOS/company-template.git /tmp/{company}-scaffold
+cd /tmp/{company}-scaffold
+rm -rf .git
+
+# 2. RE-LICENSE for the company role. Move, don't delete: the scaffolding they received
+#    stays licensed + attributed, while the root LICENSE slot is freed for their own choice.
+mv LICENSE LICENSE-TEMPLATE
+rm -f .aios-template-repo        # this marker means "I am the template" — the company repo is not
+
+# 3. Overlay the drafted context + agent files, then start the company's own history.
+#    (overlay drafted files here)
+git init && git add -A
+git commit -m "chore: scaffold {Company} venture context from AIOS company-template"
+git remote add origin {new-remote} && git push -u origin main
+```
+
+**Then confirm the licence posture before telling the operator it's done:** `ls LICENSE LICENSE-TEMPLATE .aios-template-repo 2>&1` should show `LICENSE-TEMPLATE` present, and both `LICENSE` and `.aios-template-repo` absent. If the company wants its own licence, that is the moment to add a root `LICENSE` — their choice, any terms, or none. Tell them plainly: *"the GPL text you received is preserved as `LICENSE-TEMPLATE` and covers the scaffolding; everything you write into `context/` is yours and is not GPL."*
 
 ### Step 6 — Register in USER.md
 

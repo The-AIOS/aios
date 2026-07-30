@@ -75,11 +75,20 @@ The operator's Obsidian vault (declared/observed context, projects, calendar, id
 
 Infra a company ships to operators who mount it (via `/aios:company --sync`) lands at namespaced paths (`agents/{company}/`, `plugins/{company}/`, `skills/{company}/`, etc.). It is **not** part of canonical and **not** GPL by default — it is licensed at the distributing company's discretion and is private to mounters. The same zero-operator-data rule applies to anything a company distributes to others.
 
-### `company-template` — separate repo (FLAG)
+### `company-template` — separate repo (CONFIRMED 2026-07-30)
 
-`/aios:company --create` scaffolds from **`The-AIOS/company-template`**, which is a **separate repo not present in this tree**. Its license could not be verified from here.
-- **Presumed:** GPL-2.0-or-later (it is framework infra published under the same org).
-- **To confirm:** check that repo's `LICENSE` + manifests and record the result here. Until confirmed, treat the presumption as unverified.
+`/aios:company --create` scaffolds from **`The-AIOS/company-template`**, a separate repo not present in this tree. The earlier presumption is now **verified**: its `LICENSE` is **byte-identical** to this repo's GPL text (same `sha256`), and its `NOTICE` carries the *"or (at your option) any later version"* grant.
+
+- **The template repo:** **GPL-2.0-or-later.** Framework infra, same terms as canonical. Confirmed by direct comparison, not inference.
+- **A repo scaffolded FROM it:** **NOT GPL.** Its substance is the company's private business context, which falls under *Company-distributed infra — company's discretion* above. The framework does not license it and never did.
+
+**The split, and why it needed enforcing.** Those two lines were in tension, and the tension shipped: the template's CI required a root `LICENSE`, and `/aios:company --create` cloned the repo wholesale — CI and all. So a scaffolded company repo either kept the framework's GPL at its root, **silently declaring a company's private brand/pricing/positioning material GPL-2.0 while passing CI**, or deleted it and failed the build. Compliant-and-green was unreachable. Resolved 2026-07-30 (`company-template@3003833c`):
+
+- The template marks itself with **`.aios-template-repo`**; its CI branches on that file (not on the repo name, which would misjudge every legitimate fork).
+- A scaffolded repo keeps the GPL text as **`LICENSE-TEMPLATE`** — moved, not deleted, so the scaffolding it received stays licensed and attributed — and its CI **fails** if the framework's GPL is found at the root. The root `LICENSE` slot belongs to the company: their terms, or none.
+- `/aios:company --create` (Step 5) performs that rename, drops the marker, and starts a fresh git history so the GPL-at-root never enters the company's log.
+
+*Reported by an operator reviewing the licence boundary; the contradiction was real and is the reason this entry moved from FLAG to CONFIRMED rather than just recording a licence name.*
 
 ---
 
@@ -89,5 +98,6 @@ Infra a company ships to operators who mount it (via `/aios:company --sync`) lan
 - [ ] Every vendored subtree still has its in-folder upstream `LICENSE` + `.upstream-sync`.
 - [ ] No proprietary Anthropic skill (`docx`/`pdf`/`pptx`/`xlsx`/`brand-guidelines`/`canvas-design`) has been copied into `skills/anthropic/`.
 - [ ] No new upstream added that is GPL-2.0-incompatible.
-- [ ] `The-AIOS/company-template` license confirmed and recorded in §4.
+- [x] `The-AIOS/company-template` license confirmed and recorded in §4 — **GPL-2.0-or-later, verified 2026-07-30** (`LICENSE` byte-identical to this repo's). Permanently answered; the live check is the next line.
+- [ ] The **template/company split** is still enforced: `company-template` ships `.aios-template-repo` + a role-aware LICENSE check, and `/aios:company --create` still renames `LICENSE` → `LICENSE-TEMPLATE`. A scaffolded company repo must never carry the framework's GPL at its root (§4).
 - [ ] No operator data in any file destined to leave the vault.
