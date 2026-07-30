@@ -1,0 +1,7 @@
+# Pinned per the MCP pinning policy (mcps/_index.md). Bump deliberately; vet before bumping.
+#
+# The mcp pin is load-bearing, not hygiene: mcp 2.0 removed `mcp.server.fastmcp`,
+# which server.py imports. An unpinned install therefore builds a venv that
+# reports success and then fails at import.
+mcp==1.28.1
+google-genai==2.8.0
