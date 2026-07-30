@@ -66,6 +66,19 @@
 
 *Reported by an operator reviewing the licence boundary. The report named the contradiction exactly; the audit then found the shipped default was the silent-and-green horn rather than the red-build one, and that no part of the scaffold touched licensing at all.*
 
+### `aios-commit` left a phantom `MM` after any `git mv` — one dead pathspec aborted the whole index sync
+
+> **What this delivers.** After `aios-commit`, `git status` could show your committed files as **modified indefinitely** — looking exactly like unpushed work that does not exist. The commit and push were both correct; only the *index* lagged. Cause: the hook synced the real index with a single `git add --all -- <every path>`, and that form is **all-or-nothing** — if one pathspec matches nothing, git exits 128 (`fatal: pathspec 'X' did not match any files`) and stages **none** of the others. It fires on the ordinary `git mv old new` flow, because the caller naturally passes both names and `old` is by then gone from the worktree *and* the index. The error was routed to `/dev/null`, so nothing reported it: HEAD carried the new content, the index kept the old, and the repo looked dirty forever.
+
+**What you can now do:**
+- **Trust `git status` again after a commit.** The sync now runs **one path per call**, so a dead pathspec costs only itself. Concretely: `aios-commit -m "…" -- NOTICE LICENSE LICENSE-TEMPLATE` after a rename now leaves a clean tree instead of two phantom `MM` files.
+- **See it if it ever happens again.** The hook now verifies its own sync (`git diff --cached --name-only HEAD` — permissive with dead pathspecs where `git add` is not) and prints a `NOTE` naming the lagging files plus the `git reset -- <paths>` remedy. It deliberately does **not** silently repair the wider index: reaching beyond the committed paths is the shared-state overreach this tool exists to prevent. This branch is a **backstop and is documented as untestable** — after the per-path fix there is no way to make the sync fail without also breaking the commit, so it ships without a test rather than with one that proves nothing.
+- **Keep the guarantee under test.** Two cases added to `tests/aios-commit.test.sh` (canonical-only, run in CI on ubuntu *and* under macOS's bash 3.2): the git-mv sync case, and an assertion that the self-verification is still wired in. Both were confirmed to **fail against the pre-fix hook** before shipping. Full suite: 17/17 on bash 5.3 and bash 3.2.
+
+**Action required — only if a repo currently shows `M`/`MM` on files you know are committed.** Nothing is broken and nothing needs re-committing: `git log origin/main..HEAD` will show `0` unpushed. Confirm the content is genuinely identical to HEAD with `git diff HEAD --stat -- <those paths>` (expect empty), then clear the stale index with `git reset -- <those paths>` — index-only, it cannot touch your file contents. Three repos on this vault were in that state; the fix prevents new ones, it does not retroactively clean an index that is already stale.
+
+*Found because an operator noticed three repos "with uncommitted changes" that the session had just reported as clean — the session had verified unpushed commits and never checked the working tree.*
+
 ---
 
 ## 2026-07-29 — Clickable file paths, and a lock that blamed the wrong thing

@@ -200,8 +200,21 @@ git update-ref HEAD "$COMMIT" || die "update-ref failed"
 # invocation PATHS is empty, so an unguarded line here would be a literal `git add -A` on
 # the shared index — the precise failure this whole tool exists to prevent, reintroduced by
 # the flag that was meant to close a gap.
+#
+# ONE PATH PER CALL, deliberately — `git add --all -- a b c` is ALL-OR-NOTHING. If any single
+# pathspec matches nothing in either the worktree or the index, git exits 128 ("fatal: pathspec
+# 'X' did not match any files") and stages NONE of the others. That is not a corner case: it
+# fires on the ordinary `git mv old new` flow, where the caller naturally passes BOTH names —
+# `old` is gone from the worktree and already removed from the index by the mv, so it matches
+# nothing and the entire sync is skipped. Combined with the swallowed error below, the failure
+# was invisible in the worst way: commit and push both succeed, HEAD carries the new content,
+# and the real index keeps the OLD content — so `git status` reports `MM` indefinitely and reads
+# as unpushed work that does not exist. Measured on three repos 2026-07-30. Per-path, one dead
+# pathspec costs only itself.
 if [ ${#PATHS[@]} -gt 0 ]; then
-  git add --all -- "${PATHS[@]}" 2>/dev/null || true
+  for _p in "${PATHS[@]}"; do
+    git add --all -- "$_p" 2>/dev/null || true
+  done
 fi
 
 # ...and the --untrack counterpart. Without this the real index still lists the file while
@@ -215,6 +228,23 @@ fi
 # never touches the working tree, and keeping the file on disk is the entire point.
 if [ ${#UNTRACK[@]} -gt 0 ]; then
   git rm --cached -rf --quiet --ignore-unmatch -- "${UNTRACK[@]}" 2>/dev/null || true
+fi
+
+# Did the index sync above actually take? Verify instead of assuming — the whole reason the
+# stale-index bug survived is that the sync reported nothing either way. `git diff --cached` is
+# safe here where `git add` was not: its pathspecs are permissive, so a path that no longer
+# exists yields no output rather than a fatal. A stale index is cosmetic (the commit is correct)
+# but it renders as `M`/`MM` forever, which is indistinguishable from real uncommitted work —
+# and an operator who learns that `git status` cries wolf stops reading it. So: say it, don't fix
+# it silently. Repairing the real index beyond the committed paths is exactly the shared-state
+# overreach this tool exists to avoid.
+if [ ${#PATHS[@]} -gt 0 ]; then
+  STALE=$(git diff --cached --name-only HEAD -- "${PATHS[@]}" 2>/dev/null)
+  if [ -n "$STALE" ]; then
+    echo "aios-commit: NOTE — the commit is correct and complete, but your git index still lags HEAD for:" >&2
+    printf '  %s\n' $STALE >&2
+    echo "aios-commit: \`git status\` will show these as modified. Clear it with:  git reset -- <those paths>" >&2
+  fi
 fi
 
 echo "aios-commit: ${COMMIT:0:9} — $(printf '%s' "$MSG" | head -1)"

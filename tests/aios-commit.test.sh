@@ -136,6 +136,36 @@ R=$(newrepo); ( cd "$R"; echo t > tracked.txt; git add tracked.txt; git commit -
   || no "--untrack-only swept the tree — `git add --all --` with no pathspec stages EVERYTHING"
 rm -rf "$R"
 
+# The real-index sync used ONE `git add --all -- <every path>` call. That form is all-or-nothing:
+# a single pathspec matching nothing (the `git mv old new` case — caller passes both, `old` is
+# gone from worktree AND index) exits 128 and stages NOTHING. The error was swallowed, so commit
+# and push succeeded, HEAD held the new content, the index held the old, and `git status` showed
+# `MM` forever — read as unpushed work that did not exist. Found on 3 live repos 2026-07-30.
+echo "── aios-commit: index sync survives a pathspec that matches nothing (the git-mv MM bug) ──"
+R=$(newrepo); ( cd "$R"; echo gpl > LICENSE; echo old > NOTICE; git add -A; git commit -qm init
+  echo new > NOTICE                                        # modified, NOT staged
+  git mv LICENSE LICENSE-TEMPLATE                           # 'LICENSE' now matches nothing
+  "$AC" -m "renamed" --no-push -- NOTICE LICENSE LICENSE-TEMPLATE >/dev/null 2>&1
+  # the commit must carry the new NOTICE *and* the real index must agree with HEAD afterwards
+  git show HEAD:NOTICE 2>/dev/null | grep -qx new \
+    && [ -z "$(git diff --cached --name-only HEAD -- NOTICE LICENSE LICENSE-TEMPLATE)" ] \
+    && [ -z "$(git status --porcelain -- NOTICE LICENSE-TEMPLATE)" ] ) \
+  && ok "dead pathspec doesn't abort the sync: NOTICE committed AND index clean (no phantom MM)" \
+  || no "index sync aborted on a non-matching pathspec — status will show phantom MM"
+rm -rf "$R"
+
+# NO test for the stale-index NOTE itself, deliberately. With the per-path sync above there is no
+# longer a way to leave the index lagging without also breaking the commit: every mechanism that
+# stops `git add` writing the index (read-only .git, unreadable file) equally stops the lock, the
+# throwaway index, or update-ref. Attempted via `chmod -w .git` — the whole run fails, so the test
+# would assert on an artificial state that no real failure produces. The NOTE stays in the hook as
+# a BACKSTOP (a per-path add can still fail for reasons not enumerated here), but an untestable
+# backstop is documented as one rather than given a test that proves nothing.
+echo "── aios-commit: the sync verifies itself (assertion present, not just attempted) ──"
+grep -q 'index still lags HEAD' "$AC" && grep -q 'git diff --cached --name-only HEAD' "$AC" \
+  && ok "post-sync verification + operator-facing NOTE are wired into the hook" \
+  || no "the stale-index verification was removed — silent staleness can return"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Lock-failure CLASSIFICATION. `mkdir` fails for two unrelated reasons and the
 # loop used to treat both as contention: an unwritable $GIT_DIR (sandboxed Bash
