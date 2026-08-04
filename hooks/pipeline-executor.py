@@ -99,6 +99,39 @@ def log(msg):
             print(f"⚠️  pipeline log unwritable at {LOG_PATH} ({e}) — continuing", file=sys.stderr)
 
 
+# Phrases that mark a source as deliberately NOT in use. An operator who documents
+# *why* they skip a source (good practice — it stops future sessions re-asking) would
+# otherwise have that very documentation read as "enabled", because detection was a bare
+# substring match: `if "Slack" in content`. The better the note, the more certain the
+# parser became that the source was live — and the daily plan then reported a hard
+# failure every morning for something the operator had deliberately turned off.
+# Bilingual on purpose: USER.md is written in the operator's own language.
+_NEGATION_MARKERS = (
+    "no configurado", "no configurada", "sin configurar", "not configured",
+    "no se usa", "no usar", "not used", "do not use", "don't use",
+    "no conectada", "no conectado", "not connected",
+    "desactivado", "desactivada", "disabled", "deshabilitado",
+    "a propósito", "por decisión", "on purpose", "deliberately", "by choice",
+)
+
+
+def _mentions_enabled(content, keyword):
+    """True when `keyword` appears in USER.md on at least one line that does NOT negate it.
+
+    Scans line by line rather than testing the whole document, so a single "Slack — no
+    configurado" bullet no longer flips the source on. If every line mentioning the
+    keyword negates it, the source counts as off.
+    """
+    for line in content.split("\n"):
+        if keyword not in line:
+            continue
+        low = line.lower()
+        if not any(marker in low for marker in _NEGATION_MARKERS):
+            return True
+    # Never mentioned, or mentioned only on negated lines → off.
+    return False
+
+
 def parse_sources():
     """Parse USER.md Sources section for API IDs and configured sources."""
     config = {
@@ -122,13 +155,13 @@ def parse_sources():
 
     content = SOURCES_PATH.read_text()
 
-    if "Google Calendar" in content:
+    if _mentions_enabled(content, "Google Calendar"):
         config["configured"].add("calendar")
-        if "Google Calendar (Personal)" in content:
+        if _mentions_enabled(content, "Google Calendar (Personal)"):
             config["configured"].add("calendar-personal")
-    if "Slack" in content and "### Communication" in content:
+    if _mentions_enabled(content, "Slack") and "### Communication" in content:
         config["configured"].add("slack")
-    if "Google Tasks" in content:
+    if _mentions_enabled(content, "Google Tasks"):
         config["configured"].add("tasks")
     if "### Dev projects" in content:
         config["configured"].add("dev-projects")
@@ -513,7 +546,10 @@ def run_pipeline(command_name):
                 google_tasks_list, creds_primary,
                 sources["google_tasks_list"]
             )
-        if "slack" in sources["configured"]:
+        # Credential guard, matching calendar/tasks above. Without it Slack was the one
+        # source that attempted a fetch with no tokens on disk, turning a missing optional
+        # integration into a hard ❌ in every morning's plan instead of a quiet skip.
+        if "slack" in sources["configured"] and SLACK_TOKENS_PATH.exists():
             futures["slack"] = pool.submit(slack_unreads)
             # Slack daily recap — both today and close-day if enabled
             if sources["slack_recap_enabled"]:
@@ -536,9 +572,15 @@ def run_pipeline(command_name):
             status.append(f"✅ {key}")
         else:
             status.append(f"❌ {key}: {errors.get(key, 'unknown')}")
+    # Distinguish "operator never turned this on" from "turned on but unusable". Reporting
+    # both as "not configured" hid a real problem: a source the operator HAD configured but
+    # whose credentials were missing read as a deliberate choice, so nobody went looking.
     for source, mapped in [("calendar", "calendar_primary"), ("calendar-personal", "calendar_personal"), ("tasks", "tasks"), ("slack", "slack")]:
         if mapped not in futures:
-            status.append(f"⏭️ {source}: not configured")
+            if source in sources["configured"]:
+                status.append(f"⏭️ {source}: configured but credentials missing — run the setup for this source")
+            else:
+                status.append(f"⏭️ {source}: not configured")
 
     elapsed = (datetime.now() - start_time).total_seconds()
 
