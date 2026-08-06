@@ -146,6 +146,15 @@ _claude_with_respawn() {
   local name="${1:?Usage: _claude_with_respawn <name> [bootstrap] [initial-session-id]}"
   local bootstrap="${2:-}"
   local initial_sid="${3:-}"
+
+  # Anchor every spawned session in the vault so Claude Code auto-loads ~/aios/CLAUDE.md
+  # and runs the Session Start Ritual. The launcher's `cd ~/aios` only covers the
+  # macOS AppleScript path; the in-shell spawn path (and any plain-terminal spawn on
+  # Linux) calls this function directly from whatever cwd the terminal happened to be
+  # in — landing sessions in $HOME with no CLAUDE.md, so nothing loaded. cd'ing here
+  # makes vault-loading independent of OS, IDE automation, and the caller's cwd.
+  cd ~/aios 2>/dev/null
+
   # Use ARRAY for resume args (portable bash + zsh). Unquoted string $resume_flag
   # would word-split in bash but NOT in zsh (default) — zsh would pass the whole
   # "--resume <uuid>" as ONE option-name, and claude would error with
@@ -635,11 +644,23 @@ cat >> "$RC" <<EOF
 # Primary-session shorthand — runs \`$PRIMARY_NAME\` as a named, respawn-capable
 # session. Re-run install-wrappers.sh after editing USER.md → ## Identity to
 # rename this function to your actual session name.
+#
+# A FRESH session is launched with a bootstrap prompt. Without one, \`claude\` opens
+# idle and waits: CLAUDE.md is loaded (the cwd is the vault) but nothing has taken a
+# turn, so the Session Start Ritual never runs — no declared/observed context, no
+# greeting. \`spawn\` never had this problem, but only by accident: it ALWAYS passes
+# a bootstrap ("Read <task-file> …"), and that turn is what triggers the ritual. The
+# primary shorthand passing none looks like an oversight rather than a decision, so
+# the two paths are made to behave the same.
+#
+# -c/--continue and -r/--resume deliberately pass NO bootstrap: the context is
+# already in the session being resumed, and re-running the ritual would spend a turn
+# re-reading what is already loaded.
 $PRIMARY_NAME() {
   case "\$1" in
     -c|--continue) _claude_with_respawn $PRIMARY_NAME "" --continue ;;
     -r|--resume)   _claude_with_respawn $PRIMARY_NAME "" "\${2:-}" ;;
-    *)             _claude_with_respawn $PRIMARY_NAME ;;
+    *)             _claude_with_respawn $PRIMARY_NAME "Session start — follow the Session Start Ritual in CLAUDE.md: load declared + observed context, then greet me." ;;
   esac
 }
 # ==== END claude-primary-session ====
