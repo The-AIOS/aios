@@ -6,13 +6,17 @@
 # ============================================================================
 # One tool that handles three concerns for running Claude Code across multiple
 # Anthropic accounts (e.g., a primary + an overflow to dodge the 5h/7d rate
-# limits). All state is self-contained in your vault + ~/.claude/.
+# limits). All state is self-contained in your vault + your Claude config dir.
+#
+# Platforms: macOS and Linux. The credential store is detected, not assumed —
+# Keychain on macOS, and on Linux the plaintext $CONFIG_DIR/.credentials.json
+# (mode 600) that Claude Code itself writes. Windows uses the same file layout
+# as Linux but has no scheduler wired here and is untested.
 #
 # 1. Identity: save/restore/rotate between Anthropic accounts.
-#    Swaps the Keychain 'Claude Code-credentials' blob + the oauthAccount
-#    object + userID in ~/.claude.json atomically. Never touches mcpServers
-#    or project configs. Captures the outgoing identity before every swap
-#    (refresh tokens rotate).
+#    Swaps the credential blob + the oauthAccount object + userID in
+#    .claude.json atomically. Never touches mcpServers or project configs.
+#    Captures the outgoing identity before every swap (refresh tokens rotate).
 #
 # 2. Cache: read a Claude Code hook payload from stdin, extract the
 #    rate_limits object + current account email, write to
@@ -24,7 +28,7 @@
 #    to run under launchd every few minutes.
 #
 # ============================================================================
-# INSTALL ON A NEW MACHINE (macOS)
+# INSTALL ON A NEW MACHINE (macOS + Linux)
 # ============================================================================
 # All paths assume the vault is at ~/aios. Adjust if cloned elsewhere.
 #
@@ -38,10 +42,19 @@
 #   1. `primary@example.com` — optional label/context
 #   2. `overflow@example.com`
 #
-# Step 3 — capture each identity once. For each account, log into it via the
-# normal Claude Code flow, then:
+# Step 3 — capture each identity once.
 #
 #   claude-switch --capture
+#
+# SAFETY: do NOT just /login as the second account and capture. /login performs
+# a server-side revoke of the previous refresh token (POST {TOKEN_URL}/revoke,
+# token_type_hint: "refresh_token"), so depending on ordering it can kill an
+# identity you already captured. Log the additional account into an ISOLATED
+# config dir and capture from there — nothing to log out of, live credentials
+# untouched:
+#
+#   CLAUDE_CONFIG_DIR=~/.claude-acct-2 claude    # /login as account 2, then /exit
+#   CLAUDE_CONFIG_DIR=~/.claude-acct-2 claude-switch --capture
 #
 # Step 4 — wire the cache writer to the statusLine command. The statusline
 # is the ONLY Claude Code surface that receives rate_limits on stdin (Stop
@@ -65,14 +78,28 @@
 #   json.dump(d, open(p, "w"), indent=2)
 #   PY
 #
-# Step 5 — load the launchd agent (runs `watch` every 10 min, swaps when near cap):
+# Step 5 — install the safety-net scheduler.
 #
+# macOS (launchd):
 #   cp ~/aios/hooks/claude-identity/com.aios.claude-quota-watch.plist ~/Library/LaunchAgents/
 #   launchctl load ~/Library/LaunchAgents/com.aios.claude-quota-watch.plist
 #
+# Linux (systemd USER units — never system; the credentials are per-user):
+#   mkdir -p ~/.config/systemd/user
+#   cp ~/aios/hooks/claude-identity/aios-claude-quota-watch.service ~/.config/systemd/user/
+#   cp ~/aios/hooks/claude-identity/aios-claude-quota-watch.timer   ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now aios-claude-quota-watch.timer
+#   # headless box? `loginctl enable-linger $USER` so the timer survives logout
+#
+# Either way this is the SAFETY NET, not the detector. Real-time detection runs
+# from the statusLine pipe via _cache.py, which tightens to a 3s evaluation
+# interval as the account approaches its cap.
+#
 # Verify: `claude-whoami` works, `claude mcp list` unchanged, after a few
-# minutes `~/.claude/rate-limit-cache.json` appears and stays fresh as you use
-# Claude Code. The launchd log at ~/.claude/quota-watch.log records each check.
+# minutes `$CONFIG_DIR/rate-limit-cache.json` appears and stays fresh as you use
+# Claude Code. The watcher log at $CONFIG_DIR/quota-watch.log records each check.
+# `claude-switch watch --threshold` prints the threshold actually in force.
 #
 # ============================================================================
 # SUBCOMMANDS

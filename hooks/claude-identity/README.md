@@ -61,7 +61,7 @@ Multi-account Claude Code identity manager + quota autopilot. One tool that:
 >
 > **Hard preconditions — check both before any step runs:**
 >
-> 1. **macOS only.** The autopilot uses `security` (Keychain), `launchctl`, `~/Library/LaunchAgents/`, and `osascript` — all macOS-specific. If `uname -s` ≠ `Darwin`, tell the user: *"This autopilot is macOS-only — it relies on Keychain Services and launchd. The scripts are now in your repo but won't run on Linux/Windows. Skipping setup."* Then **skip the rest of setup entirely**.
+> 1. **macOS or Linux.** The credential store is platform-detected: Keychain on macOS, the plaintext `$CLAUDE_CONFIG_DIR/.credentials.json` (mode 600) that Claude Code itself writes on Linux/Windows. The scheduler follows the platform too — a launchd agent on macOS, a systemd **user** timer on Linux (`aios-claude-quota-watch.{service,timer}`). **Windows is not supported yet:** the credential path is right, but there is no scheduler equivalent wired and nothing has been tested there. If `uname -s` is neither `Darwin` nor `Linux`, tell the user: *"This autopilot supports macOS and Linux. The scripts are in your repo but the scheduler isn't wired for your platform. Skipping setup."* Then **skip the rest of setup entirely**.
 > 2. **≥ 2 Anthropic accounts.** This autopilot only brings value with multiple accounts in rotation. If step 1 (below) establishes the user has fewer than 2, **skip steps 2 through 7 entirely** — the scripts stay dormant in their repo until they configure ≥ 2 accounts in `USER.md`. Don't try to run capture, plist install, or statusLine wire on a single-account user.
 
 Paths below assume the vault is at `~/aios`. If you cloned elsewhere, either symlink `~/aios → /your/path` or substitute the full path.

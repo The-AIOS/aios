@@ -36,6 +36,25 @@
 
 ---
 
+## 2026-08-12 — The rotation autopilot runs on Linux, and three of its bugs were never about Linux
+
+`hash: TBD-ON-MERGE` <!-- date + hash set by the maintainer on merge; 08-12 is a placeholder because 08-11 is taken -->
+
+> **What this delivers.** `hooks/claude-identity/` was documented macOS-only, so every operator running two or more Anthropic accounts on Linux had **no rate-limit autopilot at all** — they hit the 5h cap mid-task with no fallback, which is the exact situation the feature exists to prevent. Porting it surfaced four things, and **three of them are bugs in the existing macOS implementation** that affect operators today. The fourth is a documented premise that measurement contradicts. The shape worth naming: *a port is an unusually good auditor, because it forces you to read every assumption out loud.*
+
+**What you can now do:**
+
+- **Run the quota autopilot on Linux.** The credential store is platform-detected — Keychain on macOS, and on Linux the plaintext `$CLAUDE_CONFIG_DIR/.credentials.json` (mode 600) that Claude Code itself writes. Not libsecret, not a keyring: anything else would be storing the credential somewhere the application never reads. The scheduler follows suit — a systemd **user** timer beside the launchd agent. The macOS path is byte-for-byte unchanged.
+- **Actually change the rotation threshold.** `claude-identity.sh` declared `THRESHOLD_5H`/`THRESHOLD_7D` and **nothing read them** — never exported, no consumer in that file, and the path that actually fires (statusLine → `_cache.py` → `_watch.py`) never sources the shell at all. So the copy that reads as configuration was inert, and `_watch.py`'s own default silently governed. Set 92, watch a 96% reading log `no swap`, get no error anywhere. `_watch.py` now owns the value; `claude-switch watch --threshold` answers from the enforcing process, so what is reported cannot drift from what is applied.
+- **Stop rotating onto an account that is still capped.** Rotation was a bare `switch`, which advances one position and wraps — so with two accounts, exhausting B rotated straight back to a still-capped A, landing the session on a dead account and then burning the cooldown there. The watcher now persists each account's `resets_at` as it sees it, and only rotates somewhere whose window has genuinely rolled. When nothing has capacity it **declines and tells you when capacity returns**, which is a better outcome than a swap to nowhere.
+- **Cross the cap without the rotation arriving late.** The threshold was only *evaluated* every 30 seconds. The credential swap lands in milliseconds, so that flat interval was the real ceiling: with parallel subagents burning fast, the cap gets crossed inside the blind window. The tick now tightens to 3s above 85% usage and stays at 30s below it.
+- **Find out if a rotation never reached your running session.** The autopilot leans on Claude Code re-reading its credential store on the next API request — measured, not promised. If that ever changes the failure is **mute**: the swap succeeds, the log says rotated, and the session keeps burning the capped account. A detector now watches for the usage that should have fallen and did not, and says so.
+- **Add a second account without killing the first.** `/login` performs a server-side revoke of the previous refresh token, so the documented "log in, then `--capture`" flow can destroy an identity you already captured, depending on ordering. Every component now honours `CLAUDE_CONFIG_DIR`, so you can log the new account into an isolated config dir and capture from there — nothing to log out of.
+
+**Action required:** none, unless you are on Linux and want the autopilot — see `hooks/claude-identity/README.md` § Setup. **If you are on macOS and had edited the threshold in `claude-identity.sh`, it was never in force.** Export `CLAUDE_QUOTA_5H` / `CLAUDE_QUOTA_7D` instead, and run `claude-switch watch --threshold` to see what is actually applied.
+
+**Not included:** Windows. The credential layout is the same as Linux, but no scheduler is wired and nothing has been tested there. `_resume.py` is also **not** deleted — its premise is false and its docstring now says so plainly, but it sits behind the documented `CLAUDE_AUTOSWAP_RESPAWN=1` opt-in, and removing an escape hatch operators may be using is a separate decision from a port.
+
 ## 2026-08-11 — Four backstops that could not see the thing they existed to catch
 
 `hash: f03c411 · 9f80efc · 19d674f · 05f7340`

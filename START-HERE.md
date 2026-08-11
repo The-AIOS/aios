@@ -181,7 +181,7 @@ If you customize how a command behaves, put it in `USER.md` → `## Command pers
 
 ## (Optional) Quota autopilot — multi-account rotation
 
-If you run two or more Anthropic accounts to manage 5h/7d rate limits, the bundled `hooks/claude-identity/` autopilot rotates between them automatically and respawns active Claude sessions on the new account. macOS-only (uses Keychain + launchd). Single-account setup? Skip — the scripts stay dormant.
+If you run two or more Anthropic accounts to manage 5h/7d rate limits, the bundled `hooks/claude-identity/` autopilot rotates between them automatically and respawns active Claude sessions on the new account. macOS (Keychain + launchd) and Linux (Claude Code's own credentials file + a systemd user timer). Single-account setup? Skip — the scripts stay dormant.
 
 To set up: in any Claude session, say *"set up the quota autopilot"*. Claude reads `hooks/claude-identity/README.md` and walks you through 7 steps.
 

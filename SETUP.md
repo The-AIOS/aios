@@ -420,7 +420,7 @@ Merge `PreToolUse` alongside your existing `UserPromptSubmit` array — don't re
 
 If either hook silently failed: re-read the settings.json and confirm the `hooks.UserPromptSubmit` array + `statusLine.command` are exactly as above. Common gotcha: an existing settings.json with `hooks: {}` empty object — merge the array in, don't replace the empty value at the wrong nesting level.
 
-### 11. Quota autopilot — split: install now, capture later (macOS only, ≥ 2 accounts)
+### 11. Quota autopilot — split: install now, capture later (macOS + Linux, ≥ 2 accounts)
 
 **Why this is split.** The autopilot has two install phases. The first is file-system-only (drop the plist, load the launchd agent) — safe to do during setup. The second is the **account-capture dance** (login → capture identity → logout → switch → repeat) — that one cycles Claude's auth, and running it during setup would interrupt the very session that's setting things up. So we ALWAYS defer capture to the operator's first `/today`, where it's a deliberate task with no other in-flight work to disrupt.
 
@@ -457,7 +457,7 @@ If either hook silently failed: re-read the settings.json and confirm the `hooks
 **The full capture walkthrough** is at `hooks/claude-identity/README.md` → `## Setup` — 7 interactive steps: configure accounts in USER.md, capture identities, verify cache writes, run a swap dry-run. That walkthrough is what fires from `/today` when the marker is present.
 
 Hard preconditions:
-- **macOS only.** Uses Keychain Services and launchd. On Linux/Windows the autopilot stays dormant; the spawn wrapper + universal hooks still work on all platforms.
+- **macOS and Linux.** The credential store and the scheduler are both platform-detected: Keychain + launchd on macOS; on Linux, the plaintext credentials file Claude Code itself writes (mode 600) + a systemd **user** timer. **Windows stays dormant** — the credential path is right there but no scheduler is wired and it is untested. The spawn wrapper + universal hooks work on all three regardless.
 - **≥ 2 Anthropic accounts.** A single-account setup gets no value — skip this section entirely.
 
 ### 12. Advanced — two-machine architecture (optional, power users)
@@ -590,7 +590,7 @@ OS-specific debugging fixes documented as the team hit them. Cross-reference if 
 | Terminal in Obsidian doesn't work | polyipseity plugin incompatible | Use VS Code or Antigravity terminal instead. Uninstall the plugin. |
 | Atlassian auth doesn't open popup | VS Code OAuth popup blocked | Authenticate at claude.ai → Settings → Connectors → Atlassian. VS Code detects it after. *(Skip if you don't use Jira/Confluence.)* |
 
-**Skip on Windows:** Quota autopilot (above) is macOS-only — single-account use works fine on Windows without it.
+**Skip on Windows:** Quota autopilot (above) supports macOS and Linux — single-account use works fine on Windows without it.
 
 ### macOS
 
