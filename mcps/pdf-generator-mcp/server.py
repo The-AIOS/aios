@@ -1,6 +1,12 @@
-"""PDF Generator MCP — pandoc (md → HTML) → Chrome headless (HTML → PDF)."""
+"""PDF Generator MCP — pandoc (md → HTML) → Chrome headless (HTML → PDF).
+
+Cross-platform (macOS / Windows / Linux). Chrome is resolved per-OS at call time;
+override with the CHROME_PATH env var if your browser lives somewhere unusual.
+"""
 import os
+import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from datetime import datetime
@@ -19,17 +25,64 @@ from mcp.server.fastmcp import FastMCP
 # root from this file's location removes the dependency on the symlink entirely.
 AIOS_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT_DIR = AIOS_ROOT / "vault" / "03 - export" / "generated"
-CHROME_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 mcp = FastMCP("pdf-generator")
 
 
-def _ensure_tools():
-    """Verify pandoc and Chrome are available."""
-    if subprocess.run(["which", "pandoc"], capture_output=True).returncode != 0:
-        raise RuntimeError("pandoc not found. Install: brew install pandoc")
-    if not os.path.exists(CHROME_PATH):
-        raise RuntimeError(f"Chrome not found at {CHROME_PATH}. Install Google Chrome.")
+def _find_chrome() -> str | None:
+    """Locate a Chrome/Chromium/Edge binary across macOS, Windows and Linux."""
+    # 1) explicit override
+    env = os.environ.get("CHROME_PATH")
+    if env and os.path.exists(env):
+        return env
+
+    # 2) per-OS well-known locations
+    if sys.platform == "darwin":
+        candidates = [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Chromium.app/Contents/MacOS/Chromium",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+        ]
+    elif sys.platform == "win32":
+        candidates = [
+            os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%LocalAppData%\Google\Chrome\Application\chrome.exe"),
+            os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
+            os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
+        ]
+    else:  # linux / other unix
+        candidates = [
+            "/usr/bin/google-chrome",
+            "/usr/bin/google-chrome-stable",
+            "/usr/bin/chromium",
+            "/usr/bin/chromium-browser",
+            "/snap/bin/chromium",
+        ]
+    for c in candidates:
+        if c and os.path.exists(c):
+            return c
+
+    # 3) anything on PATH
+    for name in ("google-chrome", "google-chrome-stable", "chromium",
+                 "chromium-browser", "chrome", "msedge"):
+        found = shutil.which(name)
+        if found:
+            return found
+    return None
+
+
+def _ensure_tools() -> str:
+    """Verify pandoc and a Chrome-family browser are available. Returns the browser path."""
+    if shutil.which("pandoc") is None:
+        raise RuntimeError("pandoc not found. Install pandoc and make sure it's on PATH.")
+    chrome = _find_chrome()
+    if not chrome:
+        raise RuntimeError(
+            "Chrome/Chromium/Edge not found. Install Google Chrome, "
+            "or set the CHROME_PATH env var to your browser binary."
+        )
+    return chrome
 
 
 def _default_output(ext: str = "pdf") -> str:
@@ -38,8 +91,9 @@ def _default_output(ext: str = "pdf") -> str:
 
 
 def _html_to_pdf(html_path: str, pdf_path: str) -> None:
+    chrome = _ensure_tools()
     subprocess.run(
-        [CHROME_PATH, "--headless", "--no-pdf-header-footer", f"--print-to-pdf={pdf_path}", html_path],
+        [chrome, "--headless", "--no-pdf-header-footer", f"--print-to-pdf={pdf_path}", html_path],
         check=True,
         capture_output=True,
     )

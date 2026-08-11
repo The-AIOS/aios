@@ -41,7 +41,7 @@ If `USER.md` exists, read it. It contains:
 
 1. Your session name is your role (e.g. `accountant`, `lawyer`, `code-review`, `writing`).
 2. **Agent matching** (in order):
-   - **Exact:** glob `agents/**/{name}.md` — first match wins. `agents/custom/{name}.md` always overrides bundled. Wrapper warns on collisions across bundles.
+   - **Exact:** glob `agents/**/{name}.md` — first match wins. `agents/custom/{name}.md` always overrides bundled. Wrapper warns on collisions across bundles. **Probe with a command that exits 0 on no-match** — `find agents -ipath "*/{name}.md" -print -quit 2>/dev/null` (a bare `ls agents/**/{name}.md` exits 2 when nothing matches, surfacing a harmless-but-noisy red error every spawn). A no-match is expected and normal — especially for primary sessions in USER.md, which aren't agents; don't treat the empty result as a failure.
    - **Fuzzy:** no exact file → read `agents/_index.md` (canonical registry) + `agents/custom/_index.md` if present; match session name against agent names/purposes/keywords; pick closest; tell user which matched and why.
    - **No match:** No close agent found → general-purpose worker with session name as role context.
 3. **Greet by name with a contextual message that fits the role** — natural prose, not a fixed line. E.g. `lawyer` → *"Counsel is in, [name]. What do you need me to look at?"* (`[name]` from `about_me.md`; never hardcode). Adapt for any role.
