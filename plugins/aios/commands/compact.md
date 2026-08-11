@@ -75,6 +75,7 @@ Individual snapshot and role-log files accumulate daily. This command:
    a. Measure `vault/00 - notes/context/observed/antifragile.md` — **tokens are the real cost; entry count is only a proxy for it.** If **≤ ~45k tokens** (≈1,000 lines) **AND ≤ ~120 entries**, skip — within bounds. (Quick read: `wc -c` ÷ 3.7 ≈ tokens; `grep -c '^### [0-9]'` = entries.)
    b. If over: **snapshot first** — `cp` the current file to `00 - notes/logs/observed-snapshots/{current-month}/{today}-antifragile.md`. The snapshot IS the archive — no separate `-archive.md` file; `/trace` reads snapshots + git history.
    c. Then compact the LIVE file in **three tiers** — never silent-delete on inference:
+      - **TIER 0 — RELOCATE, and try this BEFORE condensing (added 2026-08-11):** a long argument living inside the meta-pattern index costs its full weight on every single read, while the same prose in its own numbered entry costs nothing until something points at it. Moving one such block out and leaving a two-line pointer measured **~1,570 tokens reclaimed in a single edit** — against **12.6% for condensing 24 of 50 entries**, because mature entries are dense rather than padded. Relocation is the lever that pays; condensation is largely spent after its first pass. ⚠️ **If the relocated block contains a live open decision, the pointer must carry that decision verbatim** — otherwise you have moved a decision into a file nobody opens, which is worse than the tokens you saved. _(Measured and reported by Luigi Matrone / ALI, 2026-08-08, from a real compaction pass.)_
       - **TIER 1 — AUTO-tombstone (safe, mechanical):** entries **explicitly marked** graduated/merged/superseded (carrying `→ Graduated to CLAUDE.md`, `→ Merged into #N`, or `superseded by #N`). The file itself declares these redundant. **Tombstone, don't delete** — collapse the body but keep the number, title, marker and Category tag, so the meta-pattern index and every external `#N` reference still resolve. **Entry numbers are identity — never renumber.**
       - **TIER 2 — CONDENSE (the primary lever):** rewrite verbose entries into tight **what-broke / why / fix** triplets (~6-9 lines). Preserve verbatim: every entry number, all exact commands, flags, paths, hashes, and cross-references (`#N`, `[[wikilinks]]`, meta-pattern letters). This is where the tokens actually are — once entries are already terse, removal frees almost nothing. Condensing is an editorial pass, not a deletion, so the wisdom survives at a fraction of the cost.
       - **TIER 3 — SURFACE for confirmation (judgment — never auto):** entries that *look* stale (resolved/shipped, old, low-recurrence) but carry **no explicit marker**. List them with the reason and **ask the operator to confirm** before removing each. NEVER auto-delete an unmarked entry on inference — a wrong cut loses real wisdom, and on a teammate's vault Claude can't see what's still load-bearing for them.
@@ -121,7 +122,7 @@ Individual snapshot and role-log files accumulate daily. This command:
    - Role logs: {N} files → digest + zip
    - Space saved estimate
 
-6. **Commit and push**: `cd ~/aios && git add -A && git commit -m "Compact {target-month} logs" && git push`
+6. **Commit and push**: `cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Compact {target-month} logs"`
 
 ## End state
 

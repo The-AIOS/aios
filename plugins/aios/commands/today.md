@@ -213,7 +213,7 @@ Place triage decisions at the top of Parking lot, not buried in Rhythm.
   5. Note any fixes inline in the commit message: `Daily plan {date} (clean pass: merged X, restored Y, recovered N due-today tasks)`.
 
 ### Message 3 — Commit + push
-- `cd ~/aios && git add -A && git commit -m "Daily plan {date}" && git push`
+- `cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Daily plan {date}"`
 
 ## First run handling
 
@@ -403,7 +403,7 @@ After writing the Radar table, scan the past 7 daily notes (`vault/01 - calendar
 - Carry-reason tags: `strategic-deferral` (important but not now), `blocked-on-{who}` (external), `needs-challenge` (should I push harder?), `waiting-on-date` (time-gated). Once tagged, count alone stops escalating.
 - **🤖 Proactive execution:** prefix tasks Claude can execute with available tools. Match against `agents/_index.md` (loaded in Message 1a) by domain + keywords; annotate `🤖 {task} _(→ agent: [[agent-name]])_`. After Energy note, add: `🤖 **{N} tasks agents can handle** — say "go" to spawn them, pick specific ones, or /agent {name} to wear the hat.`
 - **Dependency trees:** when a task is blocked, nest the blocker beneath it with indentation.
-- **After writing, commit + push** — `cd ~/aios && git add -A && git commit -m "Daily plan {date}" && git push`.
+- **After writing, commit + push** — `cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Daily plan {date}"`.
 
 ## Command Discovery Engine
 
