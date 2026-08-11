@@ -94,6 +94,14 @@
 #   CLAUDE_QUOTA_5H=98      rotate when 5h pct >= this
 #   CLAUDE_QUOTA_7D=98      rotate when 7d pct >= this
 #
+# These are read by _watch.py, which OWNS the default — this script deliberately
+# does not define one. It used to (`THRESHOLD_5H="${CLAUDE_QUOTA_5H:-98}"`), and
+# that copy was never read by anything: nothing in this file consumed it, it was
+# never exported, and the hot path (statusLine -> _cache.py -> _watch.py) never
+# runs this script at all. An operator who edited it got silence, not an effect.
+# One value, one owner. Export the env vars to change it; `watch --threshold`
+# prints what is actually in force.
+#
 # Note (2026-04-23): come-home semantics removed for topology-independence.
 # The watcher now does pure rotate-only: when current account hits its cap,
 # advance to the next account in USER.md. Round-robin alternation across
@@ -111,8 +119,8 @@ CACHE_FILE="$HOME/.claude/rate-limit-cache.json"
 WATCH_LOG="$HOME/.claude/quota-watch.log"
 SWAP_LOG="$HOME/.claude/swap-log.jsonl"
 
-THRESHOLD_5H="${CLAUDE_QUOTA_5H:-98}"
-THRESHOLD_7D="${CLAUDE_QUOTA_7D:-98}"
+# NOTE: the rotation thresholds are intentionally NOT defined here — _watch.py
+# owns them. See the "Environment overrides" block above.
 
 if [ -t 1 ]; then
   BOLD=$'\033[1m'; DIM=$'\033[2m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; BLUE=$'\033[34m'; RED=$'\033[31m'; RESET=$'\033[0m'
@@ -333,6 +341,12 @@ cmd_cache() {
 cmd_watch() {
   # _watch.py used to take a `primary` arg for come-home logic; come-home
   # was removed 2026-04-23 for topology-independence. Only self-path now.
+  if [ "${1:-}" = "--threshold" ]; then
+    # Ask the process that actually enforces it. Reading a number out of this
+    # file would just recreate the second source of truth we deleted.
+    python3 "$SELF_DIR/_watch.py" --threshold
+    return
+  fi
   python3 "$SELF_DIR/_watch.py" "$0"
 }
 

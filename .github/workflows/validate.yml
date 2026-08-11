@@ -630,6 +630,14 @@ jobs:
         # reported by operators, neither catchable here because nothing tested this file.
         run: bash tests/install-wrappers.test.sh
 
+      - name: rotation threshold reaches its enforcing process
+        # THRESHOLD_5H/7D lived in claude-identity.sh and nothing read them: never
+        # exported, no consumer in that file, and the hot path (statusLine ->
+        # _cache.py -> _watch.py) never sources the shell. Editing the value you
+        # could find changed nothing, silently. Reported from a Linux operator's
+        # live rotation (#15).
+        run: bash tests/quota-threshold.test.sh
+
   primitives_bash32:
     # The same regression suite under bash 3.2 — the bash Apple ships at /bin/bash on every
     # macOS, and what `#!/usr/bin/env bash` resolves to on a stock Mac. The `primitives` job
@@ -666,6 +674,11 @@ jobs:
       - name: install-wrappers regression under bash 3.2
         # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.
         run: /bin/bash tests/install-wrappers.test.sh
+
+      - name: rotation threshold under bash 3.2
+        # macOS is the platform the rotation autopilot already supports, so this
+        # lane is the one that matters most for it.
+        run: /bin/bash tests/quota-threshold.test.sh
 
   primitives_windows:
     # The same regression suite under GIT BASH — the shell Windows operators actually run

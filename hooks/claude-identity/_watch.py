@@ -39,6 +39,40 @@ SWAP_LOG = os.path.join(HOME, ".claude", "swap-log.jsonl")
 STALE_AFTER_SECS = 1800  # 30 min
 COOLDOWN_SECS = 900  # 15 min — prevent thrashing after a swap
 
+# ── rotation thresholds ─────────────────────────────────────────────────────
+# This module is the SINGLE owner of the default. claude-identity.sh used to
+# carry its own `THRESHOLD_5H="${CLAUDE_QUOTA_5H:-98}"`, which nothing read and
+# nothing exported — and the hot path (statusLine -> _cache.py -> _watch.py)
+# never touches the shell at all, so an operator editing that line changed
+# nothing and got no error. Two declarations of one value is one too many; the
+# one the consumer reads is the only one that exists now.
+DEFAULT_THRESHOLD_PCT = 98
+
+
+def _threshold(name: str) -> tuple:
+    """(value, source) for one threshold. `source` says where the value that is
+    ACTUALLY in force came from — a rejected override reports the default, not
+    'environment'. Mislabelling that is the same failure this fix exists for."""
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return DEFAULT_THRESHOLD_PCT, "built-in default"
+    try:
+        v = int(raw)
+    except ValueError:
+        log(f"{name}={raw!r} is not an integer — using {DEFAULT_THRESHOLD_PCT}")
+        return DEFAULT_THRESHOLD_PCT, f"built-in default ({name} rejected: not an integer)"
+    if not 1 <= v <= 100:
+        # A 0 would rotate on every tick; a 150 would never rotate. Both are
+        # almost certainly typos, and both fail silently if we honour them.
+        log(f"{name}={v} out of range 1-100 — using {DEFAULT_THRESHOLD_PCT}")
+        return DEFAULT_THRESHOLD_PCT, f"built-in default ({name}={v} out of range 1-100)"
+    return v, "environment"
+
+
+def thresholds() -> tuple:
+    """(5h, 7d) rotation thresholds actually in force."""
+    return _threshold("CLAUDE_QUOTA_5H")[0], _threshold("CLAUDE_QUOTA_7D")[0]
+
 
 def recently_swapped() -> tuple[bool, int]:
     """Returns (True, seconds_since_last) if a swap happened within COOLDOWN_SECS.
@@ -103,8 +137,7 @@ def _read_active_email() -> str:
 
 def main(self_path: str) -> None:
     try:
-        t5 = int(os.environ.get("CLAUDE_QUOTA_5H", "98"))
-        t7 = int(os.environ.get("CLAUDE_QUOTA_7D", "98"))
+        t5, t7 = thresholds()
 
         if not os.path.exists(CACHE):
             log("no cache yet — skip (is the Stop hook installed?)")
@@ -236,7 +269,15 @@ if __name__ == "__main__":
     # argv: self-path (claude-identity.sh)
     # Note: come-home removed 2026-04-23, so the second-arg "primary" from
     # claude-identity.sh `watch` is now accepted but ignored for back-compat.
+    if len(sys.argv) >= 2 and sys.argv[1] == "--threshold":
+        # Report the value THIS process would enforce. The point is that it is
+        # answered by the consumer, so it cannot drift from what actually runs.
+        t5, s5 = _threshold("CLAUDE_QUOTA_5H")
+        t7, s7 = _threshold("CLAUDE_QUOTA_7D")
+        print(f"5h: {t5}%  ({s5})")
+        print(f"7d: {t7}%  ({s7})")
+        sys.exit(0)
     if len(sys.argv) < 2:
-        sys.stderr.write("_watch.py: usage: _watch.py <self_path>\n")
+        sys.stderr.write("_watch.py: usage: _watch.py <self_path> | --threshold\n")
         sys.exit(2)
     main(sys.argv[1])
