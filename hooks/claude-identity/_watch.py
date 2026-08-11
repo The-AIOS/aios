@@ -482,6 +482,13 @@ def main(self_path: str) -> None:
         # respawn behavior. Only meaningful for unattended overnight agents
         # that MUST keep working past the cap without a human present to
         # restart. For interactive use it's strictly noisier.
+        #
+        # NOTE (#15): the reason this path was originally built — "a running
+        # session keeps the old token in memory" — is false, measured. A live
+        # session adopts on its next API request. So the respawn no longer has a
+        # token-related job; it is a hard restart on rotation and nothing more.
+        # Left reachable because it is a documented opt-in and removing it is
+        # the maintainer's call, not a side effect of this port.
         if r.returncode != 0:
             # Swap failed — most commonly because there's only one account in
             # USER.md (rotation needs >= 2). Degrade quietly: no OS notification
