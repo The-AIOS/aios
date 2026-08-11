@@ -27,6 +27,7 @@ to force a specific account on a specific machine.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -36,6 +37,8 @@ HOME = os.path.expanduser("~")
 CACHE = os.path.join(HOME, ".claude", "rate-limit-cache.json")
 LOG = os.path.join(HOME, ".claude", "quota-watch.log")
 SWAP_LOG = os.path.join(HOME, ".claude", "swap-log.jsonl")
+IDENTITIES = os.path.join(HOME, ".claude", "identities")
+USER_MD = os.environ.get("USER_MD_PATH") or os.path.join(HOME, "aios", "USER.md")
 STALE_AFTER_SECS = 1800  # 30 min
 COOLDOWN_SECS = 900  # 15 min — prevent thrashing after a swap
 
@@ -74,29 +77,58 @@ def thresholds() -> tuple:
     return _threshold("CLAUDE_QUOTA_5H")[0], _threshold("CLAUDE_QUOTA_7D")[0]
 
 
+def _swap_log_tail(limit: int = 40) -> list:
+    """Most recent swap-log rows, newest first. Bounded read; malformed lines
+    are skipped rather than aborting the scan."""
+    if not os.path.exists(SWAP_LOG):
+        return []
+    rows = []
+    try:
+        with open(SWAP_LOG, "rb") as f:
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            if size == 0:
+                return []
+            block = min(65536, size)
+            f.seek(-block, os.SEEK_END)
+            lines = f.read().splitlines()
+        # A partial first line is likely when we seek into the middle of the
+        # file; json.loads rejects it and the skip below handles it.
+        for raw in reversed(lines[-limit:]):
+            try:
+                rows.append(json.loads(raw.decode()))
+            except Exception:
+                continue
+    except Exception:
+        return []
+    return rows
+
+
+def last_actual_swap() -> dict:
+    """The most recent row where the account genuinely changed.
+
+    `declined` rows are NOT swaps. They must be skipped here: a decline means we
+    looked and stayed put, so nothing about the session changed and there is
+    nothing to debounce. Counting one would arm the cooldown at the exact moment
+    the watcher most needs to keep looking — the other account's window may roll
+    over seconds later, and we would not notice for another COOLDOWN_SECS."""
+    for r in _swap_log_tail():
+        if r.get("action") == "rotate" and r.get("rc") == 0:
+            return r
+    return {}
+
+
 def recently_swapped() -> tuple[bool, int]:
     """Returns (True, seconds_since_last) if a swap happened within COOLDOWN_SECS.
     Thrashing guard: after a swap the running session keeps the old token in
     memory; its next turns report the OLD account's rate_limits against the NEW
     oauthAccount email in ~/.claude.json — without this cooldown we'd swap
     back immediately and ping-pong forever."""
-    if not os.path.exists(SWAP_LOG):
+    last = last_actual_swap()
+    if not last:
         return False, 0
-    try:
-        with open(SWAP_LOG, "rb") as f:
-            # read last line efficiently
-            f.seek(0, os.SEEK_END)
-            size = f.tell()
-            if size == 0:
-                return False, 0
-            block = min(4096, size)
-            f.seek(-block, os.SEEK_END)
-            last_line = f.read().splitlines()[-1]
-        last = json.loads(last_line.decode())
-        elapsed = int(time.time() - last.get("ts", 0))
-        return elapsed < COOLDOWN_SECS, elapsed
-    except Exception:
-        return False, 0
+    elapsed = int(time.time() - (last.get("ts") or 0))
+    return elapsed < COOLDOWN_SECS, elapsed
 
 
 def log(msg: str) -> None:
@@ -135,6 +167,124 @@ def _read_active_email() -> str:
         return ""
 
 
+# ── where to rotate ─────────────────────────────────────────────────────────
+# Rotation used to be a bare `switch`, which advances one position in the
+# USER.md list and wraps. With exactly two accounts — the common case — that
+# means exhausting B rotates straight back to A, whose 5h window has not rolled
+# yet. The session lands on a dead account and then sits out the cooldown there,
+# which is worse than not rotating at all.
+#
+# The data needed to avoid it is already in hand and was being thrown away:
+# `rate_limits` carries `resets_at` per window. Persisting the ACTIVE account's
+# limits on every tick is what lets the watcher reason about accounts it is not
+# currently on — otherwise it is blind to every account but one, and blind is
+# exactly what forces round-robin.
+
+
+def parse_accounts() -> list:
+    """Ordered account list from USER.md -> '## Anthropic accounts'.
+
+    Position is preference, not a cycle: #1 is home, the rest are overflow.
+    Same numbered-backtick format claude-identity.sh parses; kept in step with
+    it deliberately, because two parsers disagreeing about the account list is
+    the failure this file already fixed once for thresholds."""
+    out = []
+    try:
+        in_sec = False
+        with open(USER_MD, encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("## Anthropic accounts"):
+                    in_sec = True
+                    continue
+                if in_sec and line.startswith("## "):
+                    break
+                if in_sec:
+                    m = re.match(r"\s*\d+\.\s*`([^`]+)`", line)
+                    if m:
+                        out.append(m.group(1))
+    except FileNotFoundError:
+        log(f"USER.md not found at {USER_MD} — cannot determine the account list")
+    except Exception as e:
+        log(f"could not parse accounts from {USER_MD}: {type(e).__name__}: {e}")
+    return out
+
+
+def state_path(email: str) -> str:
+    return os.path.join(IDENTITIES, email, "last-limits.json")
+
+
+def record_state(email: str, cache: dict) -> None:
+    """Persist the active account's limits so that, once we have rotated away
+    from it, we can still reason about when its window frees up."""
+    if not email:
+        return
+    try:
+        os.makedirs(os.path.join(IDENTITIES, email), exist_ok=True)
+        dst = state_path(email)
+        tmp = dst + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump({
+                "email": email,
+                "recorded_at": int(time.time()),
+                "five_hour_pct": cache.get("five_hour_pct") or 0,
+                "five_hour_resets_at": cache.get("five_hour_resets_at"),
+                "seven_day_pct": cache.get("seven_day_pct") or 0,
+                "seven_day_resets_at": cache.get("seven_day_resets_at"),
+            }, f, indent=2)
+        os.replace(tmp, dst)
+        os.chmod(dst, 0o600)
+    except Exception as e:
+        log(f"record_state({email}) failed: {type(e).__name__}: {e}")
+
+
+def headroom(email: str, t5: int, t7: int) -> tuple:
+    """(available, why) for an account we are not currently on.
+
+    Available means: no evidence it is capped, or the window that capped it has
+    already rolled over. Absence of evidence is treated as available on purpose
+    — a never-seen account is the normal state right after setup, and refusing
+    to rotate to it would make the feature useless on day one."""
+    p = state_path(email)
+    if not os.path.exists(p):
+        return True, "no known state (assume fresh)"
+    try:
+        with open(p) as f:
+            s = json.load(f)
+    except Exception:
+        return True, "state unreadable (assume fresh)"
+    now = time.time()
+    for pct_key, reset_key, thr, label in (
+        ("five_hour_pct", "five_hour_resets_at", t5, "5h"),
+        ("seven_day_pct", "seven_day_resets_at", t7, "7d"),
+    ):
+        pct = s.get(pct_key) or 0
+        reset = s.get(reset_key)
+        if pct < thr:
+            continue
+        if reset and now > reset:
+            continue  # window rolled over — fresh again
+        when = time.strftime("%H:%M", time.localtime(reset)) if reset else "unknown"
+        return False, f"{label} at {round(pct)}% until {when}"
+    return True, "under thresholds"
+
+
+def pick_target(current: str, t5: int, t7: int) -> tuple:
+    """(email_or_None, reason). Preference is USER.md order, but an account is
+    only a candidate if its cap window has actually rolled."""
+    accts = parse_accounts()
+    if len(accts) < 2:
+        return None, f"need >= 2 accounts in USER.md (found {len(accts)})"
+    blocked = []
+    for email in accts:
+        if email == current:
+            continue
+        ok, why = headroom(email, t5, t7)
+        if ok:
+            return email, why
+        blocked.append(f"{email} ({why})")
+    return None, "all alternatives still capped: " + "; ".join(blocked)
+
+
 def main(self_path: str) -> None:
     try:
         t5, t7 = thresholds()
@@ -158,6 +308,12 @@ def main(self_path: str) -> None:
         pct7 = cache.get("seven_day_pct") or 0
         email = cache.get("email", "")
 
+        # Persist BEFORE deciding. This tick is the only moment we can observe
+        # the active account's numbers; once we rotate away it goes dark until
+        # we come back. The rotation decision below is only ever as good as this
+        # record, so it must not sit behind any of the early returns.
+        record_state(email, cache)
+
         # Thrashing guard — if we swapped recently, the session is still on
         # its old token and reporting misleading numbers against the new email.
         in_cooldown, elapsed = recently_swapped()
@@ -180,8 +336,27 @@ def main(self_path: str) -> None:
 
         log(f"TRIGGER ({action}): {reason}")
 
+        # Where to — not a blind advance. Declining to rotate is a legitimate
+        # outcome and a better one than landing on an account that is still
+        # capped, so it is logged as its own action rather than as a failure.
+        target, why = pick_target(email, t5, t7)
+        if not target:
+            log(f"NO ROTATION — {why}. Staying on {email}; its window rolls on its own.")
+            append_swap_log({
+                "ts": int(time.time()),
+                "from": email,
+                "action": "declined",
+                "reason": f"{reason} | {why}",
+                "five_hour_pct": pct5,
+                "seven_day_pct": pct7,
+                "rc": None,
+            })
+            notify(f"quota {round(pct5)}% — no account with capacity. {why}")
+            return
+
+        log(f"target: {target} ({why})")
         r = subprocess.run(
-            [self_path, "switch"], capture_output=True, text=True
+            [self_path, "switch", target], capture_output=True, text=True
         )
         log(
             f"swap result: rc={r.returncode} "

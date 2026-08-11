@@ -638,6 +638,13 @@ jobs:
         # live rotation (#15).
         run: bash tests/quota-threshold.test.sh
 
+      - name: rotation picks an account with actual capacity
+        # Bare `switch` wraps, so with two accounts exhausting B rotates back to
+        # a still-capped A — landing on a dead account and then burning the
+        # cooldown there. Includes the non-obvious one: a `declined` row must not
+        # arm the cooldown, or the watcher goes blind exactly when it must not.
+        run: bash tests/quota-rotation-target.test.sh
+
   primitives_bash32:
     # The same regression suite under bash 3.2 — the bash Apple ships at /bin/bash on every
     # macOS, and what `#!/usr/bin/env bash` resolves to on a stock Mac. The `primitives` job
