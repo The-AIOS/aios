@@ -141,6 +141,63 @@ fi
 
 die() { echo "${RED}error:${RESET} $*" >&2; exit 1; }
 
+# ---- credential backend ----------------------------------------------------
+# macOS stores the OAuth blob in Keychain. Linux and Windows store the SAME blob
+# as a plaintext JSON file at $CONFIG_DIR/.credentials.json, mode 600 — this is
+# Claude Code's own layout, not a choice made here, so libsecret/secret-tool or
+# any other keyring would be storing it somewhere the app never reads.
+#
+# Because the blob is identical either way, every caller above and below this
+# block stays platform-agnostic; only read and write differ.
+case "$(uname -s)" in
+  Darwin) CRED_BACKEND="keychain" ;;
+  *)      CRED_BACKEND="file" ;;
+esac
+CRED_FILE="$CONFIG_DIR/.credentials.json"
+
+cred_source() {
+  case "$CRED_BACKEND" in
+    keychain) printf "Keychain '%s'" "$KEYCHAIN_SERVICE" ;;
+    file)     printf '%s' "$CRED_FILE" ;;
+  esac
+}
+
+cred_read() {
+  case "$CRED_BACKEND" in
+    keychain)
+      security find-generic-password -s "$KEYCHAIN_SERVICE" -w 2>/dev/null || return 1
+      ;;
+    file)
+      [ -f "$CRED_FILE" ] || return 1
+      cat "$CRED_FILE" || return 1
+      ;;
+  esac
+}
+
+cred_write() {
+  local blob="$1"
+  case "$CRED_BACKEND" in
+    keychain)
+      security add-generic-password -U -s "$KEYCHAIN_SERVICE" -a "$USER" -w "$blob" \
+        >/dev/null 2>&1 || return 1
+      ;;
+    file)
+      # Validate before the write. On this path a bad blob would REPLACE a
+      # working credential with garbage, and the operator would discover it as
+      # a logged-out session rather than as an error from this tool.
+      printf '%s' "$blob" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null \
+        || die "refusing to write a malformed credential blob to $CRED_FILE"
+      local tmp="$CRED_FILE.tmp.$$"
+      ( umask 077; printf '%s' "$blob" > "$tmp" ) || return 1
+      chmod 600 "$tmp"
+      # Atomic, and the rename bumps mtime — which is the signal a live session
+      # rides to pick the new credential up. A truncate-and-write would both
+      # risk a torn read and, on some filesystems, leave mtime unchanged.
+      mv -f "$tmp" "$CRED_FILE" || return 1
+      ;;
+  esac
+}
+
 # ---- parse USER.md for the ordered account list ----
 parse_accounts() {
   [ -f "$USER_MD" ] || die "USER.md not found at $USER_MD (set USER_MD_PATH if elsewhere)"
@@ -174,8 +231,8 @@ capture_current() {
   chmod 700 "$IDENTITIES_DIR" "$dir"
 
   local blob
-  blob=$(security find-generic-password -s "$KEYCHAIN_SERVICE" -w 2>/dev/null) || \
-    die "could not read Keychain '$KEYCHAIN_SERVICE'. Is this account fully logged in to Claude Code?"
+  blob=$(cred_read) || \
+    die "could not read $(cred_source). Is this account fully logged in to Claude Code?"
   printf '%s' "$blob" > "$dir/keychain.json"
   chmod 600 "$dir/keychain.json"
 
@@ -204,8 +261,7 @@ restore_identity() {
 
   local blob
   blob=$(cat "$dir/keychain.json")
-  security add-generic-password -U -s "$KEYCHAIN_SERVICE" -a "$USER" -w "$blob" >/dev/null 2>&1 || \
-    die "security add-generic-password failed"
+  cred_write "$blob" || die "credential write failed ($CRED_BACKEND: $(cred_source))"
 
   python3 - <<PY
 import json, shutil
@@ -288,7 +344,7 @@ First-time setup per account:
   3. Repeat for each account in USER.md → ## Anthropic accounts
 
 Safety:
-  - Swaps Keychain '$KEYCHAIN_SERVICE' blob + .claude.json oauthAccount + userID
+  - Swaps the credential blob ($(cred_source)) + .claude.json oauthAccount + userID
   - Always captures outgoing identity before swap (refresh tokens rotate)
   - Never touches mcpServers, project configs, or history
   - Backup written to $CLAUDE_JSON.bak-claude-switch on every swap
