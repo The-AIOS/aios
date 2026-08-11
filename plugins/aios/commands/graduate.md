@@ -82,7 +82,7 @@ Present a summary in the response:
 {Max 3. Omit section if nothing is genuinely ripe — forced candidates erode trust in the lens.}
 ```
 
-Then commit and push: `cd ~/aios && git add -A && git commit -m "Graduate ideas {date}" && git push`
+Then commit and push: `cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Graduate ideas {date}"`
 
 ## Rules
 

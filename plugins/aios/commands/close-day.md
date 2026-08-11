@@ -552,7 +552,7 @@ For each entry in `## Reinforced` section of `session-insights.md`:
    - **Remove the entry from `## Reinforced` using the surgical excision helper** (do NOT hand-edit multi-line buffer blocks — it's fragile and risks corrupting the compounding file):
      ```bash
      uv run ~/aios/hooks/route-insight.py "$HOME/aios/vault/00 - notes/context/observed/session-insights.md" \
-       --match "<unique substring of the entry's ### heading>" \
+       --match "<unique substring of the entry line — a `### ` heading OR a top-level `- ` bullet>" \
        --marker "<!-- ROUTED {date} (Tier A): {title} → [[{target}]]. Removed from buffer post-route. -->"
      ```
      The helper is snapshot-first + validate-after: it excises exactly one `### ` entry (refuses on no/ambiguous match), leaves the marker as the trail, verifies the entry is gone + the file is intact, and restores from snapshot on any mismatch. One reliable op per entry — never improvise a script.
@@ -640,7 +640,7 @@ For each Tier B file (`growth.md`, `profile.md`, `ecosystem.md`):
 2. **Expire** — for each remaining Emerging entry, apply the **inverse substance bar** (an entry expires only if ALL hold): (a) **age** — older than ~2 weeks / unreferenced across the last several close-days (don't expire fresh entries that haven't had a chance to reinforce); (b) **no 2nd instance** ever landed; (c) **wouldn't matter in 90 days** (fails the timeline test); (d) **not essential** — nothing real is lost. Expire via the surgical helper with an EXPIRED trail marker:
    ```bash
    uv run ~/aios/hooks/route-insight.py "$HOME/aios/vault/00 - notes/context/observed/session-insights.md" \
-     --match "<unique substring of the entry's ### heading>" \
+     --match "<unique substring of the entry line — a `### ` heading OR a top-level `- ` bullet>" \
      --marker "<!-- EXPIRED {date}: never reinforced, fails inverse substance bar (age + no-2nd-instance + not-90-day-relevant). -->"
    ```
    **This is judgment, not automation** — Claude decides *which* entries expire; the helper only does the safe excision. When unsure whether an entry is stale-or-slow-burning, **keep it** (with a one-line reason in the close-day output) — under-expiring is cheap, wrongly deleting a slow-burn insight is not.

@@ -7,7 +7,10 @@ updated: '{{date}}'
 status: active
 venture: []                    # array — e.g. [venture-a], [venture-b], [venture-a, venture-b]
 stakeholders: []               # array — groups from venture's Stakeholders table
-exempt-line-check: false       # set true for catalogs/reference docs
+exempt-line-check: false       # true for catalogs, reference docs, and APPEND-ONLY LOGS
+                               # (council logs, journals, baselines, diagnostic records) —
+                               # growing IS them working; set it at creation, not after the
+                               # line-check has cried wolf for a week
 path: ''
 stack: []
 aliases: []

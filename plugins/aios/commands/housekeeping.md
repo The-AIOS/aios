@@ -35,6 +35,18 @@ Check if `00 - notes/logs/command-logs/housekeeping-*.md` exists. If not, this i
 
 Gather evidence across **all 23 buckets — no skipping.** "Deferred to tooling" is banned; the scanning IS the tooling. If a bucket surfaces low signal, state that explicitly with evidence ("scanned N items, 0 merge candidates found") — don't hand-wave.
 
+> #### ⚖️ The measurement contract — governs EVERY bucket, not just Bucket 28
+>
+> Bucket 28 already mandates this and was, until 2026-08-11, the only bucket that did. The other buckets said "scan" and "cite specifics" — prose, not a contract — and that gap is measurable: an operator running the full sweep produced **five wrong findings in one night**, each caught only by checking the artifact instead of the signal. Reported by Luigi Matrone / ALI, 2026-08-08. Three rules, and they are cheap:
+>
+> 1. **A finding a scanner produced is a HYPOTHESIS until an artifact confirms it.** Re-verify by a second, different means before reporting. (Real miss: a wiki-link scan read filenames only, ignored frontmatter `aliases:` and case-insensitivity, and reported 175 broken refs that all resolved.)
+> 2. **Never classify a result by keyword-matching its output when an exit code exists. Read the exit code.** (Real miss: `grep -qi fail` over test output reported **five passing tests as failures** — they printed the string `0 failed`. `$?` was 0 on all ten.)
+> 3. **Every bucket emits a COVERAGE line, including at zero findings** — what was scanned, what was skipped, what could not be determined. Treat UNCHECKABLE as *not a finding*, never as a pass.
+>
+> Rule 3 is the load-bearing one. **A bucket that reports only hits makes a silent cap indistinguishable from "everything is fine"** — which is the exact false-completeness this whole command exists to prevent. `update.md` already names this failure in prose ("never read a failed measurement as a substantive result"); housekeeping had the identical exposure and no equivalent rule.
+>
+> The sharpest instance is worth carrying: a check that asked *"is this fact already in the vault?"* by grepping distinctive terms scored one entry **6/6 terms found** — while the actual fact, an email address, appeared in that file **zero** times. It measured vocabulary overlap and was read as fact presence. Acting on it would have deleted three facts that exist nowhere else.
+
 #### Bucket 1: Link repairs
 
 1. Scan all notes for mentions of project names, context files, ventures, and people that exist as notes but aren't wiki-linked.
@@ -812,7 +824,7 @@ Write a log to `00 - notes/logs/command-logs/housekeeping-{YYYY-MM-DD}.md` with:
 Commit and push:
 
 ```bash
-cd ~/aios && git add -A && git commit -m "Housekeeping {date}" && git push
+cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Housekeeping {date}"
 ```
 
 ## Rules

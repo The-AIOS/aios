@@ -333,7 +333,7 @@ Rules: new project → `projects/_index.md` (status + one-line); idea graduated 
 
 **Line count check** (`/close-day` enforces): **<200** healthy · **200-300** nudge (*"⚠️ [[project]] at {N} lines — archive older session notes + shipped items"*) · **>300** flag hard (*"🔴 [[project]] at {N} lines — becoming a history book; move shipped to git log, trim session notes to last 5, keep only pivotal decisions"*).
 
-**Exempt projects:** intentionally-long notes (catalogs, reference docs, deep specs) — add `exempt-line-check: true` to frontmatter to skip the nudge.
+**Exempt projects:** intentionally-long notes (catalogs, reference docs, deep specs) — add `exempt-line-check: true` to frontmatter to skip the nudge. **Append-only logs are the canonical case and should set it at creation** (council logs, training journals, baselines, diagnostic records): length is the artifact working correctly, so flagging one daily is a false alarm that teaches the operator to ignore the check.
 
 ---
 
