@@ -151,13 +151,22 @@ def append_swap_log(row: dict) -> None:
 
 
 def notify(msg: str) -> None:
+    """Best-effort desktop notification. Never raises, never blocks the tick.
+
+    Platform-detected rather than macOS-only: `osascript` simply does not exist
+    off macOS, and the except below swallows that — so on Linux every
+    notification this module sends was silently dropped, including the two that
+    matter most (no account has capacity; a rotation was not adopted). A missing
+    notifier is still a no-op, but now it is the RIGHT notifier that is missing."""
+    if sys.platform == "darwin":
+        cmd = ["osascript", "-e",
+               f'display notification "{msg}" with title "Claude quota watch"']
+    else:
+        # libnotify is near-universal on desktop Linux; absent on headless
+        # boxes, where the log is the channel that matters anyway.
+        cmd = ["notify-send", "Claude quota watch", msg]
     try:
-        subprocess.run(
-            ["osascript", "-e",
-             f'display notification "{msg}" with title "Claude quota watch"'],
-            check=False,
-            timeout=5,
-        )
+        subprocess.run(cmd, check=False, timeout=5)
     except Exception:
         pass
 
@@ -167,11 +176,80 @@ def _read_active_email() -> str:
     Used to fill the swap-notification marker's `to` field — the cache still
     has the OLD email at this point (it was the trigger). Empty string on any
     error so the marker write doesn't crash the watch tick."""
+    # Same beside-or-inside rule as the other components: .claude.json sits next
+    # to the config dir normally and inside it when relocated.
+    for p in (os.path.join(CONFIG_DIR, ".claude.json"),
+              os.path.join(HOME, ".claude.json")):
+        try:
+            with open(p) as f:
+                return json.load(f).get("oauthAccount", {}).get("emailAddress", "")
+        except Exception:
+            continue
+    return ""
+
+
+# ── did the live session actually adopt the swap? ───────────────────────────
+# The one hole this design cannot close by itself. Rotating the credential is
+# our code; a RUNNING session picking it up is Claude Code's internal behaviour
+# (it stat()s the credential store on the API request path and purges its token
+# caches when mtime changes). That was measured, but it is not a contract we
+# control — an upstream change could remove it, and the failure would be MUTE:
+# the swap succeeds, the log says "rotated", and the session keeps burning the
+# capped account until it hits the wall the autopilot exists to avoid.
+#
+# The detector is cheap because we only ever rotate to an account with real
+# capacity (pick_target). So after a successful swap the reported percentage
+# MUST fall. If it is still high minutes later, the session never adopted.
+ADOPTION_GRACE_SECS = 120   # let the session make its next request
+ADOPTION_WINDOW_SECS = 900  # past this, stop looking
+ADOPTION_DROP_PTS = 3       # minimum fall that counts as adoption
+ALERT_FILE = os.path.join(CONFIG_DIR, "rotation-alert.json")
+
+
+def check_adoption(cache: dict) -> None:
+    """Warn if a completed rotation never reached the running session."""
+    last = last_actual_swap()
+    if not last:
+        return
+    now = time.time()
+    elapsed = now - (last.get("ts") or 0)
+    if elapsed < ADOPTION_GRACE_SECS or elapsed > ADOPTION_WINDOW_SECS:
+        return
+    # The cache must be NEWER than the swap, or we are reading the old photo and
+    # would report a failure that has not had a chance to happen yet.
+    if (cache.get("captured_at") or 0) <= (last.get("ts") or 0):
+        return
+    before = last.get("five_hour_pct") or 0
+    current = cache.get("five_hour_pct") or 0
+    if current < before - ADOPTION_DROP_PTS:
+        # It fell: adopted. Clear any previous alert so a recovered system does
+        # not keep showing a stale warning.
+        if os.path.exists(ALERT_FILE):
+            try:
+                os.remove(ALERT_FILE)
+            except OSError:
+                pass
+        return
+    msg = (
+        f"rotation to {_read_active_email()} happened {int(elapsed)}s ago but 5h usage "
+        f"is still {round(current)}% (was {round(before)}% before the swap). The live "
+        f"session did not adopt the new credential — most likely Claude Code stopped "
+        f"re-reading the credential store. Restart open sessions and check whether an "
+        f"update changed that behaviour."
+    )
+    log(f"ADOPTION FAILED: {msg}")
+    notify(msg)
     try:
-        with open(os.path.join(HOME, ".claude.json")) as f:
-            return json.load(f).get("oauthAccount", {}).get("emailAddress", "")
-    except Exception:
-        return ""
+        with open(ALERT_FILE, "w") as f:
+            json.dump({
+                "ts": int(now),
+                "kind": "adoption_failed",
+                "message": msg,
+                "pct_before": before,
+                "pct_now": current,
+            }, f)
+    except Exception as e:
+        log(f"alert write failed: {type(e).__name__}: {e}")
 
 
 # ── where to rotate ─────────────────────────────────────────────────────────
@@ -320,6 +398,12 @@ def main(self_path: str) -> None:
         # we come back. The rotation decision below is only ever as good as this
         # record, so it must not sit behind any of the early returns.
         record_state(email, cache)
+
+        # Deliberately BEFORE the cooldown check. The cooldown returns early,
+        # and the cooldown window is exactly when a failed adoption is visible —
+        # putting this after it would mean the one condition the detector exists
+        # for is the one it never runs in.
+        check_adoption(cache)
 
         # Thrashing guard — if we swapped recently, the session is still on
         # its old token and reporting misleading numbers against the new email.

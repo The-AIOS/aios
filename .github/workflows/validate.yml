@@ -665,6 +665,13 @@ jobs:
         # rename bumps mtime, which is the signal a live session rides to adopt.
         run: bash tests/credential-backend.test.sh
 
+      - name: a rotation the live session never adopted is detected
+        # The autopilot leans on Claude Code re-reading the credential store on
+        # its next API request. That was measured, not promised — if an update
+        # removed it the failure would be mute: swap succeeds, log says rotated,
+        # session keeps burning the capped account. This is the only sensor.
+        run: bash tests/adoption-detector.test.sh
+
   primitives_bash32:
     # The same regression suite under bash 3.2 — the bash Apple ships at /bin/bash on every
     # macOS, and what `#!/usr/bin/env bash` resolves to on a stock Mac. The `primitives` job
