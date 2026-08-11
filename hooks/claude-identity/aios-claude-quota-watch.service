@@ -1,0 +1,42 @@
+; aios-claude-quota-watch.service — systemd user unit (Linux).
+;
+; The Linux equivalent of com.aios.claude-quota-watch.plist. Same role: a
+; SAFETY-NET watcher. Fast-path detection lives in _cache.py, which the
+; statusLine pipe drives several times per turn; this unit exists for sessions
+; where that pipe is broken or absent.
+;
+; Install (as your own user — NOT root, the credentials are per-user):
+;   mkdir -p ~/.config/systemd/user
+;   cp ~/aios/hooks/claude-identity/aios-claude-quota-watch.{service,timer} \
+;      ~/.config/systemd/user/
+;   systemctl --user daemon-reload
+;   systemctl --user enable --now aios-claude-quota-watch.timer
+;
+; Verify / debug:
+;   systemctl --user list-timers aios-claude-quota-watch.timer
+;   systemctl --user start aios-claude-quota-watch.service   # trigger once
+;   tail -f ~/.claude/quota-watch.log
+;
+; Remove:
+;   systemctl --user disable --now aios-claude-quota-watch.timer
+;
+; Note: if you are not logged into a graphical session, systemd may stop your
+; user manager on logout and the timer with it. `loginctl enable-linger $USER`
+; keeps it running. This is the closest Linux gets to launchd's RunAtLoad
+; behaviour for a headless box.
+
+[Unit]
+Description=AIOS Claude Code quota watcher (safety net)
+Documentation=file:%h/aios/hooks/claude-identity/README.md
+
+[Service]
+Type=oneshot
+# %h is the user's home. Path assumes the vault is at ~/aios, same assumption
+# the plist makes; symlink ~/aios or edit this line if yours lives elsewhere.
+ExecStart=/usr/bin/env bash -c '"$HOME/aios/hooks/claude-identity/claude-identity.sh" watch'
+
+# The watcher writes its own log; keeping the unit's stdout in the journal
+# separates "the timer fired" from "the watcher decided something", which is
+# the distinction you need when nothing appears to be happening.
+StandardOutput=journal
+StandardError=journal
