@@ -112,12 +112,23 @@
 set -euo pipefail
 
 USER_MD="${USER_MD_PATH:-$HOME/aios/USER.md}"
-CLAUDE_JSON="$HOME/.claude.json"
-IDENTITIES_DIR="$HOME/.claude/identities"
+# Claude Code relocates its whole config tree when CLAUDE_CONFIG_DIR is set, and
+# the safe way to add a second account leans on exactly that: log the new account
+# into an isolated config dir and `--capture` from there, so the live credentials
+# are never touched and no logout fires (see the /login revoke note below).
+CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+# .claude.json sits BESIDE the config dir in the default layout but INSIDE it
+# when relocated. Try the relocated position first, then fall back.
+if [ -f "$CONFIG_DIR/.claude.json" ]; then
+  CLAUDE_JSON="$CONFIG_DIR/.claude.json"
+else
+  CLAUDE_JSON="$HOME/.claude.json"
+fi
+IDENTITIES_DIR="$CONFIG_DIR/identities"
 KEYCHAIN_SERVICE="Claude Code-credentials"
-CACHE_FILE="$HOME/.claude/rate-limit-cache.json"
-WATCH_LOG="$HOME/.claude/quota-watch.log"
-SWAP_LOG="$HOME/.claude/swap-log.jsonl"
+CACHE_FILE="$CONFIG_DIR/rate-limit-cache.json"
+WATCH_LOG="$CONFIG_DIR/quota-watch.log"
+SWAP_LOG="$CONFIG_DIR/swap-log.jsonl"
 
 # NOTE: the rotation thresholds are intentionally NOT defined here — _watch.py
 # owns them. See the "Environment overrides" block above.

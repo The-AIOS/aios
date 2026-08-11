@@ -651,6 +651,13 @@ jobs:
         # subagents cross the cap inside a 30s blind window.
         run: bash tests/quota-tick-interval.test.sh
 
+      - name: every component follows CLAUDE_CONFIG_DIR together
+        # The safe way to add an account is to log it into an isolated config dir
+        # and capture from there (`/login` revokes the previous refresh token).
+        # If one component lags the relocation, every path still resolves and the
+        # watcher reads one account's state while the operator works in another.
+        run: bash tests/quota-config-dir.test.sh
+
   primitives_bash32:
     # The same regression suite under bash 3.2 — the bash Apple ships at /bin/bash on every
     # macOS, and what `#!/usr/bin/env bash` resolves to on a stock Mac. The `primitives` job

@@ -34,10 +34,17 @@ import time
 
 
 HOME = os.path.expanduser("~")
-CACHE = os.path.join(HOME, ".claude", "rate-limit-cache.json")
-LOG = os.path.join(HOME, ".claude", "quota-watch.log")
-SWAP_LOG = os.path.join(HOME, ".claude", "swap-log.jsonl")
-IDENTITIES = os.path.join(HOME, ".claude", "identities")
+# Claude Code relocates its whole config tree when CLAUDE_CONFIG_DIR is set, and
+# the documented safe way to add a second account depends on that: log the new
+# account into an ISOLATED config dir and capture from there, so the live
+# credentials are never touched and no logout fires. Hard-coding ~/.claude here
+# would make the watcher read one account's state while the operator works in
+# another — silently, since every path would still resolve.
+CONFIG_DIR = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(HOME, ".claude")
+CACHE = os.path.join(CONFIG_DIR, "rate-limit-cache.json")
+LOG = os.path.join(CONFIG_DIR, "quota-watch.log")
+SWAP_LOG = os.path.join(CONFIG_DIR, "swap-log.jsonl")
+IDENTITIES = os.path.join(CONFIG_DIR, "identities")
 USER_MD = os.environ.get("USER_MD_PATH") or os.path.join(HOME, "aios", "USER.md")
 STALE_AFTER_SECS = 1800  # 30 min
 COOLDOWN_SECS = 900  # 15 min — prevent thrashing after a swap

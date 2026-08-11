@@ -40,10 +40,21 @@ WATCH_TICK_SECS_HOT = 3     # near the cap — every second counts
 HOT_ZONE_PCT = 85           # above this, tick fast
 
 
+def config_dir(home: str) -> str:
+    """Claude Code's config root. Honouring CLAUDE_CONFIG_DIR is what makes the
+    isolated-config account capture possible — see the note in _watch.py."""
+    return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(home, ".claude")
+
+
 def main():
     home = os.path.expanduser("~")
-    cache_path = os.path.join(home, ".claude", "rate-limit-cache.json")
-    claude_json = os.path.join(home, ".claude.json")
+    cfg = config_dir(home)
+    cache_path = os.path.join(cfg, "rate-limit-cache.json")
+    # .claude.json sits BESIDE the config dir in the default layout but INSIDE
+    # it when relocated, so try the relocated position first and fall back.
+    claude_json = os.path.join(cfg, ".claude.json")
+    if not os.path.exists(claude_json):
+        claude_json = os.path.join(home, ".claude.json")
 
     try:
         payload = sys.stdin.read()
@@ -113,7 +124,7 @@ def kick_watcher(home: str, worst_pct: float = 0) -> None:
     """Spawn _watch.py in the background if enough time has elapsed since the
     last kick. Touches a tick marker so subsequent statusLine renders don't pile
     up subprocesses. The interval tightens as usage approaches the cap."""
-    tick_path = os.path.join(home, ".claude", "watch-tick")
+    tick_path = os.path.join(config_dir(home), "watch-tick")
     interval = tick_interval(worst_pct)
     now = time.time()
     if os.path.exists(tick_path):
