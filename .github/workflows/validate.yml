@@ -645,6 +645,12 @@ jobs:
         # arm the cooldown, or the watcher goes blind exactly when it must not.
         run: bash tests/quota-rotation-target.test.sh
 
+      - name: watcher evaluation interval tightens near the cap
+        # A flat 30s tick was the real ceiling: the credential swap lands in
+        # milliseconds, but only if the threshold is EVALUATED in time. Parallel
+        # subagents cross the cap inside a 30s blind window.
+        run: bash tests/quota-tick-interval.test.sh
+
   primitives_bash32:
     # The same regression suite under bash 3.2 — the bash Apple ships at /bin/bash on every
     # macOS, and what `#!/usr/bin/env bash` resolves to on a stock Mac. The `primitives` job
