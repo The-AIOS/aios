@@ -36,6 +36,36 @@
 
 ---
 
+## 2026-08-11 — Four backstops that could not see the thing they existed to catch
+
+`hash: f03c411 · 9f80efc · 19d674f · 05f7340`
+
+> **What this delivers.** An outside-contributor batch, and the four items share one shape worth naming before the list: **a check that cannot observe the case it guards.** A source-detector that read a documented *"no"* as a yes. A buffer-editor that could not see the entry format its own instructions produce. Six rituals ending in a commit the framework's own hook blocks. A housekeeping sweep with no verification contract outside a single bucket. None of these were caught internally, and one of them is **structurally invisible from the author's vault** — which is the more useful lesson than any individual fix.
+
+**What you can now do:**
+
+- **Document a deliberate non-use without switching it on.** (#13) Source detection tested whether a keyword appeared *anywhere* in `USER.md`, so writing `Slack — not configured` under `### Communication` **enabled Slack** — and the daily plan then reported a hard failure every morning for something you had deliberately turned off. The failure was inverted: *the more carefully you documented a "no", the more certain the parser became that you meant yes.* Detection is now line-scoped with bilingual negation markers (`not configured` · `no configurado` · `not used` · `on purpose` · `deliberately` …), and Slack gained the credential guard calendar and tasks already had — a missing optional integration is a quiet skip, not a red ❌.
+- **Spawn a session on Linux, or from any cwd, and actually get your vault.** (#14) `_claude_with_respawn` now `cd`s to the vault itself. The launcher's `cd` only ever covered the macOS AppleScript path, so the in-shell spawn path — and every plain-terminal spawn on Linux — started in whatever directory the terminal happened to be in, with no `CLAUDE.md` in reach. Sessions loaded nothing and nobody could tell.
+- **Get the Session Start Ritual from your primary shorthand too.** (#14) A fresh primary session now launches with a bootstrap prompt. Without one, `claude` opened idle: `CLAUDE.md` was loaded but no turn had been taken, so the ritual never ran — no declared context, no observed context, no greeting. `spawn` never had this bug, *but only by accident* — it always passes a bootstrap, and that turn is what fires the ritual. `-c/--continue` and `-r/--resume` deliberately pass none; the context is already in the session.
+- **Stop the red error on every spawn.** (#14) Agent matching probed with `ls agents/**/{name}.md`, which exits 2 on no-match — and a no-match is the *normal* case for a primary session, which is not an agent. Now `find … -print -quit`, which exits 0 and says nothing.
+- **Generate a PDF on Windows or Linux.** (#14) Chrome is resolved per-OS at call time across Chrome/Chromium/Edge, with a `CHROME_PATH` override. It was a hardcoded macOS path.
+- **Have `/close-day`'s buffer gardening actually do something.** `hooks/route-insight.py` matched only `### ` headings — but a `session-insights.md` buffer that follows the documented lifecycle becomes top-level `- **…**` bullets with indented facets. The tool matched nothing and exited 2, which reads as *"nothing to do"* rather than *"I cannot see your data"*, so **both** of close-day's compounding steps had been silently no-ops. One reporting vault sat at 13 Emerging against the documented ≤10, with the cap failing three consecutive closes. Now detects both styles (heading tried first, so existing behaviour is bit-identical), with **style-dependent boundaries** — a bullet must not terminate a `### ` entry or you orphan the back half of every one — style-aware post-edit validation, and file-level `<!-- … -->` trail lines preserved rather than swallowed. Five-scenario test, **verified to fail on the pre-fix code** (3 of 5), not merely to pass.
+- **Finish a ritual without hitting your own pre-commit hook.** Six commands — `/today` (×2), `/7plan`, `/graduate`, `/compact`, `/housekeeping` — ended in `cd ~/aios && git add -A && git commit … && git push`. On any vault that ran `install-git-hooks.sh`, that is the pattern the hook **blocks**, and `git add -A` is what `CLAUDE.md` forbids for scrambling attribution across concurrent writers. All six now use `aios-commit --vault`. *(Left deliberately: `/company`'s `git init && git add -A`, which scaffolds a fresh repo with no concurrent writers.)*
+- **Trust a housekeeping run that reports nothing.** Bucket 28's verification contract now governs **all** buckets as a Phase-1 preamble: a scanner finding is a hypothesis until an artifact confirms it · read the exit code, never keyword-match the output · **every bucket emits a coverage line even at zero findings.** The third is load-bearing — a bucket that reports only hits makes a silent cap indistinguishable from *"everything is fine."* One real sweep produced five wrong findings in a night, including `grep -qi fail` reporting **five passing tests as failures** because they printed the string `0 failed`.
+- **Compact `antifragile.md` with the lever that actually pays.** New **TIER 0 — relocate before condensing**: moving a long argument out of the always-read meta-pattern index into its own numbered entry, leaving a two-line pointer, measured **~1,570 tokens in a single edit** — against **12.6% for condensing 24 of 50 entries**, because mature entries are dense rather than padded. ⚠️ If the relocated block holds a live open decision, the pointer must carry it verbatim, or you have moved a decision into a file nobody opens.
+- **Stop your append-only logs crying wolf.** `exempt-line-check: true` now names them as its canonical case in both the project template and `CLAUDE.md`. A council log, a training journal, a baseline — growing *is* them working correctly, and four daily false alarms is how an operator learns to ignore the check.
+
+**Action required — none for most operators.** Everything above is behaviour you get by syncing; the source-detection change was verified byte-identical on a vault that genuinely uses all its sources. Two optional checks:
+
+1. **If your `session-insights.md` uses `- **bullet**` entries** (rather than `### ` headings), your `/close-day` buffer gardening has been doing nothing. Nothing is lost — the entries are all still there — but your Emerging section is probably over its ≤10 cap. Let the next `/close-day` garden it, or check now: `grep -c '^- \*\*' "vault/00 - notes/context/observed/session-insights.md"`.
+2. **If you documented a source as unused in `USER.md`** and have been seeing a red ❌ for it every morning, that stops on this sync.
+
+---
+
+### 🖥️ Running the AIOS App on your Mac?
+
+**Make sure you are on `v0.8.1`.** Quit and reopen the app — it checks for updates on launch and will offer the update itself. `v0.8.x` carries the four-store Claude settings model (the Settings panel used to assert values it had never read), `⌘F` find, `⌘+/⌘−` zoom, line wrap, a git gutter, `⌘⇧T` recents, and a `⌘R` tick-box resume selector. If the update pill never appears, the boot check is the reliable path — an update it has not been told about is one it will not fetch.
+
 ## 2026-07-30 — Scaffolding a company repo was quietly declaring its private context GPL-2.0
 
 `hash: 7f091c1 · 465300b · 5f0d321 · 94e9b19 · company-template@3003833c`
