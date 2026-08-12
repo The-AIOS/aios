@@ -15,14 +15,15 @@
 >
 > Entries here are **date-keyed**. Releases are **tagged in git** with full notes, and published as GitHub Releases. A release contains every entry dated up to and including its tag date, back to the previous release:
 >
-> - **Unreleased** — entries dated after `2026-07-25`
+> - **Unreleased** — entries dated after `2026-08-12`
+> - **[v0.5.0](https://github.com/The-AIOS/aios/releases/tag/v0.5.0)** — tagged `2026-08-12` — covers `2026-07-26` → `2026-08-12`
 > - **[v0.4.0](https://github.com/The-AIOS/aios/releases/tag/v0.4.0)** — tagged `2026-07-25` — covers `2026-05-26` → `2026-07-25`
 > - **[v0.2.0](https://github.com/The-AIOS/aios/releases/tag/v0.2.0)** — tagged `2026-05-25` — covers `2026-05-24` → `2026-05-25`
 > - **[v0.1.0](https://github.com/The-AIOS/aios/releases/tag/v0.1.0)** — tagged `2026-05-21` — first tagged shape; predates every entry still in this file
 >
 > **`0.3.0` was never cut** (`0.2.0` → `0.4.0` directly), so a missing 0.3.0 is not a gap in your history.
 >
-> Two version numbers exist and they are **not** the same thing: the **framework** version in `plugins/aios/.claude-plugin/plugin.json`, and **AIOS Glass** (the editor extension, versioned independently on Open VSX). Both happen to read `0.4.0` right now — where an entry says "Glass", it means the extension.
+> Three version numbers exist and they are **not** the same thing: the **framework** version in `plugins/aios/.claude-plugin/plugin.json`, **AIOS Glass** (the editor extension, versioned independently on Open VSX), and the **AIOS App** (the Mac desktop app, versioned independently again). Where an entry says "Glass" or "App", it means that surface — not the framework. *Deliberately not stating their current numbers here: they advance on their own schedules, and a version written into prose is a fact that goes stale silently. Read each from its own manifest or Releases page.*
 >
 > The release number is a milestone marker for humans. **What you actually have is the hash in `.aios-update`**, which is finer-grained — a vault normally sits *between* releases, and `/aios:update` works off that hash, never off the version.
 
@@ -38,7 +39,7 @@
 
 ## 2026-08-12 — The rotation autopilot runs on Linux, and three of its bugs were never about Linux
 
-`hash: TBD-ON-MERGE` <!-- date + hash set by the maintainer on merge; 08-12 is a placeholder because 08-11 is taken -->
+`hash: 43d3888 · acf1e9f`
 
 > **What this delivers.** `hooks/claude-identity/` was documented macOS-only, so every operator running two or more Anthropic accounts on Linux had **no rate-limit autopilot at all** — they hit the 5h cap mid-task with no fallback, which is the exact situation the feature exists to prevent. Porting it surfaced four things, and **three of them are bugs in the existing macOS implementation** that affect operators today. The fourth is a documented premise that measurement contradicts. The shape worth naming: *a port is an unusually good auditor, because it forces you to read every assumption out loud.*
 
@@ -54,6 +55,22 @@
 **Action required:** none, unless you are on Linux and want the autopilot — see `hooks/claude-identity/README.md` § Setup. **If you are on macOS and had edited the threshold in `claude-identity.sh`, it was never in force.** Export `CLAUDE_QUOTA_5H` / `CLAUDE_QUOTA_7D` instead, and run `claude-switch watch --threshold` to see what is actually applied.
 
 **Not included:** Windows. The credential layout is the same as Linux, but no scheduler is wired and nothing has been tested there. `_resume.py` is also **not** deleted — its premise is false and its docstring now says so plainly, but it sits behind the documented `CLAUDE_AUTOSWAP_RESPAWN=1` opt-in, and removing an escape hatch operators may be using is a separate decision from a port.
+
+### `/aios:update` could not see a folder your vault never received
+
+> **What this delivers.** `/aios:update` enumerated the infra layers from a **hardcoded list, at two call sites** — Step 2's diff pathspec and Step 6.5's reconcile loop. That matters because of an asymmetry: a folder that exists in canonical but is **absent** from your vault is invisible to `git diff`. Nothing *differs* — the path simply isn't there. Step 6.5 is the only thing that could have caught it, and it was reading the same stale list as the check it exists to backstop. **One blind spot, shared by the check and its own safety net.** Found in the field: bundled skills sitting in canonical, missing from a real vault, with no `/aios:update` run able to pull them and nothing reporting the gap.
+
+**What you can now do:**
+- **Receive a bundled layer your vault never got.** Both call sites now derive the layer list from the clone itself, so anything canonical ships is enumerated whether or not you already have it. A layer added to the framework in future is covered the day it lands, with no list to remember to edit.
+- **Trust the Tier-0 boundary explicitly rather than by omission.** Deriving the list immediately arms the hazard `update.md` § Tier 0 warned about *in writing* — that `tests/` and `.github/` would start shipping to vaults the moment enumeration went generic. They are now held out by a named `TIER0_DENY` applied at **both** sites, with the blast radius stated at its definition: editing that one line changes what every operator receives.
+- **Rely on a guard that can observe its own case.** The previous CI check pattern-matched `update.md` for a *typed* Tier-0 folder — sufficient while the list was hardcoded, useless once the folders enter by default and are held out by a denylist. `tests/update-tier0-denylist.test.sh` now extracts the **real** derivation from the spec and runs it against a fixture, including a **falsifiability assertion**: the same logic with an empty denylist must leak both folders, or the main assertion proves nothing.
+
+**Action required — one run, and read what it reports (2 min).** This is the rare update where the *interesting* outcome is the one you were never able to see before.
+
+1. **Run `/aios:update`.** `plugins/aios/commands/update.md` changed, so your session will self-update and re-read the new spec mid-run — expected, not a fault.
+2. **Read the "Recovered by completeness reconcile" section of its report.** If it names files, **that is this fix working**: your vault had a silent gap that no previous update could detect. Nothing further to do — they have been applied.
+3. **If that section is empty, you were already whole.** Most vaults will be. That is a clean result, not a failed one.
+4. **Claude sessions running this:** report recovered files *loudly and by name* rather than folding them into the applied list. A recovery means the tracker was over-claiming and the operator was missing framework content — they should know which. And do **not** "finish the job" by deriving the root-doc list too: `validate.yml` asserts every root `*.md` appears literally quoted in `update.md`, and that guard is what fails the build when a new root doc is added without being wired in. Deriving it would disarm the check — the reason the second commit on this branch exists.
 
 ## 2026-08-11 — Four backstops that could not see the thing they existed to catch
 
