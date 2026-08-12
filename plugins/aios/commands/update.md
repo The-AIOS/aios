@@ -233,14 +233,45 @@ Read `CHANGELOG.md` from the cloned repo root. If absent, skip silently. Otherwi
 
 ### 2. Find what changed
 
+**The layer list is DERIVED from the clone, minus an explicit Tier-0 denylist — never hardcoded.** A hardcoded list can only ever describe the layers that existed when someone last edited it, so a newly-added infra layer is missed silently and forever. That is not hypothetical: the root-docs list shipped `AGENTS.md`, `EXTENSION-MAP.md` and `LICENSE-AUDIT.md` to canonical while no vault received them, because the enumeration and its own backstop shared one blind spot. This is the same fix, one level up — and the denylist below is what keeps the Tier-0 footgun closed while doing it.
+
 ```bash
-git -C /tmp/aios-update-check diff {stored_hash}..HEAD --name-only -- \
+CLONE="/tmp/aios-update-check"
+
+# ── Tier-0 denylist — canonical-only, MUST stay explicit ─────────────────────
+# tests/ and .github/ are CI + contributor infrastructure; an operator vault has
+# no CI and can neither run nor maintain them. They used to be excluded by mere
+# OMISSION from a hardcoded list, which is invisible to anyone reading it — so the
+# moment that list is derived (as it now is), the omission has to become a
+# deliberate, named exclusion or the generalisation ships CI into every vault.
+# vault/ is the operator's own content (Tier 2) except the .obsidian baseline,
+# which is added back by hand below.  See § Tier 0.
+TIER0_DENY="tests .github vault .git .gitattributes"
+
+# Every top-level directory canonical actually has, minus the denylist.
+LAYERS=""
+for d in $(cd "$CLONE" && ls -A); do
+  [ -d "$CLONE/$d" ] || continue
+  case " $TIER0_DENY " in *" $d "*) continue ;; esac
+  LAYERS="$LAYERS $d/"
+done
+
+# Root docs stay ENUMERATED here on purpose — do not "finish the job" by deriving them
+# too. `.github/workflows/validate.yml` asserts every root *.md appears literally quoted
+# in this list, which is what fails the build the moment a new root doc is added without
+# being wired in. Deriving the list would satisfy the sync and silently disarm that guard,
+# trading a build-time error for a runtime one. Step 6.5 already scans root docs
+# generically, so the belt (enumerated + guarded) and the braces (generic reconcile) are
+# deliberately different mechanisms. The DIRECTORY list below is the one that had no
+# equivalent guard, and is therefore the one that is derived.
+git -C "$CLONE" diff {stored_hash}..HEAD --name-only -- \
   "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
   "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "AGENTS.md" "EXTENSION-MAP.md" "LICENSE-AUDIT.md" \
   "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
-  "templates/" "skills/" "hooks/" "mcps/" "plugins/" "agents/" \
-  ".claude-plugin/" "vault/.obsidian/"
+  $LAYERS "vault/.obsidian/"
 ```
+
+> ⚠️ **If you touch `TIER0_DENY`, you are changing what ships to every operator vault.** `.github/workflows/validate.yml` fails the build if `tests` or `.github` leave that list — deliberately, because this is the one edit whose blast radius is every vault at once.
 
 If no Tier 1 files changed in the tracker-diff → **still run the completeness reconcile (§ Step 6.5)** before declaring "current." The tracker-diff (`stored..HEAD`) is an *optimization*, NOT the source of truth — if the stored hash over-claims (e.g. a prior manual edit, or a previous run that advanced the tracker without fully applying), genuinely-missing files are *ancestors* of stored and invisible to this diff. The reconcile is the tracker-independent backstop. Only advance the tracker after the reconcile is clean.
 
@@ -448,10 +479,21 @@ fi
     if [ ! -e "$VAULT/$p" ]; then echo "Only in $CLONE: $p"
     else diff -q "$VAULT/$p" "$CLONE/$p" 2>/dev/null; fi
   done
-  # Layer dirs — diff -rq surfaces both "Files … differ" and dir-side "Only in …" (missing) lines.
-  for p in templates skills hooks mcps plugins agents .claude-plugin; do
+  # Layer dirs — DERIVED from the clone, minus the same Tier-0 denylist Step 2 uses.
+  # Hardcoding this list is what let a whole bundled folder go missing with nothing to
+  # notice: the reconcile is the backstop for Step 2, and a backstop that reads from the
+  # same hardcoded list shares its blind spot exactly. A directory canonical has and the
+  # vault does not is invisible to `git diff` (nothing DIFFERS — it is simply absent), so
+  # the reconcile is the ONLY thing that can catch it, and only if it enumerates reality.
+  # diff -rq surfaces both "Files … differ" and dir-side "Only in …" (missing) lines.
+  TIER0_DENY="tests .github vault .git .gitattributes"
+  for p in $(cd "$CLONE" && ls -A); do
+    [ -d "$CLONE/$p" ] || continue
+    case " $TIER0_DENY " in *" $p "*) continue ;; esac
     diff -rq "$VAULT/$p" "$CLONE/$p" 2>/dev/null
   done
+  # vault/.obsidian is the one Tier-1 path under the otherwise Tier-2 vault/ tree.
+  diff -rq "$VAULT/vault/.obsidian" "$CLONE/vault/.obsidian" 2>/dev/null
 } \
   | grep -vF "Only in $VAULT" \
   | grep -vE "/custom(/|: )" \
