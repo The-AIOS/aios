@@ -345,14 +345,21 @@ Any command written as `~/path/to/thing` in `settings.json` (under `hooks` or `s
 
 The statusLine/hook command is `execve`d directly, not `bash -c`-wrapped. Bash-only features like process substitution (`>(...)`), `$(...)` command substitution, heredocs, and arrays DO NOT work unless you explicitly wrap the whole thing in `bash -c '...'`. If your statusline is coming out blank, this is probably why.
 
-### 4. The running session keeps its token in memory
+### 4. A running session adopts a swapped credential on its NEXT API request
 
-When `claude-switch` runs mid-session (auto or manual), it swaps the Keychain + `~/.claude.json` identity, but your RUNNING Claude Code session holds the OLD account's OAuth token in memory. It keeps hitting the API as the old account until the token refreshes naturally (~1h) — at which point the refresh uses the NEW Keychain credentials and may fail because the refresh token belongs to the old account. The session will prompt you to log in again or simply error.
+> **This entry said the opposite until 2026-08-12, and that is the lesson.** It read *"The running session keeps its token in memory"* and built three conclusions on it. The belief was corrected in the `2026-05-28` CHANGELOG entry — which explicitly records this README being fixed — but the fix never landed here. So the doc kept teaching the false version for two and a half months while the changelog claimed it had been corrected, and two code files went on citing it. **A correction that isn't propagated is not a correction**; it is a second source of truth that disagrees with the first.
 
-**Implications:**
-- Auto-swaps are best-effort — they ensure your NEXT spawn uses the new account, but the current session keeps burning the old account's quota.
-- To cleanly hand over: restart the session (new terminal + new `claude` spawn), or let the token refresh fail naturally.
-- The 15-min cooldown is not a bug — it's a thrashing guard. During cooldown, the running session's old-token reports will reflect against the NEW `oauthAccount` email in the cache. Without cooldown, we'd swap back immediately into a ping-pong loop.
+When `claude-switch` runs mid-session, the running session picks the new credential up on its **next API request** — no restart, no waiting for a ~1h token refresh.
+
+**Why**, measured on Claude Code 2.1.223: the client `stat()`s the credential store *on the request path* and purges its in-memory token caches when the mtime changes, before the not-expired early return. It is not a background watcher — bumping the credential file's mtime 40 times at 1s intervals produced re-reads **only at the 3 request boundaries**. So the check rides the request: swap the file, and the next turn is the new account. (Reported and measured in #15, on Linux; the mechanism is the client's, not the platform's.)
+
+**Implications** — each one inverts an earlier conclusion:
+- **Auto-swaps are not best-effort.** The current session moves too, so it stops burning the exhausted account's quota. That is the entire point of the autopilot, and it does work mid-task.
+- **You do not need to restart to hand over.** The old advice ("new terminal + new `claude` spawn") was doing nothing except costing you your session.
+- **`_resume.py` no longer has a token-related job.** It is kept, and still reachable via `CLAUDE_AUTOSWAP_RESPAWN=1`, but it is now a hard restart on rotation and nothing more. Its docstring says so at the top; do not reason from the paragraph beneath.
+- **The 15-min cooldown stays, on a different justification.** It was originally defended as a token-in-memory guard, which is void. It survives because the *cache* — not the token — lags: for a short window after a swap, `rate-limit-cache.json` can still report the previous account's percentages against the new `oauthAccount` email, and acting on that reading would ping-pong. The guard is against stale telemetry, not stale credentials. It is deliberately unchanged at `COOLDOWN_SECS = 900` rather than shortened on inference — shortening it wants its own measurement.
+
+**What the swap latency actually depends on** is therefore not adoption but *evaluation*: the threshold has to be checked before the cap is crossed. `_cache.py` ticks the watcher every `WATCH_TICK_SECS = 30` with headroom, tightening to `WATCH_TICK_SECS_HOT = 3` above `HOT_ZONE_PCT = 85`, because parallel subagents can cross a cap inside a 30-second blind window.
 
 ### 5. Tee-based statusLine piggyback is the cleanest pattern
 
