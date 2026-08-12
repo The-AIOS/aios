@@ -256,13 +256,19 @@ for d in $(cd "$CLONE" && ls -A); do
   LAYERS="$LAYERS $d/"
 done
 
-# Root files: every *.md at the canonical root (generic, same reason), plus the
-# non-md root infra. Tier-2 operator files are excluded — canonical ships them as
-# EXAMPLE-ONLY templates, so reconciling them would overwrite operator data.
-ROOTDOCS=$(cd "$CLONE" && ls *.md 2>/dev/null | grep -vE '^(HISTORY-PRE-.*|USER\.md|INTENT\.md)$')
-
+# Root docs stay ENUMERATED here on purpose — do not "finish the job" by deriving them
+# too. `.github/workflows/validate.yml` asserts every root *.md appears literally quoted
+# in this list, which is what fails the build the moment a new root doc is added without
+# being wired in. Deriving the list would satisfy the sync and silently disarm that guard,
+# trading a build-time error for a runtime one. Step 6.5 already scans root docs
+# generically, so the belt (enumerated + guarded) and the braces (generic reconcile) are
+# deliberately different mechanisms. The DIRECTORY list below is the one that had no
+# equivalent guard, and is therefore the one that is derived.
 git -C "$CLONE" diff {stored_hash}..HEAD --name-only -- \
-  $ROOTDOCS LICENSE NOTICE .gitignore $LAYERS "vault/.obsidian/"
+  "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
+  "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "AGENTS.md" "EXTENSION-MAP.md" "LICENSE-AUDIT.md" \
+  "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
+  $LAYERS "vault/.obsidian/"
 ```
 
 > ⚠️ **If you touch `TIER0_DENY`, you are changing what ships to every operator vault.** `.github/workflows/validate.yml` fails the build if `tests` or `.github` leave that list — deliberately, because this is the one edit whose blast radius is every vault at once.
