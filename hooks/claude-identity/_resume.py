@@ -2,12 +2,34 @@
 """
 _resume.py — after an auto-swap, continue any active Claude Code sessions.
 
-The problem: `claude-switch` rewrites the Keychain + ~/.claude.json, but a
-running Claude Code session holds the OLD account's OAuth token in memory.
-It keeps working for ~1h until refresh, then fails (the refresh token
-belongs to the OLD account, Keychain now has the NEW). Session stalls.
+  ⚠️ THE PREMISE BELOW IS FALSE. Kept because the behaviour is still reachable
+  via CLAUDE_AUTOSWAP_RESPAWN=1, but do not reason from this paragraph.
 
-The fix: right after the swap, kill each active session and respawn with
+  This file was written to solve "a running session holds the OLD account's
+  token in memory and stalls". Measured on Claude Code 2.1.223 (Linux): a
+  running session adopts a swapped credential on its NEXT API request, with no
+  restart. Claude Code stat()s the credential store on the request path and
+  purges its token caches when mtime changes — the check rides the request,
+  there is no background watcher. An isolated process with its own
+  CLAUDE_CONFIG_DIR, running a 3-turn task with the credential file's mtime
+  bumped 40 times at 1s intervals, re-read ONLY at the 3 request boundaries.
+
+  The CHANGELOG entry for 2026-05-28 already corrected this ("auto-transitions
+  on its next API turn — empirically ~30 seconds") and made the respawn opt-in;
+  this docstring was never updated to match, so the file kept asserting a
+  problem that does not exist. See issue #15.
+
+  What the opt-in is still FOR, if anything: an unattended agent whose operator
+  wants a hard restart on rotation for reasons other than the token. Note the
+  hazard the same CHANGELOG documents — respawning into a broken transcript can
+  chain-burn every account in the pool.
+
+The original rationale, retained for context (and now known to be wrong):
+`claude-switch` rewrites the Keychain + ~/.claude.json, but a running Claude
+Code session was believed to hold the OLD account's OAuth token in memory,
+working for ~1h until refresh and then stalling.
+
+The mechanism: right after the swap, kill each active session and respawn with
 `--resume <session-id>` + an auto-resume prompt so Claude wakes up with
 the EXACT transcript that was in flight and immediately picks up work.
 No human input needed.

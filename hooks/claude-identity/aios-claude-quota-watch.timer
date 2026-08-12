@@ -1,0 +1,29 @@
+; aios-claude-quota-watch.timer — systemd user timer (Linux).
+;
+; Mirrors the plist's StartInterval=1800 + RunAtLoad=true.
+;
+; Why 30 minutes and not 60 seconds: on macOS a 60s interval pinned the machine
+; awake (constant DarkWake cycles). The Linux failure mode is different but the
+; conclusion is the same — this is the SAFETY NET, not the detector. Real-time
+; detection comes from _cache.py, which now tightens to a 3s evaluation interval
+; as the account approaches its cap. A tight timer here would burn wakeups to
+; duplicate work the statusLine pipe already does better.
+
+[Unit]
+Description=Run the AIOS Claude Code quota watcher every 30 minutes
+Documentation=file:%h/aios/hooks/claude-identity/README.md
+
+[Timer]
+; launchd's RunAtLoad: fire shortly after the user session comes up. 1 minute of
+; delay rather than 0 so it does not compete with login.
+OnStartupSec=1min
+OnUnitActiveSec=30min
+; Let systemd batch this with other wakeups instead of demanding its own.
+AccuracySec=1min
+; If the machine was asleep or off when a run was due, run once on resume —
+; the launchd agent gets this for free, systemd needs it asked for.
+Persistent=true
+Unit=aios-claude-quota-watch.service
+
+[Install]
+WantedBy=timers.target

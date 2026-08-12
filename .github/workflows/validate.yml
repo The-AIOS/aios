@@ -630,6 +630,48 @@ jobs:
         # reported by operators, neither catchable here because nothing tested this file.
         run: bash tests/install-wrappers.test.sh
 
+      - name: rotation threshold reaches its enforcing process
+        # THRESHOLD_5H/7D lived in claude-identity.sh and nothing read them: never
+        # exported, no consumer in that file, and the hot path (statusLine ->
+        # _cache.py -> _watch.py) never sources the shell. Editing the value you
+        # could find changed nothing, silently. Reported from a Linux operator's
+        # live rotation (#15).
+        run: bash tests/quota-threshold.test.sh
+
+      - name: rotation picks an account with actual capacity
+        # Bare `switch` wraps, so with two accounts exhausting B rotates back to
+        # a still-capped A — landing on a dead account and then burning the
+        # cooldown there. Includes the non-obvious one: a `declined` row must not
+        # arm the cooldown, or the watcher goes blind exactly when it must not.
+        run: bash tests/quota-rotation-target.test.sh
+
+      - name: watcher evaluation interval tightens near the cap
+        # A flat 30s tick was the real ceiling: the credential swap lands in
+        # milliseconds, but only if the threshold is EVALUATED in time. Parallel
+        # subagents cross the cap inside a 30s blind window.
+        run: bash tests/quota-tick-interval.test.sh
+
+      - name: every component follows CLAUDE_CONFIG_DIR together
+        # The safe way to add an account is to log it into an isolated config dir
+        # and capture from there (`/login` revokes the previous refresh token).
+        # If one component lags the relocation, every path still resolves and the
+        # watcher reads one account's state while the operator works in another.
+        run: bash tests/quota-config-dir.test.sh
+
+      - name: credential backend round-trip and refusal
+        # The Linux/Windows store is a plaintext file that this tool REPLACES on
+        # every swap: a malformed blob would overwrite a working credential and
+        # surface as a logged-out session, not as an error. Also asserts the
+        # rename bumps mtime, which is the signal a live session rides to adopt.
+        run: bash tests/credential-backend.test.sh
+
+      - name: a rotation the live session never adopted is detected
+        # The autopilot leans on Claude Code re-reading the credential store on
+        # its next API request. That was measured, not promised — if an update
+        # removed it the failure would be mute: swap succeeds, log says rotated,
+        # session keeps burning the capped account. This is the only sensor.
+        run: bash tests/adoption-detector.test.sh
+
   primitives_bash32:
     # The same regression suite under bash 3.2 — the bash Apple ships at /bin/bash on every
     # macOS, and what `#!/usr/bin/env bash` resolves to on a stock Mac. The `primitives` job
@@ -666,6 +708,11 @@ jobs:
       - name: install-wrappers regression under bash 3.2
         # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.
         run: /bin/bash tests/install-wrappers.test.sh
+
+      - name: rotation threshold under bash 3.2
+        # macOS is the platform the rotation autopilot already supports, so this
+        # lane is the one that matters most for it.
+        run: /bin/bash tests/quota-threshold.test.sh
 
   primitives_windows:
     # The same regression suite under GIT BASH — the shell Windows operators actually run

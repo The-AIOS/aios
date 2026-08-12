@@ -6,13 +6,17 @@
 # ============================================================================
 # One tool that handles three concerns for running Claude Code across multiple
 # Anthropic accounts (e.g., a primary + an overflow to dodge the 5h/7d rate
-# limits). All state is self-contained in your vault + ~/.claude/.
+# limits). All state is self-contained in your vault + your Claude config dir.
+#
+# Platforms: macOS and Linux. The credential store is detected, not assumed —
+# Keychain on macOS, and on Linux the plaintext $CONFIG_DIR/.credentials.json
+# (mode 600) that Claude Code itself writes. Windows uses the same file layout
+# as Linux but has no scheduler wired here and is untested.
 #
 # 1. Identity: save/restore/rotate between Anthropic accounts.
-#    Swaps the Keychain 'Claude Code-credentials' blob + the oauthAccount
-#    object + userID in ~/.claude.json atomically. Never touches mcpServers
-#    or project configs. Captures the outgoing identity before every swap
-#    (refresh tokens rotate).
+#    Swaps the credential blob + the oauthAccount object + userID in
+#    .claude.json atomically. Never touches mcpServers or project configs.
+#    Captures the outgoing identity before every swap (refresh tokens rotate).
 #
 # 2. Cache: read a Claude Code hook payload from stdin, extract the
 #    rate_limits object + current account email, write to
@@ -24,7 +28,7 @@
 #    to run under launchd every few minutes.
 #
 # ============================================================================
-# INSTALL ON A NEW MACHINE (macOS)
+# INSTALL ON A NEW MACHINE (macOS + Linux)
 # ============================================================================
 # All paths assume the vault is at ~/aios. Adjust if cloned elsewhere.
 #
@@ -38,10 +42,19 @@
 #   1. `primary@example.com` — optional label/context
 #   2. `overflow@example.com`
 #
-# Step 3 — capture each identity once. For each account, log into it via the
-# normal Claude Code flow, then:
+# Step 3 — capture each identity once.
 #
 #   claude-switch --capture
+#
+# SAFETY: do NOT just /login as the second account and capture. /login performs
+# a server-side revoke of the previous refresh token (POST {TOKEN_URL}/revoke,
+# token_type_hint: "refresh_token"), so depending on ordering it can kill an
+# identity you already captured. Log the additional account into an ISOLATED
+# config dir and capture from there — nothing to log out of, live credentials
+# untouched:
+#
+#   CLAUDE_CONFIG_DIR=~/.claude-acct-2 claude    # /login as account 2, then /exit
+#   CLAUDE_CONFIG_DIR=~/.claude-acct-2 claude-switch --capture
 #
 # Step 4 — wire the cache writer to the statusLine command. The statusline
 # is the ONLY Claude Code surface that receives rate_limits on stdin (Stop
@@ -65,14 +78,28 @@
 #   json.dump(d, open(p, "w"), indent=2)
 #   PY
 #
-# Step 5 — load the launchd agent (runs `watch` every 10 min, swaps when near cap):
+# Step 5 — install the safety-net scheduler.
 #
+# macOS (launchd):
 #   cp ~/aios/hooks/claude-identity/com.aios.claude-quota-watch.plist ~/Library/LaunchAgents/
 #   launchctl load ~/Library/LaunchAgents/com.aios.claude-quota-watch.plist
 #
+# Linux (systemd USER units — never system; the credentials are per-user):
+#   mkdir -p ~/.config/systemd/user
+#   cp ~/aios/hooks/claude-identity/aios-claude-quota-watch.service ~/.config/systemd/user/
+#   cp ~/aios/hooks/claude-identity/aios-claude-quota-watch.timer   ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now aios-claude-quota-watch.timer
+#   # headless box? `loginctl enable-linger $USER` so the timer survives logout
+#
+# Either way this is the SAFETY NET, not the detector. Real-time detection runs
+# from the statusLine pipe via _cache.py, which tightens to a 3s evaluation
+# interval as the account approaches its cap.
+#
 # Verify: `claude-whoami` works, `claude mcp list` unchanged, after a few
-# minutes `~/.claude/rate-limit-cache.json` appears and stays fresh as you use
-# Claude Code. The launchd log at ~/.claude/quota-watch.log records each check.
+# minutes `$CONFIG_DIR/rate-limit-cache.json` appears and stays fresh as you use
+# Claude Code. The watcher log at $CONFIG_DIR/quota-watch.log records each check.
+# `claude-switch watch --threshold` prints the threshold actually in force.
 #
 # ============================================================================
 # SUBCOMMANDS
@@ -94,6 +121,14 @@
 #   CLAUDE_QUOTA_5H=98      rotate when 5h pct >= this
 #   CLAUDE_QUOTA_7D=98      rotate when 7d pct >= this
 #
+# These are read by _watch.py, which OWNS the default — this script deliberately
+# does not define one. It used to (`THRESHOLD_5H="${CLAUDE_QUOTA_5H:-98}"`), and
+# that copy was never read by anything: nothing in this file consumed it, it was
+# never exported, and the hot path (statusLine -> _cache.py -> _watch.py) never
+# runs this script at all. An operator who edited it got silence, not an effect.
+# One value, one owner. Export the env vars to change it; `watch --threshold`
+# prints what is actually in force.
+#
 # Note (2026-04-23): come-home semantics removed for topology-independence.
 # The watcher now does pure rotate-only: when current account hits its cap,
 # advance to the next account in USER.md. Round-robin alternation across
@@ -104,15 +139,26 @@
 set -euo pipefail
 
 USER_MD="${USER_MD_PATH:-$HOME/aios/USER.md}"
-CLAUDE_JSON="$HOME/.claude.json"
-IDENTITIES_DIR="$HOME/.claude/identities"
+# Claude Code relocates its whole config tree when CLAUDE_CONFIG_DIR is set, and
+# the safe way to add a second account leans on exactly that: log the new account
+# into an isolated config dir and `--capture` from there, so the live credentials
+# are never touched and no logout fires (see the /login revoke note below).
+CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+# .claude.json sits BESIDE the config dir in the default layout but INSIDE it
+# when relocated. Try the relocated position first, then fall back.
+if [ -f "$CONFIG_DIR/.claude.json" ]; then
+  CLAUDE_JSON="$CONFIG_DIR/.claude.json"
+else
+  CLAUDE_JSON="$HOME/.claude.json"
+fi
+IDENTITIES_DIR="$CONFIG_DIR/identities"
 KEYCHAIN_SERVICE="Claude Code-credentials"
-CACHE_FILE="$HOME/.claude/rate-limit-cache.json"
-WATCH_LOG="$HOME/.claude/quota-watch.log"
-SWAP_LOG="$HOME/.claude/swap-log.jsonl"
+CACHE_FILE="$CONFIG_DIR/rate-limit-cache.json"
+WATCH_LOG="$CONFIG_DIR/quota-watch.log"
+SWAP_LOG="$CONFIG_DIR/swap-log.jsonl"
 
-THRESHOLD_5H="${CLAUDE_QUOTA_5H:-98}"
-THRESHOLD_7D="${CLAUDE_QUOTA_7D:-98}"
+# NOTE: the rotation thresholds are intentionally NOT defined here — _watch.py
+# owns them. See the "Environment overrides" block above.
 
 if [ -t 1 ]; then
   BOLD=$'\033[1m'; DIM=$'\033[2m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; BLUE=$'\033[34m'; RED=$'\033[31m'; RESET=$'\033[0m'
@@ -121,6 +167,63 @@ else
 fi
 
 die() { echo "${RED}error:${RESET} $*" >&2; exit 1; }
+
+# ---- credential backend ----------------------------------------------------
+# macOS stores the OAuth blob in Keychain. Linux and Windows store the SAME blob
+# as a plaintext JSON file at $CONFIG_DIR/.credentials.json, mode 600 — this is
+# Claude Code's own layout, not a choice made here, so libsecret/secret-tool or
+# any other keyring would be storing it somewhere the app never reads.
+#
+# Because the blob is identical either way, every caller above and below this
+# block stays platform-agnostic; only read and write differ.
+case "$(uname -s)" in
+  Darwin) CRED_BACKEND="keychain" ;;
+  *)      CRED_BACKEND="file" ;;
+esac
+CRED_FILE="$CONFIG_DIR/.credentials.json"
+
+cred_source() {
+  case "$CRED_BACKEND" in
+    keychain) printf "Keychain '%s'" "$KEYCHAIN_SERVICE" ;;
+    file)     printf '%s' "$CRED_FILE" ;;
+  esac
+}
+
+cred_read() {
+  case "$CRED_BACKEND" in
+    keychain)
+      security find-generic-password -s "$KEYCHAIN_SERVICE" -w 2>/dev/null || return 1
+      ;;
+    file)
+      [ -f "$CRED_FILE" ] || return 1
+      cat "$CRED_FILE" || return 1
+      ;;
+  esac
+}
+
+cred_write() {
+  local blob="$1"
+  case "$CRED_BACKEND" in
+    keychain)
+      security add-generic-password -U -s "$KEYCHAIN_SERVICE" -a "$USER" -w "$blob" \
+        >/dev/null 2>&1 || return 1
+      ;;
+    file)
+      # Validate before the write. On this path a bad blob would REPLACE a
+      # working credential with garbage, and the operator would discover it as
+      # a logged-out session rather than as an error from this tool.
+      printf '%s' "$blob" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null \
+        || die "refusing to write a malformed credential blob to $CRED_FILE"
+      local tmp="$CRED_FILE.tmp.$$"
+      ( umask 077; printf '%s' "$blob" > "$tmp" ) || return 1
+      chmod 600 "$tmp"
+      # Atomic, and the rename bumps mtime — which is the signal a live session
+      # rides to pick the new credential up. A truncate-and-write would both
+      # risk a torn read and, on some filesystems, leave mtime unchanged.
+      mv -f "$tmp" "$CRED_FILE" || return 1
+      ;;
+  esac
+}
 
 # ---- parse USER.md for the ordered account list ----
 parse_accounts() {
@@ -155,8 +258,8 @@ capture_current() {
   chmod 700 "$IDENTITIES_DIR" "$dir"
 
   local blob
-  blob=$(security find-generic-password -s "$KEYCHAIN_SERVICE" -w 2>/dev/null) || \
-    die "could not read Keychain '$KEYCHAIN_SERVICE'. Is this account fully logged in to Claude Code?"
+  blob=$(cred_read) || \
+    die "could not read $(cred_source). Is this account fully logged in to Claude Code?"
   printf '%s' "$blob" > "$dir/keychain.json"
   chmod 600 "$dir/keychain.json"
 
@@ -185,8 +288,7 @@ restore_identity() {
 
   local blob
   blob=$(cat "$dir/keychain.json")
-  security add-generic-password -U -s "$KEYCHAIN_SERVICE" -a "$USER" -w "$blob" >/dev/null 2>&1 || \
-    die "security add-generic-password failed"
+  cred_write "$blob" || die "credential write failed ($CRED_BACKEND: $(cred_source))"
 
   python3 - <<PY
 import json, shutil
@@ -269,7 +371,7 @@ First-time setup per account:
   3. Repeat for each account in USER.md → ## Anthropic accounts
 
 Safety:
-  - Swaps Keychain '$KEYCHAIN_SERVICE' blob + .claude.json oauthAccount + userID
+  - Swaps the credential blob ($(cred_source)) + .claude.json oauthAccount + userID
   - Always captures outgoing identity before swap (refresh tokens rotate)
   - Never touches mcpServers, project configs, or history
   - Backup written to $CLAUDE_JSON.bak-claude-switch on every swap
@@ -333,6 +435,12 @@ cmd_cache() {
 cmd_watch() {
   # _watch.py used to take a `primary` arg for come-home logic; come-home
   # was removed 2026-04-23 for topology-independence. Only self-path now.
+  if [ "${1:-}" = "--threshold" ]; then
+    # Ask the process that actually enforces it. Reading a number out of this
+    # file would just recreate the second source of truth we deleted.
+    python3 "$SELF_DIR/_watch.py" --threshold
+    return
+  fi
   python3 "$SELF_DIR/_watch.py" "$0"
 }
 

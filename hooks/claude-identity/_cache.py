@@ -23,15 +23,38 @@ import subprocess
 import sys
 import time
 
-# Fire _watch.py at most once per WATCH_TICK_SECS to avoid spawning a
-# subprocess on every statusLine render (~4-6/turn).
-WATCH_TICK_SECS = 30
+# Fire _watch.py at most once per tick to avoid spawning a subprocess on every
+# statusLine render (~4-6/turn).
+#
+# The interval is adaptive, because a flat 30s was the real ceiling on the whole
+# autopilot. Claude Code adopts a swapped credential on its very next API request
+# — milliseconds — but that is moot if the threshold is only EVALUATED every 30
+# seconds: with parallel subagents burning fast, the cap gets crossed inside that
+# blind window and the rotation arrives after the wall it existed to avoid.
+#
+# So: poll lazily while there is headroom, tighten as the account approaches its
+# cap. The cost of the fast lane is one short-lived subprocess a few seconds
+# apart, and only in the minutes that actually matter.
+WATCH_TICK_SECS = 30        # headroom — stay cheap
+WATCH_TICK_SECS_HOT = 3     # near the cap — every second counts
+HOT_ZONE_PCT = 85           # above this, tick fast
+
+
+def config_dir(home: str) -> str:
+    """Claude Code's config root. Honouring CLAUDE_CONFIG_DIR is what makes the
+    isolated-config account capture possible — see the note in _watch.py."""
+    return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(home, ".claude")
 
 
 def main():
     home = os.path.expanduser("~")
-    cache_path = os.path.join(home, ".claude", "rate-limit-cache.json")
-    claude_json = os.path.join(home, ".claude.json")
+    cfg = config_dir(home)
+    cache_path = os.path.join(cfg, "rate-limit-cache.json")
+    # .claude.json sits BESIDE the config dir in the default layout but INSIDE
+    # it when relocated, so try the relocated position first and fall back.
+    claude_json = os.path.join(cfg, ".claude.json")
+    if not os.path.exists(claude_json):
+        claude_json = os.path.join(home, ".claude.json")
 
     try:
         payload = sys.stdin.read()
@@ -80,20 +103,33 @@ def main():
     # every statusLine render). Any failure here is non-fatal — the launchd
     # safety-net will still catch threshold crossings within 30 min.
     try:
-        kick_watcher(home)
+        kick_watcher(
+            home, max(out["five_hour_pct"] or 0, out["seven_day_pct"] or 0)
+        )
     except Exception as e:
         sys.stderr.write(f"claude-identity cache: watch kick skipped: {e}\n")
 
 
-def kick_watcher(home: str) -> None:
-    """Spawn _watch.py in the background if at least WATCH_TICK_SECS have
-    elapsed since the last kick. Touches a tick marker so subsequent
-    statusLine renders don't pile up subprocesses."""
-    tick_path = os.path.join(home, ".claude", "watch-tick")
+def tick_interval(worst_pct: float) -> int:
+    """Seconds to wait between watcher kicks, given the worst of the two usage
+    percentages. Fast only inside the hot zone — see the note on WATCH_TICK_SECS."""
+    try:
+        pct = float(worst_pct or 0)
+    except (TypeError, ValueError):
+        pct = 0.0
+    return WATCH_TICK_SECS_HOT if pct >= HOT_ZONE_PCT else WATCH_TICK_SECS
+
+
+def kick_watcher(home: str, worst_pct: float = 0) -> None:
+    """Spawn _watch.py in the background if enough time has elapsed since the
+    last kick. Touches a tick marker so subsequent statusLine renders don't pile
+    up subprocesses. The interval tightens as usage approaches the cap."""
+    tick_path = os.path.join(config_dir(home), "watch-tick")
+    interval = tick_interval(worst_pct)
     now = time.time()
     if os.path.exists(tick_path):
         try:
-            if now - os.path.getmtime(tick_path) < WATCH_TICK_SECS:
+            if now - os.path.getmtime(tick_path) < interval:
                 return
         except OSError:
             pass
