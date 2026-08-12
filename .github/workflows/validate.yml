@@ -71,8 +71,15 @@ jobs:
             echo "shipping them adds files they can neither run nor maintain. Denylist explicitly instead."
             exit 1
           fi
-          # And the category must stay documented — folklore is how the last blind spot happened.
-          grep -q "^### Tier 0" "$U" || { echo "::error::update.md lost its § Tier 0 section — the canonical-only category must stay documented"; exit 1; }
+          # ⚠️ The two greps above are NECESSARY BUT NO LONGER SUFFICIENT. They were written
+          # against a HARDCODED layer list, where a Tier-0 folder could only enter the sync
+          # path by being typed into it. The list is now DERIVED from the clone, so tests/
+          # and .github/ enter by default and are held out by TIER0_DENY — which means a
+          # pattern-match on the spec text can pass while the real derivation leaks. That is
+          # exactly the failure class this guard exists for: a check that cannot observe the
+          # case it guards. The executable test below runs the ACTUAL derivation against a
+          # fixture tree, and asserts its own falsifiability so it cannot pass vacuously.
+          bash tests/update-tier0-denylist.test.sh
           echo "OK: tests/ + .github/ remain canonical-only, and Tier 0 is documented"
 
       - name: Required infra folders + custom/ subfolders exist
