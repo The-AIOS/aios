@@ -29,6 +29,7 @@ When invoked as `/close-session --auto` (the Glass Close-all broadcast fires thi
 - **Keep every step that captures / commits** — Mode A merge-appends its block via `aios-note-append`; Mode B writes its per-session report; the commit is `aios-commit`.
 - **Under `--auto`, DEFER all observed-context routing to `/close-day` (single-writer) — do NOT run the direct Tier A writes in steps 6–7.** A broadcast can close several *vault* sessions at once, and the daily-note lock does **not** protect the observed files (`session-insights.md`, `patterns.md`, `preferences.md`, `business.md`, `antifragile.md`) — those steps read-scan-edit-write, so two parallel closes clobber each other (last-writer-wins). Instead, **capture** each observation as a candidate in the block — Tier A → `**Observed (Tier A candidates):**`, Tier B → `**Observed (Tier B candidates):**` — commit only the block, and let `/close-day` route them as the sole writer. **Nothing is lost:** routing moves from per-session to the consolidator, exactly as Mode B workers already defer via their reports. This is *why* parallel closing can't "make a mess" — under a broadcast there is exactly **one** observed-context writer (close-day), so no clobber, no trip, and no staleness (close-day always routes). (Interactive single `/close-session` still writes Tier A inline — no concurrency there → no race → immediate value.)
 - **Finish promptly** — completion → idle is the contract `--auto` exists to honor.
+- **Step 4.5's idempotency gate applies here, and `--auto` is the mode that needs it.** A machine-fired close can arrive repeatedly — a retrying bus, a double-clicked button, a broadcast that overlaps its own previous run. Run the gate; if this session already stamped a block and the vault HEAD has not moved, **skip the append and finish** rather than adding a near-identical block. Under `--auto` that skip is a normal, successful outcome — report it and go idle, do not treat it as an error. (Measured 2026-08-12: one bus request delivered `--auto` four times in twelve minutes to two different sessions.)
 
 The rest of this command is the **interactive** (manual `/close-session`) flow. Under `--auto`, skip each input-waiting step, run each capture/route/commit step.
 
@@ -55,6 +56,33 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
 2. Read `00 - notes/context/observed/session-insights.md` — check current content for snapshotting
 3. Infer a session label from the conversation: current time (HH:MM) + a 2–4 word topic. Present it to the user for confirmation: "Session label: **{HH:MM} | {Topic}** — correct, or adjust?"
 4. Wait for user response on label
+4.5. **Idempotency gate — has THIS session already closed with no work since?** Mode B has had an idempotency rule from the start (*"If the same session runs `/close-session` twice on one date, overwrite its own file"*); Mode A had none, and its per-day multi-block design is exactly what makes the gap invisible — the note cannot tell **a second session** (legitimate, wants its own block) from **the same session firing twice** (a duplicate), because `## Session — {HH:MM}` carries no session identity.
+
+   That is not hypothetical. On 2026-08-12 a misbehaving command-bus request delivered `/aios:close-session --auto` to one session **four times in twelve minutes**. Four blocks would have meant four copies of the same wins in the daily note *and* four copies of the same Tier A/Tier B candidates for `/close-day` to route into observed context — the consolidator amplifying noise it was built to reduce. **A consumer must not be corruptible by a misbehaving producer**, so the gate lives here rather than only in whatever surface glitched.
+
+   ```bash
+   NOTE="$HOME/aios/vault/01 - calendar/{YYYY-MM}/{YYYY-MM-DD}.md"
+   SID="${CLAUDE_CODE_SESSION_ID:-unknown}"
+   VHEAD=$(git -C "$HOME/aios" rev-parse HEAD)
+
+   # Did this session already stamp a block, and was the vault at the same commit then?
+   PRIOR=$(grep -o "<!-- close-session: ${SID} @ [0-9a-f]* -->" "$NOTE" 2>/dev/null | tail -1)
+   ```
+
+   - **A prior stamp exists AND its hash equals `$VHEAD`** → nothing has been committed since that close. This is a **duplicate**: skip the append, skip every step below, and say so plainly (*"already closed at {HH:MM}; no commits since — not duplicating"*). Under `--auto` this is the normal outcome of a re-fire and must not read as an error.
+   - **A prior stamp exists but its hash DIFFERS** → real work landed since. This is a **legitimate second close**: proceed and append a new block. A long session that closes at noon, works on, and closes again at 18:00 is a case the gate must never block.
+   - **No prior stamp** → first close today for this session. Proceed.
+
+   > **Why the vault HEAD and not a timestamp:** elapsed time does not distinguish a duplicate from real work — a re-fire two minutes later and a genuine second close two minutes later look identical by clock. `HEAD` moves if and only if something was committed, which is the property actually being asked about. And it is *measured*, not inferred. (`SID` falls back to `unknown` rather than failing: a session with no id still gets a block — degrading to the old always-append behaviour is the right failure direction, since a missing block is worse than a duplicated one.)
+
+   **Stamp the block you are about to write** — immediately under its `## Session —` heading, so the next invocation can find it:
+
+   ```
+   ## Session — {HH:MM} | {Topic}
+   <!-- close-session: {SID} @ {VHEAD} -->
+   ```
+
+   An HTML comment renders invisibly in Obsidian and in every markdown preview, so the note stays clean for the human while carrying the identity the machine needs.
 5. **Append the session block via the race-safe helper — never write the note directly** (a concurrent Close-all broadcast fires several vault sessions at once; a direct read-append-write would clobber). Write the block (format below) to a temp file, then:
    ```bash
    ~/aios/hooks/aios-note-append \
@@ -122,6 +150,7 @@ Append this to the daily note:
 ---
 
 ## Session — {HH:MM} | {Topic}
+<!-- close-session: {CLAUDE_CODE_SESSION_ID} @ {vault HEAD at close} -->
 
 > {One sentence characterization — not a summary, a frame. What was this session really about?}
 
