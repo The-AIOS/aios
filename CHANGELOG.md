@@ -39,7 +39,7 @@
 
 ## 2026-08-13 — `/aios:update` left empty directories in vault roots, and nothing could see them
 
-`hash: TBD-ON-MERGE`
+`hash: 200bec5`
 
 ### Stray empty directories from a previous update are now found and removed
 
