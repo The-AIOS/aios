@@ -51,7 +51,7 @@
 - **Let `/aios:update` clean up after its own past runs.** The sweep reports what it removed (*"Removed {N} stray empty directories from a previous run's unquoted path list"*) and stays silent when there is nothing.
 - **Trust it not to touch your folders.** Two conditions must *both* hold: the name looks like a joined file list (an extension followed by a space), **and** the directory contains zero files. Your `01 - calendar`, `00 - notes`, `02 - assets`, `03 - export` and `04 - backups` all contain a space and are all spared — none has a `.ext ` sequence. A folder holding anything real is never a candidate, and neither is a legitimately-empty folder like `05 - drafts`. Verified against a live vault plus a fixture: **1 true positive, 0 false positives across 9 cases.**
 
-**Action required — none.** The next `/aios:update` sweeps automatically. To look now: `find ~/aios -maxdepth 1 -type d -name '*.[A-Za-z0-9]* *'`. Anything it lists is empty by construction, so `rm -rf` on it loses nothing.
+**Action required — none.** The sweep is its own once-per-run step (3.9), so it runs on your next `/aios:update` **even if nothing else changed** — which matters, because the residue is damage from a *past* run: a vault that is already current is the most likely to be carrying it and the least likely to be looked at. To look now: `find ~/aios -maxdepth 1 -type d -name '*.[A-Za-z0-9]* *'`. Anything it lists is empty by construction, so `rm -rf` on it loses nothing.
 
 ### Also shipped: the company template's stock examples no longer name anyone real
 
