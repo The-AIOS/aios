@@ -37,9 +37,46 @@
 
 ---
 
-## 2026-08-13 — `/aios:update` left empty directories in vault roots, and two checks could not fire
+## 2026-08-13 — Four checks that reported green without measuring, and a setup step that could not fail loudly
 
-`hash: 200bec5 · 7b5a2d9`
+`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388`
+
+### Setup step 5 could leave you with a `claude` that doesn't run — now it can't
+
+> **What this delivers.** `npm install -g @anthropic-ai/claude-code` exits **green** while leaving a broken command, whenever npm runs with `--omit=optional` or `--ignore-scripts` — which some pnpm setups and corporate `.npmrc` files do without telling you. You get the JS wrapper and no native engine, and `claude` fails with *"native binary not installed"*. The remedy the error itself suggests assumes a **local** install, so following it on a global one fails too, and the postinstall it eventually runs cannot help because the platform package was never downloaded. **Two dead ends in the step before you see any of the framework** — step 5 of 13.
+
+**What you can now do:**
+- **Install a self-contained binary** with no optional dependencies, so the failure mode is gone by construction rather than by documentation. **Per platform, and they are not interchangeable:** macOS and Linux use `curl -fsSL https://claude.ai/install.sh | bash`; **Windows uses `irm https://claude.ai/install.ps1 | iex`** — the bash installer *refuses to run on Windows outright* (it detects MINGW/MSYS/CYGWIN and exits), so reaching for it in Git Bash is a dead end, not a slow path.
+- **Catch it at the step that caused it.** Every platform block now ends with `claude --version`, which must print a number before you continue.
+- **Stop `sudo`-ing the Linux install.** The old block said `sudo npm install -g`; the native installer **refuses sudo on purpose**, because a root-owned binary in `/root/.local/bin` is not on your PATH.
+- **Tell the two lookalike failures apart.** § Known Gotchas → macOS used to say *"no platform-specific gotchas observed"* and blamed `$PATH` for everything. It now distinguishes *not on PATH* from *binary never downloaded* and gives the one-line check that separates them: `ls -l ~/.local/bin/claude`. Present but not runnable → PATH. Absent → download.
+
+**Action required — only if `claude --version` fails for you today.** A working install needs no action; nothing is removed and npm still works when it works. Windows also had two steps both numbered "2" — fixed.
+
+### A forked vault no longer gets red CI for files the framework sent it
+
+> **What this delivers.** Tier 0 keeps `.github/` and `tests/` canonical-only, justified as *"an operator's vault has no CI"* — true for a clean clone, **false for a fork**, and forking is a normal install path. A fork carries `.github/` from creation and then **never updates it**, so its frozen workflow judges the new content `/aios:update` legitimately delivers. Canonical had already widened an allowlist that no vault could ever receive. Result: red mail for healthy files — and pulling the new workflow by hand only moves the error, since it invokes suites written against canonical's tree.
+
+**What you can now do:**
+- **Fork the repo and use it as your vault without fighting its CI.** The ten canonical-contract jobs now carry `if: github.event.repository.fork != true`, so in a fork they **skip** instead of failing.
+- **Keep the two guards that are actually yours** — the credentials/secret scan and note-frontmatter validation still run in a fork, because those protect *you*, not the framework's contract.
+- **Contribute from a fork with CI intact.** `pull_request` events evaluate `github.event.repository` against the **base** repo, so a contributor PR runs the full suite exactly as before.
+
+**Action required — none.** If you have been deleting `.github/` or hand-maintaining a replacement, you can stop after this sync; a fork now goes green on its own.
+
+*Same role-aware shape as `company-template`'s `personal_leak` job — enforce in the repo that owns the contract, skip where it does not apply.*
+
+### `USER.md`'s own template no longer votes on which sources you use
+
+> **What this delivers.** A partial regression of the 2026-08-11 fix. That one made source detection line-scoped with negation markers, so *"Slack — no se usa"* stopped switching Slack **on**. But the scan still walked **every** line, and the template the framework writes into your `USER.md` names the sources in its own explanatory blockquotes and italic examples — none of which carry a negation marker. The first such line won, so **a freshly scaffolded `USER.md` reported every source as configured**, and an operator who explicitly documented a non-use was overruled by the documentation that shipped with the file. Unfindable from the outside: deleting the template's blockquotes is the last thing anyone would try, and it was the only thing that worked.
+
+**What you can now do:**
+- **Have your declaration win.** A source is enabled only by a line **you** wrote. Blockquotes, headings, HTML comments, `*EXAMPLE ONLY*` blocks and italic example bullets no longer get a vote.
+- **Trust a fresh install's report.** A `USER.md` containing nothing but the template now enables **nothing** — that is the canary this ships with, and canonical's own `USER.md` is asserted against it in CI.
+
+**Action required — none, but worth one look.** If `/today` has been reporting a source as configured that you don't use, this sync fixes it silently. To confirm: `uv run hooks/pipeline-executor.py --command today` and check the source lines match what your `USER.md` actually declares.
+
+*Reported with file, line and a proposed canary by the same operator who found the fork-CI issue. Locked with `tests/source-detector.test.sh` — **9 of its 11 assertions fail against the pre-fix parser**, so it cannot pass vacuously.*
 
 ### Stray empty directories from a previous update are now found and removed
 
