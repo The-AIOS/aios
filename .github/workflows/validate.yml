@@ -111,6 +111,25 @@ jobs:
           bash tests/source-detector.test.sh
           echo "OK: template prose does not vote on the operator's configuration"
 
+      - name: Changelog scan handles multi-hash entries; layer pathspec is an array
+        run: |
+          set -e
+          # Two silent bugs found by RUNNING /aios:update instead of hand-executing it.
+          # The scan took the first of N cited hashes, so a day's entry with 3 synced +
+          # 1 new hash read as fully synced and its new subsections were never shown.
+          # And the layer pathspec was a space-joined string passed unquoted — under
+          # zsh (the session shell) that is ONE pathspec matching nothing, so every
+          # layer change was invisible to Step 2 while Step 6.5 quietly applied it.
+          #
+          # ⚠️ The dynamic half of this suite REQUIRES zsh: under bash the buggy form
+          # works, so a bash-only run cannot prove it. Install zsh here so the proof
+          # actually executes rather than reporting a skip that reads like a pass.
+          sudo apt-get install -qq -y zsh >/dev/null 2>&1 || true
+          command -v zsh >/dev/null 2>&1 && echo "zsh present — dynamic proof will run" \
+            || echo "::warning::zsh unavailable; only the static assertions will run"
+          bash tests/update-changelog-scan.test.sh
+          echo "OK: multi-hash entries surface, and the layer pathspec survives zsh"
+
       - name: SETUP.md prescribes the right Claude Code installer per platform
         run: |
           set -e

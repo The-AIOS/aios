@@ -242,8 +242,19 @@ If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git
 
 Read `CHANGELOG.md` from the cloned repo root. If absent, skip silently. Otherwise:
 
-1. Parse `## ` entries (each is `## YYYY-MM-DD — title` followed by `` `hash: {short_hash}` ``).
-2. For each entry newest first, check if synced via `git -C /tmp/aios-update-check merge-base --is-ancestor {entry_hash} {stored_hash}` (exit 0 = synced, stop scanning; exit 1 = new, collect; exit 128 = hash unreachable in cloned repo → fall back to content-comparison against local CHANGELOG.md by date header + title).
+1. Parse `## ` entries. Each is `## YYYY-MM-DD — title` followed by `` `hash: {short_hash}` `` — **and that field carries one OR MANY hashes**, ` · `-separated (`` `hash: 200bec5 · 7b5a2d9 · 7055d09` ``), because a day's entry accumulates a `###` subsection per merge and each cites its own PR head. Parse the field into a **list**, always; a single hash is just a list of one.
+2. **For each entry newest first, an entry is NEW if ANY of its hashes is not yet synced. Stop scanning only when ALL of an entry's hashes are ancestors of `{stored_hash}`.**
+
+   ```bash
+   # Per hash: exit 0 = ancestor (synced) · exit 1 = new · 128 = unreachable in the clone.
+   git -C /tmp/aios-update-check merge-base --is-ancestor {hash} {stored_hash}
+   ```
+
+   - **any hash → exit 1** → the entry is **NEW**: collect it and keep scanning older entries.
+   - **every hash → exit 0** → fully synced: stop scanning.
+   - **any hash → exit 128** (unreachable) → treat that hash as **inconclusive, not synced**, and fall back to content-comparison against the local `CHANGELOG.md` by date header + title. Never let an unreachable hash *satisfy* the synced test.
+
+   > **Why "any", and why this is not a hypothetical.** The rule used to read *"check `{entry_hash}`… exit 0 = synced, stop scanning"*, written when an entry cited exactly one hash. Same-day accumulation broke that silently: on 2026-08-13 the entry cited **five** hashes, of which the first four were already ancestors of an operator's stored hash and the fifth was not. Taking the first hash returns exit 0, the scan stops, and **the entry reads as fully synced** — so the afternoon's subsections are never shown, and any `Action required` inside them is never executed. The operator sees a silent, plausible "nothing new" and has no way to notice. **The failure mode is under-reporting, which is exactly what a changelog cannot afford**, so bias the test the other way: one unsynced hash makes the whole entry new, and showing an already-seen subsection twice is a trivially cheaper error than hiding one.
 3. If new entries exist, show them before applying changes — **lead with each entry's "What you can now do" section** (the plain-language capability read — this is the part that actually tells the operator what the new version unlocks; read it back to them, don't make them open the file), then **Action required** (skip Why/FYI for brevity; full details in CHANGELOG.md). Aggregate + deduplicate Action required across all new entries. If an entry predates the convention and has no "What you can now do" section, fall back to its "What changed" / "What you're getting".
 4. Execute the action items inline as part of this run — don't list them and wait for the operator to ask. This command IS the implementation arm of CHANGELOG action items.
    - **After applying, close with a one-line-per-capability recap** — *"This update lets you: {do X}, {do Y}, {do Z}."* — so the operator leaves the sync knowing what they gained, not just that files changed. (This is the comprehension-debt guard for the framework's own release channel: an update the operator can't translate into a capability is debt, not a gift.)
@@ -267,11 +278,13 @@ CLONE="/tmp/aios-update-check"
 TIER0_DENY="tests .github vault .git .gitattributes"
 
 # Every top-level directory canonical actually has, minus the denylist.
-LAYERS=""
+# MUST be an ARRAY. A space-joined string here is the bug documented under the
+# `git diff` call below — it reaches git as ONE pathspec and matches nothing.
+LAYERS=()
 for d in $(cd "$CLONE" && ls -A); do
   [ -d "$CLONE/$d" ] || continue
   case " $TIER0_DENY " in *" $d "*) continue ;; esac
-  LAYERS="$LAYERS $d/"
+  LAYERS+=("$d/")          # ARRAY, not a space-joined string — see the note below
 done
 
 # Root docs stay ENUMERATED here on purpose — do not "finish the job" by deriving them
@@ -282,11 +295,24 @@ done
 # generically, so the belt (enumerated + guarded) and the braces (generic reconcile) are
 # deliberately different mechanisms. The DIRECTORY list below is the one that had no
 # equivalent guard, and is therefore the one that is derived.
+# ⚠️ `"${LAYERS[@]}"` — QUOTED ARRAY EXPANSION, never a bare `$LAYERS`. This line
+# carried the exact word-splitting bug that Step 3 warns about in prose, and it
+# went unnoticed for weeks because the *symptom is silence*: the session's shell
+# is zsh, which performs NO word splitting on unquoted parameter expansion, so a
+# space-joined "agents/ hooks/ plugins/ …" arrived at git as ONE pathspec that
+# matches nothing. Measured on a live vault the day it was found:
+#     unquoted $LAYERS  → 0 paths
+#     quoted array      → 1 path (plugins/aios/commands/update.md)
+# Every LAYER change was therefore invisible to this step; only the individually
+# quoted root docs above survived. Nothing failed — Step 6.5's reconcile applied
+# the files anyway — so the sync still landed while THIS step's report was wrong,
+# which is the worst combination: correct outcome, false account of it.
+# Bash 3.2 (macOS system bash) and zsh both handle `"${arr[@]}"` correctly.
 git -C "$CLONE" diff {stored_hash}..HEAD --name-only -- \
   "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
   "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "AGENTS.md" "EXTENSION-MAP.md" "LICENSE-AUDIT.md" \
   "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
-  $LAYERS "vault/.obsidian/"
+  "${LAYERS[@]}" "vault/.obsidian/"
 ```
 
 > ⚠️ **If you touch `TIER0_DENY`, you are changing what ships to every operator vault.** `.github/workflows/validate.yml` fails the build if `tests` or `.github` leave that list — deliberately, because this is the one edit whose blast radius is every vault at once.

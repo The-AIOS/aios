@@ -39,7 +39,26 @@
 
 ## 2026-08-13 — Four checks that reported green without measuring, and a setup step that could not fail loudly
 
-`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8`
+`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8 · {PR-HEAD}`
+
+### `/aios:update` was hiding new changelog entries and under-reporting what it synced
+
+> **What this delivers.** Two silent bugs in `/aios:update` itself, found by **running** the command rather than hand-executing its steps. Neither ever failed: the sync landed correctly both times, only the *account* of it was wrong — which is the worst combination, because there is nothing to notice.
+>
+> **1. A day's entry could hide its own later sections.** The changelog scan assumed **one hash per entry**. Entries now accumulate a `###` subsection per merge, each citing its own PR head — so today's cites six. The scan checked the *first* hash, and if that one was already synced it declared the whole entry synced and **stopped**. An operator who synced mid-morning would never be shown the afternoon's subsections, and any `Action required` inside them would never run.
+>
+> **2. Every layer change was invisible to Step 2.** The layer pathspec was built as a space-joined string and passed **unquoted**. Your session shell is **zsh**, which performs no word splitting on unquoted expansion, so `agents/ hooks/ plugins/ …` arrived at `git diff` as **one** pathspec matching nothing. Measured on a live vault: **0 paths** unquoted versus **1** with a quoted array. Only the individually-quoted root docs survived. Step 6.5's reconcile applied the files anyway — which is exactly why nobody noticed.
+
+**What you can now do:**
+- **See every entry that applies to you.** An entry counts as new if **any** of its hashes is unsynced; scanning stops only when **all** of them are ancestors. Being shown a subsection twice is a trivially cheaper error than being shown none.
+- **Trust the "Applied (Tier 1)" list.** Step 2 now reports what actually changed instead of silently listing only root docs.
+- **Rely on an unreachable hash never counting as "synced."** It falls back to date+title comparison rather than satisfying the test by accident.
+
+**Action required — none.** Both are inside the command. If a past sync seemed to show fewer changes than expected, this is why.
+
+*Locked with `tests/update-changelog-scan.test.sh` (11 assertions). **The dynamic half requires zsh, and CI installs it deliberately** — under bash the buggy pathspec *works*, so a bash-only test passes on broken code, which is precisely how this survived weeks of green CI. Test 3 asserts the old rule hid the entry; test 11 reproduces the 0-paths failure. The three static assertions fail against the pre-fix spec.*
+
+*Found on the first run of `/aios:update` as an actual command rather than by hand — the operator's "be user 0 of every update" rule, earning itself on its first outing. Hand-executing performs the author's **intent**; only the real invocation executes the **literal code**.*
 
 ### Setup step 5 could leave you with a `claude` that doesn't run — now it can't
 
