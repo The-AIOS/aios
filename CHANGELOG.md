@@ -39,7 +39,7 @@
 
 ## 2026-08-13 — Four checks that reported green without measuring, and a setup step that could not fail loudly
 
-`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388`
+`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8`
 
 ### Setup step 5 could leave you with a `claude` that doesn't run — now it can't
 
@@ -106,7 +106,13 @@
 
 **What you can now do:**
 - **Read the docs without decoding someone else's ventures.** `START-HERE.md` and `/aios:company` illustrated multi-company mounting and voice sign-offs with the framework author's own brand names — which mean nothing in your vault. They now describe **roles and registers** (*"your own venture and a client's company"*, *"an institutional/precision-first voice"*), which is both neutral and more useful, since an archetype tells you how to pick *yours*.
-- **See a cache/manifest version gap before it becomes two live copies.** `/aios:update` now reports when your installed plugin-cache directory is named for an older version than `plugin.json` declares, and gives you the aligning command (`claude plugin update aios@the-aios`). Harmless today — the sync globs any version directory — but if a re-resolve mints a new one, the old directory lingers and the sync keeps writing to **both**. It **reports and never prunes**: the running client may hold references, and a wrong deletion costs you your working commands to save a few kilobytes.
+- **See a cache/manifest version gap, and be told what actually causes it.** `/aios:update` now reports when your installed plugin-cache directory is named for an older version than `plugin.json` declares, and prescribes the **re-resolve** (`claude plugin update aios@the-aios`). It **reports and never prunes**: the running client may hold references, and a wrong deletion costs you your working commands to save a few kilobytes.
+
+  > **Correction to the first version of this note, made the same day.** It called the gap *"harmless today — an artifact of a missed re-resolve."* That was wrong, and the correction matters because it changes whether you should expect it to recur. The command-sync step copies `commands/*.md` **and nothing else**, so the cache's own `.claude-plugin/plugin.json` is never updated — and since the cache **directory is named for the version in that manifest**, the name can never advance. **The sync is the cause, and every version bump reproduces it.** Measured on a live install: 25 of 26 cache files identical to their vault source, the 26th being that manifest, cache reading `0.4.0` against a vault reading `0.5.0`.
+  >
+  > **The fix is still the re-resolve, not a broader copy** — and that is the non-obvious part. Copying `plugin.json` into the cache looks like completing the sync, but it writes a `0.5.0` manifest into a directory named `0.4.0`: internally inconsistent, a state no re-resolve produces and nothing expects. **Stale-but-coherent beats fresh-but-contradictory.** Only `claude plugin update` can mint a correctly-named directory, so the spec now says so explicitly, with both tempting wrong moves named.
+  >
+  > *Found because an operator asked whether a manual sync had actually updated the cache. It had — for the 25 files the documented snippet covers. The 26th is why the question was worth asking.*
 
 **Action required — none.** Both are silent when there is nothing to say.
 
