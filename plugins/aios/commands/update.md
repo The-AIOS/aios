@@ -395,22 +395,26 @@ For each changed Tier 1 file:
    - New files in `agents/aios/{bundle}/` or other bundled subfolders → `cp` to the matching local path
 4. **Files deleted upstream:** flag with a question, don't auto-delete. *"Upstream removed `{path}`. Delete your local copy too? [yes/keep]."* Default: keep (operator may have reasons to retain locally).
 
-5. **Sweep for split-residue directories — the prose rule above needs a check behind it.** The word-splitting warning at the top of this step has shipped since 2026-07-27 and was still violated on 2026-08-12, leaving a 14-deep chain of empty directories in a vault root. That is the predictable outcome: the rule is an instruction a session must read and obey every run, and **nothing verified it afterward**. Worse, the residue is invisible to every existing check — `git status` does not report empty directories at all, and Step 6.5's reconcile deliberately drops every vault-side `Only in` line. So it accumulates silently, exactly as the warning predicts, and the operator finds it months later wondering who made it.
+### 3.9. Sweep for split-residue directories — the prose rule needs a check behind it
 
-   ```bash
-   # A residue dir is named like a JOINED FILE LIST — an extension followed by a
-   # space ("CHANGELOG.md SETUP.md …") — and holds ZERO files, because only
-   # `mkdir` ever ran. Both conditions are required.
-   find "$HOME/aios" -maxdepth 1 -type d ! -name '.*' -print | while IFS= read -r d; do
-     case "$(basename "$d")" in
-       *.[A-Za-z0-9]*\ *) [ "$(find "$d" -type f | wc -l)" -eq 0 ] && echo "$d" ;;
-     esac
-   done
-   ```
+> **This runs ONCE PER RUN, and it runs even when nothing changed.** It is deliberately *not* part of Step 3's per-file loop. The residue is damage left by a **past** run, so an operator whose vault is already current — zero changed Tier-1 files, the loop never entered — is exactly the operator most likely to be sitting on it and least likely to be cleaned. Scope it to the vault once, not to each file.
 
-   **Both conditions are load-bearing, and the second is what makes this safe to automate.** A vault legitimately contains directories with spaces — `01 - calendar`, `00 - notes`, `02 - assets`, `03 - export`, `04 - backups` — so *"has a space"* alone would flag the entire vault. The `extension-followed-by-space` shape excludes all five (none contains a `.ext ` sequence), and the zero-files test means a directory holding anything real is never a candidate. Verified against a live vault: **1 true positive, 0 false positives**, including against all five numbered folders.
+Step 3's word-splitting warning has shipped since 2026-07-27 and was still violated on 2026-08-12, leaving a 14-deep chain of empty directories in a vault root. That is the predictable outcome of a rule with nothing behind it: an instruction must be read and obeyed on *every* run, while a check runs whether anyone remembered. Worse, this residue is invisible to every other check — `git status` does not report empty directories **at all**, and Step 6.5's reconcile deliberately drops every vault-side `Only in` line. So it accumulates silently, exactly as the warning predicted, and the operator finds it months later wondering who created it.
 
-   Report what you find and remove it — it is empty by construction, so there is nothing to preserve: *"Removed {N} stray empty directories from a previous run's unquoted path list."* If the sweep finds nothing, say nothing. **Never widen this to non-empty directories or to a bare space match** — at that point you are deleting an operator's folders on a name heuristic, which is far worse than the residue.
+```bash
+# A residue dir is named like a JOINED FILE LIST — an extension followed by a
+# space ("CHANGELOG.md SETUP.md …") — and holds ZERO files, because only
+# `mkdir` ever ran. Both conditions are required.
+find "$HOME/aios" -maxdepth 1 -type d ! -name '.*' -print | while IFS= read -r d; do
+  case "$(basename "$d")" in
+    *.[A-Za-z0-9]*\ *) [ "$(find "$d" -type f | wc -l)" -eq 0 ] && echo "$d" ;;
+  esac
+done
+```
+
+**Both conditions are load-bearing, and the second is what makes this safe to automate.** A vault legitimately contains directories with spaces — `01 - calendar`, `00 - notes`, `02 - assets`, `03 - export`, `04 - backups` — so *"has a space"* alone would flag the entire vault. The extension-followed-by-space shape excludes all five (none contains a `.ext ` sequence), and the zero-files test means a directory holding anything real is never a candidate. Verified against a live vault plus a fixture reproducing the exact residue: **1 true positive, 0 false positives across 9 cases**, including a legitimately-empty space-named folder and an `ext+space` name that does hold files.
+
+Report what you find and remove it — it is empty by construction, so there is nothing to preserve: *"Removed {N} stray empty directories from a previous run's unquoted path list."* If the sweep finds nothing, say nothing. **Never widen this to non-empty directories or to a bare space match** — at that point you are deleting an operator's folders on a name heuristic, which is far worse than the residue.
 
 ### 4. Auto-execute post-replace scripts
 
