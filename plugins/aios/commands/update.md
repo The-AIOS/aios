@@ -155,6 +155,16 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   # cache path is VERSION-AGNOSTIC — glob the installed version dir (never hard-pin a version; the plugin bumps but this string outlives the bump). Guard handles the no-match case.
   for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/*.md "$d"; done
   ```
+
+  **Then report cache/manifest version parity — do not act on it.** The glob above is deliberately version-agnostic, so the sync is *correct* even when the installed cache directory is named for an older version than the manifest declares. But that mismatch means the plugin has not been re-resolved since the last version bump, and it has a real consequence worth naming: if a re-resolve ever mints a directory for the new version, **the old one lingers and the loop above keeps writing to both forever** — a second copy that is live, invisible, and drifts the moment anything writes to only one of them.
+
+  ```bash
+  MANIFEST=$(python3 -c "import json;print(json.load(open('$HOME/aios/plugins/aios/.claude-plugin/plugin.json'))['version'])" 2>/dev/null)
+  CACHED=$(for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/; do [ -d "$d" ] && basename "$d"; done | tr '\n' ' ')
+  # Report only — never delete a cache directory the running client may hold open.
+  ```
+
+  If `$CACHED` names anything other than `$MANIFEST`, say so once and give the operator the aligning command — *"plugin cache is at {cached} while the manifest declares {manifest}; `claude plugin update aios@the-aios` realigns it. Harmless today (the sync is version-agnostic), worth doing before it becomes two live copies."* **Never prune the directory yourself**: the running client may hold references, and a wrong deletion costs the operator their working commands to save a few kilobytes. If `$CACHED` is empty, say nothing — a directory-source install may legitimately have no cache yet.
 - **`mcps/setup.sh` or any other dep-installer updated** → surface in the report as a recommended manual step, with the exact command. Don't auto-run.
 
 If a future framework update adds a new state-producing installer under `hooks/`, the principle extends naturally — add it to the rule above and it gets auto-run. Library scripts (`*.py` invoked indirectly) are picked up by their callers; no auto-execution needed.

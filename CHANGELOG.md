@@ -53,6 +53,26 @@
 
 **Action required — none.** The sweep is its own once-per-run step (3.9), so it runs on your next `/aios:update` **even if nothing else changed** — which matters, because the residue is damage from a *past* run: a vault that is already current is the most likely to be carrying it and the least likely to be looked at. To look now: `find ~/aios -maxdepth 1 -type d -name '*.[A-Za-z0-9]* *'`. Anything it lists is empty by construction, so `rm -rf` on it loses nothing.
 
+### `/close-session`'s duplicate-detector could never once fire
+
+> **What this delivers.** Yesterday's idempotency gate compared the stamped vault hash against the current `HEAD` — and appending a session block **commits** it, so `HEAD` advances on every close while the stamp can only hold the value from *before* that commit. `stamped == HEAD` was unsatisfiable **by construction**: the "HEAD moved → real work" branch always won, and the gate always appended. It had nine trap cases proving its logic and none proving it could fire. Measured on a live note: all four stamps differed from `HEAD`. It now compares **non-close commits** — every commit a close makes is prefixed `session: `, so excluding those asks the real question: *did anything happen other than me writing this block?*
+
+**What you can now do:**
+- **Actually get the protection.** A re-fired close — a retrying bus, a double-clicked button, an overlapping broadcast — is now detected and skipped instead of adding a near-duplicate block plus a second copy of the same Tier A/B candidates for `/close-day` to route.
+- **Still close twice on purpose.** A long session that closes at noon, works on, and closes again at 18:00 appends normally, because a non-`session:` commit landed in between.
+
+**Action required — none.** The gate is inside the command; nothing to run. If you closed a session between yesterday and today you may have one duplicate block — harmless, and `/close-day` reconciles it.
+
+*Locked with `tests/close-session-idempotency.test.sh`, now in CI. **Test 1 asserts the duplicate branch is reachable and test 2 asserts the original logic answers differently on the same input** — the reachability control whose absence is the entire reason this shipped broken. The lesson generalises: a comparison is only a check if both outcomes can happen, and "is it right?" is a different question from "does it run?"*
+
+### Real brand names removed from framework examples, and a plugin-cache parity report
+
+**What you can now do:**
+- **Read the docs without decoding someone else's ventures.** `START-HERE.md` and `/aios:company` illustrated multi-company mounting and voice sign-offs with the framework author's own brand names — which mean nothing in your vault. They now describe **roles and registers** (*"your own venture and a client's company"*, *"an institutional/precision-first voice"*), which is both neutral and more useful, since an archetype tells you how to pick *yours*.
+- **See a cache/manifest version gap before it becomes two live copies.** `/aios:update` now reports when your installed plugin-cache directory is named for an older version than `plugin.json` declares, and gives you the aligning command (`claude plugin update aios@the-aios`). Harmless today — the sync globs any version directory — but if a re-resolve mints a new one, the old directory lingers and the sync keeps writing to **both**. It **reports and never prunes**: the running client may hold references, and a wrong deletion costs you your working commands to save a few kilobytes.
+
+**Action required — none.** Both are silent when there is nothing to say.
+
 ### Also shipped: the company template's stock examples no longer name anyone real
 
 The sibling [`company-template`](https://github.com/The-AIOS/company-template) repo (`85d09e3`, PR #1 — **not** this repo, so it is not part of this hash) shipped **four** personal references in `agents/onboarding-{company}.md`: a change-digest example naming a real teammate, two voice sign-off examples naming real brands, and a post-sync nudge hardcoding one of those brands where a `{company}` placeholder belonged. That file is copied into **every scaffolded company repo**, so each reference propagated into other operators' repositories. Fixed, with a role-aware `personal_leak` CI job that enforces only in the template and skips scaffolded repos — because your own venture-context repo *should* name your own people.

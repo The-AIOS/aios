@@ -370,7 +370,7 @@ Default (a) if no answer in 60s.
   - Path A product-walk reordered to match the operator's actual offering ladder structure
   - Bilingual / multilingual code-switching rules if voice.md indicates them
   - Voice-specific examples in the change-digest section (drawn from positioning + brand)
-  - Sign-off line in the company's tone (Sovra's "Bienvenido al equipo"; ChuyCepeda's "Clarity before velocity. AI amplifies what is already clear.")
+  - Sign-off line in the company's tone — read its `voice.md` and match the register, e.g. an institutional/precision-first voice lands "Bienvenido al equipo" while a warm/philosophical one lands something closer to "Clarity before velocity."
   
   Show the diff. Operator accepts / edits / reverts to (a). Ship the accepted version.
 
@@ -378,7 +378,7 @@ Default (a) if no answer in 60s.
 
 **Always tell the operator they can edit the agent any time post-create** — it lives at `agents/onboarding-{company}.md` in the repo. Edits propagate to mounters on their next `/aios:company --sync`.
 
-**Why offer (b):** the template is necessarily generic (it serves Sovra + ChuyCepeda + Acme + any future operator equally). But each company has a *distinct* voice + offering shape that the template can't anticipate. Claude has the just-filled context fresh in mind and can spot specific customizations that improve fit — it's a low-cost, high-value moment of polish.
+**Why offer (b):** the template is necessarily generic (it serves every mounted company equally — yours, your client's, any future operator's). But each company has a *distinct* voice + offering shape that the template can't anticipate. Claude has the just-filled context fresh in mind and can spot specific customizations that improve fit — it's a low-cost, high-value moment of polish.
 
 ### Step 5 — Push to remote
 
@@ -591,7 +591,7 @@ If `about_venture.md` changed, surface Tier-3 advisory: *"ℹ️ The `{name}` ve
 If the sync was **substantive** (≥1 new file OR ≥3 modified files in `context/`/`agents/`/`templates/`/`plugins/`/`hooks/`/`mcps/`/`skills/`), AND the bundle ships `agents/onboarding-{name}.md`, **offer** (don't auto-fire) the digest:
 
 ```
-🆕 Sovra-context shipped N changes since your last sync. Want a brief
+🆕 {company}-context shipped N changes since your last sync. Want a brief
    digest from the onboarding agent? (yes / skip)
 ```
 
