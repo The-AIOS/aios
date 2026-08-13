@@ -39,7 +39,7 @@
 
 ## 2026-08-13 — Four checks that reported green without measuring, and a setup step that could not fail loudly
 
-`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8 · {PR-HEAD}`
+`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8 · 1c4d72d`
 
 ### `/aios:update` was hiding new changelog entries and under-reporting what it synced
 
