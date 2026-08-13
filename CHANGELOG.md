@@ -39,7 +39,7 @@
 
 ## 2026-08-13 — Four checks that reported green without measuring, and a setup step that could not fail loudly
 
-`hash: 200bec5 · 7b5a2d9 · 7055d09`
+`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388`
 
 ### Setup step 5 could leave you with a `claude` that doesn't run — now it can't
 
