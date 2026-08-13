@@ -71,6 +71,22 @@
 2. **Read the "Recovered by completeness reconcile" section of its report.** If it names files, **that is this fix working**: your vault had a silent gap that no previous update could detect. Nothing further to do — they have been applied.
 3. **If that section is empty, you were already whole.** Most vaults will be. That is a clean result, not a failed one.
 4. **Claude sessions running this:** report recovered files *loudly and by name* rather than folding them into the applied list. A recovery means the tracker was over-claiming and the operator was missing framework content — they should know which. And do **not** "finish the job" by deriving the root-doc list too: `validate.yml` asserts every root `*.md` appears literally quoted in `update.md`, and that guard is what fails the build when a new root doc is added without being wired in. Deriving it would disarm the check — the reason the second commit on this branch exists.
+### `/close-session` could be made to write the same block over and over
+
+> **What this delivers.** Mode B has had an idempotency rule since it was written — *"if the same session runs `/close-session` twice on one date, overwrite its own file."* **Mode A had none**, and its per-day multi-block design is what made the gap invisible: the note genuinely *should* hold several `## Session —` blocks (one per session), so nothing could distinguish **a second session** from **the same session firing twice**. The heading carries no session identity. Measured today: a misbehaving command-bus request delivered `/aios:close-session --auto` to a session **four times in twelve minutes**, and to a second session with an identical signature. Four blocks would have meant four copies of the same wins in the daily note **and** four copies of the same Tier A/Tier B candidates for `/close-day` to route into observed context — the consolidator amplifying the noise it exists to reduce.
+
+**What you can now do:**
+- **Let a close fire twice without paying for it.** Each block is stamped `<!-- close-session: {session-id} @ {vault HEAD} -->` under its heading. On the next close, if *this* session already stamped a block **and** the vault HEAD has not moved, the append is skipped with a plain message. An HTML comment renders invisibly in Obsidian, so your note reads exactly as before.
+- **Still close twice on purpose.** A long session that closes at noon, works on, and closes again at 18:00 appends normally — because `HEAD` moved. The gate keys on *whether anything was committed*, not on elapsed time: a re-fire two minutes later and a genuine second close two minutes later are indistinguishable by clock, and identical by `HEAD` only in the first case.
+- **Keep multi-session days working untouched.** A different session closing has no matching stamp, so it always appends. Verified against a real note holding three blocks from three sessions.
+- **Fail toward a block, never toward silence.** If `CLAUDE_CODE_SESSION_ID` is unavailable the gate degrades to the old always-append behaviour. A duplicated block is recoverable; a missing one is lost work.
+
+**Why the fix belongs here and not only in whatever glitched.** The bus bug is being fixed separately in the App. This one is still worth having: **a consumer must not be corruptible by a misbehaving producer.** A retrying bus, a double-clicked button, a broadcast overlapping its own previous run — the command cannot enumerate the ways it will be called twice, so it should be safe when it is. Defence in depth; neither fix makes the other redundant.
+
+**Action required — none, and one thing to know.** The gate is **forward-only**: blocks already in your notes carry no stamp, so a session that closed *before* this sync and closes again after it will append a second block. That self-corrects the first time each session closes post-sync. Nothing to run, nothing to migrate.
+
+*Found by a bus glitch firing the same close four times at one session — the loop was harmless only because the receiving session declined to act on invocations 2–4 by hand. This makes that judgement a rule.*
+
 
 ## 2026-08-11 — Four backstops that could not see the thing they existed to catch
 
@@ -95,8 +111,6 @@
 
 1. **If your `session-insights.md` uses `- **bullet**` entries** (rather than `### ` headings), your `/close-day` buffer gardening has been doing nothing. Nothing is lost — the entries are all still there — but your Emerging section is probably over its ≤10 cap. Let the next `/close-day` garden it, or check now: `grep -c '^- \*\*' "vault/00 - notes/context/observed/session-insights.md"`.
 2. **If you documented a source as unused in `USER.md`** and have been seeing a red ❌ for it every morning, that stops on this sync.
-
----
 
 ### 🖥️ Running the AIOS App on your Mac?
 
