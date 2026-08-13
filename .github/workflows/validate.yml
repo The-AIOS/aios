@@ -111,6 +111,30 @@ jobs:
           bash tests/source-detector.test.sh
           echo "OK: template prose does not vote on the operator's configuration"
 
+      - name: SETUP.md prescribes the right Claude Code installer per platform
+        run: |
+          set -e
+          # install.sh REFUSES Windows (it detects MINGW*/MSYS*/CYGWIN* and exits 1), so the
+          # obvious edit — one curl|bash line for all three platform blocks — silently breaks
+          # the Windows path. This guard exists because that edit was nearly made.
+          WIN=$(awk '/^### Windows \(/{f=1} /^### Linux \(/{f=0} f' SETUP.md)
+          UNIXBLOCKS=$(awk '/^### macOS \(/{f=1} /^### Windows \(/{f=0} f' SETUP.md; \
+                       awk '/^### Linux \(/{f=1} /^## /{if(f && !/^### Linux \(/)f=0} f' SETUP.md)
+
+          printf '%s' "$WIN" | grep -q 'install\.ps1' || {
+            echo "::error::The Windows block must install via install.ps1"; exit 1; }
+          printf '%s' "$WIN" | grep -q 'curl .*install\.sh' && {
+            echo "::error::The Windows block reaches for install.sh, which REFUSES to run on Windows (exits 1 on MINGW/MSYS/CYGWIN). Use install.ps1."; exit 1; }
+          printf '%s' "$UNIXBLOCKS" | grep -q 'install\.sh' || {
+            echo "::error::The macOS/Linux blocks must install via install.sh"; exit 1; }
+          printf '%s' "$UNIXBLOCKS" | grep -qE 'sudo +curl .*install\.sh' && {
+            echo "::error::install.sh refuses sudo on purpose — a root-owned binary is not on the user's PATH."; exit 1; }
+
+          # A failure must surface at the step that caused it, not three steps later.
+          test "$(grep -c 'claude --version' SETUP.md)" -ge 3 || {
+            echo "::error::Each platform block needs a 'claude --version' verification step."; exit 1; }
+          echo "OK: install.sh for macOS/Linux, install.ps1 for Windows, verification in all three"
+
       - name: Required infra folders + custom/ subfolders exist
         run: |
           set -e
