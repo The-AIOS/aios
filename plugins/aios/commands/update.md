@@ -158,15 +158,21 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/*.md "$d"; done
   ```
 
-  **Then report cache/manifest version parity — do not act on it.** The glob above is deliberately version-agnostic, so the sync is *correct* even when the installed cache directory is named for an older version than the manifest declares. But that mismatch means the plugin has not been re-resolved since the last version bump, and it has a real consequence worth naming: if a re-resolve ever mints a directory for the new version, **the old one lingers and the loop above keeps writing to both forever** — a second copy that is live, invisible, and drifts the moment anything writes to only one of them.
+  **Then check cache/manifest version parity — and understand that the sync above is what CAUSES the drift.** The loop copies `commands/*.md` and nothing else, so `.claude-plugin/plugin.json` inside the cache is **never** updated. The cache **directory is named for the version in that manifest**, so a manifest that never advances means a directory name that never advances: every version bump reproduces the mismatch, and it does not heal on its own. Measured 2026-08-13 on a live install — 25 of 26 cache files identical to their vault source, the 26th being that manifest, cache reading `0.4.0` while the vault read `0.5.0`. This was first reported as a harmless artifact of a missed re-resolve; it is the opposite — a recurring consequence of an incomplete sync.
 
   ```bash
   MANIFEST=$(python3 -c "import json;print(json.load(open('$HOME/aios/plugins/aios/.claude-plugin/plugin.json'))['version'])" 2>/dev/null)
   CACHED=$(for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/; do [ -d "$d" ] && basename "$d"; done | tr '\n' ' ')
-  # Report only — never delete a cache directory the running client may hold open.
+  # Report + prescribe the re-resolve. Do NOT copy the manifest and do NOT delete a directory.
   ```
 
-  If `$CACHED` names anything other than `$MANIFEST`, say so once and give the operator the aligning command — *"plugin cache is at {cached} while the manifest declares {manifest}; `claude plugin update aios@the-aios` realigns it. Harmless today (the sync is version-agnostic), worth doing before it becomes two live copies."* **Never prune the directory yourself**: the running client may hold references, and a wrong deletion costs the operator their working commands to save a few kilobytes. If `$CACHED` is empty, say nothing — a directory-source install may legitimately have no cache yet.
+  If `$CACHED` names anything other than `$MANIFEST`, say so once and prescribe the **re-resolve**: *"plugin cache is at {cached} while the manifest declares {manifest} — `claude plugin update aios@the-aios` realigns it. Your commands are current either way (the sync is version-agnostic); this stops a second cache directory appearing later."*
+
+  > **Two things NOT to do here, both tempting and both worse than the drift.**
+  > - **Do not copy `plugin.json` into the cache.** It looks like the obvious completion of the sync, but the directory is *named* for the version, so writing a `0.5.0` manifest into a directory called `0.4.0` makes the cache **internally inconsistent** — a state no re-resolve produces and none of the tooling expects. Stale-but-coherent beats fresh-but-contradictory. Only `claude plugin update` can mint a correctly-named directory.
+  > - **Do not prune the old directory.** The running client may hold references, and a wrong deletion costs the operator their working commands to save a few kilobytes.
+  >
+  > If `$CACHED` is empty, say nothing — a directory-source install may legitimately have no cache yet.
 - **`mcps/setup.sh` or any other dep-installer updated** → surface in the report as a recommended manual step, with the exact command. Don't auto-run.
 
 If a future framework update adds a new state-producing installer under `hooks/`, the principle extends naturally — add it to the rule above and it gets auto-run. Library scripts (`*.py` invoked indirectly) are picked up by their callers; no auto-execution needed.
