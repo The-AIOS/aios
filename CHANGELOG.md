@@ -37,6 +37,34 @@
 
 ---
 
+## 2026-08-13 — A stock example named a real person, and every scaffolded company repo inherited it
+
+`hash: 85d09e3` *(in [`company-template`](https://github.com/The-AIOS/company-template), not this repo)*
+
+### The company template's onboarding examples named a real teammate and two real brands
+
+> **What this delivers.** `agents/onboarding-{company}.md` in the company template shipped **four** personal references — a change-digest example naming a **real teammate**, two voice sign-off examples naming **real brands**, and a post-sync nudge with one of those brands hardcoded where a `{company}` placeholder belonged. That file is **copied into every scaffolded company repo**, so each reference propagated outward into other operators' repositories. Found by an operator who hit it downstream and de-personalised their own copy; this fixes the source so nobody has to do it again.
+
+**Why each one is a real cost, not a cosmetic one.** Per this framework's own rule — *write framework docs for a stranger's empty vault* — a personal reference in shipped infra leaks **both directions**: it exposes someone who never agreed to be a stock example in strangers' repos, **and** it hands every other operator an illustration that resolves to nothing for them. The brand examples were also weaker teaching: a register archetype (*"institutional / precision-first"*) tells you how to pick **your** sign-off; a brand name tells you how someone else picked theirs.
+
+**What you can now do:**
+- **Scaffold a company repo that names nobody.** `/aios:company --create` produces onboarding text with archetypes and `{company}` placeholders throughout.
+- **Get the rule, not just the cleanup.** The digest step now states it: **describe what shipped, not who shipped it.** The author is already in `git log`, and in a *shared* repo a name in a digest names a teammate to everyone who syncs.
+- **Rely on CI to keep it out.** A new `personal_leak` job rejects `{Capitalised} shipped|wrote|built|…` constructions (non-human actors allowlisted) and known-leaked brands. It is **role-aware**, branching on the same `.aios-template-repo` sentinel the LICENSE check already uses: it enforces **only in the template**, and exits 0 in a scaffolded repo — because your own venture-context repo *should* name your own teammates and your own brand. That is what a private context repo is for. Without that branch the guard would fail every legitimate scaffolded repo.
+
+**Action required — only if you scaffolded a company repo before today.** Your repo carries a copy of the old text, and updating the template does **not** reach back into it. Check and clean it:
+
+```bash
+# in each scaffolded company-context repo you own
+grep -rnE '\b[A-Z][a-z]{2,11} (shipped|wrote|built|added|fixed)\b' agents/ --include='*.md'
+```
+
+Any hit inside a **stock example** should describe *what* shipped instead of *who*. A hit in your own genuine content — an origin story, a real decision record — is **fine and should stay**: it is your private repo about your own company. The distinction is *illustration* versus *record*. If you are unsure which a line is, ask your session to judge it against that distinction rather than deleting names wholesale.
+
+*Fixed with a guard rather than only an edit because **this class has regrown before** — the CHANGELOG records an earlier pass replacing brand-coupled names in a canonical agent, and it never reached the template. The guard also caught a fourth occurrence during this very fix, one a `grep` had truncated before displaying: without it, the file would have shipped looking clean.*
+
+---
+
 ## 2026-08-12 — The rotation autopilot runs on Linux, and three of its bugs were never about Linux
 
 `hash: 43d3888 · acf1e9f`
