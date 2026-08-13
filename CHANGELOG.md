@@ -37,13 +37,34 @@
 
 ---
 
-## 2026-08-13 — A stock example named a real person, and every scaffolded company repo inherited it
+## 2026-08-13 — `/aios:update` left empty directories in vault roots, and nothing could see them
 
-`hash: 85d09e3` *(in [`company-template`](https://github.com/The-AIOS/company-template), not this repo)*
+`hash: TBD-ON-MERGE`
 
-### The company template's onboarding examples named a real teammate and two real brands
+### Stray empty directories from a previous update are now found and removed
 
-> **What this delivers.** `agents/onboarding-{company}.md` in the company template shipped **four** personal references — a change-digest example naming a **real teammate**, two voice sign-off examples naming **real brands**, and a post-sync nudge with one of those brands hardcoded where a `{company}` placeholder belonged. That file is **copied into every scaffolded company repo**, so each reference propagated outward into other operators' repositories. Found by an operator who hit it downstream and de-personalised their own copy; this fixes the source so nobody has to do it again.
+> **What this delivers.** If a past `/aios:update` iterated its changed-file list unsafely, it created a directory **named after the whole list** — `CHANGELOG.md SETUP.md START-HERE.md hooks` — and then nested deeper on each subsequent file. Yours may hold a chain of them. They are **completely empty** and break nothing, which is exactly why they survive: `git status` does not report empty directories **at all**, and Step 6.5's reconcile deliberately drops every vault-side-only entry. So the residue accumulates invisibly, and you find it months later wondering who created it. Step 3 now sweeps for it and removes it.
+
+**Why the existing protection was not enough.** Step 3 has carried a written rule against unquoted list iteration since 2026-07-27 — and it was still violated on 2026-08-12, in this very vault, producing a 14-directory chain. That is the predictable failure of a rule with nothing behind it: an instruction must be read and obeyed on *every* run, while a check runs whether anyone remembered or not. This release adds the check; the rule stays as the explanation.
+
+**What you can now do:**
+- **Let `/aios:update` clean up after its own past runs.** The sweep reports what it removed (*"Removed {N} stray empty directories from a previous run's unquoted path list"*) and stays silent when there is nothing.
+- **Trust it not to touch your folders.** Two conditions must *both* hold: the name looks like a joined file list (an extension followed by a space), **and** the directory contains zero files. Your `01 - calendar`, `00 - notes`, `02 - assets`, `03 - export` and `04 - backups` all contain a space and are all spared — none has a `.ext ` sequence. A folder holding anything real is never a candidate, and neither is a legitimately-empty folder like `05 - drafts`. Verified against a live vault plus a fixture: **1 true positive, 0 false positives across 9 cases.**
+
+**Action required — none.** The next `/aios:update` sweeps automatically. To look now: `find ~/aios -maxdepth 1 -type d -name '*.[A-Za-z0-9]* *'`. Anything it lists is empty by construction, so `rm -rf` on it loses nothing.
+
+### Also shipped: the company template's stock examples no longer name anyone real
+
+The sibling [`company-template`](https://github.com/The-AIOS/company-template) repo (`85d09e3`, PR #1 — **not** this repo, so it is not part of this hash) shipped **four** personal references in `agents/onboarding-{company}.md`: a change-digest example naming a real teammate, two voice sign-off examples naming real brands, and a post-sync nudge hardcoding one of those brands where a `{company}` placeholder belonged. That file is copied into **every scaffolded company repo**, so each reference propagated into other operators' repositories. Fixed, with a role-aware `personal_leak` CI job that enforces only in the template and skips scaffolded repos — because your own venture-context repo *should* name your own people.
+
+**Relevant to you only if you scaffolded a company repo before today**, since updating the template does not reach back into an existing repo:
+
+```bash
+# in each scaffolded company-context repo you own
+grep -rnE '\b[A-Z][a-z]{2,11} (shipped|wrote|built|added|fixed)\b' agents/ --include='*.md'
+```
+
+A hit inside a **stock example** should describe *what* shipped rather than *who*. A hit in your **own genuine content** — an origin story, a real decision record — is legitimate and should stay. *Illustration versus record.* Do not delete names wholesale; that would strip exactly the content a private context repo exists to hold.
 
 **Why each one is a real cost, not a cosmetic one.** Per this framework's own rule — *write framework docs for a stranger's empty vault* — a personal reference in shipped infra leaks **both directions**: it exposes someone who never agreed to be a stock example in strangers' repos, **and** it hands every other operator an illustration that resolves to nothing for them. The brand examples were also weaker teaching: a register archetype (*"institutional / precision-first"*) tells you how to pick **your** sign-off; a brand name tells you how someone else picked theirs.
 

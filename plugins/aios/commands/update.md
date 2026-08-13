@@ -395,6 +395,23 @@ For each changed Tier 1 file:
    - New files in `agents/aios/{bundle}/` or other bundled subfolders → `cp` to the matching local path
 4. **Files deleted upstream:** flag with a question, don't auto-delete. *"Upstream removed `{path}`. Delete your local copy too? [yes/keep]."* Default: keep (operator may have reasons to retain locally).
 
+5. **Sweep for split-residue directories — the prose rule above needs a check behind it.** The word-splitting warning at the top of this step has shipped since 2026-07-27 and was still violated on 2026-08-12, leaving a 14-deep chain of empty directories in a vault root. That is the predictable outcome: the rule is an instruction a session must read and obey every run, and **nothing verified it afterward**. Worse, the residue is invisible to every existing check — `git status` does not report empty directories at all, and Step 6.5's reconcile deliberately drops every vault-side `Only in` line. So it accumulates silently, exactly as the warning predicts, and the operator finds it months later wondering who made it.
+
+   ```bash
+   # A residue dir is named like a JOINED FILE LIST — an extension followed by a
+   # space ("CHANGELOG.md SETUP.md …") — and holds ZERO files, because only
+   # `mkdir` ever ran. Both conditions are required.
+   find "$HOME/aios" -maxdepth 1 -type d ! -name '.*' -print | while IFS= read -r d; do
+     case "$(basename "$d")" in
+       *.[A-Za-z0-9]*\ *) [ "$(find "$d" -type f | wc -l)" -eq 0 ] && echo "$d" ;;
+     esac
+   done
+   ```
+
+   **Both conditions are load-bearing, and the second is what makes this safe to automate.** A vault legitimately contains directories with spaces — `01 - calendar`, `00 - notes`, `02 - assets`, `03 - export`, `04 - backups` — so *"has a space"* alone would flag the entire vault. The `extension-followed-by-space` shape excludes all five (none contains a `.ext ` sequence), and the zero-files test means a directory holding anything real is never a candidate. Verified against a live vault: **1 true positive, 0 false positives**, including against all five numbered folders.
+
+   Report what you find and remove it — it is empty by construction, so there is nothing to preserve: *"Removed {N} stray empty directories from a previous run's unquoted path list."* If the sweep finds nothing, say nothing. **Never widen this to non-empty directories or to a bare space match** — at that point you are deleting an operator's folders on a name heuristic, which is far worse than the residue.
+
 ### 4. Auto-execute post-replace scripts
 
 See § Post-replace auto-execution above. For each script that was updated in step 3, run it now. Wait for it to finish, capture output, report success/failure.
