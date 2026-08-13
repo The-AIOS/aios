@@ -13,6 +13,12 @@ permissions:
 jobs:
   structure:
     name: Repo structure
+    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,6 +98,18 @@ jobs:
           # logic answers differently on that same input — so neither can pass vacuously.
           bash tests/close-session-idempotency.test.sh
           echo "OK: the duplicate branch is reachable and the fix is falsifiable"
+
+      - name: A source is enabled only by a line the OPERATOR wrote
+        run: |
+          set -e
+          # The template the framework writes into USER.md names the sources in its own
+          # blockquotes and italic examples. Those lines carry no negation marker, so the
+          # first one used to win the scan — the framework's documentation outvoting the
+          # operator's explicit "Slack — no se usa", with no way for them to see why.
+          # Test 1 is the canary: a template-only USER.md must enable NOTHING. 9 of the 11
+          # assertions fail against the pre-fix parser, so this cannot pass vacuously.
+          bash tests/source-detector.test.sh
+          echo "OK: template prose does not vote on the operator's configuration"
 
       - name: Required infra folders + custom/ subfolders exist
         run: |
@@ -235,6 +253,12 @@ jobs:
 
   manifests:
     name: Plugin manifests
+    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -315,6 +339,12 @@ jobs:
 
   personalization:
     name: Personalization guard
+    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -424,6 +454,12 @@ jobs:
 
   drift:
     name: Migration drift
+    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -510,6 +546,12 @@ jobs:
 
   counts:
     name: Capability counts
+    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -566,6 +608,12 @@ jobs:
 
   skill_resolution:
     name: Skill resolution
+    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -634,6 +682,12 @@ jobs:
 
   primitives:
     name: Commit primitives
+    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -691,6 +745,12 @@ jobs:
         run: bash tests/adoption-detector.test.sh
 
   primitives_bash32:
+    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true
     # The same regression suite under bash 3.2 — the bash Apple ships at /bin/bash on every
     # macOS, and what `#!/usr/bin/env bash` resolves to on a stock Mac. The `primitives` job
     # above runs on ubuntu (bash 5), where `"${arr[@]}"` on an empty array is harmless — so it
@@ -733,6 +793,12 @@ jobs:
         run: /bin/bash tests/quota-threshold.test.sh
 
   primitives_windows:
+    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true
     # The same regression suite under GIT BASH — the shell Windows operators actually run
     # `aios-commit` in. The windows_installer lane below covers only the PowerShell installer,
     # so until this lane existed NOTHING had ever executed the commit primitives on Windows:
@@ -780,6 +846,12 @@ jobs:
         run: bash tests/aios-commit.test.sh
 
   windows_installer:
+    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true
     # The Windows installer had NO execution lane. `install-wrappers.ps1` shipped
     # twice on regex-inspection alone ("regex-verified against the same case matrix
     # but not execution-verified -- no PowerShell on the authoring machine"), and the

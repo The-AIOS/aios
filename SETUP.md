@@ -93,13 +93,19 @@ brew install --cask obsidian
 # b) Antigravity IDE — download from https://antigravity.google/product/antigravity-ide
 #    (no brew cask yet — drag the .dmg to Applications), then install AIOS Glass.
 
-# 5. Claude Code CLI
-npm install -g @anthropic-ai/claude-code
+# 5. Claude Code CLI — native installer (self-contained binary, no npm, no optional deps)
+curl -fsSL https://claude.ai/install.sh | bash
+#    Then OPEN A NEW TERMINAL — the installer writes PATH into your shell rc.
 
-# 6. Auth (each opens a browser tab)
+# 6. Verify before moving on — this must print a version number, not an error
+claude --version
+
+# 7. Auth (each opens a browser tab)
 gh auth login
 claude
 ```
+
+> **Why the native installer and not `npm install -g`.** The npm route exits **green** while leaving a broken command when npm runs with `--omit=optional` or `--ignore-scripts` — which some pnpm setups and corporate `.npmrc` files do without telling you. You get the JS wrapper and no native engine: `claude` then fails with *"native binary not installed"*. Worse, the remedy that error suggests assumes a *local* install, so following it on a global install fails too, and the postinstall it eventually runs cannot help — the platform package was never downloaded. The native installer has no optional dependencies, so **that failure mode is gone by construction rather than by documentation**. Step 6 exists so a failure surfaces at the step that caused it, not three steps later.
 
 ### Windows (~15-20 min)
 
@@ -120,21 +126,28 @@ winget install Obsidian.Obsidian
 # For Antigravity IDE (recommended — Claude Code bundled): download from https://antigravity.google/product/antigravity-ide
 # For VS Code as the IDE alternative: winget install Microsoft.VisualStudioCode
 
-# 2. uv (Python package runner — vendored MCPs need it)
+# 3. uv (Python package runner — vendored MCPs need it)
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-# 3. Allow PowerShell to run npm scripts (one-time, required)
+# 4. Allow PowerShell to run scripts (one-time, still required — npx-based MCPs need it)
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned    # type Y at the prompt
 
-# 4. CLOSE this PowerShell, open a fresh one (PATH only refreshes on new shells)
+# 5. CLOSE this PowerShell, open a fresh one (PATH only refreshes on new shells)
 
-# 5. Claude Code CLI
-npm install -g @anthropic-ai/claude-code
+# 6. Claude Code CLI — Windows uses the PowerShell installer, NOT the bash one
+powershell -ExecutionPolicy ByPass -c "irm https://claude.ai/install.ps1 | iex"
+#    Downloads the native claude.exe (win32-x64 or win32-arm64) and registers the launcher.
+#    Then CLOSE this PowerShell and open a fresh one again.
 
-# 6. Auth
+# 7. Verify before moving on — this must print a version number, not an error
+claude --version
+
+# 8. Auth
 gh auth login
 claude
 ```
+
+> **Windows takes `install.ps1`, and the bash installer is not an alternative here.** `install.sh` **refuses to run on Windows outright** — it detects `MINGW*/MSYS*/CYGWIN*` and exits 1 with *"Windows is not supported by this script"* — so `curl … | bash` in Git Bash will not work, and reaching for it is a dead end rather than a slow path. `install.ps1` is the Windows equivalent: it picks the right architecture, downloads `claude.exe`, and runs `claude install` to register the launcher and shell integration. Requires 64-bit PowerShell (the script checks and refuses a 32-bit process).
 
 **If `node --version` says "not recognized" after step 1:** PATH didn't take. Fix via GUI — `Win+R` → `sysdm.cpl` → Advanced → Environment Variables → System variables → Path → Edit → New → add `C:\Program Files\nodejs` AND `%AppData%\npm`. Close all shells, open a fresh one. See [Known Gotchas](#known-gotchas) for more.
 
@@ -148,19 +161,26 @@ sudo apt install -y nodejs npm git gh python3 python3-pip
 # 2. uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 3. Claude Code CLI
-sudo npm install -g @anthropic-ai/claude-code
+# 3. Claude Code CLI — native installer. NO sudo: the installer refuses it on purpose,
+#    because a root-owned binary in /root/.local/bin is not on your PATH.
+curl -fsSL https://claude.ai/install.sh | bash
+#    Then OPEN A NEW TERMINAL — the installer writes PATH into your shell rc.
 
-# 4. Obsidian + your execution surface (see "The two things you'll use daily" above).
+# 4. Verify before moving on — this must print a version number, not an error
+claude --version
+
+# 5. Obsidian + your execution surface (see "The two things you'll use daily" above).
 #    The AIOS App is macOS-only for now, so on Linux the surface is the IDE + AIOS Glass.
 # Obsidian — download the AppImage from https://obsidian.md/download
 # Antigravity IDE (recommended, Claude Code bundled) — https://antigravity.google/product/antigravity-ide
 #   or VS Code as the alternative: sudo snap install code --classic
 
-# 5. Auth
+# 6. Auth
 gh auth login
 claude
 ```
+
+> **Do not prefix step 3 with `sudo`** (the old instruction did, via `npm -g`). The installer **refuses to run under sudo from a user shell** and says why: the binary would land in `/root/.local/bin`, owned by root, and `claude` would then not be found in your own shell. It also detects musl and picks the right build. On a distro whose `nodejs`/`npm` packages you only installed for Claude Code, step 1 can now drop them — they are still used by npx-based MCPs, so keep them if you plan to run those.
 
 (For Fedora/Arch/etc., swap the package manager — the package names are the same.)
 
@@ -594,7 +614,20 @@ OS-specific debugging fixes documented as the team hit them. Cross-reference if 
 
 ### macOS
 
-No platform-specific gotchas observed. Brew handles dependencies cleanly. If `claude` isn't found after `npm install -g`, ensure `~/.npm-global/bin` (or wherever npm installs globals) is on your `$PATH`.
+Brew handles dependencies cleanly. One gotcha, and it matters because **two different failures look almost identical from the operator's chair** — this section used to name only the first, which sent people down the wrong path for several rounds:
+
+| Symptom | Which failure | Fix |
+|---|---|---|
+| `claude: command not found` | **Not on `$PATH`.** The binary exists, your shell can't see it. | Open a new terminal first (the installer writes PATH into your rc). Still missing → add `~/.local/bin` to `$PATH`. |
+| `claude` runs but says **`native binary not installed`** | **The binary was never downloaded.** Only reachable via the old `npm install -g` route, when npm ran with `--omit=optional` or `--ignore-scripts`. | Re-install with the native installer: `curl -fsSL https://claude.ai/install.sh \| bash`. Do **not** chase the `install.cjs` command the error suggests — it assumes a local install, and even resolved via `npm root -g` it cannot help, because the platform package is not on disk. |
+
+**The one-line check that separates them** — run it before trying anything else:
+
+```bash
+ls -l ~/.local/bin/claude    # or your npm global prefix, if you installed the old way
+```
+
+Present but not runnable → a `$PATH` problem. Absent → a download problem. Guessing between the two is what turns a one-minute fix into several rounds, and it costs two people's attention when a non-technical operator is being helped through setup.
 
 ---
 

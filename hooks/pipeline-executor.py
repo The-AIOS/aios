@@ -115,20 +115,85 @@ _NEGATION_MARKERS = (
 )
 
 
+def _is_operator_line(line):
+    """False for lines the FRAMEWORK wrote into the operator's USER.md.
+
+    A source may only be switched on by something the operator typed. The template
+    ships explanatory blockquotes that name the sources in passing — e.g.
+    "> Where Claude pulls data for daily plans… no calendar, tasks, or Slack." and
+    "> Your timezone. Used by the pipeline executor for calendar queries and Slack
+    recaps." — and neither carries a negation marker. Before this guard the first such
+    line won the scan, so a freshly scaffolded USER.md reported every source as
+    configured, and an operator who explicitly wrote "Slack — no se usa" was overruled
+    by the documentation that came with the file. They had no way to see it: deleting
+    the template's blockquotes is the last thing anyone would try, and it was the only
+    thing that worked.
+
+    Excluded:
+      - blockquotes (`>`)          — template instructions
+      - headings (`#`)             — section titles that name sources
+      - HTML comments              — scaffolding notes
+      - fully-italic lines         — the *EXAMPLE ONLY* convention used across templates,
+                                     including list items whose text is italic (`- *Slack — …*`)
+    """
+    stripped = line.strip()
+    if not stripped:
+        return False
+    if stripped.startswith((">", "#", "<!--")):
+        return False
+    if "example only" in stripped.lower():
+        return False
+    # Strip a leading list marker before testing for full emphasis: the template writes its
+    # examples as italic BULLETS ("- *Slack — send/read messages…*"), so testing the raw line
+    # would only catch un-bulleted ones. This was the miss that kept canonical's own USER.md
+    # reporting Slack as configured after the first version of this guard.
+    body = re.sub(r"^(?:[-*+]|\d+\.)\s+", "", stripped)
+    if len(body) > 2 and body.startswith("*") and body.endswith("*"):
+        return False
+    return True
+
+
+def _operator_lines(content):
+    """Yield only the lines of USER.md that the OPERATOR wrote.
+
+    Two exclusion mechanisms, because the template uses both:
+      1. **Block-scoped** — an `*EXAMPLE ONLY …*` marker opens an example block, and
+         everything until the next heading belongs to the template. This is what the
+         `### Communication` section uses, and a sub-bullet inside it ("- *Key channels:
+         #general…*") is not a declaration no matter how it is punctuated.
+      2. **Line-scoped** — `_is_operator_line` above, for blockquotes, headings, comments
+         and italic items outside a marked block.
+    """
+    in_example = False
+    for line in content.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            in_example = False          # a heading closes any open example block
+        if "example only" in stripped.lower():
+            in_example = True
+            continue
+        if in_example:
+            continue
+        if _is_operator_line(line):
+            yield line
+
+
 def _mentions_enabled(content, keyword):
-    """True when `keyword` appears in USER.md on at least one line that does NOT negate it.
+    """True when `keyword` appears on at least one OPERATOR line that does NOT negate it.
 
     Scans line by line rather than testing the whole document, so a single "Slack — no
     configurado" bullet no longer flips the source on. If every line mentioning the
-    keyword negates it, the source counts as off.
+    keyword negates it — or every such line came from the template rather than the
+    operator — the source counts as off.
     """
-    for line in content.split("\n"):
+    for line in _operator_lines(content):
         if keyword not in line:
             continue
         low = line.lower()
         if not any(marker in low for marker in _NEGATION_MARKERS):
             return True
-    # Never mentioned, or mentioned only on negated lines → off.
+    # Never mentioned, mentioned only on negated lines, or mentioned only by the
+    # template → off. A USER.md containing nothing but the template enables nothing.
     return False
 
 
