@@ -35,7 +35,7 @@ The AIOS uses three layers of repos, each with a different concern:
 | **The AIOS framework** (`The-AIOS/aios` — public) | Shared infrastructure (commands, hooks, MCPs, plugins, skills, agent bundles, templates) | **No** — pulls only via `/aios:update`. Updates from upstream flow to everyone on AIOS. |
 | **Company venture-context repo(s)** (`{org}/venture-context` — per company you mount) | Company-specific shared knowledge (about, positioning, GTM, pricing, design.md, brand.md, CLAUDE.md operating manual, primitives, culture) | Depends on access — write permission lives in GitHub/Drive. From the AIOS side it's **pulled only** via `/company --sync`. |
 
-**Multi-company support:** you can mount **0, 1, or many** companies. An independent consultant might mount their own ChuyCepeda venture AND a client's company. A Sovra employee mounts just Sovra. A non-business operator mounts none. The model adapts.
+**Multi-company support:** you can mount **0, 1, or many** companies. An independent consultant might mount their own venture **and** a client's company. Someone employed at one company mounts just that one. A non-business operator mounts none. The model adapts.
 
 **This separation is intentional:**
 - Your personal observations never leak upstream

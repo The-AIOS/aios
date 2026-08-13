@@ -63,17 +63,26 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
    ```bash
    NOTE="$HOME/aios/vault/01 - calendar/{YYYY-MM}/{YYYY-MM-DD}.md"
    SID="${CLAUDE_CODE_SESSION_ID:-unknown}"
-   VHEAD=$(git -C "$HOME/aios" rev-parse HEAD)
 
-   # Did this session already stamp a block, and was the vault at the same commit then?
+   # Did this session already stamp a block on this note?
    PRIOR=$(grep -o "<!-- close-session: ${SID} @ [0-9a-f]* -->" "$NOTE" 2>/dev/null | tail -1)
+   STAMPED=$(printf '%s' "$PRIOR" | sed -E 's/.* @ ([0-9a-f]*) -->/\1/')
+
+   # Has any NON-CLOSE work landed since that stamp? Every commit a close makes is
+   # prefixed "session: ", so excluding those isolates real work from the close's
+   # own bookkeeping.
+   if [ -n "$STAMPED" ]; then
+     WORK=$(git -C "$HOME/aios" log --format=%s "${STAMPED}..HEAD" 2>/dev/null | grep -cvE '^session: ')
+   fi
    ```
 
-   - **A prior stamp exists AND its hash equals `$VHEAD`** → nothing has been committed since that close. This is a **duplicate**: skip the append, skip every step below, and say so plainly (*"already closed at {HH:MM}; no commits since — not duplicating"*). Under `--auto` this is the normal outcome of a re-fire and must not read as an error.
-   - **A prior stamp exists but its hash DIFFERS** → real work landed since. This is a **legitimate second close**: proceed and append a new block. A long session that closes at noon, works on, and closes again at 18:00 is a case the gate must never block.
+   - **A prior stamp exists AND `$WORK` is 0** → nothing but this command's own commits have landed. This is a **duplicate**: skip the append, skip every step below, and say so plainly (*"already closed at {HH:MM}; no work since — not duplicating"*). Under `--auto` this is the normal outcome of a re-fire and must not read as an error.
+   - **A prior stamp exists AND `$WORK` is ≥ 1** → real work landed since. This is a **legitimate second close**: proceed and append a new block. A long session that closes at noon, works on, and closes again at 18:00 is a case the gate must never block.
    - **No prior stamp** → first close today for this session. Proceed.
 
-   > **Why the vault HEAD and not a timestamp:** elapsed time does not distinguish a duplicate from real work — a re-fire two minutes later and a genuine second close two minutes later look identical by clock. `HEAD` moves if and only if something was committed, which is the property actually being asked about. And it is *measured*, not inferred. (`SID` falls back to `unknown` rather than failing: a session with no id still gets a block — degrading to the old always-append behaviour is the right failure direction, since a missing block is worse than a duplicated one.)
+   > **Why non-close commits and not the raw HEAD.** The first version of this gate compared the stamped hash directly against the current `HEAD`, and it was **inert** — it could never once fire. Appending a block *commits* it (`aios-note-append` → `aios-commit`), so `HEAD` advances on every close, while the stamp can only record the value from *before* that commit. `stamped == HEAD` was therefore unsatisfiable by construction, the "HEAD moved → real work" branch always won, and the gate always appended. Measured on a live note: all four stamps differed from `HEAD`. **Excluding `session: `-prefixed commits is what makes the two sides comparable** — it asks "did anything happen other than me writing this block", which is the actual question. (`SID` falls back to `unknown` rather than failing: a session with no id still gets a block, degrading to always-append, because a missing block is worse than a duplicated one.)
+   >
+   > **The lesson generalises past this gate:** a comparison is only a check if both outcomes are *reachable*. When you write one, prove the equal branch can happen — `tests/close-session-idempotency.test.sh` asserts exactly that, and it fails against the original logic.
 
    **Stamp the block you are about to write** — immediately under its `## Session —` heading, so the next invocation can find it:
 

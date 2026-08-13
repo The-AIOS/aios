@@ -82,6 +82,17 @@ jobs:
           bash tests/update-tier0-denylist.test.sh
           echo "OK: tests/ + .github/ remain canonical-only, and Tier 0 is documented"
 
+      - name: close-session idempotency gate stays falsifiable
+        run: |
+          set -e
+          # The gate's FIRST version was inert: it compared the stamped hash against HEAD, but
+          # appending a block COMMITS it, so HEAD always advanced and the equal branch was
+          # unsatisfiable by construction. Its logic had 9 trap cases; its reachability had
+          # none. Test 1 asserts the duplicate branch CAN fire; test 2 asserts the original
+          # logic answers differently on that same input — so neither can pass vacuously.
+          bash tests/close-session-idempotency.test.sh
+          echo "OK: the duplicate branch is reachable and the fix is falsifiable"
+
       - name: Required infra folders + custom/ subfolders exist
         run: |
           set -e
