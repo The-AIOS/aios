@@ -39,7 +39,19 @@
 
 ## 2026-08-13 — Four checks that reported green without measuring, and a setup step that could not fail loudly
 
-`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8 · 1c4d72d · a395d92`
+`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8 · 1c4d72d · a395d92 · {PR-HEAD}`
+
+### Same-day snapshots no longer overwrite each other
+
+> **What this delivers.** The observed-context archive path is `{YYYY-MM-DD}-{filename}.md` — **day and filename, no writer.** So when a second session archives the same file on the same day, it lands on the first session's destination, and `cp` exits 0 either way: a colliding write is byte-for-byte indistinguishable from a successful one. It surfaces later as a hole in the one artifact whose whole job is to survive. Not hypothetical — **21 archives across 13 days already carry `b`/`c`/`d` suffixes**, each one a collision somebody happened to notice, and a single day has now run to **eight** session blocks.
+
+**What you can now do:**
+- **Keep both captures.** The rule is now explicit everywhere it is described: destination exists with **identical** content → you are done, no second copy; **different** content → write the **next free letter** (`b`, `c`, `d`…).
+- **Stop relying on whoever notices.** `/aios:housekeeping` had carried this convention alone for weeks while `CLAUDE.md` and `/close-day` — the two places most sessions actually read — did not. All three now say the same thing.
+
+**Action required — none.** Existing suffixed archives already work: every consumer (`/aios:trace`, `/aios:drift`, `/aios:compact`, `/aios:learned`) reads the month **directory**, never exact filenames.
+
+*This is the RULE half only, and deliberately so. It covers every collision that has actually occurred — all sequential, minutes or hours apart. The remaining case is **simultaneous** writers (a Close-all broadcast firing N sessions inside one minute), which needs a real primitive with a lock: `hooks/aios-snapshot`, spec'd as `AI-102`, built rested rather than at the end of a long day. Shipping the cheap half tonight and the careful half deliberately is the trade being made on purpose.*
 
 ### Your commits now say which session made them — and the duplicate-detector needed it
 

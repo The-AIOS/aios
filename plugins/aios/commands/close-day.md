@@ -658,6 +658,7 @@ For each Tier B file (`growth.md`, `profile.md`, `ecosystem.md`):
 **Before modifying any observed context file**, archive the previous version:
 
 1. Copy the current file to `00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-{filename}.md` (create the monthly subfolder if needed)
+   - **If that destination already exists, never overwrite it.** Identical content → done, no second copy. Different content → **next free letter** (`{YYYY-MM-DD}b-`, then `c-`, `d-`…). The path carries the day and the filename but **not the writer**, so a peer session that archived the same file today owns that destination — and `cp` exits 0 either way, so a collision looks exactly like a success. `/close-day` is the single-writer consolidator, which makes it *more* exposed here, not less: it runs after N sessions have already closed.
    - If you already edited the file, use `git show HEAD:"vault/00 - notes/context/observed/{file}"` to recover the previous version
    - **Skip snapshots for stub files** — if an observed file contains only frontmatter and seed text (no real observations yet), there is nothing to archive. Start snapshotting once the file has actual content.
 2. After archiving, edit the live observed file
