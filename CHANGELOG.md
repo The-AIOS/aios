@@ -37,7 +37,7 @@
 
 ## 2026-08-14 — The quota autopilot runs on Windows, and a credential guard that only covered one of two backends
 
-`hash: 51e3dd6 · 600e642 · 09af065` *(`51e3dd6` is an external contribution — PR #30)*
+`hash: 51e3dd6 · 600e642 · 09af065 · 7e71521` *(`51e3dd6` is an external contribution — PR #30)*
 
 ### Windows: the identity manager claimed support and could not run at all
 
@@ -99,6 +99,21 @@ Then interpret it for the operator, because the three outcomes need different th
 - **No file for a surface, or `current` everywhere** → say nothing about it. A missing file means they never installed that surface.
 
 If every surface they have reads `current`, this entry asks nothing of them — say so plainly rather than leaving a check they think they still owe.
+
+### The observed-context archive had no lock, and four archives collided in one day
+
+> **What this delivers.** Every snapshot of an observed-context file lands at `logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-{filename}.md` — a path keyed by **day and filename with no writer in it**. Two sessions archiving the same file on the same day therefore target one destination, and `cp` exits `0`, so a colliding write is byte-for-byte indistinguishable from a successful one. The loss lands in the one artifact whose entire job is to survive, and is noticed later, as a hole. A written protocol covered it — *compare, and if the content differs take the next free letter* — and it held every time it was followed. But it was a **human-executed mutex**, with two failure modes no amount of care removes: it is **not atomic** (two sessions can each see the same free letter and both take it), and it compared only against the **base** name, so content already archived under `b` still minted a `c`.
+
+**What you can now do:**
+- **Archive with `hooks/aios-snapshot` instead of a hand-rolled `cp`.** It takes both decisions under a real lock and compares against *every* existing variant, so a re-run is genuinely idempotent no matter which letter got there first. Output is one machine-readable line per file: `snapshot` · `identical` (already archived — success, not a failed no-op) · `collision` (differed from everything, took the next free letter).
+- **Stop relying on remembering the protocol at the end of a long session.** `CLAUDE.md` § Session End now prescribes the tool. The old rule was correct and still fails the moment somebody is tired, because nothing about a missed comparison is visible afterwards.
+- **Trust the archive on a busy day.** Measured with a realistic decide-to-write window, six concurrent writers keep **1 of 6** contents without the lock and **6 of 6** with it.
+
+**Action required — none.** Existing archives are untouched; the tool only changes how new ones are written.
+
+*Priority came from the rate, not the theory: **2026-08-14 alone produced four suffixed archives** across three session blocks and two sessions, with the day's last close finding a `b` pair already sitting on its destination. A single day has reached eight session blocks — the one-session-per-day assumption that path encodes stopped being true a long time ago.*
+
+*The test needed a real window, and its first version did not have one: eight writers, no injected delay, and **the unlocked control passed too** — with both steps inside one process the decide-to-write gap is microseconds, so the test would have certified the lock on the strength of a race that never happened. The actual protocol's gap is seconds, because the compare and the copy are separate steps. The delay is now injected into **both** variants so the lock is the only difference, and the suite **verifies that its own two variants parse and differ only in the lock** before asserting anything about either.*
 
 ### `aios-commit --vault` said "nothing to commit" over a state it could not explain
 
