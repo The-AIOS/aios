@@ -294,6 +294,103 @@ jobs:
           done
           echo "OK: all 6 agent bundles present at agents/aios/{bundle}/ with README.md, and agents/_index.md is in place"
 
+      - name: Every tracked .sh carries the exec bit
+        run: |
+          set -e
+          # WHY THIS EXISTS: `test-identity-cycle.sh` shipped at 100644 while all 26 of its
+          # siblings were 100755 — the mode is recorded from the contributor's filesystem, and
+          # nothing looked at it. `./hooks/claude-identity/test-identity-cycle.sh` then answers
+          # "Permission denied" for the operator, while CI stayed green because every CI caller
+          # invokes suites as `bash <path>`. A check that runs the thing one way can never see
+          # a defect that only shows up the other way; this looks at the mode directly.
+          #
+          # WHY .sh AND NOT "has a shebang": measured across the tree, the shebang rule flags 5
+          # files that are CORRECTLY non-executable (hooks/pipeline-executor.py and friends are
+          # invoked as `python3 <path>` by their callers, never run directly). A rule with known
+          # false positives gets muted, so the narrow one is the useful one: at the time of
+          # writing, 27 tracked .sh files, 27 expected at 755.
+          #
+          # If you ever add a .sh that is meant to be SOURCED rather than executed, add it to
+          # SOURCED_OK below in the same PR — deliberately, so the exception is visible to the
+          # next reader instead of being an omission nobody can see.
+          SOURCED_OK=""
+          BAD=""
+          while IFS= read -r line; do
+            mode=${line%% *}; path=${line#*$'\t'}
+            case " $SOURCED_OK " in *" $path "*) continue ;; esac
+            [ "$mode" = "100755" ] || BAD="$BAD  $mode  $path"$'\n'
+          done < <(git ls-files -s '*.sh')
+          if [ -n "$BAD" ]; then
+            echo "::error::Shell script(s) tracked without the exec bit — 'chmod +x' then 'git add --chmod=+x':"
+            printf '%s' "$BAD"
+            exit 1
+          fi
+          echo "OK: all $(git ls-files '*.sh' | wc -l | tr -d ' ') tracked .sh files are mode 755"
+
+      - name: Every tracked executable has an explicit eol (CRLF would break its shebang)
+        run: |
+          set -e
+          # THE SAME MISSED-ENUMERATION CLASS AS THE STEP ABOVE, one attribute over.
+          # .gitattributes listed extensionless hook executables BY NAME. A third one was added
+          # later and missed the list, so on Windows (core.autocrlf=true by default) it would
+          # check out with CRLF and Git Bash would answer `bad interpreter`. The worst instance
+          # was not the new file at all: `hooks/git/pre-commit` had never been listed, and git
+          # runs hooks through `sh` — so on Windows the secret scan that gates every commit
+          # would simply not execute, with nothing printed to say so.
+          #
+          # An executable is a thing something tries to RUN, so its line endings are load-bearing
+          # by definition. Requiring an explicit eol for all of them means the next addition
+          # fails here instead of failing silently on somebody's Windows machine.
+          BAD=""
+          while IFS= read -r f; do
+            attr=$(git check-attr eol -- "$f" | sed 's/.*eol: //')
+            [ "$attr" = "unspecified" ] && BAD="$BAD  $f"$'\n'
+          done < <(git ls-files -s | awk '$1=="100755"{ sub(/^[^\t]*\t/,""); print }')
+          if [ -n "$BAD" ]; then
+            echo "::error::Tracked executable(s) with no eol attribute — add a rule to .gitattributes:"
+            printf '%s' "$BAD"
+            exit 1
+          fi
+          echo "OK: all $(git ls-files -s | awk '$1=="100755"' | wc -l | tr -d ' ') tracked executables have an explicit eol"
+
+      - name: The two star-check implementations agree
+        run: |
+          set -e
+          # aios-star-check exists twice — bash for the shell callers, PowerShell because the
+          # Windows callers (Electron App, Node extension host) cannot assume Git Bash is on
+          # PATH. Its own header says not to duplicate this logic, so the duplication is
+          # guarded here instead of trusted: the two must name the SAME repos and the SAME
+          # verdicts. This is the check that makes the second file acceptable; delete it and
+          # the pair silently diverges the way the bus fulfillers did.
+          SH=hooks/aios-star-check; PS=hooks/aios-star-check.ps1
+          test -f "$SH" && test -f "$PS" || { echo "::error::star-check pair incomplete"; exit 1; }
+
+          # Repos each file would ever ask about, in sorted order.
+          repos_of() { grep -oE 'The-AIOS/aios(-app|-glass)?' "$1" | sort -u | tr '\n' ' '; }
+          R_SH=$(repos_of "$SH"); R_PS=$(repos_of "$PS")
+          if [ "$R_SH" != "$R_PS" ]; then
+            echo "::error::star-check repo allowlists diverge."
+            echo "  bash: $R_SH"
+            echo "  ps1 : $R_PS"
+            exit 1
+          fi
+
+          # A private repo in either list is a permanent failure for every user — see the
+          # comment in the bash version. Assert neither ever names one.
+          for f in "$SH" "$PS"; do
+            if grep -qE "['\"]The-AIOS/(forum|site|org|company-template)" "$f"; then
+              echo "::error::$f names a repo that must never be in the ask (private, or a non-discovery repo)"
+              exit 1
+            fi
+          done
+
+          # The four verdicts are the contract the surfaces switch on.
+          for v in starred unstarred declined unknown; do
+            grep -q "$v" "$SH" || { echo "::error::$SH lost verdict '$v'"; exit 1; }
+            grep -q "$v" "$PS" || { echo "::error::$PS lost verdict '$v'"; exit 1; }
+          done
+          echo "OK: star-check implementations agree — repos [$R_SH] and all four verdicts present in both"
+
   manifests:
     name: Plugin manifests
     # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
@@ -828,6 +925,15 @@ jobs:
         # session keeps burning the capped account. This is the only sensor.
         run: bash tests/adoption-detector.test.sh
 
+      - name: the star ask decides correctly about whether to ask
+        # Every defect this suite covers fails in the SILENT direction — the script still
+        # exits 0 and still prints a verdict, just the wrong one. A missing tracker reading as
+        # "not declined" re-asks someone who already said no; an unquoted reason= executes as
+        # a command in the eval its own caller docs prescribe. Nothing about "does it run"
+        # sees either. The suite is local-only by design (no authenticated gh in CI): every
+        # decision about WHETHER to ask is local, and that is exactly what it asserts.
+        run: bash tests/star-check.test.sh
+
   primitives_bash32:
     # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
@@ -1090,3 +1196,64 @@ jobs:
           $n = (Select-String -Path $PROFILE -Pattern '^function spawn \{').Count
           if ($n -ne 1) { Write-Host "::error::Expected exactly 1 spawn definition after re-run, found $n"; exit 1 }
           Write-Host "ok: idempotent, still parses, exactly one spawn definition"
+
+      - name: aios-star-check.ps1 parses and fails closed
+        # SAME REASON THIS LANE EXISTS. aios-star-check.ps1 was authored on a machine with no
+        # PowerShell at all -- the exact condition under which install-wrappers.ps1 shipped
+        # twice broken on inspection alone. Reading a .ps1 carefully is not running it: a
+        # `return` inside a ForEach-Object scriptblock returns from the BLOCK, so a detection
+        # helper can look right and answer wrong on every machine. Execute it here or it is
+        # unverified.
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $errs = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path .\hooks\aios-star-check.ps1), [ref]$null, [ref]$errs) | Out-Null
+          if ($errs) {
+            Write-Host "::error::aios-star-check.ps1 does not parse under Windows PowerShell 5.1:"
+            $errs | ForEach-Object { Write-Host "  line $($_.Extent.StartLineNumber): $($_.Message)" }
+            exit 1
+          }
+          Write-Host "ok: parses under 5.1"
+
+          # FAIL CLOSED is the rule the whole script rests on, so assert it rather than trust
+          # it. A tracker that does not exist means a prior decline would be invisible, which
+          # must yield 'unknown' -- never 'unstarred', which would re-ask someone who declined.
+          $env:AIOS_TRACKER = Join-Path $env:TEMP 'does-not-exist-star.aios-update'
+          $out = & .\hooks\aios-star-check.ps1 2>$null
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::verdict path must always exit 0, got $LASTEXITCODE"; exit 1 }
+          if (($out -join ' ') -notmatch "verdict='unknown'") {
+            Write-Host "::error::Missing tracker must yield verdict=unknown. Got: $($out -join ' | ')"
+            exit 1
+          }
+          Write-Host "ok: missing tracker -> unknown, exit 0"
+
+          # An automated context must never produce an ask, whatever the API would say.
+          $env:AIOS_STAR_ASK = 'never'
+          $out = & .\hooks\aios-star-check.ps1 2>$null
+          if (($out -join ' ') -notmatch "verdict='unknown'") {
+            Write-Host "::error::AIOS_STAR_ASK=never must yield unknown. Got: $($out -join ' | ')"
+            exit 1
+          }
+          Remove-Item Env:\AIOS_STAR_ASK
+          Write-Host "ok: AIOS_STAR_ASK=never -> unknown"
+
+          # The decline round-trip, on a real tracker, asserting hash= is left alone.
+          $t = Join-Path $env:TEMP 'star-tracker.aios-update'
+          Set-Content -Path $t -Value @('repo=x','hash=abc123','synced=2026-01-01') -Encoding UTF8
+          $env:AIOS_TRACKER = $t
+          & .\hooks\aios-star-check.ps1 -Decline | Out-Null
+          $c = Get-Content $t
+          if (-not ($c | Where-Object { $_ -match '^star-ask=declined' })) {
+            Write-Host "::error::-Decline did not record star-ask="; exit 1
+          }
+          if (-not ($c | Where-Object { $_ -eq 'hash=abc123' })) {
+            Write-Host "::error::-Decline disturbed hash= -- /aios:update owns that field alone"; exit 1
+          }
+          $out = & .\hooks\aios-star-check.ps1 2>$null
+          if (($out -join ' ') -notmatch "verdict='declined'") {
+            Write-Host "::error::A recorded decline must yield verdict=declined. Got: $($out -join ' | ')"
+            exit 1
+          }
+          Write-Host "ok: decline recorded, hash= untouched, verdict=declined thereafter"

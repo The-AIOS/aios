@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+# aios-star-check — the in-product star ask, as a verdict. No UI, no prompt, no nag.
+#
+# ONE implementation, THREE callers: /aios:update calls it at the end of an APPLIED sync;
+# the App calls it from its what's-new surface; Glass calls it after N successful sessions.
+# The bus double-delivery fix had to be ported into Glass because the function had been
+# duplicated, so the bug was too — do not duplicate this one. Shell out to it.
+#
+# USAGE
+#   aios-star-check              → verdict + the repos worth asking about (key=value lines)
+#   aios-star-check --json       → the same, as JSON (for the TypeScript surfaces)
+#   aios-star-check --decline    → record the decline, once, forever
+#   aios-star-check --star R…    → PUT each repo; per-repo result; non-zero if any failed
+#
+# VERDICTS
+#   starred    every candidate repo is already starred      → say nothing, ever
+#   unstarred  at least one is not, and no decline on file  → the caller MAY ask, once
+#   declined   the operator already said no                 → say nothing, ever
+#   unknown    the check could not be completed             → say nothing (FAIL CLOSED)
+#
+# FAIL CLOSED IS THE LOAD-BEARING RULE. No network, no `gh`, no auth, a rate-limit, a
+# missing tracker — every one of them yields `unknown`, and `unknown` must never produce a
+# prompt. Nagging someone who already starred tells them the software doesn't notice what
+# they did, which is worse than never asking. Exit status is 0 for all four verdicts: the
+# verdict is the output, not the exit code.
+#
+# DISPLAYING THE ASK IS THE CALLER'S JOB, AND SO IS THE INTERACTIVITY CHECK.
+# This script never prints a prompt and never waits for input, because it cannot know
+# whether a human is present. `/aios:update` auto-fires from `/today`, which runs in
+# scheduled routines with nobody there — and a prompt with no answer must never default to
+# yes. Silence is NO. Callers: ask only when a human is in the loop, and set
+# AIOS_STAR_ASK=never in any automated context to make that mechanical.
+
+set -u
+
+CONFIG_TRACKER="${AIOS_TRACKER:-$HOME/aios/.aios-update}"
+API_BASE="user/starred"
+
+# ── The repo allowlist is FIXED and every entry is verified public ────────────────────
+# GET /user/starred/{repo} returns 404 for "not starred" AND for "private or nonexistent",
+# and those are indistinguishable from outside. So a private repo in this list reads as
+# unstarred forever, and the PUT that follows 404s for every single user. Measured
+# 2026-08-13/14 against a real account:
+#   The-AIOS/aios              public   ← ALWAYS: if you're running this, you use it
+#   The-AIOS/aios-app          public   ← only if installed
+#   The-AIOS/aios-glass        public   ← only if installed
+#   The-AIOS/forum             PRIVATE  ← NEVER, and the reason is not the one first written
+#   The-AIOS/site  /  org      public   ← no: website repos, nobody browses them
+#   The-AIOS/company-template  public   ← no
+#
+# ON `forum`, CORRECTED BY MEASUREMENT: the original note said a PUT "404s for every user".
+# It does not. For anyone OUTSIDE the org it 404s — but for a member with access the PUT
+# SUCCEEDS (verified 2026-08-14, then reverted). So the two real reasons to exclude it are:
+# a star on a private repo is invisible to strangers and therefore buys exactly zero
+# discovery, and for everyone else the GET's 404 is indistinguishable from "not starred", so
+# the tool would offer it forever and fail forever. Both are permanent; neither is fixable
+# by retrying. Do not add a private repo to this list.
+# Stars concentrate or they are worth nothing: 5 repos at 100 ranks below 1 at 500, because
+# search and every human evaluator work per-repo. And "star what you use" survives someone
+# screenshotting the prompt, where "star our org" reads as a campaign.
+CANONICAL_REPO="The-AIOS/aios"
+
+# SHELL-QUOTED, because the documented caller is `eval "$(aios-star-check)"` and the reason
+# field is a sentence. Unquoted, `reason=all candidate repos already starred` sets reason=all
+# and then executes `candidate` as a command — caught by running the snippet this file's own
+# caller documentation prescribes. Single-quote and escape embedded quotes, so every value is
+# eval-safe no matter what ends up in it.
+shq() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
+emit_kv() { local k; for k in "$@"; do printf '%s=%s\n' "${k%%=*}" "$(shq "${k#*=}")"; done; }
+
+json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+
+emit_json() {
+  # $1 verdict, $2 space-separated repos, $3 reason
+  local repos_json="" r
+  for r in $2; do repos_json="$repos_json,\"$(json_escape "$r")\""; done
+  repos_json="[${repos_json#,}]"
+  printf '{"verdict":"%s","repos":%s,"reason":"%s"}\n' \
+    "$(json_escape "$1")" "$repos_json" "$(json_escape "$3")"
+}
+
+finish() {
+  # $1 verdict, $2 repos, $3 reason
+  if [ "${OUT_JSON:-0}" = "1" ]; then emit_json "$1" "$2" "$3"
+  else emit_kv "verdict=$1" "repos=$2" "reason=$3"; fi
+  exit 0
+}
+
+# ── Surface detection: what has this operator actually installed? ─────────────────────
+# PRIMARY is the surface's own announcement at ~/.aios/surfaces/<surface>.json, and that is
+# a deliberate choice over looking for install directories. Glass runs inside whatever IDE
+# the operator uses, and the real path on the machine this was written on turned out to be
+# `~/.antigravity-ide/extensions/` — not `.antigravity`, and not any name a hardcoded list
+# would have contained. Same reasoning as the bus's pid-not-process-name rule: ask the
+# thing to identify itself instead of guessing where it lives.
+# FALLBACK keeps one level of wildcard on the IDE directory itself, so it still works before
+# a surface has ever run, and does not break the day the operator switches editors.
+surface_installed() {
+  local s="$1"
+  [ -f "$HOME/.aios/surfaces/$s.json" ] && return 0
+  case "$s" in
+    glass)
+      local d
+      for d in "$HOME"/.*/extensions; do
+        [ -d "$d" ] || continue
+        ls "$d" 2>/dev/null | grep -qi 'aios-glass' && return 0
+      done
+      return 1 ;;
+    app)
+      [ -d "/Applications/AIOS.app" ] && return 0
+      [ -d "$HOME/Applications/AIOS.app" ] && return 0
+      [ -d "$HOME/.local/share/AIOS" ] && return 0
+      [ -d "/opt/AIOS" ] && return 0
+      return 1 ;;
+  esac
+  return 1
+}
+
+candidate_repos() {
+  local out="$CANONICAL_REPO"
+  surface_installed glass && out="$out The-AIOS/aios-glass"
+  surface_installed app   && out="$out The-AIOS/aios-app"
+  printf '%s' "$out"
+}
+
+# ── Decline record: per-operator, not per-machine ─────────────────────────────────────
+# It lives in `.aios-update` because that file travels with the vault repo, so a decline on
+# one machine is honoured on every machine the operator owns. A machine-local dotfile would
+# ask a two-machine operator twice for the same decision. The star itself needs no storage —
+# the API is authoritative and re-checkable.
+#
+# This writes ONLY the `star-ask=` line. It never touches `hash=`, `synced=` or `repo=`:
+# hand-bumping `hash=` past un-pulled commits is what creates permanently orphaned content,
+# which is why /aios:update owns that field alone.
+# THREE-STATE, not two — 0 declined · 1 not declined · 2 CANNOT TELL.
+# Collapsing "cannot tell" into "not declined" is a real bug, and a control test caught it
+# here: with the tracker missing, the decline record is invisible, so an operator who already
+# said no gets asked again — the exact nag the three-state design exists to prevent. An
+# unreadable record is an inconclusive measurement, and inconclusive means say nothing.
+decline_state() {
+  [ -r "$CONFIG_TRACKER" ] || return 2
+  grep -q '^star-ask=declined' "$CONFIG_TRACKER" 2>/dev/null && return 0
+  return 1
+}
+
+record_decline() {
+  if [ ! -f "$CONFIG_TRACKER" ]; then
+    echo "aios-star-check: no tracker at $CONFIG_TRACKER — nothing recorded" >&2
+    exit 0
+  fi
+  decline_state && { echo "already recorded"; exit 0; }
+  local tmp
+  tmp=$(mktemp "${TMPDIR:-/tmp}/aios-star.XXXXXX") || exit 0
+  grep -v '^star-ask=' "$CONFIG_TRACKER" > "$tmp" 2>/dev/null || cp "$CONFIG_TRACKER" "$tmp"
+  printf 'star-ask=declined:%s\n' "$(date +%F)" >> "$tmp"
+  mv "$tmp" "$CONFIG_TRACKER" || { rm -f "$tmp"; exit 0; }
+  echo "recorded: star-ask=declined — this will not be asked again"
+  exit 0
+}
+
+# ── The star write ────────────────────────────────────────────────────────────────────
+# PUT /user/starred/{owner}/{repo} → 204. Verified to work under the ordinary `repo` scope
+# that AI-52's onboarding already establishes, so accepting costs one keystroke and never a
+# browser round-trip. It is idempotent: PUTting an already-starred repo is a no-op 204.
+#
+# Reports every repo individually and exits non-zero if ANY failed, so the caller can never
+# honestly print "starred!" over a failure. A receipt for something that did not happen is
+# the one output this product line cannot ship.
+do_star() {
+  local ok=0 bad=0 r code
+  for r in "$@"; do
+    code=$(gh api -X PUT "$API_BASE/$r" -i 2>/dev/null | head -1 | awk '{print $2}')
+    if [ "$code" = "204" ]; then echo "starred=$r"; ok=$((ok+1))
+    else echo "failed=$r:${code:-no-response}"; bad=$((bad+1)); fi
+  done
+  echo "summary=$ok starred, $bad failed"
+  [ "$bad" -eq 0 ]
+}
+
+# ── Arguments ─────────────────────────────────────────────────────────────────────────
+OUT_JSON=0
+MODE=verdict
+STAR_REPOS=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --json)    OUT_JSON=1 ;;
+    --decline) MODE=decline ;;
+    --star)    MODE=star; shift; STAR_REPOS="$*"; break ;;
+    -h|--help) sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *)         echo "aios-star-check: unknown argument '$1'" >&2; exit 0 ;;
+  esac
+  shift
+done
+
+[ "$MODE" = "decline" ] && record_decline
+
+if [ "$MODE" = "star" ]; then
+  command -v gh >/dev/null 2>&1 || { echo "failed=all:no-gh"; exit 1; }
+  [ -n "$STAR_REPOS" ] || { echo "failed=all:no-repos-given"; exit 1; }
+  # shellcheck disable=SC2086
+  do_star $STAR_REPOS
+  exit $?
+fi
+
+# ── verdict ───────────────────────────────────────────────────────────────────────────
+[ "${AIOS_STAR_ASK:-}" = "never" ] && finish unknown "" "AIOS_STAR_ASK=never — automated context"
+decline_state; case $? in
+  0) finish declined "" "decline on file in .aios-update" ;;
+  2) finish unknown  "" "tracker unreadable at $CONFIG_TRACKER — a prior decline would be invisible" ;;
+esac
+command -v gh >/dev/null 2>&1      || finish unknown "" "gh not installed"
+gh auth status >/dev/null 2>&1     || finish unknown "" "gh not authenticated"
+
+REPOS=$(candidate_repos)
+UNSTARRED=""
+for repo in $REPOS; do
+  code=$(gh api -X GET "$API_BASE/$repo" -i 2>/dev/null | head -1 | awk '{print $2}')
+  case "$code" in
+    204) : ;;                                    # already starred
+    404) UNSTARRED="$UNSTARRED $repo" ;;         # not starred (allowlist is all-public)
+    *)   finish unknown "" "inconclusive check on $repo (HTTP ${code:-no-response})" ;;
+  esac
+done
+
+UNSTARRED="${UNSTARRED# }"
+[ -z "$UNSTARRED" ] && finish starred "" "all candidate repos already starred"
+finish unstarred "$UNSTARRED" "not starred, never asked"
