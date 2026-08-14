@@ -590,6 +590,46 @@ For each genuine framework drift surfaced (a Tier-1 file that **differs**, or a 
 
 CRLF-normalize when comparing file *contents* (`tr -d '\r'`) per the § Backup-on-divergence CRLF note. **Vault-side `Only in` lines are dropped wholesale** — operator extensions (`custom/`), company namespaces (`<company>/`), and runtime (`.venv/`, `__pycache__/`, `*.log`, OAuth/auth caches, `.session`) live only in the vault, are never in canonical, and are never framework-drift-to-pull. (An upstream *deletion* — a file the vault has that canonical removed — is handled by Step 3.4's flag-don't-delete rule, not here.) Filtering by **side** (`^Only in $VAULT`), not by token, is what makes this robust — `diff` writes `Only in DIR: name` with a colon, so token patterns like `custom/` silently miss `…/custom: name`.
 
+### 6.9. The star ask — applied runs only, asked once, never again either way
+
+**Runs ONLY when this sync actually applied something.** If zero Tier-1 files changed and the reconcile was clean, skip this step entirely and say nothing. *"Already up to date — by the way, star us"* is asking to be paid for nothing, and it is the difference between a request and a nag.
+
+**Runs ONLY when a human is in the loop.** `/aios:update` auto-fires from `/today` and `/close-day`, and those run in scheduled routines with nobody present. A prompt nobody sees cannot be answered, and **silence must never read as yes.** If this run was auto-fired, or you are executing in a routine / cron / bridge context, skip the step and set `AIOS_STAR_ASK=never` so the check itself agrees with you.
+
+```bash
+# Verdict only — this never prompts and never writes. See hooks/aios-star-check.
+eval "$(bash "$HOME/aios/hooks/aios-star-check")"   # sets verdict= repos= reason=
+```
+
+Act on `$verdict`, and on **nothing else**:
+
+- **`starred`** · **`declined`** · **`unknown`** → **say nothing at all.** Not a note, not a "we checked" line. `unknown` means the check could not complete (no network, no `gh`, no auth, rate-limited, tracker unreadable) and it is deliberately indistinguishable from `starred` in behaviour: nagging someone who already starred tells them the software does not notice what they did.
+- **`unstarred`** → show the ask **once**, naming every repo in `$repos`:
+
+```
+⭐ One ask — and whatever you answer, never again.
+
+AIOS is free and open source. The star count is the first thing someone
+checks before trusting an unknown repo enough to install it, so it's the
+main thing that gets this in front of the next person who'd use it.
+Costs you nothing, takes effect right here.
+
+Star the AIOS repos you're using?
+  {one line per repo in $repos, each with what it is to this operator}
+
+  [y] yes   [n] no thanks — and don't ask again
+```
+
+**Name every repo.** *"the AIOS repositories"* is real consent but underspecified — stars land on a public profile, and the operator is entitled to know which ones before they appear there. It costs one line and makes the ask unimpeachable.
+
+On the answer:
+
+- **yes** → `bash "$HOME/aios/hooks/aios-star-check" --star $repos`. It prints `starred=<repo>` / `failed=<repo>:<code>` per repo and exits non-zero if any failed. **Report exactly what it reports.** If two of three succeeded, say which one didn't — never print a blanket "starred!" over a failure. A receipt for something that did not happen is the one output this framework cannot ship. No state is recorded on success: the API is authoritative and re-checkable, so the next run reads `starred` on its own.
+- **no** → `bash "$HOME/aios/hooks/aios-star-check" --decline`. Terminal, forever, on every machine this operator owns.
+- **no answer** → do nothing and record nothing. Silence is not a decline; it just is not a yes. It may surface again on a later applied update, which is the deliberately conservative choice — recording a refusal the operator never gave is worse than one extra ask months later.
+
+**Never star anything without an explicit yes.** GitHub's Acceptable Use Policies §4 name *"automated starring"* verbatim as rank abuse, enforced at org level. Beyond the policy: a star is a public act on the operator's profile, and an agent taking an unmandated public action in a user's name is precisely the failure this whole framework argues against. There is nothing to gain by removing the keystroke — the keystroke is the only thing that makes the star worth having.
+
 ### 7. Advance tracker (only on a clean, fully-applied run) and clean up
 
 **Only write `.aios-update` to the new HEAD hash if BOTH are true:** (a) every Step-3 apply + Step-4 auto-exec succeeded, and (b) the Step-6.5 reconcile came back clean (no remaining framework drift). If either failed, leave the tracker at its current value and report what's incomplete — a stale tracker is recoverable (next run re-pulls); an over-advanced tracker orphans content (the failure we're guarding against). Set `hash={HEAD}` + `synced={today}`.
@@ -600,7 +640,7 @@ cd ~/aios && ~/aios/hooks/aios-commit -m "sync: framework → {short-HEAD} (via 
 ```
 If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update`. **Framework-sync commits stay DISTINCT from operator session-work commits** (clean attribution), and `aios-commit --vault` at session-end / `/close-day` stays scoped to vault *content* — never framework infra, which is THIS command's domain. Finally `rm -rf /tmp/aios-update-check`.
 
-> **The tracker is written ONLY by this command, as its final step, after a clean fully-applied run. NEVER hand-edit `.aios-update`** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65).
+> **`hash=` is written ONLY by this command, as its final step, after a clean fully-applied run. NEVER hand-edit it** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65). The rule is about *that field*, and saying so precisely matters now that the file is no longer single-writer: `hooks/aios-star-check --decline` appends `star-ask=` to the same file, deliberately, because a decline must be per-operator rather than per-machine and `.aios-update` is what travels with the vault. It touches nothing else and never reads `hash=`. A rule stated as *"never write this file"* would have been read as forbidding that, or quietly ignored — neither of which protects `hash=`.
 
 ## Output format
 
@@ -645,6 +685,7 @@ If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update
 - **The update always lands — no compare outcome aborts the run.** Every content comparison in this command has THREE outcomes (identical · different · **could not be determined**), and the third one never stops the sync. It degrades to the conservative-but-applying branch — back up then apply, or carry-all then merge — and is **reported as inconclusive** rather than silently mislabeled as a personalization. The reasoning is asymmetric: a sync that stops leaves the vault half-applied and the operator without the fix; a sync that applies with a loud label is recoverable by reading the report. Corollary, and the reason this rule exists: **never read a failed measurement as a substantive result.** `diff` returns 0/1/**2**, and collapsing that to a boolean turned "the comparison did not run" into "the file differs" — which is how this command once reported a phantom self-update and a phantom personalization in the same run.
 - **Backup-on-divergence is the safety net.** Operator customizations to Tier 1 files are preserved in `vault/04 - backups/aios-update-{date}/` but are NOT auto-restored. If they want their edits back, they manually merge from the backup.
 - **Scripts must run.** A script update that doesn't get executed is half a sync. The wrapper installer is the canonical example — bringing the file without running it leaves the operator's shell on the old code path.
+- **The star ask is opt-in by silence and terminal either way.** Step 6.9 runs only on an applied sync with a human present, shows one prompt naming every repo, and then never asks again — `yes` stars via the API (which is thereafter authoritative, so no state is stored), `no` records a decline that travels with the vault. `starred`, `declined` and `unknown` all produce **no output whatsoever**, and `unknown` is deliberately behaviourally identical to `starred`: an inconclusive check must never produce a prompt. Nothing is ever starred without an explicit yes.
 - **Completeness reconcile is the source of truth, not the tracker.** Step 6.5 always runs (even on the "current" path) — it compares the vault against canonical HEAD directly, so a desynced tracker self-heals instead of orphaning content. The tracker advances only on a clean, fully-applied run; it is NEVER hand-edited.
 - **An empty drift list only counts if the reconcile actually ran.** "0 drift" and "the clone wasn't there" are the same output, because `diff`'s errors go to `/dev/null` — so Step 6.5 asserts the clone exists *before* comparing and refuses to continue if it doesn't. **Never advance the tracker on an empty result you did not first prove was a real measurement.**
 - **The temp clone path is a literal `/tmp/aios-update-check`, deliberately.** Do not "improve" it to `${TMPDIR:-/tmp}`: `$TMPDIR` resolves *differently* in a sandboxed vs un-sandboxed tool call, so a clone written in Step 1 goes missing in Step 6.5 while the path expression still looks right — that substitution is what once made this reconcile report "0 drift" having compared nothing. A fixed `/tmp` is writable when Step 1 clones (that call is un-sandboxed regardless, because cloning needs network) and readable from any later call in either context. Boring and stable beats portable-looking and context-dependent.

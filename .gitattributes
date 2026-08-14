@@ -14,9 +14,22 @@
 *.sh            text eol=lf
 *.bash          text eol=lf
 
-# Extensionless executables under hooks/ are shell scripts too (aios-commit, aios-note-append).
-hooks/aios-commit       text eol=lf
-hooks/aios-note-append  text eol=lf
+# Extensionless executables under hooks/ are shell scripts too. This started as a list of two
+# names (aios-commit, aios-note-append) and a third — `aios-star-check` — was added later and
+# missed it, which is the failure mode of every enumeration in this repo: correct on the day it
+# was written, silently incomplete afterwards. So match the FAMILY, and note that a `.ps1` in
+# this family still resolves to CRLF because the `*.ps1` rule below comes later and last match
+# wins. `validate.yml` now fails the build if any tracked executable has an unspecified eol, so
+# the next addition cannot slip through even if it doesn't match these patterns.
+hooks/aios-*            text eol=lf
+hooks/git/pre-commit    text eol=lf
+
+# `hooks/git/pre-commit` above is the one with teeth: git invokes hooks through `sh`, so a CRLF
+# checkout does not merely warn — the hook fails to execute, and the secret scan that gates every
+# commit stops running on Windows with no error anyone would notice.
+
+# Node entrypoints with shebangs — same shebang breakage, lower blast radius.
+*.js            text eol=lf
 
 # Python hooks: CRLF is survivable for the interpreter but breaks `#!` shebang invocation the
 # same way, and these are invoked directly by settings.json and by other scripts.

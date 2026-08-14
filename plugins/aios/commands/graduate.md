@@ -84,6 +84,26 @@ Present a summary in the response:
 
 Then commit and push: `cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Graduate ideas {date}"`
 
+### The intake-edge question (ask once per graduated idea)
+
+After writing each permanent note, ask one more question of it:
+
+> **Did this discover a primitive no master owns?**
+
+Most graduated ideas belong to a family that already exists — they file under an existing master, and the answer is a plain *no*. That is the healthy default, and answering *no* costs one line.
+
+The question earns its place on the rare *yes*: an idea that turns out to describe something **none of the existing masters can hold** — a new capability, a new surface, a new venture-shaped thing. Without the question, that idea gets filed under the nearest family by gravity, and the fact that it needed a new home is lost at exactly the moment it was visible.
+
+**When the answer is yes**, say so in the summary and name what it implies — a new master, a new venture note, or a primitive that belongs in `context/ventures/`:
+
+```
+### Primitive found (no master owns this)
+- **{Title}** — belongs to no existing family. Implies: {a new master / a venture note / a primitive in context/ventures/}.
+  {One line on why the nearest family would have been the wrong home.}
+```
+
+Omit the section entirely when every idea filed cleanly — which is most runs. **Never manufacture a yes**; a forced primitive is worse than a missed one, because it births a home that nothing else will ever live in.
+
 ## Rules
 
 - Quality over quantity — 2 well-formed notes beat 8 half-baked ones

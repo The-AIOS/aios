@@ -37,7 +37,7 @@
 
 ## 2026-08-14 — The quota autopilot runs on Windows, and a credential guard that only covered one of two backends
 
-`hash: 51e3dd6` *(external contribution — PR #30)*
+`hash: 51e3dd6 · 600e642` *(`51e3dd6` is an external contribution — PR #30)*
 
 ### Windows: the identity manager claimed support and could not run at all
 
@@ -65,6 +65,66 @@
 *Deliberately **not** ported, and the argument is the contribution: `hooks/git/secret-scan.sh` (git runs hooks through `sh`, and a second implementation of a secret scanner is a drift hazard with a security blast radius), `mcps/atlassian-mcp/run.sh` (an MCP launcher invoked via `bash`), and `mcps/setup.sh` (already worked under Git Bash — it needed its **advice** corrected, not a rewrite). That is the doctrine `install-git-hooks.ps1` already states, applied consistently.*
 
 **Still unverified, stated plainly:** a live two-account swap on Windows has **not** been run against real Anthropic credentials — the contributor's machine has a single account, so rotation is covered by the fixture only. `claude-switch` always writes `.claude.json.bak-claude-switch` before touching anything, so the first real rotation is a verification step rather than a leap. Noted in `SETUP.md` and the autopilot README.
+
+### AIOS asks for the star, once, and never again either way
+
+> **What this delivers.** Canonical has **16 stars against 10 forks** — a fork-to-star ratio of 0.63 where open source typically runs 0.1–0.2. People are doing the *deeper* thing at three to five times the rate they do the cheap one, which is the signature of a missing ask rather than a missing audience. So there is now an ask, built to be impossible to experience as nagging: **three states, not two.** Starred is silent forever (the API is authoritative and re-checkable, so nothing is stored). Declined is recorded **once**, in `.aios-update` — which travels with your vault, so declining on one machine settles it on every machine you own. And a check that could not complete — no network, no `gh`, no auth, rate-limited, tracker unreadable — is **deliberately identical in behaviour to already-starred**: it says nothing. Being nagged when you already starred tells you the software doesn't notice what you did, which is worse than never being asked.
+
+**What you can now do:**
+- **Star in one keystroke, with no browser round-trip.** `PUT /user/starred/{owner}/{repo}` works under the ordinary `repo` scope that onboarding already establishes, so accepting is a keypress. This was the one detail the spec deliberately left untested, because testing a write means starring something on a real account; it is now verified — and reverted afterwards.
+- **See exactly which repos, named, before anything lands on your public profile.** The prompt lists them individually. It covers the framework you just updated plus only the surfaces you actually have installed — never the website repos, and never a private one. *"Star the AIOS repositories"* would be real consent but underspecified, and stars are public.
+- **Get told the truth when it half-works.** If two of three succeed, the report names the one that didn't. A blanket "starred!" over a failure is a receipt for something that did not happen, which is the one output a framework built on receipts cannot ship.
+- **Never have an agent star anything for you.** GitHub's Acceptable Use Policies §4 name *"automated starring"* verbatim as rank abuse, enforced at org level — and a star is a public endorsement on your profile. It stays a keystroke. Automating it was considered and rejected the same hour.
+
+**Action required — confirm the operator's surfaces are current, then tell them.** As of this entry, **AIOS Glass is `v0.5.4`** and **AIOS App is `v0.8.6`**. Both shipped protocol changes today, and an old surface running against new instructions is exactly the drift this entry's other half is about. Do not ask the operator which version they have and do not take a version number from prose — **run the check**, because each surface announces what it is *actually* running:
+
+```bash
+python3 - <<'PY'
+import json, os, glob
+WANT = {"glass": "0.5.4", "app": "0.8.6"}
+for f in sorted(glob.glob(os.path.expanduser("~/.aios/surfaces/*.json"))):
+    d = json.load(open(f)); s, v = d.get("surface"), d.get("version", "?")
+    try: os.kill(d["pid"], 0); live = True
+    except Exception: live = False
+    want = WANT.get(s, "?")
+    state = "current" if v == want else f"BEHIND — expected {want}"
+    print(f"{s:<6} v{v:<8} {'running' if live else 'not running'}  {state}")
+PY
+```
+
+Then interpret it for the operator, because the three outcomes need different things from them and only one needs anything at all:
+
+- **`BEHIND` on a `running` surface** → this is the only case that needs the operator. Tell them to update **and reopen**: Glass through their IDE's extensions view (it auto-updates from Open VSX, but the new code does not load until a window reload), the App through *Check for Updates*. Say which surface and which version, not just "you're behind".
+- **`BEHIND` on one that is `not running`** → nothing is owed. The number is a record of that surface's *last start*, and it will announce the current version the next time they open it. Do not report this as a problem; reporting a stale record as drift is how a check trains someone to ignore it.
+- **No file for a surface, or `current` everywhere** → say nothing about it. A missing file means they never installed that surface.
+
+If every surface they have reads `current`, this entry asks nothing of them — say so plainly rather than leaving a check they think they still owe.
+
+### Two checks that could not see the defect they existed to catch, and a bus rule agents need
+
+> **What this delivers.** `test-identity-cycle.sh` shipped at mode `644` while all **26** of its siblings were `755`. `./hooks/claude-identity/test-identity-cycle.sh` answered *Permission denied* — while CI stayed green, because every CI caller invokes suites as `bash <path>`. The one way nobody ran it was the way an operator would type it. The same missed enumeration turned up one attribute over: `.gitattributes` listed extensionless hook executables **by name**, and the worst omission was already sitting there — **`hooks/git/pre-commit` had never been listed**, and git runs hooks through `sh`, so on Windows (where `core.autocrlf=true` is the default) the secret scan that gates every commit would simply not execute, with nothing printed to say so.
+
+**What you can now do:**
+- **Trust that a shell script in this repo can be run the way you'd type it.** Every tracked `.sh` is asserted at mode `755`, and every tracked executable must declare an `eol` — so the next one added cannot silently arrive un-runnable on Windows. (The narrow `.sh` rule is deliberate: the tempting *"anything with a shebang"* generalisation flags five files that are correctly non-executable, and a rule with known false positives gets muted.)
+- **Address the command bus correctly the first time.** `CLAUDE.md` § Spawning Sessions now carries the asymmetry your session needs *before* it reads the generated inbox README: a `send` or `kill` names a session that already exists, so a mis-race self-corrects and `surface` is only an optimization — but a **`spawn` cannot self-correct**, because the session doesn't exist yet and there is no host to compare against. It opens wherever it landed. So a spawn should carry `surface`, and your session can derive it by walking its own process ancestry against `~/.aios/surfaces/<surface>.json`, comparing **pids and never process names** — Glass runs inside whatever IDE you use, so a name list breaks the day you switch editors. **No match is a legitimate answer**, not an error.
+- **Stop reasoning about the two surfaces as one codebase.** There is **no Glass inside the App** — each has its own fulfiller, written independently against the same contract. That framing is not trivia: it is the reason their divergences kept recurring, and assuming one implementation is how you reason straight past the next one.
+
+**Action required — none.** If the operator keeps a fork, the `.gitattributes` change arrives with this sync and takes effect on their next checkout of those paths; nothing to tell them unless they ask.
+
+*Three defects in the new star-check were found by **running** it rather than reading it, and every one fails in the silent direction — the script still exits 0 and still prints a verdict, just the wrong one. A missing tracker read as "not declined", which would re-ask exactly the person who had already declined. An impossible `PUT` reported success. And the `key=value` output was not shell-quoted, so the `eval` snippet in its own caller documentation **executed the reason sentence as a command**. `tests/star-check.test.sh` covers all three and inverts its own assertions, so a version of it that could never fail would fail its own controls. A fourth was caught only by reading the PowerShell sibling back: `return` inside a `ForEach-Object` block returns from the **block**, so the Glass-detection helper looked right and would have answered wrong on every machine — it is now executed in CI under Windows PowerShell 5.1, the lane that exists because two earlier `.ps1` files shipped broken on inspection alone.*
+
+*Four more surfaced across two CI runs, every one of them the entry's own thesis pointed back at its author — and each was invisible on the authoring machine specifically.*
+
+- *The `.ps1` carried **553 non-ASCII bytes with no BOM**, which PS 5.1 corrupts at parse time. The existing guard caught it instantly; the local pre-flight that had cleared it used `grep`, which reports **zero matches** on a file it decides is binary — so the check meant to prevent this returned a false negative, and only a byte count was honest.*
+- *`"failed=$r:…"` is a **parse error**, not a runtime one: PowerShell reads `$r:` as a scope qualifier (the syntax of `$env:PATH`), so the entire file fails to load. Only a Windows runner could see it, which means anyone without one authors blind — so there is now a **static** check on the fast Ubuntu job that catches the class in seconds. Its first draft flagged its own explanatory comment, and the control meant to prove it worked was then measuring that comment rather than the code; it is comment-aware now, verified to fire on the real defect and to stay quiet on legitimate `$env:`/`$global:` and on prose describing the bug.*
+- *The suite's `unknown` assertions keyed on the **verdict**, but `unknown` has five causes. On a runner where `gh` is installed and unauthenticated, "missing tracker" and "not authenticated" are indistinguishable — so the assertion passed for entirely the wrong reason and its control correctly declared itself vacuous. They now assert on the `reason` field, the only part of the output that names **which** guard fired.*
+- *And the no-`gh` case hid the binary with `PATH=/usr/bin:/bin`, which works on macOS (Homebrew) and does nothing on Ubuntu, **where `gh` is `/usr/bin/gh`**. It now builds a PATH that provably lacks it and **verifies that precondition before asserting on it** — a test that cannot tell whether its own setup held is measuring nothing.*
+
+- *And the one that disabled the guard itself. Writing that static check as a Python heredoc inside a `run:` block put a literal doubled-brace token in the workflow — which Actions evaluates as an **expression**, one layer above YAML, substituting it into the raw string before any shell exists. An invalid expression does not fail a job; it produces **zero jobs**: `conclusion: failure · job count: 0 · check-runs: 0 · combined state: pending`, no `pull_request` run created at all, `gh pr checks` answering **"no checks reported"**, and the PR showing `mergeStateStatus: CLEAN` because GitHub sees no required checks. Green-looking, nothing run. `yaml.safe_load` passed and the extracted step executed and printed OK — both blind by construction. **A comment is not a safe place to write one either**, for the same reason, which the first fix promptly proved. So `tests/workflow-expressions.test.sh` validates every expression against the real context list, and its home is the **local** run loop before a push: a check inside the workflow cannot catch a defect that stops the workflow from running.*
+
+*Verified afterwards in both environments, including a deliberately unauthenticated `gh` that reproduces the CI runner: **32/32** in star-check, **15/15** suites, controls firing throughout.*
+
+*And the second implementation is itself a hazard, named rather than hoped away: `aios-star-check` exists twice because the Windows callers are an Electron app and a Node extension host, neither of which can assume Git Bash is on PATH. CI now asserts the two agree on the repo allowlist and all four verdicts — the check that makes the duplicate acceptable, and the one whose absence let the bus fulfillers drift.*
 
 ---
 
