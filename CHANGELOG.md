@@ -39,7 +39,19 @@
 
 ## 2026-08-13 — Four checks that reported green without measuring, and a setup step that could not fail loudly
 
-`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8 · 1c4d72d · a395d92 · 901b42d`
+`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8 · 1c4d72d · a395d92 · 901b42d · {PR-HEAD}`
+
+### The duplicate-detector answered SKIP for everyone — it was written with a bash-only loop
+
+> **What this delivers.** The provenance-scoped gate shipped hours earlier iterated its commit list with `for c in $RANGE`. **Under bash that word-splits and works; under zsh — the session shell — it does not**, so the loop body received the entire newline-separated list as one value, every lookup failed, the count stayed 0, and the gate answered **SKIP**. That is the *dangerous* direction: it would have suppressed every legitimate second close and **lost the block**, which is precisely the failure the gate's own design principle forbids (*degrade toward a block, never toward silence*).
+
+**What you can now do:**
+- **Close twice in one day again.** The loop uses the portable `printf | while IFS= read -r` form the rest of the framework already prescribes, so a genuine second close appends as intended.
+- **Trust the count.** It is computed via command substitution rather than incremented inside a piped `while` — that runs in a **subshell**, so the increments would have been discarded on exit even after the splitting was fixed. Two bugs, one line.
+
+**Action required — none.** If you closed a session twice today and the second block did not appear, this is why; re-running `/close-session` now works.
+
+*Caught by running the gate for a real close and reading a result that disagreed with the evidence in front of it: 18 commits in range, 4 of them mine and carrying the trailer, and the gate still said 0. **The 13-assertion suite passed the whole time, because it runs under bash.** Test 14 now runs under **zsh** and reproduces the broken form on purpose — the same lesson, and the same fix, as the `$LAYERS` pathspec earlier today.*
 
 ### Same-day snapshots no longer overwrite each other
 

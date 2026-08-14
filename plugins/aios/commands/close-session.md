@@ -73,15 +73,23 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
    #   · own close    = subject starts "session: " — bookkeeping, never "work"
    if [ -n "$STAMPED" ]; then
      RANGE=$(git -C "$HOME/aios" log --format='%H' "${STAMPED}..HEAD" 2>/dev/null)
-     TAGGED=$(printf '%s\n' "$RANGE" | grep -c . )                       # commits in range
-     MINE=0; ANYTAG=0
-     for c in $RANGE; do
+     # ⚠️ `printf | while read`, NEVER `for c in $RANGE` — the session shell is zsh, which does
+     # NOT word-split an unquoted expansion, so the loop body would receive the ENTIRE newline-
+     # separated list as ONE value, every `git log -1` would fail, MINE would stay 0, and the gate
+     # would answer SKIP — losing a legitimate second close. Same bug class as /aios:update Step 2.
+     # Counting via command substitution (not a bare `while` pipeline) because a piped `while` runs
+     # in a SUBSHELL, so `MINE=$((MINE+1))` inside one is discarded on exit.
+     ANYTAG=$(printf '%s\n' "$RANGE" | while IFS= read -r c; do
+       [ -n "$c" ] || continue
+       git -C "$HOME/aios" log -1 --format='%B' "$c" 2>/dev/null | grep -q '^AIOS-Session: ' && echo x
+     done | grep -c .)
+     MINE=$(printf '%s\n' "$RANGE" | while IFS= read -r c; do
+       [ -n "$c" ] || continue
        B=$(git -C "$HOME/aios" log -1 --format='%B' "$c" 2>/dev/null)
-       printf '%s' "$B" | grep -q '^AIOS-Session: ' && ANYTAG=1
        printf '%s' "$B" | grep -q "^AIOS-Session: ${SID}$" || continue   # not mine → ignore
        printf '%s' "$B" | head -1 | grep -qE '^session: ' && continue    # my own close → not work
-       MINE=$((MINE+1))
-     done
+       echo x
+     done | grep -c .)
      if [ "$ANYTAG" -eq 1 ]; then
        WORK=$MINE                                                        # precise path
      else
