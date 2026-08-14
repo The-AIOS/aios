@@ -37,7 +37,7 @@
 
 ## 2026-08-14 — The quota autopilot runs on Windows, and a credential guard that only covered one of two backends
 
-`hash: {PR-HEAD}` *(external contribution — PR #30)*
+`hash: 51e3dd6` *(external contribution — PR #30)*
 
 ### Windows: the identity manager claimed support and could not run at all
 
