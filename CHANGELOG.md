@@ -39,7 +39,23 @@
 
 ## 2026-08-13 — Four checks that reported green without measuring, and a setup step that could not fail loudly
 
-`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8 · 1c4d72d`
+`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8 · 1c4d72d · a395d92`
+
+### Your commits now say which session made them — and the duplicate-detector needed it
+
+> **What this delivers.** A vault is written by **several Claude sessions at once**, and git cannot tell them apart: same author, same committer, no distinguishing field. So anything asking *"did **I** do this?"* had to infer it from the commit **subject** — a convention, not a fact. `/close-session`'s duplicate-detector was the first consumer to hit the limit: it counted every commit that was not its own close-bookkeeping, so **a peer's commit read as "this session did work"** and a spurious re-fire would append a duplicate block anyway. Measured the day it shipped: one session had **10 non-close commits since its stamp and only 1 was its own.**
+
+**What you can now do:**
+- **Tell your sessions' commits apart.** `aios-commit` writes an `AIOS-Session:` trailer, so `git log --format=%B | grep AIOS-Session` answers *who made this* — useful well beyond this fix when several agents share one vault.
+- **Get the duplicate-detector you were promised.** It now counts only commits carrying **your** session id, so a peer working in parallel can no longer make a re-fire look like new work.
+- **Keep working exactly as before if you're not a session.** The trailer is **additive**: no `CLAUDE_CODE_SESSION_ID` → no trailer. A human at a terminal, a script, or an older Claude is unaffected, and a session id containing anything but letters, digits or hyphens is **rejected rather than written** (a multi-line value would otherwise forge a trailer line).
+- **Rely on a safe degradation.** If no commit in the range carries a trailer — a vault predating this — the gate falls back to the old coarse rule, which errs toward **appending**. A duplicated block is recoverable; a missing one is lost work.
+
+**Action required — none.** The trailer starts appearing on your next commit; nothing is rewritten.
+
+*Locked with 3 new assertions in `tests/aios-commit.test.sh` (**20 passed**) and 5 in `tests/close-session-idempotency.test.sh` (**13 passed**). **Test 10 asserts the previous rule answers differently on the same state** — a peer commit where the old gate says APPEND and the new one says SKIP — so the fix cannot pass vacuously.*
+
+*Found while closing the session that shipped the detector, by running its own gate and reading the 10 commits it counted. **Record provenance; do not infer it from a naming convention.***
 
 ### `/aios:update` was hiding new changelog entries and under-reporting what it synced
 
