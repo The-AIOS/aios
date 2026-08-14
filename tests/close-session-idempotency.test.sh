@@ -16,9 +16,10 @@
 # cannot happen is not a check. Every other test here is downstream of that one.
 
 set -u
-PASS=0; FAIL=0
+PASS=0; FAIL=0; SKIP=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n' "$1"; }
+sk(){ SKIP=$((SKIP+1)); printf '  skip %s\n' "$1"; }
 have(){ [ "$1" = "$2" ] && ok "$3" || { no "$3"; printf '       expected %s, got %s\n' "$2" "$1"; }; }
 
 WORK=$(mktemp -d) || { echo "cannot mktemp"; exit 1; }
@@ -175,6 +176,27 @@ git add "$NOTE"; git commit -q -m "session: 11:00 w"
 have "$(gate3 "$SID")" "SKIP" "12. no trailers in range → degrades to the coarse rule, still correct here"
 commit_as "" "feat: untagged peer work"
 have "$(gate3 "$SID")" "APPEND" "13. untagged work in range → APPEND (degrade toward a block, never silence)"
+
+# ---------------------------------------------------------------------------
+# TEST 14 — SHELL PORTABILITY, and it must run under ZSH to mean anything.
+# The shipped gate first used `for c in $RANGE`. Under bash that word-splits and
+# works; under zsh (the session shell) it does NOT, so the loop body gets the whole
+# newline-separated list as ONE value, every lookup fails, MINE stays 0 and the gate
+# answers SKIP — losing a legitimate second close. A bash-only suite passes on that
+# broken code, which is exactly how it shipped.
+# ---------------------------------------------------------------------------
+if command -v zsh >/dev/null 2>&1; then
+  Z=$(zsh -c '
+    cd '"$WORK"'
+    RANGE=$(git log --format=%H -3)
+    broken=0; for c in $RANGE; do git log -1 --format=%H "$c" >/dev/null 2>&1 || broken=1; done
+    fixed=$(printf "%s\n" "$RANGE" | while IFS= read -r c; do [ -n "$c" ] && git log -1 --format=%H "$c" >/dev/null 2>&1 && echo x; done | grep -c .)
+    echo "$broken:$fixed"' 2>/dev/null)
+  have "${Z%%:*}" "1" "14a. under zsh the bare for-loop DOES break (the bug, reproduced)"
+  have "${Z##*:}" "3" "14b. under zsh the printf|while form resolves all 3 commits"
+else
+  sk "14. zsh unavailable — the portability proof cannot run"
+fi
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1
