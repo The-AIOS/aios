@@ -353,6 +353,43 @@ jobs:
           fi
           echo "OK: all $(git ls-files -s | awk '$1=="100755"' | wc -l | tr -d ' ') tracked executables have an explicit eol"
 
+      - name: No .ps1 uses "$var:" with a non-scope prefix (5.1 parse error)
+        run: |
+          set -e
+          # `$r:` is not a typo PowerShell tolerates — it parses as a SCOPE QUALIFIER, the same
+          # syntax as $env:PATH or $global:x. With an unknown prefix the file does not fail at
+          # runtime, it fails to PARSE, so the entire script is dead on load. It cost a full CI
+          # cycle on a Windows runner to find one occurrence of it inside a double-quoted string.
+          #
+          # This is a static check on purpose: the Windows PowerShell 5.1 lane catches the same
+          # thing, but only after a Windows runner boots, and it is the ONLY lane that can — so
+          # anyone without one is authoring blind. Fourteen seconds on ubuntu closes that gap.
+          # The fix is always the same: write ${var} instead of $var before the colon.
+          # COMMENT-AWARE, and it has to be: the first draft flagged its own explanatory comment
+          # (which quotes the bad pattern in order to describe it), and — worse — the control
+          # that was supposed to prove the check works was then also measuring that comment
+          # rather than the code. A checker that cannot tell code from prose about code reports
+          # on the wrong thing twice.
+          python3 - <<'PYCHK'
+          import re, subprocess, sys
+          SCOPES = {"env","global","script","local","private","using","variable","function","alias","workflow"}
+          files = subprocess.run(["git","ls-files","*.ps1"], capture_output=True, text=True).stdout.split()
+          pat = re.compile(r'\$([A-Za-z_][A-Za-z0-9_]*):')
+          bad = []
+          for f in files:
+              src = open(f, encoding="utf-8", errors="replace").read()
+              src = re.sub(r'<#.*?#>', lambda m: "\n"*m.group(0).count("\n"), src, flags=re.S)  # block comments
+              for n, line in enumerate(src.split("\n"), 1):
+                  code = line.split("#", 1)[0]                                                   # line comments
+                  for m in pat.finditer(code):
+                      if m.group(1) not in SCOPES:
+                          bad.append(f"  {f}:{n}: ${m.group(1)}:  ->  use ${{{m.group(1)}}}:")
+          if bad:
+              print("::error::A .ps1 uses $var: with a prefix that is not a PowerShell scope. That is a PARSE error under 5.1 — the whole file fails to load, not just that line:")
+              print("\n".join(bad)); sys.exit(1)
+          print(f"OK: no .ps1 misuses the scope-qualifier syntax across {len(files)} files")
+          PYCHK
+
       - name: The two star-check implementations agree
         run: |
           set -e

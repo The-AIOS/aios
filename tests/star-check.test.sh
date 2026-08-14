@@ -85,8 +85,28 @@ fi
 out=$(AIOS_TRACKER="$T" AIOS_STAR_ASK=never bash "$SCRIPT" 2>/dev/null)
 check_reason "AIOS_STAR_ASK=never → unknown, from the AUTOMATION guard" unknown "AIOS_STAR_ASK=never" "$out"
 
-out=$(PATH=/usr/bin:/bin AIOS_TRACKER="$T" bash "$SCRIPT" 2>/dev/null)
-check_reason "no gh on PATH → unknown, from the GH guard" unknown "gh not installed" "$out"
+# HIDING gh PORTABLY. `PATH=/usr/bin:/bin` hides it on macOS (Homebrew puts it in
+# /opt/homebrew/bin) and does NOT hide it on Ubuntu, where gh IS /usr/bin/gh — so this
+# assertion silently exercised the "not authenticated" guard on CI instead of the
+# "not installed" one. Build a PATH that provably lacks gh but keeps what the script needs,
+# then VERIFY the absence before asserting on it: a test that cannot tell whether its own
+# precondition holds is measuring nothing.
+SBIN="$TMP/nogh"; mkdir -p "$SBIN"
+for c in grep sed awk date mktemp cat head tr cut; do
+  cp_path=$(command -v "$c" 2>/dev/null) && ln -sf "$cp_path" "$SBIN/$c"
+done
+# `bash` must be invoked by ABSOLUTE path, resolved BEFORE the PATH is narrowed — otherwise
+# the interpreter itself is looked up on the sandboxed PATH and the whole thing dies with
+# `bash: command not found` (exit 127, empty output). Loudly, at least: an empty output could
+# not be mistaken for a verdict, so the failure was visible rather than silent.
+BASH_ABS=$(command -v bash)
+if PATH="$SBIN" command -v gh >/dev/null 2>&1; then
+  bad "precondition failed: gh is still reachable on the sandboxed PATH, so the no-gh assertion would be meaningless"
+else
+  ok "precondition: gh is genuinely absent from the sandboxed PATH"
+  out=$(PATH="$SBIN" AIOS_TRACKER="$T" "$BASH_ABS" "$SCRIPT" 2>/dev/null)
+  check_reason "no gh on PATH → unknown, from the GH guard" unknown "gh not installed" "$out"
+fi
 
 echo "── 3. the verdict path ALWAYS exits 0 (the verdict is the output, not the status) ──"
 for env_desc in "AIOS_TRACKER=$TMP/does-not-exist" "AIOS_STAR_ASK=never AIOS_TRACKER=$T"; do

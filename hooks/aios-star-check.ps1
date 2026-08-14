@@ -148,7 +148,10 @@ function Invoke-StarPut {
       if ($raw) { $code = ($raw | Select-Object -First 1) -split '\s+' | Select-Object -Index 1 }
     } catch { $code = $null }
     if ($code -eq '204') { "starred=$r"; $ok++ }
-    else { "failed=$r:$(if ($code) { $code } else { 'no-response' })"; $bad++ }
+    # ${r} NOT $r -- PowerShell parses `$r:` as a SCOPE QUALIFIER (the same syntax as
+    # $env:PATH or $global:x), so the bare form is a parse error, not a runtime one: the whole
+    # file fails to load. Invisible without executing it, which is why this lane exists.
+    else { "failed=${r}:$(if ($code) { $code } else { 'no-response' })"; $bad++ }
   }
   "summary=$ok starred, $bad failed"
   if ($bad -gt 0) { exit 1 }
