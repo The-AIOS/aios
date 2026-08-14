@@ -39,7 +39,7 @@
 
 ## 2026-08-13 — Four checks that reported green without measuring, and a setup step that could not fail loudly
 
-`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8 · 1c4d72d · a395d92 · 901b42d · {PR-HEAD}`
+`hash: 200bec5 · 7b5a2d9 · 7055d09 · 9c95388 · 94963d8 · 1c4d72d · a395d92 · 901b42d · 88753eb`
 
 ### The duplicate-detector answered SKIP for everyone — it was written with a bash-only loop
 
