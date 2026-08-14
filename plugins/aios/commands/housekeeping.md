@@ -371,7 +371,7 @@ Synthesize a ≤100-word behavioral rule from the pattern description + the sour
 
 4. **Annotate the meta-pattern description** with the same graduation flag inline.
 
-5. **Snapshot `antifragile.md` before editing** (per CLAUDE.md observed-context rules). Save to `00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-antifragile.md` (suffix `b/c/...` if same-day snapshots already exist).
+5. **Snapshot `antifragile.md` before editing** (per CLAUDE.md observed-context rules). Save to `00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-antifragile.md`, applying CLAUDE.md § Session End's collision rule: destination exists + identical → done; exists + different → **next free letter** (`b`, `c`, …). _(This command carried the suffix convention alone for weeks — it is now the global rule, so the two cannot drift apart.)_
 
 **Evidence discipline:** show the entry numbers, dates, and the synthesized rule text. *"Meta-pattern Q has 5 entries (most recent #51, 1 day ago) — proposed rule reads: '{exact text}'"* beats *"Q is ready to graduate."*
 
