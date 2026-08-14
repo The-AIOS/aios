@@ -383,7 +383,15 @@ jobs:
                   code = line.split("#", 1)[0]                                                   # line comments
                   for m in pat.finditer(code):
                       if m.group(1) not in SCOPES:
-                          bad.append(f"  {f}:{n}: ${m.group(1)}:  ->  use ${{{m.group(1)}}}:")
+                          # Built by concatenation so the literal characters "${" and "{" are
+                          # never adjacent IN THIS FILE. Actions treats a doubled-brace token in
+                          # a run: block as an EXPRESSION, one layer ABOVE YAML, and substitutes
+                          # it into the raw string BEFORE any shell sees it — so an accidental one
+                          # makes the whole workflow invalid, and neither yaml.safe_load nor
+                          # executing the extracted step can detect that. A comment is not a safe
+                          # place to write one either, for exactly the same reason.
+                          sug = "$" + "{" + m.group(1) + "}"
+                          bad.append(f"  {f}:{n}: ${m.group(1)}:  ->  use {sug}:")
           if bad:
               print("::error::A .ps1 uses $var: with a prefix that is not a PowerShell scope. That is a PARSE error under 5.1 — the whole file fails to load, not just that line:")
               print("\n".join(bad)); sys.exit(1)
@@ -961,6 +969,13 @@ jobs:
         # removed it the failure would be mute: swap succeeds, log says rotated,
         # session keeps burning the capped account. This is the only sensor.
         run: bash tests/adoption-detector.test.sh
+
+      - name: every workflow expression names a real context
+        # THE ONE CHECK THAT CANNOT SAVE ITSELF, kept here anyway for the case where the file is
+        # still valid and a bad expression is added alongside. An INVALID expression produces
+        # zero jobs, so this step would never execute to report it — which is why the suite's
+        # real home is the local run loop, before the push. See the file header.
+        run: bash tests/workflow-expressions.test.sh
 
       - name: the star ask decides correctly about whether to ask
         # Every defect this suite covers fails in the SILENT direction — the script still

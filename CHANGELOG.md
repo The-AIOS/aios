@@ -76,7 +76,7 @@
 - **Get told the truth when it half-works.** If two of three succeed, the report names the one that didn't. A blanket "starred!" over a failure is a receipt for something that did not happen, which is the one output a framework built on receipts cannot ship.
 - **Never have an agent star anything for you.** GitHub's Acceptable Use Policies §4 name *"automated starring"* verbatim as rank abuse, enforced at org level — and a star is a public endorsement on your profile. It stays a keystroke. Automating it was considered and rejected the same hour.
 
-**Action required — check your surfaces are current.** As of this entry, **AIOS Glass is `v0.5.4`** and **AIOS App is `v0.8.6`**. Both shipped protocol changes today, and an old surface running against new instructions is exactly the drift this entry's other half is about. **Ask your Claude session to check rather than guessing** — each surface announces what it is *actually* running:
+**Action required — confirm the operator's surfaces are current, then tell them.** As of this entry, **AIOS Glass is `v0.5.4`** and **AIOS App is `v0.8.6`**. Both shipped protocol changes today, and an old surface running against new instructions is exactly the drift this entry's other half is about. Do not ask the operator which version they have and do not take a version number from prose — **run the check**, because each surface announces what it is *actually* running:
 
 ```bash
 python3 - <<'PY'
@@ -92,7 +92,13 @@ for f in sorted(glob.glob(os.path.expanduser("~/.aios/surfaces/*.json"))):
 PY
 ```
 
-`BEHIND` on a **running** surface → update it and **reopen**: Glass via your IDE's extensions view (it auto-updates from Open VSX but needs a window reload to take effect), the App via *Check for Updates*. `BEHIND` on one that is **not running** → the number is just a record of its last start; it will announce the current version next time you open it. No file at all for a surface → you don't have it installed, and nothing is owed. **Everyone whose output says `current` for what they have: nothing to do.**
+Then interpret it for the operator, because the three outcomes need different things from them and only one needs anything at all:
+
+- **`BEHIND` on a `running` surface** → this is the only case that needs the operator. Tell them to update **and reopen**: Glass through their IDE's extensions view (it auto-updates from Open VSX, but the new code does not load until a window reload), the App through *Check for Updates*. Say which surface and which version, not just "you're behind".
+- **`BEHIND` on one that is `not running`** → nothing is owed. The number is a record of that surface's *last start*, and it will announce the current version the next time they open it. Do not report this as a problem; reporting a stale record as drift is how a check trains someone to ignore it.
+- **No file for a surface, or `current` everywhere** → say nothing about it. A missing file means they never installed that surface.
+
+If every surface they have reads `current`, this entry asks nothing of them — say so plainly rather than leaving a check they think they still owe.
 
 ### Two checks that could not see the defect they existed to catch, and a bus rule agents need
 
@@ -103,7 +109,7 @@ PY
 - **Address the command bus correctly the first time.** `CLAUDE.md` § Spawning Sessions now carries the asymmetry your session needs *before* it reads the generated inbox README: a `send` or `kill` names a session that already exists, so a mis-race self-corrects and `surface` is only an optimization — but a **`spawn` cannot self-correct**, because the session doesn't exist yet and there is no host to compare against. It opens wherever it landed. So a spawn should carry `surface`, and your session can derive it by walking its own process ancestry against `~/.aios/surfaces/<surface>.json`, comparing **pids and never process names** — Glass runs inside whatever IDE you use, so a name list breaks the day you switch editors. **No match is a legitimate answer**, not an error.
 - **Stop reasoning about the two surfaces as one codebase.** There is **no Glass inside the App** — each has its own fulfiller, written independently against the same contract. That framing is not trivia: it is the reason their divergences kept recurring, and assuming one implementation is how you reason straight past the next one.
 
-**Action required — none.** If you keep a fork, the `.gitattributes` change reaches you with this sync and takes effect on your next checkout of those paths.
+**Action required — none.** If the operator keeps a fork, the `.gitattributes` change arrives with this sync and takes effect on their next checkout of those paths; nothing to tell them unless they ask.
 
 *Three defects in the new star-check were found by **running** it rather than reading it, and every one fails in the silent direction — the script still exits 0 and still prints a verdict, just the wrong one. A missing tracker read as "not declined", which would re-ask exactly the person who had already declined. An impossible `PUT` reported success. And the `key=value` output was not shell-quoted, so the `eval` snippet in its own caller documentation **executed the reason sentence as a command**. `tests/star-check.test.sh` covers all three and inverts its own assertions, so a version of it that could never fail would fail its own controls. A fourth was caught only by reading the PowerShell sibling back: `return` inside a `ForEach-Object` block returns from the **block**, so the Glass-detection helper looked right and would have answered wrong on every machine — it is now executed in CI under Windows PowerShell 5.1, the lane that exists because two earlier `.ps1` files shipped broken on inspection alone.*
 
@@ -114,7 +120,9 @@ PY
 - *The suite's `unknown` assertions keyed on the **verdict**, but `unknown` has five causes. On a runner where `gh` is installed and unauthenticated, "missing tracker" and "not authenticated" are indistinguishable — so the assertion passed for entirely the wrong reason and its control correctly declared itself vacuous. They now assert on the `reason` field, the only part of the output that names **which** guard fired.*
 - *And the no-`gh` case hid the binary with `PATH=/usr/bin:/bin`, which works on macOS (Homebrew) and does nothing on Ubuntu, **where `gh` is `/usr/bin/gh`**. It now builds a PATH that provably lacks it and **verifies that precondition before asserting on it** — a test that cannot tell whether its own setup held is measuring nothing.*
 
-*Verified afterwards in both environments, including a deliberately unauthenticated `gh` that reproduces the CI runner: **32/32**, controls firing in both.*
+- *And the one that disabled the guard itself. Writing that static check as a Python heredoc inside a `run:` block put a literal doubled-brace token in the workflow — which Actions evaluates as an **expression**, one layer above YAML, substituting it into the raw string before any shell exists. An invalid expression does not fail a job; it produces **zero jobs**: `conclusion: failure · job count: 0 · check-runs: 0 · combined state: pending`, no `pull_request` run created at all, `gh pr checks` answering **"no checks reported"**, and the PR showing `mergeStateStatus: CLEAN` because GitHub sees no required checks. Green-looking, nothing run. `yaml.safe_load` passed and the extracted step executed and printed OK — both blind by construction. **A comment is not a safe place to write one either**, for the same reason, which the first fix promptly proved. So `tests/workflow-expressions.test.sh` validates every expression against the real context list, and its home is the **local** run loop before a push: a check inside the workflow cannot catch a defect that stops the workflow from running.*
+
+*Verified afterwards in both environments, including a deliberately unauthenticated `gh` that reproduces the CI runner: **32/32** in star-check, **15/15** suites, controls firing throughout.*
 
 *And the second implementation is itself a hazard, named rather than hoped away: `aios-star-check` exists twice because the Windows callers are an Electron app and a Node extension host, neither of which can assume Git Bash is on PATH. CI now asserts the two agree on the repo allowlist and all four verdicts — the check that makes the duplicate acceptable, and the one whose absence let the bus fulfillers drift.*
 
