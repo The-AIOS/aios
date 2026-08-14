@@ -1,17 +1,17 @@
 <#
 .SYNOPSIS
-  aios-star-check — the in-product star ask, as a verdict. No UI, no prompt, no nag.
+  aios-star-check -- the in-product star ask, as a verdict. No UI, no prompt, no nag.
 
 .DESCRIPTION
   Windows sibling of hooks/aios-star-check. Same four verdicts, same fail-closed rule, same
   fixed repo allowlist, same three-state decline record in .aios-update.
 
-  WHY A SECOND IMPLEMENTATION EXISTS AT ALL — and why this one is defensible where others
+  WHY A SECOND IMPLEMENTATION EXISTS AT ALL -- and why this one is defensible where others
   were refused. The porting doctrine in this repo is deliberately narrow: secret-scan.sh was
   NOT ported because git invokes hooks through `sh`, and a second secret scanner is a drift
   hazard with a security blast radius. The consumer here is different. On Windows the callers
   are the App (Electron) and Glass (a Node extension host), and neither can assume Git Bash
-  is on PATH — a desktop-app user has no reason to have installed Git. A caller that cannot
+  is on PATH -- a desktop-app user has no reason to have installed Git. A caller that cannot
   invoke the script is not served by the script existing.
 
   The drift hazard is real anyway, and the header of the bash version says out loud not to
@@ -41,7 +41,7 @@ $ErrorActionPreference = 'Continue'
 $HomeDir = if ($env:HOME) { $env:HOME } else { $env:USERPROFILE }
 $Tracker = if ($env:AIOS_TRACKER) { $env:AIOS_TRACKER } else { Join-Path $HomeDir 'aios\.aios-update' }
 
-# ── The repo allowlist is FIXED and every entry is verified public ────────────────────
+# -- The repo allowlist is FIXED and every entry is verified public --------------------
 # Kept in lockstep with the bash version by a CI parity check. See that file's comment for
 # why `forum` is never listed (private: invisible to strangers, and its GET 404 is
 # indistinguishable from "not starred", so the tool would offer and fail forever) and why
@@ -58,7 +58,7 @@ function Write-Verdict {
     # Shell-quoted to match the bash sibling byte-for-byte in shape: its documented caller is
     # `eval "$(aios-star-check)"`, and an unquoted sentence in reason= gets EXECUTED. Keeping
     # both emitters identical means a caller cannot be written against one and break on the
-    # other — the divergence class the CI parity check exists to prevent.
+    # other -- the divergence class the CI parity check exists to prevent.
     # POSIX-shell escaping ('\''), NOT PowerShell's doubled-quote convention. The consumer of
     # key=value output is a shell `eval`, so the escape has to be the one a shell understands;
     # emitting PowerShell's would produce a string that only PowerShell can read back, from a
@@ -71,7 +71,7 @@ function Write-Verdict {
   exit 0
 }
 
-# ── Surface detection ────────────────────────────────────────────────────────────────
+# -- Surface detection ------------------------------------------------------------
 # PRIMARY is the surface's own announcement, not an install directory: Glass runs inside
 # whatever IDE the operator uses, and no hardcoded list survives them switching editors.
 function Test-SurfaceInstalled {
@@ -80,7 +80,7 @@ function Test-SurfaceInstalled {
   switch ($Surface) {
     'glass' {
       # PLAIN foreach, deliberately. `return $true` inside a ForEach-Object scriptblock
-      # returns from the SCRIPTBLOCK, not the function — the loop keeps going and the
+      # returns from the SCRIPTBLOCK, not the function -- the loop keeps going and the
       # function falls through to `return $false`, so Glass would read as not-installed on
       # every machine. It is the kind of defect that looks correct in review and is invisible
       # without a Windows box to run it on.
@@ -114,7 +114,7 @@ function Get-CandidateRepos {
   return $out
 }
 
-# ── Decline record: THREE-STATE — 0 declined · 1 not declined · 2 CANNOT TELL ────────
+# -- Decline record: THREE-STATE -- 0 declined - 1 not declined - 2 CANNOT TELL --------
 # "Cannot tell" must never collapse into "not declined": an unreadable tracker hides a prior
 # decline, and asking again is the nag the three-state design exists to prevent.
 function Get-DeclineState {
@@ -126,7 +126,7 @@ function Get-DeclineState {
 
 function Set-Decline {
   if (-not (Test-Path $Tracker)) {
-    Write-Error "aios-star-check: no tracker at $Tracker — nothing recorded"; exit 0
+    Write-Error "aios-star-check: no tracker at $Tracker -- nothing recorded"; exit 0
   }
   if ((Get-DeclineState) -eq 0) { 'already recorded'; exit 0 }
   # Writes ONLY the star-ask= line; never hash=, synced= or repo=. /aios:update owns hash=,
@@ -134,7 +134,7 @@ function Set-Decline {
   $kept = Get-Content $Tracker | Where-Object { $_ -notmatch '^star-ask=' }
   $kept += "star-ask=declined:$(Get-Date -Format 'yyyy-MM-dd')"
   Set-Content -Path $Tracker -Value $kept -Encoding UTF8
-  'recorded: star-ask=declined — this will not be asked again'
+  'recorded: star-ask=declined -- this will not be asked again'
   exit 0
 }
 
@@ -155,7 +155,7 @@ function Invoke-StarPut {
   exit 0
 }
 
-# ── Dispatch ─────────────────────────────────────────────────────────────────────────
+# -- Dispatch ------------------------------------------------------------
 if ($Decline) { Set-Decline }
 
 if ($Star) {
@@ -164,11 +164,11 @@ if ($Star) {
 }
 
 if ($env:AIOS_STAR_ASK -eq 'never') {
-  Write-Verdict 'unknown' @() 'AIOS_STAR_ASK=never — automated context'
+  Write-Verdict 'unknown' @() 'AIOS_STAR_ASK=never -- automated context'
 }
 switch (Get-DeclineState) {
   0 { Write-Verdict 'declined' @() 'decline on file in .aios-update' }
-  2 { Write-Verdict 'unknown'  @() "tracker unreadable at $Tracker — a prior decline would be invisible" }
+  2 { Write-Verdict 'unknown'  @() "tracker unreadable at $Tracker -- a prior decline would be invisible" }
 }
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
   Write-Verdict 'unknown' @() 'gh not installed'

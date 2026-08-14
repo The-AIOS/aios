@@ -41,6 +41,25 @@ bad()  { FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf
 check(){ # check <label> <expected-verdict> <actual-output>
   case "$3" in *"verdict='$2'"*) ok "$1" ;; *) bad "$1" "expected verdict='$2', got: $(printf '%s' "$3" | tr '\n' ' ')" ;; esac; }
 
+# check_reason <label> <expected-verdict> <substring the reason MUST contain> <output>
+#
+# WHY VERDICT ALONE IS NOT ENOUGH, and this is not theoretical — CI caught it.
+# `unknown` has FIVE causes, and asserting only the verdict cannot tell them apart. On a
+# runner with `gh` installed but unauthenticated, "missing tracker" and "not authenticated"
+# both print verdict='unknown'. So the missing-tracker assertion PASSED on CI for entirely
+# the wrong reason, and its control then reported itself vacuous — correctly. The `reason`
+# field is the only part of the output that identifies WHICH guard fired, so any assertion
+# about a specific guard has to read it.
+check_reason(){
+  case "$4" in
+    *"verdict='$2'"*)
+      case "$4" in
+        *"$3"*) ok "$1" ;;
+        *) bad "$1" "verdict='$2' as expected, but a DIFFERENT guard produced it — reason lacks '$3': $(printf '%s' "$4" | tr '\n' ' ')" ;;
+      esac ;;
+    *) bad "$1" "expected verdict='$2', got: $(printf '%s' "$4" | tr '\n' ' ')" ;;
+  esac; }
+
 mk_tracker() { printf 'repo=git@github.com:The-AIOS/aios.git\nhash=abc1234\nsynced=2026-01-01\n' > "$1"; }
 
 echo "── 1. the script is present and executable ──"
@@ -52,21 +71,22 @@ echo "── 2. fail closed: every inconclusive input yields 'unknown' ──"
 T="$TMP/t1"; mk_tracker "$T"
 
 out=$(AIOS_TRACKER="$TMP/does-not-exist" bash "$SCRIPT" 2>/dev/null)
-check "missing tracker → unknown (DEFECT 1: was 'starred')" unknown "$out"
+check_reason "missing tracker → unknown, from the TRACKER guard (DEFECT 1: was 'starred')" \
+  unknown "tracker unreadable" "$out"
 
 touch "$TMP/unreadable"; chmod 000 "$TMP/unreadable"
 if [ -r "$TMP/unreadable" ]; then
   ok "unreadable-tracker case skipped (running as root — chmod 000 is not enforced)"
 else
   out=$(AIOS_TRACKER="$TMP/unreadable" bash "$SCRIPT" 2>/dev/null)
-  check "unreadable tracker → unknown" unknown "$out"
+  check_reason "unreadable tracker → unknown, from the TRACKER guard" unknown "tracker unreadable" "$out"
 fi
 
 out=$(AIOS_TRACKER="$T" AIOS_STAR_ASK=never bash "$SCRIPT" 2>/dev/null)
-check "AIOS_STAR_ASK=never → unknown (automated context)" unknown "$out"
+check_reason "AIOS_STAR_ASK=never → unknown, from the AUTOMATION guard" unknown "AIOS_STAR_ASK=never" "$out"
 
 out=$(PATH=/usr/bin:/bin AIOS_TRACKER="$T" bash "$SCRIPT" 2>/dev/null)
-check "no gh on PATH → unknown" unknown "$out"
+check_reason "no gh on PATH → unknown, from the GH guard" unknown "gh not installed" "$out"
 
 echo "── 3. the verdict path ALWAYS exits 0 (the verdict is the output, not the status) ──"
 for env_desc in "AIOS_TRACKER=$TMP/does-not-exist" "AIOS_STAR_ASK=never AIOS_TRACKER=$T"; do
@@ -143,10 +163,16 @@ chmod +x "$BROKEN"
 if ! grep -q 'return 1$' "$BROKEN"; then
   bad "control could not be constructed — the sed target moved; fix this test"
 else
+  # Assert on the REASON, not the verdict. With the tri-state collapsed the tracker guard can
+  # no longer fire, so the reason must no longer mention it — whatever the next guard decides.
+  # Keying on verdict alone made this control environment-dependent: on a runner with an
+  # unauthenticated `gh`, the very next guard also returns `unknown`, so the control saw no
+  # change and declared the assertion vacuous. It was the CONTROL that was wrong, and it was
+  # right to complain.
   out=$(AIOS_TRACKER="$TMP/does-not-exist" bash "$BROKEN" 2>/dev/null)
   case "$out" in
-    *"verdict='unknown'"*) bad "CONTROL DID NOT FIRE — the missing-tracker assertion is vacuous" ;;
-    *)                     ok "control fires: collapsing the tri-state changes the verdict (assertion is real)" ;;
+    *"tracker unreadable"*) bad "CONTROL DID NOT FIRE — the tracker guard still fired with the tri-state collapsed, so the assertion is vacuous" ;;
+    *)                      ok "control fires: collapsing the tri-state stops the tracker guard from firing (assertion is real)" ;;
   esac
 fi
 # Invert section 7: a forbidden repo added to a copy must be caught.
