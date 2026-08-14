@@ -26,7 +26,41 @@ SCRIPT="$SELF_DIR/claude-identity.sh"
 [ -f "$SCRIPT" ] || { echo "claude-identity.sh not found beside this test"; exit 1; }
 
 FIX="$(mktemp -d 2>/dev/null || echo "${TMPDIR:-/tmp}/aios-identity-fixture.$$")"
-cleanup() { rm -rf "$FIX"; }
+# ── HARD SAFETY GATE — do not weaken, do not remove ──────────────────────────
+# CLAUDE_CONFIG_DIR scopes the FILES. It does NOT scope the macOS Keychain, which is
+# machine-global. So on Darwin this suite writes through to the operator's REAL
+# credential unless the service name is overridden — and section 7 deliberately writes
+# a MALFORMED blob. That is not theoretical: on 2026-08-14 running this suite on macOS
+# replaced a live credential with the literal string `not json at all`, and it was
+# recovered only because a captured identity happened to exist.
+#
+# So: point the tool at a throwaway service, then REFUSE TO RUN unless the override is
+# actually in effect. A test that merely *claims* isolation is the thing that caused the
+# incident; this asserts it.
+export AIOS_KEYCHAIN_SERVICE="aios-identity-test-$$"
+if ! grep -q 'AIOS_KEYCHAIN_SERVICE' "$SCRIPT"; then
+  echo "REFUSING TO RUN: $SCRIPT has no AIOS_KEYCHAIN_SERVICE override." >&2
+  echo "On macOS this suite would write to the operator's REAL Keychain credential." >&2
+  echo "Update the script (or run this suite only on a file-backend platform)." >&2
+  exit 2
+fi
+case "$(uname -s)" in
+  Darwin)
+    # Prove the throwaway service is empty before we start, and clean it up after —
+    # never touch the default service, never leave a stray keychain item behind.
+    security delete-generic-password -s "$AIOS_KEYCHAIN_SERVICE" >/dev/null 2>&1 || true
+    ;;
+esac
+
+
+cleanup() {
+  rm -rf "$FIX"
+  # Remove the throwaway keychain item too. Folded into the ONE cleanup function on
+  # purpose: a second `trap ... EXIT` silently REPLACES the first, so adding a separate
+  # trap for this would have leaked the item on every run.
+  [ -n "${AIOS_KEYCHAIN_SERVICE:-}" ] && \
+    security delete-generic-password -s "$AIOS_KEYCHAIN_SERVICE" >/dev/null 2>&1 || true
+}
 trap cleanup EXIT
 
 mkdir -p "$FIX/cfg"
@@ -55,11 +89,33 @@ mkcfg() {
   "projects": { "keep": "me" }
 }
 EOF
-  printf '{"claudeAiOauth":{"accessToken":"tok-%s","refreshToken":"ref-%s"}}' "$1" "$1" \
-    > "$FIX/cfg/.credentials.json"
+  local blob
+  blob=$(printf '{"claudeAiOauth":{"accessToken":"tok-%s","refreshToken":"ref-%s"}}' "$1" "$1")
+  printf '%s' "$blob" > "$FIX/cfg/.credentials.json"
+  # Seed the backend the PLATFORM actually uses, not just the file. CLAUDE_CONFIG_DIR
+  # scopes the file; on Darwin the tool reads the KEYCHAIN, so a file-only fixture left
+  # every read falling through to whatever the machine happened to hold. That is why this
+  # suite reported 25/25 on a file backend and only 22/25 on macOS — and the three that
+  # "passed" there passed by reading the operator's REAL credential, not the fixture.
+  case "$(uname -s)" in
+    Darwin) security add-generic-password -U -s "$AIOS_KEYCHAIN_SERVICE" -a "$USER" \
+              -w "$blob" >/dev/null 2>&1 ;;
+  esac
 }
 
 run() { CLAUDE_CONFIG_DIR="$FIX/cfg" USER_MD_PATH="$FIX/USER.md" bash "$SCRIPT" "$@"; }
+
+# Read the LIVE credential from whichever backend this platform uses. Asserting against
+# "$FIX/cfg/.credentials.json" directly is only correct on a file backend: on Darwin the
+# tool writes to the Keychain, so the file keeps whatever the fixture last put there —
+# which made one assertion fail and two others PASS for the wrong reason (they matched a
+# stale file rather than the credential the tool had actually written).
+cred_now() {
+  case "$(uname -s)" in
+    Darwin) security find-generic-password -s "$AIOS_KEYCHAIN_SERVICE" -w 2>/dev/null ;;
+    *)      cat "$FIX/cfg/.credentials.json" 2>/dev/null ;;
+  esac
+}
 
 pass=0; fail=0
 ok()   { echo "  PASS  $1"; pass=$((pass+1)); }
@@ -102,7 +158,7 @@ has "B userID correct" "uid-$B" "$(cat "$FIX/cfg/identities/$B/userID.txt" 2>/de
 echo "== 5. explicit switch B -> A =="
 out=$(run switch "$A" 2>&1); rc=$?
 exp_exit "switch to A exits 0" 0 $rc
-has "credential restored" "tok-$A" "$(cat "$FIX/cfg/.credentials.json")"
+has "credential restored" "tok-$A" "$(cred_now)"
 has "oauthAccount restored" "$A" "$(cat "$FIX/cfg/.claude.json")"
 has "userID restored" "uid-$A" "$(cat "$FIX/cfg/.claude.json")"
 has "mcpServers untouched" "obsidian" "$(cat "$FIX/cfg/.claude.json")"
@@ -112,14 +168,14 @@ has "projects untouched" "keep" "$(cat "$FIX/cfg/.claude.json")"
 echo "== 6. bare switch rotates A -> B =="
 out=$(run switch 2>&1); rc=$?
 exp_exit "rotation exits 0" 0 $rc
-has "landed on B" "tok-$B" "$(cat "$FIX/cfg/.credentials.json")"
+has "landed on B" "tok-$B" "$(cred_now)"
 
 echo "== 7. malformed blob must be REFUSED, leaving the live credential alone =="
 printf 'not json at all' > "$FIX/cfg/identities/$A/keychain.json"
 out=$(run switch "$A" 2>&1); rc=$?
 exp_exit "switch fails closed" 1 $rc
 has "says why" "malformed" "$out"
-has "live credential intact" "tok-$B" "$(cat "$FIX/cfg/.credentials.json")"
+has "live credential intact" "tok-$B" "$(cred_now)"
 
 echo
 echo "RESULT: $pass passed, $fail failed"

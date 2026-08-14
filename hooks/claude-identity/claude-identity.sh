@@ -169,7 +169,13 @@ else
   CLAUDE_JSON="$HOME/.claude.json"
 fi
 IDENTITIES_DIR="$CONFIG_DIR/identities"
-KEYCHAIN_SERVICE="Claude Code-credentials"
+# Overridable ONLY so the test suite can point at a throwaway service. The default is
+# byte-identical to the constant this replaced, so every operator's keychain entry is
+# unchanged. This exists because test-identity-cycle.sh claimed "never touches the
+# operator's real credentials" while CLAUDE_CONFIG_DIR does not scope the Keychain at
+# all — true on the file backend it was written against, false on macOS, where running
+# it overwrote a live credential with the string `not json at all` (2026-08-14).
+KEYCHAIN_SERVICE="${AIOS_KEYCHAIN_SERVICE:-Claude Code-credentials}"
 CACHE_FILE="$CONFIG_DIR/rate-limit-cache.json"
 WATCH_LOG="$CONFIG_DIR/quota-watch.log"
 SWAP_LOG="$CONFIG_DIR/swap-log.jsonl"
@@ -185,6 +191,15 @@ fi
 
 die() { echo "${RED}error:${RESET} $*" >&2; exit 1; }
 
+
+# ---- credential backend ----------------------------------------------------
+
+# NOTE ON PLACEMENT: this probe lives INSIDE the credential-backend range on purpose.
+# tests/credential-backend.test.sh extracts exactly this range with sed and sources it
+# alone under `set -u`, so a $PY defined above the marker is UNBOUND in that harness —
+# which broke four pre-existing assertions (round-trip, mode 600, malformed-refused,
+# mtime) the moment cred_write started using $PY instead of a literal python3. Every
+# other $PY consumer sits below this point, so nothing is left un-probed.
 # ---- python interpreter ------------------------------------------------------
 # Every helper below shells out to Python. On Windows `python3` is the Microsoft
 # Store redirector stub by default: invoking it prints an "install Python" notice
@@ -201,7 +216,6 @@ for _cand in python3 python "py -3"; do
 done
 [ -n "$PY" ] || die "no working Python found (tried python3, python, py -3). On Windows, disable the Store aliases: Settings > Apps > Advanced app settings > App execution aliases > turn OFF python.exe and python3.exe."
 
-# ---- credential backend ----------------------------------------------------
 # macOS stores the OAuth blob in Keychain. Linux and Windows store the SAME blob
 # as a plaintext JSON file at $CONFIG_DIR/.credentials.json, mode 600 — this is
 # Claude Code's own layout, not a choice made here, so libsecret/secret-tool or
@@ -256,17 +270,23 @@ cred_read() {
 
 cred_write() {
   local blob="$1"
+  # Validate BEFORE the write, for EVERY backend. On any path a bad blob would REPLACE
+  # a working credential with garbage, and the operator would discover it as a
+  # logged-out session rather than as an error from this tool.
+  #
+  # This guard used to live inside the `file` branch only, so on macOS a malformed blob
+  # went straight into the Keychain unchecked — the exact failure its own comment
+  # described, on the platform most operators are on. Found because
+  # test-identity-cycle.sh asserts the refusal and FAILED on macOS (22/25) while
+  # passing on the file backend it was authored against.
+  printf '%s' "$blob" | $PY -c "import json,sys; json.load(sys.stdin)" 2>/dev/null \
+    || die "refusing to write a malformed credential blob to $(cred_source)"
   case "$CRED_BACKEND" in
     keychain)
       security add-generic-password -U -s "$KEYCHAIN_SERVICE" -a "$USER" -w "$blob" \
         >/dev/null 2>&1 || return 1
       ;;
     file)
-      # Validate before the write. On this path a bad blob would REPLACE a
-      # working credential with garbage, and the operator would discover it as
-      # a logged-out session rather than as an error from this tool.
-      printf '%s' "$blob" | $PY -c "import json,sys; json.load(sys.stdin)" 2>/dev/null \
-        || die "refusing to write a malformed credential blob to $CRED_FILE"
       local tmp="$CRED_FILE.tmp.$$"
       ( umask 077; printf '%s' "$blob" > "$tmp" ) || return 1
       chmod 600 "$tmp"
