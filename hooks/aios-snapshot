@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# aios-snapshot — archive an observed-context file to the dated snapshot path, safely.
+#
+# WHY THIS EXISTS
+# ---------------
+# The snapshot destination is `logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-{filename}.md`.
+# That path is keyed by DAY and FILENAME with **no writer in it**, so a second session
+# archiving the same file on the same day lands on the first one's destination — and `cp`
+# exits 0, which makes a colliding write byte-for-byte indistinguishable from a successful
+# one. It surfaces later as a hole in the one artifact whose entire job is to survive.
+#
+# The written protocol (compare content -> identical means done, different means take the
+# next free letter) is correct, and it has held every time it was followed. It is also a
+# HUMAN-EXECUTED MUTEX around a path that should not need one, and it has two failure modes
+# that no amount of care removes:
+#
+#   1. It is not atomic. Two sessions can both observe that `…b-` exists and differs, both
+#      pick `c`, and both write it. Last writer wins, silently.
+#   2. It only compares against the BASE name. If `…b-` happens to hold identical content,
+#      the protocol as written still mints a `…c-` — a duplicate that looks like history.
+#
+# Neither is hypothetical. 2026-08-14 produced FOUR suffixed archives in one day across
+# three session blocks and two sessions; the day's last close found a `b` pair already
+# sitting on its destination. The one-session-per-day assumption the path encodes stopped
+# being true long ago.
+#
+# So: same protocol, same decisions, but taken UNDER A LOCK and compared against every
+# existing variant rather than only the base.
+#
+# USAGE
+#   aios-snapshot <file>...        archive each file, print what it did
+#   aios-snapshot --date YYYY-MM-DD <file>...   (testing / backfill; defaults to today)
+#   aios-snapshot --root <dir>     vault root (defaults to $HOME/aios)
+#
+# OUTPUT — one line per file, machine-readable first token:
+#   snapshot  <dest>     a new archive was written
+#   identical <dest>     an existing archive already holds this exact content; nothing written
+#   collision <dest>     content differed from every existing variant; took the next free letter
+#
+# Exit 0 when every file was handled (including `identical` — that is success, not a no-op
+# failure). Non-zero only when a file could not be archived.
+#
+# DELIBERATELY MECHANICAL: it archives what it is told. It does NOT decide whether a file is
+# a "stub" worth skipping — that is the caller's policy call, and inventing it here would
+# hide a skipped archive behind a tool that reports success.
+
+set -uo pipefail
+
+die(){ echo "aios-snapshot: $*" >&2; exit 1; }
+
+ROOT="${AIOS_ROOT:-$HOME/aios}"
+DATE=""
+FILES=()
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --date) shift; DATE="${1:-}"; [ -n "$DATE" ] || die "--date needs a value" ;;
+    --root) shift; ROOT="${1:-}"; [ -n "$ROOT" ] || die "--root needs a value" ;;
+    -h|--help) sed -n '2,40p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -*) die "unknown option '$1'" ;;
+    *)  FILES+=("$1") ;;
+  esac
+  shift
+done
+
+[ "${#FILES[@]}" -gt 0 ] || die "no files given"
+[ -n "$DATE" ] || DATE=$(date +%F)
+case "$DATE" in
+  [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) : ;;
+  *) die "--date must be YYYY-MM-DD, got '$DATE'" ;;
+esac
+MONTH="${DATE%-*}"
+
+DESTDIR="$ROOT/vault/00 - notes/logs/observed-snapshots/$MONTH"
+mkdir -p "$DESTDIR" || die "cannot create $DESTDIR"
+
+# ── The lock. Same shape as aios-commit's, and the same reasoning behind every branch:
+#    distinguish contention from a permanently-unwritable path by OBSERVATION, never by
+#    parsing mkdir's locale-dependent stderr. A check that knows only one spelling of what
+#    it forbids is not a check.
+#
+#    Scope: ONE lock for the whole snapshot directory, not one per file. Two sessions
+#    archiving *different* files still serialise, which costs milliseconds and removes a
+#    whole class of reasoning about per-file lock naming. Correctness over throughput for an
+#    operation that runs a handful of times a day.
+LOCK="$DESTDIR/.aios-snapshot.lock"
+LOCKED=0
+release(){ [ "$LOCKED" = 1 ] && { rm -rf "$LOCK" 2>/dev/null; LOCKED=0; }; }
+trap release EXIT INT TERM
+
+acquire(){
+  local tries=0 holder saw_lock=0
+  while ! mkdir "$LOCK" 2>/dev/null; do
+    if [ -d "$LOCK" ]; then
+      saw_lock=1
+      holder=$(cat "$LOCK/pid" 2>/dev/null || true)
+      if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+        rm -rf "$LOCK" 2>/dev/null; continue      # dead holder → reclaim
+      fi
+    else
+      holder=""
+    fi
+    tries=$((tries+1))
+    if [ "$saw_lock" -eq 0 ] && [ "$tries" -ge 20 ]; then
+      die "cannot create $LOCK — $tries attempts, no lock ever present: this is NOT contention. Is $DESTDIR writable?"
+    fi
+    [ "$tries" -gt 600 ] && die "lock timeout (held by pid ${holder:-unknown})"
+    sleep 0.1
+  done
+  echo "$$" > "$LOCK/pid"
+}
+
+same(){ cmp -s "$1" "$2"; }
+
+acquire; LOCKED=1
+
+RC=0
+for src in "${FILES[@]}"; do
+  if [ ! -f "$src" ]; then
+    echo "missing  $src" >&2; RC=1; continue
+  fi
+  base=$(basename "$src")
+
+  # Compare against EVERY existing variant, not just the base name. The manual protocol
+  # only ever looked at the base, so identical content already archived under `b` would
+  # still mint a `c` — a duplicate that reads as history. Checking all of them means a
+  # re-run is genuinely idempotent no matter which letter got there first.
+  found=""
+  for cand in "$DESTDIR/$DATE-$base" "$DESTDIR/$DATE"[b-z]"-$base"; do
+    [ -f "$cand" ] || continue
+    if same "$src" "$cand"; then found="$cand"; break; fi
+  done
+  if [ -n "$found" ]; then
+    echo "identical $found"
+    continue
+  fi
+
+  dest="$DESTDIR/$DATE-$base"
+  if [ ! -e "$dest" ]; then
+    cp -p "$src" "$dest" || { echo "failed   $src" >&2; RC=1; continue; }
+    echo "snapshot $dest"
+    continue
+  fi
+
+  # Base is taken and differs, and no existing variant matched → next free letter.
+  # This whole walk happens under the lock, which is the half the manual protocol
+  # could not have: two sessions could each observe the same free letter and both take it.
+  placed=""
+  for L in b c d e f g h i j k l m n o p q r s t u v w x y z; do
+    cand="$DESTDIR/$DATE$L-$base"
+    [ -e "$cand" ] && continue
+    cp -p "$src" "$cand" || break
+    echo "collision $cand"
+    placed=1
+    break
+  done
+  [ -n "$placed" ] || { echo "failed   $src (no free suffix a-z, or copy failed)" >&2; RC=1; }
+done
+
+release
+exit "$RC"

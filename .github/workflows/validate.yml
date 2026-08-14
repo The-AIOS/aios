@@ -977,6 +977,14 @@ jobs:
         # real home is the local run loop, before the push. See the file header.
         run: bash tests/workflow-expressions.test.sh
 
+      - name: the snapshot archiver survives concurrent writers
+        # AI-102's whole point. The suite injects a realistic decide-to-write window into a
+        # locked and an unlocked copy and races six writers through each: the unlocked control
+        # must LOSE data, or the locked result proves nothing. A first version of that test had
+        # no injected window, the control passed too, and it would have certified the lock on a
+        # race that never occurred.
+        run: bash tests/aios-snapshot.test.sh
+
       - name: the star ask decides correctly about whether to ask
         # Every defect this suite covers fails in the SILENT direction — the script still
         # exits 0 and still prints a verdict, just the wrong one. A missing tracker reading as
