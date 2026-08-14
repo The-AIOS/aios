@@ -186,6 +186,28 @@ if [ "${#PARENTS[@]}" -gt 0 ] && GIT_INDEX_FILE="$TMPIDX" git diff-index --quiet
 fi
 
 TREE=$(GIT_INDEX_FILE="$TMPIDX" git write-tree) || die "write-tree failed"
+
+# ── session provenance trailer ────────────────────────────────────────────────
+# WHY: a vault is written CONCURRENTLY by several Claude sessions, and git cannot
+# tell them apart — same author, same committer, no distinguishing field. Anything
+# that needs to ask "did *I* do this?" has been forced to infer it from the commit
+# SUBJECT, which is a convention, not a fact. /close-session's duplicate detector
+# was the first consumer to hit the limit: it counts commits that are not its own
+# close-bookkeeping, so a PEER's commit reads as "this session did work" and a
+# spurious re-fire appends a duplicate block anyway. Measured 2026-08-13: 10
+# non-close commits since one session's stamp, only 1 of them its own.
+# Record the provenance instead of inferring it. Additive: an empty CLAUDE_CODE_SESSION_ID
+# (a human at a terminal, a script, an older Claude) simply omits the trailer, and every
+# consumer MUST treat "no trailer" as unknown-not-mine and degrade to its old behaviour.
+if [ -n "${CLAUDE_CODE_SESSION_ID:-}" ]; then
+  case "$CLAUDE_CODE_SESSION_ID" in
+    *[!a-zA-Z0-9-]*) : ;;    # refuse anything that could forge a trailer line
+    *) MSG="$MSG
+
+AIOS-Session: $CLAUDE_CODE_SESSION_ID" ;;
+  esac
+fi
+
 # ${PARENTS[@]+"${PARENTS[@]}"} — PARENTS is EMPTY on a root commit (no HEAD yet), and bash 3.2
 # (the macOS system bash) treats "${arr[@]}" on an empty array as unbound under `set -u` → the
 # very first commit in a fresh repo aborts. The +alternate form is empty-safe on 3.2 and 4+.

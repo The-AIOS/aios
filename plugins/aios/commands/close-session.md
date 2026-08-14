@@ -68,13 +68,33 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
    PRIOR=$(grep -o "<!-- close-session: ${SID} @ [0-9a-f]* -->" "$NOTE" 2>/dev/null | tail -1)
    STAMPED=$(printf '%s' "$PRIOR" | sed -E 's/.* @ ([0-9a-f]*) -->/\1/')
 
-   # Has any NON-CLOSE work landed since that stamp? Every commit a close makes is
-   # prefixed "session: ", so excluding those isolates real work from the close's
-   # own bookkeeping.
+   # Did THIS SESSION do non-close work since that stamp?
+   #   · own commits  = carry `AIOS-Session: $SID` (stamped by aios-commit)
+   #   · own close    = subject starts "session: " — bookkeeping, never "work"
    if [ -n "$STAMPED" ]; then
-     WORK=$(git -C "$HOME/aios" log --format=%s "${STAMPED}..HEAD" 2>/dev/null | grep -cvE '^session: ')
+     RANGE=$(git -C "$HOME/aios" log --format='%H' "${STAMPED}..HEAD" 2>/dev/null)
+     TAGGED=$(printf '%s\n' "$RANGE" | grep -c . )                       # commits in range
+     MINE=0; ANYTAG=0
+     for c in $RANGE; do
+       B=$(git -C "$HOME/aios" log -1 --format='%B' "$c" 2>/dev/null)
+       printf '%s' "$B" | grep -q '^AIOS-Session: ' && ANYTAG=1
+       printf '%s' "$B" | grep -q "^AIOS-Session: ${SID}$" || continue   # not mine → ignore
+       printf '%s' "$B" | head -1 | grep -qE '^session: ' && continue    # my own close → not work
+       MINE=$((MINE+1))
+     done
+     if [ "$ANYTAG" -eq 1 ]; then
+       WORK=$MINE                                                        # precise path
+     else
+       # No commit in range carries a trailer → this vault predates the stamping,
+       # so provenance is unknowable. Degrade to the old coarse rule, which errs
+       # toward APPEND. Never toward skipping: a duplicate block is recoverable,
+       # a missing one is lost work.
+       WORK=$(printf '%s\n' "$RANGE" | while IFS= read -r c; do [ -n "$c" ] && git -C "$HOME/aios" log -1 --format=%s "$c"; done | grep -cvE '^session: ')
+     fi
    fi
    ```
+
+   > **Why this needed provenance rather than a better heuristic.** The first version counted every commit whose subject was not `session: `-prefixed — which correctly ignored *this* command's bookkeeping but counted **other sessions' work as mine**. In a vault written by several sessions at once that is not an edge case: measured 2026-08-13, one session had **10 non-close commits since its stamp and only 1 was its own**. A spurious re-fire would then append a duplicate on the strength of a peer's commit. Git cannot tell sessions apart on its own — same author, same committer — so `aios-commit` now stamps an `AIOS-Session:` trailer and this reads it. **Record provenance; do not infer it from a naming convention.**
 
    - **A prior stamp exists AND `$WORK` is 0** → nothing but this command's own commits have landed. This is a **duplicate**: skip the append, skip every step below, and say so plainly (*"already closed at {HH:MM}; no work since — not duplicating"*). Under `--auto` this is the normal outcome of a re-fire and must not read as an error.
    - **A prior stamp exists AND `$WORK` is ≥ 1** → real work landed since. This is a **legitimate second close**: proceed and append a new block. A long session that closes at noon, works on, and closes again at 18:00 is a case the gate must never block.

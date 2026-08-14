@@ -112,5 +112,69 @@ have "$(gate "$SID")" "APPEND" "7. legacy note with no stamp → APPEND"
 # ---------------------------------------------------------------------------
 have "$(gate "unknown")" "APPEND" "8. SID 'unknown' → APPEND (degrade toward a block, never lose one)"
 
+# ---------------------------------------------------------------------------
+# TESTS 9-12 — provenance. The v2 gate counted any non-"session:" commit, so a
+# PEER's commit read as "this session did work". Git cannot tell sessions apart,
+# so aios-commit stamps AIOS-Session: and the gate reads it.
+# ---------------------------------------------------------------------------
+SID2="aaaabbbb-cccc-dddd-eeee-ffff00001111"
+
+commit_as(){ # $1=session-id ("" = none) $2=subject
+  echo "$RANDOM" >> f; git add f
+  if [ -n "$1" ]; then git commit -q -m "$2
+
+AIOS-Session: $1"
+  else git commit -q -m "$2"; fi
+}
+
+# the v3 gate, transcribed from close-session.md Step 4.5
+gate3(){
+  local sid="$1" prior stamped range mine=0 anytag=0 b
+  prior=$(grep -o "<!-- close-session: ${sid} @ [0-9a-f]* -->" "$NOTE" 2>/dev/null | tail -1)
+  [ -z "$prior" ] && { echo APPEND; return; }
+  stamped=$(printf '%s' "$prior" | sed -E 's/.* @ ([0-9a-f]*) -->/\1/')
+  range=$(git log --format='%H' "${stamped}..HEAD" 2>/dev/null)
+  for c in $range; do
+    b=$(git log -1 --format='%B' "$c" 2>/dev/null)
+    printf '%s' "$b" | grep -q '^AIOS-Session: ' && anytag=1
+    printf '%s' "$b" | grep -q "^AIOS-Session: ${sid}$" || continue
+    printf '%s' "$b" | head -1 | grep -qE '^session: ' && continue
+    mine=$((mine+1))
+  done
+  if [ "$anytag" -eq 1 ]; then
+    [ "$mine" -eq 0 ] && echo SKIP || echo APPEND
+  else
+    local w
+    w=$(printf '%s\n' "$range" | while IFS= read -r c; do [ -n "$c" ] && git log -1 --format=%s "$c"; done | grep -cvE '^session: ')
+    [ "$w" -eq 0 ] && echo SKIP || echo APPEND
+  fi
+}
+
+# fresh note + a stamped close carrying provenance
+printf '# note\n' > "$NOTE"
+echo seed >> f; git add f; git commit -q -m "base"
+printf '## Session — 10:00 | work\n<!-- close-session: %s @ %s -->\nbody\n' "$SID" "$(git rev-parse HEAD)" >> "$NOTE"
+git add "$NOTE"; commit_as "$SID" "session: 10:00 work"
+
+# 9 — a PEER commits. This session did nothing → must SKIP.
+commit_as "$SID2" "feat: a different session's work"
+have "$(gate3 "$SID")" "SKIP" "9. a PEER's commit does NOT count as this session's work"
+
+# 10 — the v2 rule on that same state, to prove the test is not vacuous.
+have "$(gate "$SID")" "APPEND" "10. v2 rule says APPEND on that same state (the imprecision)"
+
+# 11 — this session then does real work → APPEND.
+commit_as "$SID" "feat: my own work"
+have "$(gate3 "$SID")" "APPEND" "11. this session's own non-close commit → APPEND"
+
+# 12 — untagged range (a vault predating the trailer) degrades to the coarse rule.
+printf '# note2\n' > "$NOTE"
+echo x >> f; git add f; git commit -q -m "base2"
+printf '## Session — 11:00 | w\n<!-- close-session: %s @ %s -->\nb\n' "$SID" "$(git rev-parse HEAD)" >> "$NOTE"
+git add "$NOTE"; git commit -q -m "session: 11:00 w"
+have "$(gate3 "$SID")" "SKIP" "12. no trailers in range → degrades to the coarse rule, still correct here"
+commit_as "" "feat: untagged peer work"
+have "$(gate3 "$SID")" "APPEND" "13. untagged work in range → APPEND (degrade toward a block, never silence)"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1

@@ -217,6 +217,32 @@ R=$(newrepo); ( cd "$R"; echo v1>f; git add -A; git commit -qm init; echo v2>f
   && ok "dead holder reclaimed and the commit landed" || no "reclaim broken by the classification change"
 rm -rf "$R"
 
+# ── session-provenance trailer (added 2026-08-13) ────────────────────────────
+# A vault is written by several Claude sessions at once and git cannot tell them
+# apart (same author, same committer). Consumers asking "did *I* do this?" were
+# forced to infer it from the commit SUBJECT — a convention, not a fact. This
+# records it. Additive by design: no env var → no trailer, so a human at a
+# terminal or an older Claude is unaffected.
+R=$(mktemp -d); ( cd "$R" && git init -q . && git config user.email t@t && git config user.name t \
+  && git config commit.gpgsign false && echo x > a.md && git add a.md && git commit -qm base ) >/dev/null 2>&1
+
+( cd "$R" && echo y > a.md && CLAUDE_CODE_SESSION_ID="sess-abc-123" "$AC" --no-push -m "feat: tagged" -- a.md >/dev/null 2>&1 \
+  && git log -1 --format='%B' | grep -q '^AIOS-Session: sess-abc-123$' ) \
+  && ok "session trailer written when CLAUDE_CODE_SESSION_ID is set" \
+  || no "session trailer missing when the env var is set"
+
+( cd "$R" && echo z > a.md && env -u CLAUDE_CODE_SESSION_ID "$AC" --no-push -m "feat: untagged" -- a.md >/dev/null 2>&1 \
+  && ! git log -1 --format='%B' | grep -q 'AIOS-Session' ) \
+  && ok "no session id → no trailer (additive, never required)" \
+  || no "a trailer appeared with no session id — the change must be additive"
+
+( cd "$R" && echo w > a.md && CLAUDE_CODE_SESSION_ID='bad
+AIOS-Session: forged' "$AC" --no-push -m "feat: hostile" -- a.md >/dev/null 2>&1 \
+  && ! git log -1 --format='%B' | grep -q 'AIOS-Session' ) \
+  && ok "a session id with illegal characters is REJECTED, not injected" \
+  || no "a multi-line session id forged a trailer line"
+rm -rf "$R"
+
 echo ""
 echo "── RESULT: $PASS passed, $FAIL failed  (bash $BASH_VERSION) ──"
 [ "$FAIL" = "0" ] || exit 1
