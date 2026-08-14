@@ -243,6 +243,67 @@ AIOS-Session: forged' "$AC" --no-push -m "feat: hostile" -- a.md >/dev/null 2>&1
   || no "a multi-line session id forged a trailer line"
 rm -rf "$R"
 
+# ── --vault must not say "nothing" when two reads disagree (added 2026-08-14) ─────────
+#
+# THE STATE: the real index holds content that is neither HEAD's nor the working tree's. Then
+# `git status` (index-based) reports the path as MM, while the sweep (`diff --name-only HEAD`,
+# working-tree-based) truthfully finds nothing differing from HEAD. Both reads are correct and
+# they contradict each other, and the old message — "no vault changes to commit" — asserted
+# something stronger than it had measured. From outside, indistinguishable from a sweep whose
+# pathspec cannot reach the file, which is exactly how an operator lost a session hunting a
+# sweep bug that did not exist. The sweep was byte-identical across the versions involved.
+#
+# Reported as "the sweep misses tracked dotfiles"; re-measured as "the index was lying". The
+# reporter could not reconstruct the state, so it is constructed here — deliberately, because a
+# fix for a state nobody can reproduce is a fix nobody can verify.
+R=$(mktemp -d "${TMPDIR:-/tmp}/ac-idx.XXXXXX")
+( cd "$R" && git init -q . && git config user.email t@t.io && git config user.name T \
+  && git config commit.gpgsign false && mkdir -p vault && echo A > vault/n.md \
+  && git add -A && git commit -qm base ) >/dev/null 2>&1
+
+# Construct it: index=B, worktree back to A, HEAD=A.
+( cd "$R" && echo B > vault/n.md && git add vault/n.md && echo A > vault/n.md ) >/dev/null 2>&1
+
+( cd "$R" && [ "$(git status --porcelain -- vault/ | wc -l | tr -d ' ')" = "1" ] \
+  && [ -z "$(git diff --name-only HEAD -- 'vault/')" ] ) \
+  && ok "fixture: status sees 1 path the sweep truthfully does not (the state is real)" \
+  || no "fixture did not build the desynced index — the assertions below prove nothing"
+
+OUT=$( cd "$R" && "$AC" --vault --no-push -m "should not commit" 2>&1 )
+printf '%s' "$OUT" | grep -q 'do not differ from HEAD' \
+  && ok "--vault names the contradiction instead of claiming there is nothing" \
+  || no "--vault printed a bare 'nothing to commit' over a state it could not explain: $OUT"
+printf '%s' "$OUT" | grep -q 'git reset' \
+  && ok "…and prescribes the remedy" || no "no remedy offered"
+( cd "$R" && [ "$(git rev-list --count HEAD)" = "1" ] ) \
+  && ok "…and commits nothing" || no "it committed something it should not have"
+
+# The remedy must actually work, and must not eat the working tree.
+( cd "$R" && git reset -q && [ -z "$(git status --porcelain -- vault/)" ] && [ "$(cat vault/n.md)" = "A" ] ) \
+  && ok "the prescribed 'git reset' clears it and preserves the working tree" \
+  || no "the advice in the message does not work — worse than no advice"
+OUT=$( cd "$R" && "$AC" --vault --no-push -m "noop" 2>&1 )
+printf '%s' "$OUT" | grep -q 'no vault changes to commit' \
+  && ok "genuinely clean still prints the plain message" || no "clean case regressed: $OUT"
+
+# CONTROL: machine-local noise is excluded by the sweep, so it must not trigger the warning —
+# otherwise the two reads are taken over different path sets, which is its own mismatch.
+( cd "$R" && mkdir -p vault/.obsidian && echo '{}' > vault/.obsidian/workspace.json \
+  && git add -f vault/.obsidian/workspace.json && git commit -qm ws \
+  && echo '{"a":1}' > vault/.obsidian/workspace.json && git add vault/.obsidian/workspace.json \
+  && echo '{}' > vault/.obsidian/workspace.json ) >/dev/null 2>&1
+OUT=$( cd "$R" && "$AC" --vault --no-push -m "noise" 2>&1 )
+printf '%s' "$OUT" | grep -q 'no vault changes to commit' \
+  && ok "a desynced EXCLUDED path does not trigger the warning (same scope both sides)" \
+  || no "excluded machine-local noise raised the warning: $OUT"
+
+# CONTROL: a real change must still commit — the guard sits on the empty-PATHS branch only.
+( cd "$R" && git reset -q && echo C > vault/n.md \
+  && "$AC" --vault --no-push -m "real" >/dev/null 2>&1 \
+  && [ "$(git show HEAD:vault/n.md)" = "C" ] ) \
+  && ok "a real change still commits normally" || no "the normal --vault path regressed"
+rm -rf "$R"
+
 echo ""
 echo "── RESULT: $PASS passed, $FAIL failed  (bash $BASH_VERSION) ──"
 [ "$FAIL" = "0" ] || exit 1

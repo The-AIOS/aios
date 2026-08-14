@@ -37,7 +37,7 @@
 
 ## 2026-08-14 — The quota autopilot runs on Windows, and a credential guard that only covered one of two backends
 
-`hash: 51e3dd6 · 600e642` *(`51e3dd6` is an external contribution — PR #30)*
+`hash: 51e3dd6 · 600e642 · 09af065` *(`51e3dd6` is an external contribution — PR #30)*
 
 ### Windows: the identity manager claimed support and could not run at all
 
@@ -99,6 +99,23 @@ Then interpret it for the operator, because the three outcomes need different th
 - **No file for a surface, or `current` everywhere** → say nothing about it. A missing file means they never installed that surface.
 
 If every surface they have reads `current`, this entry asks nothing of them — say so plainly rather than leaving a check they think they still owe.
+
+### `aios-commit --vault` said "nothing to commit" over a state it could not explain
+
+> **What this delivers.** An external contributor reported that the `--vault` sweep was missing tracked dotfiles under `vault/`. The reply blamed his stale copy — and the **date was right**, he was running a version from 70 minutes before the relevant fix. He then measured that this does not explain the symptom, and he was correct: `git diff 0d16853..HEAD -- hooks/aios-commit` is **empty on the sweep lines**. The sweep was byte-identical across those versions; the earlier fix had changed the real-index sync, not the sweep. So *"your copy was old"* was true and **not causal**, and four passing variants passed because not one of them reproduced the actual state.
+>
+> The actual state is that **`git status` and the sweep read different things.** With a drifted real index, status (index-based) reports the path as modified while the sweep (working tree vs HEAD) truthfully finds nothing — so `--vault` printed *"no vault changes to commit"*, which asserted something stronger than it had measured. Both reads are correct and they contradict each other, and from outside that is **indistinguishable from a sweep whose pathspec cannot reach the file** — which is exactly the wrong thing to go hunting. The symptom was already documented in this repo, in the index-sync fix's own commit message: *"`git status` reports `MM` indefinitely and reads as unpushed work that does not exist."*
+
+**What you can now do:**
+- **Stop chasing a sweep bug that isn't there.** When two reads of the repo disagree, `--vault` now names the contradiction and prescribes the remedy — `git reset`, which clears it and keeps the working tree — instead of reporting an empty result. Nothing is committed either way, but the operator is told *why*.
+- **Trust the plain message again.** *"No vault changes to commit"* now means only that. The check applies the **same scope and the same exclusions** as the sweep on both sides, so a desynced `workspace.json` — machine-local noise `--vault` ignores by design — does not raise it. Comparing two reads over different path sets would be its own measurement mismatch.
+- **Rely on the exit code not moving.** It stays `0`: the command did not fail, it declined to commit. `--vault` runs mid-ritual inside `/aios:close-session`, `/aios:close-day` and `/aios:update`, and a non-zero here would abort those chains over a cosmetic index state.
+
+**Action required — none.** If a session ever sees that message, run `git reset` in the vault and re-run the commit; the working tree is untouched by it.
+
+*The fix is the contributor's **revised** proposal, and it is better than either of the first two: do not detect a desynced index, and do not explain it — just notice that two reads of the same repo disagree, and say so. His original suggestion was that a sweep unable to reach something should say so; the correction is that the sweep **could** reach it, and the index was what lied. The state he hypothesised but could not reconstruct is now built explicitly in the suite (index=B, worktree=A, HEAD=A), because **a fix for a state nobody can reproduce is a fix nobody can verify**. Eight new assertions, including that the `git reset` the message prescribes actually works — advice that does not work is worse than no advice. Falsifiable: **26/28** against the pre-fix tree with the two behavioural assertions failing on the old message, 28/28 after, green under bash 3.2 too.*
+
+*One more from the same family, hit live during this release's own self-update: `/aios:update` **Step 2.5** told the run to delete the temp clone because *"the re-invoke will re-clone fresh"* — wording left over from a mechanism that had already been replaced by read-the-file-and-continue. There is no inner run, and **Step 6.5 asserts the clone exists and exits FATAL without advancing the tracker** when it is gone. Obeying that line aborted the sync at the reconcile on the one run where `update.md` itself changed — the run least able to afford stopping half-applied. The closing report line lost its "re-ran automatically" phrasing for the same reason: it makes a stalled sync read as a completed one.*
 
 ### Two checks that could not see the defect they existed to catch, and a bus rule agents need
 
