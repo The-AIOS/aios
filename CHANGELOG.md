@@ -35,6 +35,37 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-08-14 — The quota autopilot runs on Windows, and a credential guard that only covered one of two backends
+
+`hash: 51e3dd6` *(external contribution — PR #30)*
+
+### Windows: the identity manager claimed support and could not run at all
+
+> **What this delivers.** `claude-identity.sh` said *"Windows uses the same file layout as Linux"* and its credential backend genuinely detected Windows correctly — but **every subcommand failed there**, fail-closed, in three independent ways. `python3` on a default Windows install is the Microsoft Store **redirector stub**: it prints an "install Python" notice and exits non-zero, which killed `current_email()` (so `whoami`/`list`/`switch` never started) *and* killed the pre-write blob validation, whose failure trips `die` — so **a swap could never complete**. With a real interpreter found, `whoami` still died on POSIX paths (`/c/Users/you/.claude.json`) handed to a *native* Windows Python. And `grep -c .` exits 1 on zero matches, which under `set -e` aborted the function outright.
+
+**What you can now do:**
+- **Run the quota autopilot on Windows.** Task Scheduler wiring ships as `install-quota-watch.ps1` — the third sibling of the launchd plist and the systemd timer, with a mapping table in its header so a change to one can be mirrored. **No elevation required**, which took real digging: `Register-ScheduledTask` refuses unelevated (`0x80070005`) while `schtasks.exe /Create /XML` accepts the identical definition, and `<LogonTrigger>` turned out to be the *single* element demanding elevation — bisected element by element — so `RunAtLoad` parity is opt-in via `-WithLogonTrigger` and the default leans on `StartWhenAvailable`, the same gap systemd's `Persistent=true` covers.
+- **Get a real error instead of silence on a fresh install, on every platform.** The `grep -c .` fix is **not Windows-specific**: any operator without `## Anthropic accounts` in `USER.md` — the default state of every new install — got exit 1 and *no output*, instead of the "not listed in USER.md" branch written fifteen lines below for exactly that case.
+- **Stop being told to `brew install` things on Windows and Linux.** `mcps/setup.sh` fired two `brew` hints unconditionally, and its Chrome check was a bare `[ -d "/Applications/Google Chrome.app" ]` — so off macOS it **always** warned "Google Chrome not found" at operators who had Chrome. A false warning is worse than none, because it teaches you to ignore the installer.
+
+**Action required — only if you use more than one Anthropic account on Windows.** Install with `pwsh -File ~/aios/hooks/claude-identity/install-quota-watch.ps1`, verify with `-RunNow`, remove with `-Uninstall`. Everyone else: nothing.
+
+### The credential guard covered the file backend and not the Keychain
+
+> **What this delivers.** `cred_write()` validated the blob **only in its `file` branch**. On macOS — the Keychain path, where most operators are — a malformed blob went **straight in unchecked**, which is precisely the failure that branch's own comment describes: *"a bad blob would REPLACE a working credential with garbage, and the operator would discover it as a logged-out session rather than as an error from this tool."* Pre-existing, and found because the new test suite asserts the refusal and **failed on macOS while passing on the backend it was authored against**.
+
+**What you can now do:**
+- **Rely on the refusal on both backends.** Validation is hoisted above the backend switch, and the error names the actual store — `Keychain 'Claude Code-credentials'` or the file path.
+- **Run the credential test on your own Mac without risking your login.** `CLAUDE_CONFIG_DIR` scopes the *files*; it never scoped the **Keychain**, which is machine-global — so the suite wrote through to the real credential, and its section 7 deliberately writes a malformed blob. The service name is now overridable (**default byte-identical**, so no keychain entry moves) and **the suite refuses to run, exit 2, unless that override is in effect**. A test that merely claims isolation is what caused the incident; this asserts it.
+
+**Action required — none.** If you ran `test-identity-cycle.sh` on macOS before this sync, check that you are still logged in (`claude --version` then any prompt); a captured identity under `~/.claude/identities/` restores it if not.
+
+*Three things this shipped with, each verified rather than asserted: the suite now **seeds the platform's actual backend** (it previously seeded only the file, so on macOS three assertions passed by reading the operator's **real** credential and one could not pass at all — the reason a "25/25" read 22/25 there); a new **two-OS CI matrix**, because the backend is chosen by `uname` and a single-OS run certifies exactly one of them; and a CI step that **strips the override from a copy and requires exit 2**, so the safety gate is asserted rather than assumed. Confirmed not vacuous: 25/25 against the fixed script, **21 failures** against the unmodified one.*
+
+*Deliberately **not** ported, and the argument is the contribution: `hooks/git/secret-scan.sh` (git runs hooks through `sh`, and a second implementation of a secret scanner is a drift hazard with a security blast radius), `mcps/atlassian-mcp/run.sh` (an MCP launcher invoked via `bash`), and `mcps/setup.sh` (already worked under Git Bash — it needed its **advice** corrected, not a rewrite). That is the doctrine `install-git-hooks.ps1` already states, applied consistently.*
+
+**Still unverified, stated plainly:** a live two-account swap on Windows has **not** been run against real Anthropic credentials — the contributor's machine has a single account, so rotation is covered by the fixture only. `claude-switch` always writes `.claude.json.bak-claude-switch` before touching anything, so the first real rotation is a verification step rather than a leap. Noted in `SETUP.md` and the autopilot README.
+
 ---
 
 ## 2026-08-13 — Four checks that reported green without measuring, and a setup step that could not fail loudly

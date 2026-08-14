@@ -67,6 +67,38 @@ if [ -z "$PY" ]; then
   echo ""
 fi
 
+# Platform-correct install hint for a missing tool. The messages below used to say
+# "brew install X" unconditionally, which on Windows and most Linux boxes names a
+# package manager the operator does not have — a dead end dressed as instructions.
+# Same $PY/vbin lesson one layer up: the script already knew it runs on three
+# platforms, the ADVICE did not.
+pkg_hint() {
+  case "$(uname -s)" in
+    Darwin)               echo "brew install $1" ;;
+    MINGW*|MSYS*|CYGWIN*) echo "winget install $1" ;;
+    *)                    echo "your package manager, e.g. apt install $1" ;;
+  esac
+}
+
+# Chrome presence, per platform. The bare `[ -d "/Applications/Google Chrome.app" ]`
+# check is mac-only, so on Windows and Linux it ALWAYS failed and printed
+# "Google Chrome not found" at an operator who had Chrome installed — a false
+# warning is worse than no warning, because it teaches you to ignore the output.
+have_chrome() {
+  case "$(uname -s)" in
+    Darwin) [ -d "/Applications/Google Chrome.app" ] ;;
+    MINGW*|MSYS*|CYGWIN*)
+      [ -f "/c/Program Files/Google/Chrome/Application/chrome.exe" ] \
+        || [ -f "/c/Program Files (x86)/Google/Chrome/Application/chrome.exe" ] \
+        || [ -f "$LOCALAPPDATA/Google/Chrome/Application/chrome.exe" ] \
+        || command -v chrome >/dev/null 2>&1
+      ;;
+    *) command -v google-chrome >/dev/null 2>&1 \
+        || command -v google-chrome-stable >/dev/null 2>&1 \
+        || command -v chromium >/dev/null 2>&1 ;;
+  esac
+}
+
 # --- Google Workspace MCP: NOTHING TO INSTALL (runtime is `uvx workspace-mcp`, from PyPI) ---
 # This used to `python -m venv .venv && pip install -e .` against a vendored copy of the
 # upstream server. It built ~196MB per operator for code that the registration never ran:
@@ -117,7 +149,7 @@ fi
 if want atlassian-mcp && [ -d "$SCRIPT_DIR/atlassian-mcp" ]; then
   echo "→ atlassian-mcp..."
   if ! command -v uvx >/dev/null 2>&1 && ! command -v pipx >/dev/null 2>&1; then
-    echo "  ⚠ neither uvx nor pipx found — install one (brew install uv or brew install pipx), then re-run"
+    echo "  ⚠ neither uvx nor pipx found — install one ($(pkg_hint uv)), then re-run"
   else
     if command -v uvx >/dev/null 2>&1; then
       uvx --help mcp-atlassian >/dev/null 2>&1 || uvx mcp-atlassian --help >/dev/null 2>&1 || true
@@ -155,8 +187,8 @@ if want pdf-generator-mcp && [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && [ ! -d "$
   cd "$SCRIPT_DIR/pdf-generator-mcp"
   $PY -m venv .venv
   "$(vbin)/pip" install -r requirements.txt -q
-  command -v pandoc >/dev/null 2>&1 || echo "  ⚠ pandoc not found — brew install pandoc"
-  [ -d "/Applications/Google Chrome.app" ] || echo "  ⚠ Google Chrome not found — install from https://google.com/chrome"
+  command -v pandoc >/dev/null 2>&1 || echo "  ⚠ pandoc not found — $(pkg_hint pandoc)"
+  have_chrome || echo "  ⚠ Google Chrome not found — install from https://google.com/chrome"
   echo "  ✓ installed (requires pandoc + Chrome)"
 fi
 

@@ -723,6 +723,47 @@ jobs:
           print(f"OK: all bundled skill references across {len(agent_files)} agents resolve to skills/*/<name>/SKILL.md")
           PY
 
+  identity_backends:
+    name: Identity manager — both credential backends (${{ matrix.os }})
+    # Canonical-contract check, so it carries the fork guard like its siblings.
+    if: github.event.repository.fork != true
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Credential-cycle suite
+        shell: bash
+        run: |
+          set -e
+          # WHY BOTH OSes: the credential store is chosen by `uname` — Keychain on Darwin,
+          # a plaintext file everywhere else — so a single-OS run exercises exactly one
+          # backend and certifies nothing about the other. That is not hypothetical: this
+          # suite reported 25/25 against the file backend while, on macOS, three of its
+          # assertions were passing by reading the machine's REAL credential and one could
+          # not pass at all. Two lanes, or the guarantee is fiction.
+          echo "uname: $(uname -s)"
+          bash hooks/claude-identity/test-identity-cycle.sh
+
+      - name: The suite REFUSES to run without the keychain override (safety gate)
+        shell: bash
+        run: |
+          set -e
+          # The gate is the reason this suite is safe to run on a maintainer's own Mac.
+          # Assert it actually fires, rather than trusting that it is present: strip the
+          # override from a COPY and require exit 2.
+          cp -r hooks /tmp/nogate
+          sed -i.bak 's/^KEYCHAIN_SERVICE=.*/KEYCHAIN_SERVICE="Claude Code-credentials"/' \
+            /tmp/nogate/claude-identity/claude-identity.sh
+          if bash /tmp/nogate/claude-identity/test-identity-cycle.sh >/dev/null 2>&1; then
+            echo "::error::The suite RAN against a script with no AIOS_KEYCHAIN_SERVICE override. On macOS that writes to the operator's real credential."
+            exit 1
+          fi
+          echo "OK: the suite refuses to run when its isolation is not in effect"
+
   primitives:
     name: Commit primitives
     # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.

@@ -8,10 +8,21 @@
 # Anthropic accounts (e.g., a primary + an overflow to dodge the 5h/7d rate
 # limits). All state is self-contained in your vault + your Claude config dir.
 #
-# Platforms: macOS and Linux. The credential store is detected, not assumed —
-# Keychain on macOS, and on Linux the plaintext $CONFIG_DIR/.credentials.json
-# (mode 600) that Claude Code itself writes. Windows uses the same file layout
-# as Linux but has no scheduler wired here and is untested.
+# Platforms: macOS, Linux and Windows. The credential store is detected, not
+# assumed — Keychain on macOS, and on Linux/Windows the plaintext
+# $CONFIG_DIR/.credentials.json that Claude Code itself writes.
+#
+# Windows runs under Git Bash (which Git for Windows always ships) and has its
+# scheduler wired via install-quota-watch.ps1 — Task Scheduler, the sibling of the
+# launchd agent and the systemd user timer. Two caveats that do not apply
+# elsewhere:
+#   - `chmod 600` on the credential files is a NO-OP on NTFS. The blob is
+#     protected only by the ACL of your user profile, which is also exactly how
+#     Claude Code itself stores it. Nothing here weakens that; nothing strengthens
+#     it either. If that matters to your threat model, do not use a shared machine.
+#   - Rotation is exercised by test-identity-cycle.sh against a fabricated config
+#     dir on every platform, but a real two-account swap on Windows has not been
+#     run against live Anthropic credentials by the author of that port.
 #
 # 1. Identity: save/restore/rotate between Anthropic accounts.
 #    Swaps the credential blob + the oauthAccount object + userID in
@@ -92,6 +103,12 @@
 #   systemctl --user enable --now aios-claude-quota-watch.timer
 #   # headless box? `loginctl enable-linger $USER` so the timer survives logout
 #
+# Windows (Task Scheduler — no elevation needed):
+#   pwsh -File ~/aios/hooks/claude-identity/install-quota-watch.ps1
+#   pwsh -File ~/aios/hooks/claude-identity/install-quota-watch.ps1 -RunNow   # verify
+#   # remove with -Uninstall. The script explains why it uses schtasks.exe rather
+#   # than Register-ScheduledTask, and why the logon trigger is opt-in.
+#
 # Either way this is the SAFETY NET, not the detector. Real-time detection runs
 # from the statusLine pipe via _cache.py, which tightens to a 3s evaluation
 # interval as the account approaches its cap.
@@ -152,7 +169,13 @@ else
   CLAUDE_JSON="$HOME/.claude.json"
 fi
 IDENTITIES_DIR="$CONFIG_DIR/identities"
-KEYCHAIN_SERVICE="Claude Code-credentials"
+# Overridable ONLY so the test suite can point at a throwaway service. The default is
+# byte-identical to the constant this replaced, so every operator's keychain entry is
+# unchanged. This exists because test-identity-cycle.sh claimed "never touches the
+# operator's real credentials" while CLAUDE_CONFIG_DIR does not scope the Keychain at
+# all — true on the file backend it was written against, false on macOS, where running
+# it overwrote a live credential with the string `not json at all` (2026-08-14).
+KEYCHAIN_SERVICE="${AIOS_KEYCHAIN_SERVICE:-Claude Code-credentials}"
 CACHE_FILE="$CONFIG_DIR/rate-limit-cache.json"
 WATCH_LOG="$CONFIG_DIR/quota-watch.log"
 SWAP_LOG="$CONFIG_DIR/swap-log.jsonl"
@@ -168,7 +191,31 @@ fi
 
 die() { echo "${RED}error:${RESET} $*" >&2; exit 1; }
 
+
 # ---- credential backend ----------------------------------------------------
+
+# NOTE ON PLACEMENT: this probe lives INSIDE the credential-backend range on purpose.
+# tests/credential-backend.test.sh extracts exactly this range with sed and sources it
+# alone under `set -u`, so a $PY defined above the marker is UNBOUND in that harness —
+# which broke four pre-existing assertions (round-trip, mode 600, malformed-refused,
+# mtime) the moment cred_write started using $PY instead of a literal python3. Every
+# other $PY consumer sits below this point, so nothing is left un-probed.
+# ---- python interpreter ------------------------------------------------------
+# Every helper below shells out to Python. On Windows `python3` is the Microsoft
+# Store redirector stub by default: invoking it prints an "install Python" notice
+# and exits non-zero. That is not a cosmetic problem here -- it is fail-closed in
+# the worst place. `current_email()` dies, so `whoami`/`list`/`switch` never get
+# started; and cred_write()'s pre-write blob validation is a pipeline whose
+# failure trips `die`, so a swap can never complete. The tool reported itself as
+# "same file layout as Linux" while nothing in it could run.
+# Probe for a REAL interpreter -- same pattern mcps/setup.sh already uses for the
+# identical stub (see its $PY block). $PY is used UNQUOTED so `py -3` word-splits.
+PY=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PY="$_cand"; break; fi
+done
+[ -n "$PY" ] || die "no working Python found (tried python3, python, py -3). On Windows, disable the Store aliases: Settings > Apps > Advanced app settings > App execution aliases > turn OFF python.exe and python3.exe."
+
 # macOS stores the OAuth blob in Keychain. Linux and Windows store the SAME blob
 # as a plaintext JSON file at $CONFIG_DIR/.credentials.json, mode 600 — this is
 # Claude Code's own layout, not a choice made here, so libsecret/secret-tool or
@@ -181,6 +228,26 @@ case "$(uname -s)" in
   *)      CRED_BACKEND="file" ;;
 esac
 CRED_FILE="$CONFIG_DIR/.credentials.json"
+
+# ---- path form (Windows / Git Bash) -----------------------------------------
+# Under Git Bash $HOME is a POSIX path (/c/Users/you), and the helpers below embed
+# these paths in Python source handed to a NATIVE Windows interpreter, which cannot
+# resolve that form. It is the SECOND fail-closed Windows bug after the `python3`
+# stub: with a real interpreter found, `whoami` still died with
+#   FileNotFoundError: '/c/Users/you/.claude.json'
+# `cygpath -m` yields the mixed form (C:/Users/you/...) that BOTH bash and native
+# Python accept, so normalising the path variables ONCE here leaves every caller
+# below untouched. No-op off MSYS, and a no-op if cygpath is somehow absent (the
+# script then behaves exactly as it did before this block existed).
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    if command -v cygpath >/dev/null 2>&1; then
+      for _v in USER_MD CONFIG_DIR CLAUDE_JSON IDENTITIES_DIR CACHE_FILE WATCH_LOG SWAP_LOG CRED_FILE; do
+        eval "$_v=\$(cygpath -m \"\$$_v\")"
+      done
+    fi
+    ;;
+esac
 
 cred_source() {
   case "$CRED_BACKEND" in
@@ -203,17 +270,23 @@ cred_read() {
 
 cred_write() {
   local blob="$1"
+  # Validate BEFORE the write, for EVERY backend. On any path a bad blob would REPLACE
+  # a working credential with garbage, and the operator would discover it as a
+  # logged-out session rather than as an error from this tool.
+  #
+  # This guard used to live inside the `file` branch only, so on macOS a malformed blob
+  # went straight into the Keychain unchecked — the exact failure its own comment
+  # described, on the platform most operators are on. Found because
+  # test-identity-cycle.sh asserts the refusal and FAILED on macOS (22/25) while
+  # passing on the file backend it was authored against.
+  printf '%s' "$blob" | $PY -c "import json,sys; json.load(sys.stdin)" 2>/dev/null \
+    || die "refusing to write a malformed credential blob to $(cred_source)"
   case "$CRED_BACKEND" in
     keychain)
       security add-generic-password -U -s "$KEYCHAIN_SERVICE" -a "$USER" -w "$blob" \
         >/dev/null 2>&1 || return 1
       ;;
     file)
-      # Validate before the write. On this path a bad blob would REPLACE a
-      # working credential with garbage, and the operator would discover it as
-      # a logged-out session rather than as an error from this tool.
-      printf '%s' "$blob" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null \
-        || die "refusing to write a malformed credential blob to $CRED_FILE"
       local tmp="$CRED_FILE.tmp.$$"
       ( umask 077; printf '%s' "$blob" > "$tmp" ) || return 1
       chmod 600 "$tmp"
@@ -243,7 +316,7 @@ parse_accounts() {
 
 current_email() {
   [ -f "$CLAUDE_JSON" ] || die "$CLAUDE_JSON not found"
-  python3 -c "
+  $PY -c "
 import json
 d = json.load(open('$CLAUDE_JSON'))
 print(d.get('oauthAccount', {}).get('emailAddress', ''))
@@ -263,7 +336,7 @@ capture_current() {
   printf '%s' "$blob" > "$dir/keychain.json"
   chmod 600 "$dir/keychain.json"
 
-  python3 - <<PY
+  $PY - <<PY
 import json
 d = json.load(open('$CLAUDE_JSON'))
 with open('$dir/oauthAccount.json', 'w') as f:
@@ -290,7 +363,7 @@ restore_identity() {
   blob=$(cat "$dir/keychain.json")
   cred_write "$blob" || die "credential write failed ($CRED_BACKEND: $(cred_source))"
 
-  python3 - <<PY
+  $PY - <<PY
 import json, shutil
 with open('$CLAUDE_JSON') as f:
     d = json.load(f)
@@ -315,7 +388,12 @@ cmd_whoami() {
   local cur; cur=$(current_email)
   [ -n "$cur" ] || die "could not detect current account from $CLAUDE_JSON"
   local accts; accts=$(parse_accounts)
-  local total; total=$(printf '%s\n' "$accts" | grep -c .)
+  # `grep -c .` EXITS 1 on zero matches, and under `set -e` a failing command
+  # substitution in an assignment aborts the function -- so an operator who has
+  # not yet added `## Anthropic accounts` to USER.md got exit 1 and NO output at
+  # all, silently, instead of the "not listed in USER.md" branch fifteen lines
+  # below that was written for exactly that case. `|| true` restores the intent.
+  local total; total=$(printf '%s\n' "$accts" | grep -c . || true)
   local idx; idx=$(printf '%s\n' "$accts" | awk -v c="$cur" '$0==c {print NR; exit}')
   local next=""
   if [ -n "$idx" ] && [ "$total" -gt 1 ]; then
@@ -396,7 +474,7 @@ USAGE
 
   if [ -z "$target" ]; then
     local accts; accts=$(parse_accounts)
-    local total; total=$(printf '%s\n' "$accts" | grep -c .)
+    local total; total=$(printf '%s\n' "$accts" | grep -c . || true)   # see cmd_whoami: exits 1 on zero
     [ "$total" -ge 2 ] || die "need at least 2 accounts in USER.md to rotate (found $total)"
     local idx; idx=$(printf '%s\n' "$accts" | awk -v c="$cur" '$0==c {print NR; exit}')
     if [ -z "$idx" ]; then
@@ -429,7 +507,7 @@ SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 # We DO NOT chain into watch from here — statusline fires far too often for
 # that to be cheap. The launchd agent polls watch every 60s independently.
 cmd_cache() {
-  python3 "$SELF_DIR/_cache.py"
+  $PY "$SELF_DIR/_cache.py"
 }
 
 cmd_watch() {
@@ -438,10 +516,10 @@ cmd_watch() {
   if [ "${1:-}" = "--threshold" ]; then
     # Ask the process that actually enforces it. Reading a number out of this
     # file would just recreate the second source of truth we deleted.
-    python3 "$SELF_DIR/_watch.py" --threshold
+    $PY "$SELF_DIR/_watch.py" --threshold
     return
   fi
-  python3 "$SELF_DIR/_watch.py" "$0"
+  $PY "$SELF_DIR/_watch.py" "$0"
 }
 
 # ---- dispatch ----
