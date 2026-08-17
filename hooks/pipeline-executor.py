@@ -87,12 +87,12 @@ def log(msg):
     """
     global _log_broken
     try:
-        with open(LOG_PATH, "a") as f:
+        with open(LOG_PATH, "a", encoding="utf-8") as f:
             f.write(f"{datetime.now().isoformat()} | {msg}\n")
         # Rotate occasionally (check every call is cheap, rewrite is rare)
         if LOG_PATH.stat().st_size > 100_000:  # ~100KB
-            lines = LOG_PATH.read_text().splitlines()
-            LOG_PATH.write_text("\n".join(lines[-MAX_LOG_LINES:]) + "\n")
+            lines = LOG_PATH.read_text(encoding="utf-8").splitlines()
+            LOG_PATH.write_text("\n".join(lines[-MAX_LOG_LINES:]) + "\n", encoding="utf-8")
     except Exception as e:
         if not _log_broken:
             _log_broken = True
@@ -218,7 +218,13 @@ def parse_sources():
         log(msg)
         return config
 
-    content = SOURCES_PATH.read_text()
+    # encoding is EXPLICIT, not incidental: USER.md is UTF-8 (accents, emoji), but
+    # Python on Windows defaults read_text() to the locale codepage (cp1252 on a
+    # Western-European install), which raises UnicodeDecodeError on the first accented
+    # character and kills the executor before a single source loads. The crash is only
+    # written to the log, so the calling command reports zero API data with no visible
+    # cause.
+    content = SOURCES_PATH.read_text(encoding="utf-8")
 
     if _mentions_enabled(content, "Google Calendar"):
         config["configured"].add("calendar")
