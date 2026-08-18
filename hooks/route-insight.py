@@ -28,6 +28,14 @@ Exit codes: 0 = excised + validated; 2 = no/ambiguous match (no change);
 """
 import argparse, datetime, os, re, shutil, sys
 
+# Windows: stdout defaults to the locale codepage (cp1252 on a Western-European
+# install), so echoing an excised entry that contains an arrow, emoji or accented
+# character raises UnicodeEncodeError and aborts the excision. The file IO below is
+# already explicit UTF-8; only the report was not.
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 def is_top_bullet(ln):
     """A top-level list item: `- ` at column 0. Indented facets (`  - `) are body, not entries."""
     return bool(re.match(r"^- \S", ln))
