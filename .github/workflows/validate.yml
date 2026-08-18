@@ -1011,6 +1011,14 @@ jobs:
         # real home is the local run loop, before the push. See the file header.
         run: bash tests/workflow-expressions.test.sh
 
+      - name: /aios:update classifies a local-AHEAD file instead of downgrading it
+        # The command computed BASE and LOCAL and decided from those two alone, so "the operator
+        # improved this file" and "canonical also changed this file" were the same input. It took
+        # canonical either way — a silent downgrade that reported success. Replayed here from the
+        # real incident (graduate.md, 2026-08-15), with a control asserting the two-way logic still
+        # produces the downgrade on the same inputs.
+        run: bash tests/update-local-ahead.test.sh
+
       - name: the snapshot archiver survives concurrent writers
         # AI-102's whole point. The suite injects a realistic decide-to-write window into a
         # locked and an unlocked copy and races six writers through each: the unlocked control

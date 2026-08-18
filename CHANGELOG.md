@@ -35,9 +35,26 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
-## 2026-08-18 — Every spawned worker was launching on the previous Opus, and nothing said so
+## 2026-08-18 — The secret scanner had never once fired, the updater could not tell "behind" from "ahead", and every worker launched on the previous Opus
 
-`hash: TBD-ON-MERGE` <!-- date + hash set by the maintainer on merge; 08-18 is a placeholder -->
+`hash: 049d1a1 · d3d662b · f985f36` *(`049d1a1` and `d3d662b` are external contributions — PRs #37 and #39)*
+
+### The private-key pattern in the pre-commit secret scan has never matched anything
+
+> **What this delivers.** `hooks/git/secret-scan.sh` ran each pattern as `grep -InE "$pat" …`. One pattern begins with a dash — `-----BEGIN [A-Z ]*PRIVATE KEY-----` — so **grep parsed it as an option bundle rather than a pattern**, exited **2** (*TROUBLE*, which is not *"no match"*), wrote its usage message to a discarded stderr, and returned an empty `$match`. Empty is the caller's **clean** signal. So **every commit containing a PEM private-key header has passed this scanner since the pattern was written**, and there was no failure state to notice: an unguarded class and a clean repo produce byte-identical output.
+
+**What you can now do:**
+- **Rely on the private-key check for the first time.** Patterns are passed with `-e` so a leading dash is data, and — the general form of the bug — **grep exiting `>1` now fails closed.** An unusable scan can no longer read as a pass.
+- **Catch two more shapes:** `GOCSPX-…` (a Google OAuth **client secret**, distinct from the `AIza…` API key already covered, and what a Workspace/Drive/Gmail setup actually produces) and a 40-hex token inside a launchd plist — the shape AIOS's own scheduled routines store tokens in, and a plist is easy to commit by reflex.
+- **Trust that adding a pattern cannot silently re-open the gap.** `tests/secret-scan.test.sh` carries **one assertion per `PATTERNS` entry**, so a new pattern without its case fails the suite. Verified in both directions: **9 passed / 4 failed** against unpatched `HEAD`, **13 / 0** after.
+
+**Action required — if you have ever committed to a vault repo, this scanner was not checking for private keys.** It is worth one look at your own history: `git log -p -S'BEGIN RSA PRIVATE KEY' --all` (repeat for `OPENSSH`, `EC`, `DSA`). Almost certainly clean — but "almost certainly" was the scanner's only guarantee until now, and it was not the one it advertised.
+
+*The reporter cited **our own prose** back at us, correctly: `update.md` already warns that *"`diff` exits 0=same, 1=differ, 2=TROUBLE. Read as a boolean, TROUBLE becomes 'differ' … a comparison that never completed is indistinguishable from a real difference."* Same trap, different tool — and here it failed **permissive** rather than conservative, which is the worse direction. Independently reproduced before merging: the live scanner returned **exit 0 on a file containing a real PEM header.***
+
+*Worth recording plainly: this same file was edited four days earlier to fix its line endings so the hook would execute on Windows. The **delivery** of the check was repaired while its **content** was broken, and nobody looked at whether the patterns fired. A check can be present, installed, invoked, and still be measuring nothing.*
+
+### Every spawned worker was launching on the previous Opus, and nothing said so
 
 > **What this delivers.** The `spawn` / named-session wrappers pass an explicit `--model` flag, because `/config` and `/model` are session-scoped and do not propagate to spawned children. That flag's default was still `claude-opus-4-8[1m]`. So an operator whose own session had already moved to Opus 5 kept getting the previous generation in **every worker they spawned** — and the wrapper is precisely the surface where that is invisible: the terminal opens, the session greets, the work gets done, and nothing anywhere names the model. The default moves to `claude-opus-5[1m]`. The `$CLAUDE_MODEL` override is unchanged.
 
@@ -54,6 +71,30 @@
 *Scope is the wrappers and what documents them. The vendored `skills/anthropic/claude-api/*` references stay untouched — they track Anthropic's upstream skill and are a separate decision, exactly as the 2026-05-28 entry recorded. `_resume.py` is unaffected: it inherits the model from the running session's process args and hard-codes nothing.*
 
 *What was **not** tested: the PowerShell path. `.ps1` carries the same one-line default and was mirrored, not executed — there is no Windows machine behind this change, and claiming it because the edit looks identical would be the wrong shape of confidence. Everything else was verified on Linux (bash 5.2), where `tests/install-wrappers.test.sh` passes 20/20 after the edit. Worth stating plainly: nothing here is a platform claim, so nothing here earns a new CI lane — the existing suite covers the file and the one fact that could be wrong is the model id, which is verified above by measurement rather than by a test that would only re-assert the string.*
+
+### `/aios:update` could not tell a stale file from a newer one
+
+> **What this delivers.** The three-way compare fetched the baseline and the local copy and decided from those two, so **"the operator improved this file" and "canonical also changed this file" were the same input** — and it took canonical either way. For a consumer that is exactly right. For anyone whose vault is *upstream* of canonical — the framework author, or a fork operator who improves a command before canonical receives it — it is a **silent downgrade that reports success**, leaving them to re-apply the same improvement on every sync, forever. The backup preserved the bytes and did nothing about the downgrade.
+
+**What you can now do:**
+- **Keep your own improvements across a sync.** The compare now asks one further question, from data it already had: **did canonical actually change this file?** If it did not, your copy is ahead and is kept — reported as *"kept your newer version"*. That branch can only ever **prevent** a write, so it adds no new failure mode.
+- **Know the limit, because it is stated rather than implied.** When **both** sides moved, the command still backs up and takes canonical. Distinguishing a genuine merge there needs a decision ledger, and the RFC's author reported a flaw in their own: a keep-local decision records the verdict but not the evidence, so one partial reading of a diff **suppressed a real upstream improvement for seven days**, indistinguishably from a complete reading. A mechanism whose known failure mode is *hiding upstream changes*, inside the command whose entire job is delivering them, trades a loud problem for a quiet one. Deliberately not built.
+
+**Action required — none.**
+
+*Not hypothetical, and the instance is ours: `graduate.md` was improved in a vault on 08-15 and the next sync overwrote it, reported as a "personalization". `tests/update-local-ahead.test.sh` replays that exact case and includes a control confirming the two-way logic still produces the downgrade on the same inputs.*
+
+### `/aios:compact` had a lever with no gate, and `/aios:housekeeping` copied the bound instead of pointing at it
+
+> **What this delivers.** Two findings from a real compaction pass. `housekeeping.md` restated the `antifragile.md` volume bound inline **while naming `/aios:compact` as the source of truth in the same sentence** — two homes for one number, with a comment asserting they agreed. When the reporter re-aimed the bound (which TIER 0's own measurement invites), compact honoured the override and housekeeping kept flagging the retired number: **a false 🔴 finding, an approved remediation scope, and a full worker session spent condensing a file that was inside its real bound** — with the disproof one grep away.
+
+**What you can now do:**
+- **Re-aim the bound once and have both commands agree.** `housekeeping.md` now **points** at Step 3.5 and honours any `USER.md` override, instead of restating numbers. A restated constant is a second implementation; the problem is not that it is wrong today but that nothing keeps it right tomorrow.
+- **See which lever to reach for.** Step 3.5a now measures the **meta-pattern index** alongside the whole file and reports both: index large relative to the file → TIER 0 (relocate); file large with a small index → condense. **Reported, not enforced** — the whole-file numbers remain the gate, because canonical's § Session Start reads every observed file *in full*, so as canonical ships the whole file *is* the per-read cost and an index bound would gate on a reading model canonical does not implement.
+
+**Action required — none.**
+
+*TIER 0's rationale is corrected in the same pass, because the reporter's measurement exposed it: it claimed a long argument in the index *"costs its full weight on every single read"*, which is only true for a vault that **tiers** its session-start reading. The lever is right either way; the justification had quietly assumed a reading model canonical does not implement. The honest form is that relocation shrinks the part most likely to be **re-read** — and becomes a per-session saving outright for anyone who tiers.*
 
 ---
 
