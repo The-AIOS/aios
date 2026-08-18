@@ -37,7 +37,7 @@
 
 ## 2026-08-18 — The secret scanner had never once fired, the updater could not tell "behind" from "ahead", and every worker launched on the previous Opus
 
-`hash: 049d1a1 · d3d662b · f985f36` *(`049d1a1` and `d3d662b` are external contributions — PRs #37 and #39)*
+`hash: 049d1a1 · d3d662b · f985f36 · 0bbe49a` *(`049d1a1` and `d3d662b` are external contributions — PRs #37 and #39)*
 
 ### The private-key pattern in the pre-commit secret scan has never matched anything
 
@@ -83,6 +83,17 @@
 **Action required — none.**
 
 *Not hypothetical, and the instance is ours: `graduate.md` was improved in a vault on 08-15 and the next sync overwrote it, reported as a "personalization". `tests/update-local-ahead.test.sh` replays that exact case and includes a control confirming the two-way logic still produces the downgrade on the same inputs.*
+
+### And the bound had a THIRD copy — in the file every session loads at startup
+
+> **What this delivers.** The fix above removed the volume bound's copy from `housekeeping.md` and the issue was closed as resolved. It was not resolved: **`CLAUDE.md` still stated `~45k tokens (≈1,000 lines), or ~120 entries`** — and that is the worst of the three places to leave it, because `CLAUDE.md` is loaded by every session at startup, *before* anything opens `compact.md`. A stale bound there looks more authoritative than the real one.
+
+**What you can now do:**
+- **Re-aim the bound in one place and have every command follow.** `CLAUDE.md` now points at `/aios:compact` Step 3.5 and says why, so the next person tempted to restate a number there sees the reason not to.
+
+**Action required — none.**
+
+*Worth recording how it was found, because the method is the transferable part. The reporter's closing line was: "a grep for other places canonical restates a bound that a sibling file owns would likely be worth it — this is a shape, not an instance." Running it surfaced **13 bound-shaped values living in more than one file** — including the one that had just been declared centralised. The question "is this class closed?" had been answered from the file that was just edited rather than from the class, which is the same shape as every other finding in this entry: a check consulted where the answer was already known to be yes. The remaining 12 are filed with the measurement attached rather than fixed in a hurry — several are legitimate restatements in prose, and telling those apart needs reading, not `sed`.*
 
 ### `/aios:compact` had a lever with no gate, and `/aios:housekeeping` copied the bound instead of pointing at it
 
