@@ -294,6 +294,40 @@ jobs:
           done
           echo "OK: all 6 agent bundles present at agents/aios/{bundle}/ with README.md, and agents/_index.md is in place"
 
+      - name: No root doc claims a surface is limited to one platform
+        run: |
+          set -e
+          # WHY: SETUP.md told Windows and Linux operators "The AIOS App is macOS-only for now"
+          # for THREE DAYS after both platforms shipped (Linux v0.8.2 on 08-12, Windows v0.8.3 on
+          # 08-13). A Windows visitor following it was routed to install an IDE *and* an extension
+          # when one installer would do — the "download, wizard, working" bar pointing backwards.
+          # It was found by watching a real person onboard, which is the expensive way to find it.
+          #
+          # This is the second time in one week a doc outlived a shipped platform, so the class
+          # gets a check rather than another correction. A platform-exclusivity claim about our own
+          # surfaces is a fact with an expiry date, and the docs cannot know when it expired.
+          #
+          # Deliberately NARROW: it forbids the exclusivity CLAIM, not the platform names. Naming
+          # macOS, Windows or Linux is normal and necessary in an install guide; asserting a
+          # surface exists on only one of them is the thing that rots.
+          #
+          # CHANGELOG.md is EXCLUDED, and not as a convenience. It is append-only history, so an
+          # entry describing what was true on its own date is correct BY DEFINITION — `843` reads
+          # "The app is macOS-only today", which was accurate when written and is evidence now.
+          # Rewriting it to satisfy a check would be editing the record to make the present tidy.
+          # Caught by this check's own control on its first run, which flagged exactly that line.
+          BAD=""
+          for f in $(git ls-files '*.md' | grep -v '/' | grep -v '^CHANGELOG.md$'); do
+            hits=$(grep -nEi '(app|glass|aios)[^.]{0,24}\bis (macos|mac|windows|linux)-only' "$f" || true)
+            [ -n "$hits" ] && BAD="$BAD$f:"$'\n'"$hits"$'\n'
+          done
+          if [ -n "$BAD" ]; then
+            echo "::error::A root doc asserts one of our surfaces is limited to a single platform. If that was true when written, it has an expiry date — check what actually ships before re-asserting it:"
+            printf '%s' "$BAD"
+            exit 1
+          fi
+          echo "OK: no root doc claims a single-platform limitation"
+
       - name: Every tracked .sh carries the exec bit
         run: |
           set -e

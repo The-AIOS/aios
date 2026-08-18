@@ -273,7 +273,9 @@ Structure:
 {Today's meetings and time-bound events from all configured Google Calendars, merged chronologically. If multiple accounts are configured, tag personal events with [personal] to distinguish from work events. Skip all-day non-task events. Skip calendars marked as "Skip" in USER.md Sources. Format: HH:MM – HH:MM — Event name. If no events, write "No events today."}
 
 ## Slack triage
-{Scan the pre-loaded Slack data (unreads + daily recap) for anything that needs the user's attention. Two checks:
+{**OMIT THIS ENTIRE SECTION — heading included — when Slack is not a configured source.** The executor reports each source as configured or not; if Slack is absent from it, or `USER.md` has no Slack source, write nothing at all here. Do not render the heading, do not render an empty state, and above all do not render the clean line: **"✅ Sin unreads ni action items pendientes en Slack" is a green checkmark asserting a measured clean state, and for an operator who declined Slack it asserts a state that was never measured.** That is worse than noise — it is a confident report about nothing, and it lands in the FIRST daily note the operator ever reads, exactly while they are deciding whether this system is actually looking at them. Hit live by both new operators on day one (2026-08-15); neither uses Slack, both declined the connection, and both got the tick. The same source-configuration signal is already read further up this command — use it here too rather than assuming presence.
+
+Scan the pre-loaded Slack data (unreads + daily recap) for anything that needs the user's attention. Two checks:
 
 1. **Unreads:** If there are unread conversations, list each with a one-line summary and whether it needs a response. If no unreads, say "Sin unreads."
 2. **Action items from recap:** Scan the daily recap for messages that require the user to do something — questions directed at them, requests, decisions pending their input, approvals needed. Extract each as a one-liner with the person who needs the response. If nothing needs action, say "Sin action items pendientes."

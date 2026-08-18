@@ -35,6 +35,51 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-08-17 — A first run that stopped asserting things it had never measured
+
+`hash: 3d93fe9 · f202b3b` *(`3d93fe9` is an external contribution — PR #34)*
+
+### Windows: two hooks died on the first accented character, and the failure looked like an unconfigured vault
+
+> **What this delivers.** Two Python hooks read and wrote text without an explicit encoding, so on Windows Python fell back to the **locale codepage** (cp1252 on a Western-European install) and both failed on the first non-ASCII character. Any vault written in an accented language met this on day one. `pipeline-executor.py` raised `UnicodeDecodeError` on `USER.md` and died **before a single source loaded** — and the traceback went *only* to its own log, so `/today` and `/close-day` ran blind and reported zero API data with no visible cause. **The failure was indistinguishable from a vault that simply had nothing configured.** `route-insight.py` had explicit UTF-8 on its file IO but not on `stdout`, and it echoes the entry it excises: `session-insights.md` entries routinely contain `→` arrows, so on Windows it aborted on close to every call — measured at 2 of 4 Emerging-cap excisions failing in one `/close-day`, the other 2 surviving only because their text happened to be ASCII.
+
+**What you can now do:**
+- **Run `/today` and `/close-day` on Windows in a non-English locale.** Fixed additively — `encoding="utf-8"` where it was missing, plus the same `win32` stdout guard `pipeline-executor.py` already carried at line 30. **No behavior change on macOS or Linux**, where UTF-8 is already the default; nothing removed, nothing reordered, no control flow touched.
+- **Trust the Emerging-cap pass to actually excise.** Arrows, emoji and accented characters in a routed entry no longer abort the run.
+
+**Action required — none.** If you are on Windows and your rituals have been reporting no calendar, task or Slack data, this is very likely why; re-run `/today` after syncing and the sources will report their real state.
+
+*Verified live on **Windows 11, Python 3.14, Spanish locale** by the contributor — before: the executor crashed on every ritual; after: it completes and `/close-day` finished a full Tier-A routing pass (1 promotion, 1 route, 4 Emerging-cap expirations). The step most fixes skip was included: with the source **deliberately misconfigured**, the executor still reports `not configured` rather than crashing — proof the encoding change did not simply silence the signal.*
+
+*One observation in that PR outlives its own fix, and it is now recorded as a named failure mode: **the log's own IO carried the same gap**, which means the diagnostic channel could fail by the same cause as the fault it was recording — the exact property the module's own docstring argues against. We met the same shape from another direction three days earlier, when a CI guard written *inside* the workflow it protected made that workflow invalid, producing zero jobs while four separate surfaces reported success. The instrument sitting inside the blast radius of what it measures.*
+
+*The contributor also asked which they should do — fix only what fired, or sweep the class — and handed the call back rather than assuming. **Narrow was the right answer**, and their own measurement is why: the class is 41 unencoded text-IO call sites across 8 files, and the bulk sit in the credential-rotation and quota machinery, a subsystem that has already produced one incident where an apparently-additive change wrote through to a live credential. The residue in the fixed file is 5 sites, all `json` on credential and token files, which `json.dumps` writes as pure ASCII — **latent, not live**, which is precisely why it can have a deliberate pass instead of an urgent one. Keyed separately, with the class guard that belongs to it.*
+
+### `SETUP.md` told Windows and Linux operators the App was macOS-only, three days after both shipped
+
+> **What this delivers.** Four lines still read *"The AIOS App is macOS-only for now"* and routed everyone to a `.dmg` — while Linux had shipped in `v0.8.2` (08-12) and Windows in `v0.8.3` (08-13). The cost is not cosmetic: a Windows visitor following the guide was told to install **an IDE and an extension** when one installer would do — the *"download, wizard, working"* bar pointing backwards, in the one document that meets someone before they have any reason to trust us. Found by watching a real person onboard, which is the expensive way to find it.
+
+**What you can now do:**
+- **Follow `SETUP.md` on any of the three platforms and be offered the App.** Each OS block now names its own artifact, and the Windows block states up front that SmartScreen **warns rather than blocks** on first run, so the unsigned-binary prompt is expected rather than alarming.
+- **Rely on a release failing if a doc outlives a platform again.** This was the second time in one week that documentation survived a shipped platform, so the class now has a check: no root doc may assert one of our surfaces exists on only one platform. A claim like that is **a fact with an expiry date**, and the doc cannot know when it expired. Deliberately narrow — it forbids the exclusivity *claim*, not the platform names an install guide obviously needs.
+
+**Action required — none**, unless you previously concluded from `SETUP.md` that you had to install an IDE on Windows or Linux. You do not; the App is a supported surface on both.
+
+*The check's own control is worth recording, because it caught something the check was about to get wrong. On its first run it flagged `CHANGELOG.md:843` — *"The app is macOS-only today"* — which was **accurate when written**. Append-only history describing a past state is evidence, not drift, and rewriting it to satisfy a linter would be editing the record to make the present look tidy. `CHANGELOG.md` is now excluded for that stated reason rather than for convenience.*
+
+### `/today` gave two brand-new operators a green tick for a Slack they had declined
+
+> **What this delivers.** The `## Slack triage` section was **unconditional** in the `/today` template, and its clean case renders *"✅ Sin unreads ni action items pendientes en Slack."* — a green checkmark asserting a **measured** clean state for a source that was never connected. Both new operators hit it on day one; neither uses Slack and both had declined the connection. That is worse than noise: it is a confident report about nothing, and it lands in the **first daily note a person ever reads**, exactly while they are deciding whether this system is genuinely looking at *them*.
+
+**What you can now do:**
+- **Get a daily note that only reports on what you actually connected.** When Slack is not a configured source the section is omitted **entirely, heading included** — not rendered empty, and above all not rendered clean.
+
+**Action required — none.**
+
+*The mechanism already existed and this one section simply did not use it: `/today` reads source configuration from `USER.md` twenty-five lines earlier, and **`close-day.md` already did it right** — *"skip this section silently"* when the recap is absent. Verified rather than assumed, which is also how we know the class is closed by this single fix instead of left half-done. Same family as the App greeting a new operator as `{{first-name}}`: first-run artifacts that reveal the system is not looking at this particular person, arriving at the moment that costs most.*
+
+---
+
 ## 2026-08-14 — The quota autopilot runs on Windows, and a credential guard that only covered one of two backends
 
 `hash: 51e3dd6 · 600e642 · 09af065 · 7e71521` *(`51e3dd6` is an external contribution — PR #30)*
