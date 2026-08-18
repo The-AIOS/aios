@@ -173,7 +173,7 @@ _claude_with_respawn() {
   # is the right default). Override via $CLAUDE_MODEL env var for cheaper
   # Sonnet sessions, 3P providers (Bedrock/Vertex), or non-1M Opus.
   # Examples:
-  #   (default — no setup needed)                 # claude-opus-4-8[1m] — 1M context Opus
+  #   (default — no setup needed)                 # claude-opus-5[1m] — 1M context Opus
   #   export CLAUDE_MODEL='claude-sonnet-4-6'     # cheaper Sonnet sessions
   #   export CLAUDE_MODEL='opus'                  # alias for latest base Opus (no [1m])
   #   export CLAUDE_MODEL='sonnet'                # alias for latest Sonnet
@@ -182,7 +182,7 @@ _claude_with_respawn() {
   # propagate to spawned children. Without an explicit --model flag, every
   # spawn falls back to whatever ~/.claude/settings.json `model` key says,
   # which is often base Opus even when the operator wants 1M.
-  local model_to_use="${CLAUDE_MODEL:-claude-opus-4-8[1m]}"
+  local model_to_use="${CLAUDE_MODEL:-claude-opus-5[1m]}"
   local -a model_args=(--model "$model_to_use")
 
   export CLAUDE_AGENT_NAME="$name"
@@ -588,7 +588,7 @@ spawn-kill() {
   local claude_pid pgid tty
 
   # NOTE: ".*" between "claude" and "--remote-control" tolerates flags injected
-  # between them (e.g. "--model claude-opus-4-8[1m]" from the model-selection
+  # between them (e.g. "--model claude-opus-5[1m]" from the model-selection
   # block above). Without the wildcard, this pgrep silently fails to find any
   # spawn launched after the model flag landed — leaving orphan processes.
   # Caught 2026-05-22 during testing-day end-to-end run.
