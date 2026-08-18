@@ -64,7 +64,7 @@ The AIOS is *one filesystem, two surfaces*: somewhere to **read and think**, and
 | What | Role | Why it earns its place |
 |---|---|---|
 | **[Obsidian](https://obsidian.md/)** — **required on every path** | *Reading and thinking* | Beautiful read of your vault — daily notes, project notes, observed context, reflections. Wikilinks resolve, graph view shows connections, the markdown structure compounds visually. It is also what the bundled Obsidian MCP talks to, so it is not a preference. |
-| **[AIOS App](https://github.com/The-AIOS/aios-app/releases)** — *pick this **or** the IDE* | *Executing, the simplest way* | The AIOS as a normal Mac app: rituals, agents, sessions, terminals and your vault in one window, point-and-click. **No IDE and no extension** — it is its own glass layer, so skip the Antigravity and AIOS Glass steps below entirely. |
+| **[AIOS App](https://github.com/The-AIOS/aios-app/releases)** — *pick this **or** the IDE* | *Executing, the simplest way* | The AIOS as a normal desktop app — macOS, Windows and Linux: rituals, agents, sessions, terminals and your vault in one window, point-and-click. **No IDE and no extension** — it is its own glass layer, so skip the Antigravity and AIOS Glass steps below entirely. |
 | **[Antigravity IDE](https://antigravity.google/product/antigravity-ide) + AIOS Glass** — *pick this **or** the app* | *Executing, beside a real editor* | Bundles Claude Code natively — agents run in IDE terminals (one per spawn), file edits and git ops feel native. Choose this if you also write code. VS Code works as the alternative; Antigravity is just batteries-included. Then add Glass (below). |
 
 **Pick ONE execution surface.** Both drive the same vault through the same Claude Code, so this is a preference, not a fork — and you can add the other later without redoing anything.
@@ -88,8 +88,9 @@ brew install node git gh python uv
 brew install --cask obsidian
 
 # 4. ONE execution surface — pick a) or b), not both (see "The two things you'll use daily")
-# a) AIOS App — simplest: download the .dmg from https://github.com/The-AIOS/aios-app/releases
+# a) AIOS App — simplest: download the macOS .dmg from https://github.com/The-AIOS/aios-app/releases
 #    and drag it to Applications. Nothing else; skip the Glass step later.
+#    (Windows and Linux have their own artifacts on the same releases page — see those sections.)
 # b) Antigravity IDE — download from https://antigravity.google/product/antigravity-ide
 #    (no brew cask yet — drag the .dmg to Applications), then install AIOS Glass.
 
@@ -121,8 +122,11 @@ winget install GitHub.cli
 winget install Python.Python.3.12
 
 # 2. Obsidian + your execution surface (see "The two things you'll use daily" above).
-#    The AIOS App is macOS-only for now, so on Windows the surface is the IDE + AIOS Glass.
+#    Either surface works on Windows — the AIOS App ships a Windows installer (v0.8.3+).
 winget install Obsidian.Obsidian
+# For the AIOS App (simplest — no IDE, no extension): download the Windows installer from
+#   https://github.com/The-AIOS/aios-app/releases  — then skip the Antigravity and Glass steps.
+#   SmartScreen warns on first run (unsigned): "More info" -> "Run anyway". It does not block.
 # For Antigravity IDE (recommended — Claude Code bundled): download from https://antigravity.google/product/antigravity-ide
 # For VS Code as the IDE alternative: winget install Microsoft.VisualStudioCode
 
@@ -170,7 +174,9 @@ curl -fsSL https://claude.ai/install.sh | bash
 claude --version
 
 # 5. Obsidian + your execution surface (see "The two things you'll use daily" above).
-#    The AIOS App is macOS-only for now, so on Linux the surface is the IDE + AIOS Glass.
+#    Either surface works on Linux — the AIOS App ships a Linux build (v0.8.2+).
+# AIOS App (simplest — no IDE, no extension): grab the Linux artifact from
+#   https://github.com/The-AIOS/aios-app/releases — then skip the Antigravity and Glass steps.
 # Obsidian — download the AppImage from https://obsidian.md/download
 # Antigravity IDE (recommended, Claude Code bundled) — https://antigravity.google/product/antigravity-ide
 #   or VS Code as the alternative: sudo snap install code --classic
