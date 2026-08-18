@@ -131,6 +131,22 @@ New bundled plugins register in `.claude-plugin/marketplace.json` (`name`, `disp
 - **Concurrency matters.** The AIOS often runs several agents at once, and they all read and write the same vault — a single shared git repo. If your contribution touches git, files, or shared state, test it with **2+ agents running in parallel** before you ship it.
 - **Don't claim it passes without showing the command + output.** Evidence before assertions, always.
 
+### The contribution we cannot make ourselves: a platform or locale nobody here runs
+
+This is a standing request, not a nice-to-have. **Three of the five most valuable findings in a recent week came from platforms and locales no maintainer runs**, and none of them was subtle once seen:
+
+- Two Python hooks read text with no explicit encoding, so on Windows they fell back to the locale codepage and died on the **first accented character**. `/today` and `/close-day` then reported no data — **indistinguishable from a vault with nothing configured.** Found by an operator on a Spanish-locale Windows install.
+- `SETUP.md` told Windows and Linux operators the desktop app was macOS-only for **three days after both platforms shipped**, routing them to install an IDE and an extension when one installer would do. Found by watching a new operator onboard.
+- A brand-new operator's very first daily note reported a cheerful green *"no unread Slack"* — for a Slack they had declined to connect.
+
+None of those is findable by more care on the maintainer side. **The knowledge that lets you maintain a system is the same knowledge that blinds you to its first surface** — you cannot un-know that your own Slack is configured, or that your locale is UTF-8. So if you are running AIOS on **Windows, on Linux, in a non-English locale, or as a genuine first-timer**, the most useful thing you can send is not a fix. It is:
+
+- **what the first run actually looked like** — the wrong turn, the step that assumed something you didn't have, the message that asserted a state nobody measured;
+- **the exact error text**, before you work around it;
+- **what you expected to happen**, which is often the more valuable half.
+
+A Flavor-A report (§ *The two flavors of contribution*) is a complete contribution here. You do not need to build the fix, and you do not need to be sure it is a bug — *"this confused me and here is what I saw"* is a finding, because confusion at the first surface is a defect in the surface.
+
 ### Shell portability — write for bash 3.2, not just the bash you have
 
 Anything with a `#!/usr/bin/env bash` shebang (every hook in `hooks/`) may be serviced by **bash 3.2** — the bash Apple still ships at `/bin/bash`, and what a stock Mac resolves to. If your PATH has Homebrew bash first, *your machine cannot reproduce this class of bug*, and neither could most maintainers.
