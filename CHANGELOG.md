@@ -35,6 +35,28 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-08-18 — Every spawned worker was launching on the previous Opus, and nothing said so
+
+`hash: TBD-ON-MERGE` <!-- date + hash set by the maintainer on merge; 08-18 is a placeholder -->
+
+> **What this delivers.** The `spawn` / named-session wrappers pass an explicit `--model` flag, because `/config` and `/model` are session-scoped and do not propagate to spawned children. That flag's default was still `claude-opus-4-8[1m]`. So an operator whose own session had already moved to Opus 5 kept getting the previous generation in **every worker they spawned** — and the wrapper is precisely the surface where that is invisible: the terminal opens, the session greets, the work gets done, and nothing anywhere names the model. The default moves to `claude-opus-5[1m]`. The `$CLAUDE_MODEL` override is unchanged.
+
+**What you can now do:**
+
+- **Spawn a worker and get the generation your own session runs on.** `spawn accountant "…"` now launches on 1M-context Opus 5. Nothing to configure; if you had already pinned `CLAUDE_MODEL` yourself, that still wins.
+- **Trust the default because it was measured, not assumed.** An unavailable model id passed to `--model` does **not** error — it falls back silently to the session model, which makes *"the spawn worked"* worthless as evidence. This id was checked against what a run actually reports: `claude -p --model 'claude-opus-5[1m]'` returns `canonicalModel: claude-opus-5`, `contextWindow: 1000000`. That is the only check here capable of failing.
+- **Get `--tier judgment` meaning the frontier again.** The ladder deliberately hard-codes nothing for judgment work — it defers to this default *so that it tracks the lineup*. While the default lagged, `judgment` quietly meant the previous generation while `mechanical` stayed pinned to Sonnet 4.6, narrowing the very gap the ladder exists to hold open.
+
+**Action required — none, unless you spawn workers.** Check first: `grep -n 'CLAUDE_MODEL:-' hooks/claude-identity/install-wrappers.sh`. If it already reads `claude-opus-5[1m]`, you are done. Otherwise re-run the installer for your platform (`hooks/claude-identity/install-wrappers.sh` / `install-wrappers.ps1`) — idempotent, as always. **Last step, and only if the installer reports that it rewrote your rc file:** open shells keep the previous function definition until re-sourced (`source ~/.zshrc` / `~/.bashrc`). A new terminal needs nothing.
+
+**Components:** `hooks/claude-identity/install-wrappers.sh` — the default plus the two comments that quote it (the examples block, and the `spawn-kill` pgrep note that cites the injected flag) · `hooks/claude-identity/install-wrappers.ps1` — the `$modelToUse` default · `plugins/aios/commands/cold-start-interview.md` — the identity-table launch command · `CHEATSHEET.md` — the "Override model" row. Same four surfaces the 2026-05-28 bump named, so the set is a repeat rather than a fresh enumeration.
+
+*Scope is the wrappers and what documents them. The vendored `skills/anthropic/claude-api/*` references stay untouched — they track Anthropic's upstream skill and are a separate decision, exactly as the 2026-05-28 entry recorded. `_resume.py` is unaffected: it inherits the model from the running session's process args and hard-codes nothing.*
+
+*What was **not** tested: the PowerShell path. `.ps1` carries the same one-line default and was mirrored, not executed — there is no Windows machine behind this change, and claiming it because the edit looks identical would be the wrong shape of confidence. Everything else was verified on Linux (bash 5.2), where `tests/install-wrappers.test.sh` passes 20/20 after the edit. Worth stating plainly: nothing here is a platform claim, so nothing here earns a new CI lane — the existing suite covers the file and the one fact that could be wrong is the model id, which is verified above by measurement rather than by a test that would only re-assert the string.*
+
+---
+
 ## 2026-08-17 — A first run that stopped asserting things it had never measured
 
 `hash: 3d93fe9 · f202b3b` *(`3d93fe9` is an external contribution — PR #34)*
