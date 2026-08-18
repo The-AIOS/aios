@@ -14,6 +14,8 @@ PATTERNS=(
   'xox[baprs]-[A-Za-z0-9-]{10,}'         # Slack token
   'AIza[0-9A-Za-z_-]{35}'                # Google API key
   'glpat-[A-Za-z0-9_-]{20,}'             # GitLab PAT
+  'GOCSPX-[A-Za-z0-9_-]{20,}'            # Google OAuth client secret
+  '<string>[0-9a-f]{40}</string>'        # 40-hex token in a launchd plist
 )
 
 files=()
@@ -26,7 +28,18 @@ fi
 
 hit=0
 for pat in "${PATTERNS[@]}"; do
-  match=$(grep -InE "$pat" "${files[@]}" 2>/dev/null | head -3 || true)
+  # -e is load-bearing: a pattern beginning with '-' (the private-key header) is otherwise
+  # parsed by grep as an OPTION BUNDLE. grep then exits 2 (TROUBLE, not "no match"), writes
+  # its usage to stderr — which this call discards — and leaves $match empty, which reads
+  # here as "clean". That pattern therefore never fired. A failed measurement must never be
+  # read as a substantive result.
+  match=$(grep -InE -e "$pat" "${files[@]}" 2>/dev/null | head -3); rc=$?
+  # rc: 0 = matched · 1 = no match · >1 = grep itself failed. Fail CLOSED on >1 rather than
+  # silently treating an unusable scan as a pass.
+  if [ "$rc" -gt 1 ]; then
+    echo "secret-scan: FAILED to scan for pattern: $pat (grep exit $rc) — refusing to pass." >&2
+    exit 1
+  fi
   if [ -n "$match" ]; then
     [ "$hit" = 0 ] && echo "secret-scan: BLOCKED — secret-shaped string(s) found:" >&2
     printf '%s\n' "$match" | sed 's/^/  /' >&2
