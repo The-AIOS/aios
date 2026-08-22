@@ -258,7 +258,23 @@ function spawn {
     [CmdletBinding()]
     param(
         [Parameter(Position=0)] [string] $Name,
-        [Parameter(Position=1)] [string] $Task = 'Start session.',
+        # DEFAULT TASK -- an actionable instruction, never a placeholder.
+        # A bare `spawn <name>` promised instructions and delivered none.
+        #
+        #   The launcher always passes `Read <task-file> and follow the instructions inside.`
+        #   as the bootstrap, so a task file whose contents are `Start session.` is a prompt
+        #   pointing at a file with nothing to follow. The worker takes its turn, finds no
+        #   instruction, answers blandly, and never runs the Session Start Ritual: no declared
+        #   or observed context, no agent match for the session name, no greeting. The terminal
+        #   is open and the session looks idle, which reads as a hang rather than a default.
+        #
+        #   The primary-session shorthand below already passes a real instruction for exactly
+        #   this reason. Its note -- "spawn never had this problem, but only by accident: it
+        #   ALWAYS passes a bootstrap ... and that turn is what triggers the ritual" -- is true
+        #   about the turn and not about the ritual: passing a bootstrap only starts the ritual
+        #   when the bootstrap CONTAINS an instruction. With an explicit task it always did;
+        #   with the default it never did, and that is the path a first-time operator takes.
+        [Parameter(Position=1)] [string] $Task = 'Run the CLAUDE.md Session Start Ritual now: load my declared + observed context, match your session name to your role, and greet me in character before awaiting my task.',
         # -Tier mechanical|judgment. mechanical routes to the SECOND-BEST model
         # (cheaper; "always aim second-best" auto-tracks the lineup). judgment/none
         # keeps the frontier default (Invoke-ClaudeWithRespawn's CLAUDE_MODEL fallback).
