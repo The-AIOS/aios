@@ -4,13 +4,24 @@
 >
 > Written from a real setup (2026-07-22) on a fortress agent machine. Uses the **local** MCP (its own OAuth client, `uvx`-launched) per the AIOS MCP policy — not the claude.ai-hosted Google connector, which is bound to the active claude.ai OAuth grant and breaks on account switch.
 
-## The two traps (read first — they cost the most time)
+## The three traps (read first — they cost the most time)
 
 1. **`Error 403: org_internal` — "can only be used within its organization."**
    The OAuth client belongs to a Google Cloud project whose consent screen is **Internal** (locked to a Workspace org). A **personal gmail can never use an Internal client.** → Create a **fresh project under the personal account itself** (no org → **External** consent available). Do *not* reuse a client from a work/org project.
 
 2. **`Error 403: access_denied` — "has not completed the Google verification process / developer-approved testers."**
-   The app is in **Testing** mode and the account isn't on the test-user list. → Add the account as a **Test user** (below). You do **not** need to publish/verify the app — Testing + test-user is the correct, permanent state for a personal setup.
+   The app is in **Testing** mode and the account isn't on the test-user list. → Add the account as a **Test user** (below). Testing + test-user is enough to *authorize* and gets you running today — but it is **not a permanent state**. See trap #3, which is the bill for stopping here.
+
+3. **The whole thing works, then dies exactly 7 days later — `invalid_grant: Token has been expired or revoked`.**
+   Google expires the **refresh token** of an app whose publishing status is **Testing** after 7 days. Nothing is misconfigured and nothing was revoked by a human: the grant reached its built-in expiry.
+
+   This is the trap that costs the most over the life of the setup, and it costs the most *because it does not fail during setup*. Traps #1 and #2 fail loudly while you are still holding the context — you are in the console, you read the error, you fix it. This one fails on a Tuesday three weeks later, on a machine you are not looking at, and it presents as "the MCP broke" rather than "a policy clock ran out". Whatever depends on this server — a daily-ritual pipeline, a scheduled routine, an agent that reads your calendar every morning — goes dark once a week until a human clicks through a consent screen. The setup guide is the only place that can warn you, because by the time it happens nobody connects the symptom to the step that caused it.
+
+   → **The lever is the publishing status, not verification.** The 7-day clock is attached to **Testing**; moving the app to **In production** (Audience → *Publish app*) is what stops it. Publishing and *being verified* are two different things — an app can sit in Production **unverified**, still showing the "Google hasn't verified this app" screen this document already tells you to expect.
+
+   → **Check what Google asks of you before assuming it is free, because this MCP uses sensitive scopes.** Gmail and Drive are not the basic `email`/`profile`/`openid` trio; they are the scope classes that pull an app into Google's verification requirements, and the requirements (and any user caps on an unverified Production app) are Google's to change, not this document's to promise. **Read what the Audience screen tells you at the moment you click Publish** — that is the only current answer. If it does ask for verification and you do not want to go through it, that is a real decision, not a formality.
+
+   → **Whichever way you go, write the cost down** next to whatever depends on this server. Staying in Testing means **a manual re-auth every 7 days, forever** — a legitimate choice for a throwaway experiment, and the wrong default for a server a daily automation depends on, which is exactly what this document is setting up.
 
 ## Part A — Google Cloud Console (the human clicks)
 
@@ -81,6 +92,7 @@ At the consent screen you'll see **"Google hasn't verified this app"** — this 
 |---|---|---|
 | `403 org_internal` | client from an org/Internal project | new project under the personal account, External consent |
 | `403 access_denied` (testers) | account not a test user | add it under Audience → Test users |
+| `invalid_grant` after ~7 days | app publishing status still **Testing** | move it to **In production** (trap #3) — check what Google asks at that screen; these are sensitive scopes |
 | `redirect_uri_mismatch` | client isn't Desktop type | recreate as Desktop, or add `http://localhost:8000/` |
 | consent URL never prints | Python stdout buffered while `run_local_server` blocks | run `python -u` / `PYTHONUNBUFFERED=1` |
 | "scope has changed" error | Google added `openid` | `OAUTHLIB_RELAX_TOKEN_SCOPE=1` |
