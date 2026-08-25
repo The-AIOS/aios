@@ -35,6 +35,55 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-08-25 — A bootstrap that promised instructions and delivered none, and a "permanent" state with a seven-day clock
+
+`hash: b8c2762 · 180dace · 1c85d75` *(`b8c2762` and `180dace` are external contributions — PRs #44 and #45)*
+
+### `spawn <name>` with no task never ran the Session Start Ritual
+
+> **What this delivers.** The launcher always passes `Read <task-file> and follow the instructions inside.` as the bootstrap — and a bare `spawn accountant` wrote **`Start session.`** into that file. A prompt pointing at a file with nothing to follow. The worker took its turn, found no instruction, answered blandly, and **never ran the ritual**: no declared or observed context, no agent match for its session name, no greeting. The terminal is open and the session looks *idle*, which reads as a hang rather than as a default. With an explicit task it always worked — **only the bare form**, which is the path a first-time operator takes.
+
+**What you can now do:**
+- **Run `spawn <name>` with no task and get a working session.** The default is now an instruction: *"Run the CLAUDE.md Session Start Ritual now: load my declared + observed context, match your session name to your role, and greet me in character before awaiting my task."* Fixed on **both** platforms rather than leaving them divergent.
+- **Re-run the wrapper installer to pick it up** — `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (or the `.ps1`), then open a new terminal.
+
+**Action required — re-run the installer.** Existing shells keep the old function.
+
+*The correction inside this report is better than the fix. The file already carried a note claiming `spawn` was safe **because it always passes a bootstrap** — and the contributor's reply was that this is *"true about the turn and not about the ritual"*: passing a bootstrap only starts the ritual when the bootstrap **contains an instruction**. The right reasoning was written one paragraph above the path that violated it, which is exactly why nobody looked.*
+
+*They also disclosed what they could not test — no macOS or Linux machine, so the shell edit was **mirrored, not run** — instead of implying parity of evidence. That gap is now closed from this side: parses and installs cleanly under bash 5.3 **and bash 3.2**, the Apple-shipped `/bin/bash` our hooks may be serviced by.*
+
+*And searching the **class** rather than the two files found a third instance canonical cannot reach: an operator-local `sarah-spawn()` — a remote-machine variant in a shell rc, carrying the identical placeholder and the identical bootstrap since at least 2026-07-23. Fixed by hand on both machines. The generalisable form is not "the spawn default was wrong" but **"a bootstrap that promises instructions must be paired with a default that contains one"** — which has as many sites as there are launchers.*
+
+### Google Workspace: the setup guide called a 7-day state "permanent"
+
+> **What this delivers.** `personal-account-setup.md` told the reader that **Testing + test-user is the correct, permanent state** for a personal setup. Testing does authorize, so day 1 works — but Google expires the **refresh token** of an app whose publishing status is *Testing* after **7 days**. The symptom is `invalid_grant: Token has been expired or revoked`, and the guide's own word for that state was "permanent".
+
+**What you can now do:**
+- **Learn this at setup instead of a week later.** Trap #3 explains the clock, separates **publishing status** (what the 7-day timer is attached to) from **verification** (a different process), and states the alternative honestly: staying in Testing costs a manual re-auth every 7 days, forever — fine for an experiment, wrong for a server a daily ritual depends on.
+- **Diagnose it in one line.** A troubleshooting row now maps `invalid_grant` after ~7 days → publishing status still Testing.
+
+**Action required — only if you followed this guide and have been re-authenticating weekly.** That is this, not a broken MCP.
+
+*Why it belongs in the setup guide rather than only in troubleshooting, in the contributor's framing: traps #1 and #2 fail **during setup**, while you are still in the console holding the context. This one fails on a Tuesday three weeks later on a machine nobody is watching, and presents as "the MCP broke" rather than "a policy clock ran out." By then nobody connects the symptom to the step that caused it.*
+
+*The strongest part of that PR is a sentence it **removed**. An earlier draft claimed Production needs no review, reasoning by analogy from the basic `email`/`profile`/`openid` scopes — and they cut it, because Gmail and Drive are exactly the sensitive classes that pull an app into verification. Replacing a confidently-wrong claim with a second confidently-wrong claim is the usual way a docs fix makes things worse. Pointing at the Audience screen as the only current answer, rather than hardcoding a policy Google owns, is what makes this still true in six months.*
+
+*Checked against the maintainer's own machine and it does not reproduce: **zero `invalid_grant` across 45,062 log lines**, and `oauth_states.json` — written only during an OAuth consent flow — untouched for four weeks. That setup is not in Testing mode and structurally cannot produce the failure, so nobody here would ever have found it. Third consecutive week where the most valuable finding came from a platform, locale or configuration no maintainer runs.*
+
+### The restated-bound sweep, closed by reading rather than by `sed`
+
+> **What this delivers.** A contributor's closing suggestion last week — *"a grep for other places canonical restates a bound that a sibling file owns would likely be worth it — this is a shape, not an instance"* — turned up **11 bound-shaped values living in more than one file.** That read like 11 bugs. It was one, and the honest yield is the reason to record the rest.
+
+**What you can now do:**
+- **Override the project-note line thresholds and have every reader agree.** `CLAUDE.md` named `/close-day` as the enforcer *and restated all three numbers in the same sentence* — the identical shape as the antifragile bound fixed a week earlier. It now points; `/close-day` owns the ladder.
+
+**Action required — none.**
+
+*The other ten, classified by reading each site: **`~25KB / 200 lines`** (auto-memory) is **describing an external constraint** — grepped for an owner and no hook in canonical contains the number, because the limit is Claude Code's, not ours, so neither file can point at an owner that exists here. **`14`/`30`/`7`/`90`/`21`/`3`/`5`/`49 days`** are **coincidence**: independent cadences sharing a digit (graduate reads 14 days of notes, housekeeping flags staleness at 14, today hides horizons past 14) — pointing them at one another would **couple unrelated rules**, a regression dressed as a cleanup. **`50 entries`** is historical prose in both sites, which is evidence. The list is closed because nothing on it is unexamined, not because the numbers are gone.*
+
+---
+
 ## 2026-08-18 — The secret scanner had never once fired, the updater could not tell "behind" from "ahead", and every worker launched on the previous Opus
 
 `hash: 049d1a1 · d3d662b · f985f36 · 0bbe49a` *(`049d1a1` and `d3d662b` are external contributions — PRs #37 and #39)*
