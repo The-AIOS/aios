@@ -344,7 +344,7 @@ Rules: new project → `projects/_index.md` (status + one-line); idea graduated 
 
 **Where history lives (not in the project note):** what shipped → git log + CHANGELOG · what was learned → session-insights.md + daily notes · what was decided → Decisions Log (pivotal only, max 10–15; older in git) · session notes → last 5 only (older in daily notes + snapshots).
 
-**Line count check** (`/close-day` enforces): **<200** healthy · **200-300** nudge (*"⚠️ [[project]] at {N} lines — archive older session notes + shipped items"*) · **>300** flag hard (*"🔴 [[project]] at {N} lines — becoming a history book; move shipped to git log, trim session notes to last 5, keep only pivotal decisions"*).
+**Line count check — `/close-day` owns the thresholds; read them there and do not restate them here.** A project note has a three-step ladder (healthy → nudge → flag hard) and `/close-day` is what applies it. The numbers used to be duplicated in this sentence *while it named `/close-day` as the enforcer in the same breath* — the exact shape that produced a false 🔴 and a wasted worker session when the antifragile bound was overridden in one file and not the other (2026-08-18, reported by an operator). A restated constant is a second implementation, and this file is the one every session loads at startup, so a stale copy here outranks the real one.
 
 **Exempt projects:** intentionally-long notes (catalogs, reference docs, deep specs) — add `exempt-line-check: true` to frontmatter to skip the nudge. **Append-only logs are the canonical case and should set it at creation** (council logs, training journals, baselines, diagnostic records): length is the artifact working correctly, so flagging one daily is a false alarm that teaches the operator to ignore the check.
 
