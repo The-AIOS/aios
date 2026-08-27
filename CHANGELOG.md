@@ -37,7 +37,7 @@
 
 ## 2026-08-27 — First-run stops asking questions a newcomer cannot answer, and stops ending before it is finished
 
-`hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4 · 8d7238f · 1e78989 · 140ea59 · e166fc9 · 23b001f`
+`hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4 · 8d7238f · 1e78989 · 140ea59 · e166fc9 · 23b001f · 69da9bf`
 
 ### The setup interview re-times its friction without losing a single capability
 
@@ -139,6 +139,18 @@
 *One cross-repo coupling is recorded where it can be seen, in Step 2: the **AIOS App reads the operator's name from `about_me.md` and watches that directory**, so its greeting turns from *"Good morning"* into *"Good morning, {name}"* the moment this step writes the file. That was an operator-reported bug in the App — the name used to appear only when something unrelated tripped a different watcher, so the App greeted a stranger for the whole interview while the onboarding agent was already using their name. A first-timer seeing their own name is the most legible proof the setup worked, so `about_me.md` is written in **Core** and a note now says why it cannot be deferred.*
 
 *`tests/cold-start-interview.test.sh` → **53 assertions**. One of the new ones passed under mutation on the first attempt: its pattern was `'while p and p != 1|parent(p)'`, and the alternation let a **stubbed** walk satisfy it, because `p = parent(p)` survives inside a loop replaced with `if False:` — the helper existing is not the walk running. It now requires both halves. That is the third guard in this entry to pass while measuring nothing, and all three were caught the same way: reintroduce the defect, demand the red line.*
+
+### The five-minute path had one step in it that was longer than five minutes
+
+> **What this delivers.** The Core row of the tier table reads *"Pre-step → 0 → 1 (trimmed) → 2 → 3-light → 8 (silent) → 10 → 11"*. Every parenthetical there is an instruction to the session running Core — and **`3-light` appeared exactly once, in that table, defined nowhere.** So Core would have run the *full* Step 3: an autonomy level asked **per domain**, across five or more domains, plus just-cause and the pillars. That one step is longer on its own than the five minutes the operator was promised for all of Core. A label that names a variant which does not exist shortens nothing — it makes the table look like a decision that was taken.
+
+**What you can now do:**
+- **Answer one question about trust instead of seven.** Core asks the posture in plain words — *"would you rather I just do it and tell you what I did, or show you first and wait?"* — and Claude writes `INTENT.md` from that single answer, taking the documented defaults for *just cause* and *focus priorities*. Step 3's own text already says the default framing *"is fine for most operators"*, so asking cost two questions and changed nothing. A line in the file names what was defaulted, so nothing is hidden.
+- **Not accidentally authorise mail going out in your name.** Whatever the answer, **irreversible and outward-facing actions are pinned to draft-first** — outbound email, publishing, anything that spends money — and you are told so in one line. An operator answering *"just do it"* in minute four is answering about tidying files. Reading that as authorisation for outbound mail would be the most expensive misread in this file, and it is the one the single-question version would have made.
+
+**Action required — none.** Depth runs the full per-domain walk, unchanged.
+
+*The pattern worth naming, since this is the second instance in this entry: **a tier shorthand is an instruction, and an undefined instruction is executed as its opposite.** `1 (trimmed)` was real — Step 1 genuinely is two questions. `8 (silent)` was written into Step 8 when it moved into Core. `3-light` was the one that stayed a label, and the failure mode is that the table reads as complete either way. A test now requires every shorthand in that row to be defined somewhere in the file. **55 assertions.***
 
 ---
 
