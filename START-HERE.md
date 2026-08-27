@@ -17,7 +17,7 @@ You're holding the framework. This file is your post-clone walkthrough. (For the
 
 **Three steps to a working personalized vault:**
 
-1. Run `SETUP.md` (Claude-driven, ~10 min) — installs MCPs, configures your private vault, wires up tools
+1. Run `SETUP.md` (Claude-driven, ~10 min) — configures your private vault and wires up your tools. Connectors (calendar, Slack, repos) come **after** your first daily ritual, one at a time and only the ones you want — see `/aios:cold-start-interview` Step 11
 2. Run `/aios:cold-start-interview` (~20 min) — fills in your identity, declared context, INTENT.md trust contract, agent bundle preferences, MCP auth
 3. Run `/aios:today` (~5 min) — your first daily plan. The rhythm starts here.
 
