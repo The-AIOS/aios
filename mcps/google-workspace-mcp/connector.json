@@ -1,0 +1,34 @@
+{
+  "id": "google-workspace",
+  "service": "Google Workspace",
+  "value": "Your calendar, tasks, mail, Drive and Docs — so a daily plan can read your real day instead of guessing at it.",
+  "infrastructure": false,
+  "connect": "needs-key",
+  "requires": [],
+  "register": {
+    "transport": "stdio",
+    "command": "uvx",
+    "args": [
+      "workspace-mcp",
+      "--single-user",
+      "--permissions",
+      "drive:full",
+      "sheets:full",
+      "slides:full",
+      "docs:full",
+      "calendar:full",
+      "tasks:full",
+      "gmail:full",
+      "contacts:full",
+      "forms:full"
+    ],
+    "env": {
+      "GOOGLE_OAUTH_CLIENT_ID": "{ask:client-id}",
+      "GOOGLE_OAUTH_CLIENT_SECRET": "{ask:client-secret}",
+      "MCP_SINGLE_USER_MODE": "1",
+      "USER_GOOGLE_EMAIL": "{ask:google-email}",
+      "WORKSPACE_MCP_CREDENTIALS_DIR": "{home}/.google_workspace_mcp/credentials"
+    }
+  },
+  "docs": "README.md"
+}

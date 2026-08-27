@@ -10,6 +10,20 @@ Browser automation for the AI-OS. Auto-publish content, test web apps, capture s
 - Test web applications (verify UI behavior, debug rendering)
 - Scrape content with full JS rendering
 
+## Not a connector — there is nothing to register
+
+This folder lives under `mcps/` by history, but **it contains no MCP server**: no server code, no
+`FastMCP`, no stdio transport. Verified 2026-08-27 while auditing all bundled folders for the connector
+manifest.
+
+It is a Python toolkit, invoked directly — `.venv/bin/python cookie_import.py`, and Playwright itself
+driven from agent code. `connector.json` here carries `registers: false`, so the AIOS App neither lists
+it as a connector nor reads its missing registration as drift.
+
+An earlier audit recorded this folder as *"bundled but registered nowhere, no register command in the
+README"* and proposed authoring one. There is no server to point such a command at; writing one would
+produce a registration that fails at first use. The honest fix is this section.
+
 ## Example usage
 
 Ask Claude naturally — it drives the browser with your saved auth:

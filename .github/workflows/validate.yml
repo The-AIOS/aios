@@ -1057,6 +1057,17 @@ jobs:
         # Same finding, same cause: committed, never invoked.
         run: bash tests/route-insight.test.sh
 
+      - name: every bundled connector carries a manifest the App can read
+        # AI-122 Front A. The AIOS App builds its Connectors card from
+        # mcps/*/connector.json and ships NO copy of any register command, so a
+        # missing or malformed manifest does not degrade the card — it removes a
+        # connector from existence, silently. The criteria asserted are the silent
+        # ones: a literal ~/aios (a symlink on some machines, so documented != working,
+        # and invisible wherever they agree), an id that cannot be paired with a live
+        # registration, "MCP" in operator-facing copy, and a folder with no server
+        # claiming it has one.
+        run: bash tests/connector-manifests.test.sh
+
       - name: every suite in tests/ is actually invoked by this workflow
         # This job's step list is hand-typed, so a suite can be committed, shipped, and
         # never run — it rots without one red mark. This repo has already been bitten twice

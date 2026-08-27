@@ -87,6 +87,24 @@ Operated by Revasser. Self-host support is best-effort; managed rollout and Clou
 
 **Runtime:** Node.js 20+
 
+### Register
+
+```bash
+claude mcp add slack -s user -- npx -y @jtalk22/slack-mcp
+```
+
+> **This command was missing from this README** until the connector-manifest audit (2026-08-27), even
+> though the server was live on the machine doing the audit — the working command existed only inside
+> `~/.claude.json`. It is now also in `connector.json`, which is what the AIOS App reads; this copy is
+> for a human reading the folder.
+>
+> **The registration takes no secret, and `env` is empty by design.** Credentials arrive out-of-band
+> through the `--setup` step below, which extracts them from your already-signed-in Chrome rather than
+> asking you to paste a token. So **"has a key" cannot be inferred from the registration** — an empty
+> `env` here means *"the secret lives elsewhere"*, not *"unconfigured"*. That is why this connector is
+> `connect: "guided"` rather than `one-click`: the command is fully known, but a human has to do the
+> auth step, and a card claiming one-click here would be lying.
+
 ```bash
 npx -y @jtalk22/slack-mcp --setup
 npx -y @jtalk22/slack-mcp@latest --version

@@ -1,0 +1,17 @@
+{
+  "id": "playwright",
+  "service": "Browser automation",
+  "value": "Drives a real browser for publishing, testing and screenshots — invoked directly as Python, not through a connector.",
+  "infrastructure": true,
+  "registers": false,
+  "delivery": "python",
+  "entrypoint": "{framework}/mcps/playwright-mcp/.venv/bin/python",
+  "setup": [
+    "bash mcps/setup.sh playwright-mcp",
+    "{framework}/mcps/playwright-mcp/.venv/bin/python {framework}/mcps/playwright-mcp/cookie_import.py"
+  ],
+  "connect": "guided",
+  "requires": [],
+  "docs": "README.md",
+  "_note": "NOT an MCP server. Verified 2026-08-27: no server code in this folder. `registers: false` means there is no registration to make and none to check for — a reader must not treat its absence as drift."
+}

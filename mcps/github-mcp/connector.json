@@ -1,0 +1,20 @@
+{
+  "id": "github",
+  "service": "GitHub",
+  "value": "Your repositories, issues and pull requests — so code work can be read, reviewed and shipped without leaving the conversation.",
+  "infrastructure": false,
+  "connect": "needs-key",
+  "requires": [],
+  "register": {
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@modelcontextprotocol/server-github"
+    ],
+    "env": {
+      "GITHUB_PERSONAL_ACCESS_TOKEN": "{ask:github-token}"
+    }
+  },
+  "docs": "README.md"
+}

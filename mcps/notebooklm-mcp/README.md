@@ -10,6 +10,22 @@ Unofficial Python API for Google NotebookLM. Full programmatic access including 
 - Chat with notebooks (ask questions against your sources)
 - Share and collaborate
 
+## Not a connector — there is nothing to register
+
+This folder lives under `mcps/` by history, but **it contains no MCP server**: no server code, no
+`FastMCP`, no stdio transport. Verified 2026-08-27 while auditing all bundled folders for the connector
+manifest.
+
+Capability reaches you through the **bundled `notebooklm` skill** (`setup.sh` runs
+`notebooklm skill install`), plus the CLI documented below. `connector.json` here carries
+`registers: false`, which tells the AIOS App two things: never list this as a connector, and **never
+treat the absent registration as drift.**
+
+An earlier audit recorded this folder as *"bundled but registered nowhere, no register command in the
+README"* and proposed authoring one. That would have invented a server that does not exist — the App
+would then register a command that fails at first use, which is precisely the failure class this whole
+effort removes. The honest fix is this section.
+
 ## Install
 
 > ⚠️ **Requires Python 3.10+.** `notebooklm-py` uses PEP 604 syntax (`str | None`), so building the
