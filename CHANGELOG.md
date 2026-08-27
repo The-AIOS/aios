@@ -107,6 +107,22 @@
 
 *Both failures were caught the same way: **mutate the file so the defect is present, and require the red line.** A guard that has never been seen to fail is a guard with no evidence behind it. **40 assertions.***
 
+### The full tour was overselling three things it does not give you, and under-delivering one it does
+
+> **What this delivers.** The opening offer read: *"The full tour — same start, plus the deeper setup: your agent team, companies, plugins, the graphical app."* An operator caught the contradiction **inside a single message**: Step 0 has already said the AIOS *"ships with a team of agents already built"*, and then offers *"your agent team"* as something the tour adds. Three of those four items were wrong.
+
+**What you can now do:**
+- **Read an offer that matches what the tour does.** The agents already shipped — the tour is a walk through *which of them fit your work* (Step 4 closes with *"nothing to install or demote"*). Companies and shared workspaces are **explained and deliberately deferred** by Step 5, not set up. The tour now says it shows you around rather than unlocking anything, and says so plainly: everything in it is already installed or one sentence away.
+- **Stop being sold a panel you are already looking at.** *"The graphical app"* was **AIOS Glass** — an **extension inside a code editor**, not an app, and not the standalone AIOS App. For an operator who arrived *through* the App, that phrase advertised the surface already open in front of them. Step 8.5 is renamed, and now reads `ENTRY`: App-path operators are told in one line that they already have the equivalent and there is nothing to do; terminal-path operators are asked whether they even use a code editor before being walked through installing a panel for one.
+- **Keep the capability packs when you choose the five-minute start.** Step 8 installs a recommended plugin set and its own text says *"plugins are NOT optional in cold-start"* — while sitting in the **opt-in** tier. Every operator who chose the quick start therefore lost it silently. **That is deletion wearing re-timing's clothes, which is the single failure this change exists to prevent.** Step 8 now runs in **Core, silently**, because it needs nothing from the operator.
+- **Not have marketplace commands read at you.** Step 8's spoken block listed `/plugin marketplace add anthropics/skills (138K⭐)` and a `+ role-specific selections` line — star counts and `@`-scoped package names a first-timer cannot evaluate, in exactly the register this change removes from first-run. That list is now the executor's reference; the operator hears one sentence about stronger habits for writing, reviewing and research.
+
+**Action required — none.**
+
+*The tiering rule is now written down, because getting it wrong produced the bug above: **the line is "do the operator's hands have to move?", not importance.** Step 8 needs nothing from them, so Core runs it silently. Steps **8.5** and **9** also call themselves non-optional and stay in Depth for the opposite reason — a panel dragged into place and a two-to-three-minute guided walk **cannot be done for the operator**, so neither can be silent, so either one placed before the first `/today` breaks the five-minute promise they just accepted. Both are named in Step 11's closing message, which mentions what is waiting without firing it.*
+
+*Found by dry-running the flow a second time — the **tour** path, after the quick-start path had already been walked. Each walk found defects the other could not: the first surfaced the false endings, the second surfaced an offer that contradicted a sentence four paragraphs above it. **45 assertions**, each new one proven to fail by reintroducing the exact defect.*
+
 ---
 
 ## 2026-08-25 — A bootstrap that promised instructions and delivered none, and a "permanent" state with a seven-day clock

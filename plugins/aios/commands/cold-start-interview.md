@@ -24,7 +24,7 @@ A guided conversation — ~5 minutes to working, deeper setup on request — tha
 
 ## When to use
 
-Immediately after the first clone of an AIOS vault — turns the freshly-cloned template into the operator's personalized vault. A guided conversation, not a form. Opens by offering a **~5-minute Core** (identity, declared context, a light INTENT.md, then the operator's first `/today`) or the **full tour** (Core plus agent bundles, companies, plugins, the desktop app). Core runs Steps 0-3, 10, 11 — Step 10 fires the first `/today`, Step 11 then offers connectors one service at a time. Depth Steps 4, 5, 8, 8.5, 9 are offered on request, at any point, including weeks later. Nothing is removed; the timing moved. Run once; re-runnable to revisit any section.
+Immediately after the first clone of an AIOS vault — turns the freshly-cloned template into the operator's personalized vault. A guided conversation, not a form. Opens by offering a **~5-minute Core** (identity, declared context, a light INTENT.md, then the operator's first `/today`) or the **full tour** (Core plus a walk through the agents that already shipped, companies and shared workspaces, the AIOS Glass panel for a code editor, and a guided orientation). Core runs Steps 0-3, **8 silently**, 10, 11 — Step 10 fires the first `/today`, Step 11 then offers connectors one service at a time. Depth Steps 4, 5, 8.5, 9 are offered on request, at any point, including weeks later. Nothing is removed; the timing moved. Run once; re-runnable to revisit any section.
 
 
 ## Detection
@@ -178,11 +178,16 @@ Two ways to start:
 
   A quick start  — about five minutes of questions, then you'll see it
                    working on your actual day.
-  The full tour  — same start, plus the deeper setup: your agent team,
-                   companies, plugins, the graphical app.
+  The full tour  — the same start, plus the parts that are easier to
+                   show than to describe: the agents you already have
+                   and which ones fit the way you work, how to bring in
+                   a company or a shared workspace when you need one,
+                   a visual panel if you work inside a code editor,
+                   and a proper walk through the whole map with a guide.
 
-Either way nothing is lost — the full tour is one sentence away
-whenever you want it, and I'll offer it again at the end.
+Nothing is locked behind the tour. Everything in it is either already
+installed or one sentence away — the tour is me showing you around, and
+I'll offer it again at the end. It will still be there next month.
 
 Which sounds better?
 ```
@@ -193,8 +198,12 @@ WAIT for their answer.
 
 | Tier | Steps | Feels like |
 |---|---|---|
-| **Core** (default) | Pre-step → 0 → **1 (trimmed)** → 2 → **3-light** → 10 → **11 (connectors)** | ~5 minutes of questions, then the system working on their real day |
-| **Depth** (on request, any time) | Core **plus** 4 · 5 · 8 · 8.5 · 9 | The full orientation walk |
+| **Core** (default) | Pre-step → 0 → **1 (trimmed)** → 2 → **3-light** → **8 (silent)** → 10 → **11 (connectors)** | ~5 minutes of questions, then the system working on their real day |
+| **Depth** (on request, any time) | Core **plus** 4 · 5 · 8.5 · 9 | The full orientation walk |
+
+> **Why Step 8 is in Core and Steps 8.5 / 9 are not — the line is "do the operator's hands have to move?", not importance.** Step 8 declares in its own text that *"plugins are NOT optional in cold-start"* and installs a recommended set **without asking**, so parking it behind an opt-in tier did not defer it — it **deleted it** for every operator who chose the quick start, which is the exact failure this whole change exists to avoid. It needs nothing from the operator, so it belongs in Core, silently, like the vault-bridge registration in the Pre-step.
+>
+> Steps **8.5** (the visual panel) and **9** (the guided walk) also call themselves non-optional, and they stay in Depth for a different reason: **both need the operator's attention and their hands** — an extensions view, a window reload, a panel dragged into place; or two to three minutes of being walked through a map. Neither can be done *for* them, so neither can be silent, so putting either before the first `/today` breaks the five-minute promise the operator just accepted. They are named explicitly in Step 11's closing message instead, which is a standing offer rather than a coda — Step 11 *mentions* what is waiting; it never fires it.
 
 **Depth is de-mandated, not deferred.** Nothing in it is withheld or postponed to another day — it is one sentence away at any moment, including mid-Core (*"actually, show me the whole thing"*), and Step 11 offers it again. An operator who picks Core and never asks has lost **no capability**: every deferred item is either offered later in this same session or reachable by a command they will be told about.
 
@@ -360,17 +369,15 @@ No questions asked at this step. Operator just acknowledges + moves to Step 6.
 
 Plugins are NOT optional in cold-start. The new operator doesn't know what each plugin does yet — making them DECIDE upfront forces knowledge they don't have. Same pattern as bundles (ship by default) and connectors (bulk-install Phase 1): **announce the recommended set, install them, surface what landed.** Operators can disable any plugin later if they notice it as noise.
 
-**The standard install set** (based on the universal + role-specific selection from declared context in Steps 2-4):
+> **In Core, run this SILENTLY and report it in the one short paragraph below — never show the operator the marketplace commands.** The `✓ /plugin marketplace add …` list that used to be spoken here is exactly the register this whole change removes from first-run: star counts, `@`-scoped package names and a `+ role-specific selections` line the operator cannot evaluate. It is useful output **for you**, and it stays below as your install reference. In **Depth**, where the operator asked to be shown around, walking the actual list is fair and welcome.
+
+**The standard install set** (based on the universal + role-specific selection from declared context in Steps 2-4) — *your* reference, not a script to read aloud:
 
 ```
-Installing the recommended plugin set for you...
-
-  ✓ /plugin marketplace add anthropics/skills                (138K⭐)
-  ✓ /plugin marketplace add anthropics/claude-plugins-official
-  ✓ /plugin marketplace add obra/superpowers-marketplace
-  ✓ /plugin install superpowers@superpowers-marketplace      (universal — dev methodology)
-  ✓ /plugin install claude-md-management@claude-plugins-official  (universal — CLAUDE.md/USER.md health)
-  + role-specific selections based on declared context (see table below)
+I've added a few capability packs in the background, picked from what
+you just told me — nothing for you to choose, and nothing you have to
+remember. They give me stronger habits for writing, reviewing and
+research. If you ever want to see or change what's there, just ask.
 ```
 
 **Role-specific augmentation** (read declared/observed context to decide):
@@ -387,9 +394,15 @@ Installing the recommended plugin set for you...
 
 **Edge case — operator says "skip plugins entirely"** before the install fires: respect it. The default is install-all-by-recommended-set, but explicit "skip" wins.
 
-### Step 8.5 — Install AIOS Glass — the graphical front door
+### Step 8.5 — Install AIOS Glass — the panel that lives inside a code editor
 
-**Install it as part of setup — walk them through it, don't soft-offer-and-skip.** Glass is a core surface of the AIOS, not an optional extra. Same posture as Step 9 and the bundle/plugin installs: the default is *do it now, together* — there's no fake "skip / later" gate (skipping it leaves a new operator, especially a non-terminal one, without the surface that makes the AIOS usable — exactly the gap that strands them). **What it is:** a docked panel inside the IDE that turns the AIOS into a point-and-click surface — run rituals, launch/spawn agents, browse skills + commands, mount companies, manage spaces, all without typing terminal commands. *Glass, not engine* — it triggers the existing rituals through Claude, reimplements nothing.
+> **Say "AIOS Glass", or say "a visual panel inside your editor" — never "the app".** Glass is an **extension** that runs inside Antigravity / VS Code. The **AIOS App** is a separate, standalone program. Calling Glass *"the graphical app"* (which the Step 0 offer used to do) is wrong twice over: it is not an app, and an operator who arrived **through** the App already has a graphical surface open in front of them, so the phrase reads as if they are being sold what they are currently looking at.
+>
+> **Check `ENTRY` from the Pre-step before running this step at all.**
+> - `ENTRY=app` → **skip it, and say why in one line:** *"You already have the AIOS App, which is the same idea in its own window — Glass is for people working inside a code editor. Nothing to do here."* Walking an App operator through installing a second surface is friction with no payoff.
+> - `ENTRY=terminal` → run it, but only if they actually use a code editor. Ask that first, in plain words, rather than assuming: an operator who lives in a terminal has no window for Glass to attach to.
+
+**When it does apply, install it together — walk them through it, don't soft-offer-and-skip.** Glass is a core surface of the AIOS, not an optional extra. Same posture as Step 9 and the bundle/plugin installs: the default is *do it now, together* — there's no fake "skip / later" gate (skipping it leaves a new operator, especially a non-terminal one, without the surface that makes the AIOS usable — exactly the gap that strands them). **What it is:** a docked panel inside the IDE that turns the AIOS into a point-and-click surface — run rituals, launch/spawn agents, browse skills + commands, mount companies, manage spaces, all without typing terminal commands. *Glass, not engine* — it triggers the existing rituals through Claude, reimplements nothing.
 
 Walk them through it now (don't just name it — installing isn't opening):
 1. Extensions view (`⌘⇧X` / `Ctrl+Shift+X`) → search **"AIOS Glass"** → **Install** (auto-installs the **Foam** dependency + auto-updates) → reload the window.
@@ -541,7 +554,9 @@ That's you set up. From tomorrow the rhythm is just:
   morning → /aios:today     evening → /aios:close-day
 
 Two things still waiting whenever you want them, no rush:
-  • The full tour — your agent team, companies, plugins, the app.
+  • The full tour — the agents you already have and which fit your
+    work, companies and shared workspaces, a visual panel for your
+    code editor, and a proper walk through the whole map.
     Say "show me the full tour" any time, today or next month.
   • More connectors — /aios:mcps-setup adds any of the others,
     one at a time, same as we just did.

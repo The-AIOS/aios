@@ -303,5 +303,68 @@ else
   no "SETUP.md invokes something after the interview has already closed" "$CODA_BAD"
 fi
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6 · THE FULL TOUR MUST DESCRIBE ITSELF HONESTLY
+#
+# The Step 0 offer used to read: "The full tour — same start, plus the deeper
+# setup: your agent team, companies, plugins, the graphical app." Three of those
+# four were wrong, and an operator spotted it inside a single message:
+#
+#   - "your agent team"    — Step 4 says all six bundles ship in the clone and
+#                            closes with "nothing to install or demote". Step 0
+#                            had ALREADY said the agents ship built. Offering them
+#                            as a tour extra contradicts both.
+#   - "companies"          — Step 5 explicitly DEFERS setup ("we'll skip setup
+#                            now"). It explains; it does not set anything up.
+#   - "the graphical app"  — that is AIOS Glass, an EXTENSION inside a code
+#                            editor. The AIOS App is a separate program. And an
+#                            App-path operator is already looking at a graphical
+#                            surface, so the phrase sells them what they hold.
+#
+# A tour that oversells is not a warmer tour — the operator who takes it finds
+# the promised things already installed and wonders what they actually got.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# 6a — no spoken copy may conflate Glass with the App. Prose that states this very
+#      rule is allowed, so the check is scoped to fenced blocks, as in section 2.
+GBAD=$(awk '/^```/{f=!f;next} f' "$F" | grep -inE 'the graphical app|the desktop app|plugins, the app' || true)
+[ -z "$GBAD" ] \
+  && ok "no spoken copy calls the Glass panel an app" \
+  || no "spoken copy conflates AIOS Glass with the AIOS App" "$(printf '%s' "$GBAD" | head -2)"
+
+# 6b — the tour must not offer the agents as though taking it is how you get them.
+TOUR=$(awk '/^### Step 0/,/^### Step 1/' "$F" | awk '/^```/{f=!f;next} f')
+printf '%s\n' "$TOUR" | grep -qiE 'your agent team' \
+  && no "the Step 0 tour offers 'your agent team' as a tour extra" \
+        "the same message already said the agents ship built; Step 4 is orientation, not acquisition" \
+  || ok "the Step 0 tour does not sell the operator agents they already have"
+
+# 6c — Step 8 installs a plugin set and its own text calls that NOT optional. It sat
+#      in the opt-in tier, so every operator choosing the quick start silently got
+#      none of it. That is deletion wearing re-timing's clothes — the one failure
+#      mode this whole change exists to prevent. It needs nothing from the operator,
+#      so Core must run it.
+if grep -qE '^\| \*\*Core\*\*.*\*\*8 \(silent\)\*\*' "$F"; then
+  ok "Core runs Step 8, so the quick start does not silently lose the plugin set"
+else
+  no "Step 8 is not in the Core path" "its own text says plugins are NOT optional; leaving it in Depth deletes it for every quick-start operator"
+fi
+if grep -qE '^\| \*\*Depth\*\*.*plus 4 · 5 · 8 · ' "$F"; then
+  no "Step 8 is still listed as Depth-only" "it would run twice, or not at all, depending on which row is believed"
+else
+  ok "Step 8 is no longer listed as Depth-only (one tier owns it)"
+fi
+
+# 6d — and what Core runs silently must not be spoken as marketplace commands. The
+#      old block read out '/plugin marketplace add anthropics/skills (138K⭐)' and a
+#      '+ role-specific selections' line: star counts and @-scoped package names an
+#      operator cannot evaluate, in the register this change removes from first-run.
+S8=$(awk '/^### Step 8 —/,/^### Step 8\.5/' "$F" | awk '/^```/{f=!f;next} f')
+printf '%s\n' "$S8" | grep -qE '/plugin (marketplace add|install)|⭐' \
+  && no "Step 8's spoken copy reads marketplace commands aloud" \
+        "useful output for the executor, not for a first-timer; keep it as reference prose" \
+  || ok "Step 8's spoken copy names no marketplace commands"
+
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
