@@ -13,7 +13,7 @@ This is the **canonical list** referenced by `CLAUDE.md` → MCP Policy. When yo
 | Atlassian | `atlassian-mcp/` | Jira issues + Confluence pages | API token (scoped recommended for least-privilege, classic also works) |
 | GitHub | `github-mcp/` | Repos, issues, PRs, files, branches, workflows | PAT |
 | Stitch | `stitch-mcp/` | AI-native design → code pipeline (Stitch 2.0) | `npx` (no auth) |
-| NotebookLM | `notebooklm-mcp/` | Google NotebookLM — notebooks, audio/podcasts, quizzes | `notebooklm login` |
+| NotebookLM | `notebooklm-mcp/` | Google NotebookLM — notebooks, audio/podcasts, quizzes | `notebooklm login` ⚠️ **needs Python 3.10+ — see README** |
 | Playwright¹ | `playwright-mcp/` | Browser automation — auto-publish, testing, screenshots | Browser storage state (Chrome cookie import) |
 | Nano Banana | `nano-banana-mcp/` | Gemini 2.5 Flash Image generation (cover images, visuals) | `GEMINI_API_KEY` |
 | PDF Generator | `pdf-generator-mcp/` | pandoc (md → HTML) + Chrome (HTML → PDF) | None (local binaries) |
