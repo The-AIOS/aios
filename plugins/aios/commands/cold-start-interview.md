@@ -24,7 +24,7 @@ A guided conversation — ~5 minutes to working, deeper setup on request — tha
 
 ## When to use
 
-Immediately after the first clone of an AIOS vault — turns the freshly-cloned template into the operator's personalized vault. 15-25 minute interactive interview walking through identity (USER.md), declared context, INTENT.md, bundles, connectors. Run once; re-runnable to revisit specific sections.
+Immediately after the first clone of an AIOS vault — turns the freshly-cloned template into the operator's personalized vault. A guided conversation, not a form. Opens by offering a **~5-minute Core** (identity, declared context, a light INTENT.md, then the operator's first `/today`) or the **full tour** (Core plus agent bundles, companies, plugins, the desktop app). Core runs Steps 0-3, 10, 11 — Step 10 fires the first `/today`, Step 11 then offers connectors one service at a time. Depth Steps 4, 5, 8, 8.5, 9 are offered on request, at any point, including weeks later. Nothing is removed; the timing moved. Run once; re-runnable to revisit any section.
 
 
 ## Detection
@@ -159,10 +159,10 @@ build presentations, handle legal and finance reading, and yes, write
 and ship software for you, with no engineering knowledge required on
 your side.
 
-I'm going to guide you through setting this up. It's a conversation,
-not an install — nothing to download, nothing technical, no commands to
-type. Interrupt me any time. If something I say doesn't make sense, ask;
-that's not a detour, it's the point.
+I'm going to guide you through setting this up — a conversation rather
+than an install. Nothing to download, nothing technical, no commands to
+type. Interrupt me whenever you like. If something I say doesn't land,
+just ask; questions are welcome here and they make the setup better.
 
 What we're really doing here is teaching me about you. That's the part
 that compounds: every session, the AIOS knows more about how you work,
@@ -427,8 +427,9 @@ It'll read everything you just told me and propose a plan for the rest
 of your day.
 
 One thing to expect: some sections will come up empty — your calendar,
-your tasks. That's not it failing. I'm just not connected to those yet,
-and that's the very next thing we do, once you've seen the shape of it.
+your tasks. That's simply because I'm not connected to those yet, and
+connecting them is the very next thing we do, once you've seen the shape
+of it.
 
 After today, the loop is:
   - morning  →  /aios:today

@@ -17,8 +17,8 @@ You're holding the framework. This file is your post-clone walkthrough. (For the
 
 **Three steps to a working personalized vault:**
 
-1. Run `SETUP.md` (Claude-driven, ~10 min) — configures your private vault and wires up your tools. Connectors (calendar, Slack, repos) come **after** your first daily ritual, one at a time and only the ones you want — see `/aios:cold-start-interview` Step 11
-2. Run `/aios:cold-start-interview` (~20 min) — fills in your identity, declared context, INTENT.md trust contract, agent bundle preferences, MCP auth
+1. Run `SETUP.md` (Claude-driven, ~5 min) — configures your private vault and wires up your tools. Connectors (calendar, Slack, repos) come **after** your first daily ritual, one at a time and only the ones you want — see `/aios:cold-start-interview` Step 11
+2. Run `/aios:cold-start-interview` (~5 min for the short start; the full tour whenever you want it) — fills in your identity, declared context, and an INTENT.md trust contract, then runs your first `/aios:today` and offers connectors
 3. Run `/aios:today` (~5 min) — your first daily plan. The rhythm starts here.
 
 Steps 1-2 happen once. Step 3 becomes your morning ritual.
@@ -72,9 +72,9 @@ Claude reads `SETUP.md` and handles the rest:
 
 You confirm decisions. Claude executes.
 
-**~10 minutes. You drink coffee. The system installs.**
+**~5 minutes, and Claude does the typing. You answer when asked and watch the rest.**
 
-### Step 2 — Run `/cold-start-interview` (15-25 minutes)
+### Step 2 — Run `/cold-start-interview` (~5 minutes, or the full tour if you'd rather)
 
 Once SETUP completes, the system has the *infrastructure*. Now it needs *you*. Open a fresh Claude session in `~/aios` and run:
 

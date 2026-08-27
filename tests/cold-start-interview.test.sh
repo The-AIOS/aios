@@ -133,5 +133,77 @@ PY
 [ "$bad" -gt 0 ] && ok "CONTROL FIRES: a spoken 'MCP' before Step 11 is detected ($bad)" \
   || no "CONTROL DID NOT FIRE — section 2 cannot see a violation, so it proves nothing"
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4 · CROSS-SURFACE CONSISTENCY
+#
+# Four documents describe this same first run: README.md (the funnel), START-HERE.md
+# (post-clone), SETUP.md (which Claude EXECUTES), and the interview itself. SETUP.md
+# alone carries the sequence TWICE — once addressed to Claude, once to the operator.
+#
+# They drifted during this very change: the connectors step and the interview's
+# duration were corrected in one copy and not the other, so a first-timer read a
+# promise the executor no longer made. Nothing detected it; a human reread did.
+# These assertions are that reread, made mechanical.
+# ─────────────────────────────────────────────────────────────────────────────
+SURFACES="README.md START-HERE.md SETUP.md CHEATSHEET.md TOOLS.md plugins/aios/commands/cold-start-interview.md"
+
+# 4a — the retired contract must not survive anywhere. Whichever copy keeps it is
+#      the one a newcomer might read.
+for claim in '15-25 min' '~20 min' 'Steps 0-10' 'installs MCPs' 'pulls your Calendar + Tasks + Slack'; do
+  hits=""
+  for f in $SURFACES; do
+    [ -f "$f" ] || continue
+    grep -qF "$claim" "$f" && hits="$hits $f"
+  done
+  [ -z "$hits" ] && ok "retired claim absent from every surface: \"$claim\"" \
+    || no "retired claim still live: \"$claim\"" "in:$hits — a surface promising the old flow is worse than no surface"
+done
+
+# 4b — SETUP.md is the file the entry prompt actually runs. It must not fire the
+#      connectors pass, nor ask the two questions that moved. Matching only a LIVE
+#      invocation: the file must stay free to explain, in prose, why it doesn't.
+# NOTE: the block is an HTML <details>, NOT a '>' blockquote. The first version of
+#       this guard matched '^> ### .*Reading this as Claude' and selected ZERO lines,
+#       so it passed by measuring nothing — reintroducing the exact invocation did not
+#       make it fire. The line-count assertion below is what makes that visible.
+CLAUDE_BLOCK=$(awk '/<summary>.*Reading this as Claude/,/<\/details>/' SETUP.md)
+CB_STEPS=$(printf '%s\n' "$CLAUDE_BLOCK" | grep -cE '^[0-9]+\. ')
+[ "${CB_STEPS:-0}" -ge 8 ] \
+  && ok "the Claude-facing block is locatable and has $CB_STEPS numbered steps" \
+  || no "cannot locate the Claude-facing block in SETUP.md (found ${CB_STEPS:-0} steps)" \
+       "every assertion scoped to it would pass by measuring nothing"
+
+# The step that REPLACED the invocation says "Do NOT invoke `/aios:mcps-setup` here"
+# and is itself a numbered line, so a naive '^[0-9]+\. .*invoke' fires on the fix.
+# Strip negated lines first: a guard that cannot tell a thing from its own changelog
+# fires on every honest edit, and gets muted.
+if printf '%s\n' "$CLAUDE_BLOCK" \
+     | grep -E '^[0-9]+[a-z]?\. ' \
+     | grep -viE 'do not|don.t|never|no longer|used to' \
+     | grep -qF 'invoke `/aios:mcps-setup`'; then
+  no "SETUP.md still invokes /aios:mcps-setup as a numbered step" "connectors belong to interview Step 11, after the first /today"
+else
+  ok "SETUP.md does not invoke the connectors pass during setup"
+fi
+grep -qF 'Do you use more than one Anthropic account?' SETUP.md \
+  && no "SETUP.md still asks the multi-account question" "unanswerable on day one; the Day-7 check-in owns it" \
+  || ok "SETUP.md no longer asks the multi-account question"
+
+# 4c — removal without a named destination is how re-timing decays into deletion.
+#      SETUP must point at where each moved thing went.
+grep -qF 'Step 11' SETUP.md \
+  && ok "SETUP.md names interview Step 11 as the connectors' destination" \
+  || no "SETUP.md drops connectors with no destination" "a reader cannot tell 'later' from 'gone'"
+grep -qiE 'Day-7|Day 7' SETUP.md \
+  && ok "SETUP.md names the Day-7 check-in as the multi-account destination" \
+  || no "SETUP.md drops the multi-account question with no destination" ""
+
+# 4d — the interview's own self-description is read by every session that lists
+#      commands. It drifted too, and it is the least likely copy to be reread.
+grep -qE '5-minute Core|~5 ?min' "$F" \
+  && ok "the interview's description states the Core contract it actually offers" \
+  || no "the interview's description does not state its own Core contract" "the description is what a session sees before opening the file"
+
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
