@@ -38,6 +38,22 @@ The command is safe to run multiple times — it detects what's already configur
 
 If all of those are TRUE → fresh vault → run the full interview. If some are filled → ask the operator which sections they want to revisit.
 
+**The third case, and the one this command promises out loud twice: they came back for the tour.** Step 0 says *"the full tour is one sentence away whenever you want it"* and Step 11's close says *"say 'show me the full tour' any time, today or next month."* When an operator takes either of those up — or invokes this command again on a vault where Core is plainly already done — **do not offer to revisit their identity.** They did not come back to re-answer who they are; that framing makes a returning operator feel they are starting over, and it is the wrong read of a request we invited.
+
+Run **Depth only** — Steps **4 · 5 · 8.5 · 9** — skip Core entirely, and open by placing them:
+
+```
+Picking up where we left off. Your identity, context and trust settings are
+already in place, so none of that needs touching — this is the part I said
+I'd show you when you had time.
+
+Four things, and you can stop after any of them.
+```
+
+Then run those four steps in order. `ENTRY` still governs Step 8.5 exactly as it does in a first run — detect it again rather than assuming the surface has not changed, because it may well have (an operator who set up in a terminal and later installed the App is the common case, not the exotic one).
+
+**Why this is written down rather than left to judgment:** the deferred tour is a *promise with a named trigger phrase*, and until this paragraph existed nothing mapped that phrase to an action. Detection would have offered to revisit filled-in sections — technically a re-run, and not at all what was asked for. A promise whose landing is undefined is the same defect as re-timing a step to a destination that does not exist; it just fails later, and in front of an operator who trusted the offer enough to come back.
+
 ## Steps
 
 ### Pre-step — Silent setup (runs before the welcome; the operator sees none of this)

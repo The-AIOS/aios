@@ -167,6 +167,20 @@
 
 *A note now sits at the top of the test file recording a trap that caught **four** guards here: each one fired on the prose that **documents** a defect rather than the defect — a step reading *"Do NOT invoke X"* matching a search for *"invoke X"*, a coda check excused by a sentence mentioning the interview, and two checks matching a quoted *"it used to say …"*. Every time the file was right and the guard was wrong. The conclusion is not "write better patterns": a command file must be free to explain its own rules, so a guard over one has to be scoped to **what executes** — a fenced block, a numbered step, a probe line — never the whole file. One of these fixes required moving an explanation off a probe line onto its own, because the line carried both. **62 assertions.***
 
+### Coming back for the tour a month later now lands somewhere
+
+> **What this delivers.** This command tells the operator, twice and in quotes, that *"show me the full tour"* will work *"any time, today or next month."* **Nothing mapped that phrase to an action.** Detection's returning-operator branch offered to *revisit filled-in sections* — technically a re-run, and not remotely what was asked. A returning operator being asked to re-answer who they are feels like starting over, on a visit we invited.
+
+**What you can now do:**
+- **Take up the offer and be met where you left off.** A tour request — or an invocation on a vault where Core is plainly done — runs **Depth only** (Steps 4 · 5 · 8.5 · 9), skips Core entirely, and opens by saying so: *"Your identity, context and trust settings are already in place, so none of that needs touching — this is the part I said I'd show you when you had time."*
+- **Have the surface checked again rather than remembered.** `ENTRY` is re-detected on the return, because an operator who set up in a terminal and later installed the App is the ordinary case, not the exotic one — and Step 8.5 is the step that most depends on getting it right.
+
+**Action required — none.**
+
+*This is the **third** promise in this entry that needed a mechanism, and the pattern is now explicit enough to name: **a promise with a named trigger phrase needs a named landing.** The Day-7 check-in said *"I'm scheduling"* and scheduled nothing; a step re-timed to that check-in landed nowhere; and this one had a quoted phrase with no handler. All three fail the same way — later, and in front of someone who believed the offer.*
+
+*On the two remaining walks: the **App path** was walked against the App's own source and is clean. Its first phase installs *"Homebrew, the toolchain, Obsidian and Claude Code"* and **stops there** — its own note reads *"This installs the tools; a Claude session does the AIOS itself once Claude is running"* — so there is no duplicated clone to detect and the fresh-or-existing-vault question is still asked in the session. The App has real terminals, so the shell-rc instructions are executable on that path too. One thing sharpened as a result: the Obsidian check is **verifying a claim, not filling a gap** — the App already tries to install it, and it is still the one prerequisite that has needed a manual install in the field, because a failed cask install looks identical to a successful one from the next step's point of view. The **path-`CONFLICT`** branch was read and needs nothing: it surfaces immediately and asks whether to back the existing path up, which is the designed behaviour for the one case a human has to decide. **65 assertions.***
+
 ---
 
 ## 2026-08-25 — A bootstrap that promised instructions and delivered none, and a "permanent" state with a seven-day clock

@@ -532,5 +532,36 @@ grep -qiE 'Arrived through the App|assume the toolchain is present' SETUP.md \
   && ok "SETUP's prerequisite step branches on how the operator arrived" \
   || no "SETUP walks one prerequisites block for both doors" "an App operator meets a wall of checks that all pass, before anything works"
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10 · A PROMISE WITH A NAMED TRIGGER PHRASE NEEDS A NAMED LANDING
+#
+# This command tells the operator, twice and in quotes, that "show me the full
+# tour" will work "any time, today or next month". Nothing mapped that phrase to
+# an action. Detection's returning-operator branch offered to revisit filled-in
+# sections — technically a re-run, and not remotely what was asked: a returning
+# operator being asked to re-answer who they are feels like starting over, on a
+# visit WE invited.
+#
+# Same shape as the Day-7 check-in, which said "I'm scheduling" and scheduled
+# nothing: a promise whose landing is undefined fails later, in front of someone
+# who trusted the offer enough to come back.
+# ─────────────────────────────────────────────────────────────────────────────
+DET=$(awk '/^## Detection/,/^## Steps/' "$F")
+
+printf '%s\n' "$DET" | grep -qiE 'show me the full tour|came back for the tour' \
+  && ok "Detection recognises the returning-for-the-tour case by its trigger phrase" \
+  || no "the tour phrase this command promises has no landing in Detection" "a returning operator gets offered a re-run of their identity instead"
+
+printf '%s\n' "$DET" | grep -qiE 'Depth only|Steps \*\*4 · 5 · 8\.5 · 9\*\*' \
+  && ok "the returning tour runs Depth only, skipping Core" \
+  || no "the returning tour does not state that Core is skipped" "it would re-ask identity, context and trust"
+
+# and the surface must be re-detected, since a terminal operator who later
+# installed the App is the common case rather than the exotic one.
+printf '%s\n' "$DET" | grep -qiE 'detect it again|ENTRY still governs' \
+  && ok "the returning tour re-detects the surface rather than assuming it" \
+  || no "the returning tour assumes the original surface" "an operator who set up in a terminal and later installed the App is the ordinary case"
+
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
