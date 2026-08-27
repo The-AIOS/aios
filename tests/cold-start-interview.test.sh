@@ -427,5 +427,29 @@ grep -qE 'about_me\.md.*(watch|greeting)|greeting.*about_me\.md' "$F" \
   && ok "the App's dependency on about_me.md is recorded where it can be seen" \
   || no "nothing records that the App reads about_me.md for its greeting" "a future Core trim would regress an operator-reported fix in aios-app"
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8 · EVERY TIER-TABLE SHORTHAND MUST BE DEFINED SOMEWHERE
+#
+# The Core row reads "Pre-step -> 0 -> 1 (trimmed) -> 2 -> 3-light -> 8 (silent)
+# -> 10 -> 11". Each parenthetical is an INSTRUCTION to the session running Core.
+# "3-light" was named there and defined nowhere, so Core would have run the full
+# Step 3 — which asks an autonomy level per domain across five-plus domains, and
+# is by itself longer than the five minutes the operator was promised for all of
+# it. A label that names a variant without defining it does not shorten anything;
+# it just makes the table look like a decision that was taken.
+# ─────────────────────────────────────────────────────────────────────────────
+grep -qE '`3-light`.*what Core actually runs|### `3-light`' "$F" \
+  && ok "3-light is defined, not only named in the tier table" \
+  || no "3-light is named in the tier table but never defined" "Core would run the full Step 3 — per-domain autonomy, longer than the whole promised Core"
+
+# 8b — and the one-question version must not quietly authorise outbound actions.
+#      An operator answering "just do it" in minute four is talking about tidying
+#      files, not about email going out in their name.
+S3=$(awk '/^### Step 3 —/,/^### Step 4/' "$F")
+printf '%s\n' "$S3" | grep -qiE 'pin anything irreversible|irreversible or outward-facing to draft' \
+  && ok "3-light pins irreversible and outward-facing actions to draft regardless of the answer" \
+  || no "3-light applies one global answer to everything" "a minute-four yes about tidying files would authorise outbound mail in the operator's name"
+
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

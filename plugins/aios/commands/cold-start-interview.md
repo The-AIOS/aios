@@ -360,7 +360,46 @@ Skip optional files (`role-expectations.md`, `psychometric-profile.md`) unless t
 
 ### Step 3 — `INTENT.md` (trust contract)
 
-INTENT.md is the highest-leverage file for compounding trust. Walk through:
+INTENT.md is the highest-leverage file for compounding trust.
+
+> ### `3-light` — what Core actually runs (this is the definition; the tier table only names it)
+>
+> The tier table says Core runs **`3-light`**, and for a while that label was the only mention of it
+> anywhere — so a session running Core had no way to know what to leave out and would have run the full
+> walk below. That matters more here than anywhere else in Core: item 1 asks for an autonomy level **per
+> domain**, and there are five or more domains, so the full version is on its own longer than the five
+> minutes the operator was promised for the whole thing.
+>
+> **In Core, ask ONE question** — the global posture, in plain words, with no jargon and no list of domains:
+>
+> ```
+> Last thing before you see it work. When I can do something for you —
+> draft a reply, tidy a file, prepare a document — would you rather I
+> just do it and tell you what I did, or show you first and wait?
+>
+> Either is fine, and you can change it any time, for everything or
+> for one kind of task.
+> ```
+>
+> Then write `INTENT.md` yourself from that single answer:
+>
+> - Apply their choice as the **global default** across domains.
+> - **Regardless of what they chose, pin anything irreversible or outward-facing to draft-first** —
+>   sending email to other people, publishing, and anything that spends money. Then tell them, in one
+>   line: *"I've kept myself on show-you-first for anything that leaves your name somewhere — email out,
+>   anything published. You can loosen that whenever you want."* An operator answering *"just do it"* in
+>   minute four is answering about tidying files; they are not authorising outbound mail in their name,
+>   and reading it that way would be the single most expensive misread in this file.
+> - Take the **defaults** for *just cause* and *focus priorities* (items 2 and 3 below) without asking.
+>   Step 3's own text already says the default framing *"is fine for most operators"*, so asking costs two
+>   questions and changes nothing.
+> - Leave a line in the file naming what was defaulted, so the operator can see what to revisit.
+>
+> **Depth runs the full walk below** — per-domain autonomy, just cause, the pillars. Nothing here is
+> dropped; it is one question now and the rest whenever they ask, which is the same trade as everywhere
+> else in Core.
+
+**The full walk (Depth, or on request at any time):**
 
 1. **Autonomy levels** — for each domain (draft messages, external emails, code commits, content publishing, calendar scheduling, etc.), ask: *"autonomous / draft / ask?"* Defaults are conservative ("draft" everywhere); operator opens up as trust grows.
 2. **Just cause** — *"In one sentence: why does your work matter beyond revenue?"*
