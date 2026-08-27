@@ -1068,6 +1068,14 @@ jobs:
         # claiming it has one.
         run: bash tests/connector-manifests.test.sh
 
+      - name: an agent's declared skills exist, and the registrar checks its own premise
+        # Issue #49, item 4. The root failure was not the exclusion in
+        # skills/setup.sh — it was that "an agent DECLARES a skill" and "that skill
+        # is available" were never checked against each other. Eight bundled agents
+        # named a skill and received nothing; nothing errored, they just answered
+        # worse. Silent by construction, so it has to be a test.
+        run: bash tests/agent-skills-resolve.test.sh
+
       - name: every suite in tests/ is actually invoked by this workflow
         # This job's step list is hand-typed, so a suite can be committed, shipped, and
         # never run — it rots without one red mark. This repo has already been bitten twice
