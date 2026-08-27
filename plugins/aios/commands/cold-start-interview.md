@@ -234,7 +234,7 @@ Edit USER.md inline as the operator answers. Show the diff before applying.
 **After the Identity table is captured — bind the shorthand to their name.**
 
 > **Two entry paths, and the wording must not assume either.** An operator who came through
-> **SETUP.md** already has wrappers installed (SETUP.md Step 5 ran before `USER.md` existed, so the
+> **SETUP.md** already has wrappers installed (its wrapper-install step ran before `USER.md` existed, so the
 > shorthand fell back to the default `claude` function) — for them this is a *refresh*. An operator who
 > came through **the AIOS App** never ran SETUP.md at all — for them this is the *first* install, and
 > calling it a "re-run" is confusing at best. The Pre-step detects which path they are on; use the word

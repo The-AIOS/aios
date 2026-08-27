@@ -273,5 +273,35 @@ done
   || no "operator-facing doc(s) still instruct the operator to run the flow:$BAD" \
        "the operator types one sentence; everything after it is their Claude session"
 
+
+# 5e — NO CODA. SETUP.md step 10 hands control to this interview and does not get it
+#      back: the interview fires the first /today, offers connectors, and closes on
+#      "Welcome to The AIOS." Anything SETUP.md invokes after step 10 therefore lands
+#      AFTER the operator has been told they are finished — and it lands worst on the
+#      one who chose the ~5-minute start. Three separate steps did exactly this before
+#      being retired (mcps-setup, the orientation hat, company/collaborate).
+#
+#      A first version of this guard filtered the lines by PROSE ("skip anything that
+#      says 'do not' or 'the interview already owns'"). That fails open: a live step
+#      whose sentence happens to mention the interview owning something gets excused,
+#      which is exactly what a half-finished edit produces. So the rule is positional
+#      instead — each retired step must OPEN with its retirement marker. Prose after
+#      the marker cannot buy an exemption.
+CODA_BAD=""
+for n in 11 12 13; do
+  line=$(awk '/<summary>.*Reading this as Claude/,/<\/details>/' SETUP.md | grep -E "^${n}\. " | head -1)
+  [ -n "$line" ] || continue
+  case "$line" in
+    "$n. **Do NOT"*|"$n. ~~"*|"$n. Do NOT"*) : ;;
+    *) CODA_BAD="$CODA_BAD
+  step $n: $(printf '%s' "$line" | cut -c1-72)" ;;
+  esac
+done
+if [ -z "$CODA_BAD" ]; then
+  ok "SETUP.md invokes nothing after handing off to the interview (no coda)"
+else
+  no "SETUP.md invokes something after the interview has already closed" "$CODA_BAD"
+fi
+
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

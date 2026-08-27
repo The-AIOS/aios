@@ -93,6 +93,20 @@
 
 *`tests/cold-start-interview.test.sh` → **39 assertions**. Every new one was proven to fail before being trusted: re-adding the second registration, restoring the chatty echo, stripping the deliberate-re-run note, and putting back one *"Run `/aios:cold-start-interview`"* each produce exactly one red line.*
 
+### The dry run found a third false ending, and the guard written to catch it failed open twice
+
+> **What this delivers.** Walking the flow from the operator's one sentence — rather than reading the steps in order — surfaced what reading could not: `SETUP.md` step 10 hands control to the interview, the interview closes on *"Welcome to The AIOS."*, and then **`SETUP.md` steps 11 and 12 fired anyway.** The orientation companion and the company/collaboration setup both landed *after* the operator had been told they were finished — and worst on the one who chose the five-minute start, who said "quick", got a clean finish, and was then handed two more things.
+
+**What you can now do:**
+- **Be finished when you are told you are finished.** Both steps are retired into the interview's own Depth tier, which already owned them — **Step 9** is the orientation companion, and **Step 5** presents companies and collaboration spaces while *explicitly deferring their setup*: *"we'll skip setup now; both deserve their own beats post-cold-start."* Running them one step later, in the same session, was that deferral being overridden by the file that had just delegated it. `SETUP.md` now states where the sequence ends and that nothing may be appended after the hand-off.
+- **Trust the cross-file references.** The interview cited *"SETUP.md Step 5"* for the wrapper install. Wrappers are **step 7** — the number shifted when the update tracker and plugin registration were added, the same drift `SETUP.md` already documents for its own step count. The reference now names the step by its role rather than its position, which cannot drift.
+
+**Action required — none.**
+
+*The guard for this rule **failed open twice before it worked**, and both times the mistake was the same instinct: describing the defect in prose and then matching the prose. The first version filtered candidate lines by phrase — skip anything saying *"do not"*, or *"the interview already owns"* — which excuses a **live** step whose sentence merely mentions the interview owning something. That is not a hypothetical: a half-finished edit produces exactly that line, and the guard passed on it. The working version is **positional** — each retired step must OPEN with its retirement marker, and prose after the marker buys no exemption. A guard that reads intent can be talked out of firing; one that reads position cannot.*
+
+*Both failures were caught the same way: **mutate the file so the defect is present, and require the red line.** A guard that has never been seen to fail is a guard with no evidence behind it. **40 assertions.***
+
 ---
 
 ## 2026-08-25 — A bootstrap that promised instructions and delivered none, and a "permanent" state with a seven-day clock
