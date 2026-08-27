@@ -37,7 +37,7 @@
 
 ## 2026-08-27 — First-run stops asking questions a newcomer cannot answer, and stops ending before it is finished
 
-`hash: b55e142 · 2e4044b · 765ff51`
+`hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4`
 
 ### The setup interview re-times its friction without losing a single capability
 
@@ -74,7 +74,9 @@
 
 *The four surfaces **drifted during this very change** — corrected in the Claude-facing copy and not the operator-facing one twenty lines below, in the same file. `SETUP.md` already carried a comment recording the same class of failure (a step count repeated across three files, two of them in another repo, that went on saying 11 after it became 13). The drift warning now sits between the two copies, and eleven new assertions check them against each other.*
 
-*Two of those assertions were written wrong first, and both failure modes are recorded in the test file rather than quietly fixed. The block guard matched a `>` blockquote when the block is an HTML `<details>`: it selected **zero lines** and passed by measuring nothing — reintroducing the exact invocation did not make it fire, which is the only reason it was caught. Re-scoped, it then matched its own replacement step (`6. **Do NOT invoke …**`) and failed on the fix — *a guard that cannot tell a thing from its own changelog fires on every honest edit, and gets muted.* Both now prove both directions: clean passes, reintroduced fails. **34 assertions, 20/20 suites.***
+*Wiring the suite into CI needed a hand-typed step, so a **derived guard** went in beside it: every `tests/*.sh` must be referenced by some workflow, or CI fails. On its first run it found **two suites that had been committed and never invoked by anything** — including `secret-scan.test.sh`, the scanner standing between a vault and a committed credential. Both now run. This repo had already been bitten twice by a hand-typed list (the Tier-1 root-docs enumeration missing three docs; a step count still reading 11 after it became 13) and fixed both by deriving the list; a suite nothing runs is worse than no suite, because it reads as coverage.*
+
+*Two of those assertions were written wrong first, and both failure modes are recorded in the test file rather than quietly fixed. The block guard matched a `>` blockquote when the block is an HTML `<details>`: it selected **zero lines** and passed by measuring nothing — reintroducing the exact invocation did not make it fire, which is the only reason it was caught. Re-scoped, it then matched its own replacement step (`6. **Do NOT invoke …**`) and failed on the fix — *a guard that cannot tell a thing from its own changelog fires on every honest edit, and gets muted.* Both now prove both directions: clean passes, reintroduced fails. **34 assertions in the new suite; 19/19 suites green.***
 
 ---
 

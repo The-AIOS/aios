@@ -1036,6 +1036,49 @@ jobs:
         # decision about WHETHER to ask is local, and that is exactly what it asserts.
         run: bash tests/star-check.test.sh
 
+      - name: first-run friction stayed removed and every destination still exists
+        # AI-122 Front A. The regression to fear is not a bug, it is a tidy-up: a later
+        # session reads a negated step ("do NOT invoke the connectors pass here") as dead
+        # weight and deletes it, and re-timing silently becomes removal. So the suite
+        # asserts BOTH halves — the friction is gone AND each moved capability's new owner
+        # is named in the file it left. It also checks the four surfaces that describe this
+        # same first run against each other; they drifted inside the very PR that aligned
+        # them, in two copies twenty lines apart in one file.
+        run: bash tests/cold-start-interview.test.sh
+
+      - name: the secret scanner rejects what it is supposed to reject
+        # Found by the derived-list guard below on its first run: this suite had been
+        # committed and never invoked by any workflow. It is the scanner that stands between
+        # a vault and a committed credential — the one suite whose silence is least
+        # acceptable, and it was silent because a hand-typed list did not mention it.
+        run: bash tests/secret-scan.test.sh
+
+      - name: insights route to the right observed file
+        # Same finding, same cause: committed, never invoked.
+        run: bash tests/route-insight.test.sh
+
+      - name: every suite in tests/ is actually invoked by this workflow
+        # This job's step list is hand-typed, so a suite can be committed, shipped, and
+        # never run — it rots without one red mark. This repo has already been bitten twice
+        # by a hand-typed list: the Tier-1 root-docs enumeration silently missed three docs,
+        # and a step count went on saying 11 across three files after it became 13. Both
+        # were fixed by DERIVING the list. This is that fix applied to the suite list — it
+        # does not run the suites, it checks that something does.
+        run: |
+          MISSING=""
+          for t in tests/*.test.sh tests/*.sh; do
+            [ -f "$t" ] || continue
+            case " $MISSING " in *" $t "*) continue ;; esac
+            grep -qF "$t" .github/workflows/*.yml || MISSING="$MISSING $t"
+          done
+          if [ -n "$MISSING" ]; then
+            printf '::error::suite(s) committed but never invoked by any workflow:%s\n' "$MISSING"
+            echo "Add a step that runs it, or delete it. A suite nothing runs is worse than no suite:"
+            echo "it reads as coverage."
+            exit 1
+          fi
+          echo "OK: every tests/*.sh is referenced by a workflow"
+
   primitives_bash32:
     # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
