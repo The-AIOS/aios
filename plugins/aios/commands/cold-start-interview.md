@@ -43,12 +43,22 @@ If all of those are TRUE → fresh vault → run the full interview. If some are
 Run **Depth only** — Steps **4 · 5 · 8.5 · 9** — skip Core entirely, and open by placing them:
 
 ```
-Picking up where we left off. Your identity, context and trust settings are
-already in place, so none of that needs touching — this is the part I said
-I'd show you when you had time.
+Your identity, context and trust settings are already in place, so none of
+that needs touching. This is the deeper half — the parts that are easier to
+show than to describe.
 
 Four things, and you can stop after any of them.
 ```
+
+> **Do not say *"the part I said I'd show you"* unless you know it was offered.** Two different doors reach
+> this branch and only one of them was ever promised a tour: the operator who heard Step 11's closing offer
+> and came back for it, **and** the operator who found a button. The AIOS App ships a **"Deepen your
+> context (cold-start interview)"** action, and it is also one of the three commands **exempt from the
+> App's readiness gate** — because, in the App's own words, *"the interview writes the context the gate
+> wants."* So this command gets invoked on partially-configured vaults by a surface that never made any
+> promise, sometimes by an operator who set their vault up before the tour existed at all. The copy above
+> works for both; a callback to a conversation that never happened is a small thing that reads as the
+> system confusing them with someone else.
 
 Then run those four steps in order. `ENTRY` still governs Step 8.5 exactly as it does in a first run — detect it again rather than assuming the surface has not changed, because it may well have (an operator who set up in a terminal and later installed the App is the common case, not the exotic one).
 
