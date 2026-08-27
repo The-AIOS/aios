@@ -10,7 +10,7 @@ argument-hint: "(no arguments — fully interactive)"
 
 # /cold-start-interview — First Session After You Clone AIOS
 
-A 15-25 minute interview that turns a freshly-cloned AIOS template into your personalized vault. Walks you through identity (`USER.md`), declared context (`about_me`, `personal_voice`, `working_style`, `INTENT.md`), bundle install choices (which of the 6 agent bundles you need), MCP setup, optional Anthropic plugins, and your first `/today` run.
+A guided conversation — ~5 minutes to working, deeper setup on request — that turns a freshly-cloned AIOS template into your personalized vault. Walks you through identity (`USER.md`), declared context (`about_me`, `personal_voice`, `working_style`, `INTENT.md`), bundle install choices (which of the 6 agent bundles you need), connector setup, optional Anthropic plugins, and your first `/today` run.
 
 > **When to run:** immediately after `git clone git@github.com:The-AIOS/aios.git ~/aios` (or equivalent). Run once. If you skip it, the system still works — you'll just spend more time figuring things out yourself.
 
@@ -24,7 +24,7 @@ A 15-25 minute interview that turns a freshly-cloned AIOS template into your per
 
 ## When to use
 
-Immediately after the first clone of an AIOS vault — turns the freshly-cloned template into the operator's personalized vault. 15-25 minute interactive interview walking through identity (USER.md), declared context, INTENT.md, bundles, MCPs. Run once; re-runnable to revisit specific sections.
+Immediately after the first clone of an AIOS vault — turns the freshly-cloned template into the operator's personalized vault. A guided conversation, not a form. Opens by offering a **~5-minute Core** (identity, declared context, a light INTENT.md, then the operator's first `/today`) or the **full tour** (Core plus a walk through the agents that already shipped, companies and shared workspaces, the AIOS Glass panel for a code editor, and a guided orientation). Core runs Steps 0-3, **8 silently**, 10, 11 — Step 10 fires the first `/today`, Step 11 then offers connectors one service at a time. Depth Steps 4, 5, 8.5, 9 are offered on request, at any point, including weeks later. Nothing is removed; the timing moved. Run once; re-runnable to revisit any section.
 
 
 ## Detection
@@ -38,21 +38,132 @@ The command is safe to run multiple times — it detects what's already configur
 
 If all of those are TRUE → fresh vault → run the full interview. If some are filled → ask the operator which sections they want to revisit.
 
+**The third case, and the one this command promises out loud twice: they came back for the tour.** Step 0 says *"the full tour is one sentence away whenever you want it"* and Step 11's close says *"say 'show me the full tour' any time, today or next month."* When an operator takes either of those up — or invokes this command again on a vault where Core is plainly already done — **do not offer to revisit their identity.** They did not come back to re-answer who they are; that framing makes a returning operator feel they are starting over, and it is the wrong read of a request we invited.
+
+Run **Depth only** — Steps **4 · 5 · 8.5 · 9** — skip Core entirely, and open by placing them:
+
+```
+Your identity, context and trust settings are already in place, so none of
+that needs touching. This is the deeper half — the parts that are easier to
+show than to describe.
+
+Four things, and you can stop after any of them.
+```
+
+> **Do not say *"the part I said I'd show you"* unless you know it was offered.** Two different doors reach
+> this branch and only one of them was ever promised a tour: the operator who heard Step 11's closing offer
+> and came back for it, **and** the operator who found a button. The AIOS App ships a **"Deepen your
+> context (cold-start interview)"** action, and it is also one of the three commands **exempt from the
+> App's readiness gate** — because, in the App's own words, *"the interview writes the context the gate
+> wants."* So this command gets invoked on partially-configured vaults by a surface that never made any
+> promise, sometimes by an operator who set their vault up before the tour existed at all. The copy above
+> works for both; a callback to a conversation that never happened is a small thing that reads as the
+> system confusing them with someone else.
+
+Then run those four steps in order. `ENTRY` still governs Step 8.5 exactly as it does in a first run — detect it again rather than assuming the surface has not changed, because it may well have (an operator who set up in a terminal and later installed the App is the common case, not the exotic one).
+
+**Why this is written down rather than left to judgment:** the deferred tour is a *promise with a named trigger phrase*, and until this paragraph existed nothing mapped that phrase to an action. Detection would have offered to revisit filled-in sections — technically a re-run, and not at all what was asked for. A promise whose landing is undefined is the same defect as re-timing a step to a destination that does not exist; it just fails later, and in front of an operator who trusted the offer enough to come back.
+
 ## Steps
 
-### Pre-step — Path portability check (silent, runs before welcome)
+### Pre-step — Silent setup (runs before the welcome; the operator sees none of this)
 
-Before the welcome message, run this check **once** to ensure the framework's hardcoded `~/aios/` references resolve to the actual install:
+Three things happen before you say hello. **None of them is a question.** None produces output the
+operator has to read *unless it needs a human decision* — which, in practice, is only the path conflict
+in (c). If any fails, note it and carry on — a first-timer must never open on an error.
+
+**(a) Which door did they come through?** Detect it, because the wording of several later steps depends
+on it and getting it wrong is its own friction:
+
+**Do not guess this from what is installed — walk your own process ancestry.** Each AIOS surface
+announces its process-tree root at `~/.aios/surfaces/<surface>.json`; you belong to whichever one is an
+**ancestor of your own pid**. This is the protocol's own detection snippet (`~/.aios/spawn-inbox/README.md`
+is its authority) and it must be used as written, because the two shortcuts both fail in the direction
+that matters:
+
+- **A surface file's presence proves nothing** — it stays on disk after the surface exits, so it must be
+  liveness-checked (`os.kill(pid, 0)`). Measured on a live machine 2026-08-27: `glass.json` was present
+  with a **dead** pid while the App was genuinely running. A presence check would have reported "IDE" to
+  an operator sitting in the App.
+- **An install path proves less** — `/Applications/AIOS.app` existing says the operator *owns* the App,
+  not that it launched *this session*. Someone with the App installed who opens a plain terminal is a
+  terminal-path operator, and telling them otherwise skips a step they needed.
+- **Never match on process *name*.** Glass runs inside whatever editor the operator uses, so a name list
+  breaks the day they switch editors. Compare **pids**.
+
+```bash
+ENTRY=$(python3 - <<'PY'
+import json, os, glob, subprocess
+def parent(pid):
+    r = subprocess.run(["ps","-o","ppid=","-p",str(pid)], capture_output=True, text=True)
+    return int(r.stdout) if r.stdout.strip() else 0
+live = {}
+for f in glob.glob(os.path.expanduser("~/.aios/surfaces/*.json")):
+    try:
+        d = json.load(open(f))
+        os.kill(d["pid"], 0)          # announced but dead => not running
+        live[d["pid"]] = d["surface"]
+    except Exception:
+        pass
+p = os.getpid()
+while p and p != 1:
+    if p in live:
+        print(live[p]); break
+    p = parent(p)
+else:
+    print("terminal")                 # no match is a legitimate answer, not an error
+PY
+) || ENTRY=terminal
+```
+
+Three answers, and each one changes what you say later:
+
+| `ENTRY` | Where they are | What it means for you |
+|---|---|---|
+| `app` | Inside the **AIOS App**, which launched this session | **They never read SETUP.md** — the App ran that phase for them. Never mention it, never link it. They already have a graphical surface, so **skip Step 8.5 entirely**. Treat Step 1's wrapper install as a *first* install. |
+| `glass` | Inside a **code editor** with the **AIOS Glass panel already installed and running** | They are demonstrably an editor user, and Glass is **already there** — Step 8.5 must not offer to install what announced itself thirty seconds ago. Point at the panel instead. |
+| `terminal` | A plain terminal — no AIOS surface in the ancestry | They followed SETUP.md, so referring to it is fair game and Step 1's wrapper install is a *refresh*. Glass is a genuine offer here, and the only branch where asking *"do you work in a code editor?"* is the right move rather than a question you could have answered yourself. |
+
+**Say what you detected, once, in one clause — it is the cheapest trust you will ever buy.** An operator
+who is told *"I can see you're in the App"* learns, in four words and with no claim they have to take on
+faith, that this thing looks at their actual machine. Do not make a performance of it and never present it
+as a question. If detection fails, treat it as `terminal` and say nothing at all — a wrong guess announced
+confidently costs more than the whole gain.
+
+This is the canonical half of the routing rule: **a first-timer arriving through the app must never be
+linked into the 654-line manual.** SETUP.md stays the reference for the manual path and is not changed.
+
+**(b) Register the vault connector, silently.** The AIOS edits notes through an Obsidian MCP. It is
+**infrastructure, not a connector** — a published npm package, no tokens, no account, nothing to
+decide — so it is never a question and never appears in the Step 11 list:
+
+```bash
+# Idempotent: skip if already registered. No tokens, no prompts, no output the operator must read.
+claude mcp list 2>/dev/null | grep -q '^obsidian:' \
+  || claude mcp add obsidian -- npx @mauricio.wolff/mcp-obsidian@latest "$INSTALL_PATH/vault" 2>/dev/null \
+  || true
+```
+
+If it fails, say nothing and continue — vault writes still work through the filesystem; this only makes
+them cleaner. **Never ask the operator about it.** (`A2`: on a fresh install, vault edits work and the
+operator was never consulted.)
+
+**(c) Path portability.** Ensure the framework's hardcoded `~/aios/` references resolve to the actual install. **This is idempotent and deliberately runs on both doors** — the setup sequence already did it for a terminal-path operator, and an App-path operator never ran that sequence, so this is their only pass. It stays quiet unless it actually did something or needs a decision:
 
 ```bash
 # Resolve the actual repo path (cold-start-interview runs from the cloned repo root)
 INSTALL_PATH="$(pwd)"
 CANONICAL="$HOME/aios"
 
+# SILENT on every path that needs no decision. This step runs a second time for
+# terminal-path operators (the setup sequence already did it), and on the App path it
+# is the only pass — so it must be safe to run twice AND produce nothing to read when
+# there is nothing to do. CONFLICT is the sole case a human has to resolve, so it is
+# the sole case that speaks.
 if [ "$INSTALL_PATH" = "$CANONICAL" ]; then
-  echo "path-portability: already at ~/aios — no action needed"
+  :   # already at ~/aios
 elif [ -L "$CANONICAL" ] && [ "$(readlink "$CANONICAL")" = "$INSTALL_PATH" ]; then
-  echo "path-portability: symlink already points to this install — ok"
+  :   # symlink already points here — the terminal path's second run lands here
 elif [ -e "$CANONICAL" ]; then
   echo "path-portability: CONFLICT — ~/aios exists and points elsewhere. Operator must resolve before continuing."
 else
@@ -96,33 +207,81 @@ After this check passes, proceed to the welcome message below.
 
 ### Step 0 — Welcome + framing
 
+**Voice for this whole command — read this before you speak.** You are not running a form. You are
+having a conversation with someone who may never have opened a terminal on purpose, and this is the
+moment they decide whether the AIOS is for them. Lead with what becomes *possible*, not with a
+checklist of artifacts. Give them explicit permission to interrupt and to not understand something —
+that single sentence converts a first-timer's fear into a question, and a question is something you
+can answer. Never make them feel behind. **The word "MCP" does not appear anywhere before the
+connectors pass at Step 11** — the word is **"connectors"**, and even that waits until they have
+seen the system work.
+
+Say something in this spirit — your words, not a script:
+
 ```
-Welcome to The AIOS. The next 15-25 minutes set up your personalized
-operating system.
+Hello! Welcome to The AIOS.
 
-The AIOS turns AI into a team — a legal you, an accountant you,
-a marketing you, a software engineer you. By the end of this
-interview, you'll have:
+This is a framework for getting far more out of AI than a chat window
+gives you. The idea is simple: you shouldn't need to be technical, or
+write clever prompts, to do genuinely ambitious work.
 
-  ✓ Your identity + role + voice declared
-  ✓ Trust contract (INTENT.md) calibrated
-  ✓ Bundles installed for what you actually do
-  ✓ MCPs set up for your daily tools
-  ✓ Your first /today ready to run
+What that looks like in practice — the AIOS ships with a team of agents
+already built. They draft and polish real documents, run deep research,
+build presentations, handle legal and finance reading, and yes, write
+and ship software for you, with no engineering knowledge required on
+your side.
 
-Three progressive stages await:
-  1. Automate — Gain speed, do faster (Week 1)
-  2. Amplify — Gain bandwidth, do more (Month 1)
-  3. Agency — Gain autonomy, do agentic (Quarter 1+)
+I'm going to guide you through setting this up — a conversation rather
+than an install. Nothing to download, nothing technical, no commands to
+type. Interrupt me whenever you like. If something I say doesn't land,
+just ask; questions are welcome here and they make the setup better.
 
-(Want the whole system in one read first? The Operating Manual —
- www.the-aios.com/#manual — has all 17 sections, online or as a PDF.
- Optional; this interview gets you running without it.)
+What we're really doing here is teaching me about you. That's the part
+that compounds: every session, the AIOS knows more about how you work,
+and starts doing things you didn't think to ask for.
 
-Ready?
+Two ways to start:
+
+  A quick start  — about five minutes of questions, then you'll see it
+                   working on your actual day.
+  The full tour  — the same start, plus the parts that are easier to
+                   show than to describe: the agents you already have
+                   and which ones fit the way you work, how to bring in
+                   a company or a shared workspace when you need one,
+                   and a proper walk through the whole map with a guide.
+
+Nothing is locked behind the tour. Everything in it is either already
+installed or one sentence away — the tour is me showing you around, and
+I'll offer it again at the end. It will still be there next month.
+
+Which sounds better?
 ```
 
-WAIT for confirmation before proceeding.
+**Add one surface-specific line to that tour description, from `ENTRY` — never the hedge.** The earlier
+copy read *"a visual panel if you work inside a code editor"*, which asks the operator to answer a
+question you have already answered. Insert it as the **last item of the tour list above**, right before *"Nothing is locked behind the tour"*:
+
+- **`ENTRY=terminal`** → append `and a visual panel for your code editor, if you use one.` This is the
+  only branch where the conditional is honest, because a plain terminal genuinely does not tell you
+  whether they also work in an editor.
+- **`ENTRY=glass`** → append `and a proper introduction to the AIOS panel already open beside you.`
+- **`ENTRY=app`** → **append nothing.** They are looking at the graphical surface. Listing a second one
+  as a tour benefit is the exact confusion this change removed.
+
+WAIT for their answer.
+
+**Tier the flow from their answer — this is `A3`, and it exists because "this interview is super long" was the #2 measured friction.**
+
+| Tier | Steps | Feels like |
+|---|---|---|
+| **Core** (default) | Pre-step → 0 → **1 (trimmed)** → 2 → **3-light** → **8 (silent)** → 10 → **11 (connectors)** | ~5 minutes of questions, then the system working on their real day |
+| **Depth** (on request, any time) | Core **plus** 4 · 5 · 8.5 · 9 | The full orientation walk |
+
+> **Why Step 8 is in Core and Steps 8.5 / 9 are not — the line is "do the operator's hands have to move?", not importance.** Step 8 declares in its own text that *"plugins are NOT optional in cold-start"* and installs a recommended set **without asking**, so parking it behind an opt-in tier did not defer it — it **deleted it** for every operator who chose the quick start, which is the exact failure this whole change exists to avoid. It needs nothing from the operator, so it belongs in Core, silently, like the vault-bridge registration in the Pre-step.
+>
+> Steps **8.5** (the visual panel) and **9** (the guided walk) also call themselves non-optional, and they stay in Depth for a different reason: **both need the operator's attention and their hands** — an extensions view, a window reload, a panel dragged into place; or two to three minutes of being walked through a map. Neither can be done *for* them, so neither can be silent, so putting either before the first `/today` breaks the five-minute promise the operator just accepted. They are named explicitly in Step 11's closing message instead, which is a standing offer rather than a coda — Step 11 *mentions* what is waiting; it never fires it.
+
+**Depth is de-mandated, not deferred.** Nothing in it is withheld or postponed to another day — it is one sentence away at any moment, including mid-Core (*"actually, show me the whole thing"*), and Step 11 offers it again. An operator who picks Core and never asks has lost **no capability**: every deferred item is either offered later in this same session or reachable by a command they will be told about.
 
 ### Step 1 — Identity + USER.md scaffold
 
@@ -134,29 +293,41 @@ Walk through `USER.md` section by section:
 
    **Role string is OS-detected, not hardcoded.** Default the role to a machine-agnostic "Primary session" baseline. Only add OS-specificity ("MacBook primary", "Windows primary", etc.) if the operator explicitly signals a multi-machine setup. Single-machine operators (99% of fresh clones) see clean "Primary session — AI partner" without machine-class jargon.
 
-2. **Anthropic accounts** — ask for primary email AND the multi-account question:
+2. **Their email** — one question, in plain words: *"What email should I use for you?"* Record it as the primary account in `USER.md`. Nothing else here.
 
-   > *"Quick gentle question — do you use more than one Anthropic account to manage the 5h/7d rate limits? (yes / no — single account)"*
+   > **RE-TIMED, not removed — the multi-account rate-limit question moves to the Day-7 check-in.**
+   > It used to sit here, at minute two, phrased *"do you use more than one Anthropic account to manage
+   > the 5h/7d rate limits?"* — with a `launchctl` install behind it. It was the **most expert-coded
+   > moment in the interview**, and a first-timer cannot answer it: on day one they have not hit a cap,
+   > so the question has no meaning yet. It is the one deferral whose need genuinely takes a week to
+   > appear, which is why it is the **only** item routed to Day 7 rather than to Step 11 today.
+   > Step 10 already schedules that check-in; the payload is specified there.
 
-   - **If no** → record primary email only. No autopilot setup needed; skip the quota-autopilot deferred-capture path entirely.
-   - **If yes** (macOS only) → record primary + secondary emails in USER.md `## Anthropic accounts`, and **drop the deferred-capture marker** so the first `/today` surfaces it as a task:
-     ```bash
-     # File-system install (safe to run here — no auth cycling):
-     cp ~/aios/hooks/claude-identity/com.aios.claude-quota-watch.plist ~/Library/LaunchAgents/ 2>/dev/null
-     launchctl load ~/Library/LaunchAgents/com.aios.claude-quota-watch.plist 2>/dev/null
-     mkdir -p ~/aios/vault && touch ~/aios/vault/.pending-quota-autopilot-capture
-     ```
-     Then tell the operator: *"Got it. I installed the watcher; the per-account login/Keychain capture happens during your first `/today` — running it now would interrupt this session. It'll be a 5-min task there, easy to skip and carry forward if you're not ready."*
-   - **If yes but not macOS** → record emails for documentation but note: *"Autopilot is macOS-only (uses Keychain + launchd). On your platform the spawn wrapper still respawns sessions cleanly; you just won't get auto-rotation across accounts."*
+**That is the whole of Core Step 1 — two questions.** Everything below belonged to Step 1 and has been
+re-timed. **Read the destination, not just the removal:** each item is offered later *in this same
+session* (Step 11), or in the Depth tier, or at the Day-7 check-in. Nothing is dropped.
 
-3. **Organization → migrated to ## Companies (mounted)** — defer to Step 5 below
-4. **Sources → Google accounts** — ask for primary Google email (Calendar + Tasks + Drive + Gmail)
-5. **Sources → Communication** — Slack workspace? Gmail? GitHub username?
-6. **Sources → Growth routines** — does the operator have a Reading or Writing routine they want to track? Defer; can configure later.
+| Was asked here | Now asked | Why there |
+|---|---|---|
+| Organization / company | **Depth Step 5** (or `/aios:company` any time) | Already deferred before this change; unchanged |
+| *"Primary Google email — Calendar + Tasks + Drive + Gmail"* | **Step 11**, after the first `/today` | A connector question wearing plain words. It is unanswerable until they have *seen* the empty calendar — then it answers itself |
+| *"Slack workspace? Gmail? GitHub username?"* | **Step 11**, after the first `/today` | The **#1 measured freak-out**: asked what they use before they know what any of it is for |
+| Growth routines (Reading / Writing) | **Depth Step 9**, or whenever a routine comes up | Was already marked *"defer; can configure later"* — it was being asked *and* deferred, which is the worst of both |
 
 Edit USER.md inline as the operator answers. Show the diff before applying.
 
-**After the Identity table is captured — refresh the wrapper banner.** SETUP.md Step 5 installed shell wrappers BEFORE USER.md was populated, so the primary-session shorthand fell back to the default `claude` function. Now that the operator has chosen their name (e.g. `samantha`), re-run the installer to bind the shorthand to the captured name. **OS-conditional** — pick the right installer for the operator's machine:
+**After the Identity table is captured — bind the shorthand to their name.**
+
+> **Two entry paths, and the wording must not assume either.** An operator who came through
+> **SETUP.md** already has wrappers installed (its wrapper-install step ran before `USER.md` existed, so the
+> shorthand fell back to the default `claude` function) — for them this is a *refresh*. An operator who
+> came through **the AIOS App** never ran SETUP.md at all — for them this is the *first* install, and
+> calling it a "re-run" is confusing at best. The Pre-step detects which path they are on; use the word
+> that matches. Never mention SETUP.md to an App-path operator: **the app is their installer**, and
+> routing a first-timer into a 654-line manual is the opposite of this command's job.
+
+Run it silently and report the outcome in one line — do not show them the command unless they ask.
+**OS-conditional** — pick the right installer for the operator's machine:
 
 ```bash
 # macOS / Linux (zsh or bash)
@@ -173,6 +344,15 @@ Both installers are idempotent (timestamped backup → strip prior banner → ap
 **Rule for this whole step:** one question at a time. The operator should feel walked by the hand, not interrogated. Use sensible defaults. Defer any action that involves cycling Claude's auth (the multi-account capture is the canonical example — always deferred to `/today`).
 
 ### Step 2 — Declared context (4 files, fast pass)
+
+> **This step is load-bearing for a surface outside this repo — do not trim it out of Core.** The AIOS
+> App reads the operator's name from `vault/00 - notes/context/declared/about_me.md` and *watches that
+> directory* so its greeting changes from *"Good morning"* to *"Good morning, {name}"* the moment this
+> step writes the file. That was an operator-reported bug in the App (the name used to appear only when
+> something else happened to trip a different watcher, so the App greeted a stranger through the whole
+> interview while the onboarding agent was already using their name). Their own name appearing is the most
+> legible proof to a first-timer that the setup actually worked — so `about_me.md` must be written in
+> **Core**, not deferred to Depth.
 
 **Opening — offer the pre-fill path BEFORE the per-file questions:**
 
@@ -206,7 +386,46 @@ Skip optional files (`role-expectations.md`, `psychometric-profile.md`) unless t
 
 ### Step 3 — `INTENT.md` (trust contract)
 
-INTENT.md is the highest-leverage file for compounding trust. Walk through:
+INTENT.md is the highest-leverage file for compounding trust.
+
+> ### `3-light` — what Core actually runs (this is the definition; the tier table only names it)
+>
+> The tier table says Core runs **`3-light`**, and for a while that label was the only mention of it
+> anywhere — so a session running Core had no way to know what to leave out and would have run the full
+> walk below. That matters more here than anywhere else in Core: item 1 asks for an autonomy level **per
+> domain**, and there are five or more domains, so the full version is on its own longer than the five
+> minutes the operator was promised for the whole thing.
+>
+> **In Core, ask ONE question** — the global posture, in plain words, with no jargon and no list of domains:
+>
+> ```
+> Last thing before you see it work. When I can do something for you —
+> draft a reply, tidy a file, prepare a document — would you rather I
+> just do it and tell you what I did, or show you first and wait?
+>
+> Either is fine, and you can change it any time, for everything or
+> for one kind of task.
+> ```
+>
+> Then write `INTENT.md` yourself from that single answer:
+>
+> - Apply their choice as the **global default** across domains.
+> - **Regardless of what they chose, pin anything irreversible or outward-facing to draft-first** —
+>   sending email to other people, publishing, and anything that spends money. Then tell them, in one
+>   line: *"I've kept myself on show-you-first for anything that leaves your name somewhere — email out,
+>   anything published. You can loosen that whenever you want."* An operator answering *"just do it"* in
+>   minute four is answering about tidying files; they are not authorising outbound mail in their name,
+>   and reading it that way would be the single most expensive misread in this file.
+> - Take the **defaults** for *just cause* and *focus priorities* (items 2 and 3 below) without asking.
+>   Step 3's own text already says the default framing *"is fine for most operators"*, so asking costs two
+>   questions and changes nothing.
+> - Leave a line in the file naming what was defaulted, so the operator can see what to revisit.
+>
+> **Depth runs the full walk below** — per-domain autonomy, just cause, the pillars. Nothing here is
+> dropped; it is one question now and the rest whenever they ask, which is the same trade as everywhere
+> else in Core.
+
+**The full walk (Depth, or on request at any time):**
 
 1. **Autonomy levels** — for each domain (draft messages, external emails, code commits, content publishing, calendar scheduling, etc.), ask: *"autonomous / draft / ask?"* Defaults are conservative ("draft" everywhere); operator opens up as trust grows.
 2. **Just cause** — *"In one sentence: why does your work matter beyond revenue?"*
@@ -231,7 +450,7 @@ All 6 bundles ship in the AIOS clone. This step is mental-model setting + signal
 
 ### Step 5 — Companies + collaboration spaces (informational — defer setup)
 
-AIOS comes with two adjacent primitives for shared infrastructure beyond your personal vault. **Do NOT try to set either up during cold-start** — both require git MCP working (configured in Step 6) AND substrate choice (GitHub/Drive) AND their own interview flows (~10 min each). Setting one up mid-onboarding is a momentum-killing detour. Cover them informationally + defer.
+AIOS comes with two adjacent primitives for shared infrastructure beyond your personal vault. **Do NOT try to set either up during cold-start** — both require git connector working (configured in Step 6) AND substrate choice (GitHub/Drive) AND their own interview flows (~10 min each). Setting one up mid-onboarding is a momentum-killing detour. Cover them informationally + defer.
 
 ```
 The AIOS bundles two workspace primitives. We'll skip setup now —
@@ -254,69 +473,35 @@ each takes ~10 min on its own.
 
 No questions asked at this step. Operator just acknowledges + moves to Step 6.
 
-### Step 6 — MCP setup (the real workflow surface)
+### Steps 6 + 7 — moved, not removed → see **Step 11 (connectors)**
 
-**Open with a 1-2 line executive-friendly definition** — many operators encounter "MCP" jargon-cold and need orientation:
-
-> *"MCPs (Model Context Protocols) are how Claude connects to the real tools you use — Google Calendar, Slack, GitHub, etc. Think browser extensions, but for AI: each one teaches Claude to read and write in one specific tool. We bundle 10 with AIOS; you set up the ones you actually use."*
-
-The AIOS bundles 10 MCPs. Operator picks which to set up now vs defer:
-
-1. **Google Workspace** — Calendar, Tasks, Drive, Gmail, Docs, Sheets, Slides (almost every operator)
-2. **Slack** — workspace OAuth (if operator uses Slack)
-3. **GitHub** — PAT for repos/issues/PRs (if operator codes)
-4. **Atlassian** — Jira + Confluence (if operator uses Atlassian)
-5. **NotebookLM** — audio summaries (optional)
-6. **Stitch** — UI generation from prompts (see Step 7 below — separate ask)
-7. **Playwright** — browser automation + auto-publish (advanced, defer)
-8. **Nano Banana** — Gemini image generation (cover images, visuals)
-9. **PDF Generator** — branded report export (always-on)
-10. **Spotify DJ** — lifestyle (optional)
-
-**Two-phase install** — works best done in this order:
-
-1. **Bulk dependencies:** `bash mcps/setup.sh` — creates venvs, installs Python/Node deps for every bundled MCP. Idempotent; safe to re-run.
-2. **Guided auth + register:** `/aios:mcps-setup` — the canonical command for per-MCP token + zshrc + `claude mcp add` + verify. Asks "want this?" per MCP, never assumes. Use this rather than walking each `mcps/{name}-mcp/README.md` by hand.
-
-After this step the MCP-tooling layer is operational — Claude can read your Calendar, post to Slack as you, query GitHub PRs, render PDFs, generate images, etc.
-
-### Step 7 — Google's Stitch (UI builders only)
-
-Dedicated ask for operators who build user interfaces. **Binary choice — no "tell me more" branch** (the prompt below explains enough; adding a third option creates decision overhead for an already-narrow audience):
-
-```
-Do you build user interfaces? (web apps, mobile apps, design systems)
-
-If yes, Google's Stitch is worth wiring in — it's Google's AI-native
-design → code pipeline. Pairs with our design-md-author agent (generates
-DESIGN.md per Google's spec, then optionally uploads to Stitch for UI
-screen generation from prompts + design tokens).
-
-Install: y / n
-```
-
-If `y`:
-- Run `bash mcps/setup.sh stitch` (or equivalent per the stitch-mcp README)
-- Optionally install Stitch Skills marketplace: `npx plugins add google-labs-code/stitch-skills --scope project --target claude-code`
-- Surface VoltAgent/awesome-design-md (82K⭐) as the inspiration repo for first-time DESIGN.md authors
-
-If `n`: defer, move on. Stitch MCP is on disk; operator can wire it in later via `/aios:mcps-setup` if their UI work picks up.
+> **This is the heart of `AI-122`.** MCP setup and the Stitch question used to live here, on the
+> critical path, *before the operator had seen a single thing work*. Step 6 opened by **defining the
+> word "MCP"** — which is the tell: if a step has to explain its own vocabulary before it can ask its
+> question, it is in the wrong place in the conversation.
+>
+> **Nothing here was deleted.** The definition, all ten services and their value props, and the entire
+> guided auth flow are preserved and now run at **Step 11**, immediately after the first `/today` — the
+> moment the operator has *watched their calendar come up empty*, which is the only moment the question
+> "want me to connect your calendar?" answers itself. The Stitch ask becomes conditional rather than
+> universal (it was already written that way for the `n` case).
+>
+> **Why later-today and not Day-7:** the value is legible the instant the ritual runs, and the
+> motivation the ritual creates expires. A week-later offer is a removal with a polite sentence on top.
 
 ### Step 8 — Plugins (announce + install-all-by-default)
 
-Plugins are NOT optional in cold-start. The new operator doesn't know what each plugin does yet — making them DECIDE upfront forces knowledge they don't have. Same pattern as bundles (ship by default) and MCPs (bulk-install Phase 1): **announce the recommended set, install them, surface what landed.** Operators can disable any plugin later if they notice it as noise.
+Plugins are NOT optional in cold-start. The new operator doesn't know what each plugin does yet — making them DECIDE upfront forces knowledge they don't have. Same pattern as bundles (ship by default) and connectors (bulk-install Phase 1): **announce the recommended set, install them, surface what landed.** Operators can disable any plugin later if they notice it as noise.
 
-**The standard install set** (based on the universal + role-specific selection from declared context in Steps 2-4):
+> **In Core, run this SILENTLY and report it in the one short paragraph below — never show the operator the marketplace commands.** The `✓ /plugin marketplace add …` list that used to be spoken here is exactly the register this whole change removes from first-run: star counts, `@`-scoped package names and a `+ role-specific selections` line the operator cannot evaluate. It is useful output **for you**, and it stays below as your install reference. In **Depth**, where the operator asked to be shown around, walking the actual list is fair and welcome.
+
+**The standard install set** (based on the universal + role-specific selection from declared context in Steps 2-4) — *your* reference, not a script to read aloud:
 
 ```
-Installing the recommended plugin set for you...
-
-  ✓ /plugin marketplace add anthropics/skills                (138K⭐)
-  ✓ /plugin marketplace add anthropics/claude-plugins-official
-  ✓ /plugin marketplace add obra/superpowers-marketplace
-  ✓ /plugin install superpowers@superpowers-marketplace      (universal — dev methodology)
-  ✓ /plugin install claude-md-management@claude-plugins-official  (universal — CLAUDE.md/USER.md health)
-  + role-specific selections based on declared context (see table below)
+I've added a few capability packs in the background, picked from what
+you just told me — nothing for you to choose, and nothing you have to
+remember. They give me stronger habits for writing, reviewing and
+research. If you ever want to see or change what's there, just ask.
 ```
 
 **Role-specific augmentation** (read declared/observed context to decide):
@@ -333,9 +518,16 @@ Installing the recommended plugin set for you...
 
 **Edge case — operator says "skip plugins entirely"** before the install fires: respect it. The default is install-all-by-recommended-set, but explicit "skip" wins.
 
-### Step 8.5 — Install AIOS Glass — the graphical front door
+### Step 8.5 — Install AIOS Glass — the panel that lives inside a code editor
 
-**Install it as part of setup — walk them through it, don't soft-offer-and-skip.** Glass is a core surface of the AIOS, not an optional extra. Same posture as Step 9 and the bundle/plugin installs: the default is *do it now, together* — there's no fake "skip / later" gate (skipping it leaves a new operator, especially a non-terminal one, without the surface that makes the AIOS usable — exactly the gap that strands them). **What it is:** a docked panel inside the IDE that turns the AIOS into a point-and-click surface — run rituals, launch/spawn agents, browse skills + commands, mount companies, manage spaces, all without typing terminal commands. *Glass, not engine* — it triggers the existing rituals through Claude, reimplements nothing.
+> **Say "AIOS Glass", or say "a visual panel inside your editor" — never "the app".** Glass is an **extension** that runs inside Antigravity / VS Code. The **AIOS App** is a separate, standalone program. Calling Glass *"the graphical app"* (which the Step 0 offer used to do) is wrong twice over: it is not an app, and an operator who arrived **through** the App already has a graphical surface open in front of them, so the phrase reads as if they are being sold what they are currently looking at.
+>
+> **`ENTRY` from the Pre-step decides this step. Do not ask what you already detected.**
+> - **`ENTRY=app`** → **skip it entirely**, one line and move on: *"You've already got the AIOS App, which is this same idea in its own window — Glass is the version that lives inside a code editor, so there's nothing to do here."* Walking an App operator through installing a second surface is friction with no payoff.
+> - **`ENTRY=glass`** → **Glass is already installed and running — it is how you detected them.** Offering to install it would tell the operator, in the clearest possible way, that this system does not look at their machine. Skip steps 1 and 2 below; the panel exists and is open. Do step 3 only (help them place it beside the editor, which first-timers genuinely miss) and say what you know: *"I can see the AIOS panel is already open in your editor — let's just get it sitting where you'll actually use it."*
+> - **`ENTRY=terminal`** → the one branch where a question is right, because this is the one thing the ancestry walk cannot tell you: a plain terminal says nothing about whether they *also* work in an editor. Ask in plain words, then install if yes.
+
+**When it does apply, install it together — walk them through it, don't soft-offer-and-skip.** Glass is a core surface of the AIOS, not an optional extra. Same posture as Step 9 and the bundle/plugin installs: the default is *do it now, together* — there's no fake "skip / later" gate (skipping it leaves a new operator, especially a non-terminal one, without the surface that makes the AIOS usable — exactly the gap that strands them). **What it is:** a docked panel inside the IDE that turns the AIOS into a point-and-click surface — run rituals, launch/spawn agents, browse skills + commands, mount companies, manage spaces, all without typing terminal commands. *Glass, not engine* — it triggers the existing rituals through Claude, reimplements nothing.
 
 Walk them through it now (don't just name it — installing isn't opening):
 1. Extensions view (`⌘⇧X` / `Ctrl+Shift+X`) → search **"AIOS Glass"** → **Install** (auto-installs the **Foam** dependency + auto-updates) → reload the window.
@@ -375,9 +567,15 @@ Everything compounds from here. Time to feel it.
 
 In the next message, run:  /aios:today
 
-It'll read everything we just configured, pull your calendar + tasks +
-Slack, propose a plan for the rest of today, and surface the daily
-ritual that anchors the system. After today, the loop is:
+It'll read everything you just told me and propose a plan for the rest
+of your day.
+
+One thing to expect: some sections will come up empty — your calendar,
+your tasks. That's simply because I'm not connected to those yet, and
+connecting them is the very next thing we do, once you've seen the shape
+of it.
+
+After today, the loop is:
   - morning  →  /aios:today
   - evening  →  /aios:close-day
   - sessions →  /aios:close-session
@@ -391,14 +589,128 @@ to try next based on how you've actually been using AIOS in your
 first week. (Easy to ignore if you're not in the mood; the schedule
 is a nudge, not an interrupt.)
 
+Go ahead — run it, read what it gives you, and I'll be right here.
+```
+
+Mention the Day-7 check-in in one line here — it is reassurance, not a closing move. **Never sign off in a step that hands off:** a goodbye here is the same defect as the old "interview is complete" line, because an operator who believes they are finished does not continue to Step 11. The farewell now lives at the true close. Then create the Day-7 `RemoteTrigger`. **Its payload now carries the one genuinely week-later item**, so
+the deferral is a scheduled thing rather than a forgotten one:
+
+**Write the marker — this is what makes the sentence above true.** Step 10 tells the operator *"I'm
+scheduling a Day-7 check-in"*, and for one commit that was a promise with nothing behind it: no marker, no
+cron, nothing reading anything. The multi-account question had been routed here, so it landed nowhere at
+all — a step re-timed to a destination that did not exist, which is the one failure this whole change
+exists to prevent. `/aios:today` reads this marker and surfaces the check-in on or after `due`:
+
+```bash
+printf 'due=%s\ncreated=%s\n' "$(date -v+7d +%F 2>/dev/null || date -d '+7 days' +%F)" "$(date +%F)" \
+  > ~/aios/vault/.pending-day7-checkin
+```
+
+*(`date -v+7d` is BSD/macOS, `date -d` is GNU/Linux — the fallback covers both, and a failure here is
+silent by design: a missing marker costs a nudge, while a visible error in the closing minute of setup
+costs the whole impression.)*
+
+The check-in prompt itself, for whoever picks it up:
+
+> *"Spawn onboarding-aios for the Week-1 check-in. Cover: what has actually been useful this week; the
+> Depth-tier steps not yet run (agent bundles, companies, plugins, Glass); any connectors still
+> unconnected; and — if they have been hitting Claude's 5h/7d caps — whether a second Anthropic account
+> and the quota autopilot are worth setting up now (macOS only). Ask that last one **only** if the caps
+> have actually bitten; on day one it was meaningless, and if it still is, skip it."*
+
+**Set the expectation BEFORE they run it — this ordering is load-bearing.** The copy above warns that
+the calendar will be empty. Without that warning, `/today` looks broken and Step 11 opens by
+apologising for a failure the previous step promised would not happen; with it, the emptiness is a
+*preview of the next step* and Step 11 lands as the fix that was already announced. Same information,
+opposite emotional read — and this was caught by walking the flow rather than by reading the steps.
+
+**⚠️ The interview does NOT end here.** This line used to read *"after `/today` fires, the cold-start
+interview is complete"* — and that sentence is precisely what turned deferral into deletion. Let them
+read the plan `/today` produced, let the empty calendar register, **then continue to Step 11**. The
+operator's own next move comes after that.
+
+Old wording, kept for the record: operator's next move is whatever `/today` suggests — typically beginning the work the day is already underway with, or just absorbing the rhythm-establishing first daily note.
+
+**Reminder for the executing Claude:** the company + collaboration setups DEFERRED at Step 5 are NOT forgotten — they're operator-initiated post-cold-start. If the operator next says *"let's mount my company"* or *"let's set up a collaboration space"*, route to `/aios:company` or `/aios:collaborate` respectively. Don't ask "did you mean...?" — the deferral phrasing in Step 5 is the canonical trigger.
+
+### Step 11 — Connectors (right after the first `/today`, same conversation)
+
+**This step is why the interview does not end at Step 10.** The old line *"After `/today` fires, the
+cold-start interview is complete"* is what would have turned this whole redesign into a feature
+removal: an operator told "you're done" does not come back for connectors, and the AIOS then ships
+without their calendar, their Slack, or their repos — with the operator never learning those powers
+existed. So the interview **continues**, in the same breath, using what they just saw.
+
+**Open with the evidence in front of them, not with a concept:**
+
+```
+There it is — and the empty calendar I mentioned.
+
+That's the last piece, and it's the one that changes how much I can
+actually do for you. Connected, I read your real calendar and tasks
+every morning, pull what needs your attention out of Slack, and can
+work against your repos. Nothing changes about how you talk to me —
+there's just more of your world in the room.
+
+We do these one at a time, and only the ones you want. Each takes
+about a minute: I open the right page, you click approve, I check it
+worked. You never see or handle a token.
+
+Want to start with your calendar?
+```
+
+**Then hand off to `/aios:mcps-setup`** — do not reimplement its flow here. That command already does
+exactly the right thing and says so in its own Step 1 (*"Do NOT bulk-install anything"*): one service
+at a time, an opt-in question before each, dependencies installed **only after** a yes, the token page
+opened with `open <url>`, a real API call to validate, credentials written to a managed `~/.zshrc`
+block, and **tokens never echoed back** (receipt confirmed by character count). Hand off *actively* —
+invoke it — rather than naming a command and hoping they run it later.
+
+**What is available, in the operator's language.** Say "connectors", never "MCP", and lead with what
+each one *does for them*:
+
+1. **Google Workspace** — Calendar, Tasks, Drive, Gmail, Docs, Sheets, Slides (almost every operator)
+2. **Slack** — workspace OAuth (if operator uses Slack)
+3. **GitHub** — PAT for repos/issues/PRs (if operator codes)
+4. **Atlassian** — Jira + Confluence (if operator uses Atlassian)
+5. **NotebookLM** — audio summaries (optional)
+6. **Stitch** — UI generation from prompts (see Step 7 below — separate ask)
+7. **Playwright** — browser automation + auto-publish (advanced, defer)
+8. **Nano Banana** — Gemini image generation (cover images, visuals)
+9. **PDF Generator** — branded report export (always-on)
+10. **Spotify DJ** — lifestyle (optional)
+
+**Order it by what they told you.** They gave you their email at Step 1 — start with Google Workspace,
+since Calendar and Tasks are what the daily ritual reads. Then Slack if they mentioned a team, GitHub
+if they mentioned code. Skip silently past anything they don't recognise; a service they've never heard
+of is not a gap in their setup.
+
+**Stitch is conditional, not universal.** Ask about it only if their answers have involved building
+user interfaces. Otherwise it stays available via `/aios:mcps-setup` and is never mentioned — asking
+every operator *"do you build user interfaces?"* spends a question on a `no` roughly 95% of the time.
+
+**And close by re-opening the door to Depth:**
+
+```
+That's you set up. From tomorrow the rhythm is just:
+  morning → /aios:today     evening → /aios:close-day
+
+Two things still waiting whenever you want them, no rush:
+  • The full tour — the agents you already have and which fit your
+    work, companies and shared workspaces, a visual panel for your
+    code editor, and a proper walk through the whole map.
+    Say "show me the full tour" any time, today or next month.
+  • More connectors — /aios:mcps-setup adds any of the others,
+    one at a time, same as we just did.
+
+I'll check in with you in a week to see what's actually been useful.
+
 Welcome to The AIOS. 🌊
 ```
 
-Then create the Day-7 `RemoteTrigger` with the prompt: *"Spawn onboarding-aios for the Week-1 check-in."*
-
-After `/today` fires, the cold-start interview is complete. Operator's next move is whatever `/today` suggests — typically beginning the work the day is already underway with, or just absorbing the rhythm-establishing first daily note.
-
-**Reminder for the executing Claude:** the company + collaboration setups DEFERRED at Step 5 are NOT forgotten — they're operator-initiated post-cold-start. If the operator next says *"let's mount my company"* or *"let's set up a collaboration space"*, route to `/aios:company` or `/aios:collaborate` respectively. Don't ask "did you mean...?" — the deferral phrasing in Step 5 is the canonical trigger.
+**Acceptance for this step:** an operator who answers "no thanks" to every connector still finishes
+with a working AIOS, and an operator who says yes to two finishes with exactly those two working —
+never ten installed, never a bulk download, never a terminal command they had to type.
 
 ## Output
 
@@ -415,8 +727,8 @@ Always show diffs before writing. Operator confirms each section before applying
 
 - **Never auto-fill creative content.** The operator's voice, values, just-cause — those come from them, not from defaults. Smart defaults are for SCAFFOLD only.
 - **Save state between steps.** If the operator pauses mid-interview (closes the terminal, etc.), the next `/cold-start-interview` invocation should detect what was completed and offer to resume.
-- **Skip aggressively.** Some operators want the full 25-minute walk; others want the 5-minute fast path. Honor: *"can we skip to MCP setup?"* — jump to Step 6 directly.
-- **Always end at Step 9 with a concrete next-action.** The first `/today` is the moment the system starts compounding. Don't let the interview be the destination.
+- **Skip aggressively — and the tier offer at Step 0 is now the default expression of this.** Some operators want the full walk; others want the 5-minute fast path. Honor: *"can we skip to MCP setup?"* — jump to Step 6 directly.
+- **Always end at Step 11 with a concrete next-action.** The first `/today` is the moment the system starts compounding. Don't let the interview be the destination.
 - **Document what was skipped.** At the end, surface: *"You skipped Step 3 (INTENT.md) and Step 7 (Stitch). Run `/cold-start-interview` again anytime, or fill those manually when ready."*
 
 ## Schedule
@@ -430,4 +742,4 @@ One-shot. Run immediately after cloning AIOS. Optionally re-runnable to revisit 
 - [[USER]] — the canonical personalization file this command writes to
 - [[INTENT]] — the trust contract this command calibrates
 - [[company]] — if you mount a company in Step 5
-- `mcps/_index.md` — canonical MCP setup reference (consulted in Step 6)
+- `mcps/_index.md` — canonical connector reference (consulted in Step 11)

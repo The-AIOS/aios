@@ -3,7 +3,7 @@
 Welcome to your AI-OS. This is your personal operating system for thinking with Claude — a vault that gets smarter about *you* the more you use it. It's also team-shared infrastructure: the commands, MCPs, and hooks come from a central team repo, but your personal context stays in your own private fork.
 
 > **TL;DR — what you do today:**
-> 1. Run `SETUP.md` (Claude does the heavy lifting — including forking to your private repo)
+> 1. Say one sentence; Claude reads `SETUP.md` and does the install (including forking to your private repo)
 > 2. Fill in 4 files about yourself (`about_me`, `personal_voice`, `working_style`, `INTENT.md`)
 > 3. Run `/aios:today` to see your first daily plan
 
@@ -15,10 +15,10 @@ If you've never used this kind of system before, that's fine — Claude walks yo
 
 You're holding the framework. This file is your post-clone walkthrough. (For the *why* of AIOS — philosophy, three progressive stages, agentic culture, what compounds — see [README.md](./README.md).)
 
-**Three steps to a working personalized vault:**
+**One sentence to a working personalized vault.** You say it once; your Claude session does the installing and asks you for what only you can answer. The stages below describe what it does, not a list of commands for you to run:
 
-1. Run `SETUP.md` (Claude-driven, ~10 min) — installs MCPs, configures your private vault, wires up tools
-2. Run `/aios:cold-start-interview` (~20 min) — fills in your identity, declared context, INTENT.md trust contract, agent bundle preferences, MCP auth
+1. **The install** (~5 min, Claude working) — it reads `SETUP.md` and configures your private vault and wires up your tools. Connectors (calendar, Slack, repos) come **after** your first daily ritual, one at a time and only the ones you want — see `/aios:cold-start-interview` Step 11
+2. **The conversation** (~5 min for the short start; the full tour whenever you want it) — the install hands off into it on its own, so there is nothing for you to invoke. It fills in your identity, declared context, and an INTENT.md trust contract, then runs your first `/aios:today` and offers connectors
 3. Run `/aios:today` (~5 min) — your first daily plan. The rhythm starts here.
 
 Steps 1-2 happen once. Step 3 becomes your morning ritual.
@@ -48,7 +48,7 @@ SETUP + `/cold-start-interview` wire all three layers — you don't have to thin
 
 ## The two-step setup
 
-### Step 1 — Run `SETUP.md` (Claude-driven)
+### Stage 1 — the install (you say one sentence; Claude reads `SETUP.md` and executes)
 
 Open any terminal. Type:
 
@@ -72,9 +72,9 @@ Claude reads `SETUP.md` and handles the rest:
 
 You confirm decisions. Claude executes.
 
-**~10 minutes. You drink coffee. The system installs.**
+**~5 minutes, and Claude does the typing. You answer when asked and watch the rest.**
 
-### Step 2 — Run `/cold-start-interview` (15-25 minutes)
+### Stage 2 — the interview, which Stage 1 starts for you (~5 minutes, or the full tour if you'd rather)
 
 Once SETUP completes, the system has the *infrastructure*. Now it needs *you*. Open a fresh Claude session in `~/aios` and run:
 

@@ -24,7 +24,7 @@ You're the executor — the human reads alongside, you do the heavy lifting. Seq
 Set up my AI-OS from https://github.com/The-AIOS/aios
 ```
 
-Claude reads [SETUP.md](./SETUP.md), clones the framework, walks every choice.
+Claude reads [SETUP.md](./SETUP.md), clones the framework, and then talks you through the rest — a guided conversation rather than an install. You are asked for your name and little else before you see it work; the connectors (calendar, Slack, repos) are offered afterwards, once you have something to connect them to.
 
 **Don't have Claude Code yet?** → [SETUP.md → Prerequisites](./SETUP.md#prerequisites) for OS-specific install (~5-20 min). Then come back and run the line above.
 
@@ -191,11 +191,13 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 
 ## The canonical setup sequence
 
-If the [30-second version at the top](#get-started-the-30-second-version) was enough, you're already running. If you want the full step-by-step:
+If the [30-second version at the top](#get-started-the-30-second-version) was enough, you're already running. If you want to know what happens after you say it:
 
-**Step 1 — `SETUP.md` (Claude-driven, ~10 min).** Open any terminal with Claude Code installed and say: *"Set up my AI-OS from `https://github.com/The-AIOS/aios`"*. Claude clones the framework, installs MCPs, configures your private vault, and walks you through every choice.
+**You type one sentence. Your Claude session does the rest and asks you when it needs something from you.** There is no second command to remember — `SETUP.md` hands off to the interview itself, so what looks like two stages below is one continuous conversation from your side.
 
-**Step 2 — `/aios:cold-start-interview` (~20 min).** Walks identity, declared context, `INTENT.md` trust contract, agent bundle install choices, MCP setup, optional plugins, and your first `/aios:today`.
+**Stage 1 — the install (~5 min, Claude working, you mostly watching).** Open any terminal with Claude Code installed and say: *"Set up my AI-OS from `https://github.com/The-AIOS/aios`"*. Claude clones the framework, registers the one connector the vault itself needs, and wires up your tools. It does not ask you which services you use — that comes later, in Step 2, after you have seen the system run.
+
+**Stage 2 — the conversation (~5 min, or as long as you want).** You do not invoke this; Stage 1 ends by handing you straight into it. It opens by offering you a short start — who you are, how you work, what it may do without asking — and then runs your first `/aios:today` so you watch it work on your real day. Only then does it offer connectors, one service at a time. Prefer the whole tour up front (agent team, companies, plugins, the desktop app)? Say so and it runs that instead; nothing is withheld either way, and the tour stays one sentence away a month from now.
 
 **Day 1 onward:** `/aios:today` morning · `/aios:close-day` evening · `/aios:close-session` per task. That's the rhythm. The system compounds from there.
 

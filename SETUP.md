@@ -15,9 +15,27 @@ Get the full system running in under 10 minutes (after the prereqs install).
 Operator said *"set up my AI-OS from this repo"* or similar. You're the executor. The flow:
 
 1. Confirm Prerequisites are installed — Obsidian + Node/Git/gh/Python/uv/Claude Code, **plus ONE execution surface**: the **AIOS App** *or* Antigravity IDE/VS Code with AIOS Glass. If the operator reached you from the AIOS App, that surface is already satisfied — do **not** send them to install an IDE or Glass. If anything else is missing, walk the OS-specific block from "Prerequisites" §
+   > **Branch this on how they arrived — an App operator has almost all of it already.** The AIOS App installs the toolchain as part of its own guided steps, so walking a full OS-specific prerequisites block at an App operator is a wall of checks that will all pass, in the first minute, before anything has been shown to work. Derive the surface the way `/aios:cold-start-interview`'s Pre-step does — a liveness-checked walk of your own process ancestry against `~/.aios/surfaces/*.json` (never a file-presence or install-path test; both report confidently wrong answers). Then:
+   >
+   > - **Arrived through the App** → assume the toolchain is present and **verify silently** rather than interrogating: one check, and speak only about what is actually missing. **Check the Obsidian desktop app specifically — and note that you are verifying a claim, not filling a gap.** The App's own first phase is described to the operator as installing *"Homebrew, the toolchain, Obsidian and Claude Code"*, so Obsidian is something it already tried to do. It is nonetheless the one prerequisite that has needed a **manual** install in the field — reported on two separate operator installs — because it is a GUI application whose cask install can fail in ways the rest of the toolchain does not, and **a failed attempt looks identical to a successful one from the next step's point of view.** That is precisely why it is worth one cheap check here rather than trusting the phase that claimed it: everything else on the list has come pre-satisfied on this path, and this one has not, twice.
+   > - **Arrived through a terminal** → the full block applies; walk it.
+   >
+   > **What the App does NOT do: clone.** Its phase-1 note tells the operator *"This installs the tools; a Claude session does the AIOS itself once Claude is running"* — so the App stops at the toolchain, and step 2 below is still yours to run on both paths. There is no duplicated clone to detect, and the fresh-or-existing-vault question is asked in the session, not pre-answered by a button.
+   >
+   > Either way: **name only what is missing.** Reading a passing checklist aloud is the same mistake as the connector questions this sequence used to ask — accurate, and worthless to the person hearing it.
+
+   ```bash
+   # Obsidian desktop app — the one gap seen on the App path. macOS / Linux / Windows.
+   ls -d "/Applications/Obsidian.app" >/dev/null 2>&1 \
+     || ls -d "$HOME/Applications/Obsidian.app" >/dev/null 2>&1 \
+     || command -v obsidian >/dev/null 2>&1 \
+     || ls -d "$HOME/AppData/Local/Obsidian" >/dev/null 2>&1 \
+     || echo "missing: obsidian-app"
+   ```
+   > A blank result means it is installed and **nothing should be said about it**. Only `missing: obsidian-app` earns a sentence: *"One thing I can't install for you — Obsidian itself, the app you'll read your vault in. It's a normal download from obsidian.md; grab it whenever, nothing here waits on it."* Note the framing: the vault is plain Markdown on their disk and every ritual works without the GUI, so this is genuinely not a blocker, and saying so prevents a first-timer stalling on it.
 2. Clone to `~/aios` (default) and create private GitHub repo `{username}/aios` (or whatever the operator names it) — see "The Setup" §1 below
-3. Register bundled skills: `bash skills/setup.sh` (Windows: `pwsh skills/setup.ps1`) — symlinks AIOS skills into `~/.claude/skills` so Claude Code loads them (restart sessions after) · Register the **Obsidian MCP**, the only one setup needs: `claude mcp add obsidian -- npx -y @mauricio.wolff/mcp-obsidian@latest ~/aios/vault`
-   > **Do NOT run `bash mcps/setup.sh` here.** With no arguments it installs all ten bundled MCPs — multiple Chrome-for-Testing downloads, several venvs, minutes of output in which a long download is indistinguishable from a hang and one failure reads as a crash. None of it is needed to use the vault. Slack, Atlassian, Google, image generation and the rest are convenience, installed WHEN the operator says they want one — which is what step 6 asks. `bash mcps/setup.sh <name>` installs just that one, `--list` shows what exists.
+3. Register bundled skills: `bash skills/setup.sh` (Windows: `pwsh skills/setup.ps1`) — symlinks AIOS skills into `~/.claude/skills` so Claude Code loads them (restart sessions after) · **Do not register the Obsidian MCP here.** `/aios:cold-start-interview`'s Pre-step registers it silently, and it has to: an operator who arrived through the **AIOS App** reaches the interview without ever passing through this list, so the interview is the only place that covers both doors. Registering it here as well gave the command two owners with two different arguments (this copy hardcoded `~/aios/vault`; the interview uses the resolved install path) — and because the interview's registration is guarded by *"skip if already registered"*, whichever copy ran first won permanently, including when it was the wrong one.
+   > **Do NOT run `bash mcps/setup.sh` here.** With no arguments it installs all ten bundled MCPs — multiple Chrome-for-Testing downloads, several venvs, minutes of output in which a long download is indistinguishable from a hang and one failure reads as a crash. None of it is needed to use the vault. Slack, Atlassian, Google, image generation and the rest are convenience, installed WHEN the operator says they want one — which is what the interview's Step 11 asks, after the first `/today`. `bash mcps/setup.sh <name>` installs just that one, `--list` shows what exists.
 4. **Write the update tracker** — one command, and setup must not end without it:
    ```bash
    printf 'repo=git@github.com:The-AIOS/aios.git\nhash=%s\nsynced=%s\n' \
@@ -25,19 +43,41 @@ Operator said *"set up my AI-OS from this repo"* or similar. You're the executor
    ```
    > **Why this is not optional.** `.aios-update` is what tells the operator the framework has moved on. Until now it was only ever written by `/aios:update` — which a fresh setup never runs — so every newcomer finished setup with the update surface reporting *"no config"* / *"not tracked yet"*, `/today` unable to notice a canonical release, and no way to know they were behind except by being told. A brand-new install is exactly the moment we know the hash for certain, so record it then. `repo=` is the FRAMEWORK upstream, deliberately not the operator's own vault remote: the question it answers is "has the framework moved", not "have I pushed". Confirm afterwards with `cat ~/aios/.aios-update` — the hash must be a real 40-character commit, since a placeholder reads as "you are behind" forever.
 5. **Register the AIOS plugin** — `claude plugin marketplace add ~/aios && claude plugin install aios@the-aios`. This was missing from this list, and `/aios:today` cannot exist without it: the rituals ARE the plugin's commands, so a setup that skips this ends with an operator whose first instruction fails.
-6. Guided MCP auth: invoke `/aios:mcps-setup`
+6. **Do NOT invoke `/aios:mcps-setup` here.** This step used to, and it is the single biggest source of
+   first-run friction on the terminal path: it fires the connector questions — *"Slack workspace? Gmail?
+   GitHub username?"* — **four steps before the operator has seen anything work.** A newcomer asked which
+   services they use, before they know what any of them are for, freezes; and the operator who came
+   through the AIOS App meets the same wall from a different direction. Connectors are now owned by
+   `/aios:cold-start-interview` **Step 11**, which runs them immediately after the first `/today`, when
+   the operator has just watched their own calendar come up empty and the question answers itself. One
+   service at a time, only the ones they want. Nothing is lost by waiting; the offer is stronger.
 7. Install the **spawn wrapper** — `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (or `.ps1` on Windows), then re-source the shell rc
+   > **The interview runs this a second time, on purpose — do not "deduplicate" it.** The installer reads `USER.md` to detect which session names are primary, and `USER.md` does not exist yet at this point in the sequence; the interview writes it at its Step 1 and re-runs the installer immediately after. This run gives the operator a working `spawn` during setup; that run makes it identity-aware. The script is idempotent (timestamped backup → strip prior banner → append fresh), so running it twice is free — and unlike the Obsidian registration above, neither run is redundant.
 8. Wire the **universal hooks** to `~/.claude/settings.json`: `UserPromptSubmit` → `inject-datetime` (real clock in every prompt) + `statusLine` → `claude-identity.sh cache | context-monitor.py` (rate-limit cache writer + context display). See §10 below for exact JSON.
-9. (Conditional, macOS multi-account only) — **ask the operator**: *"Do you use more than one Anthropic account?"* If yes → install the launchd plist + drop a `vault/.pending-quota-autopilot-capture` marker. **Don't run the account-capture login/logout dance during setup** — it would interrupt this session. The first `/today` will surface it as a deliberate task. See §11 below for the exact pattern.
-10. Personalize: invoke `/aios:cold-start-interview` (15-25 min interactive; follow its Steps 0-10).
+9. **Do NOT ask the multi-account question here.** It used to live at this step (*"Do you use more than
+   one Anthropic account?"*, plus a launchd install). On day one the operator has not hit a 5h/7d cap, so
+   the question has no meaning yet and cannot be answered — it is the most expert-coded moment in the
+   whole flow. `/aios:cold-start-interview` **Step 10** now schedules it into the Day-7 check-in,
+   conditional on the caps having actually bitten. It is the one deferral whose need genuinely takes a
+   week to appear, which is exactly why it is deferred by a *week* rather than by an hour.
+10. **Personalize — and this is where setup ends and the conversation begins:** invoke
+    `/aios:cold-start-interview`. It offers the operator a **~5-minute Core** path (identity, declared
+    context, a light INTENT, then their first `/today`) or the **full tour**, and it runs **Steps 0
+    through 11** — Step 10 fires the first `/aios:today`, Step 11 then offers connectors in the same
+    conversation. **Do not run `/aios:today` yourself afterwards; the interview owns it.** Running it
+    twice makes the proof point land as a repeat.
     > **Offer choices, not a blank page.** Wherever a question has recognisable answers — role, industry, how they work, which bundles — present them as a short numbered list with a final *"none of these / let me describe it"* option, rather than asking them to compose prose. An operator meeting the system for the first time does not yet know the vocabulary it wants, and a blank prompt asks them to guess it. Free text stays available for everything a list would flatten.
-11. Wear the hat: `/agent onboarding-aios` (orientation companion)
-12. Optional: `/aios:company` (mount/create venture-context) + `/aios:collaborate` (shared space)
-13. First `/aios:today` (the proof point — also surfaces the deferred quota-autopilot capture if marker present)
+11. **Do NOT invoke `/agent onboarding-aios` here.** The interview already owns this as its **Depth Step 9**, and by the time control returns to this list the interview has *closed* — it ends on *"Welcome to The AIOS."* after the connectors step. Firing the orientation companion after that goodbye is the third false ending this sequence has had, and it lands worst on the operator who chose the ~5-minute start: they said "quick", were given a clean finish, and then got handed two more things. Route to it **only** if the operator seems lost, which the note at the foot of this block already covers.
+12. **Do NOT invoke `/aios:company` or `/aios:collaborate` here either.** Interview **Depth Step 5** presents both and *deliberately defers setup* — *"we'll skip setup now; both deserve their own beats post-cold-start"*. Running them here overrides that decision one step later, in the same session, which is the opposite of deferring. The operator asks for them when they want them; the interview's closing message tells them how.
+13. ~~First `/aios:today`~~ — **the interview runs it** (its Step 10), then continues into connectors (Step 11). Setup is complete when the interview is. Kept as a numbered line so the change is visible rather than silently absorbed.
 
-**Defaults to pick without asking** (unless operator overrides): vault path = `~/aios/`, private repo name = `{username}/aios`, substrate for company = GitHub, wrappers + hooks A+B always install (no opt-out — they're load-bearing). **Always ask, never assume**: Google email, task sources (Slack/GitHub/Linear/Monday), MCP-by-MCP installs (let `/aios:mcps-setup` handle that), the multi-account-Anthropic question (§9 above — affects whether to defer capture). Show diffs before writing to `USER.md` / `INTENT.md` / `vault/00 - notes/context/declared/*` / `~/.claude/settings.json`.
+> ⚠️ **Two copies of this sequence exist in this file** — the Claude-facing block above and the operator-facing "The Setup" section below. They just drifted: the connectors step and the interview's duration were corrected in one and not the other, so a first-timer read a promise the executor no longer made. **Change both, or change neither.** They cannot be merged — one is instructions to execute, the other is a human reading what is about to happen to them — but they answer the same questions and must not disagree.
+
+**Defaults to pick without asking** (unless operator overrides): vault path = `~/aios/`, private repo name = `{username}/aios`, substrate for company = GitHub, wrappers + hooks A+B always install (no opt-out — they're load-bearing). **Always ask, never assume**: anything that writes the operator's own words or commits them to a choice only they can make. **Deliberately NOT on this list any more:** Google email, task sources (Slack / GitHub / Linear / Monday), per-connector installs, and the multi-account-Anthropic question. Those are not assumptions to make — they are questions asked at the **wrong time**, and this list was what mandated asking them during setup. Every one of them now has a named owner later in the flow (interview Step 11 for connectors, the Day-7 check-in for multi-account), so asking here is not thoroughness, it is duplication that costs a newcomer their confidence. Show diffs before writing to `USER.md` / `INTENT.md` / `vault/00 - notes/context/declared/*` / `~/.claude/settings.json`.
 
 **Be gentle, not exhaustive.** The operator should feel walked by the hand, not interrogated. One question at a time, sensible defaults, defer anything that risks interrupting the in-flight session (account capture is the canonical example — always deferred).
+
+> **Where this sequence actually ends.** Step 10 hands control to `/aios:cold-start-interview` and **does not get it back**: the interview runs its own Steps 0-11, fires the first `/today`, offers connectors, and closes. Steps 11-13 above are retired *because* of that — every one of them was something that fired after the operator had already been told they were done. When the interview closes, setup is over. Do not add a coda.
 
 **If operator gets lost mid-setup:** route to `/agent onboarding-aios` — that agent knows the full doc map.
 
@@ -205,13 +245,13 @@ Claude reads this file and walks you through the full onboarding — clone → i
 **The end-to-end flow:**
 
 1. **Clone** the repo to `~/aios` and create your private vault repo (`gh repo create {your-username}/aios --private` — matches the local path; renameable later) — your personal content never goes back to the shared framework. **If you cloned elsewhere**, Claude creates a `~/aios` symlink to the actual install path (see § Path portability below) so every framework reference resolves cleanly.
-2. **Register the Obsidian MCP** — the one MCP the vault actually needs: `claude mcp add obsidian -- npx -y @mauricio.wolff/mcp-obsidian@latest ~/aios/vault`
-3. **Guided MCP auth** via `/aios:mcps-setup` (one MCP at a time — asks "want this?", installs just that one's deps with `bash mcps/setup.sh <name>`, walks you through tokens, registers with `claude mcp add`, verifies the connection works). The other nine bundled MCPs are convenience, not prerequisites — install each when you want it, not before. `bash mcps/setup.sh` with no arguments still installs everything if you prefer that.
-4. **Personalize via `/aios:cold-start-interview`** — 15-25 min interactive interview: identity (USER.md), declared context (`about_me`, `personal_voice`, `working_style`), trust contract (`INTENT.md`), bundle install choices, optional Anthropic plugins. This is where the vault becomes *yours*.
+2. **The one connector the vault itself needs** is an Obsidian bridge, so Claude can read and write your notes directly. It is a published npm package with no account and no token, so nothing is asked of you and nothing appears in the connector list later — it is registered silently during the interview's opening moments. You will not see this step happen, which is the intent.
+3. **Connectors come later, on purpose.** Calendar, Slack, GitHub and the rest are offered by the interview's **Step 11**, right after your first `/today` — when you have just seen your day come up empty and connecting it means something. One service at a time, only the ones you want: it opens the right page, you approve, it checks the connection worked, and you never handle a token. The other nine bundled connectors are convenience rather than prerequisites — `/aios:mcps-setup` adds any of them whenever you like.
+4. **Personalize via `/aios:cold-start-interview`** — a guided conversation, not a form. It opens by offering you a **~5-minute start** (who you are, how you work, what you're happy for it to do without asking, then your first `/today`) or the **full tour** (the same start plus your agent team, companies, plugins and the app). Either way nothing is withheld — the tour is one sentence away at any point, including a month from now. This is where the vault becomes *yours*.
 5. **Spawn the onboarding companion**: `/agent onboarding-aios` — wears the AIOS-orientation hat. Knows the whole map: org profile, README, SETUP, CHEATSHEET, FORTRESS, START-HERE, USER.md personalization power, the self-update loop, where to look when lost. Invoke anytime later by saying *"I'm lost"* / *"what should I try next"* / *"remind me how this fits together"*.
 6. **(Optional) Mount or create a company** via `/aios:company` — if you have a venture-context repo or want to scaffold one (GitHub recommended ✅, see the command's substrate selector)
 7. **(Optional) Set up a collaboration space** via `/aios:collaborate` — if you have a known shared space (Drive folder, GitHub repo, local sync folder) to mount or scaffold
-8. **First `/aios:today`** — the proof point. Reads everything you just configured, pulls your Calendar + Tasks + Slack, and generates a grounded plan for the rest of today. From here, the daily ritual takes over.
+8. **Your first `/aios:today` — run by the interview, not separately.** It reads everything you just told it and proposes a plan for the rest of your day. Expect some sections to be empty at first: the calendar and tasks are not connected yet, and connecting them is the step immediately after. From there the daily ritual takes over.
 
 **What Claude auto-detects** (saves asking):
 - Git identity from `~/.gitconfig` or local repo config
@@ -236,7 +276,7 @@ Claude reads this file and walks you through the full onboarding — clone → i
 
 **If you can't** (corporate machine restricts home-folder layout, you already have a different convention, you're trying the framework from `/tmp/...`, etc.), Claude creates a one-time symlink so the hardcoded references still resolve. This is a fallback, not an equal alternative — pick the default unless you have a specific reason.
 
-**Auto-detect** — Claude runs this at SETUP §1 and again at the top of `/aios:cold-start-interview`: if the cloned repo path ≠ `~/aios/`, create the symlink for you.
+**Auto-detect** — Claude runs this at SETUP §1 and again at the top of `/aios:cold-start-interview`. **Both runs are needed and neither is redundant:** the setup sequence needs the path resolved before its own later steps reference `~/aios/...`, and an operator who arrived through the **AIOS App** never runs that sequence, so the interview is their only pass. The second run is **silent when there is nothing to do** — it speaks only if `~/aios` exists and points somewhere else, which is the one case a human has to decide.
 
 **Manual** (if you ever need to redo it):
 
@@ -262,6 +302,8 @@ mklink /J "%USERPROFILE%\aios" "%CD%"
 ### 1. Obsidian MCP
 
 The Obsidian MCP lets Claude read and write your vault notes directly.
+
+**Registered for you, once, by `/aios:cold-start-interview`'s Pre-step** — silently, with the resolved install path, and skipped if it is already there. The command is documented here for reference and for the rare manual repair; it is **not** a step to run during setup, and running it by hand with a different path is how the vault ends up bridged to a directory that does not exist:
 
 ```bash
 claude mcp add obsidian -- npx -y @mauricio.wolff/mcp-obsidian@latest ~/aios/vault
