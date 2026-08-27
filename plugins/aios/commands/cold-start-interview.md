@@ -423,9 +423,14 @@ Everything compounds from here. Time to feel it.
 
 In the next message, run:  /aios:today
 
-It'll read everything we just configured, pull your calendar + tasks +
-Slack, propose a plan for the rest of today, and surface the daily
-ritual that anchors the system. After today, the loop is:
+It'll read everything you just told me and propose a plan for the rest
+of your day.
+
+One thing to expect: some sections will come up empty — your calendar,
+your tasks. That's not it failing. I'm just not connected to those yet,
+and that's the very next thing we do, once you've seen the shape of it.
+
+After today, the loop is:
   - morning  →  /aios:today
   - evening  →  /aios:close-day
   - sessions →  /aios:close-session
@@ -439,10 +444,10 @@ to try next based on how you've actually been using AIOS in your
 first week. (Easy to ignore if you're not in the mood; the schedule
 is a nudge, not an interrupt.)
 
-Welcome to The AIOS. 🌊
+Go ahead — run it, read what it gives you, and I'll be right here.
 ```
 
-Then create the Day-7 `RemoteTrigger`. **Its payload now carries the one genuinely week-later item**, so
+Mention the Day-7 check-in in one line here — it is reassurance, not a closing move. **Never sign off in a step that hands off:** a goodbye here is the same defect as the old "interview is complete" line, because an operator who believes they are finished does not continue to Step 11. The farewell now lives at the true close. Then create the Day-7 `RemoteTrigger`. **Its payload now carries the one genuinely week-later item**, so
 the deferral is a scheduled thing rather than a forgotten one:
 
 > *"Spawn onboarding-aios for the Week-1 check-in. Cover: what has actually been useful this week; the
@@ -450,6 +455,12 @@ the deferral is a scheduled thing rather than a forgotten one:
 > unconnected; and — if they have been hitting Claude's 5h/7d caps — whether a second Anthropic account
 > and the quota autopilot are worth setting up now (macOS only). Ask that last one **only** if the caps
 > have actually bitten; on day one it was meaningless, and if it still is, skip it."*
+
+**Set the expectation BEFORE they run it — this ordering is load-bearing.** The copy above warns that
+the calendar will be empty. Without that warning, `/today` looks broken and Step 11 opens by
+apologising for a failure the previous step promised would not happen; with it, the emptiness is a
+*preview of the next step* and Step 11 lands as the fix that was already announced. Same information,
+opposite emotional read — and this was caught by walking the flow rather than by reading the steps.
 
 **⚠️ The interview does NOT end here.** This line used to read *"after `/today` fires, the cold-start
 interview is complete"* — and that sentence is precisely what turned deferral into deletion. Let them
@@ -471,8 +482,7 @@ existed. So the interview **continues**, in the same breath, using what they jus
 **Open with the evidence in front of them, not with a concept:**
 
 ```
-You just saw your day — but notice the calendar section was empty.
-That's not a bug: I'm simply not connected to it yet.
+There it is — and the empty calendar I mentioned.
 
 That's the last piece, and it's the one that changes how much I can
 actually do for you. Connected, I read your real calendar and tasks
@@ -530,6 +540,8 @@ Two things still waiting whenever you want them, no rush:
     one at a time, same as we just did.
 
 I'll check in with you in a week to see what's actually been useful.
+
+Welcome to The AIOS. 🌊
 ```
 
 **Acceptance for this step:** an operator who answers "no thanks" to every connector still finishes
