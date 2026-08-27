@@ -37,7 +37,7 @@
 
 ## 2026-08-27 — First-run stops asking questions a newcomer cannot answer, and stops ending before it is finished
 
-`hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4 · 8d7238f · 1e78989 · 140ea59 · e166fc9 · 23b001f · 69da9bf · 51e70ac · be5baf9`
+`hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4 · 8d7238f · 1e78989 · 140ea59 · e166fc9 · 23b001f · 69da9bf · 51e70ac · be5baf9 · 9e55b19`
 
 ### The setup interview re-times its friction without losing a single capability
 
@@ -180,6 +180,18 @@
 *This is the **third** promise in this entry that needed a mechanism, and the pattern is now explicit enough to name: **a promise with a named trigger phrase needs a named landing.** The Day-7 check-in said *"I'm scheduling"* and scheduled nothing; a step re-timed to that check-in landed nowhere; and this one had a quoted phrase with no handler. All three fail the same way — later, and in front of someone who believed the offer.*
 
 *On the two remaining walks: the **App path** was walked against the App's own source and is clean. Its first phase installs *"Homebrew, the toolchain, Obsidian and Claude Code"* and **stops there** — its own note reads *"This installs the tools; a Claude session does the AIOS itself once Claude is running"* — so there is no duplicated clone to detect and the fresh-or-existing-vault question is still asked in the session. The App has real terminals, so the shell-rc instructions are executable on that path too. One thing sharpened as a result: the Obsidian check is **verifying a claim, not filling a gap** — the App already tries to install it, and it is still the one prerequisite that has needed a manual install in the field, because a failed cask install looks identical to a successful one from the next step's point of view. The **path-`CONFLICT`** branch was read and needs nothing: it surfaces immediately and asks whether to back the existing path up, which is the designed behaviour for the one case a human has to decide. **65 assertions.***
+
+### `/aios:update` stops prescribing a command that cannot do anything
+
+> **What this delivers.** The plugin-cache parity check tells you to run `claude plugin update aios@the-aios` whenever the cached version differs from what the manifest declares. That is right when the cache holds **only** stale versions. It is misleading when the manifest's version is **already there** alongside an older directory — the re-resolve then answers *"already at the latest version"* and changes nothing, and you have just watched the prescribed fix no-op. A remedy that visibly does nothing is worse than no remedy: it makes the operator doubt the tool that was, in fact, correct.
+
+**What you can now do:**
+- **Read a verdict instead of a chore.** That case now reports *"your commands are current, and the extra directory is inert"* and stops. Measured on a live install: manifest `0.5.0`, cache holding both `0.4.0` and `0.5.0`, **all 25 command files identical in both**, and `grep -rl` across the plugin tree finding **no file that references the old directory** outside its own path. Nothing was misaligned, so nothing needed realigning.
+- **Trust that the ban on pruning is deliberate, not caution-by-default.** The rule against deleting an old cache directory is restated exactly where it is most tempting to break — a directory this provably unreferenced is worth kilobytes, while a wrong deletion costs the operator their working commands. The prescription stays for the case it was written for: the cache naming **only** versions other than the manifest's.
+
+**Action required — none.** If a previous run told you to re-resolve and it appeared to do nothing, that was this bug and your commands were current the whole time.
+
+*Found by running the prescription rather than reading it — the same method that turned up the day-zero defects earlier in this entry. A remedy is a claim, and a claim that has never been executed is untested.*
 
 ---
 
