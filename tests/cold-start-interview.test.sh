@@ -366,5 +366,66 @@ printf '%s\n' "$S8" | grep -qE '/plugin (marketplace add|install)|⭐' \
         "useful output for the executor, not for a first-timer; keep it as reference prose" \
   || ok "Step 8's spoken copy names no marketplace commands"
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 7 · THE SURFACE IS DETECTED, NOT GUESSED AND NOT ASKED
+#
+# The first version probed the filesystem: does ~/.aios/surfaces/app.json exist,
+# does /Applications/AIOS.app exist. Both fail in the direction that matters, and
+# both were measured failing on a live machine on 2026-08-27:
+#
+#   - glass.json was PRESENT with a DEAD pid while the App was genuinely running.
+#     A presence check reports "IDE" to an operator sitting in the App.
+#   - app.json's pid was live AND five hops up that session's ancestry — which the
+#     presence check cannot distinguish from "the App is merely installed".
+#
+# The protocol's own answer (~/.aios/spawn-inbox/README.md) is a liveness-checked
+# walk of your own process ancestry, comparing PIDS — never process names, since
+# Glass runs inside whatever editor the operator happens to use.
+# ─────────────────────────────────────────────────────────────────────────────
+PRE=$(awk '/^### Pre-step/,/^### Step 0/' "$F")
+
+# 7a — the liveness check is the whole difference between detection and a guess.
+printf '%s\n' "$PRE" | grep -qF 'os.kill(d["pid"], 0)' \
+  && ok "surface detection liveness-checks the announced pid" \
+  || no "surface detection does not liveness-check" "a surface file outlives its process; glass.json was measured present-and-dead"
+
+# 7b — and it must walk ancestry, not merely find a live surface somewhere on the box.
+# NOTE: this first read `grep -qE 'while p and p != 1|parent(p)'`. The alternation
+#       made it pass on a stubbed walk, because `p = parent(p)` survives inside a
+#       loop replaced by `if False:` — the helper existing is not the walk running.
+#       Both halves are required now: the climb AND the reassignment.
+if printf '%s\n' "$PRE" | grep -qF 'while p and p != 1' \
+   && printf '%s\n' "$PRE" | grep -qF 'p = parent(p)'; then
+  ok "surface detection walks this session's own ancestry"
+else
+  no "surface detection does not walk ancestry" "a live surface elsewhere on the machine did not launch this session"
+fi
+
+# 7c — the retired probes must not come back as a 'simplification'.
+BADPROBE=$(printf '%s\n' "$PRE" | grep -nE '^\s*(if )?\[ -[fd] "?\$HOME/\.aios/surfaces|-d "?/Applications/AIOS\.app' || true)
+[ -z "$BADPROBE" ] \
+  && ok "no install-path or file-presence probe stands in for detection" \
+  || no "a file-presence / install-path probe is back" "$(printf '%s' "$BADPROBE" | head -2)"
+
+# 7d — three surfaces, three behaviours. A binary app/terminal split cannot express
+#      the case that matters most: an operator already inside Glass being offered an
+#      install of Glass, which tells them plainly that nothing looked at their machine.
+for e in 'ENTRY=app' 'ENTRY=glass' 'ENTRY=terminal'; do
+  grep -qF "$e" "$F" && ok "the flow branches on $e" || no "no branch for $e" "the surface split is not three-way"
+done
+
+# 7e — Glass must never be offered to an operator detected THROUGH Glass.
+S85=$(awk '/^### Step 8\.5/,/^### Step 9/' "$F")
+printf '%s\n' "$S85" | grep -qiE 'ENTRY=glass' \
+  && ok "Step 8.5 handles the already-in-Glass case explicitly" \
+  || no "Step 8.5 does not branch on ENTRY=glass" "it would walk an operator through installing the panel they are looking at"
+
+# 7f — Step 2 writes about_me.md, which the AIOS App watches to learn the operator's
+#      name. Trimming it out of Core would silently regress a fix in another repo.
+grep -qE 'about_me\.md.*(watch|greeting)|greeting.*about_me\.md' "$F" \
+  && ok "the App's dependency on about_me.md is recorded where it can be seen" \
+  || no "nothing records that the App reads about_me.md for its greeting" "a future Core trim would regress an operator-reported fix in aios-app"
+
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

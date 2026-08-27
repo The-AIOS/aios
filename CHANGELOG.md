@@ -123,6 +123,23 @@
 
 *Found by dry-running the flow a second time — the **tour** path, after the quick-start path had already been walked. Each walk found defects the other could not: the first surfaced the false endings, the second surfaced an offer that contradicted a sentence four paragraphs above it. **45 assertions**, each new one proven to fail by reintroducing the exact defect.*
 
+### Setup knows which surface you are sitting in, instead of asking you
+
+> **What this delivers.** The tour offer said *"a visual panel if you work inside a code editor"* — a hedge that hands the operator a question the system can answer itself. It can: every AIOS surface announces its process-tree root at `~/.aios/surfaces/<surface>.json`, and a session belongs to whichever one is an **ancestor of its own pid**. There are **three** answers, not two — the **App**, a code editor running the **Glass** panel, and a plain terminal — and each changes what should be said next.
+
+**What you can now do:**
+- **Never be offered the thing you are already looking at.** An operator detected *through* the Glass panel was being walked through installing Glass. Nothing communicates "this system does not look at your machine" more clearly. That branch now skips the install, keeps only the part first-timers actually miss (placing the panel beside the editor), and says what it knows. An operator in the **App** skips the step entirely, with one line explaining that they already have the equivalent.
+- **Be asked only what genuinely cannot be detected.** A plain terminal says nothing about whether the operator *also* works in an editor, so that is the one branch where the question is honest — and it is now the only branch that asks it.
+- **Get told what was detected, in one clause.** *"I can see you're in the App"* is four words that demonstrate, with nothing the operator has to take on faith, that this thing reads their actual machine. The rule is written alongside: never a performance, never a question, and **silence if detection fails** — a wrong guess announced confidently costs more than the whole gain.
+
+**Action required — none.**
+
+*The first implementation of this was wrong, and it was wrong in the way that does not announce itself: it tested whether `~/.aios/surfaces/app.json` **existed**, and whether `/Applications/AIOS.app` was **installed**. Both fail toward a confident wrong answer, and both were measured failing on a live machine: `glass.json` was sitting on disk with a **dead pid** while the App was genuinely running, so a presence check would have reported "IDE" to an operator inside the App — and an install path proves the operator *owns* the App, never that it launched *this session*. The protocol already had the answer (`~/.aios/spawn-inbox/README.md` is its authority): liveness-check each announced pid, then walk your own ancestry comparing **pids**, never process names, because Glass runs inside whatever editor the operator happens to use. That snippet is now used verbatim rather than approximated.*
+
+*One cross-repo coupling is recorded where it can be seen, in Step 2: the **AIOS App reads the operator's name from `about_me.md` and watches that directory**, so its greeting turns from *"Good morning"* into *"Good morning, {name}"* the moment this step writes the file. That was an operator-reported bug in the App — the name used to appear only when something unrelated tripped a different watcher, so the App greeted a stranger for the whole interview while the onboarding agent was already using their name. A first-timer seeing their own name is the most legible proof the setup worked, so `about_me.md` is written in **Core** and a note now says why it cannot be deferred.*
+
+*`tests/cold-start-interview.test.sh` → **53 assertions**. One of the new ones passed under mutation on the first attempt: its pattern was `'while p and p != 1|parent(p)'`, and the alternation let a **stubbed** walk satisfy it, because `p = parent(p)` survives inside a loop replaced with `if False:` — the helper existing is not the walk running. It now requires both halves. That is the third guard in this entry to pass while measuring nothing, and all three were caught the same way: reintroduce the defect, demand the red line.*
+
 ---
 
 ## 2026-08-25 — A bootstrap that promised instructions and delivered none, and a "permanent" state with a seven-day clock

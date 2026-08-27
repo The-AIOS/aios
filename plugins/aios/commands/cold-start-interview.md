@@ -49,20 +49,60 @@ in (c). If any fails, note it and carry on — a first-timer must never open on 
 **(a) Which door did they come through?** Detect it, because the wording of several later steps depends
 on it and getting it wrong is its own friction:
 
+**Do not guess this from what is installed — walk your own process ancestry.** Each AIOS surface
+announces its process-tree root at `~/.aios/surfaces/<surface>.json`; you belong to whichever one is an
+**ancestor of your own pid**. This is the protocol's own detection snippet (`~/.aios/spawn-inbox/README.md`
+is its authority) and it must be used as written, because the two shortcuts both fail in the direction
+that matters:
+
+- **A surface file's presence proves nothing** — it stays on disk after the surface exits, so it must be
+  liveness-checked (`os.kill(pid, 0)`). Measured on a live machine 2026-08-27: `glass.json` was present
+  with a **dead** pid while the App was genuinely running. A presence check would have reported "IDE" to
+  an operator sitting in the App.
+- **An install path proves less** — `/Applications/AIOS.app` existing says the operator *owns* the App,
+  not that it launched *this session*. Someone with the App installed who opens a plain terminal is a
+  terminal-path operator, and telling them otherwise skips a step they needed.
+- **Never match on process *name*.** Glass runs inside whatever editor the operator uses, so a name list
+  breaks the day they switch editors. Compare **pids**.
+
 ```bash
-# App-path if the AIOS App is installed AND announced itself; terminal-path otherwise.
-if [ -f "$HOME/.aios/surfaces/app.json" ] || [ -d "/Applications/AIOS.app" ] \
-   || [ -d "$HOME/AppData/Local/Programs/AIOS" ] || [ -d "/opt/AIOS" ]; then
-  ENTRY=app
-else
-  ENTRY=terminal
-fi
+ENTRY=$(python3 - <<'PY'
+import json, os, glob, subprocess
+def parent(pid):
+    r = subprocess.run(["ps","-o","ppid=","-p",str(pid)], capture_output=True, text=True)
+    return int(r.stdout) if r.stdout.strip() else 0
+live = {}
+for f in glob.glob(os.path.expanduser("~/.aios/surfaces/*.json")):
+    try:
+        d = json.load(open(f))
+        os.kill(d["pid"], 0)          # announced but dead => not running
+        live[d["pid"]] = d["surface"]
+    except Exception:
+        pass
+p = os.getpid()
+while p and p != 1:
+    if p in live:
+        print(live[p]); break
+    p = parent(p)
+else:
+    print("terminal")                 # no match is a legitimate answer, not an error
+PY
+) || ENTRY=terminal
 ```
 
-- `ENTRY=app` → **they never ran SETUP.md.** The app was their installer. Never mention SETUP.md to
-  them, never send them to it, and treat the wrapper install at Step 1 as a *first* install.
-- `ENTRY=terminal` → they followed SETUP.md to get here. The Step 1 wrapper install is a *refresh*, and
-  referring to SETUP.md is fair game because they have already read it.
+Three answers, and each one changes what you say later:
+
+| `ENTRY` | Where they are | What it means for you |
+|---|---|---|
+| `app` | Inside the **AIOS App**, which launched this session | **They never read SETUP.md** — the App ran that phase for them. Never mention it, never link it. They already have a graphical surface, so **skip Step 8.5 entirely**. Treat Step 1's wrapper install as a *first* install. |
+| `glass` | Inside a **code editor** with the **AIOS Glass panel already installed and running** | They are demonstrably an editor user, and Glass is **already there** — Step 8.5 must not offer to install what announced itself thirty seconds ago. Point at the panel instead. |
+| `terminal` | A plain terminal — no AIOS surface in the ancestry | They followed SETUP.md, so referring to it is fair game and Step 1's wrapper install is a *refresh*. Glass is a genuine offer here, and the only branch where asking *"do you work in a code editor?"* is the right move rather than a question you could have answered yourself. |
+
+**Say what you detected, once, in one clause — it is the cheapest trust you will ever buy.** An operator
+who is told *"I can see you're in the App"* learns, in four words and with no claim they have to take on
+faith, that this thing looks at their actual machine. Do not make a performance of it and never present it
+as a question. If detection fails, treat it as `terminal` and say nothing at all — a wrong guess announced
+confidently costs more than the whole gain.
 
 This is the canonical half of the routing rule: **a first-timer arriving through the app must never be
 linked into the 654-line manual.** SETUP.md stays the reference for the manual path and is not changed.
@@ -182,7 +222,6 @@ Two ways to start:
                    show than to describe: the agents you already have
                    and which ones fit the way you work, how to bring in
                    a company or a shared workspace when you need one,
-                   a visual panel if you work inside a code editor,
                    and a proper walk through the whole map with a guide.
 
 Nothing is locked behind the tour. Everything in it is either already
@@ -191,6 +230,17 @@ I'll offer it again at the end. It will still be there next month.
 
 Which sounds better?
 ```
+
+**Add one surface-specific line to that tour description, from `ENTRY` — never the hedge.** The earlier
+copy read *"a visual panel if you work inside a code editor"*, which asks the operator to answer a
+question you have already answered. Insert it as the **last item of the tour list above**, right before *"Nothing is locked behind the tour"*:
+
+- **`ENTRY=terminal`** → append `and a visual panel for your code editor, if you use one.` This is the
+  only branch where the conditional is honest, because a plain terminal genuinely does not tell you
+  whether they also work in an editor.
+- **`ENTRY=glass`** → append `and a proper introduction to the AIOS panel already open beside you.`
+- **`ENTRY=app`** → **append nothing.** They are looking at the graphical surface. Listing a second one
+  as a tour benefit is the exact confusion this change removed.
 
 WAIT for their answer.
 
@@ -268,6 +318,15 @@ Both installers are idempotent (timestamped backup → strip prior banner → ap
 **Rule for this whole step:** one question at a time. The operator should feel walked by the hand, not interrogated. Use sensible defaults. Defer any action that involves cycling Claude's auth (the multi-account capture is the canonical example — always deferred to `/today`).
 
 ### Step 2 — Declared context (4 files, fast pass)
+
+> **This step is load-bearing for a surface outside this repo — do not trim it out of Core.** The AIOS
+> App reads the operator's name from `vault/00 - notes/context/declared/about_me.md` and *watches that
+> directory* so its greeting changes from *"Good morning"* to *"Good morning, {name}"* the moment this
+> step writes the file. That was an operator-reported bug in the App (the name used to appear only when
+> something else happened to trip a different watcher, so the App greeted a stranger through the whole
+> interview while the onboarding agent was already using their name). Their own name appearing is the most
+> legible proof to a first-timer that the setup actually worked — so `about_me.md` must be written in
+> **Core**, not deferred to Depth.
 
 **Opening — offer the pre-fill path BEFORE the per-file questions:**
 
@@ -398,9 +457,10 @@ research. If you ever want to see or change what's there, just ask.
 
 > **Say "AIOS Glass", or say "a visual panel inside your editor" — never "the app".** Glass is an **extension** that runs inside Antigravity / VS Code. The **AIOS App** is a separate, standalone program. Calling Glass *"the graphical app"* (which the Step 0 offer used to do) is wrong twice over: it is not an app, and an operator who arrived **through** the App already has a graphical surface open in front of them, so the phrase reads as if they are being sold what they are currently looking at.
 >
-> **Check `ENTRY` from the Pre-step before running this step at all.**
-> - `ENTRY=app` → **skip it, and say why in one line:** *"You already have the AIOS App, which is the same idea in its own window — Glass is for people working inside a code editor. Nothing to do here."* Walking an App operator through installing a second surface is friction with no payoff.
-> - `ENTRY=terminal` → run it, but only if they actually use a code editor. Ask that first, in plain words, rather than assuming: an operator who lives in a terminal has no window for Glass to attach to.
+> **`ENTRY` from the Pre-step decides this step. Do not ask what you already detected.**
+> - **`ENTRY=app`** → **skip it entirely**, one line and move on: *"You've already got the AIOS App, which is this same idea in its own window — Glass is the version that lives inside a code editor, so there's nothing to do here."* Walking an App operator through installing a second surface is friction with no payoff.
+> - **`ENTRY=glass`** → **Glass is already installed and running — it is how you detected them.** Offering to install it would tell the operator, in the clearest possible way, that this system does not look at their machine. Skip steps 1 and 2 below; the panel exists and is open. Do step 3 only (help them place it beside the editor, which first-timers genuinely miss) and say what you know: *"I can see the AIOS panel is already open in your editor — let's just get it sitting where you'll actually use it."*
+> - **`ENTRY=terminal`** → the one branch where a question is right, because this is the one thing the ancestry walk cannot tell you: a plain terminal says nothing about whether they *also* work in an editor. Ask in plain words, then install if yes.
 
 **When it does apply, install it together — walk them through it, don't soft-offer-and-skip.** Glass is a core surface of the AIOS, not an optional extra. Same posture as Step 9 and the bundle/plugin installs: the default is *do it now, together* — there's no fake "skip / later" gate (skipping it leaves a new operator, especially a non-terminal one, without the surface that makes the AIOS usable — exactly the gap that strands them). **What it is:** a docked panel inside the IDE that turns the AIOS into a point-and-click surface — run rituals, launch/spawn agents, browse skills + commands, mount companies, manage spaces, all without typing terminal commands. *Glass, not engine* — it triggers the existing rituals through Claude, reimplements nothing.
 
