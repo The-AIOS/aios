@@ -151,6 +151,12 @@ Services where teammates currently rely on claude.ai-hosted connectors. These sh
 1. Create a folder: `mcps/{name}-mcp/`
 2. Add the server code + `README.md` with: what it does, setup, auth, register command
 3. **Add `connector.json`** (required — without it the AIOS App will not list the connector at all).
+   **This applies to `mcps/custom/` too**, and that case is easier to miss because nothing in canonical
+   checks it: `/aios:update` never touches `custom/`, and the test suite is repo infrastructure that is
+   deliberately never synced to a vault. A custom MCP was found **registered and working with no
+   manifest** — invisible to the card while functioning perfectly — which surfaced only once the App
+   began reporting folders that have no manifest. See `mcps/custom/_index.md` for the operator-facing
+   version of this.
    Copy the shape from any bundled folder. Non-negotiable fields:
    - `id` **must equal the registered server name**, or a reader cannot match manifest to registration
    - `service` is the service as the operator would name it — **never** containing the string "MCP"

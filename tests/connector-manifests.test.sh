@@ -135,5 +135,60 @@ rm -rf "$T"
 [ "${hits:-0}" -ge 5 ] && ok "CONTROL FIRES: a deliberately broken manifest trips $hits criteria" \
   || no "CONTROL DID NOT FIRE (only ${hits:-0}) — section 2 proves nothing"
 
+
+echo "── 6. mcps/custom/ — validated if present, never required ──"
+# The App reads manifests from every folder under mcps/, custom/ included, and a
+# custom MCP with no manifest is not shown as broken — it is not shown at all. A
+# real one was found registered and working, invisible to the card, and it
+# surfaced only when the App started reporting unmanifested folders.
+#
+# But this suite CANNOT be the guard for that, and the reason is structural rather
+# than an oversight: mcps/custom/ is operator content that /aios:update never
+# touches, and tests/ is repo infrastructure deliberately never synced to a vault
+# (Tier 0). So canonical CI runs where there is no custom content, and the operator
+# who has custom content never runs canonical CI. Asserting a manifest EXISTS here
+# would fail on nothing and protect nobody.
+#
+# What this suite can honestly do is two things: validate a custom manifest if one
+# is ever present (a canonical example, or a contributor's fixture), and assert
+# that the DOCUMENTATION carries the rule — because documentation is the only
+# canonical surface that actually reaches the operator's machine.
+CUSTOM=$(ls -d mcps/custom/*/ 2>/dev/null | wc -l | tr -d ' ')
+CUSTOM_MANIFESTS=$(ls mcps/custom/*/connector.json 2>/dev/null | wc -l | tr -d ' ')
+if [ "${CUSTOM:-0}" -eq 0 ]; then
+  ok "no custom MCP folders in canonical — nothing to validate (expected)"
+else
+  bad_custom=$(python3 - <<'PY'
+import json,glob,os,re
+c=0
+for f in sorted(glob.glob("mcps/custom/*/connector.json")):
+    folder=os.path.basename(os.path.dirname(f))
+    try: d=json.load(open(f))
+    except Exception: c+=1; continue
+    if d.get("id") != folder[:-4] if folder.endswith("-mcp") else False: c+=1
+    if re.search(r'\bMCPs?\b', str(d.get("service","")), re.I): c+=1
+    c += len(re.findall(r'~/aios[^"]*', json.dumps(d)))
+    if d.get("connect") not in ("one-click","needs-key","guided"): c+=1
+print(c)
+PY
+)
+  [ "${bad_custom:-0}" -eq 0 ] \
+    && ok "$CUSTOM custom folder(s), $CUSTOM_MANIFESTS manifest(s), 0 violations" \
+    || no "$bad_custom violation(s) in a custom manifest" "same contract applies wherever a manifest lives"
+fi
+
+# The doc rule is the part that reaches an operator, so it is the part asserted.
+if grep -qiE 'connector\.json' mcps/custom/_index.md; then
+  ok "mcps/custom/_index.md tells an operator their MCP needs a manifest"
+else
+  no "the custom-MCP index does not mention connector.json" \
+     "the App will silently not list their MCP, and this suite never reaches their machine to say so"
+fi
+if awk '/^## Adding a new MCP/,0' mcps/_index.md | grep -qiE 'custom'; then
+  ok "the add-an-MCP checklist covers mcps/custom/ explicitly"
+else
+  no "the checklist does not mention custom/" "the case that most needs stating is the one nothing checks"
+fi
+
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
