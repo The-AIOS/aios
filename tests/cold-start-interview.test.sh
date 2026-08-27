@@ -451,5 +451,86 @@ printf '%s\n' "$S3" | grep -qiE 'pin anything irreversible|irreversible or outwa
   && ok "3-light pins irreversible and outward-facing actions to draft regardless of the answer" \
   || no "3-light applies one global answer to everything" "a minute-four yes about tidying files would authorise outbound mail in the operator's name"
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# A RECURRING TRAP IN THIS FILE, WRITTEN DOWN ONCE
+#
+# Four guards here have fired on the prose that DOCUMENTS the defect rather than
+# the defect: a numbered step reading "Do NOT invoke X" matched a search for
+# "invoke X"; a coda check excused a live step whose sentence mentioned the
+# interview owning something; and two checks below matched a quoted "it used to
+# say …" note. Every time, the file was correct and the guard was wrong.
+#
+# The lesson is not "write better patterns". It is that a command file must be
+# free to explain its own rules, so ANY guard over one of these documents has to
+# be scoped to the thing that executes — a fenced block, a numbered step, a
+# `- `Bash(` probe line — and never to the whole file. A guard that cannot tell a
+# thing from its own changelog fires on every honest edit, and then gets muted.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 9 · DAY ZERO, AND PROMISES THAT NEED A MECHANISM
+#
+# Three defects found by building an empty vault and running /today's probes
+# against it, rather than reading them:
+#
+#   - the ventures glob had no match and zsh treats that as FATAL (rc=1), so the
+#     first /today a new operator ever ran threw a red error in the step this whole
+#     flow builds toward. bash and sh pass the literal through; zsh does not.
+#   - Step 10 SAYS "I'm scheduling a Day-7 check-in" and nothing wrote or read a
+#     marker. The multi-account question had been re-timed there, so it landed
+#     nowhere: a destination that does not exist.
+#   - today.md's quota-marker reader cited "SETUP §11" as its writer, and that step
+#     had been deleted in this very PR. A reader outliving its writer.
+# ─────────────────────────────────────────────────────────────────────────────
+T=plugins/aios/commands/today.md
+
+# 9a — no unguarded directory glob in /today's probes. find cannot fail this way.
+if grep -qE '^- `Bash\(for [a-z]+ in ~/aios/vault[^)]*\*/;' "$T"; then
+  no "/today still iterates a bare directory glob" "unmatched glob is fatal in zsh (rc=1) — measured; the first /today on a fresh vault errors"
+else
+  ok "/today's directory scan cannot fail on an empty tree"
+fi
+
+# 9b — the Day-7 promise has both halves. Either alone is worse than neither: a
+#      writer with no reader is a dead file; a reader with no writer never fires.
+grep -qF 'pending-day7-checkin' "$F" \
+  && ok "the interview WRITES the Day-7 marker it promises" \
+  || no "Step 10 promises a Day-7 check-in and writes no marker" "re-timing to a destination that does not exist"
+grep -qF 'pending-day7-checkin' "$T" \
+  && ok "/today READS the Day-7 marker" \
+  || no "nothing reads the Day-7 marker" "the interview would write a file no command ever opens"
+
+# 9c — and the date comparison must actually compare. `[ "$a" >= "$b" ]` is not a
+#      thing: test has no >= operator, so it errored and fell through to "pending",
+#      which means the check-in would have stayed silent forever while looking like
+#      it was merely waiting. This is the fail-silent shape, so it is asserted.
+if grep -E '^- `Bash\(' "$T" | grep -qE '\[ "\$t" \\?>= "\$d" \]'; then
+  no "/today compares dates with a non-existent test operator" "[ >= ] prints 'binary operator expected' and falls through — the check-in never fires"
+else
+  ok "/today's Day-7 date comparison uses a real operator"
+fi
+
+# 9d — the stale writer reference had to be corrected, not left pointing at a step
+#      that no longer exists.
+# Scoped past the sentence that RECORDS the correction. The unscoped version fired
+# on '*(It used to say "SETUP §11 leaves this marker" …)*' — the note explaining the
+# fix. Match only an un-hedged claim.
+if grep -F 'SETUP §11 leaves this marker' "$T" | grep -qvE 'used to say|no longer|outlived'; then
+  no "/today still credits SETUP §11 with writing the quota marker" "that step was deleted in this PR; the writer is now the Day-7 flow"
+else
+  ok "the quota marker's writer is named correctly"
+fi
+
+# 9e — prerequisites branch on arrival. An App operator has the toolchain already;
+#      the real-world gap is the Obsidian DESKTOP APP, which is a GUI download no
+#      package manager pulls in, and which has needed a manual install in the field.
+grep -qiE 'missing: obsidian-app' SETUP.md \
+  && ok "SETUP checks the Obsidian desktop app specifically" \
+  || no "SETUP does not single out the Obsidian app" "it is the one prerequisite observed missing on the App path"
+grep -qiE 'Arrived through the App|assume the toolchain is present' SETUP.md \
+  && ok "SETUP's prerequisite step branches on how the operator arrived" \
+  || no "SETUP walks one prerequisites block for both doors" "an App operator meets a wall of checks that all pass, before anything works"
+
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

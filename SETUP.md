@@ -15,6 +15,22 @@ Get the full system running in under 10 minutes (after the prereqs install).
 Operator said *"set up my AI-OS from this repo"* or similar. You're the executor. The flow:
 
 1. Confirm Prerequisites are installed — Obsidian + Node/Git/gh/Python/uv/Claude Code, **plus ONE execution surface**: the **AIOS App** *or* Antigravity IDE/VS Code with AIOS Glass. If the operator reached you from the AIOS App, that surface is already satisfied — do **not** send them to install an IDE or Glass. If anything else is missing, walk the OS-specific block from "Prerequisites" §
+   > **Branch this on how they arrived — an App operator has almost all of it already.** The AIOS App installs the toolchain as part of its own guided steps, so walking a full OS-specific prerequisites block at an App operator is a wall of checks that will all pass, in the first minute, before anything has been shown to work. Derive the surface the way `/aios:cold-start-interview`'s Pre-step does — a liveness-checked walk of your own process ancestry against `~/.aios/surfaces/*.json` (never a file-presence or install-path test; both report confidently wrong answers). Then:
+   >
+   > - **Arrived through the App** → assume the toolchain is present and **verify silently** rather than interrogating: one check, and speak only about what is actually missing. **Check the Obsidian desktop app specifically.** It is the one prerequisite that has genuinely needed a manual install in the field — reported on two separate operator installs — because it is a GUI application rather than something a package manager pulls in with the rest. Everything else on the list has come pre-satisfied on this path.
+   > - **Arrived through a terminal** → the full block applies; walk it.
+   >
+   > Either way: **name only what is missing.** Reading a passing checklist aloud is the same mistake as the connector questions this sequence used to ask — accurate, and worthless to the person hearing it.
+
+   ```bash
+   # Obsidian desktop app — the one gap seen on the App path. macOS / Linux / Windows.
+   ls -d "/Applications/Obsidian.app" >/dev/null 2>&1 \
+     || ls -d "$HOME/Applications/Obsidian.app" >/dev/null 2>&1 \
+     || command -v obsidian >/dev/null 2>&1 \
+     || ls -d "$HOME/AppData/Local/Obsidian" >/dev/null 2>&1 \
+     || echo "missing: obsidian-app"
+   ```
+   > A blank result means it is installed and **nothing should be said about it**. Only `missing: obsidian-app` earns a sentence: *"One thing I can't install for you — Obsidian itself, the app you'll read your vault in. It's a normal download from obsidian.md; grab it whenever, nothing here waits on it."* Note the framing: the vault is plain Markdown on their disk and every ritual works without the GUI, so this is genuinely not a blocker, and saying so prevents a first-timer stalling on it.
 2. Clone to `~/aios` (default) and create private GitHub repo `{username}/aios` (or whatever the operator names it) — see "The Setup" §1 below
 3. Register bundled skills: `bash skills/setup.sh` (Windows: `pwsh skills/setup.ps1`) — symlinks AIOS skills into `~/.claude/skills` so Claude Code loads them (restart sessions after) · **Do not register the Obsidian MCP here.** `/aios:cold-start-interview`'s Pre-step registers it silently, and it has to: an operator who arrived through the **AIOS App** reaches the interview without ever passing through this list, so the interview is the only place that covers both doors. Registering it here as well gave the command two owners with two different arguments (this copy hardcoded `~/aios/vault`; the interview uses the resolved install path) — and because the interview's registration is guarded by *"skip if already registered"*, whichever copy ran first won permanently, including when it was the wrong one.
    > **Do NOT run `bash mcps/setup.sh` here.** With no arguments it installs all ten bundled MCPs — multiple Chrome-for-Testing downloads, several venvs, minutes of output in which a long download is indistinguishable from a hang and one failure reads as a crash. None of it is needed to use the vault. Slack, Atlassian, Google, image generation and the rest are convenience, installed WHEN the operator says they want one — which is what the interview's Step 11 asks, after the first `/today`. `bash mcps/setup.sh <name>` installs just that one, `--list` shows what exists.

@@ -152,6 +152,21 @@
 
 *The pattern worth naming, since this is the second instance in this entry: **a tier shorthand is an instruction, and an undefined instruction is executed as its opposite.** `1 (trimmed)` was real — Step 1 genuinely is two questions. `8 (silent)` was written into Step 8 when it moved into Core. `3-light` was the one that stayed a label, and the failure mode is that the table reads as complete either way. A test now requires every shorthand in that row to be defined somewhere in the file. **55 assertions.***
 
+### Day zero, tested against an actually-empty vault — which broke the first `/today` three ways
+
+> **What this delivers.** Every walk so far read the flow. This one built a day-zero vault — the shape a clone has before a single answer is given — and **ran `/today`'s probes against it.** Three defects, all of them in the step the whole conversation builds toward.
+
+**What you can now do:**
+- **Run your first `/today` without it throwing at you.** The venture-sync probe iterated `…/context/ventures/*/`, which matches nothing before a company is mounted — and **zsh treats an unmatched glob as fatal** (`no matches found`, exit 1) where bash and sh pass the literal through. Measured across all three. It now uses `find`, which cannot fail that way and is what the probe two lines above it already used.
+- **Actually receive the Day-7 check-in you were promised.** Step 10 says *"I'm scheduling a Day-7 check-in"*, and nothing wrote or read anything — the sentence was the whole implementation. Worse, the multi-account question had been **re-timed to that check-in**, so it landed nowhere at all. The interview now writes a dated marker, `/today` surfaces it on or after the date, and it is deleted when the check-in runs **or is declined** (a nudge that reappears after a no stops being a nudge — the deliberate opposite of the quota marker, which re-surfaces until done, because unfinished setup is not the same thing as an invitation).
+- **Not be interrogated about a toolchain you already have.** Prerequisites now branch on how the operator arrived. The App installs the toolchain as part of its own steps, so walking a full OS-specific block at an App operator is a wall of checks that all pass, in minute one, before anything has been shown to work. **The one real gap is the Obsidian desktop app** — a GUI download no package manager pulls in, and the only prerequisite observed missing on the App path in the field. It is checked specifically, mentioned **only** if absent, and framed as a non-blocker, because the vault is Markdown on disk and every ritual works without the GUI.
+
+**Action required — none.**
+
+*The Day-7 reader was written wrong first, in the fail-silent direction: `[ "$t" >= "$d" ]`. **`test` has no `>=` operator** — it printed *"binary operator expected"*, returned non-zero, and fell through to the "not yet due" branch, so the check-in would have stayed **silent forever while looking like it was merely waiting**. Found by running it across the boundary (day before / due date / day after, in three shells) instead of reading it. This is the second promise in this entry that needed a mechanism, and the second mechanism that needed a boundary test.*
+
+*A note now sits at the top of the test file recording a trap that caught **four** guards here: each one fired on the prose that **documents** a defect rather than the defect — a step reading *"Do NOT invoke X"* matching a search for *"invoke X"*, a coda check excused by a sentence mentioning the interview, and two checks matching a quoted *"it used to say …"*. Every time the file was right and the guard was wrong. The conclusion is not "write better patterns": a command file must be free to explain its own rules, so a guard over one has to be scoped to **what executes** — a fenced block, a numbered step, a probe line — never the whole file. One of these fixes required moving an explanation off a probe line onto its own, because the line carried both. **62 assertions.***
+
 ---
 
 ## 2026-08-25 — A bootstrap that promised instructions and delivered none, and a "permanent" state with a seven-day clock

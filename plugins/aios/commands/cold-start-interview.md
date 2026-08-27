@@ -569,6 +569,23 @@ Go ahead — run it, read what it gives you, and I'll be right here.
 Mention the Day-7 check-in in one line here — it is reassurance, not a closing move. **Never sign off in a step that hands off:** a goodbye here is the same defect as the old "interview is complete" line, because an operator who believes they are finished does not continue to Step 11. The farewell now lives at the true close. Then create the Day-7 `RemoteTrigger`. **Its payload now carries the one genuinely week-later item**, so
 the deferral is a scheduled thing rather than a forgotten one:
 
+**Write the marker — this is what makes the sentence above true.** Step 10 tells the operator *"I'm
+scheduling a Day-7 check-in"*, and for one commit that was a promise with nothing behind it: no marker, no
+cron, nothing reading anything. The multi-account question had been routed here, so it landed nowhere at
+all — a step re-timed to a destination that did not exist, which is the one failure this whole change
+exists to prevent. `/aios:today` reads this marker and surfaces the check-in on or after `due`:
+
+```bash
+printf 'due=%s\ncreated=%s\n' "$(date -v+7d +%F 2>/dev/null || date -d '+7 days' +%F)" "$(date +%F)" \
+  > ~/aios/vault/.pending-day7-checkin
+```
+
+*(`date -v+7d` is BSD/macOS, `date -d` is GNU/Linux — the fallback covers both, and a failure here is
+silent by design: a missing marker costs a nudge, while a visible error in the closing minute of setup
+costs the whole impression.)*
+
+The check-in prompt itself, for whoever picks it up:
+
 > *"Spawn onboarding-aios for the Week-1 check-in. Cover: what has actually been useful this week; the
 > Depth-tier steps not yet run (agent bundles, companies, plugins, Glass); any connectors still
 > unconnected; and — if they have been hitting Claude's 5h/7d caps — whether a second Anthropic account
