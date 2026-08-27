@@ -166,6 +166,32 @@ grep -q 'index still lags HEAD' "$AC" && grep -q 'git diff --cached --name-only 
   && ok "post-sync verification + operator-facing NOTE are wired into the hook" \
   || no "the stale-index verification was removed — silent staleness can return"
 
+# The NOTE above reports the SYMPTOM (index lags HEAD for a committed path). It does
+# not report the CAUSE, because the sync used to hide its own failure behind
+# `2>/dev/null || true` — so "the add failed" and "the add worked" produced identical
+# output. On 2026-08-27 a stale index entry was found for a committed path and the
+# cause was unrecoverable; two hypotheses were tested and both falsified. Symptom and
+# cause are different reports and both are worth having: the NOTE tells the operator
+# what to clean, this tells whoever is debugging WHY it happened.
+#
+# Trigger is the ordinary `git mv` flow — the throwaway index is seeded from HEAD,
+# where the OLD name still exists, so pre-commit staging succeeds; post-commit HEAD
+# no longer carries it and the per-path sync matches nothing.
+echo "── aios-commit: the sync reports its own failure, not just the resulting staleness ──"
+R=$(mktemp -d)
+( cd "$R" && git init -q . && git config user.email t@t && git config user.name t \
+  && mkdir -p "00 - notes" && echo one > "00 - notes/old.md" && git add -A && git commit -qm init \
+  && git mv "00 - notes/old.md" "00 - notes/new.md" ) >/dev/null 2>&1
+OUT=$( cd "$R" && "$AC" --no-push -m "rename" -- "00 - notes/old.md" "00 - notes/new.md" 2>&1 )
+case "$OUT" in
+  *"post-commit index sync failed"*) ok "a failed post-commit index sync names itself" ;;
+  *) no "the index sync failed silently" "an unrecorded cause is why the 2026-08-27 staleness is unexplainable" ;;
+esac
+( cd "$R" && [ "$(git ls-tree -r HEAD --name-only | grep -c 'new.md')" = "1" ] ) \
+  && ok "the commit still lands despite a sync warning (non-fatal by design)" \
+  || no "a sync warning broke the commit" "cosmetic staleness must never fail work that is already committed"
+rm -rf "$R"
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Lock-failure CLASSIFICATION. `mkdir` fails for two unrelated reasons and the
 # loop used to treat both as contention: an unwritable $GIT_DIR (sandboxed Bash
