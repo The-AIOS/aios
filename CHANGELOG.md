@@ -35,6 +35,49 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-08-27 — First-run stops asking questions a newcomer cannot answer, and stops ending before it is finished
+
+`hash: b55e142 · 2e4044b · 765ff51`
+
+### The setup interview re-times its friction without losing a single capability
+
+> **What this delivers.** `/aios:cold-start-interview` asked a non-technical operator four questions they could not answer, all inside the first eight minutes: *"do you use more than one Anthropic account to manage the 5h/7d rate limits?"* (minute two), *"primary Google email — Calendar + Tasks + Drive + Gmail?"*, *"Slack workspace? Gmail? GitHub username?"*, and then a whole step that opened by **defining the word "MCP"** before it could ask its question. First value — the first `/today` — arrived at roughly minute 22. The gate is the Reno EO workshop on **2026-09-28**, where 20–30 senior members install the App as pre-work, so the falsifiable test is a non-technical operator finishing first-run **without a terminal and without touching a connector**.
+
+**What you can now do:**
+- **Reach a working AIOS in about five minutes.** Core is `Pre-step → 0 → 1 → 2 → 3-light → first /today → connectors`, and Step 1 is now **two questions**: what to call your session, and your email.
+- **Be asked about connectors at the moment the answer is obvious.** Every connector question moved to a new **Step 11**, immediately after the first `/today` — *the same session*, not next week. The operator has just watched their calendar come up empty, which is the only moment *"want me to connect your calendar?"* answers itself.
+- **Take the full tour whenever you want it, including never.** Steps 4 · 5 · 8 · 8.5 · 9 became a **Depth tier** — offered at the start, offered again at the end, available mid-flow by asking. De-mandated, not deferred.
+- **Never be handed a 654-line manual by mistake.** The Pre-step now detects whether the operator arrived through the **App** or through **SETUP.md**, because the previous text called the wrapper install a *"re-run"* — which is false for an App operator who never ran SETUP.md at all.
+- **Get vault editing without being consulted about it.** The `obsidian` connector registers silently in the Pre-step (a published npm package, no tokens). It is infrastructure, so it never appears in the connectors list.
+
+**Action required — none.** Existing vaults are already set up; this changes the first-run conversation only.
+
+*The design constraint, stated because it decided everything: **re-timing is not removal, and the difference is a mechanism.** Step 10 used to end with *"after `/today` fires, the cold-start interview is complete."* Leave that sentence in place and every "moved to later" becomes a deletion — an operator told they are finished does not come back, and the AIOS ships without their calendar, their Slack or their repos while they never learn those powers existed. So the interview **continues** past the first ritual. Each deferred item was routed by **when its value becomes legible**, which turned out to be three different answers, not one: connectors go to **later today** (the motivation the ritual creates expires); the rate-limit question goes to **Day 7** alone, because it is the only item whose need genuinely takes a week — on day one no cap has been hit, so the question is meaningless; Stitch becomes **conditional**, since asking every operator "do you build user interfaces?" spends a question on a `no` about 95% of the time.*
+
+*Nothing was rewritten that was already right: **Step 11 hands off to `/aios:mcps-setup` rather than reimplementing it.** That command's own first step is titled *"Do NOT bulk-install anything"* — one service at a time, opt-in before each, dependencies installed only after a yes, the token page opened for you, a real API call to validate, and tokens never echoed back. It was correct all along and merely **invoked at the wrong moment.** The ten services and their value props moved across verbatim.*
+
+*Two defects were found by **walking the flow as an operator hears it**, and neither is visible when reading the steps in order. Step 10 promised `/today` would *"pull your calendar + tasks + Slack"* — which nothing was connected to yet, so the operator met an emptiness the previous step had promised would not happen, and Step 11 opened by apologising for it. And Step 10 still said **"Welcome to The AIOS. 🌊"** — a farewell in the step whose entire new job is to hand off. Removing the "interview is complete" line while leaving the goodbye would have preserved the exact behaviour being fixed. Both corrected, with the rule written into the file: **never sign off in a step that hands off.***
+
+*`tests/cold-start-interview.test.sh` — 23 assertions, asserting **both** halves: that the friction is gone *and* that every destination exists, since the regression to fear is a tidy-up that turns the re-timing back into a deletion. The vocabulary criterion is measured on **spoken copy** (fenced blocks) rather than the whole file, because the file has to be able to explain its own rule and a test that forbids that is a test that gets deleted. Its own first run found two bugs in itself: `no()` returned non-zero without a detail argument, so an `&& no || ok` chain printed **both** verdicts for one check; and the Step-1 guard matched the table **documenting** the move — a guard that cannot tell a thing from its changelog fires on every honest edit.*
+
+### The friction was never only in the interview — it was in the sentence every surface tells you to type
+
+> **What this delivers.** The site, the AIOS App, and this repo's README all funnel a new operator into exactly one sentence: *"Set up my AI-OS from `https://github.com/The-AIOS/aios`"*. That sentence lands on `SETUP.md`'s Claude-facing block, which is what actually runs. Re-timing the interview therefore fixed the *second* copy of the problem: the block was still invoking `/aios:mcps-setup` at its step 6 and asking the multi-account question at step 9 — **both four steps before the interview it was re-timing.** A newcomer met the connector questions on the terminal path exactly as before, and never learned that a gentler version existed one step later.
+
+**What you can now do:**
+- **Say the one sentence and not be interrogated.** `SETUP.md` no longer invokes the connectors pass or asks which Anthropic accounts you hold. Setup registers the one connector the vault itself needs (`obsidian`, a published npm package, no tokens), wires your tools, and hands you to the interview. Every question about *your* services now arrives after you have watched the system work on your real day.
+- **Read any of the four surfaces and be told the same thing.** `README.md`, `START-HERE.md`, `SETUP.md` and the interview all describe this first run, and `SETUP.md` carries the sequence **twice** — once addressed to Claude, once to you. Three of them still said the interview takes 15–25 minutes; two still promised setup *"installs MCPs"* and that your first `/today` *"pulls your Calendar + Tasks + Slack"*. Nothing you connect is pulled before you connect it, so that last one was a promise the system could not keep on a first run.
+
+**Action required — none.** These are entry-point documents; an existing vault has already passed through them.
+
+*What this change is really about: **a step that moves needs a named destination in the file it left, or it reads as a feature that vanished.** So the two retired steps are kept as numbered lines, negated, each pointing at its new owner — Step 6 at interview Step 11, Step 9 at the Day-7 check-in — and `SETUP.md`'s *"Always ask, never assume"* list now states which four entries left and why, because that list is what made asking them look like diligence rather than duplication.*
+
+*The four surfaces **drifted during this very change** — corrected in the Claude-facing copy and not the operator-facing one twenty lines below, in the same file. `SETUP.md` already carried a comment recording the same class of failure (a step count repeated across three files, two of them in another repo, that went on saying 11 after it became 13). The drift warning now sits between the two copies, and eleven new assertions check them against each other.*
+
+*Two of those assertions were written wrong first, and both failure modes are recorded in the test file rather than quietly fixed. The block guard matched a `>` blockquote when the block is an HTML `<details>`: it selected **zero lines** and passed by measuring nothing — reintroducing the exact invocation did not make it fire, which is the only reason it was caught. Re-scoped, it then matched its own replacement step (`6. **Do NOT invoke …**`) and failed on the fix — *a guard that cannot tell a thing from its own changelog fires on every honest edit, and gets muted.* Both now prove both directions: clean passes, reintroduced fails. **34 assertions, 20/20 suites.***
+
+---
+
 ## 2026-08-25 — A bootstrap that promised instructions and delivered none, and a "permanent" state with a seven-day clock
 
 `hash: b8c2762 · 180dace · 1c85d75` *(`b8c2762` and `180dace` are external contributions — PRs #44 and #45)*
