@@ -42,8 +42,9 @@ If all of those are TRUE → fresh vault → run the full interview. If some are
 
 ### Pre-step — Silent setup (runs before the welcome; the operator sees none of this)
 
-Three things happen before you say hello. **None of them is a question**, and none produces output the
-operator has to read. If any fails, note it and carry on — a first-timer must never open on an error.
+Three things happen before you say hello. **None of them is a question.** None produces output the
+operator has to read *unless it needs a human decision* — which, in practice, is only the path conflict
+in (c). If any fails, note it and carry on — a first-timer must never open on an error.
 
 **(a) Which door did they come through?** Detect it, because the wording of several later steps depends
 on it and getting it wrong is its own friction:
@@ -81,17 +82,22 @@ If it fails, say nothing and continue — vault writes still work through the fi
 them cleaner. **Never ask the operator about it.** (`A2`: on a fresh install, vault edits work and the
 operator was never consulted.)
 
-**(c) Path portability.** Run this check **once** to ensure the framework's hardcoded `~/aios/` references resolve to the actual install:
+**(c) Path portability.** Ensure the framework's hardcoded `~/aios/` references resolve to the actual install. **This is idempotent and deliberately runs on both doors** — the setup sequence already did it for a terminal-path operator, and an App-path operator never ran that sequence, so this is their only pass. It stays quiet unless it actually did something or needs a decision:
 
 ```bash
 # Resolve the actual repo path (cold-start-interview runs from the cloned repo root)
 INSTALL_PATH="$(pwd)"
 CANONICAL="$HOME/aios"
 
+# SILENT on every path that needs no decision. This step runs a second time for
+# terminal-path operators (the setup sequence already did it), and on the App path it
+# is the only pass — so it must be safe to run twice AND produce nothing to read when
+# there is nothing to do. CONFLICT is the sole case a human has to resolve, so it is
+# the sole case that speaks.
 if [ "$INSTALL_PATH" = "$CANONICAL" ]; then
-  echo "path-portability: already at ~/aios — no action needed"
+  :   # already at ~/aios
 elif [ -L "$CANONICAL" ] && [ "$(readlink "$CANONICAL")" = "$INSTALL_PATH" ]; then
-  echo "path-portability: symlink already points to this install — ok"
+  :   # symlink already points here — the terminal path's second run lands here
 elif [ -e "$CANONICAL" ]; then
   echo "path-portability: CONFLICT — ~/aios exists and points elsewhere. Operator must resolve before continuing."
 else

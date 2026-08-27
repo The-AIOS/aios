@@ -78,6 +78,21 @@
 
 *Two of those assertions were written wrong first, and both failure modes are recorded in the test file rather than quietly fixed. The block guard matched a `>` blockquote when the block is an HTML `<details>`: it selected **zero lines** and passed by measuring nothing — reintroducing the exact invocation did not make it fire, which is the only reason it was caught. Re-scoped, it then matched its own replacement step (`6. **Do NOT invoke …**`) and failed on the fix — *a guard that cannot tell a thing from its own changelog fires on every honest edit, and gets muted.* Both now prove both directions: clean passes, reintroduced fails. **34 assertions in the new suite; 19/19 suites green.***
 
+### Setup and the interview are one flow, so the steps they shared had to pick an owner
+
+> **What this delivers.** The operator never installs anything. They type one sentence — *"Set up my AI-OS from `https://github.com/The-AIOS/aios`"* — and **their Claude session** does the installing and asks them only for what it cannot know. `SETUP.md` invokes `/aios:cold-start-interview` at its step 10, so the two are a single continuous conversation, not two commands to remember. Once that is the frame, any step appearing in both files runs **twice** — and only some of those were legitimate.
+
+**What you can now do:**
+- **Stop reading instructions that were never yours to follow.** `README.md` and `START-HERE.md` said *"Run `SETUP.md`"* and *"Run `/aios:cold-start-interview`"*. You run neither; your session does. They now describe two **stages** of one prompt, and say plainly that the install hands off into the conversation on its own.
+- **Have the vault bridge registered exactly once, with the right path.** The Obsidian MCP had **four** registration sites across two files, with **two different argument sets** — `SETUP.md` hardcoded `~/aios/vault`, the interview used the resolved install path. Because the interview's copy is guarded by *"skip if already registered"*, **whichever ran first won permanently, including when it was the wrong one.** One executable owner now: the interview's Pre-step, because an operator arriving through the **AIOS App** never passes through `SETUP.md` at all. `SETUP.md` still documents the command for manual repair.
+- **See nothing during a step that promised you would see nothing.** The Pre-step's path check echoed a status line on both of its no-op branches — and it runs a *second* time for every terminal-path install, which is the common case. It is now silent unless it acted or hit a genuine conflict.
+
+**Action required — none.**
+
+*One duplicate was deliberately kept: **the wrapper installer runs in both files, and neither run is redundant.** It reads `USER.md` to learn which session names are primary, and `USER.md` does not exist until the interview's Step 1 writes it — so the setup run gives the operator a working `spawn`, and the interview's re-run makes it identity-aware. That reasoning is now written into `SETUP.md` step 7, because the instinct that correctly removed the Obsidian duplicate would have removed this one too, and a future cleanup would have deleted whichever copy it found second.*
+
+*`tests/cold-start-interview.test.sh` → **39 assertions**. Every new one was proven to fail before being trusted: re-adding the second registration, restoring the chatty echo, stripping the deliberate-re-run note, and putting back one *"Run `/aios:cold-start-interview`"* each produce exactly one red line.*
+
 ---
 
 ## 2026-08-25 — A bootstrap that promised instructions and delivered none, and a "permanent" state with a seven-day clock

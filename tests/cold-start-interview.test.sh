@@ -205,5 +205,73 @@ grep -qE '5-minute Core|~5 ?min' "$F" \
   && ok "the interview's description states the Core contract it actually offers" \
   || no "the interview's description does not state its own Core contract" "the description is what a session sees before opening the file"
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5 · ONE OWNER PER STEP, AND ONE ACTOR
+#
+# SETUP.md and this interview are ONE flow with ONE trigger: the operator says
+# "Set up my AI-OS from <repo>" and their Claude session executes everything,
+# SETUP.md invoking the interview at its step 10. The operator never runs either.
+#
+# Two consequences are asserted here. First: a step that appears in both files runs
+# twice, and only some of those are legitimate. Second: no operator-facing document
+# may instruct the operator to run something their session runs for them.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# 5a — the Obsidian bridge had FOUR registration sites with TWO different argument
+#      sets (SETUP hardcoded ~/aios/vault; this file uses the resolved install path).
+#      Because this file's registration is guarded by "skip if already registered",
+#      whichever copy ran first won permanently — including when it was the wrong one.
+#      Exactly one EXECUTABLE site is allowed, and it is this one. SETUP.md may still
+#      document the command for manual repair; it may not run it as a step.
+if grep -qE '^\s*(\|\|)?\s*claude mcp add obsidian' "$F"; then
+  ok "the interview registers the Obsidian bridge (the single owner, both doors)"
+else
+  no "the interview no longer registers the Obsidian bridge" "an App-path operator never passes through SETUP.md, so this is their only pass"
+fi
+if awk '/<summary>.*Reading this as Claude/,/<\/details>/' SETUP.md | grep -qF 'claude mcp add obsidian'; then
+  no "SETUP.md's executable sequence registers the Obsidian bridge again" \
+     "two owners, two argument sets, and a skip-if-present guard that makes the first one permanent"
+else
+  ok "SETUP.md's executable sequence does not re-register the Obsidian bridge"
+fi
+
+# 5b — the twice-run path check must be SILENT when it has nothing to do. It runs a
+#      second time on the terminal path, and the Pre-step promises the operator sees
+#      none of it. An echo on the no-op branch breaks that promise on every terminal
+#      install — the common case.
+PRE=$(awk '/^### Pre-step/,/^### Step 0/' "$F")
+if printf '%s\n' "$PRE" | grep -qE 'echo "path-portability: (already at|symlink already)'; then
+  no "the Pre-step path check speaks on a no-op branch" \
+     "it runs twice on the terminal path; the Pre-step promises the operator reads none of it"
+else
+  ok "the Pre-step path check is silent unless it acted or needs a decision"
+fi
+
+# 5c — the wrapper installer runs in BOTH files and that one is deliberate: it reads
+#      USER.md, which does not exist until this interview writes it. SETUP.md must say
+#      so, or a future dedup pass deletes whichever copy it happens to find second —
+#      the same instinct that is correct for 5a is wrong here, so the difference has
+#      to be written down rather than rediscovered.
+if grep -qiE 'runs this a second time, on purpose|do not "deduplicate"' SETUP.md; then
+  ok "SETUP.md marks the wrapper re-run as deliberate, not redundant"
+else
+  no "SETUP.md does not explain why the wrapper installer runs twice" \
+     "an unexplained duplicate invites a cleanup that removes the identity-aware run"
+fi
+
+# 5d — the operator is never the actor. "Run SETUP.md" and "Run /aios:cold-start-
+#      interview" both describe things their Claude session does; a reader who tries
+#      to obey either is looking for a command that was never theirs to type.
+BAD=""
+for f in README.md START-HERE.md SETUP.md CHEATSHEET.md TOOLS.md; do
+  [ -f "$f" ] || continue
+  grep -qiE 'Run `SETUP\.md`|Run `/?(aios:)?cold-start-interview' "$f" && BAD="$BAD $f"
+done
+[ -z "$BAD" ] \
+  && ok "no operator-facing doc tells the operator to run what their session runs" \
+  || no "operator-facing doc(s) still instruct the operator to run the flow:$BAD" \
+       "the operator types one sentence; everything after it is their Claude session"
+
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
