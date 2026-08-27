@@ -123,6 +123,30 @@ Their content lives in git history if anything needs to come back. 9 others (pyt
 
 ---
 
+## The registrar sees exactly TWO levels — a flat skill is invisible to it
+
+`skills/setup.sh` globs **`*/*/SKILL.md`**: source folder, then skill folder. A skill placed at
+`skills/<name>/SKILL.md` sits at **one** level, so it never enters the registrar's search space at
+all. It is not skipped over a name collision and it does not lose a tie — **it does not exist for
+the script.** Nothing is linked, and nothing is reported, because there is no iteration in which it
+could have failed.
+
+**This is worth using on purpose rather than only avoiding.** The flat position IS the
+*"versioned but not loaded"* state — an archive. So:
+
+- **A skill that must load** goes to `<source>/<name>/` (`aios/`, `custom/`, or a vendored source).
+- **A skill worth keeping but not worth its description in every session** can stay flat, deliberately.
+- **What must never happen** is a flat skill that something *declares* — an agent's `## Skills`
+  block, or a command that names it. There the caller receives silence: the reference resolves to a
+  file that is in the repo and not in the runtime, and no error distinguishes that from a skill
+  that loaded and had nothing to say.
+
+Two levels is a reasonable contract. The failure mode is that violating it is **silent in both
+directions** — nothing warns the author who placed a skill flat, and nothing warns the agent whose
+declared skill never arrives.
+
+---
+
 ## Adding skills
 
 **New AIOS-bundled skill** — drop into `skills/aios/<skill-name>/SKILL.md`, add to this index.
