@@ -37,7 +37,7 @@
 
 ## 2026-08-27 — First-run stops asking questions a newcomer cannot answer, and stops ending before it is finished
 
-`hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4 · 8d7238f · 1e78989 · 140ea59 · e166fc9`
+`hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4 · 8d7238f · 1e78989 · 140ea59 · e166fc9 · 23b001f`
 
 ### The setup interview re-times its friction without losing a single capability
 
