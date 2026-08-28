@@ -37,7 +37,7 @@
 
 ## 2026-08-27 — First-run stops asking questions a newcomer cannot answer, and stops ending before it is finished
 
-`hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4 · 8d7238f · 1e78989 · 140ea59 · e166fc9 · 23b001f · 69da9bf · 51e70ac · be5baf9 · 9e55b19`
+`hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4 · 8d7238f · 1e78989 · 140ea59 · e166fc9 · 23b001f · 69da9bf · 51e70ac · be5baf9 · 9e55b19 · 0d40b35 · 89fe90d · 8d046d0`
 
 ### The setup interview re-times its friction without losing a single capability
 
@@ -192,6 +192,44 @@
 **Action required — none.** If a previous run told you to re-resolve and it appeared to do nothing, that was this bug and your commands were current the whole time.
 
 *Found by running the prescription rather than reading it — the same method that turned up the day-zero defects earlier in this entry. A remedy is a claim, and a claim that has never been executed is untested.*
+
+### Your connectors have one machine-readable source, and the AIOS App reads it
+
+> **What this delivers.** Eleven bundled connectors now carry a **`connector.json`** beside the thing it describes — the service name as you'd say it, the value in one line, what it needs on disk, and the full registration (command, args, env). `mcps/_index.md` **stops carrying registration commands** and points at these instead. It had declared itself the source of truth while holding **one entry out of eleven**; the other ten lived in per-README prose in inconsistent shapes, three of them with no command at all. A section that *holds* data drifts from what it describes. One that *points* cannot.
+
+**What you can now do:**
+- **See your connectors as services, with honest status.** If you use the AIOS App, its Connectors card is built entirely from these manifests — it ships **no copy** of any register command. A connector whose manifest is missing is not shown as broken; it is **not shown at all**, which is deliberate: honest silence beats a guessed command that fails at first use.
+- **Find out when a live registration has drifted from what is documented.** The card compares your actual registration against the manifest and reports **`drift`** rather than `connected`. This is a diagnostic nobody had. It found a real one immediately: a Google Workspace registration carrying `chat:full appscript:full`, two services the docs had listed as deliberately excluded, with nothing anywhere reporting the difference.
+- **Know that two folders under `mcps/` are not connectors at all.** `notebooklm-mcp` and `playwright-mcp` contain no server — verified: no server code, no `FastMCP`, no stdio transport. The first delivers through a bundled skill, the second is a Python toolkit invoked directly. Both now say so in their README and carry `registers: false`, so nothing reads their absent registration as a fault.
+
+**Action required — two, both conditional:**
+1. **If your Connectors card reports `drift` on Google Workspace**, your registration carries extra services (likely `chat` / `appscript`). Re-register from the manifest. **This is free** — dropping a service needs no re-consent: the token keeps the scope Google already granted, the tools simply stop being exposed. *Adding* scopes is what costs a consent round-trip.
+2. **If you have a custom MCP under `mcps/custom/`, it needs a manifest too**, or the App will not list it. Nothing in canonical can check this for you — `custom/` is yours, `/aios:update` never touches it, and the test suite is repo infrastructure that never reaches your machine. `mcps/custom/_index.md` now spells out the required fields. A real custom MCP was found **registered and working with no manifest**, invisible to the card while functioning perfectly in every session.
+
+*One scope trap is now documented where a newcomer meets it: `claude mcp add` defaults to **local** (per-directory) scope, so registrations land under `projects[<dir>]` in `~/.claude.json`. Open the framework from a second directory and your connectors appear to vanish — they are filed under the first. Register again from there and you now maintain two copies that drift independently, with nothing reporting it. Pass `-s user` for a registration that follows you.*
+
+### Eight bundled agents were declaring a skill and receiving nothing
+
+> **What this delivers.** `skills/setup.sh` skipped **two** vendored sources on **one** stated premise — *"those are provided via Claude Code marketplaces"* — and it was true of only one of them. Measured across two independent vaults: `superpowers/` 14 sources, **0 missing**; `anthropic/` 11 sources, **10–11 missing**. Excluding them together is exactly what hid it, because superpowers kept proving the rule while anthropic quietly broke it.
+
+**What you can now do:**
+- **Get the skills your agents already claim to use.** `content-writer`, `sales-proposal-writer` and `protocol-steward` declare `doc-coauthoring`; `email-drafter` and `report-drafter` declare `internal-comms`; `deck-builder` declares `theme-factory`; `aios-builder` declares `mcp-builder` and `skill-creator`. **None of those resolved.** An agent that lacks the skill it declares does not error — it answers, just worse, with nothing saying why. `anthropic/` now registers like any other source.
+- **Trust the remaining exclusion, because it is now checked rather than assumed.** The registrar verifies at runtime that anything it skipped is actually present in `~/.claude/skills`, and distinguishes the two states that look alike: *marketplace installed but the skills absent* (the premise is false on your machine — it names every one and tells you to drop that source from the exclusion list) versus *marketplace not installed yet* (expected during setup, since this runs before the interview's plugins step — one quiet line, no list). Without that split a first-timer meets a fourteen-line alarm about skills arriving five steps later, which is how a warning gets trained into noise.
+
+**Action required — one, and `/aios:update` does it for you.** Because `skills/setup.sh` changed, the update auto-runs the registrar. **Restart your Claude Code sessions afterwards** to load the newly-linked skills — a symlink that appears mid-session is not picked up until the session restarts.
+
+*A test now asserts the thing that was never checked: every skill a bundled agent names must exist as a bundled source. Whether it is linked into `~/.claude/skills` is machine state, owned by the registrar's own presence check — a test cannot assert another operator's machine, and pretending to would be the same over-claiming that produced this bug.*
+
+### `aios-commit` says when its index sync fails, instead of leaving you with a phantom modified file
+
+> **What this delivers.** After committing, `aios-commit` syncs your real git index for the paths it just committed. That sync used to hide its own failure, so *"the sync did not happen"* and *"the sync worked"* produced identical output. The documented symptom is a file stuck as modified in `git status` **indefinitely**, reading as unpushed work that does not exist.
+
+**What you can now do:**
+- **Learn about a failed sync at the moment it fails.** The warning names the path, quotes git's own message, and says plainly that your commit succeeded and how to clear the index. It stays **non-fatal by design** — the commit has already landed and pushed by that point, so failing there would turn cosmetic staleness into a hard error on safe work. Non-fatal is not the same as unmentioned.
+
+**Action required — none.** If you have a file that `git status` has shown as modified for a long time with no explanation, `git restore --staged -- <path>` clears it; the content in `HEAD` is untouched.
+
+*Motivated by a real case: a stale index entry was found for a committed path, thirty minutes older than `HEAD`. **Two hypotheses were raised and both were falsified by measurement** — an Obsidian git plugin auto-staging (none is installed in that vault) and a spaced path breaking the sync (tested in a scratch repo; spaced paths sync correctly). The cause remains unknown **precisely because nothing recorded the failure when it happened**, which is the gap this closes. Neither disproven theory is recorded anywhere as a cause. The hook already reported the *symptom* (`index still lags HEAD`); this adds the *cause*, and they are different reports for different readers.*
 
 ---
 
