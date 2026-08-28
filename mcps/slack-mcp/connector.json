@@ -1,0 +1,26 @@
+{
+  "id": "slack",
+  "service": "Slack",
+  "value": "Your Slack conversations — so what needs your attention can be surfaced, and replies drafted, without opening the app.",
+  "infrastructure": false,
+  "connect": "guided",
+  "requires": [],
+  "register": {
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@jtalk22/slack-mcp"
+    ],
+    "env": {}
+  },
+  "docs": "README.md",
+  "guided": {
+    "why": "Credentials are extracted from your already-signed-in Chrome rather than typed, so no token is ever pasted or stored by the framework.",
+    "steps": [
+      "npx -y @jtalk22/slack-mcp --setup",
+      "npx -y @jtalk22/slack-mcp@latest --doctor   # verify"
+    ],
+    "note": "The registration itself needs no secret — `env` is empty by design. Do NOT infer 'has a key' from the registration (audit finding 4)."
+  }
+}

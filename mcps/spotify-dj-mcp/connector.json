@@ -1,0 +1,19 @@
+{
+  "id": "spotify-dj",
+  "service": "Spotify",
+  "value": "Playback control — start focus music without switching windows.",
+  "infrastructure": false,
+  "connect": "needs-key",
+  "requires": [
+    "{framework}/mcps/spotify-dj-mcp/.venv/bin/python"
+  ],
+  "register": {
+    "transport": "stdio",
+    "command": "{framework}/mcps/spotify-dj-mcp/.venv/bin/python",
+    "args": [
+      "{framework}/mcps/spotify-dj-mcp/server.py"
+    ],
+    "env": {}
+  },
+  "docs": "README.md"
+}

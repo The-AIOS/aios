@@ -1,0 +1,19 @@
+{
+  "id": "stitch",
+  "service": "Stitch (UI design)",
+  "value": "Generate interface designs from a description — screens and design systems without starting in a design tool.",
+  "infrastructure": false,
+  "connect": "one-click",
+  "requires": [],
+  "register": {
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@_davideast/stitch-mcp",
+      "proxy"
+    ],
+    "env": {}
+  },
+  "docs": "README.md"
+}

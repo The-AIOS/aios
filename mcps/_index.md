@@ -72,27 +72,73 @@ Three known Windows quirks have shipped helpers — bundled in the relevant MCP 
 
 The `spawn` wrapper itself has a PowerShell port — see `CLAUDE.md` → "Spawning sessions" → "On Windows (PowerShell)" for the full Invoke-ClaudeWithRespawn + spawn install block.
 
-## Canonical registration commands
+## Registration commands live in the manifests, not here
 
-Some MCPs need an explicit `--permissions` / `--tools` flag so the right services are loaded. Missing a service here means the tool surface silently lacks those endpoints (no error — they just don't appear). Use these commands as the source of truth:
+Every bundled folder carries a **`connector.json`** — machine-readable, beside the thing it describes:
 
-### Google Workspace
-
-```bash
-claude mcp add google-workspace \
-  -s local \
-  -e GOOGLE_OAUTH_CLIENT_ID=<your-client-id> \
-  -e GOOGLE_OAUTH_CLIENT_SECRET=<your-client-secret> \
-  -e MCP_SINGLE_USER_MODE=true \
-  -e USER_GOOGLE_EMAIL=<your-email> \
-  -e WORKSPACE_MCP_CREDENTIALS_DIR=$HOME/.google_workspace_mcp/credentials \
-  -- uvx workspace-mcp --single-user \
-  --permissions drive:full sheets:full slides:full docs:full calendar:full tasks:full gmail:full contacts:full forms:full
+```
+mcps/<id>-mcp/connector.json
 ```
 
-**Why this exact permission list:** every `:full` service we actually use in the vault workflow. Missing any of these = that service's tools silently don't appear. Services intentionally excluded: `chat` (redundant with Slack), `search` (redundant with built-in WebSearch), `appscript` (scope too broad, no current use). Add them to the list only when a workflow needs them.
+It holds the `id`, the operator-facing `service` name and `value`, the `connect` mode, anything the
+connector `requires` on disk, and the full `register` block (transport, command, args, env). **That is
+the single source of truth.** `mcps/setup.sh` installs dependencies and deliberately does not register
+anything; the AIOS App reads these manifests to build its Connectors card and ships **no copy** of any
+register command, so a missing manifest means a connector is simply not listed — honest silence rather
+than a guess.
 
-**On first call per service, browser opens for OAuth consent.** If you add new scopes to an already-registered server, users must re-consent (Google doesn't grant new scopes against an old token).
+**This section used to carry the commands, and that is exactly why it went stale.** It declared itself
+the source of truth while holding **one** entry (Google Workspace) out of eleven; the other ten lived
+in per-README prose in inconsistent shapes, three of them with no command at all. A section that
+*holds* data drifts from the thing it describes. A section that *points* cannot.
+
+**`{framework}` is mandatory in any manifest path — a literal `~/aios` is a bug.** `~/aios` is a
+symlink on some machines, so a hardcoded copy documents a path that differs from the one that actually
+works, and it is **invisible** on every machine where the clone and the symlink happen to agree. That
+was a real finding: a README documenting `~/aios/mcps/…` beside a live registration carrying the
+resolved path. Substitute `{framework}` with the resolved framework root at registration time.
+
+### Google Workspace — the permission list, stated once
+
+The nine `:full` services the vault workflow actually uses live in
+`mcps/google-workspace-mcp/connector.json`. **Deliberately excluded**, with reasons, because an
+exclusion needs a rationale a future reader can weigh:
+
+| Excluded | Why |
+|---|---|
+| `chat` | Redundant with Slack, which is the bundled connector for messaging |
+| `search` | Redundant with built-in WebSearch |
+| `appscript` | Scope far too broad for the benefit; no consumer in the framework |
+
+**Verified 2026-08-27, because "no current use" is a claim that decays:** a sweep of every
+`mcp__google-workspace__*` reference across `plugins/`, `agents/`, `skills/` and `hooks/` found **zero**
+consumers of any chat tool (`list_spaces`, `send_message`, `get_messages`, `search_messages`) and
+**zero** of any Apps Script tool. The exclusions hold on evidence, not on habit.
+
+> ⚠️ **A live registration carrying `chat:full appscript:full` is drift, not a newer decision.** It was
+> found on a real machine while this contract was being written, contradicting this file with no surface
+> anywhere reporting the difference — which is the diagnostic the App's Connectors card exists to
+> provide. **Correcting it is free:** removing a service needs no re-consent (the token keeps the scope
+> Google already granted; the tools simply stop being exposed), so re-register from the manifest and
+> restart. Adding scopes later is what costs a consent round-trip, not dropping them.
+
+**On first call per service a browser opens for OAuth consent.** Adding new scopes to an
+already-registered server requires re-consent — Google does not grant new scopes against an old token.
+
+### Registration scope — the trap worth knowing once
+
+`claude mcp add` defaults to **local** (per-directory) scope, so registrations land under
+`projects[<dir>].mcpServers` in `~/.claude.json` rather than at the top level. Two consequences a
+newcomer meets by accident:
+
+- **Open the same framework from a second directory and your connectors appear to vanish** — they are
+  still there, filed under the first directory.
+- **Register again from that second directory and you now maintain two copies**, which drift
+  independently and with nothing reporting it.
+
+Pass `-s user` when you want a registration that follows you across directories. Neither choice is
+wrong; the default simply is not the one most operators would pick if asked, and nothing asks.
+
 
 ## Bundling candidates (not yet bundled)
 
@@ -104,7 +150,26 @@ Services where teammates currently rely on claude.ai-hosted connectors. These sh
 
 1. Create a folder: `mcps/{name}-mcp/`
 2. Add the server code + `README.md` with: what it does, setup, auth, register command
-3. Add an install block to `mcps/setup.sh`
-4. Add a row to the **Bundled MCPs** table above
-5. Register it locally: `claude mcp add {name} -- {command}`
+3. **Add `connector.json`** (required — without it the AIOS App will not list the connector at all).
+   **This applies to `mcps/custom/` too**, and that case is easier to miss because nothing in canonical
+   checks it: `/aios:update` never touches `custom/`, and the test suite is repo infrastructure that is
+   deliberately never synced to a vault. A custom MCP was found **registered and working with no
+   manifest** — invisible to the card while functioning perfectly — which surfaced only once the App
+   began reporting folders that have no manifest. See `mcps/custom/_index.md` for the operator-facing
+   version of this.
+   Copy the shape from any bundled folder. Non-negotiable fields:
+   - `id` **must equal the registered server name**, or a reader cannot match manifest to registration
+   - `service` is the service as the operator would name it — **never** containing the string "MCP"
+   - every path uses **`{framework}`**, never a literal `~/aios` (see above)
+   - `connect` is `one-click` (fully specified, no operator secret) · `needs-key` (command known, operator supplies values) · `guided` (multi-step auth a human must perform)
+   - `requires` lists anything that must exist on disk first, so a connector pointing at a `.venv`
+     `setup.sh` has not built yet is detectable **before** a registration is written rather than at
+     first use
+   - **not an MCP server at all?** Set `registers: false` and describe the real delivery path. Two
+     bundled folders are in this category (`notebooklm-mcp`, `playwright-mcp`) — they live under
+     `mcps/` by history, deliver capability through a skill and through direct Python respectively, and
+     have no server to register. A reader must not treat a missing registration for these as drift.
+4. Add an install block to `mcps/setup.sh`
+5. Add a row to the **Bundled MCPs** table above
+6. Register it locally: `claude mcp add {name} -- {command}` (prefer `-s user` — see the scope trap above)
 6. If it replaces a claude.ai-hosted connector, note the disable step in the README

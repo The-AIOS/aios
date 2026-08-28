@@ -1,0 +1,19 @@
+{
+  "id": "pdf-generator",
+  "service": "PDF export",
+  "value": "Turn a document or web page into a clean PDF — for anything you need to send rather than share a link to.",
+  "infrastructure": false,
+  "connect": "one-click",
+  "requires": [
+    "{framework}/mcps/pdf-generator-mcp/.venv/bin/python"
+  ],
+  "register": {
+    "transport": "stdio",
+    "command": "{framework}/mcps/pdf-generator-mcp/.venv/bin/python",
+    "args": [
+      "{framework}/mcps/pdf-generator-mcp/server.py"
+    ],
+    "env": {}
+  },
+  "docs": "README.md"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "obsidian",
+  "service": "Obsidian vault bridge",
+  "value": "Lets the AIOS read and write your notes directly. Registered silently during setup — never a question, never a choice.",
+  "infrastructure": true,
+  "connect": "one-click",
+  "requires": [],
+  "register": {
+    "transport": "stdio",
+    "command": "npx",
+    "args": [
+      "-y",
+      "@mauricio.wolff/mcp-obsidian@latest",
+      "{framework}/vault"
+    ],
+    "env": {}
+  },
+  "docs": "README.md"
+}

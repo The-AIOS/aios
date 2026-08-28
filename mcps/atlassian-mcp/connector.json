@@ -1,0 +1,17 @@
+{
+  "id": "atlassian",
+  "service": "Atlassian (Jira & Confluence)",
+  "value": "Your Jira issues and Confluence pages — so work items and specs can be read and written where your team already keeps them.",
+  "infrastructure": false,
+  "connect": "needs-key",
+  "requires": [
+    "{framework}/mcps/atlassian-mcp/run.sh"
+  ],
+  "register": {
+    "transport": "stdio",
+    "command": "{framework}/mcps/atlassian-mcp/run.sh",
+    "args": [],
+    "env": {}
+  },
+  "docs": "README.md"
+}

@@ -1,0 +1,19 @@
+{
+  "id": "nano-banana",
+  "service": "Image generation",
+  "value": "Generate and edit images from a description — covers and diagrams without a design tool.",
+  "infrastructure": false,
+  "connect": "needs-key",
+  "requires": [
+    "{framework}/mcps/nano-banana-mcp/.venv/bin/python"
+  ],
+  "register": {
+    "transport": "stdio",
+    "command": "{framework}/mcps/nano-banana-mcp/.venv/bin/python",
+    "args": [
+      "{framework}/mcps/nano-banana-mcp/server.py"
+    ],
+    "env": {}
+  },
+  "docs": "README.md"
+}

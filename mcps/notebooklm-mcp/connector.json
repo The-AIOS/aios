@@ -1,0 +1,19 @@
+{
+  "id": "notebooklm",
+  "service": "NotebookLM",
+  "value": "Research notebooks — reachable through the bundled `notebooklm` skill, not through a connector.",
+  "infrastructure": true,
+  "registers": false,
+  "delivery": "skill",
+  "entrypoint": "{framework}/mcps/notebooklm-mcp/.venv/bin/notebooklm",
+  "setup": [
+    "bash mcps/setup.sh notebooklm-mcp",
+    "{framework}/mcps/notebooklm-mcp/.venv/bin/notebooklm doctor --fix",
+    "{framework}/mcps/notebooklm-mcp/.venv/bin/notebooklm login   # operator runs this, never an agent",
+    "{framework}/mcps/notebooklm-mcp/.venv/bin/notebooklm doctor  # verify: Auth ✓"
+  ],
+  "connect": "guided",
+  "requires": [],
+  "docs": "README.md",
+  "_note": "NOT an MCP server. Verified 2026-08-27: no server code in this folder. `registers: false` means there is no registration to make and none to check for — a reader must not treat its absence as drift."
+}
