@@ -1057,6 +1057,14 @@ jobs:
         # Same finding, same cause: committed, never invoked.
         run: bash tests/route-insight.test.sh
 
+      - name: the Pipeline Status line names the precondition that actually failed
+        # FIELD REPORT 2026-08-28. Three preconditions gate the Tasks future; the status
+        # report attributed ANY absent future to credentials, so a missing list-ID line in
+        # USER.md printed "credentials missing" and an operator re-authenticated OAuth five
+        # mornings in a row. A message naming the WRONG cause is worse than a generic one:
+        # a generic message makes you look, a wrong specific one makes you work.
+        run: bash tests/pipeline-executor-status.test.sh
+
       - name: every bundled connector carries a manifest the App can read
         # AI-122 Front A. The AIOS App builds its Connectors card from
         # mcps/*/connector.json and ships NO copy of any register command, so a

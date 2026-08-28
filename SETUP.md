@@ -262,6 +262,7 @@ Claude reads this file and walks you through the full onboarding — clone → i
 
 **What Claude asks you** (only if needed):
 - Your Google email (for Calendar/Tasks/Drive)
+- **Which Google Tasks list to read.** This one is easy to miss and it fails quietly: `USER.md` → `## Sources` needs a literal `- Google Tasks list: \`<ID>\`` line, and **without it the Tasks source is enabled but never queried** — `/aios:today` will simply have no tasks, every morning, with nothing to indicate why. Get the ID from the Tasks API (`tasklists.list`), or ask Claude to list them for you. Reported 2026-08-28 by an operator who chased a nonexistent OAuth problem for five days because the status line blamed credentials instead of naming the missing line (fixed — it now names the line).
 - Which task sources you use (GitHub Issues, Linear, Monday, etc.)
 - What to name your private vault repo (defaults to `{username}/aios` — matches the local path `~/aios/`; pick a different name if you prefer, e.g., `{username}/vault` or `{username}/my-aios`)
 - Substrate choices when running `/company` or `/collaborate`

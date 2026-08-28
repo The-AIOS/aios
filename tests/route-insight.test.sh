@@ -15,7 +15,7 @@ set -uo pipefail
 TOOL="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/hooks/route-insight.py"
 PASS=0; FAIL=0
 ok(){ printf '  ok   %s\n' "$1"; PASS=$((PASS+1)); }
-no(){ printf '  FAIL %s\n     %s\n' "$1" "$2"; FAIL=$((FAIL+1)); }
+no(){ printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; FAIL=$((FAIL+1)); }
 
 tmp(){ mktemp "${TMPDIR:-/tmp}/ri-XXXXXX"; }
 
@@ -92,6 +92,77 @@ python3 "$TOOL" "$f" --match "entry" >/dev/null 2>&1; rc_many=$?
 if [ $rc_none -eq 2 ] && [ $rc_many -eq 2 ] && cmp -s "$f" "$f.orig"; then
   ok "5 refuses on 0 and on >1 match, file untouched"
 else no "5 refusal paths" "no-match rc=$rc_none ambiguous rc=$rc_many (both must be 2), file changed=$(cmp -s "$f" "$f.orig" && echo no || echo YES)"; fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FIELD REPORT 2026-08-28 — excising the LAST entry of a section took the file tail
+#
+# Reported with an executed repro: the caps line, the `---` and the `**See also:**`
+# footer were all removed, exit 0, `✓ excised` printed. Silent loss.
+#
+# Cause: find_entry's `end` defaulted to len(lines) and was only corrected by three
+# enumerated terminators (heading / top-level bullet / HTML comment). The last entry
+# in a list has no next, so none matched and the scan ran to EOF. The docstring's own
+# stated goal — "neighbouring file-level comments are not swallowed" — was the one
+# broken, because the design was written against neighbours with no case for the edge.
+#
+# Why the existing validator could not catch it: its truncation guard compares
+# `lines[end:]` against `new_lines[head:]` — the SAME `end` on both sides. With end
+# at EOF both slices are empty and it passes. A check scoped by the value under
+# suspicion cannot test that value.
+# ─────────────────────────────────────────────────────────────────────────────
+t=$(mktemp -d)
+cat > "$t/last.md" <<'EOF'
+## Emerging
+
+- First entry — not the one being excised
+- Second entry, the LAST bullet in this section
+
+_Caps: Emerging ≤10 (today 2), Reinforced ≤5 (today 0)._
+
+---
+
+**See also:** [[a]] · [[b]] · [[c]]
+EOF
+cp "$t/last.md" "$t/last.before"
+out=$(python3 "$TOOL" "$t/last.md" --match "Second entry" --marker "<!-- routed: test -->" 2>&1); rc=$?
+if [ "$rc" -ne 0 ] && diff -q "$t/last.before" "$t/last.md" >/dev/null 2>&1; then
+  ok "last-in-section entry: REFUSES and leaves the file byte-identical"
+else
+  no "last-in-section entry was excised (rc=$rc) — the file tail is at risk"
+fi
+case "$out" in
+  *"_Caps:"*) ok "the refusal NAMES the lines it would have deleted" ;;
+  *) no "the refusal does not name what it protected" "a refusal you cannot act on is a wall" ;;
+esac
+
+# the ordinary path must be untouched by the fix
+cp "$t/last.before" "$t/last.md"
+python3 "$TOOL" "$t/last.md" --match "First entry" --marker "<!-- routed: test -->" >/dev/null 2>&1
+if grep -q '^\*\*See also:' "$t/last.md" && grep -q '^_Caps:' "$t/last.md" && ! grep -q 'First entry' "$t/last.md"; then
+  ok "a NON-last entry still excises cleanly, footer intact"
+else
+  no "the fix broke the ordinary excision path"
+fi
+
+# any heading level terminates — `#### ` was absent from the original list and exists
+# in the live corpus (business.md carries 10), so a bullet before one over-extended.
+cat > "$t/h4.md" <<'EOF'
+## Section
+
+- Only entry here
+
+#### A deeper heading
+
+- Belongs to the deeper heading
+EOF
+python3 "$TOOL" "$t/h4.md" --match "Only entry here" --marker "<!-- routed: test -->" >/dev/null 2>&1
+if grep -q '^#### A deeper heading' "$t/h4.md" && grep -q 'Belongs to the deeper' "$t/h4.md"; then
+  ok "an h4 heading terminates a bullet entry (the gap found while fixing the edge case)"
+else
+  no "an h4 heading does not terminate — content past it was swallowed"
+fi
+rm -rf "$t"
+
 
 printf '\n  %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

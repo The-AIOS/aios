@@ -35,6 +35,46 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-08-28 — Two messages that named the wrong cause, and a default that deleted a file's footer
+
+`hash: a1785d9`
+
+### `/aios:today` stops blaming your credentials for a missing config line
+
+> **What this delivers.** The Tasks source is queried only if **three** independent things hold: the source configured, a list ID present in `USER.md`, and credentials on disk. The Pipeline Status line attributed **any** absent future to credentials — so a missing `- Google Tasks list: \`<ID>\`` line printed *"configured but credentials missing — run the setup for this source"*. Reported by an operator who **re-authenticated OAuth five mornings in a row** while the real cause was one line of config.
+
+**What you can now do:**
+- **Read a status line that names the precondition that actually failed.** A missing list ID says so and tells you where to get the ID. Genuinely-absent credentials still say so, with the path. And when none of the known causes match, it says *that* instead of picking one — because a default naming a cause it never verified is the same bug one branch down.
+- **Find out the list-ID line exists before it costs you a week.** `SETUP.md` now documents it, and documents the failure mode: without it the source is **enabled but never queried**, so your daily plan simply has no tasks, every morning, with nothing indicating why.
+
+**Action required — one, if your `/aios:today` has been quietly task-free.** Check `USER.md` → `## Sources` for a literal `- Google Tasks list: \`<ID>\`` line. If it is absent, that was the cause and the new message will now tell you so. Get the ID from the Tasks API (`tasklists.list`) or ask Claude to list them.
+
+*The reporter's framing, which is better than the bug: **a message that names a wrong cause is worse than a generic one, because it directs the work.** A generic message makes you look; a wrong specific one makes you work — in this case for five days, in the wrong place.*
+
+### `hooks/route-insight.py` no longer deletes a section's footer when the last entry leaves
+
+> **What this delivers.** Excising the **last** bullet of a section removed the whole file tail with it — the caps line, the `---`, and the `**See also:**` footer — while exiting 0 and printing `✓ excised`. Silent loss. `end` defaulted to end-of-file and was corrected only by three enumerated terminators; the last entry in a list has no next, so none of them matched.
+
+**What you can now do:**
+- **Keep your file tails.** When the scan finds no terminator — the only case that produced the loss — the command **refuses**, names every line it would have deleted, and leaves the file byte-identical. Costs one manual excision; the alternative cost three lines while reporting success.
+- **Trust it around deeper headings.** `#### ` was never a terminator (only `##` and `###`), and h4 exists in the live corpus, so a bullet sitting before one already over-extended. Any heading level now terminates.
+
+**Action required — none.** But if you have run this command on a file that ends in `_Caps:` / `---` / `**See also:**`, it is worth checking that tail is still there. The command writes a `.routebak-*` backup beside the file on every run.
+
+*The fix is **not** a fourth terminator, and deliberately not the reporter's own preferred form either. He proposed defining membership positively — an entry is its line plus its indented continuations, cut at the first unindented line — and **flagged the contract risk himself rather than hiding it**. Measured against the seven live files that carry both bullets and a footer: **43 bullets are followed by unindented continuation prose that genuinely belongs to them** (`**Note the asymmetry:** …`, `**Category:** …`). That rule would have cut those entries in half. His flag was right, and the corpus decided against his own proposal.*
+
+*One more thing found while fixing it, and it generalises past this file: **the truncation guard could not catch a wrong `end`.** It compares `lines[end:]` against `new_lines[head:]` — the same `end` on both sides — so with `end` at EOF both slices are empty and it passed while a footer was being deleted. **A check scoped by the value under suspicion cannot test that value.** The span is now asserted independently, in absolute terms.*
+
+### The shape both of these share, which is worth more than either fix
+
+*Both are an **incomplete enumeration whose default is an assertion instead of a doubt** — the reporter's phrasing. One chains three preconditions and the negative branch asserts which failed; it does not know. The other enumerates three terminators and, finding none, assumes end-of-file; it does not know either. In both, a "none of the N" case is treated as a known case, and reported as success or as a concrete cause — which is exactly what stops anyone looking.*
+
+*It is the rule from the previous round — a step that cannot fail loudly should not be able to report success — applied one level down, to **the default value of an enumeration**. A default is a silent assertion about the case you did not enumerate. If the list of cases can be incomplete, the default has to be the one that makes noise.*
+
+*Tests: `route-insight` 5 → 9, plus a new 7-check `pipeline-executor-status` suite, both wired into CI. Controls proven the way the reporter asks for — 3 of 4 new route tests and 5 of 7 status checks go red against the old code. Also fixed `route-insight.test.sh`'s `no()` helper, which used an unguarded `$2` and **crashed instead of failing** under `set -u`, which is how a red suite can look like a broken one.*
+
+---
+
 ## 2026-08-27 — First-run stops asking questions a newcomer cannot answer, and stops ending before it is finished
 
 `hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4 · 8d7238f · 1e78989 · 140ea59 · e166fc9 · 23b001f · 69da9bf · 51e70ac · be5baf9 · 9e55b19 · 0d40b35 · 89fe90d · 8d046d0 · 127231c`
