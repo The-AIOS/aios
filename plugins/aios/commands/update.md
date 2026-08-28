@@ -38,7 +38,7 @@ Every file below is overwritten byte-identical to upstream. If the operator cust
 - **Templates:** `templates/aios/` (bundled templates, e.g. `templates/aios/about_me-template.md`) — never `templates/custom/` or `templates/<company>/`. (Moved from the layer root into `templates/aios/` to match the `{layer}/aios/` + `custom/` + `<company>/` convention used by agents, skills, and plugins.)
 - **Skills:** `skills/aios/`, `skills/anthropic/`, `skills/superpowers/` (never `skills/custom/`)
 - **Hooks:** `hooks/*` except `hooks/custom/` (pipeline executor, markitdown converter, claude-identity wrappers)
-- **MCPs:** `mcps/*` except `mcps/custom/` (vendored MCP servers — code + README)
+- **MCPs:** `mcps/*` except `mcps/custom/` (vendored MCP servers — code + README). **`mcps/custom/_index.md` included in that exception** — canonical ships it as a seed, but an operator's copy carries their own registry rows, so syncing it overwrites their content. Enforced by the `:(exclude)*/custom/**` pathspec in Step 2, not by remembering.
 - **Agents:** `agents/aios/` (bundled 6-bundle structure: `aios/sales/`, `aios/strategy/`, `aios/finance-legal/`, `aios/engineering/`, `aios/communication/`, `aios/personal/`) and `agents/_index.md`. Never overwrite `agents/custom/` or `agents/<company>/`.
 - **Plugins:** `plugins/aios/**` (full plugin folder replace, INCLUDING `plugins/aios/commands/*` — these are framework commands, not operator content) except `plugins/aios/commands/custom/`
 - **Other bundled plugins** at top level except `plugins/custom/`, `plugins/aios/`, and `plugins/<company>/`
@@ -316,8 +316,15 @@ git -C "$CLONE" diff {stored_hash}..HEAD --name-only -- \
   "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
   "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "AGENTS.md" "EXTENSION-MAP.md" "LICENSE-AUDIT.md" \
   "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
-  "${LAYERS[@]}" "vault/.obsidian/"
+  "${LAYERS[@]}" "vault/.obsidian/" \
+  ':(exclude)*/custom/**' ':(exclude)*/custom'
 ```
+
+> ⚠️ **The `custom/` exclusion is not tidiness — without it this step hands you Tier-2 paths to overwrite.** Every `{layer}/custom/` is on the hard denylist at the top of this file, and Step 6.5's reconcile already filters `/custom(/|: )`. This diff was the one place that did **not**, so it listed operator-owned files as "changed Tier-1" and the apply loop dutifully overwrote them. **Measured on a live vault, 2026-08-27:** canonical edited its seed `mcps/custom/_index.md`; the operator's copy of that file carried the registry row and notes for a **real custom MCP they had built**; the three-way compare correctly classified it *"both sides moved"*, backed it up, and overwrote — and the operator's row was gone from the live file. The backup did its job and nothing was destroyed, but backups are **not auto-restored**, so the default outcome was silent loss of their own content.
+>
+> Two properties made it worse than an ordinary overwrite. `custom/_index.md` is **dual-owned by nature** — canonical seeds the guidance, the operator owns the registry — which is exactly the shape that already forced `MERGE, never overwrite` for `.gitignore` and `marketplace.json`. And it is the **only** dual-owned file whose operator half is a *list that grows*, so the loss scales with how much the operator has built. If a future change genuinely needs to reach an existing operator's `custom/_index.md`, it belongs on the dual-owned merge list in Step 2.7 with an explicit merge rule — never on this diff.
+>
+> The exclusions are git pathspec magic (`:(exclude)`), so they apply to every derived layer at once and cannot fall out of step with `LAYERS`. The second form catches a bare `custom` directory entry alongside its contents.
 
 > ⚠️ **If you touch `TIER0_DENY`, you are changing what ships to every operator vault.** `.github/workflows/validate.yml` fails the build if `tests` or `.github` leave that list — deliberately, because this is the one edit whose blast radius is every vault at once.
 
