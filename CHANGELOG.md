@@ -37,7 +37,7 @@
 
 ## 2026-08-27 — First-run stops asking questions a newcomer cannot answer, and stops ending before it is finished
 
-`hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4 · 8d7238f · 1e78989 · 140ea59 · e166fc9 · 23b001f · 69da9bf · 51e70ac · be5baf9 · 9e55b19 · 0d40b35 · 89fe90d · 8d046d0`
+`hash: b55e142 · 2e4044b · 765ff51 · ecb3cf4 · 8d7238f · 1e78989 · 140ea59 · e166fc9 · 23b001f · 69da9bf · 51e70ac · be5baf9 · 9e55b19 · 0d40b35 · 89fe90d · 8d046d0 · 127231c`
 
 ### The setup interview re-times its friction without losing a single capability
 
@@ -230,6 +230,25 @@
 **Action required — none.** If you have a file that `git status` has shown as modified for a long time with no explanation, `git restore --staged -- <path>` clears it; the content in `HEAD` is untouched.
 
 *Motivated by a real case: a stale index entry was found for a committed path, thirty minutes older than `HEAD`. **Two hypotheses were raised and both were falsified by measurement** — an Obsidian git plugin auto-staging (none is installed in that vault) and a spaced path breaking the sync (tested in a scratch repo; spaced paths sync correctly). The cause remains unknown **precisely because nothing recorded the failure when it happened**, which is the gap this closes. Neither disproven theory is recorded anywhere as a cause. The hook already reported the *symptom* (`index still lags HEAD`); this adds the *cause*, and they are different reports for different readers.*
+
+### `/aios:update` stops handing your own `custom/` files to the overwrite loop
+
+> **What this delivers.** Every `{layer}/custom/` folder is on this command's **own hard denylist**, and its completeness reconcile already filtered them out. **Step 2's diff was the one place that did not** — so it listed operator-owned files as "changed Tier-1" and the apply loop overwrote them. Found by running the command for real on a vault that had a custom MCP, immediately after the manifest work landed.
+
+**What you can now do:**
+- **Keep what you wrote in `custom/`, permanently.** The diff now carries `:(exclude)*/custom/**`, which applies to **every** layer at once — so it cannot fall out of step with the derived layer list the way a hand-maintained per-layer exclusion would. `agents/custom/`, `skills/custom/`, `hooks/custom/`, `mcps/custom/`, `plugins/custom/`, `templates/custom/`: all of them, by construction.
+
+**Action required — one, and only if you ran `/aios:update` in the short window before this landed:**
+
+**Check `vault/04 - backups/aios-update-{today}/` for anything under `mcps/custom/`.** If a file is there, your version was backed up and then overwritten, and **backups are never auto-restored** — you have to merge yours back by hand. The file to check is `mcps/custom/_index.md`: canonical ships it as a seed, your copy carries the **registry rows for the custom MCPs you have built**, and those rows are what the overwrite drops. Everything else under `custom/` was already protected.
+
+If that backup folder has nothing under `mcps/custom/`, you were not affected and there is nothing to do.
+
+*Why this one was worse than an ordinary overwrite, stated because it is the reasoning that should generalise: `custom/_index.md` is **dual-owned by nature** — canonical seeds the guidance, the operator owns the registry — which is the exact shape that already forced **MERGE, never overwrite** onto `.gitignore` and `.claude-plugin/marketplace.json`. And it is the **only** dual-owned file whose operator half is **a list that grows**, so the cost of one bad sync scales with how much the operator has actually built with the framework. The more useful your vault, the more it takes.*
+
+*The three-way compare was not wrong at any point — it correctly classified the file as "both sides moved", correctly backed it up, and correctly overwrote per its own contract. The defect was upstream of it: a path that should never have reached the loop. Worth separating, because "the compare misjudged it" and "the compare was handed something it should never have seen" call for opposite fixes.*
+
+*If a future change genuinely needs to reach an existing operator's `custom/_index.md`, it belongs on the dual-owned merge list with an explicit merge rule — never on the sync diff.*
 
 ---
 
