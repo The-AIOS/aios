@@ -646,10 +646,32 @@ def run_pipeline(command_name):
     # Distinguish "operator never turned this on" from "turned on but unusable". Reporting
     # both as "not configured" hid a real problem: a source the operator HAD configured but
     # whose credentials were missing read as a deliberate choice, so nobody went looking.
+    #
+    # AND THEN SAY WHICH PRECONDITION FAILED. This used to report "configured but credentials
+    # missing" for EVERY absent future, while the guard that creates the Tasks future requires
+    # THREE independent things: the source configured, a list ID present in USER.md, and
+    # credentials on disk. Three preconditions collapsed into one diagnosis, and the one chosen
+    # was the most expensive to chase.
+    #
+    # Reported 2026-08-28 by an operator who re-authenticated OAuth FIVE MORNINGS IN A ROW
+    # while the real cause was a missing config line. A message naming the wrong cause is worse
+    # than a generic one: a generic message makes you look, a wrong specific one makes you work.
+    # The distinction the comment above already draws needed one more step — once you know it
+    # is unusable, say why.
     for source, mapped in [("calendar", "calendar_primary"), ("calendar-personal", "calendar_personal"), ("tasks", "tasks"), ("slack", "slack")]:
         if mapped not in futures:
             if source in sources["configured"]:
-                status.append(f"⏭️ {source}: configured but credentials missing — run the setup for this source")
+                if source == "tasks" and not sources["google_tasks_list"]:
+                    reason = ("missing list ID — add `- Google Tasks list: `<ID>`` to USER.md → ## Sources "
+                              "(get the ID from the Tasks API: tasklists.list)")
+                elif creds_primary is None or not creds_primary.exists():
+                    reason = f"credentials not found at {creds_primary} — run the setup for this source"
+                else:
+                    # Deliberately vague, and honest about being vague: the preconditions
+                    # enumerated above may not be the only ones. A default that names a cause
+                    # it never verified is precisely the failure being fixed here.
+                    reason = "prerequisites incomplete — no known cause matched, so this needs a look"
+                status.append(f"⏭️ {source}: configured but not queried — {reason}")
             else:
                 status.append(f"⏭️ {source}: not configured")
 
