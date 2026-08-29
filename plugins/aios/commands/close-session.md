@@ -126,9 +126,12 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
      --note "$HOME/aios/vault/01 - calendar/{YYYY-MM}/{YYYY-MM-DD}.md" \
      --before "## Close of Day" \
      -m "session: {HH:MM} {Topic}" \
-     --block-file /tmp/aios-session-block.$$.md
+     --block-file /tmp/aios-session-block.$$.md \
+     $([ "${CLAUDE_CLOSE_SESSION_NO_PUSH:-}" = "1" ] && echo --no-push)
    ```
    The helper takes a **per-file lock + merge-appends**: under the lock it re-reads the *latest* note and inserts the block before `## Close of Day` (or at the end if that marker is absent — omit `--before` then), then commits the note via `aios-commit`. So N sessions closing at once each land their block **in turn** — ordered, zero clobber, all visible immediately. (Then `rm` the temp block file.)
+
+   **`--no-push` fires when `$CLAUDE_CLOSE_SESSION_NO_PUSH=1` is set.** Set this before invoking `/close-session` from any automated wrapper (a cron, a scheduled agent) that already does its own controlled end-of-run push — a mid-run push from inside `/close-session` would otherwise race that push and land the vault in a half-committed state, out of order with it. Leave it unset for interactive use; the flag defaults to unset everywhere, so every push happens exactly as before unless an operator's own automation opts in.
 6. Update `session-insights.md` (observation buffer — not a log):
    - **Scan existing entries first:**
      - Does this session **reinforce** an Emerging insight? → move it to Reinforced with the new date
