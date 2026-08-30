@@ -35,6 +35,50 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-08-29 — Four documents agreed about Stitch and all four were wrong, and an installer that reported success after doing nothing
+
+`hash: 653aeac`
+
+Everything here was found the same way: a real macOS test account installed the packaged App and walked first run end to end. None of it came from review.
+
+### Stitch: five sources, one truth, and it was in none of the docs
+
+> **What this delivers.** A connector that reports itself connected while being unable to work is the exact failure this whole line of work exists to remove — and Stitch was doing it. `connector.json` said `one-click` with no credentials. `mcps/_index.md` said `npx` (no auth). Its README said it needs an API key. `setup.sh` said `export STITCH_API_KEY (create at stitch.withgoogle.com)`. The AIOS App trusted the manifest, registered it in one click, and said **"connected"** — the operator's own reaction was *"I distrusted it, how did it connect if I gave it nothing?"*
+>
+> The answer was in none of the four: Stitch authenticates with a **Google Cloud OAuth browser sign-in** via `stitch-mcp init`, needs `gcloud`, and has **no API key and no `STITCH_API_KEY` env var at all**. The CLI calls itself the "Stitch MCP OAuth setup assistant" and exposes no key flag on any subcommand. Four documents were confidently wrong in the same direction, because each was written from the previous one.
+
+**What you can now do:**
+- **Connect Stitch and actually get a working connector.** All five sources — manifest, index, README, `setup.sh` twice — now describe the OAuth flow, and the manifest is `guided` rather than `one-click`, so the App walks you through the browser sign-in instead of registering something that fails at first use.
+- **Trust "connected" a little more.** The App now routes *every* bundled connector through a guided session that verifies before it reports, precisely because a manifest field turned out not to be evidence.
+
+**Action required — none.** If you registered Stitch previously and it has never worked, run `npx -y @_davideast/stitch-mcp init` and sign in; nothing needs re-registering.
+
+*Worth keeping: the answer came from asking the tool itself, described in the session that found it as **"the only source that can't be out of date."** When documents disagree, none of them is evidence.*
+
+### `mcps/setup.sh` could report success having installed nothing
+
+> **What this delivers.** Two defects that compound. `want()` matched only **folder** names (`nano-banana-mcp`) while every caller holds the **connector id** from `connector.json` (`nano-banana`) — so a request by id matched nothing. And the closing line printed **"All MCPs installed" unconditionally**, so after matching nothing and doing no work the script reported success. An operator watched a terminal tell them it had installed something it never touched.
+>
+> The second is why the first stayed invisible. *A filter that can miss, plus a report that cannot fail, is indistinguishable from a working install.*
+
+**What you can now do:**
+- **Use either spelling.** `bash mcps/setup.sh nano-banana` and `nano-banana-mcp` both work, and `--list` says so rather than leaving you to guess.
+- **Find out when nothing matched.** An unrecognised name now exits **non-zero** with `✗ Nothing matched`, names what it did *not* do, and points at `--list`.
+
+**Action required — none.** If a past per-MCP install seemed to succeed but the connector never appeared, this was why; re-run it with either spelling.
+
+### Setup no longer breaks at the handover, and the first question stops feeling permanent
+
+**What you can now do:**
+- **Reach the interview on a first install.** A plugin's commands register at session **start**, so the session that installs the plugin is the one session where `/aios:cold-start-interview` does not exist — it fails with `Unknown skill` at the exact moment setup hands over. `SETUP.md` now documents the recovery a real setup session improvised: read `plugins/aios/commands/cold-start-interview.md` and follow it directly. **No restart** — a restart there costs the operator the session they have been talking to.
+- **Answer the first question without committing to it forever.** The session-name question led with a terminal shortcut and "60+ keystrokes", then demoted the naming as *"the bonus, not the point"*. For someone meeting the system on question one that is backwards: the naming **is** the point, the shortcut is the part an App operator may never use, and nothing said the choice could be revisited. It now says plainly that this is the name of the assistant they will work with daily and that Settings can change it later.
+- **Open `CHEATSHEET.md` without being handed a terminal.** §1 opened with `cd ~/aios && claude` for a reader who most likely just installed the App and has never typed `cd`. It now branches by which door you came through, and says up front that most of the file is optional if you use the App.
+
+### Connectors are named for what they are
+
+**What you can now do:**
+- **Find `nano-banana` in the card by the name you know it by.** Nine of eleven manifests already used the product's own name; two hid it behind a capability — `nano-banana` as *"Image generation"*, `playwright` as *"Browser automation"* — while the session tab, the folder, `claude mcp list` and every README used the real one. The card was the only surface with a euphemism. Rule now: **use the product's name when it has one; use a capability name only when there is no product to name** (which is why `pdf-generator` is still "PDF export").
+
 ## 2026-08-28 — Two messages that named the wrong cause, and a default that deleted a file's footer
 
 `hash: a1785d9`
