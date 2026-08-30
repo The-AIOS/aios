@@ -35,6 +35,41 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-08-29 — An opt-out for automated wrappers, and a skill that was installed but unloadable
+
+`hash: ef50c60 · 4f7121b · 4682f2c`
+
+*Both fixes contributed by **José Medina** ([#59](https://github.com/The-AIOS/aios/pull/59)), running in a private fork before being offered.*
+
+### `/close-session` can stop pushing, so your cron's own push is not raced
+
+> **What this delivers.** If you run `/close-session` from an automated wrapper — a cron, a scheduled agent — that already does its own controlled end-of-run push, set **`AIOS_CLOSE_SESSION_NO_PUSH=1`** before invoking it and no push happens from inside the command. Unset (the default) behaves exactly as before, so interactive use is untouched.
+
+**What you can now do:**
+- **Stop a race that does not recover on its own.** `aios-commit` releases its lock **before** pushing — deliberately, so a slow network call never makes other sessions wait — which means two pushes genuinely race. And a rejected push does **not** self-heal: it prints *"the remote has diverged. Pull/rebase, then push"* and stops. That is exactly right for a human at a terminal and useless inside a cron, where nobody reads it and the vault sits committed-but-unpushed until someone happens to notice.
+- **Set it once and have it hold for the whole run.** The command pushes from **three** places — the note block, the observed-context commit, and Mode B's report commit — and one variable now covers all three.
+
+**Action required — none unless you automate `/close-session`.** If you do, set `AIOS_CLOSE_SESSION_NO_PUSH=1` in that wrapper and let it own the push.
+
+*Two notes on what changed between the contribution and what shipped, both recorded because the reasoning outlives the change.*
+
+*The contribution guarded **one** of the three push sites. That is worse than guarding none: the wrapper's author sets the variable, believes the race is handled, and still hits it at the next site — where the symptom no longer looks connected to the thing they configured. This is **not** a criticism of the work: the three-site structure is not visible from the region of the file being edited, which is exactly why the completion ships with a test that counts **both** sites and guards and requires them to agree. Asserting "there are three guards" would pass while a fourth unguarded site was added, and that additive case is the one nothing in review catches.*
+
+*The flag was renamed from `CLAUDE_CLOSE_SESSION_NO_PUSH` to **`AIOS_CLOSE_SESSION_NO_PUSH`**. `CLAUDE_*` is Claude Code's own namespace (`CLAUDE_CODE_SESSION_ID`, `CLAUDE_CONFIG_DIR`); framework switches are `AIOS_*` (`AIOS_UPDATE_REINVOKED`, `AIOS_STAR_ASK`). There is precedent for framework variables under `CLAUDE_`, so this is a convention choice rather than a defect — made **now**, because an environment variable becomes a contract the moment someone's automation depends on it, and nothing did yet. If you already piloted the original name, update it.*
+
+### The `karpathy-coding` skill was installed and unloadable
+
+> **What this delivers.** `skills/aios/karpathy-coding/SKILL.md` had **no YAML frontmatter at all** — no `name`, no `description` — so Claude Code registered it empty and the matcher could never fire it. Its H1 read `# CLAUDE.md`, which is the tell: it was pasted from a CLAUDE.md and never converted into a skill.
+
+**What you can now do:**
+- **Actually get the skill you already had.** It was the only one of **25** bundled `aios` skills missing frontmatter, and the symlink into `~/.claude/skills` existed the whole time — so it looked installed while being unreachable. `name` and `description` are now present and it triggers.
+
+**Action required — one, and only if you want it immediately.** The skill loads on a **restart**: a `SKILL.md` whose frontmatter changed mid-session is not re-read until the session restarts. Nothing else to do; the symlink was already in place.
+
+*The shape worth keeping from this one: **installed and working are different states, and only one of them is visible.** A registered symlink pointing at a file the loader silently rejects reports as present in every check anyone would think to run. The same class as an agent declaring a skill it never receives — no error, just quietly less capability than the inventory claims.*
+
+---
+
 ## 2026-08-29 — Four documents agreed about Stitch and all four were wrong, and an installer that reported success after doing nothing
 
 `hash: 653aeac`
