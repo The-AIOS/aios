@@ -127,11 +127,17 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
      --before "## Close of Day" \
      -m "session: {HH:MM} {Topic}" \
      --block-file /tmp/aios-session-block.$$.md \
-     $([ "${CLAUDE_CLOSE_SESSION_NO_PUSH:-}" = "1" ] && echo --no-push)
+     $([ "${AIOS_CLOSE_SESSION_NO_PUSH:-}" = "1" ] && echo --no-push)
    ```
    The helper takes a **per-file lock + merge-appends**: under the lock it re-reads the *latest* note and inserts the block before `## Close of Day` (or at the end if that marker is absent — omit `--before` then), then commits the note via `aios-commit`. So N sessions closing at once each land their block **in turn** — ordered, zero clobber, all visible immediately. (Then `rm` the temp block file.)
 
-   **`--no-push` fires when `$CLAUDE_CLOSE_SESSION_NO_PUSH=1` is set.** Set this before invoking `/close-session` from any automated wrapper (a cron, a scheduled agent) that already does its own controlled end-of-run push — a mid-run push from inside `/close-session` would otherwise race that push and land the vault in a half-committed state, out of order with it. Leave it unset for interactive use; the flag defaults to unset everywhere, so every push happens exactly as before unless an operator's own automation opts in.
+   > ### `AIOS_CLOSE_SESSION_NO_PUSH=1` — set it once, it covers EVERY push this command makes
+   >
+   > Set this before invoking `/close-session` from any automated wrapper (a cron, a scheduled agent) that already does its own controlled end-of-run push. Leave it unset for interactive use: the flag defaults to unset everywhere, so every push happens exactly as before unless an operator's own automation opts in.
+   >
+   > **Why it is worth a flag at all.** `aios-commit` releases its lock *before* pushing (deliberately — a slow network call must not make peers wait), so two pushes genuinely race. And a rejected push does **not** self-heal: it prints *"the remote has diverged. Pull/rebase, then push"* and stops, which is correct for a human at a terminal and useless inside a cron, where nobody reads it. The vault then sits committed-but-unpushed until someone notices.
+   >
+   > **This command pushes from THREE places, and the flag must reach all three** — step 5's `aios-note-append`, step 10's `aios-commit` (Mode A), and Mode B's report commit. Covering only one is worse than covering none: the wrapper's author sets the variable, believes the race is handled, and still hits it at the next site. The three-site count is asserted by `tests/close-session-nopush.test.sh`, so a fourth push site added later fails the build rather than silently escaping the flag.
 6. Update `session-insights.md` (observation buffer — not a log):
    - **Scan existing entries first:**
      - Does this session **reinforce** an Emerging insight? → move it to Reinforced with the new date
@@ -177,9 +183,11 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
 
 10. **Commit any observed-context you touched via `aios-commit`** (the note block was already committed by `aios-note-append` in step 5). **NEVER `git add -A`** — in a concurrently-written vault it sweeps other sessions' + the human's in-flight files into your commit (scrambled attribution). Commit only the paths you changed:
    ```bash
-   ~/aios/hooks/aios-commit -m "session: {date} {topic}" -- \
+   ~/aios/hooks/aios-commit -m "session: {date} {topic}" \
+     $([ "${AIOS_CLOSE_SESSION_NO_PUSH:-}" = "1" ] && echo --no-push) -- \
      "vault/00 - notes/context/observed/session-insights.md" {any other files you edited}
    ```
+   **The `--no-push` opt-out applies here too** — this is the command's second push site, and a wrapper that set the flag for step 5 expects it to hold for the whole run (see the box at step 5).
    `aios-commit` stages ONLY the given paths via a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. It is the one sanctioned commit path — it replaces `git add -A` everywhere.
 
 ### Session block format (Mode A)
@@ -245,7 +253,7 @@ If yes → write the pages (with `[[wiki-links]]`, proper frontmatter, source at
 1. Determine the project name from the repo (read `package.json` name, or `CLAUDE.md` title, or folder name)
 2. **Date rule:** If the current time is between midnight and 7:00 AM, ask the user which date the report belongs to — late-night sessions usually belong to the previous day. After 7:00 AM, use today's date.
 3. Infer session content from the conversation
-4. Write the report to **`~/aios/.claude/session-report-{YYYY-MM-DD}-{project}-{session}.md`** — `{project}` is a filesystem-safe slug of the repo name (from step 1), `{session}` is `$CLAUDE_AGENT_NAME` (fallback: a short session-id or pid if unset). **Both suffixes are load-bearing at a shared dir:** `{project}` keeps two *different* repos' sessions from colliding in the one harvest dir, and `{session}` keeps a Close-all broadcast's N workers in the *same* repo from clobbering each other. Write it to `~/aios/.claude/` **even though the session runs in another repo** — that's the whole point: one dir close-day always scans, no registration needed. (`~/aios/.claude/` is fully gitignored, so the report never leaks into any repo's git.) Then commit your session's own scoped work via `~/aios/hooks/aios-commit -m "..." -- <paths>` (never `git add -A`).
+4. Write the report to **`~/aios/.claude/session-report-{YYYY-MM-DD}-{project}-{session}.md`** — `{project}` is a filesystem-safe slug of the repo name (from step 1), `{session}` is `$CLAUDE_AGENT_NAME` (fallback: a short session-id or pid if unset). **Both suffixes are load-bearing at a shared dir:** `{project}` keeps two *different* repos' sessions from colliding in the one harvest dir, and `{session}` keeps a Close-all broadcast's N workers in the *same* repo from clobbering each other. Write it to `~/aios/.claude/` **even though the session runs in another repo** — that's the whole point: one dir close-day always scans, no registration needed. (`~/aios/.claude/` is fully gitignored, so the report never leaks into any repo's git.) Then commit your session's own scoped work via `~/aios/hooks/aios-commit -m "..." $([ "${AIOS_CLOSE_SESSION_NO_PUSH:-}" = "1" ] && echo --no-push) -- <paths>` (never `git add -A`). **The `--no-push` opt-out applies here too** — Mode B is the third and last push site, and an automated wrapper is *more* likely to run in this mode than in Mode A, not less.
 5. Confirm: "Session report written to `~/aios/.claude/session-report-{date}-{project}-{session}.md`. `/close-day` will pick it up tonight."
 
 ### Session report format (Mode B)

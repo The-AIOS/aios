@@ -1057,6 +1057,17 @@ jobs:
         # Same finding, same cause: committed, never invoked.
         run: bash tests/route-insight.test.sh
 
+      - name: the close-session no-push opt-out reaches every push site
+        # Contributed in #59 to stop an automated wrapper's own end-of-run push racing
+        # the one inside /close-session — a real, unattended failure: aios-commit
+        # releases its lock BEFORE pushing, and a rejected push does not self-heal, it
+        # asks a human to pull/rebase. The contribution covered 1 of 3 push sites, which
+        # is worse than covering none: the wrapper's author sets the variable, believes
+        # the race is handled, and still hits it at the next site. This asserts sites and
+        # guards AGREE, so a fourth push site added later fails the build instead of
+        # silently escaping the flag.
+        run: bash tests/close-session-nopush.test.sh
+
       - name: the Pipeline Status line names the precondition that actually failed
         # FIELD REPORT 2026-08-28. Three preconditions gate the Tasks future; the status
         # report attributed ANY absent future to credentials, so a missing list-ID line in
