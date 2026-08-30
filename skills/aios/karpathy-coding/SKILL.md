@@ -1,4 +1,9 @@
-# CLAUDE.md
+---
+name: karpathy-coding
+description: Behavioral guidelines to reduce common LLM coding mistakes — think before coding, simplicity first, surgical changes, and goal-driven execution. Use when writing or editing code to avoid over-engineering, speculative abstractions, scope creep in diffs, and unverified changes.
+---
+
+# Karpathy Coding
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
