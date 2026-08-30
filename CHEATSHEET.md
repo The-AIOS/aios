@@ -8,6 +8,59 @@
 
 ---
 
+## §0 — If you're using the AIOS App
+
+Everything below this section is a terminal command. The App runs those commands for you, so this
+is the translation: what each control actually does, and which ritual it is underneath.
+
+> **Deliberately concept-level, not a button tour.** The App ships on its own release cycle, so a
+> table of labels here would go stale silently — the failure this file has already had once. What
+> is stable is what the surfaces *are*; where a label is load-bearing it is named, and for anything
+> version-specific the App's own README is the source.
+
+### The three ways to start something
+
+| Control | What it is | Underneath |
+|---|---|---|
+| **Ask AIOS anything you need** | A one-off question. Nothing is named, nothing joins Running. | A scratch session — the fastest path when you just want an answer. |
+| **Launch assistant** | Your **primary session**, named after the assistant you chose during setup. | Exactly the shell shorthand §1 describes — this is the button version of typing that one word. |
+| **Resume** | Reattaches to a session that already exists rather than starting a second one. | `claude --resume` / `spawn <name>` on an existing name. |
+
+### Sessions vs terminals — the distinction that matters most
+
+A **session** is a named Claude session. It appears in **Running**, it can be resumed later, it can
+be closed with `/close-session`, and its name is what lets the framework match an agent profile and
+route its capture to the right project. A **terminal** is just a shell — useful, but anonymous:
+nothing tracks it, nothing resumes it, and closing it captures nothing.
+
+If you want the work to be remembered, start a **session**. Reach for a terminal when you want to
+run a command and watch it, not when you want to do work worth keeping.
+
+### Reading the panel
+
+Top to bottom, each card answers one question:
+
+- **Daily** — the three rituals: *Plan my day* (`/today`), *Close session* (`/close-session`),
+  *Close the day* (`/close-day`). These are the same commands as §2, same behaviour.
+- **Calendar** — your month, with today marked. **A mark on a day means a daily note exists for
+  it** — that is how you tell `/today` actually wrote one, without opening the file. The note itself
+  lands in `vault/01 - calendar/{YYYY-MM}/{YYYY-MM-DD}.md`; click through to read it.
+- **Quick** — frequent tasks, agents, skills and commands, each with a count. Nothing here is
+  App-only; it is a picker over what §3–§6 list.
+- **Running** — every live session and terminal. This is the registry, so it is also the honest
+  answer to *"is that still going?"*
+- **Health** — the ongoing twin of Setup. Every row that can fail carries its own fix.
+- **Connectors** — the services your AIOS can reach, and the state of each. Anything that needs
+  more than a click opens a guided session rather than handing you a document.
+
+### What you still do in a terminal
+
+Almost nothing, day to day. The cases that remain: running a command the buttons do not cover yet,
+and reading output while it happens. Both are one click — the App opens a terminal you can watch,
+which is why every fix it runs is visible rather than silent.
+
+---
+
 ## §1 — Start here (launching a session)
 
 **First: which door did you come through?** This section is written for a terminal, and the AIOS
@@ -61,14 +114,15 @@ The minimum every-day rhythm. **`/today` is the orchestrator** — running it cl
 | Command | When | What it does |
 |---|---|---|
 | **`/today`** | Every morning | **Required.** Loads context + pulls calendar/tasks/Slack + writes today's plan. **Checks the previous daily note for `## Close of Day`** — if missing, auto-invokes `/close-day` first. **Checks aios-update freshness** — surfaces a callout if the shared template/team repo has new infra. Commits + pushes the plan. |
+| **`/close-session`** | Whenever a piece of work reaches a stopping point — several times a day is normal | Captures what that session shipped, learned and left open, and commits the vault. **This is the ritual that feeds `/close-day`**: without it the evening capture is reconstructing your day from the notes instead of reading it. In the App it is the **Close session** button on the Daily card. |
 | `/close-day` | Every evening, OR auto-invoked by `/today` next morning | Captures Close of Day (verdict, shipped, decisions, carries, observed patterns) and routes signals to observed-context + project notes. Skip-tolerant — `/today` catches missing close-day. |
 | `/aios:update` | When `/today` surfaces a BEHIND callout | Pulls fresh infra from the shared template/team repo. On-demand, not scheduled. |
 
 **Why this is the compound loop, mechanically:** yesterday's close-day routes signals to the right files (growth.md, session-insights.md, project notes, antifragile.md). Today's `/today` reads those refreshed files. The system gets smarter because the routing happened — observed-context grew, patterns confirmed, project state advanced. **You only need to remember `/today`** — it's the heartbeat that keeps everything else honest. Forget `/close-day`? `/today` catches it. Forget `/aios:update`? `/today` reminds you.
 
-**At session end**, tell Claude to commit and push the vault. The AI handles the syntax; you name the intent ("commit and push", "ship it"). The vault is only as portable and safe as its last push.
+**At session end, run `/close-session`** — it captures the session *and* commits and pushes the vault, which is why it is in the table above rather than described here as a chore. This paragraph used to say "tell Claude to commit and push", which is the command's own job written out by hand: the table listed `/today`, `/close-day` and `/aios:update`, skipped the one ritual that runs several times a day, and then explained how to do it manually. If you are mid-session and just want the push, saying "commit and push" still works — the AI handles the syntax, you name the intent. **The vault is only as portable and safe as its last push.**
 
-See: [CLAUDE.md](./CLAUDE.md) → § II. Rituals · `plugins/aios/commands/today.md` · `plugins/aios/commands/close-day.md` · `plugins/aios/commands/update.md`
+See: [CLAUDE.md](./CLAUDE.md) → § II. Rituals · `plugins/aios/commands/today.md` · `plugins/aios/commands/close-session.md` · `plugins/aios/commands/close-day.md` · `plugins/aios/commands/update.md`
 
 ---
 

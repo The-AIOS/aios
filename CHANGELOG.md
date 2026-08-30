@@ -74,6 +74,17 @@ Everything here was found the same way: a real macOS test account installed the 
 - **Answer the first question without committing to it forever.** The session-name question led with a terminal shortcut and "60+ keystrokes", then demoted the naming as *"the bonus, not the point"*. For someone meeting the system on question one that is backwards: the naming **is** the point, the shortcut is the part an App operator may never use, and nothing said the choice could be revisited. It now says plainly that this is the name of the assistant they will work with daily and that Settings can change it later.
 - **Open `CHEATSHEET.md` without being handed a terminal.** §1 opened with `cd ~/aios && claude` for a reader who most likely just installed the App and has never typed `cd`. It now branches by which door you came through, and says up front that most of the file is optional if you use the App.
 
+### `CHEATSHEET.md` gains a section for the surface most operators actually use
+
+> **What this delivers.** The daily-loop table listed `/today`, `/close-day` and `/aios:update` — and **omitted `/close-session`**, the one ritual that runs several times a day and the one that feeds the evening capture. It then described doing that ritual by hand: *"at session end, tell Claude to commit and push the vault."* The App shows all three on its Daily card; the cheatsheet showed two and a chore.
+
+**What you can now do:**
+- **See the whole daily loop.** `/close-session` is in the table, positioned where it belongs — between the morning plan and the evening close — with what it captures and why `/close-day` is reconstructing your day without it.
+- **Find your surface in the first section.** A new **§0** covers the App: the three ways to start something (**Ask AIOS** / **Launch assistant** / **Resume**) and what each is underneath; **sessions vs terminals** — a session is named, joins Running, resumes, and can be closed, while a terminal is anonymous and captures nothing; how to tell a daily note was written (the calendar mark, and where the file lands); and what each panel card answers.
+- **Trust it not to go stale.** §0 is deliberately concept-level. The App ships on its own release cycle, so a table of button labels in canonical would drift silently — the same failure this file has already had. What is stable is what the surfaces *are*.
+
+**Action required — none.**
+
 ### Connectors are named for what they are
 
 **What you can now do:**
