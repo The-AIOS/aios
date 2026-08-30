@@ -85,6 +85,22 @@ Everything here was found the same way: a real macOS test account installed the 
 
 **Action required — none.**
 
+### The front page and the cheatsheet stop assuming you own a terminal
+
+> **What this delivers.** An audit of all three operator-facing docs against the 25 commands that actually exist. `TOOLS.md` was complete and unchanged. The other two had the same shape of gap: written when a terminal was the only door.
+>
+> `README.md` — the page a prospective operator reads first — contained **zero** mentions of the App, a download, a release, Glass, an editor or a panel. Its install instruction opened *"Open any terminal with Claude Code installed"*. The one App reference in the whole file was a parenthetical inside a Stage-2 sentence.
+
+**What you can now do:**
+- **Pick a door on the front page.** README now opens the install with both paths — the App for macOS/Windows/Linux with a link to releases, or a terminal if you already live in one — and says plainly that either lands you in the same conversation and the same vault.
+- **Find the rhythm above daily.** `CHEATSHEET` covered the daily loop and then stopped, so `/aios:7plan` and `/aios:compact` had no home and nothing signalled that a weekly, bi-weekly or monthly cadence exists. A new **§2.5** carries all six with what each is *for* — and says outright that skipping one costs you nothing that day, because they are the difference between a vault that stores and one that compounds.
+- **Take the tour you were promised.** The interview ends by saying the full tour stays available; §2.5 now tells you how to take it from either surface, and names `/aios:cold-start-interview` as what runs — depth half only, identity not re-asked.
+- **Know what this file is.** The cheatsheet's subset contract was stated 300 lines in. It is now in the opening: this is the by-rhythm subset, `TOOLS.md` is the complete menu, look there before assuming something does not exist.
+
+**Action required — none.**
+
+*Method note, because it is reusable: this pass was run as a **coverage audit**, not a read-through — enumerate the commands that exist, check each against each doc, then check the reverse direction for references to commands that do not. The reverse pass came back clean. The forward pass is what surfaced `/close-session` missing from the daily loop and the two homeless cadence commands; no amount of re-reading had caught them.*
+
 ### Connectors are named for what they are
 
 **What you can now do:**

@@ -2,6 +2,8 @@
 
 > Quick-reference for new AIOS users. Scan to find what you need; click through to the deeper doc when you want context.
 >
+> **This is a subset, on purpose.** It carries the commands you reach for by rhythm — daily, weekly, when something happens. [TOOLS.md](./TOOLS.md) is the complete menu, and it lists every command, agent, skill and connector with its arguments. If something is missing here, look there before assuming it does not exist.
+>
 > **First-week instinct:** don't try to use every command on day 1. Master §1 + §2 (launch + daily loop). Add the rest when you feel the need for it.
 >
 > **If you use the AIOS App, most of this is optional.** The App runs these commands for you — this file is what you reach for when you want to know *what it just did*, or to do something the buttons don't cover yet. Nothing here is required reading to operate your AIOS.
@@ -51,7 +53,9 @@ Top to bottom, each card answers one question:
   answer to *"is that still going?"*
 - **Health** — the ongoing twin of Setup. Every row that can fail carries its own fix.
 - **Connectors** — the services your AIOS can reach, and the state of each. Anything that needs
-  more than a click opens a guided session rather than handing you a document.
+  more than a click opens a guided session rather than handing you a document. From a terminal the
+  same job is `/aios:mcps-setup`, which walks tokens, registration and verification one service at
+  a time.
 
 ### What you still do in a terminal
 
@@ -123,6 +127,34 @@ The minimum every-day rhythm. **`/today` is the orchestrator** — running it cl
 **At session end, run `/close-session`** — it captures the session *and* commits and pushes the vault, which is why it is in the table above rather than described here as a chore. This paragraph used to say "tell Claude to commit and push", which is the command's own job written out by hand: the table listed `/today`, `/close-day` and `/aios:update`, skipped the one ritual that runs several times a day, and then explained how to do it manually. If you are mid-session and just want the push, saying "commit and push" still works — the AI handles the syntax, you name the intent. **The vault is only as portable and safe as its last push.**
 
 See: [CLAUDE.md](./CLAUDE.md) → § II. Rituals · `plugins/aios/commands/today.md` · `plugins/aios/commands/close-session.md` · `plugins/aios/commands/close-day.md` · `plugins/aios/commands/update.md`
+
+---
+
+## §2.5 — Beyond daily (the wider rhythm)
+
+The daily loop is the heartbeat, but it is not the whole cadence — and this file used to stop at
+daily, which left `7plan` and `compact` with no home and no signal that a longer rhythm exists.
+
+| Cadence | Command | What it is for |
+|---|---|---|
+| **Weekly** | `/aios:7plan` | The week's strategy — what actually matters over the next seven days, not a list of tasks. |
+| **Weekly** | `/aios:drift` | The avoidance detector: what you keep carrying without doing, and why. |
+| **Weekly** | `/aios:weekly-learnings` | Consolidates the week's captures into something you would actually re-read. |
+| **Bi-weekly** | `/aios:graduate` | Promotes daily ideas that survived into permanent notes. |
+| **Bi-weekly** | `/aios:emerge` | Surfaces patterns you have not named yet — the ones implied across notes rather than written down. |
+| **Monthly** | `/aios:compact` | Digests and archives the previous month, and bounds the files that grow without limit. |
+
+**None of these are required, and skipping one costs you nothing that day.** They are the difference
+between a vault that stores and a vault that compounds — which is why they are worth knowing exist,
+even in the weeks you do not run them.
+
+**Want the full tour of what you have?** The setup interview offers it at the end and promises it
+stays available — that promise is real: say **"show me the full tour"** in any session, or press
+**Show me the full tour** in the App when setup is complete. Either one runs
+`/aios:cold-start-interview`, which detects that your Core is already done and runs the depth half
+only — your identity and context are not re-asked.
+
+See: [CLAUDE.md](./CLAUDE.md) → § V. Vault Commands for the full cadence · [TOOLS.md](./TOOLS.md) for every command with its arguments.
 
 ---
 
