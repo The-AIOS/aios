@@ -21,6 +21,9 @@ if [ "$1" = "--list" ]; then
   echo "Bundled MCPs in $SCRIPT_DIR:"
   for d in "$SCRIPT_DIR"/*-mcp; do [ -d "$d" ] && echo "  $(basename "$d")"; done
   echo ""
+  echo "Either spelling works — the folder name above, or the connector id"
+  echo "without the -mcp suffix (e.g. nano-banana-mcp OR nano-banana)."
+  echo ""
   echo "Install one:  bash mcps/setup.sh <name>"
   echo "Install all:  bash mcps/setup.sh"
   exit 0
@@ -29,11 +32,24 @@ fi
 # No arguments → everything, exactly as before. Arguments → only those, so a later
 # "I do want Slack after all" is one command instead of a ten-MCP reinstall.
 WANTED="$*"
+# Every caller below passes a FOLDER name (`nano-banana-mcp`), but the name an operator — or a
+# tool reading `connector.json` — actually has is the connector ID (`nano-banana`). The AIOS App
+# passed the id, nothing matched, and the script still reported success (see the MATCHED guard
+# below). Accept BOTH spellings rather than making every caller remember which one this file wants.
 want() {
   [ -z "$WANTED" ] && return 0
-  case " $WANTED " in *" $1 "*) return 0 ;; esac
+  _bare="${1%-mcp}"
+  case " $WANTED " in
+    *" $1 "*)      MATCHED=1; return 0 ;;   # folder name:  nano-banana-mcp
+    *" $_bare "*)  MATCHED=1; return 0 ;;   # connector id: nano-banana
+  esac
   return 1
 }
+
+# Did any requested name match a real MCP? Without this the script's closing line reports success
+# unconditionally — it printed "All MCPs installed" after matching nothing and doing no work, on a
+# real first install. A success message that cannot fail is not a success message.
+MATCHED=0
 
 if [ -n "$WANTED" ]; then echo "Setting up selected MCPs in $SCRIPT_DIR: $WANTED"; else echo "Setting up ALL bundled MCPs in $SCRIPT_DIR..."; fi
 echo ""
@@ -208,12 +224,21 @@ if want stitch-mcp && [ -d "$SCRIPT_DIR/stitch-mcp" ]; then
     echo "  ⚠ npx not found — install Node.js first"
   else
     npx -y @_davideast/stitch-mcp --version >/dev/null 2>&1 \
-      && echo "  ✓ ready (invoked via npx @_davideast/stitch-mcp proxy at runtime; requires STITCH_API_KEY — see README)" \
+      && echo "  ✓ ready (invoked via npx @_davideast/stitch-mcp proxy at runtime; requires Google Cloud OAuth login — see README)" \
       || echo "  ✓ ready (will install on first invocation)"
   fi
 fi
 
 echo ""
+if [ -n "$WANTED" ] && [ "$MATCHED" = "0" ]; then
+  echo ""
+  echo "✗ Nothing matched: $WANTED"
+  echo "  No MCP by that name is bundled here, so NOTHING was installed."
+  echo "  Run \`bash mcps/setup.sh --list\` to see the real names (either the folder"
+  echo "  name like \`nano-banana-mcp\` or the connector id like \`nano-banana\` works)."
+  exit 1
+fi
+
 echo "All MCPs installed. Recommended: ask Claude to run \`/mcps-setup\` — it walks"
 echo "you through tokens + register + verify for each MCP in a guided flow."
 echo ""
@@ -226,7 +251,7 @@ echo "  • github           : export GITHUB_TOKEN (Personal Access Token)"
 echo "  • atlassian        : export ATLASSIAN_URL / ATLASSIAN_USERNAME / ATLASSIAN_API_TOKEN"
 echo "  • nano-banana      : export GEMINI_API_KEY (requires Cloud Billing enabled — ~\$0.04/image)"
 echo "  • spotify-dj       : export SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET (Developer app)"
-echo "  • stitch           : export STITCH_API_KEY (create at stitch.withgoogle.com)"
+echo "  • stitch           : npx -y @_davideast/stitch-mcp init (browser OAuth sign-in; needs gcloud)"
 echo "  • playwright       : per-service browser-state login, see playwright-mcp/README.md"
 echo ""
 echo "Register each with: claude mcp add {name} -- {command}  (see each README)"

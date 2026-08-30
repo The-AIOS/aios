@@ -195,6 +195,13 @@ If the [30-second version at the top](#get-started-the-30-second-version) was en
 
 **You type one sentence. Your Claude session does the rest and asks you when it needs something from you.** There is no second command to remember — `SETUP.md` hands off to the interview itself, so what looks like two stages below is one continuous conversation from your side.
 
+**First, pick a door.** Two exist, and this page used to describe only one:
+
+- **The AIOS App** — a desktop app for macOS, Windows and Linux. Four steps, each verified, nothing to type. If you would rather not open a terminal, start here: [releases](https://github.com/The-AIOS/aios-app/releases).
+- **A terminal** — if you already live in one, or you want to watch every command. The rest of this section is that path.
+
+Either way you land in the same conversation and the same vault; the App simply runs Stage 1's commands for you, in a terminal you can watch.
+
 **Stage 1 — the install (~5 min, Claude working, you mostly watching).** Open any terminal with Claude Code installed and say: *"Set up my AI-OS from `https://github.com/The-AIOS/aios`"*. Claude clones the framework, registers the one connector the vault itself needs, and wires up your tools. It does not ask you which services you use — that comes later, in Step 2, after you have seen the system run.
 
 **Stage 2 — the conversation (~5 min, or as long as you want).** You do not invoke this; Stage 1 ends by handing you straight into it. It opens by offering you a short start — who you are, how you work, what it may do without asking — and then runs your first `/aios:today` so you watch it work on your real day. Only then does it offer connectors, one service at a time. Prefer the whole tour up front (agent team, companies, plugins, the desktop app)? Say so and it runs that instead; nothing is withheld either way, and the tour stays one sentence away a month from now.
