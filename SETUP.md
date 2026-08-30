@@ -43,6 +43,21 @@ Operator said *"set up my AI-OS from this repo"* or similar. You're the executor
    ```
    > **Why this is not optional.** `.aios-update` is what tells the operator the framework has moved on. Until now it was only ever written by `/aios:update` — which a fresh setup never runs — so every newcomer finished setup with the update surface reporting *"no config"* / *"not tracked yet"*, `/today` unable to notice a canonical release, and no way to know they were behind except by being told. A brand-new install is exactly the moment we know the hash for certain, so record it then. `repo=` is the FRAMEWORK upstream, deliberately not the operator's own vault remote: the question it answers is "has the framework moved", not "have I pushed". Confirm afterwards with `cat ~/aios/.aios-update` — the hash must be a real 40-character commit, since a placeholder reads as "you are behind" forever.
 5. **Register the AIOS plugin** — `claude plugin marketplace add ~/aios && claude plugin install aios@the-aios`. This was missing from this list, and `/aios:today` cannot exist without it: the rituals ARE the plugin's commands, so a setup that skips this ends with an operator whose first instruction fails.
+   > ⚠️ **The commands you just installed are NOT live in this session, and step 10 depends on them.**
+   > A plugin's commands are registered at session START, so the session that installs the plugin is
+   > the one session in which `/aios:cold-start-interview` does not exist. Observed on a real first
+   > install: `Skill(aios:cold-start-interview)` → **`Error: Unknown skill`**, at the exact moment
+   > setup hands over to the interview.
+   >
+   > **Do not restart to fix this** — a restart at the handover point costs the operator the session
+   > they have been talking to, and the trust that came with it. Instead do what that setup session
+   > worked out for itself: **read the command file and follow it directly** —
+   > `plugins/aios/commands/cold-start-interview.md`. Same instructions, same order, no restart. The
+   > commands become live on their own the next time a session starts, which is every session after
+   > this one, so nothing needs fixing afterwards.
+   >
+   > Recorded here because the recovery was improvised. It was the right move, and improvising it
+   > again on every first install is how it eventually gets improvised wrong.
 6. **Do NOT invoke `/aios:mcps-setup` here.** This step used to, and it is the single biggest source of
    first-run friction on the terminal path: it fires the connector questions — *"Slack workspace? Gmail?
    GitHub username?"* — **four steps before the operator has seen anything work.** A newcomer asked which

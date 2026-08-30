@@ -4,12 +4,15 @@ Google Stitch 2.0's MCP bridge. Design screens from natural language in Stitch, 
 
 ## Auth
 
-Stitch MCP is a proxy to `stitch.googleapis.com/mcp`. It requires an API key from Stitch.
+Stitch MCP is a proxy to `stitch.googleapis.com/mcp`. It authenticates with a
+**Google Cloud OAuth login** — an interactive browser sign-in, handled by `gcloud`.
+There is **no API key and no `STITCH_API_KEY` env var**; the CLI describes itself as
+the "Stitch MCP OAuth setup assistant" and exposes no key flag on any subcommand.
 
-1. Open https://stitch.withgoogle.com/ → profile → **API keys** → create key
-2. Add to `~/.zshrc`:
+1. Install the Google Cloud CLI if missing: `brew install --cask google-cloud-sdk`
+2. Run the interactive setup (opens a browser — must be run by a human, not an agent):
    ```bash
-   export STITCH_API_KEY="sk_stitch_..."
+   npx -y @_davideast/stitch-mcp init
    ```
 3. `source ~/.zshrc` (or open a new shell)
 

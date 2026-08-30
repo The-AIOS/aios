@@ -1,6 +1,6 @@
 {
   "id": "playwright",
-  "service": "Browser automation",
+  "service": "Playwright",
   "value": "Drives a real browser for publishing, testing and screenshots — invoked directly as Python, not through a connector.",
   "infrastructure": true,
   "registers": false,

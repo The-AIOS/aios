@@ -1,6 +1,6 @@
 {
   "id": "nano-banana",
-  "service": "Image generation",
+  "service": "Nano Banana",
   "value": "Generate and edit images from a description — covers and diagrams without a design tool.",
   "infrastructure": false,
   "connect": "needs-key",

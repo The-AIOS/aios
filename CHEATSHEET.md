@@ -3,12 +3,30 @@
 > Quick-reference for new AIOS users. Scan to find what you need; click through to the deeper doc when you want context.
 >
 > **First-week instinct:** don't try to use every command on day 1. Master §1 + §2 (launch + daily loop). Add the rest when you feel the need for it.
+>
+> **If you use the AIOS App, most of this is optional.** The App runs these commands for you — this file is what you reach for when you want to know *what it just did*, or to do something the buttons don't cover yet. Nothing here is required reading to operate your AIOS.
 
 ---
 
-## §1 — Start here (operating Claude in the vault)
+## §1 — Start here (launching a session)
 
-How to launch, name, and resume sessions.
+**First: which door did you come through?** This section is written for a terminal, and the AIOS
+now has two front doors. Take the row that matches you and skip the rest — reading a table of shell
+commands is not a prerequisite for using this.
+
+| If you use… | Launching a session is… | The rest of §1 |
+|---|---|---|
+| **The AIOS App** | the **Launch assistant** button, or any card in the pulse | Optional. The App runs these commands for you, in a terminal you can watch. Come back when you want a *second* named worker at the same time. |
+| **A code editor + AIOS Glass** | the panel's session controls | Same — the panel wraps the same commands. |
+| **A terminal** | the table below | All of it applies. |
+
+> **Why say this at all.** Every row below is a shell command, and the operator most likely to open
+> this file is the one who just installed the App and has never typed `cd`. Opening their
+> quick-reference with `cd ~/aios && claude` teaches them the AIOS is a terminal product that
+> happens to have an app — which is backwards, and is the same friction `AI-122` removed from the
+> setup flow. The commands are not going anywhere; they are just no longer the first thing.
+
+How to launch, name, and resume sessions **from a terminal**.
 
 | You want to... | Command | Notes |
 |---|---|---|

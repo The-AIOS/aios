@@ -1076,6 +1076,18 @@ jobs:
         # claiming it has one.
         run: bash tests/connector-manifests.test.sh
 
+      - name: mcps/setup.sh selects by either name, and cannot report a false success
+        # Both halves were found on a real first install, and they compound. `want()`
+        # matched only FOLDER names (nano-banana-mcp) while every caller holds the
+        # connector id from connector.json (nano-banana) — so the AIOS App's install
+        # button matched nothing. And the closing line printed "All MCPs installed"
+        # UNCONDITIONALLY, so having done no work the script reported success and the
+        # operator watched a terminal claim it had installed something it never touched.
+        # The second is why the first stayed invisible: a filter that can miss plus a
+        # report that cannot fail is indistinguishable from a working install
+        # (antifragile #88). The suite proves the guard by mutation, not by reading.
+        run: bash tests/mcps-setup-selection.test.sh
+
       - name: an agent's declared skills exist, and the registrar checks its own premise
         # Issue #49, item 4. The root failure was not the exclusion in
         # skills/setup.sh — it was that "an agent DECLARES a skill" and "that skill

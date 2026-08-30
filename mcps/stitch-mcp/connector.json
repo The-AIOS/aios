@@ -3,7 +3,7 @@
   "service": "Stitch (UI design)",
   "value": "Generate interface designs from a description — screens and design systems without starting in a design tool.",
   "infrastructure": false,
-  "connect": "one-click",
+  "connect": "guided",
   "requires": [],
   "register": {
     "transport": "stdio",
