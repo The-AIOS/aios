@@ -275,19 +275,40 @@ function spawn {
         #   when the bootstrap CONTAINS an instruction. With an explicit task it always did;
         #   with the default it never did, and that is the path a first-time operator takes.
         [Parameter(Position=1)] [string] $Task = 'Run the CLAUDE.md Session Start Ritual now: load my declared + observed context, match your session name to your role, and greet me in character before awaiting my task.',
-        # -Tier mechanical|judgment. mechanical routes to the SECOND-BEST model
-        # (cheaper; "always aim second-best" auto-tracks the lineup). judgment/none
-        # keeps the frontier default (Invoke-ClaudeWithRespawn's CLAUDE_MODEL fallback).
-        # ValidateSet rejects unknown tiers for free.
-        [ValidateSet('mechanical','judgment')] [string] $Tier,
+        # -Tier frontier|judgment|scale|fast (plus the legacy 'mechanical'). Named for
+        # the SHAPE of the work, not for a model, so the names outlive the lineup:
+        #   frontier  hardest -- long-running autonomous agents, code migration,
+        #             multi-step reasoning, full autonomy
+        #   judgment  reasoning-intensive: legal, financial, research, production
+        #             coding. THE DEFAULT, because under-powering a reasoning task
+        #             fails SILENTLY -- you get an answer, it is merely worse.
+        #   scale     general-purpose work at volume
+        #   fast      high-frequency / latency-sensitive; sub-agents in orchestration
+        # ValidateSet rejects unknown tiers for free. Keep it in lockstep with the
+        # .sh case block and with the bare-word guard below.
+        [ValidateSet('frontier','judgment','scale','fast','mechanical')] [string] $Tier,
         # -Model <id> overrides -Tier; pins an explicit/specialist model (e.g.
         # claude-fable-5) per-spawn with NO global env mutation (set for the call
         # only, then restored below).
         [string] $Model
     )
 
-    # Tier -> model id. $null = no override -> frontier default. Second-best = Sonnet 4.6.
-    $spawnModel = if ($Tier -eq 'mechanical') { 'claude-sonnet-4-6' } else { $null }
+    # Tier -> model id. $null = no override -> frontier default (judgment). Every id
+    # verified against a live run: an unrecognised id does NOT error into the void,
+    # it prints [claude-code:unrecognized_model] and bills zero tokens, so "the spawn
+    # worked" is not evidence on its own.
+    #
+    # 'mechanical' PREDATES this ladder and keeps resolving to Sonnet 4.6,
+    # byte-identical -- it is live in operators' habits and scripts, and changing what
+    # an existing flag resolves to would change the cost and behaviour of work already
+    # running. 'scale' is its successor for new work.
+    $spawnModel = switch ($Tier) {
+        'frontier'   { 'claude-fable-5-1' }
+        'scale'      { 'claude-sonnet-5' }
+        'fast'       { 'claude-haiku-4-5-20251001' }
+        'mechanical' { 'claude-sonnet-4-6' }   # legacy alias -- do not remap
+        default      { $null }                 # judgment / unset -> frontier default
+    }
     # -Model overrides -Tier: pin an explicit model outside the tier ladder.
     if ($Model) { $spawnModel = $Model }
 
@@ -296,7 +317,7 @@ function spawn {
         $Name = Get-SpawnAdjAnimal
         Write-Host "[spawn] No name given -- using handle: $Name"
         Write-Host "[spawn] Tip: name a specific agent for matched expertise (e.g. ``spawn accountant``)."
-        Write-Host "[spawn] Tip: add ``-Tier mechanical`` for cheap/mechanical work (ingests, sweeps); omit it for judgment work."
+        Write-Host "[spawn] Tip: -Tier fast (high-frequency) | scale (volume) | judgment (default: reasoning) | frontier (hardest, long-running autonomy)."
         Write-Host "[spawn] Tip: add ``-Model <id>`` to pin a specific model (e.g. ``-Model claude-fable-5``) -- no global env hack."
         Write-Host "[spawn] See agents/_index.md for the full list."
         Write-Host "[spawn] Opening session: $Name"
@@ -311,7 +332,9 @@ function spawn {
         Write-Host "[spawn] Likely a STALE shell running an old spawn(). Run '. `$PROFILE' (or open a fresh shell), then re-spawn." -ForegroundColor Yellow
         return
     }
-    if ($Task -in 'mechanical','judgment') {
+    # Every tier word must be listed. A tier this list does not know is a tier the
+    # guard goes silent on -- the exact failure it exists to surface.
+    if ($Task -in 'mechanical','judgment','frontier','scale','fast') {
         Write-Host "[spawn] task is the bare word '$Task' -- a stale shell likely dropped your real task ('$Task' is a -Tier value, not a task)." -ForegroundColor Yellow
         Write-Host "[spawn] Run '. `$PROFILE' (or open a fresh shell), then re-spawn." -ForegroundColor Yellow
         return

@@ -1078,6 +1078,14 @@ jobs:
         # acceptable, and it was silent because a hand-typed list did not mention it.
         run: bash tests/secret-scan.test.sh
 
+      - name: the model-routing ladder agrees across both wrappers
+        # The tier -> model map is implemented TWICE (a bash case, a PowerShell switch)
+        # and nothing but this suite connects them. A fix applied to one and not the
+        # other is invisible on the author's own platform, which makes it the most
+        # likely defect in the feature. The suite parses both implementations and
+        # compares the maps rather than grepping for presence, so it can actually fail.
+        run: bash tests/model-routing.test.sh
+
       - name: insights route to the right observed file
         # Same finding, same cause: committed, never invoked.
         run: bash tests/route-insight.test.sh

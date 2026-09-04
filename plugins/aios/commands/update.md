@@ -33,7 +33,7 @@ When the upstream framework has new commits. `/today` and `/close-day` auto-dete
 
 Every file below is overwritten byte-identical to upstream. If the operator customized one, their version is backed up first (see § Backup-on-divergence below).
 
-- **Root docs:** `README.md`, `START-HERE.md`, `SETUP.md`, `CHEATSHEET.md`, `TOOLS.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `AGENTS.md`, `EXTENSION-MAP.md`, `LICENSE-AUDIT.md`, `LICENSE`, `NOTICE`, `FORTRESS.md`, `.gitignore` — **and, generically, every other `*.md` at the repo root.** This enumeration is the fast path; Step 6.5's reconcile diffs **all** root `*.md` against the vault, so a newly-added root doc ships (and self-heals a stale list) even before it's named here. (`validate.yml` also fails the build if a root doc is missing from this list — belt + suspenders.)
+- **Root docs:** `README.md`, `START-HERE.md`, `SETUP.md`, `CHEATSHEET.md`, `TOOLS.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `AGENTS.md`, `EXTENSION-MAP.md`, `LICENSE-AUDIT.md`, `LICENSE`, `NOTICE`, `FORTRESS.md`, `MODEL-ROUTING.md`, `.gitignore` — **and, generically, every other `*.md` at the repo root.** This enumeration is the fast path; Step 6.5's reconcile diffs **all** root `*.md` against the vault, so a newly-added root doc ships (and self-heals a stale list) even before it's named here. (`validate.yml` also fails the build if a root doc is missing from this list — belt + suspenders.)
 - **CLAUDE.md** (vault-level instructions — moved here from Tier 2 on 2026-05-25 per the "infra is infra" principle)
 - **Templates:** `templates/aios/` (bundled templates, e.g. `templates/aios/about_me-template.md`) — never `templates/custom/` or `templates/<company>/`. (Moved from the layer root into `templates/aios/` to match the `{layer}/aios/` + `custom/` + `<company>/` convention used by agents, skills, and plugins.)
 - **Skills:** `skills/aios/`, `skills/anthropic/`, `skills/superpowers/` (never `skills/custom/`)
@@ -315,7 +315,7 @@ done
 git -C "$CLONE" diff {stored_hash}..HEAD --name-only -- \
   "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
   "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "AGENTS.md" "EXTENSION-MAP.md" "LICENSE-AUDIT.md" \
-  "LICENSE" "NOTICE" "FORTRESS.md" ".gitignore" \
+  "LICENSE" "NOTICE" "FORTRESS.md" "MODEL-ROUTING.md" ".gitignore" \
   "${LAYERS[@]}" "vault/.obsidian/" \
   ':(exclude)*/custom/**' ':(exclude)*/custom'
 ```

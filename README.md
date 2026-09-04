@@ -179,6 +179,7 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 ├── CHEATSHEET.md            ← Day-to-day operating index (launch/spawn, daily loop, capture/export, personalization)
 ├── TOOLS.md                 ← Full menu of every command, agent, skill, MCP, and standalone tool
 ├── FORTRESS.md              ← Advanced: two-machine architecture for 24/7 autonomous agents
+├── MODEL-ROUTING.md         ← Which model for which task · the non-Claude boundary
 ├── CHANGELOG.md             ← What changed in shared infra, when, and what to do (read by /aios:update)
 ├── AGENTS.md                ← Portable operating contract for non-Claude tools (Codex/Cursor/Aider)
 ├── EXTENSION-MAP.md         ← How to extend AIOS: bundled/custom/company model per infra type + how to add each

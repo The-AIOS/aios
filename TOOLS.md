@@ -259,7 +259,7 @@ Where everything lives:
 | Folder | What's inside | How it's used |
 |--------|--------------|---------------|
 | `agents/` | Task agents in 6 bundles (`aios/sales/` · `aios/strategy/` · `aios/finance-legal/` · `aios/engineering/` · `aios/communication/` · `aios/personal/`) + `agents/custom/` (operator) + `agents/{company}/` (company-distributed) | Spawned via `spawn {name}` or invoked via `/aios:agent {name}` |
-| `hooks/` | Pipeline scripts (`pipeline-executor.py`, `markitdown-convert.py`) + `claude-identity/` quota autopilot + event hooks (`inject-datetime`) | Called by commands, by `launchd` (autopilot), or via `python3` directly |
+| `hooks/` | Pipeline scripts (`pipeline-executor.py`, `markitdown-convert.py`, `openrouter.py`) + `claude-identity/` quota autopilot + event hooks (`inject-datetime`) | Called by commands, by `launchd` (autopilot), or via `python3` directly |
 | `mcps/` | Bundled MCP servers — Google Workspace, Slack, GitHub, Atlassian, NotebookLM, Playwright, Stitch, Nano Banana, PDF Generator, Spotify DJ | Auto-connected via `~/.claude/settings.json` after `/aios:mcps-setup` |
 | `plugins/` | Claude Code plugins — `plugins/aios/` (this framework) + `plugins/custom/<your-plugin>/` (operator) + `plugins/<company>/<plugin>/` (company-distributed) | Auto-loaded when enabled in `~/.claude/settings.json` |
 | `skills/` | Skills in 4 source folders — `aios/` · `anthropic/` · `superpowers/` · `custom/` | Auto-loaded by Claude Code at session start |
@@ -270,6 +270,24 @@ Where everything lives:
 ## Advanced — two-machine architecture
 
 If you want 24/7 autonomous agents — overnight shifts, scheduled cron agents, work continuing while you're away — AIOS ships a two-machine architecture pattern: a primary MacBook + an always-on Mac mini. Six defensive layers (network isolation, ecosystem lockdown, SSH hardening, permission gates, one-way data flow, recovery mechanisms).
+
+### Model routing — which model for which task
+
+Every session and every spawned worker runs on a Claude model, and on the same prompt the top and
+bottom of the ladder differ by roughly **22× in cost**. `spawn --tier frontier|judgment|scale|fast`
+picks a rung by the *shape* of the work (`judgment` is the default). `hooks/openrouter.py` calls a
+**non-Claude** model as a tool when you need a different family — a cheap text lane, or an
+**independent judge**, since a model cannot dock points for a bias it shares.
+
+```bash
+python3 ~/aios/hooks/openrouter.py --check                      # what is wired; makes no call
+python3 ~/aios/hooks/openrouter.py --prompt-file brief.md       # text in, text out
+spawn --tier fast transcriber "…"                               # cheap rung for high-frequency work
+```
+
+📘 **See [`MODEL-ROUTING.md`](./MODEL-ROUTING.md)** for the rung→model table, the containment
+boundary (a non-Claude model is *called by* a session and never *is* one — and why a model-router
+proxy is a no), the judge-independence rule, and how to verify a model id actually resolves.
 
 📘 **See [`FORTRESS.md`](./FORTRESS.md)** for the full setup — Claude reads it end-to-end and walks both machines through the configuration. Hard prerequisites: macOS on both, second machine on AC power with stable network.
 
