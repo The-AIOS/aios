@@ -237,6 +237,28 @@ def parse_sources():
     if "### Dev projects" in content:
         config["configured"].add("dev-projects")
 
+    # FIRST operator line wins for these identity fields, not the last one.
+    #
+    # These four are single-valued, but the scan below is a plain walk over every line
+    # with no notion of which block it is in — so before this guard the LAST match won.
+    # The template ships "### Google accounts" as a *Primary:* block followed by an
+    # optional second block, and operators routinely add a further one: a
+    # destination-only address, an old account, one explicitly annotated as not
+    # connected via MCP. Any of those that names its address as "- Google email: `…`"
+    # silently overwrote the primary that had already been read correctly.
+    #
+    # The consequence is invisible where it happens and misleading where it surfaces:
+    # every downstream credentials lookup builds its path from this value
+    # (GOOGLE_CREDS_DIR_PRIMARY / f"{email}.json"), so it resolves to a file that does
+    # not exist and /today reports Calendar and Tasks as "configured but credentials
+    # missing" — while the primary account's OAuth token is valid the whole time. The
+    # operator is sent to re-authenticate a connector that was never broken.
+    #
+    # First-wins rather than a block sentinel on purpose: keying on a literal label
+    # ("*Secondary:*") only covers the labels we thought to enumerate, and the second
+    # block is operator-written prose that can say anything. Ordering is the one thing
+    # the template does guarantee — the primary account is declared first.
+    _scalar_parsed = set()
     for line in content.split("\n"):
         for pattern, key in [
             (r'- Google Tasks list: `(.+?)`', "google_tasks_list"),
@@ -244,9 +266,12 @@ def parse_sources():
             (r'- Google email \(Personal\): `(.+?)`', "google_email_personal"),
             (r'- Timezone: `(.+?)`', "timezone"),
         ]:
+            if key in _scalar_parsed:
+                continue
             m = re.match(pattern, line)
             if m:
                 config[key] = m.group(1)
+                _scalar_parsed.add(key)
 
         # Parse channels to monitor
         m = re.match(r'- \*\*Channels to monitor:\*\* (.+)', line)
