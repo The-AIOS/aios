@@ -215,7 +215,7 @@ See [SETUP.md](./SETUP.md) for prerequisites + the canonical setup flow · [STAR
 
 ## What's inside
 
-Once set up, your vault comes with **24 commands, task agents across 6 bundles, bundled skills across 4 source folders, bundled MCPs, and standalone tools** — all accessible by describing what you need. See [TOOLS.md](./TOOLS.md) for the full menu.
+Once set up, your vault comes with **25 commands, task agents across 6 bundles, bundled skills across 4 source folders, bundled MCPs, and standalone tools** — all accessible by describing what you need. See [TOOLS.md](./TOOLS.md) for the full menu.
 
 The 10 bundled MCPs (Obsidian, Google Workspace, Slack, GitHub, Atlassian, NotebookLM, Playwright, Nano Banana, PDF Generator, Spotify DJ, Stitch) authenticate independently of your Anthropic OAuth grant, survive account switches, and live in the vault — policy: **local over remote**. See [`mcps/_index.md`](./mcps/_index.md) for the canonical list, auth requirements, and add-a-new-MCP pattern.
 
