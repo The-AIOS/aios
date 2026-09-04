@@ -293,7 +293,8 @@ _spawn_adj_animal() {
 }
 
 spawn() {
-  # --tier mechanical|judgment — optional, position-independent. `mechanical` routes
+  # --tier frontier|judgment|scale|fast — optional, position-independent (plus the
+  # legacy `mechanical`). See the map below for what each rung is for. `mechanical` routes
   # the spawned session to the SECOND-BEST model (cheaper; "always aim second-best"
   # so it auto-tracks as the model lineup evolves — no hard-coding the frontier).
   # `judgment` (or no flag) keeps the frontier default (_claude_with_respawn's
@@ -334,12 +335,40 @@ spawn() {
   local task="${2:-Run the CLAUDE.md Session Start Ritual now: load my declared + observed context, match your session name to your role, and greet me in character before awaiting my task.}"
 
   # Map tier → model id. Empty spawn_model = no override → _claude_with_respawn
-  # uses its frontier default. Second-best today = Sonnet 4.6.
+  # uses its frontier default (judgment). Four rungs, named for the SHAPE of the
+  # work rather than for a model, so the names outlive the lineup:
+  #
+  #   frontier  hardest problems — long-running autonomous agents, code
+  #             migration, multi-step reasoning, full autonomy
+  #   judgment  reasoning-intensive: legal, financial, research, production
+  #             coding  (THE DEFAULT — right when nobody thought about it,
+  #             because under-powering a reasoning task fails SILENTLY: you get
+  #             an answer, it is merely worse, and nothing tells you)
+  #   scale     general-purpose work at volume
+  #   fast      high-frequency / latency-sensitive; sub-agents in orchestration
+  #
+  # Every id below was verified against a live run, not assumed. An id Claude
+  # Code does not recognise does NOT error into the void — it prints
+  # [claude-code:unrecognized_model] and then bills zero tokens, so "the spawn
+  # worked" is not evidence. The check that can fail:
+  #   claude -p --model "$ID" --output-format json 'ok' 2>&1 | head -c 200
+  # (`modelUsage` in that JSON echoes the id you ASKED for, so a bogus id looks
+  # confirmed there — cost and token counts are the discriminating signal.)
+  #
+  # `mechanical` PREDATES this ladder and keeps resolving to Sonnet 4.6,
+  # byte-identical. It is live in operators' habits, routines and scripts, and
+  # changing what an existing flag resolves to would change the cost and the
+  # behaviour of work already running. `scale` is its successor for new work;
+  # `mechanical` keeps working. (Re-verified: claude-sonnet-4-6 is still a real
+  # id, so mechanical has never been silently falling back to the frontier.)
   local spawn_model=""
   case "$tier" in
-    mechanical)  spawn_model='claude-sonnet-4-6' ;;
+    frontier)    spawn_model='claude-fable-5-1' ;;
     judgment|"") spawn_model="" ;;
-    *) echo "⚠️  spawn: unknown --tier '$tier' (use: mechanical | judgment)" >&2; return 1 ;;
+    scale)       spawn_model='claude-sonnet-5' ;;
+    fast)        spawn_model='claude-haiku-4-5-20251001' ;;
+    mechanical)  spawn_model='claude-sonnet-4-6' ;;   # legacy alias — do not remap
+    *) echo "⚠️  spawn: unknown --tier '$tier' (use: frontier | judgment | scale | fast — 'mechanical' also still accepted)" >&2; return 1 ;;
   esac
   # --model <id> pins an explicit model (overrides --tier) — for a temporary or
   # specialist model outside the tier ladder (e.g. --model claude-fable-5). It sets
@@ -353,7 +382,7 @@ spawn() {
     name=$(_spawn_adj_animal)
     echo "[spawn] No name given — using handle: $name"
     echo "[spawn] Tip: name a specific agent for matched expertise (e.g. \`spawn accountant\`)."
-    echo "[spawn] Tip: add \`--tier mechanical\` for cheap/mechanical work (ingests, sweeps); omit it for judgment work."
+    echo "[spawn] Tip: --tier fast (high-frequency) | scale (volume) | judgment (default: reasoning) | frontier (hardest, long-running autonomy)."
     echo "[spawn] Tip: add \`--model <id>\` to pin a specific model (e.g. \`--model claude-fable-5\`) — no global env hack."
     echo "[spawn] See agents/_index.md for the full list."
     echo "[spawn] Opening session: $name"
@@ -374,7 +403,16 @@ spawn() {
     echo "    then re-spawn." >&2
     return 1
   fi
-  if [ "$task" = "mechanical" ] || [ "$task" = "judgment" ]; then
+  # Every tier word must be listed here. The guard's whole job is to catch a
+  # stale parent shell binding the tier VALUE as the task; a tier this list
+  # does not know is a tier the guard goes silent on — which is the exact
+  # failure it was written to surface.
+  local _bare_tier=0
+  case "$task" in
+    mechanical|judgment|frontier|scale|fast) _bare_tier=1 ;;
+    *) _bare_tier=0 ;;
+  esac
+  if [ "$_bare_tier" = "1" ]; then
     echo "⚠️  spawn: task is the bare word '$task' — a stale parent shell likely" >&2
     echo "    dropped your real task ('$task' is a --tier value, not a task)." >&2
     echo "    Run 'source ~/.zshrc' (or open a fresh terminal), then re-spawn." >&2

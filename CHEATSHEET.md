@@ -318,9 +318,10 @@ Rotation order = list order. `claude-switch` (no args) walks the list. `claude-s
 | Quota warning while typing | `claude-switch <next-account-email>` immediately, before auto-switch fires |
 | A command edit isn't taking effect | The runtime cache might be stale — see `/housekeeping` Bucket 11 (plugin cache verification) |
 | Lost track of where something lives | This file is the index. `TOOLS.md` is the deeper catalog. |
+| Unsure which model should do a task | See [`MODEL-ROUTING.md`](./MODEL-ROUTING.md) — the four `--tier` rungs, the non-Claude boundary, judge independence |
 | Want 24/7 agents on a Mac mini | See [`FORTRESS.md`](./FORTRESS.md) — two-machine architecture, network isolation, SSH hardening, recovery |
 | Truly lost / fresh-clone confused | `/agent onboarding-aios` — Claude wears the orientation hat, walks you through the full doc map |
 
 ---
 
-*This file is the operating index. The deeper docs (`README.md`, `SETUP.md`, `START-HERE.md`, `CLAUDE.md`, `TOOLS.md`, `FORTRESS.md`, `INTENT.md`, `USER.md`) carry the substance — and the full **[Operating Manual](https://www.the-aios.com/#manual)** (www.the-aios.com/#manual) gathers the whole design language + behavioral contract into one readable document (online or PDF). Use this file to find the right surface fast. When in doubt, spawn `onboarding-aios` — it knows the whole map.*
+*This file is the operating index. The deeper docs (`README.md`, `SETUP.md`, `START-HERE.md`, `CLAUDE.md`, `TOOLS.md`, `FORTRESS.md`, `MODEL-ROUTING.md`, `INTENT.md`, `USER.md`) carry the substance — and the full **[Operating Manual](https://www.the-aios.com/#manual)** (www.the-aios.com/#manual) gathers the whole design language + behavioral contract into one readable document (online or PDF). Use this file to find the right surface fast. When in doubt, spawn `onboarding-aios` — it knows the whole map.*

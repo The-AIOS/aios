@@ -9,7 +9,7 @@ allowed-tools: mcp__obsidian__*, Read, Grep, Glob, Bash
 
 # /housekeeping — Vault Housekeeping
 
-Periodic care of the vault as it grows. Produces a review packet across 23 buckets — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification, file placement drift, agent-output gate health, truth-surface drift — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
+Periodic care of the vault as it grows. Produces a review packet across **every bucket enumerated in Phase 1** — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification, file placement drift, agent-output gate health, truth-surface drift, memory-pressure channeling, spawned-output placement, antifragile fix-verification, same-family judge — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
 
 **When to run:** monthly as a rhythm, or whenever the vault feels heavy (lots of carries, too many active projects, stale snapshots). `/today` will suggest it when triggers fire.
 
@@ -33,7 +33,7 @@ Check if `00 - notes/logs/command-logs/housekeeping-*.md` exists. If not, this i
 
 ### Phase 1 — Scan (build the proposal packet)
 
-Gather evidence across **all 23 buckets — no skipping.** "Deferred to tooling" is banned; the scanning IS the tooling. If a bucket surfaces low signal, state that explicitly with evidence ("scanned N items, 0 merge candidates found") — don't hand-wave.
+Gather evidence across **every bucket enumerated below — no skipping, and the count is whatever Phase 1 actually contains.** (This line used to name a number. It said *23* while buckets 24-27 were shipped and live, which made three working buckets silently skippable by anyone who read the instruction literally — a restated constant is a second implementation, and this is the copy a session obeys.) "Deferred to tooling" is banned; the scanning IS the tooling. If a bucket surfaces low signal, state that explicitly with evidence ("scanned N items, 0 merge candidates found") — don't hand-wave.
 
 > #### ⚖️ The measurement contract — governs EVERY bucket, not just Bucket 28
 >
@@ -741,6 +741,29 @@ Spawned workers can't see the vault's placement conventions — output drifts, o
 **Don't propose:** any edit to `antifragile.md` (this bucket has no write path — see the contract above) · re-wording an entry to match reality (*their original phrasing IS the evidence*, per Bucket 12) · marking an entry superseded on the strength of a failed probe alone (that's Bucket 12's operation, and it needs the operator's cause-determination first) · findings for judgment-phrased fixes · findings for artifacts outside this vault's visibility.
 
 **Why this bucket exists:** the file's whole value is that its lessons are *load-bearing* — a fix that silently never shipped converts a lesson into folklore while the entry still reads as closed. It is deliberately **report-only** because the failure mode it hunts (a confident claim nobody re-verified) is the same one an over-eager auto-fixer would introduce: the safe move is to surface the doubt and let the operator resolve it. Sibling to Bucket 22 (agent-output gate health), which asks the same question of *tests* rather than of *lessons*.
+
+#### Bucket 27: Same-family judge (NEW — REPORT-ONLY, never edits)
+
+**The gap.** A model cannot dock points for a systematic tendency it shares. So any place a **Claude model scores Claude-authored prose** is a check that cannot fail in one specific direction — the house style common to author and judge is invisible **by construction**, and nothing about the resulting score looks wrong from the inside. This is the *instrument sharing the bias of the thing it measures*, in its quality-scoring form; its better-known sibling is a check that asserts success from its **position in a pipeline** rather than from anything about the artifact.
+
+It runs for months without complaining, which is why it needs a periodic sweep rather than a one-time fix. Reported by an operator who found it in their own verify layer after two months of clean runs — and the same mistake sits in public: a leading creative-writing leaderboard uses a Claude model as its judge and ranks a Claude model first, while an independent benchmark judged by professional human writers on thousands of blind pairwise comparisons produces a different winner. Same question, different ruler, different answer.
+
+> **READ-ONLY.** This bucket never rewrites a scorer. Its output is rows in the Phase-2 packet, because the fix is a design decision with a cost (crossing to another model family sends content off-machine — see [`MODEL-ROUTING.md`](../../../MODEL-ROUTING.md)) and that is the operator's call, not housekeeping's.
+
+**How to check (cheap, mechanical, bounded).** Grep the operator's own surfaces — `hooks/custom/`, `skills/custom/`, `agents/custom/`, `plugins/custom/`, and any routine files — for a Claude invocation (`claude -p`, `claude --print`, the Agent tool, an Anthropic SDK call) that sits within ~15 lines of **scoring vocabulary**: `score`, `rate`, `grade`, `rubric`, `judge`, `evaluate`, `critique`, `/10`, `rank`, `voice_score`, `quality_gate`. Report at most **5** candidates per run, most-load-bearing first (a scorer wired into a gate that blocks publishing outranks one in a scratch script).
+
+**The distinction that keeps this quiet — authorship, not the verb.** Most `claude -p` calls are not findings, and a bucket that flags them all gets ignored:
+
+- **NOT a finding — reading an artifact Claude did not write.** Captioning video frames, OCR interpretation, summarising a PDF, extracting structure from a transcript. AIOS ships exactly this (`hooks/video-watch.py` captions frames with `claude -p`). Measurement, not self-grading.
+- **NOT a finding — a deterministic scorer.** Anything that *counts* (tells per 1,000 words, paragraph bursts, line lengths, link density) has no judge to be biased. The [`voice-gate`](../../../skills/aios/voice-gate/SKILL.md) skill is this on purpose; where a countable proxy exists, counting is strictly better than judging and needs no cross-family call at all.
+- **NOT a finding — factual or structural verification.** *"Does this cite a source that exists?"*, *"is this valid JSON?"*, *"does this contradict the brief?"* have answers independent of house style.
+- **A FINDING — a Claude model scoring the prose quality, voice, or style of Claude-authored text**, especially when the score gates something (publishing, a commit, a promotion between buffers).
+
+**Report as:** *"`{file}:{line}` scores Claude-authored prose with a Claude model (`{the invocation}`, scoring term `{term}` at line {n}). Same-family judge — it cannot penalise a shared tendency. Options: make it deterministic (count a proxy), or cross the family via `hooks/openrouter.py`. Which fits?"*
+
+**State COVERAGE, every run, even at zero findings:** *"Same-family judge: **{N}** Claude invocations scanned across **{F}** operator files · **{S}** near scoring vocabulary · **{R}** reported · **{X}** excluded as reading-not-grading."* A silent zero is indistinguishable from a sweep that never ran.
+
+**Don't propose:** rewriting a scorer (read-only) · flagging every `claude -p` (the authorship distinction above is the whole point) · flagging canonical's own hooks, which are readers rather than graders · a cross-family call for something a counter could measure — that trades a privacy boundary for a problem a `wc` would solve.
 
 ### Phase 2 — Present the packet
 

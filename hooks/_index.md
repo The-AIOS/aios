@@ -1,7 +1,7 @@
 ---
 tags: [hooks, index]
 created: '2026-03-28'
-updated: '2026-07-13'
+updated: '2026-09-04'
 ---
 # Hooks
 
@@ -12,6 +12,7 @@ updated: '2026-07-13'
 | Hook | Used by | What it does |
 |------|---------|-------------|
 | `pipeline-executor.py` | `/today`, `/close-day` | Pre-loads Google Calendar, Tasks, and Slack data in one batch. Commands read the output instead of calling APIs individually. Runs via `uv run` with inline deps. |
+| `openrouter.py` | any command / skill / routine, and `/aios:housekeeping` Bucket 27 | Calls a **non-Claude** model as a tool — text in, text out, stdlib-only (no `pip install`). Two uses, one file: a cheap text lane, and an **independent judge** (a model cannot dock points for a bias it shares). Resolves `OPENROUTER_API_KEY` → OpenRouter, else `GEMINI_API_KEY` → Gemini direct, else refuses while naming both paths — **never a silent no-op**, because a scorer that returns nothing reads exactly like a scorer that found nothing wrong. **Opt-in and silent until configured: it is the one AIOS component that sends your content off-machine to a third party.** No MCP tools, no vault writes. `python3 ~/aios/hooks/openrouter.py --check` reports what is wired without making a call. Boundaries: [`MODEL-ROUTING.md`](../MODEL-ROUTING.md). |
 | `markitdown-convert.py` | `/ingest` + standalone | Converts any file (PDF, Word, Excel, PowerPoint, images, audio, YouTube, EPUB, HTML, CSV, JSON, XML, ZIP) → clean markdown. Wraps Microsoft's MarkItDown library. **The universal, cross-platform default converter** — the two media hooks below are macOS *enhancements*, not replacements. Standalone: `python3 ~/aios/hooks/markitdown-convert.py <file>`. |
 | `transcribe.py` *(macOS)* | `/ingest` (long-form audio/video) + standalone | Local long-form transcription (`ffmpeg → mlx-whisper large-v3-turbo`) — the macOS upgrade for MarkItDown's one audio weakness (its Web-Speech path fails past a sentence). Arbitrary length, on-device, no third party. **macOS/Apple-Silicon only** (mlx); MarkItDown remains the non-Mac path. Optional deps: `python3 -m venv hooks/.venv && hooks/.venv/bin/pip install mlx-whisper`. Standalone: `python3 ~/aios/hooks/transcribe.py <file-or-URL> [out.txt]`. |
 | `video-watch.py` + `ocr-image.swift` *(macOS)* | `/ingest` (screen-comprehension, opt-in) + standalone | Reads the video **screen** (slides · code · diagrams · on-screen text) — the capability MarkItDown lacks entirely (it discards every frame). Pipeline: transcript-first → `ffmpeg` scene-keyframes → pHash dedup → per-frame reader (`ocr` verbatim via Apple Vision `ocr-image.swift` · `vlm` structure via `claude -p` · `both`) → merged timeline. Fortress-clean (on-device OCR + subscription-auth VLM, no API key). **Opt-in** ("read the slides / code on screen"). OCR reader is macOS-only (Apple Vision); the `vlm` reader is cross-platform (`--reader vlm` off-Mac). Compose with `transcribe.py --transcript` to skip a second whisper model. Guide: `hooks/video-watch-guide.md`. |

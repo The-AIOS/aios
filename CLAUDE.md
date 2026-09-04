@@ -74,7 +74,9 @@ The `spawn` wrapper is the canonical way to launch a named worker session — it
 
 **Name the output destination in the brief (spawned-output discipline).** A spawned worker can't see your vault conventions — if the brief doesn't say *where* its deliverable lands, the output drifts to the worker's cwd, a scratch path, or an invented folder, and you find it later (or never). So every spawn brief that produces a durable artifact must **route it by type via the File Placement Router** and state the destination explicitly: audience-facing / ships outward → `03 - export/{type-or-venture}/` · one project's state → the project note · compounds / will be re-read (analysis, research, audit) → the **best-matching `reflections/{subfolder}`** (e.g. `research`, `audits`) by the retrieval test. **An export is never accidental** — when a worker builds a deck or an audience-facing report, the brief routes it to `export/`, never to reflections. **Only when a brief genuinely forgets** does the output fall back to **`vault/00 - notes/reflections/_inbox/`** — a *provisional* landing zone (the `_` signals "unrouted, pending filing"), emptied to its real home by `/aios:housekeeping` (Bucket 25). The rule: *the brief routes by type, or the output waits in `_inbox` — never the worker's guess, never silently mis-filed as a reflection when it's an export.*
 
-**Model tier (`--tier mechanical|judgment`).** Spawned sessions default to the frontier model. For **mechanical** work (ingests, file sweeps, transcription, deterministic transforms), `spawn --tier mechanical {name} "{task}"` routes to the *second-best* model (cheaper, fast, plenty for non-judgment work); omit it (or `--tier judgment`) for real reasoning. *Calibrate Don't Choose* applied to spend — don't pay frontier rates for a file sweep. (Windows: `-Tier mechanical`.)
+**Model tier (`--tier frontier|judgment|scale|fast`).** Spawned sessions default to `judgment` (the frontier reasoning model). Pick a rung by the **shape of the work, not its importance** — `fast` for high-frequency/latency-sensitive work and sub-agents, `scale` for general work at volume, `judgment` for reasoning-intensive work and production coding, `frontier` for the hardest long-running autonomous work. *Calibrate Don't Choose* applied to spend: on the same prompt the top and bottom rungs differ by roughly **22× in cost**, so paying frontier rates for a file sweep is a real transfer, not a rounding error. (Windows: `-Tier fast`. The older `--tier mechanical` still works and still resolves to the same model it always did.) **The rung→model table, and how to verify a model id actually resolves, live in [`MODEL-ROUTING.md`](./MODEL-ROUTING.md) and nowhere else** — a model id restated here would be a second implementation of a fact that churns.
+
+**A spawned worker is always a Claude model — and that boundary is load-bearing.** `spawn` passes `--model` straight to the `claude` binary, which runs Claude models only, so a non-Claude model can be **called by** a session and can never **be** one. Treat that as a rule rather than an implementation detail, because the natural next thing to reach for is a proxy that makes Claude Code believe it is talking to Anthropic while routing elsewhere — which puts third-party code in the request path of every session holding live Gmail, Drive and Slack credentials plus a private vault. **That is a no.** When you genuinely need another family (a text lane, or an *independent judge* — a model cannot dock points for a bias it shares), call it as a tool via `hooks/openrouter.py`: text in, text out, no MCP catalog, no vault writes, opt-in, and silent until a key exists. Boundaries and the privacy trade: [`MODEL-ROUTING.md`](./MODEL-ROUTING.md).
 
 **Pin an explicit model (`--model <id>`).** To spawn on a model *outside* the tier ladder — a temporary or specialist model like Fable during an extension window — use `spawn --model claude-fable-5 {name} "{task}"`. `--model` overrides `--tier` and exports `CLAUDE_MODEL` **for that spawn's launcher only** — never a global `~/.zshrc` export. (The old workaround was to `export CLAUDE_MODEL` in your rc, spawn, then revert it; miss the revert and *every* future terminal launched on the pinned model. `--model` removes that footgun entirely.)
 
@@ -260,7 +262,7 @@ Goal: truth, not flattery. Update each file when its trigger fires:
 
 ## IV. Vault Map
 
-### Documentation map (the 7 framework docs)
+### Documentation map (the 8 framework docs)
 
 When the operator asks *"where is X documented?"* — route by role, don't read every doc:
 
@@ -273,6 +275,7 @@ When the operator asks *"where is X documented?"* — route by role, don't read 
 | [`CHEATSHEET.md`](./CHEATSHEET.md) | Day-to-day operating index | *"Which command for X?"* / *"How do I customize Y?"* |
 | [`TOOLS.md`](./TOOLS.md) | Full menu — commands + agents + skills + MCPs | *"Is there a tool for X?"* |
 | [`FORTRESS.md`](./FORTRESS.md) | Two-machine architecture (+ Mac mini agent host) | *"How do I run agents 24/7?"* |
+| [`MODEL-ROUTING.md`](./MODEL-ROUTING.md) | Which model for which task · the non-Claude boundary · judge independence | *"Which model should do this?"* / *"Can I use Gemini/DeepSeek?"* |
 
 **Plus 2 operator-owned files** Claude reads every session: [`USER.md`](./USER.md) (identity, sources, command overrides) + [`INTENT.md`](./INTENT.md) (trust contract — autonomy per domain).
 
