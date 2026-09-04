@@ -380,6 +380,7 @@ On-demand. Triggered by `spawn deck-builder` OR `/agent deck-builder` in-session
 Lean on these registered skills:
 - `theme-factory` — when the deck needs a coherent visual theme / token system established before slides are built.
 - `data-presentation` — turn dense metrics into decision-ready charts + narrative, never bullet dumps.
+- `voice-gate` — slide copy is *all* exposed zone: titles and one-liners are the only prose a room reads. Check them; leave presenter notes alone, since spoken register is not written register.
 
 ## HTML Keynote Toolkit (canonical code blocks)
 

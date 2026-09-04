@@ -131,6 +131,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `theme-factory` | `skills/anthropic/` | "Apply a theme to this artifact / slide deck / doc" |
 | `data-presentation` | `skills/aios/` | "How should I present this data?" — chart selection, table layout |
 | `infographic-builder` | `skills/aios/` | "Make an infographic / one-pager / visualize this note or report" — themed self-contained HTML |
+| `voice-gate` | `skills/aios/` | "Does this sound AI-written?" / "Check this before I publish it" — grades tells by density, bursts and position against your own baseline; reports, never rewrites |
 
 ### Documents & files (all via Anthropic's `document-skills` plugin — `/plugin install`)
 | Skill | Trigger phrase |
@@ -169,7 +170,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `accessibility-compliance` | `skills/aios/` | "Check this for accessibility (WCAG, ARIA, contrast)" |
 | `pci-compliance` | `skills/aios/` | "Audit this for PCI compliance" |
 
-**Source folders:** `skills/aios/` (AIOS-built — 25 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 50. Browse `skills/_index.md` for the full registry.
+**Source folders:** `skills/aios/` (AIOS-built — 26 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 51. Browse `skills/_index.md` for the full registry.
 
 **Marketplace skills** (NOT in `skills/`, install via `/plugin install`): `canvas-design`/`docx`/`pdf`/`pptx`/`xlsx` (via `document-skills` plugin) · `code-review-excellence` (via `code-review@claude-plugins-official`) · `defuddle` (via Anthropic skills marketplace) · `superpowers` full marketplace (`obra/superpowers-marketplace`).
 

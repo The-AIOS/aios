@@ -17,7 +17,7 @@ updated: '2026-07-27'
 
 | Folder | What | Upstream | License |
 |---|---|---|---|
-| [`skills/aios/`](./aios/) | AIOS-bundled skills (25) — high-signal coding/Obsidian/meta/systems after the 2026-05-21 audit. See "What got pruned" below for what was removed. | This framework | GPL-2.0-or-later |
+| [`skills/aios/`](./aios/) | AIOS-bundled skills (26) — high-signal coding/Obsidian/meta/systems after the 2026-05-21 audit. See "What got pruned" below for what was removed. | This framework | GPL-2.0-or-later |
 | [`skills/anthropic/`](./anthropic/) | Anthropic's example skills (11) — skill-creator, claude-api, mcp-builder, frontend-design, theme-factory, doc-coauthoring, internal-comms, web-artifacts-builder, webapp-testing, algorithmic-art, slack-gif-creator | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
 | [`skills/superpowers/`](./superpowers/) | Core software-engineering workflows (14) — TDD, debugging, code review, plans, brainstorming, worktrees, subagent dispatching | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
 | [`skills/custom/`](./custom/) | Your own skill extensions — survive `/aios:update` | Operator | Operator's choice |
@@ -74,7 +74,7 @@ Core software-engineering disciplines. Many of these reference each other (e.g.,
 
 ## AIOS-bundled (this framework)
 
-25 high-signal skills, post-2026-05-21 pruning. The bundle targets *load-bearing operator workflows* — daily reference + Obsidian power-user + meta + systems/stewardship — not generic technical reference (that's Claude's training).
+26 high-signal skills, post-2026-05-21 pruning. The bundle targets *load-bearing operator workflows* — daily reference + Obsidian power-user + meta + systems/stewardship — not generic technical reference (that's Claude's training).
 
 **Coding & API**
 - `karpathy-coding` — behavioral rules for any coding session (think before, simplicity, surgical changes)
@@ -101,6 +101,7 @@ Core software-engineering disciplines. Many of these reference each other (e.g.,
 - `prompt-engineering-patterns` — production LLM prompting
 - `data-presentation` — storytelling + dashboard design (consolidated)
 - `infographic-builder` — turn a structured doc (ingest, role report, weekly learnings) into a self-contained HTML one-pager; brand-first theming with [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) as the fallback library
+- `voice-gate` — grade AI-writing tells before anything ships in the operator's name: density and paragraph bursts against *their own* baseline, weighted by position (a tell in a title costs far more than one mid-paragraph). Reports, never rewrites — a banned list flattens the voice it exists to protect. Wired into `content-writer`, `email-drafter`, `report-drafter`, `deck-builder`, `sales-proposal-writer`
 
 **Systems & stewardship**
 - `leverage-points` — Meadows' lens for *where* to intervene in a system (the systems-science backing for "fix the system, not the symptom")

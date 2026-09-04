@@ -112,6 +112,7 @@ Depending on what the user asks for:
 Lean on these registered skills:
 - `doc-coauthoring` — co-author the proposal with the operator (structured, iterative), not a one-shot wall of text.
 - `data-presentation` — shape pricing tables, ROI, and scope into decision-ready visuals the buyer can act on.
+- `voice-gate` — a proposal that reads as generated undercuts the credibility it is trying to establish. Check the cover letter, the executive summary, and every section opener before it goes to a buyer.
 
 ## Schedule
 On-demand. Triggered when a lead converts to opportunity or the user requests a proposal.
