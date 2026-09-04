@@ -243,12 +243,28 @@ Goal: truth, not flattery. Update each file when its trigger fires:
 | `business.md` | Strategic insight about their ventures | Distinguish stated vs inferred. Flag tensions, not just confirmations |
 | `ecosystem.md` | Venture relationship shifts OR new connection clear — **plus periodic re-derivation** (it's a derived aggregate, not atomic points) | This file is the map, not the territory. **Two update modes:** *atomic-append* on an event-triggered shift, AND *aggregate re-derivation* — redraw the whole map when it goes stale (threshold 21d), reading the widened feed-in: project-note relationship changes + `USER.md` tables (Forum/agent-DID, Companies mounted, Sources) + `profile.md` relationship threads + `business.md`. Event-routing alone silently decays a map — the atomic uniqueness test even *rejects* a redraw because its nodes exist elsewhere |
 | `growth.md` | Growth happening OR avoided — **the most important observed file** | See `growth.md` rules ↓ |
-| `session-insights.md` | Every meaningful session | Buffer (not log/diary). See two-stage rules ↓ |
+| `session-insights.md` | Every meaningful session | Buffer (not log/diary). **Two classes, two exits** — `behavioural` waits for a second sighting, `method` never does. See ↓ |
 | `antifragile.md` | User corrects you OR you catch your own mistake | **Immediately** at the moment. See triggers ↓ |
 
 **`growth.md` rules:** be honest (Radical Candor, not Ruinous Empathy). Frame with high expectations: *"I'm noting this because I know you can work with it."* Be specific (*"Tends to avoid operational work"* > *"Sometimes gets busy"*). NVC-clean: observation, not evaluation. Note evidence (which sessions) + timeline.
 
-**`session-insights.md` two-stage buffer:** Emerging (single session) → Reinforced (2+ sessions of evidence) → routed to target observed file (then removed). Reinforcement is as valuable as new capture — check existing entries before adding. Stay compact: ~5 reinforced + ~10 emerging. Adding forces reviewing.
+**`session-insights.md` — one buffer, two classes, two different exits.** Every entry declares its class on the line under its title, because the two have **opposite** disposition rules and one rule cannot serve both:
+
+`` `class: behavioural` · `first-seen: YYYY-MM-DD` · `route: patterns.md` ``
+
+- **`behavioural`** — an observation about *the operator*. Unchanged, and still right: Emerging (single session) → **Reinforced** (a second independent sighting) → routed to its target observed file, then removed. One sighting might be noise, so **waiting is correct** and costs nothing.
+- **`method`** — an observation about *the system*: a command, a hook, an agent's own behaviour, a process. **A second sighting is not confirmation — it is evidence the fix never landed.** So a method entry never waits for one. It needs a **stated rule general enough to fire outside the incident**, and then exits at that same close, three ways:
+  - **route** — a genuinely new class of failure → `antifragile.md` (its high bar is unchanged) or the relevant observed file.
+  - **fold** — it sharpens an entry that already exists → merge it in, delete the buffer entry.
+  - **drop** — an existing rule already covered this and *applying that rule harder* was the real answer → delete it.
+
+  **Most method findings fold or drop, and that is success, not attrition.** It is the pressure valve the single-rule model lacked.
+
+**If you can state the rule, route it now — the buffer is for what you cannot yet state.** Sessions already do this when confident, which is precisely why what accumulates is the residue nobody was confident enough to route directly. A buffer collecting only unconfident method findings is a confidence-holding pen, not a queue, and its main occupant has no exit.
+
+**Why raising the cap never held:** a system defect that *recurs* is a defect whose fix did not land. So the better AIOS gets at fixing itself, the more its findings are one-offs — and under a promote-on-second-sighting rule, one-offs can never leave. Intake also scales with the number of sessions a day while the promotion rule does not, so this is invisible on a single-session vault and unavoidable on a fleet.
+
+Caps stay: **Emerging ≤10, Reinforced ≤5.** Reinforcement is as valuable as new capture — check existing entries before adding. Adding forces reviewing. An entry with **no `route:` target has no exit condition** and may not be written. An entry predating this contract and carrying no `class:` line is **unclassified**, not assumed — the next session that touches the file classifies it (a one-time pass; *adding forces reviewing* already asks for exactly that read).
 
 **`antifragile.md` triggers (high bar):** the system has no existing rule covering this *class* of situation. Most corrections don't qualify — the default response is *apply the existing rule harder*, not *write a new rule*. Reach for antifragile only when (a) the lesson has no home elsewhere (CLAUDE.md, an existing antifragile entry, an observed file) AND (b) it's scalable beyond the incident. When both hold, write it the moment it happens. Distinguishing discipline gaps (rule exists, weak application) from system gaps (no rule covers this class) is the calibration — most catches are the former.
 
