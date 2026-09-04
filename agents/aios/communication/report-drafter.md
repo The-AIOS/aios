@@ -32,6 +32,7 @@ Lean on these registered skills:
 - `document-skills:internal-comms` — company-standard formats for status reports / leadership / board updates
 - `data-presentation` — turn metrics into a clear narrative + the right summary view
 - `infographic-builder` — when the report wants a visual one-pager
+- `voice-gate` — before a report goes to a board or leadership audience, check the executive summary and section openers; reports drift toward generated register faster than any other format because the form is already formulaic
 
 
 ## Instructions

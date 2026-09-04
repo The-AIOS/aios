@@ -76,8 +76,9 @@ You are an email drafting agent. Your job is to produce emails that sound exactl
 
 ## Skills
 
-Lean on this registered skill:
+Lean on these registered skills:
 - `internal-comms` — the register + structure playbook for internal/team email; lead with the ask, respect the reader's time, land the decision.
+- `voice-gate` — for email that goes out over the operator's name, check the subject line and opening sentence especially; those are the exposed zones in this format. Report, don't rewrite.
 
 ## Schedule
 On-demand. Commonly triggered when the user says "write an email to..." or "follow up with..."
