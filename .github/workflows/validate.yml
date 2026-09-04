@@ -191,10 +191,27 @@ jobs:
 
           FOUND=""
 
+          # Enumerate TRACKED directories, never the filesystem.
+          #
+          # This check used to glob `<layer>/*/` directly, which reads whatever happens to be on
+          # disk — including build artifacts that .gitignore correctly excludes. On 2026-09-04 a
+          # contributor's PR went red here while its own suite passed 10/10: their test was the
+          # first CI step ever to execute hooks/pipeline-executor.py, Python wrote
+          # hooks/__pycache__/, and this step — later in the same job — read that directory as a
+          # company namespace and failed the build. `.gitignore:13` excludes `**/__pycache__/`,
+          # so git never saw it; only the glob did.
+          #
+          # The distinction IS the fix: a gitignored build artifact is not a namespace. Asking
+          # git what the repo CONTAINS, instead of asking the disk what is sitting in it, makes
+          # the whole class impossible — a future artifact in any layer is invisible here, and no
+          # allowlist has to grow to accommodate one.
+          tracked_dirs() {   # $1 = layer; prints depth-1 tracked dir names, one per line
+            git ls-files "$1/" | awk -F/ 'NF>2 {print $2}' | sort -u
+          }
+
           # agents/ — allowed: aios (nested bundles inside) + custom
           # Nested layout adopted v0.2.0: agents/aios/{sales,strategy,finance-legal,engineering,communication,personal}/
-          for dir in agents/*/; do
-            name=$(basename "$dir")
+          for name in $(tracked_dirs agents); do
             case "$name" in
               aios|custom) ;;
               *) FOUND+=$'\n  - agents/'"$name"'/  (expected: aios/ or custom/)' ;;
@@ -211,8 +228,7 @@ jobs:
           done
 
           # plugins/ — allowed: aios + custom
-          for dir in plugins/*/; do
-            name=$(basename "$dir")
+          for name in $(tracked_dirs plugins); do
             case "$name" in
               aios|custom) ;;
               *) FOUND+=$'\n  - plugins/'"$name"'/  (expected: aios/ or custom/)' ;;
@@ -221,8 +237,7 @@ jobs:
 
           # hooks/ — allowed: claude-identity + git (aios-commit pre-commit guard + secret-scan) + custom
           # (files are layer-level; only subfolders checked)
-          for dir in hooks/*/; do
-            name=$(basename "$dir")
+          for name in $(tracked_dirs hooks); do
             case "$name" in
               claude-identity|git|custom) ;;
               *) FOUND+=$'\n  - hooks/'"$name"'/  (expected: claude-identity/, git/, or custom/)' ;;
@@ -230,8 +245,7 @@ jobs:
           done
 
           # mcps/ — allowed: *-mcp (suffix convention) + custom
-          for dir in mcps/*/; do
-            name=$(basename "$dir")
+          for name in $(tracked_dirs mcps); do
             case "$name" in
               custom) ;;
               *-mcp) ;;
@@ -241,8 +255,7 @@ jobs:
 
           # templates/ — bundled templates live in aios/, operator extensions in custom/
           # (company-distributed templates land in {company}/ via /aios:company --sync).
-          for dir in templates/*/; do
-            name=$(basename "$dir")
+          for name in $(tracked_dirs templates); do
             case "$name" in
               aios|custom) ;;
               *) FOUND+=$'\n  - templates/'"$name"'/  (expected: aios/ for bundled templates, custom/ for operator extensions — company namespaces land via /aios:company)' ;;
@@ -252,8 +265,7 @@ jobs:
           # skills/ — source-grouped. Allowed: aios/, superpowers/, df-claude-skills/, custom/
           # Anything else at depth 1 is either a new upstream source (update this allowlist + skills/_index.md)
           # or a company namespace that shouldn't be in the framework.
-          for dir in skills/*/; do
-            name=$(basename "$dir")
+          for name in $(tracked_dirs skills); do
             case "$name" in
               aios|anthropic|superpowers|custom) ;;
               *) FOUND+=$'\n  - skills/'"$name"'/  (expected: aios/, anthropic/, superpowers/, or custom/ — vendoring a new upstream? add it to the allowlist in this workflow + document in skills/_index.md)' ;;
