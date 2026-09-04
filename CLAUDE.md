@@ -383,7 +383,7 @@ Custom slash commands invoked via `aios:<name>`.
 
 **Monthly:** `compact` (digest + archive previous month's snapshots + role logs)
 
-**As needed:** `ideas` · `ghost` · `challenge` · `trace` · `connect` · `learned` · `housekeeping` · `role-report` · `update` · `mcps-setup` · `ingest` · `agent` · `company` (multi-company mount/sync — `--create`/`--mount`/`--sync`/`--sync-all`/`--status`/`--invite`/`--dry-run`) · `collaborate` (shared spaces, Drive/GitHub/local — `--add-project`/`--status`/`--dry-run`)
+**As needed:** `ideas` · `ghost` · `challenge` · `trace` · `connect` · `learned` · `fortress` (containment rung — detect where you are, climb one) · `housekeeping` · `role-report` · `update` · `mcps-setup` · `ingest` · `agent` · `company` (multi-company mount/sync — `--create`/`--mount`/`--sync`/`--sync-all`/`--status`/`--invite`/`--dry-run`) · `collaborate` (shared spaces, Drive/GitHub/local — `--add-project`/`--status`/`--dry-run`)
 
 See `vault/00 - notes/context/observed/vault-routine.md` for recommended cadence.
 

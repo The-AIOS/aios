@@ -289,6 +289,8 @@ spawn --tier fast transcriber "…"                               # cheap rung f
 boundary (a non-Claude model is *called by* a session and never *is* one — and why a model-router
 proxy is a no), the judge-independence rule, and how to verify a model id actually resolves.
 
+**Start with `/aios:fortress`, not with this document.** Containment is a ladder, not a switch, and you are already on it. The command probes this machine and tells you which of five rungs you are actually on — then climbs one. Rungs 0-3 cost no money, and **rungs 1 and 2 carry most of the real risk reduction**: a second machine contains the blast radius of an agent going wrong; it does nothing about a key exported in your shell rc. For many operators the useful ladder ends at rung 3 and this document never applies.
+
 📘 **See [`FORTRESS.md`](./FORTRESS.md)** for the full setup — Claude reads it end-to-end and walks both machines through the configuration. Hard prerequisites: macOS on both, second machine on AC power with stable network.
 
 ---

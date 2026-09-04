@@ -35,7 +35,7 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
-## 2026-09-04 — A voice gate that measures instead of banning, a model ladder that tells you which Claude to spend, and an observation buffer that stops filling up
+## 2026-09-04 — Three ladders: which AI-writing tells to keep, which Claude to spend, and how contained you actually are
 
 `hash: fce16ac`
 
@@ -101,6 +101,26 @@
 **Action required — one small pass, at your convenience.** Run `python3 ~/aios/hooks/buffer-status.py` after your next update. If it reports unclassified entries, classify them as you pass during a normal `/close-day`; there is no migration script and none is needed. If your Emerging section is over cap, resist reaching for the cap — on measured vaults roughly 80% of buffer intake is `method`, and those exit by disposal rather than by waiting.
 
 *Reported with machine-derived figures from a vault running a multi-session fleet — 34 entries against a raised cap of 25, 23 of them under a week old, zero near-duplicates across 561 pairwise comparisons, and 28 of 34 classified as system observations. Two of those measurements reproduced independently on a second vault that had never seen the report (14/10 Emerging, median entry ~1,857 characters, ~86% system-class); a third did not, and is noted as vault-specific rather than general. The doctrine change is ours; the write-path primitive (`add` / `reinforce` / `route`) remains open for the reporter, who offered to build it against a settled schema — this ships the parser and the measurement it needs, and deliberately not the write path.*
+
+### `/aios:fortress` — containment is a ladder, and you are already on it
+
+> **What this delivers.** `FORTRESS.md` describes a two-machine build costing about $600 and a weekend, and it was the only containment guidance the framework had — so the honest answer to *"how safe is my setup?"* was either *"buy a Mac mini"* or nothing. There is now a **five-rung ladder** from the default install up to that build, and a command that **probes your machine and tells you which rung you are actually on** instead of asking you.
+
+**The part worth reading even if you never run the command:** most of the real risk reduction is **rungs 1 and 2, and neither costs money.** A second machine contains the blast radius of an agent that misbehaves; it does nothing about a key exported in your shell rc or a permission set nobody ever scoped. Buying the hardware first is the satisfying move and the wrong order.
+
+- **Rung 0 — what you already have.** Vault local plus a private repo you own, MCP tokens on your own disk and revocable by deleting a folder, no telemetry, Bash sandboxed by default. A real rung, not a placeholder.
+- **Rung 1 — know what leaves.** An hour, nothing to install: enumerate your MCPs, your git remotes, whether the model rail has a key, what sits below your `.gitignore` operator marker. You cannot contain what you have not enumerated, and this is the rung people skip because it produces no artifact.
+- **Rung 2 — scope what an agent can touch.** An afternoon, all software. Permissions set deliberately; every API key moved out of your shell rc into `~/.config/aios-secrets/`; git hooks installed so a credential cannot be committed by accident; private paths below the ignore marker. **This is the rung that pays.**
+- **Rung 3 — separate the risky work.** Worktrees for experimental work, a second macOS account for anything you would not want reading your keychain.
+- **Rung 4 — the two-machine fortress.** The rest of `FORTRESS.md`, unchanged.
+
+**What the command does:** `/aios:fortress` runs read-only probes, reports your rung with the evidence for each, and offers to execute the next one — one rung per invocation, deliberately. It **names the rung by what is true, not what is aspired to**: an operator with a Mac mini and keys in `~/.zshrc` is on rung 1, because containment is the weakest link rather than the priciest component. It also tells single-machine operators plainly when rung 3 is the end of the useful ladder for them, because a command that pushes everyone toward $600 of hardware is a brochure.
+
+**Three probes were wrong on their first live run, and every one failed toward a *false pass*** — which is the failure that matters when the output is a safety claim. `ls ~/.config/aios-secrets/*.env` aborts under **zsh** on an unmatched glob *before* `ls` runs, so redirecting stderr does nothing and the probe died on exactly the machine it exists to describe. An unguarded call to the model rail printed a Python traceback on a vault that had not pulled it yet, which reads as a broken machine rather than a missing update. And `git worktree list` always prints the main tree, so the raw count of `1` would have satisfied rung 3 for everybody. All three are pinned by tests carrying controls, and the zsh one runs both forms under real zsh rather than asserting the difference.
+
+**Action required — none, but running it once is worth ten minutes.** `/aios:fortress` writes nothing without asking, never touches `~/.ssh/`, the keychain, or system security settings, and shows you a diff before going near a shell rc.
+
+*This also closes a dangling reference: the model-routing doc shipped earlier today points at "the containment ladder" in `FORTRESS.md`, which did not yet contain one.*
 
 ## 2026-08-29 — An opt-out for automated wrappers, and a skill that was installed but unloadable
 

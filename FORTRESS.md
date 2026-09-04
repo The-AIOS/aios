@@ -2,7 +2,34 @@
 
 > Setup manual for teammates running the AIOS across **two physical computers**: a primary MacBook (main / day-to-day driver) and a Mac mini (secondary / always-on agent host). This document is written for Claude sessions to read and execute the setup end-to-end. If you're a teammate and your Claude session is reading this for the first time, follow the section that matches the machine you're currently on.
 >
+> **New here? Read § The containment ladder first** — it places this document as the *top* rung and names the cheaper rungs most operators should do before buying anything.
+>
 > The architecture follows six defensive layers: network isolation, ecosystem lockdown, SSH hardening, permission gates, one-way data flow, and recovery mechanisms. Together they let a small operator run autonomous agents 24/7 without exposing credentials, networks, or sensitive systems.
+
+---
+
+## The containment ladder — find your rung before you buy hardware
+
+**This document describes the top rung.** It costs about $600 and a weekend, and most operators do not need it. But *containment* is not a thing you either have or lack — it is a ladder, and **you are already standing on it.** The rungs below are ordered by what they cost you, and each one is complete on its own: rung 2 is worth doing whether or not rung 4 ever happens.
+
+The uncomfortable part, stated plainly: **most of the real risk reduction is rungs 1 and 2, and neither costs money.** A second machine contains the blast radius of an agent that misbehaves; it does nothing about a credential in a shell rc or a permission set that was never scoped. Buying the mini first is the satisfying move and the wrong order.
+
+**Rung 0 — what you already have.** Nothing to do; this is the default install.
+Your vault is a folder on your machine and a private repository you own. MCP tokens sit on your own disk — deleting `~/.google_workspace_mcp/credentials/` revokes that machine's access immediately. The framework has no telemetry, and Claude Code's Bash tool is sandboxed by default. This is a real rung, not a placeholder.
+
+**Rung 1 — know what leaves.** An hour, nothing to install.
+Inventory your outbound paths and write the list down: which MCPs are connected and to whose servers · what your git remotes are and whether any is public · whether `hooks/openrouter.py` has a key (it is inert without one — see [`MODEL-ROUTING.md`](./MODEL-ROUTING.md)) · what sits below the `AIOS-OPERATOR-IGNORES` marker in your `.gitignore`. **You cannot contain what you have not enumerated**, and this is the rung people skip because it produces no artifact.
+
+**Rung 2 — scope what an agent can touch.** An afternoon, all software, no hardware.
+Set permissions deliberately in `.claude/settings.json` rather than accepting whatever accumulated. Move every API key out of your shell rc into `~/.config/aios-secrets/*.env`, so a key is never in the environment of every process you launch. Install the git hooks (`bash hooks/install-git-hooks.sh`) so a credential cannot be committed by accident. Put private-data paths below the `.gitignore` operator marker, and true never-share entries in `.git/info/exclude`, which updates never touch. Commit through `aios-commit`, never `git add -A`. **This is the rung that pays.**
+
+**Rung 3 — separate the risky work.** Software, per task.
+Run experimental or untrusted work in its own git worktree so a bad edit cannot reach your main tree. For anything you would not want reading your keychain, a second macOS user account is a stronger boundary than any flag. Keep judgment work in sessions you can watch, and autonomous loops on machine-checkable changes only — the reasoning for that is in [`CLAUDE.md`](./CLAUDE.md) § Comprehension debt.
+
+**Rung 4 — the two-machine fortress.** ~$600 and a weekend. **The rest of this document.**
+An always-on agent host, firewalled at the OS level, that can be compromised without reaching your primary machine, your network, or your identity. Worth it when agents genuinely run unattended around the clock and the blast radius of one going wrong is the thing you are managing.
+
+> **Climb in order, and stop where the cost stops being worth it.** A single-laptop operator sitting deliberately on rung 2 is in better shape than one who bought a mini and left their keys exported in `~/.zshrc`. If you want a session to work out where you actually are, run **`/aios:fortress`** — it inspects the machine, tells you your rung, and offers to execute the next one.
 
 ---
 
