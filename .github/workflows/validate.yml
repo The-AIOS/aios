@@ -111,6 +111,19 @@ jobs:
           bash tests/source-detector.test.sh
           echo "OK: template prose does not vote on the operator's configuration"
 
+      - name: The first account block wins; a later one cannot overwrite it
+        run: |
+          set -e
+          # parse_sources() walked every line with no notion of which block it was in, so
+          # the LAST match won. "### Google accounts" ships a *Primary:* block and
+          # operators add further ones (a destination-only address, an old account), any
+          # of which silently replaced an address already read correctly. Every
+          # credentials path is built from that value, so /today reported Calendar and
+          # Tasks as "configured but credentials missing" while the OAuth token was valid.
+          # Tests 1, 1b and 2 fail against the pre-fix parser, so this cannot pass vacuously.
+          bash tests/pipeline-executor-config.test.sh
+          echo "OK: a later account block cannot overwrite the primary"
+
       - name: Changelog scan handles multi-hash entries; layer pathspec is an array
         run: |
           set -e
