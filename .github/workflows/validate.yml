@@ -1078,6 +1078,16 @@ jobs:
         # acceptable, and it was silent because a hand-typed list did not mention it.
         run: bash tests/secret-scan.test.sh
 
+      - name: the observation buffer is measured, not judged
+        # Reported with machine-derived figures (#62) and reproduced independently on a
+        # second vault that had never seen the report: 14/10 Emerging, ~86% of entries
+        # system-class. The suite pins two regressions found by running the tool against a
+        # LIVE buffer rather than its own fixtures — a false "missing route" on 19 of 19
+        # entries using the pre-contract form, and a message asserting "no method entries"
+        # while nothing was classified at all. Both checks carry controls, because an
+        # unparseable file reporting a healthy zero is the defect class this reduces.
+        run: bash tests/buffer-status.test.sh
+
       - name: the model-routing ladder agrees across both wrappers
         # The tier -> model map is implemented TWICE (a bash case, a PowerShell switch)
         # and nothing but this suite connects them. A fix applied to one and not the

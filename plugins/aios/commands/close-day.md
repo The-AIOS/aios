@@ -523,7 +523,15 @@ Not every day produces new observations — but never skip this check. The obser
 > **The anti-skip principle (non-negotiable).** Close-day is the compounding ritual — the routing, the Tier-B digest, and the buffer gardening below are *where the AIOS gets smarter.* **The day's work is done, so there is no token/time opportunity cost left to optimize.** Never skip, gate, or "lighten" these passes to save tokens or feel faster — that trades the one thing we want (compounding) for a saving we explicitly don't care about, and risks stranding a routable insight on a day that merely *looked* light. The passes already **self-scale**: a quiet day finds nothing to route (the substance bars fail fast) and is naturally cheap. **Lightness is an outcome of an empty buffer, never a goal.** Run every pass, every close-day.
 
 Candidates:
-- `session-insights.md` — scan and garden the observation buffer (reinforce, add, route, clean up). Emerging → Reinforced → Routed lifecycle; ≤10 Emerging, ≤5 Reinforced. **See Tier A routing enforcement below — Reinforced entries with `Route to:` tags must be routed inline, not deferred.**
+- `session-insights.md` — scan and garden the observation buffer (reinforce, add, route, clean up). **Garden the two classes differently** (CLAUDE.md § Observed Context Rules): `behavioural` entries follow the Emerging → Reinforced → Routed lifecycle below; **entries marked `class: method` are not waiting for anything** — a second sighting would mean the fix never landed, so sweep every method entry for its exit at each close (**route** a new class · **fold** into an existing entry it sharpens · **drop** when an existing rule already covered it). Most fold or drop. Caps ≤10 Emerging, ≤5 Reinforced — **an over-cap Emerging section is almost always undisposed `method` entries, not stale behavioural ones**, so sweep those first rather than reaching for the cap.
+
+  **Measure it rather than reading it.** The buffer costs ~13-22k tokens to read in full, which is why its cap and clock drifted while they were enforced by impression. Get the state for a couple of hundred instead:
+
+  ```bash
+  python3 ~/aios/hooks/buffer-status.py
+  ```
+
+  It reports counts by class, what is over cap, what carries no route target, and what is past the 30-day clock — and it **reads only, never edits**. Exit `0` = within contract · `1` = action needed · `2` = could not measure (a shape it cannot parse is reported loudly, never as a healthy zero). Entries with no `class:` line predate the contract: classify them as you pass. **See Tier A routing enforcement below — Reinforced entries with `Route to:` tags must be routed inline, not deferred.**
 - `growth.md` — new growth edge or confirmed pattern (Tier B — see digest pass below)
 - `patterns.md` — new behavioral or decision-making pattern
 - `business.md` — strategic insight about ventures or relationships

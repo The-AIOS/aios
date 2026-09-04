@@ -35,7 +35,7 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
-## 2026-09-04 — A voice gate that measures instead of banning, and a model ladder that tells you which Claude to spend
+## 2026-09-04 — A voice gate that measures instead of banning, a model ladder that tells you which Claude to spend, and an observation buffer that stops filling up
 
 `hash: fce16ac`
 
@@ -82,6 +82,25 @@
 **Action required — none, and no restart.** The doc, the rail and the housekeeping bucket arrive with your next `/aios:update`; the new tier words are available as soon as the wrapper installer re-runs (`/aios:update` does that for you) — **open a new terminal to pick them up**, since an already-open shell keeps the old `spawn` function until you `source` your rc. The rail stays inert until you create a key file, so there is nothing to opt out of. If you have your own scorer under `hooks/custom/` or `skills/custom/` that asks a Claude model to grade Claude-authored prose, that is the one thing worth looking at by hand; Bucket 27 will find it on the next housekeeping run and offer you the two options.
 
 *The routing question, the containment boundary and the judge-independence finding were all raised by an operator — including the observation that the de-biasing and the cheap-lane happen to be the same piece of code, which is why they shipped as one file.*
+
+### The observation buffer holds two classes with opposite exits — and one of them was never able to leave
+
+> **What this delivers.** `session-insights.md` was specified as one buffer with one promotion rule: *an entry leaves when a second independent sighting confirms it.* That rule is right for observations about **you** and structurally wrong for observations about **the system** — and on any vault running more than about three sessions a day, the second kind dominates intake. The result is a buffer that fills with valid findings none of which can satisfy its only exit condition. Both classes now have their own contract, and the cap is a number a script reports rather than an impression you form after reading 13,000 tokens.
+
+**The argument, because it is counterintuitive:** for an observation about the system, a **second sighting is not confirmation — it is evidence the fix never landed.** So the better AIOS gets at fixing itself, the more its findings are one-offs, and under a promote-on-second-sighting rule one-offs can never leave. That is why raising the cap never held. Intake also scales with sessions-per-day while the promotion rule does not, which is why this is invisible on a single-session vault.
+
+**What changes for you:**
+
+- **Every buffer entry now declares its class** on the line under its title — `` `class: behavioural` · `first-seen: YYYY-MM-DD` · `route: patterns.md` ``.
+- **`behavioural` (about you) is unchanged.** Emerging → Reinforced on a second independent sighting → routed, then removed. One sighting might be noise; waiting is correct and costs nothing.
+- **`method` (about the system — a command, a hook, an agent's own behaviour, a process) never waits.** It needs a stated rule general enough to fire outside the incident, then exits in that same close three ways: **route** it (a genuinely new class of failure), **fold** it into an entry it sharpens, or **drop** it (an existing rule already covered this, and applying that rule harder was the real answer). **Most method findings fold or drop — that is success, not attrition.** It is the pressure valve the single-rule model lacked.
+- **If you can state the rule, route it now.** Sessions already do this when they are confident, which is exactly why what accumulated was the residue nobody was confident enough to route directly. A buffer holding only unconfident method findings is a confidence-holding pen, not a queue.
+- **Measure the buffer instead of reading it — `hooks/buffer-status.py`.** Counts by class, what is over cap, what states no route target, what is past the 30-day clock. It **reads only and never edits**. Exit `0` within contract · `1` action needed · `2` **could not measure** — an unparseable file fails loudly rather than reporting a healthy zero, which is the failure this whole area is prone to. `/close-day` now calls it.
+- **Old entries are not assumed.** An entry with no `class:` line is *unclassified*, and the next session that touches the file classifies it. Nothing is auto-labelled or auto-deleted.
+
+**Action required — one small pass, at your convenience.** Run `python3 ~/aios/hooks/buffer-status.py` after your next update. If it reports unclassified entries, classify them as you pass during a normal `/close-day`; there is no migration script and none is needed. If your Emerging section is over cap, resist reaching for the cap — on measured vaults roughly 80% of buffer intake is `method`, and those exit by disposal rather than by waiting.
+
+*Reported with machine-derived figures from a vault running a multi-session fleet — 34 entries against a raised cap of 25, 23 of them under a week old, zero near-duplicates across 561 pairwise comparisons, and 28 of 34 classified as system observations. Two of those measurements reproduced independently on a second vault that had never seen the report (14/10 Emerging, median entry ~1,857 characters, ~86% system-class); a third did not, and is noted as vault-specific rather than general. The doctrine change is ours; the write-path primitive (`add` / `reinforce` / `route`) remains open for the reporter, who offered to build it against a settled schema — this ships the parser and the measurement it needs, and deliberately not the write path.*
 
 ## 2026-08-29 — An opt-out for automated wrappers, and a skill that was installed but unloadable
 

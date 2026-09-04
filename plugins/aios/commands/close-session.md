@@ -144,9 +144,19 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
      - Does this session **contradict** an existing insight? → remove it
      - Is a Reinforced insight ready to **route** (clear evidence, target file identified)? → write to target observed file (snapshot it first), remove from session-insights
      - Is there a **stale** Emerging insight you're making room for? → drop it
-   - **Then add** new pattern-level observations from this session to Emerging (with date + evidence + route-to target)
+   - **Then add** new pattern-level observations from this session to Emerging. **Every new entry declares its class on the line under its title** — the two classes have opposite disposition rules (CLAUDE.md § Observed Context Rules):
+
+     ```
+     ### {title}
+     `class: method` · `first-seen: {today}` · `route: antifragile.md`
+     ```
+
+     - **`behavioural`** (about the operator) → date + evidence + `route:` target. Waits for a second independent sighting. Unchanged.
+     - **`method`** (about the system — a command, hook, agent behaviour, process) → **do not park it to wait.** A second sighting would mean the fix never landed, not that the finding is confirmed. State a rule general enough to fire outside this incident, then dispose of it **in this same close**: **route** (a new class → `antifragile.md` or the right observed file), **fold** (sharpens an entry that already exists → merge, delete the buffer entry), or **drop** (an existing rule covered it; applying that rule harder was the answer → delete). Most fold or drop, and that is success.
+     - **If you can state the rule, route it now.** The buffer is for what you cannot yet state — parking a finding you are confident about is what turns it into a holding pen with no exit.
+     - An entry with no `route:` target has no exit condition; do not write one.
    - **Snapshot** session-insights only if the document actually changed (not every session)
-   - **Cap:** Emerging ≤10, Reinforced ≤5. Adding forces reviewing.
+   - **Cap:** Emerging ≤10, Reinforced ≤5. Adding forces reviewing. **If Emerging is over cap, the cause is almost always undisposed `method` entries** — sweep those for fold/drop before considering whether anything behavioural is stale. Raising the cap does not hold: method intake scales with sessions-per-day while the promotion rule does not.
    - Session summaries (what happened, wins) belong in the daily note block above — session-insights holds only distilled observations.
 7. **Update observed context files when warranted** — same rules as close-day. Scan the session for:
    - New behavioral pattern confirmed (2+ sessions of evidence) → `patterns.md`
