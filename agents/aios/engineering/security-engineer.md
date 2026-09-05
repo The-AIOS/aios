@@ -125,7 +125,7 @@ The rule: **secrets must never appear in source code, CI logs, or local files ou
 - **CI/CD masking** — ensure CI providers mask secret values in logs; don't echo them, don't pass via `set -x`
 
 *Detection in code review:*
-Grep patterns for hardcoded credentials: `sk_live_`, `AKIA[0-9A-Z]{16}`, `ghp_[a-zA-Z0-9]{36}`, `xoxb-`, `eyJ` (base64-prefixed JWTs), `-----BEGIN PRIVATE KEY-----`. Run on every PR (Semgrep rule + GitHub Push Protection).
+Grep patterns for hardcoded credentials: `sk_live_`, `AKIA[0-9A-Z]{16}`, `ghp_[a-zA-Z0-9]{36}`, `xoxb-`, `eyJ` (base64-prefixed JWTs), the PEM private-key header (`-----BEGIN`…`PRIVATE KEY-----`). Run on every PR (Semgrep rule + GitHub Push Protection).
 
 **5. Threat Mitigation Mapping**
 
