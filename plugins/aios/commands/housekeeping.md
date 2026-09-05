@@ -9,7 +9,7 @@ allowed-tools: mcp__obsidian__*, Read, Grep, Glob, Bash
 
 # /housekeeping — Vault Housekeeping
 
-Periodic care of the vault as it grows. Produces a review packet across **every bucket enumerated in Phase 1** — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification, file placement drift, agent-output gate health, truth-surface drift, memory-pressure channeling, spawned-output placement, antifragile fix-verification, same-family judge — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
+Periodic care of the vault as it grows. Produces a review packet across **every bucket enumerated in Phase 1** — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification, file placement drift, agent-output gate health, truth-surface drift, memory-pressure channeling, spawned-output placement, antifragile fix-verification, same-family judge, containment rung drift — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
 
 **When to run:** monthly as a rhythm, or whenever the vault feels heavy (lots of carries, too many active projects, stale snapshots). `/today` will suggest it when triggers fire.
 
@@ -764,6 +764,27 @@ It runs for months without complaining, which is why it needs a periodic sweep r
 **State COVERAGE, every run, even at zero findings:** *"Same-family judge: **{N}** Claude invocations scanned across **{F}** operator files · **{S}** near scoring vocabulary · **{R}** reported · **{X}** excluded as reading-not-grading."* A silent zero is indistinguishable from a sweep that never ran.
 
 **Don't propose:** rewriting a scorer (read-only) · flagging every `claude -p` (the authorship distinction above is the whole point) · flagging canonical's own hooks, which are readers rather than graders · a cross-family call for something a counter could measure — that trades a privacy boundary for a problem a `wc` would solve.
+
+#### Bucket 28: Containment rung drift (NEW — REPORT-ONLY, never edits)
+
+**The gap.** [`FORTRESS.md`](../../../FORTRESS.md) § The containment ladder describes six rungs from the default install to a two-machine build. **Which rung an operator is actually on is measurable, and nothing measures it on a cadence.** Containment degrades the way it always does — a key exported into a shell rc during a debugging session and never moved back, a hook that stopped being installed after a machine rebuild, a repo that went public. None of those announce themselves, and the operator's *impression* of their own setup is exactly the thing that is wrong.
+
+> **READ-ONLY.** This bucket never edits a shell rc, never installs a hook, never touches `~/.ssh/`, the keychain, or any system security setting. Its output is rows in the Phase-2 packet. A containment change is the operator's own hands, always — offer the exact command, let them run it.
+
+**How to check.** Run the probe block from `FORTRESS.md` § *Which rung am I on?* verbatim — **do not re-derive it here.** That block and its reading notes are the single home for the probes; a second copy in this file would be a second implementation, and the one a session obeys is whichever it reads first. This is the same rule that had this command claiming "23 buckets" while 27 were live.
+
+**Report the rung, plus any *regression* since the last run.** A stable rung is not a finding; a rung that went **down** is. Phrase it as evidence, never as a score:
+
+> *"Rung 2 → rung 1 since the last check: `~/.zshrc` now exports `FOO_API_KEY` (was in `~/.config/aios-secrets/` on {date}). Moving it back is one command — want it?"*
+
+**Two calls this bucket must make honestly:**
+
+- **A failing low rung outranks a passing high one.** An operator with a two-machine fortress and a key in their shell rc is on rung 1. Lead with the key. Containment is the weakest link, not the priciest component.
+- **Rung 5 is not a goal.** If the operator has one machine and no unattended agents, say plainly that rung 3 is the end of the useful ladder for them. A recurring nudge toward $600 of hardware is a subscription to being ignored.
+
+**State COVERAGE, every run, even at zero findings:** *"Containment: rung **{N}** · **{P}** probes run · **{U}** could not run ({which}) · **{R}** regressions since {date}."* **A probe that could not run is excluded from the verdict and named** — a rung claimed on the strength of a probe that never executed is worse than no verdict, and five of these probes have historically failed toward a *false pass*.
+
+**Don't propose:** editing a shell rc, installing anything, or touching security settings (read-only) · a finding for a rung the operator has deliberately declined · buying hardware · re-deriving the probes into this file.
 
 ### Phase 2 — Present the packet
 

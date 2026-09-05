@@ -1078,6 +1078,18 @@ jobs:
         # acceptable, and it was silent because a hand-typed list did not mention it.
         run: bash tests/secret-scan.test.sh
 
+      - name: the containment ladder's probes can actually fail
+        # FORTRESS.md's probe block emits a SAFETY CLAIM — a session runs it and concludes
+        # which containment rung the operator is on. A probe that silently fails and reads
+        # as a clean pass tells someone they are contained when they are not. FIVE probes
+        # were wrong on a live machine and every one failed toward a false reading: a
+        # tailscale check that misses a GUI install, a zsh-fatal unmatched glob, an
+        # unguarded call that printed a traceback, a worktree count that is always >=1,
+        # and pfctl-without-sudo reading as "no firewall". Each regression check carries a
+        # control. Also pins that no fortress COMMAND exists — the ladder is documentation
+        # and the periodic check is a housekeeping bucket, deliberately not a new surface.
+        run: bash tests/fortress-ladder.test.sh
+
       - name: the observation buffer is measured, not judged
         # Reported with machine-derived figures (#62) and reproduced independently on a
         # second vault that had never seen the report: 14/10 Emerging, ~86% of entries

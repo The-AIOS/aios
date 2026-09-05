@@ -319,6 +319,7 @@ Rotation order = list order. `claude-switch` (no args) walks the list. `claude-s
 | A command edit isn't taking effect | The runtime cache might be stale — see `/housekeeping` Bucket 11 (plugin cache verification) |
 | Lost track of where something lives | This file is the index. `TOOLS.md` is the deeper catalog. |
 | Unsure which model should do a task | See [`MODEL-ROUTING.md`](./MODEL-ROUTING.md) — the four `--tier` rungs, the non-Claude boundary, judge independence |
+| Wondering how contained you actually are | [`FORTRESS.md`](./FORTRESS.md) § The containment ladder — six rungs; ask a session *"which rung am I on?"*. Rungs 1-2 are free and carry most of the value |
 | Want 24/7 agents on a Mac mini | See [`FORTRESS.md`](./FORTRESS.md) — two-machine architecture, network isolation, SSH hardening, recovery |
 | Truly lost / fresh-clone confused | `/agent onboarding-aios` — Claude wears the orientation hat, walks you through the full doc map |
 
