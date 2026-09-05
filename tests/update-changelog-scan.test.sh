@@ -102,5 +102,54 @@ else
   printf '       assertions (7-9) are the portable guard.\n'
 fi
 
+# ── every dated entry must carry a hash line ────────────────────────────────
+# /aios:update decides whether an entry is NEW by testing each of its hashes
+# against the operator's stored hash. An entry with NO hash field cannot be
+# tested at all — the scan degrades to matching by date + title, and an entry
+# that silently fails to register as new means its "Action required" is never
+# executed on any operator's machine. Under-reporting is the one failure a
+# changelog cannot afford.
+#
+# This fired for real on 2026-09-04: a rebase conflict resolution grafted one
+# entry's body onto another entry's header, displacing that entry's hash line.
+# Nothing failed, nothing looked wrong, and the entry became untestable. There
+# was no check for this — the guard is the fix.
+NOHASH=$(python3 - <<'PY'
+import re
+t = open('CHANGELOG.md', encoding='utf-8').read()
+bad = [m.group(1) for m in re.finditer(r'^## (\d{4}-\d{2}-\d{2}) — .+$', t, re.M)
+       if not re.search(r'`hash: [^`]+`', t[m.end():m.end()+400])]
+print(" ".join(bad))
+PY
+)
+if [ -z "$NOHASH" ]; then
+  PASS=$((PASS+1)); printf '  ok   12. every dated CHANGELOG entry carries a hash line\n'
+else
+  FAIL=$((FAIL+1)); printf '  FAIL 12. CHANGELOG entries with NO hash line: %s\n' "$NOHASH"
+  printf '       /aios:update cannot test these for sync state; their action items\n'
+  printf '       would never fire on an operator machine.\n'
+fi
+
+# Control: the check must be able to SEE a missing hash, or assertion 12 is
+# vacuous. Takes the fixture path as an ARGUMENT rather than cd-ing — a `cd`
+# inside a command substitution left one python invocation resolving the
+# relative filename in the wrong directory, which printed a traceback while the
+# assertion still passed. A test that emits a traceback reads as broken.
+CTRL_DIR=$(mktemp -d); printf '## 2026-01-01 — no hash here\n\nbody\n' > "$CTRL_DIR/CHANGELOG.md"
+CTRL=$(python3 - "$CTRL_DIR/CHANGELOG.md" <<'PY'
+import re, sys
+t = open(sys.argv[1], encoding='utf-8').read()
+bad = [m.group(1) for m in re.finditer(r'^## (\d{4}-\d{2}-\d{2}) — .+$', t, re.M)
+       if not re.search(r'`hash: [^`]+`', t[m.end():m.end()+400])]
+print(" ".join(bad))
+PY
+)
+rm -rf "$CTRL_DIR"
+if [ "$CTRL" = "2026-01-01" ]; then
+  PASS=$((PASS+1)); printf '  ok   13. control: the hash check DOES detect a missing hash\n'
+else
+  FAIL=$((FAIL+1)); printf '  FAIL 13. CONTROL FAILED — got [%s]; assertion 12 proves nothing\n' "$CTRL"
+fi
+
 printf '\n%d passed, %d failed, %d skipped\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1

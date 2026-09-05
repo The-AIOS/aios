@@ -180,26 +180,9 @@ A skill carrying the **order** a product gets built in, and the defaults that ar
 
 ## 2026-08-29 — An opt-out for automated wrappers, and a skill that was installed but unloadable
 
-> **What this delivers.** `FORTRESS.md` described a two-machine build costing about $600 and a weekend, and it was the **only** containment guidance the framework had — so the honest answer to *"how safe is my setup?"* was either *"buy a Mac mini"* or nothing. It now opens with a **six-rung ladder** you are already standing on, carries a **probe block** any session can run to tell you which rung, and finally documents the **agent bus** — the mechanism by which work actually crosses between machines.
+`hash: ef50c60 · 4f7121b · 4682f2c`
 
-- **Rung 0 — what you already have.** Vault local plus a private repo you own, MCP tokens on your own disk and revocable by deleting a folder, no telemetry, Bash sandboxed by default. A real rung, not a placeholder.
-- **Rung 1 — know what leaves.** An hour, nothing to install. *You cannot contain what you have not enumerated*, and this is the rung people skip because it produces no artifact.
-- **Rung 2 — scope what an agent can touch.** Permissions set deliberately · every API key out of your shell rc into `~/.config/aios-secrets/` · git hooks installed so a credential cannot be committed by accident. **This is the rung that pays.**
-- **Rung 3 — separate the risky work.** Worktrees; a second OS account for anything you would not want reading your keychain.
-- **Rung 4 — a cheap always-on box.** ~€5-10/month. The rung most people skip straight past and usually the right one: it buys the property that actually matters — *something that stays running when the laptop closes* — without hardware on your desk. Declare it rather than hand-configure it, so it is reproducible instead of a pet.
-- **Rung 5 — the two-machine fortress.** The rest of the document, unchanged.
-
-**The part worth reading even if you never climb:** most of the real risk reduction is **rungs 1 and 2, and neither costs money.** A second machine contains the blast radius of an agent that misbehaves; it does nothing about a key exported in a shell rc or a permission set nobody ever scoped. Buying hardware first is the satisfying move and the wrong order. The doc names the rung by **what is true, not what is aspired to** — an operator with a two-machine fortress and a key in `~/.zshrc` is on rung 1, because containment is the weakest link and not the priciest component.
-
-**Ask a session *"which containment rung am I on?"*** and it runs the doc's probe block. `/aios:housekeeping` re-checks on its normal cadence as **Bucket 28** — read-only, reporting *regressions* rather than a score, because containment degrades quietly: a key exported during a debugging session and never moved back, a hook that stopped being installed after a machine rebuild.
-
-**Five probes were wrong on a live machine, every one toward a *false reading*** — the direction that matters when the output is a safety claim. `command -v tailscale` misses a **GUI install** and reported *absent* on a machine that reaches its fortress over Tailscale daily. `ls ~/.config/aios-secrets/*.env` is **fatal under zsh**, which aborts on an unmatched glob *before* `ls` runs, so it died on exactly the machine it exists to describe. An unguarded call to the model rail printed a traceback on a vault that had not pulled it yet. `git worktree list` always prints the main tree, so a raw count of `1` marked a rung satisfied for everybody. And `pfctl` without sudo prints nothing — *not-readable*, never *no firewall*. All five are pinned by tests with controls.
-
-**And the agent bus is finally in the document.** Six defensive layers described the walls; nothing described the door. Agents coordinate across machines by **writing files** — `spawn`, `send` and `kill` are each a JSON file dropped into `~/.aios/spawn-inbox/`, fulfilled natively by whatever surface runs on the far machine. It is **pull-based**: the receiving machine opens no port and runs no listener, so it passes *through* the firewall posture rather than against it, and there is no broker to fail. The transport being a file makes the substrate pluggable by construction. **The design invariant, stated so it survives future edits: zero inbound surface** — if a design ever needs a listening port on the agent host, find another way. The section also says why a file bus rather than the built-in cross-session relay (no cloud transit, no plan gate, substrate-pluggable, no inbound anything), and states plainly what is missing: **a request file carries no authentication and no requester identity, so do not share a spawn-inbox** until requests are signed and verified.
-
-**Action required — none.** No new command: the ladder is documentation and the periodic check is a housekeeping bucket, which keeps the surface count flat. Running the probe block once is worth ten minutes.
-
-*This also closes a dangling reference: the model-routing doc shipped earlier today points at "the containment ladder" in `FORTRESS.md`, which did not yet contain one.*
+*Both fixes contributed by **José Medina** ([#59](https://github.com/The-AIOS/aios/pull/59)), running in a private fork before being offered.*
 
 ### `/close-session` can stop pushing, so your cron's own push is not raced
 
