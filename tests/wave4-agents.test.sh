@@ -43,12 +43,39 @@ grep -q '6 bundles' "$TMP" && ok "control: the sweep DOES detect a planted stale
 rm -f "$TMP"
 grep -qF "$TRUTH bundles" agents/_index.md && ok "agents/_index.md states $TRUTH" || no "agents/_index.md count disagrees with disk"
 
+echo "── the agent count agrees with disk in EVERY place it is written ──"
+# One new bundle touches FIVE hand-maintained places: the purity allowlist, the
+# existence loop, the _index table row, the _index total, and the registry
+# section. Four of five were updated on the first pass; CI caught the fifth.
+A_DISK=$(find agents/aios -name '*.md' ! -name '_index.md' ! -name 'README.md' | wc -l | tr -d ' ')
+A_TOT=$(grep -oE 'Total bundled agents: [0-9]+' agents/_index.md | grep -oE '[0-9]+' | head -1)
+A_SUM=$(grep -oE '\*\*`aios/[a-z-]+/`\*\* \| [^|]+ \| [0-9]+' agents/_index.md | grep -oE '[0-9]+$' | paste -sd+ - | bc 2>/dev/null)
+[ "$A_TOT" = "$A_DISK" ] && ok "_index total matches disk ($A_DISK)" || no "_index says $A_TOT, disk has $A_DISK"
+[ "$A_SUM" = "$A_DISK" ] && ok "_index bundle-table sums to disk ($A_DISK)" || no "table sums to $A_SUM, disk has $A_DISK"
+
+# Extract the purity allowlist ONCE: the alternation line inside the agents/aios
+# case block, e.g. "  sales|strategy|finance-legal|...|commerce) ;;"
+PURITY_ALLOW=$(grep -oE '^ +sales\|[a-z|-]+\)' .github/workflows/validate.yml | head -1 | tr -d ' )')
+
 echo "── every bundle on disk has a README and is in CI's list ──"
 for d in agents/aios/*/; do
   b=$(basename "$d")
   test -f "$d/README.md" && ok "$b has a README" || no "$b has no README.md"
+  # TWO independent hardcoded bundle lists live in validate.yml — the existence
+  # loop AND the framework-purity allowlist. Adding commerce updated one and not
+  # the other, and CI failed on the one that was missed. Checking a single list
+  # would have passed this exact defect, so check BOTH.
   grep -q "for bundle in .*\b$b\b" .github/workflows/validate.yml \
-    && ok "$b is in the CI bundle list" || no "$b is NOT checked by CI" "a bundle CI does not know about can rot"
+    && ok "$b is in the CI existence loop" || no "$b missing from the CI existence loop" "a bundle CI does not know about can rot"
+  # Membership test, not a positional regex. The first attempt required the name
+  # to appear AFTER "sales|strategy|", so it could only ever pass for the last
+  # alternative — the newest bundle passed by accident while five real ones
+  # "failed". A check whose result depends on position in a list is not checking
+  # membership.
+  case "|$PURITY_ALLOW|" in
+    *"|$b|"*) ok "$b is in the framework-purity allowlist" ;;
+    *) no "$b missing from the purity allowlist" "purity reads it as a company namespace and fails the build" ;;
+  esac
 done
 
 echo "── the commerce bundle ships ONE agent, on purpose ──"

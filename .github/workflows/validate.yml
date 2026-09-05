@@ -223,7 +223,7 @@ jobs:
           }
 
           # agents/ — allowed: aios (nested bundles inside) + custom
-          # Nested layout adopted v0.2.0: agents/aios/{sales,strategy,finance-legal,engineering,communication,personal}/
+          # Nested layout adopted v0.2.0: agents/aios/{sales,strategy,finance-legal,engineering,communication,personal,commerce}/
           for name in $(tracked_dirs agents); do
             case "$name" in
               aios|custom) ;;
@@ -231,12 +231,12 @@ jobs:
             esac
           done
 
-          # agents/aios/ — allowed bundles: sales, strategy, finance-legal, engineering, communication, personal
+          # agents/aios/ — allowed bundles: sales, strategy, finance-legal, engineering, communication, personal, commerce
           for dir in agents/aios/*/; do
             name=$(basename "$dir")
             case "$name" in
-              sales|strategy|finance-legal|engineering|communication|personal) ;;
-              *) FOUND+=$'\n  - agents/aios/'"$name"'/  (expected: one of: sales, strategy, finance-legal, engineering, communication, personal)' ;;
+              sales|strategy|finance-legal|engineering|communication|personal|commerce) ;;
+              *) FOUND+=$'\n  - agents/aios/'"$name"'/  (expected: one of: sales, strategy, finance-legal, engineering, communication, personal, commerce)' ;;
             esac
           done
 
