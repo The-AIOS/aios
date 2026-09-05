@@ -16,6 +16,7 @@
 > Entries here are **date-keyed**. Releases are **tagged in git** with full notes, and published as GitHub Releases. A release contains every entry dated up to and including its tag date, back to the previous release:
 >
 > - **Unreleased** — entries dated after `2026-09-04`
+> - **[v0.6.1](https://github.com/The-AIOS/aios/releases/tag/v0.6.1)** — tagged `2026-09-04` — patch: two defects found by dogfooding `/aios:update`, one of which blocked every operator's sync commit
 > - **[v0.6.0](https://github.com/The-AIOS/aios/releases/tag/v0.6.0)** — tagged `2026-09-04` — covers `2026-08-13` → `2026-09-04`
 > - **[v0.5.0](https://github.com/The-AIOS/aios/releases/tag/v0.5.0)** — tagged `2026-08-12` — covers `2026-07-26` → `2026-08-12`
 > - **[v0.4.0](https://github.com/The-AIOS/aios/releases/tag/v0.4.0)** — tagged `2026-07-25` — covers `2026-05-26` → `2026-07-25`
@@ -162,6 +163,15 @@ A skill carrying the **order** a product gets built in, and the defaults that ar
 - **A `/today` parser took the *last* matching account block instead of the first** — contributed fix, and a second independent cause of the same misleading status line addressed a week earlier from the other end.
 
 ---
+
+### Two defects found by dogfooding the update itself
+
+Both shipped in `v0.6.0` and are fixed in `v0.6.1`. Neither needs anything from you — a normal `/aios:update` carries the fixes.
+
+- **A canonical file the secret scanner rejects.** `security-engineer.md` documents credential patterns to grep for and reproduced a literal PEM private-key header; `hooks/git/secret-scan.sh` matches exactly that. The sequence: the update applies the file, Step 7 commits the sync via `aios-commit`, and **the scan refuses the commit** — leaving the vault applied-but-uncommittable with an error naming a "secret" that is a documentation example. **This would have hit every operator upgrading**, because that file changed in this release. Fixed by describing the marker instead of reproducing it, plus a new CI step that runs the scanner over **every tracked file**. Why nothing caught it earlier is the instructive part: the existing test proves the scanner works *on fixtures*, and a canonical checkout without git hooks installed **never invokes it at all** — so the people most likely to write such a line are structurally the least likely to hit it.
+- **A CHANGELOG entry with no `hash:` line.** A rebase resolution grafted one entry's body onto another entry's header, displacing that entry's hash. Not cosmetic: `/aios:update` decides an entry is new by testing its hashes, so an entry with none **cannot be tested at all** — its *Action required* would never fire on any machine. Restored verbatim from the last-synced commit, with a guard (and its control) added.
+
+Both are the same lesson: **a conflict resolution that produces valid-looking output is not evidence the content survived.**
 
 ### What you need to do — the whole day in one list
 
