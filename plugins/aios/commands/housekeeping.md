@@ -9,7 +9,7 @@ allowed-tools: mcp__obsidian__*, Read, Grep, Glob, Bash
 
 # /housekeeping — Vault Housekeeping
 
-Periodic care of the vault as it grows. Produces a review packet across **every bucket enumerated in Phase 1** — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification, file placement drift, agent-output gate health, truth-surface drift, memory-pressure channeling, spawned-output placement, antifragile fix-verification, same-family judge, containment rung drift — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
+Periodic care of the vault as it grows. Produces a review packet across **every bucket enumerated in Phase 1** — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification, file placement drift, agent-output gate health, truth-surface drift, memory-pressure channeling, spawned-output placement, antifragile fix-verification, same-family judge, containment rung drift, headless-call tool allowlists — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
 
 **When to run:** monthly as a rhythm, or whenever the vault feels heavy (lots of carries, too many active projects, stale snapshots). `/today` will suggest it when triggers fire.
 
@@ -785,6 +785,27 @@ It runs for months without complaining, which is why it needs a periodic sweep r
 **State COVERAGE, every run, even at zero findings:** *"Containment: rung **{N}** · **{P}** probes run · **{U}** could not run ({which}) · **{R}** regressions since {date}."* **A probe that could not run is excluded from the verdict and named** — a rung claimed on the strength of a probe that never executed is worse than no verdict, and five of these probes have historically failed toward a *false pass*.
 
 **Don't propose:** editing a shell rc, installing anything, or touching security settings (read-only) · a finding for a rung the operator has deliberately declined · buying hardware · re-deriving the probes into this file.
+
+#### Bucket 29: Headless `claude -p` without a tool allowlist (NEW — REPORT-ONLY, never edits)
+
+**The gap.** A headless `claude -p` with no `--allowedTools` will use whatever the machine permits. Canonical's own invocations are guarded by a CI lint — but **`tests/` is Tier 0 and never reaches an operator vault**, so that lint protects canonical and does nothing for the operator's own `hooks/custom/`, `skills/custom/`, routines and scripts. This bucket is the operator-side half. (Proposed by the operator who reported the finding, who put it in *their* housekeeping first; canonical initially placed it only in CI, which was the right call for canonical and the wrong one for everyone else.)
+
+**Why it matters more than it looks.** A published RCE against Claude Code came from a *"summarise this website"* request. The vendor's response is the load-bearing part: **auto mode is a convenience feature backed by a best-effort classifier, not a security boundary** — the real boundary is OS isolation and egress control. In a routine fleet, a headless call spawning another headless call is the normal topology, so a rogue one does not look anomalous. Any call that puts *fetched text* into a prompt — a page title, an email body, a transcript — is the shape that matters.
+
+> **READ-ONLY.** Never edit a hook to add flags. Adding a tool restriction can break a working automation, and only the operator knows what each call legitimately needs.
+
+**How to check.** Scan the operator's own `.py` / `.sh` under `hooks/custom/`, `skills/custom/`, `plugins/custom/`, and any routine scripts, for a statement that **invokes** `claude -p` without `--allowedTools`. Two disciplines make this quiet rather than noisy:
+
+- **Join line continuations and strip comments FIRST.** A first version of canonical's lint was wrong five times out of five — two hits were continuation lines whose `--allowedTools` sat on the *next* line, three were log strings that merely mention `claude -p` in prose.
+- **The invocation shape is language-specific.** In shell it is a command line; in Python it is an argv list (`[claude, "-p", …]`). A bare `claude -p` inside a Python string is documentation, never a call.
+
+**Report as:** *"`{file}:{line}` invokes `claude -p` with no `--allowedTools`. If any text in that prompt comes from outside the vault (a fetched page, an email, a transcript), it is worth an allowlist. Three of the four obvious fixes do not work — see `MODEL-ROUTING.md` § Verify an id before you trust it."*
+
+**Carry the three traps into the report**, because an operator who reaches for the obvious fix will pick a broken one: `--allowedTools ""` is swallowed (the flag is variadic and eats a following prompt) · `--permission-mode manual` does **not** block · `--disallowedTools` is a denylist, so `Write`, `Edit` and `Agent` survive it. The form that holds is an allowlist naming the tools the job needs — or one that does not exist, when it needs none — plus `--strict-mcp-config` **and an explicit `--permission-mode`**, because a machine-level `permissions.defaultMode: "auto"` silently outranks the allowlist.
+
+**State COVERAGE, every run:** *"Headless calls: **{N}** invocations found across **{F}** operator files · **{G}** already name their tools · **{R}** reported."*
+
+**Don't propose:** editing a hook (read-only) · flagging a call whose prompt is entirely vault-local and fixed · flagging prose or log lines that mention `claude -p` · verifying a fix by asking the agent what tools it has — under a restrictive allowlist it still lists `Bash` and `Write`, because it is describing its **schema**, not its permissions. **Only an absent side effect is evidence.**
 
 ### Phase 2 — Present the packet
 

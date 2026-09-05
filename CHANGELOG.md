@@ -39,7 +39,7 @@
 
 ## 2026-09-04 — Four ladders: which writing tells to keep, which Claude to spend, how contained you are, and what to build first
 
-`hash: 25d4a9f`
+`hash: 25d4a9f · 6a6b815 · 7f3b96d · 5c11809 · 8cb3c3e · 0094e48 · {HASH}`
 
 > **The shape of the day.** Four things shipped that are all the same move: replacing a judgement call you were making by feel with **a rung you can locate yourself on**. Which AI-writing tells to keep. Which Claude model to spend. How contained your machine actually is. What to build first in a product. Each one used to be answered by instinct; each now has a ladder and, where it is measurable, a script that measures it.
 >
@@ -173,6 +173,31 @@ Both shipped in `v0.6.0` and are fixed in `v0.6.1`. Neither needs anything from 
 
 Both are the same lesson: **a conflict resolution that produces valid-looking output is not evidence the content survived.**
 
+### Headless `claude -p` calls must name the tools they may use
+
+> **What this delivers.** A rule, a CI lint, and `/aios:housekeeping` **Bucket 29** — because a headless `claude -p` with no `--allowedTools` will use whatever the machine permits, and in a routine fleet a headless call spawning another headless call is the normal topology, so a rogue one does not look anomalous.
+
+**Reported by an operator** who audited their own fleet after a published RCE against Claude Code arising from a *"summarise this website"* request. The load-bearing part is the vendor's own response: **auto mode is a convenience feature backed by a best-effort classifier, not a security boundary** — the real boundary is OS isolation and egress control. The call shape that matters is any that puts *fetched text* into a prompt: a page title, an email body, a transcript.
+
+**Three of the four obvious fixes do not work.** Recorded so nobody re-invents them:
+
+- **`--allowedTools ""`** is swallowed — the flag is variadic, and with the prompt after it, the prompt is eaten.
+- **`--permission-mode manual` does not block.** Bash still runs. This is the one that reads like the safe setting.
+- **`--disallowedTools Bash`** is a denylist — `Write`, `Edit` and `Agent` survive it.
+- **What holds:** an allowlist naming the tools the job needs (or one that does not exist, when it needs none), plus `--strict-mcp-config` — **and an explicit `--permission-mode`.** Measured on a machine whose `settings.json` sets `permissions.defaultMode: "auto"`, the allowlist alone **created a file** and reported `permission_denials: []`; adding `--permission-mode default` blocked it. **A machine-level auto mode silently outranks the flag.**
+
+**You cannot verify any of this by asking the agent what tools it has.** Under a restrictive allowlist it still lists `Bash` and `Write`, because it is describing its *schema* rather than its permissions. **Only an absent side effect is evidence** — did a file appear, did the command run.
+
+**Canonical was clean when the report arrived, and broke four days later.** The model-id verification probe shipped earlier in this same entry is a headless call with no allowlist, printed in a doc telling operators to run it. Its prompt is a fixed literal so the risk is nil — but a doc showing the unguarded form teaches the unguarded form, which is the strongest available argument for a check rather than a rule. Both sites now carry the guard, and the guarded probe was re-verified to still distinguish a real model id from a bogus one.
+
+**Action required — worth ten minutes if you write your own hooks.** Canonical's lint lives in `tests/`, which is **Tier 0 and never reaches your vault**, so it protects canonical and not you. Your half is **Bucket 29**, which runs on the next `/aios:housekeeping` and scans your own `hooks/custom/`, `skills/custom/`, `plugins/custom/` and routine scripts. It is **report-only** — it will never edit a hook, because adding a tool restriction can break a working automation and only you know what each call legitimately needs.
+
+### `buffer-status.py` told a partly-classified buffer that everything was classified
+
+Small, and worth naming because of where it happened. The tool printed, one line apart: *"Every entry is classified and none is class:method…"* and *"18 entries carry no `class:` line…"* Both cannot be true. Three states — nothing classified, **some** classified, all classified — had only two branches, so the mixed case asserted a cause it had never measured and pointed the operator at behavioural entries when the honest answer was *"the cause cannot be attributed until these are classified."*
+
+That is the same wrong-specific-cause shape this tool exists to reduce, occurring inside it. Fixed, with a regression test **and** a control asserting the all-classified branch is still reachable — otherwise the fix could have made one message correct by making the other unreachable.
+
 ### What you need to do — the whole day in one list
 
 **`/aios:update` handles almost all of it** — it lands the files, registers the new skills into `~/.claude/skills`, and re-runs the wrapper installer. Three things it cannot do for you:
@@ -185,6 +210,8 @@ Both are the same lesson: **a conflict resolution that produces valid-looking ou
 
 - **Ask a session *"which containment rung am I on?"***. It runs read-only probes and reports with evidence. It never touches `~/.ssh/`, your keychain, or system security settings, and shows a diff before going near a shell rc.
 - **If you keep your own scorer** under `hooks/custom/` or `skills/custom/` that asks a Claude model to grade Claude-authored prose, that is worth a look by hand. Bucket 27 will find it on the next housekeeping run and offer you the two options.
+
+**If you write your own hooks that call `claude -p`**, the next `/aios:housekeeping` will scan them (Bucket 29) and report any that name no tools. Report-only; it never edits a hook.
 
 **If you keep a personal writing protocol or pre-publish checklist**, adding `voice-gate` as a step before your existing voice pass is the one manual edit worth making — it filters mechanically so your own pass spends its attention on judgment.
 
