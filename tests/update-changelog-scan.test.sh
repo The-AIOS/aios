@@ -151,5 +151,55 @@ else
   FAIL=$((FAIL+1)); printf '  FAIL 13. CONTROL FAILED — got [%s]; assertion 12 proves nothing\n' "$CTRL"
 fi
 
+# ── the newest entry must tell a receiving session what to DO ────────────────
+# /aios:update is the implementation arm of CHANGELOG action items: Step 1.5
+# says the session executes them inline, check-then-act, rather than printing a
+# list and waiting. An entry that ships without action guidance silently turns
+# that step into a no-op — the update lands the files and nobody is told what
+# their own machine now needs.
+#
+# This is deliberately a LOW bar: it asserts the section exists, not that it is
+# good. "Action required — none" passes, and should, because that is a real and
+# common answer. What it catches is the case that actually happened: work merged
+# with no guidance at all.
+# $ROOT, not a bare filename: this suite runs from a temp workdir (cd "$WORK"
+# at the top), so a relative CHANGELOG.md resolves to nothing. Same lesson the
+# control below already learned — pass the path, never rely on cwd.
+NEWEST=$(python3 - "$ROOT/CHANGELOG.md" <<'PY'
+import re, sys
+t = open(sys.argv[1], encoding='utf-8').read()
+m = re.search(r'^## (\d{4}-\d{2}-\d{2}) — .+$', t, re.M)
+if not m: print(""); raise SystemExit
+j = re.search(r'^## \d{4}-\d{2}-\d{2} — ', t[m.end():], re.M)
+body = t[m.end(): m.end() + j.start()] if j else t[m.end():]
+has = bool(re.search(r'What you need to do|Action required|No action required', body, re.I))
+print(f"{m.group(1)}|{'yes' if has else 'no'}")
+PY
+)
+case "$NEWEST" in
+  *"|yes") PASS=$((PASS+1)); printf '  ok   14. newest entry (%s) carries action guidance\n' "${NEWEST%%|*}" ;;
+  *"|no")  FAIL=$((FAIL+1)); printf '  FAIL 14. newest entry (%s) has NO action guidance\n' "${NEWEST%%|*}"
+           printf '       /aios:update executes action items inline; an entry with none makes that a no-op.\n'
+           printf '       Add a "What you need to do" section, or state "Action required — none" explicitly.\n' ;;
+  *)       FAIL=$((FAIL+1)); printf '  FAIL 14. could not locate the newest dated entry\n' ;;
+esac
+
+# Control: the check must be able to SEE an entry that lacks guidance.
+CTRL_DIR=$(mktemp -d); printf '## 2026-01-01 — silent ship\n\n`hash: abc1234`\n\nbody with no guidance\n' > "$CTRL_DIR/CHANGELOG.md"
+CTRL=$(cd "$CTRL_DIR" && python3 - <<'PY'
+import re
+t = open('CHANGELOG.md', encoding='utf-8').read()
+m = re.search(r'^## (\d{4}-\d{2}-\d{2}) — .+$', t, re.M)
+body = t[m.end():]
+print('yes' if re.search(r'What you need to do|Action required|No action required', body, re.I) else 'no')
+PY
+)
+rm -rf "$CTRL_DIR"
+if [ "$CTRL" = "no" ]; then
+  PASS=$((PASS+1)); printf '  ok   15. control: the check DOES flag an entry with no guidance\n'
+else
+  FAIL=$((FAIL+1)); printf '  FAIL 15. CONTROL FAILED — got [%s]; assertion 14 proves nothing\n' "$CTRL"
+fi
+
 printf '\n%d passed, %d failed, %d skipped\n' "$PASS" "$FAIL" "$SKIP"
 [ "$FAIL" -eq 0 ] || exit 1
