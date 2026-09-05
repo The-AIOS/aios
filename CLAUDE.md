@@ -320,7 +320,7 @@ vault/
 (top-level infra — outside vault/)
 .claude-plugin/marketplace.json
 plugins/   ← aios/ (bundled) · custom/ · <company>/
-agents/    ← aios/{sales,strategy,finance-legal,engineering,communication,personal}/ · custom/ · <company>/
+agents/    ← aios/{sales,strategy,finance-legal,engineering,communication,personal,commerce}/ · custom/ · <company>/
 skills/    ← aios/ · anthropic/ · superpowers/ · custom/
 hooks/     ← claude-identity + pipeline + markitdown · custom/ (flat — settings.json references hook paths directly)
 mcps/      ← *-mcp/ servers · custom/ (flat — ~/.claude.json registers absolute paths; -mcp suffix namespaces)
@@ -404,7 +404,7 @@ See `vault/00 - notes/context/observed/vault-routine.md` for recommended cadence
 | `hooks/` | Pipeline scripts + `claude-identity/` wrappers | Called by commands; wrappers via install scripts | Add `.py`, document in `_index.md` |
 | `mcps/` | Bundled MCP servers (`mcps/_index.md` = canonical list) | Auto-connected via `settings.json` | Add folder, register in settings |
 | `plugins/` | Claude Code plugins — `aios` (bundled) + `custom/` + `<company>/` | Auto-loaded when enabled | Add `plugins/custom/<name>/` with `.claude-plugin/plugin.json` |
-| `agents/` | Task agents in 6 bundles (sales/strategy/finance-legal/engineering/communication/personal) + `custom/` | Spawned via `spawn {name}` or `/agent {name}` — glob across bundles | Add `{name}.md` to the bundle (or `custom/`) from `[[agent-template]]` |
+| `agents/` | Task agents in 7 bundles (sales/strategy/finance-legal/engineering/communication/personal/commerce) + `custom/` | Spawned via `spawn {name}` or `/agent {name}` — glob across bundles | Add `{name}.md` to the bundle (or `custom/`) from `[[agent-template]]` |
 
 **Custom/ + company namespacing:** every framework layer has a `custom/` subfolder for operator extensions (survive `/aios:update`, override bundled). Operator-built plugins go in `plugins/custom/<your-plugin>/`, NOT inside `aios/`. Company-distributed infra (via `/aios:company --sync`) lands at `{layer}/{company}/` or `plugins/{company}/<plugin>/` — namespaced, never collides with `custom/` or `aios-*/`.
 

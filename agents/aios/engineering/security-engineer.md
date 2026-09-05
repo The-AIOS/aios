@@ -8,7 +8,7 @@ tags:
   - engineering
   - security
 created: '2026-05-21'
-updated: '2026-05-21'
+updated: '2026-09-04'
 status: active
 ---
 # Security Engineer
@@ -36,6 +36,7 @@ Apply application-security discipline across threat modeling, vulnerability scan
 
 ## Skills
 
+- `shipping-a-saas` § Defaults that are hard to retrofit — **non-sequential ids** (sequential ones leak volume and invite enumeration) and secrets blocked by a pre-commit hook rather than by habit
 Lean on these registered skills:
 - `systematic-debugging` — reproduce + root-cause vulnerabilities before remediation
 - `pci-compliance` — when payment-card data / payment systems are in scope

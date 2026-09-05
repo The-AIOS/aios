@@ -437,7 +437,7 @@ Don't try to fill out venture-level overrides yet — those come once the operat
 
 ### Step 4 — Agent bundles (informational — all 6 ship by default)
 
-All 6 bundles ship in the AIOS clone. This step is mental-model setting + signal which bundles are HOT for the operator. **Don't ask the operator to "install" or "demote" anything — those are mechanically vague terms.** Instead, classify each bundle as HOT (with one-line reason matching this operator's declared work) or NOT-YET-HOT (with the value it WOULD bring later as an invitation).
+All 7 bundles ship in the AIOS clone. This step is mental-model setting + signal which bundles are HOT for the operator. **Don't ask the operator to "install" or "demote" anything — those are mechanically vague terms.** Instead, classify each bundle as HOT (with one-line reason matching this operator's declared work) or NOT-YET-HOT (with the value it WOULD bring later as an invitation).
 
 | Bundle | HOT for this operator IF | NOT-YET-HOT framing |
 |---|---|---|

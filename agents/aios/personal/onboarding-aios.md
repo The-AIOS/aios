@@ -233,7 +233,7 @@ You should be able to articulate these without reading the docs back to the oper
 
 | Repo | Role | When the operator needs it |
 |---|---|---|
-| [`aios`](https://github.com/The-AIOS/aios) | The framework. 24 slash commands · agents across 6 bundles · skills (aios · anthropic · superpowers · custom) · 10 bundled MCPs · hooks · templates · 7 framework docs. GPL-2.0-or-later, path-agnostic install at `~/aios/`. | Always. This IS the install. |
+| [`aios`](https://github.com/The-AIOS/aios) | The framework. 24 slash commands · agents across 7 bundles · skills (aios · anthropic · superpowers · custom) · 10 bundled MCPs · hooks · templates · 8 framework docs. GPL-2.0-or-later, path-agnostic install at `~/aios/`. | Always. This IS the install. |
 | [`company-template`](https://github.com/The-AIOS/company-template) | The venture-context scaffold. 10 canonical context files + 6 optional infra folders (agents/plugins/hooks/MCPs/skills/templates). | When operator runs `/aios:company --create` to scaffold a new company-context repo. |
 | [`.github`](https://github.com/The-AIOS/.github) | Org-level community health files — SECURITY, PR + Issue templates. (The full contribution guide lives in the `aios` repo root, not here — see `CONTRIBUTING.md` below.) | When operator wants to contribute upstream — `/aios:update` won't touch their personal vault; PRs go through this template. |
 

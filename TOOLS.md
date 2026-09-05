@@ -86,7 +86,7 @@ Say `spawn {name}` to launch a named tab dedicated to that role, or `/agent {nam
 | `study-buddy` | Pre-read chapters, prepare briefs, facilitate study | personal |
 | `technical-cofounder` | Build products end-to-end — discovery → shipping | engineering |
 
-**By bundle:** see `agents/_index.md` for the canonical registry (6 bundles + `custom/`). Operator-built agents live at `agents/custom/{name}.md` and survive `/aios:update`. Company-distributed agents land at `agents/{company}/` via `/aios:company --sync`.
+**By bundle:** see `agents/_index.md` for the canonical registry (7 bundles + `custom/`). Operator-built agents live at `agents/custom/{name}.md` and survive `/aios:update`. Company-distributed agents land at `agents/{company}/` via `/aios:company --sync`.
 
 **Example:** `spawn lawyer "review NDA at ~/code/contracts/2026-03-mutual-nda.docx"` opens a new tab with the lawyer hat pre-loaded and the task primed as the first prompt.
 
@@ -170,7 +170,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `accessibility-compliance` | `skills/aios/` | "Check this for accessibility (WCAG, ARIA, contrast)" |
 | `pci-compliance` | `skills/aios/` | "Audit this for PCI compliance" |
 
-**Source folders:** `skills/aios/` (AIOS-built — 26 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 51. Browse `skills/_index.md` for the full registry.
+**Source folders:** `skills/aios/` (AIOS-built — 27 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 52. Browse `skills/_index.md` for the full registry.
 
 **Marketplace skills** (NOT in `skills/`, install via `/plugin install`): `canvas-design`/`docx`/`pdf`/`pptx`/`xlsx` (via `document-skills` plugin) · `code-review-excellence` (via `code-review@claude-plugins-official`) · `defuddle` (via Anthropic skills marketplace) · `superpowers` full marketplace (`obra/superpowers-marketplace`).
 
@@ -258,7 +258,7 @@ Where everything lives:
 
 | Folder | What's inside | How it's used |
 |--------|--------------|---------------|
-| `agents/` | Task agents in 6 bundles (`aios/sales/` · `aios/strategy/` · `aios/finance-legal/` · `aios/engineering/` · `aios/communication/` · `aios/personal/`) + `agents/custom/` (operator) + `agents/{company}/` (company-distributed) | Spawned via `spawn {name}` or invoked via `/aios:agent {name}` |
+| `agents/` | Task agents in 7 bundles (`aios/sales/` · `aios/strategy/` · `aios/finance-legal/` · `aios/engineering/` · `aios/communication/` · `aios/personal/` · `aios/commerce/`) + `agents/custom/` (operator) + `agents/{company}/` (company-distributed) | Spawned via `spawn {name}` or invoked via `/aios:agent {name}` |
 | `hooks/` | Pipeline scripts (`pipeline-executor.py`, `markitdown-convert.py`, `openrouter.py`) + `claude-identity/` quota autopilot + event hooks (`inject-datetime`) | Called by commands, by `launchd` (autopilot), or via `python3` directly |
 | `mcps/` | Bundled MCP servers — Google Workspace, Slack, GitHub, Atlassian, NotebookLM, Playwright, Stitch, Nano Banana, PDF Generator, Spotify DJ | Auto-connected via `~/.claude/settings.json` after `/aios:mcps-setup` |
 | `plugins/` | Claude Code plugins — `plugins/aios/` (this framework) + `plugins/custom/<your-plugin>/` (operator) + `plugins/<company>/<plugin>/` (company-distributed) | Auto-loaded when enabled in `~/.claude/settings.json` |

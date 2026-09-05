@@ -148,7 +148,7 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 │   ├── custom/              ← your personal extensions (survive /aios:update)
 │   └── <company>/<plugin>/  ← company-distributed (via /aios:company --sync)
 ├── agents/                  ← Task agents
-│   ├── aios-*/              ← framework: 6 bundles (sales · strategy · finance-legal · engineering · communication · personal)
+│   ├── aios-*/              ← framework: 7 bundles (sales · strategy · finance-legal · engineering · communication · personal · commerce)
 │   ├── custom/              ← your personal extensions
 │   └── <company>/           ← company-distributed
 ├── skills/                  ← Skills (auto-loaded by Claude Code)
@@ -215,7 +215,7 @@ See [SETUP.md](./SETUP.md) for prerequisites + the canonical setup flow · [STAR
 
 ## What's inside
 
-Once set up, your vault comes with **24 commands, task agents across 6 bundles, bundled skills across 4 source folders, bundled MCPs, and standalone tools** — all accessible by describing what you need. See [TOOLS.md](./TOOLS.md) for the full menu.
+Once set up, your vault comes with **24 commands, task agents across 7 bundles, bundled skills across 4 source folders, bundled MCPs, and standalone tools** — all accessible by describing what you need. See [TOOLS.md](./TOOLS.md) for the full menu.
 
 The 10 bundled MCPs (Obsidian, Google Workspace, Slack, GitHub, Atlassian, NotebookLM, Playwright, Nano Banana, PDF Generator, Spotify DJ, Stitch) authenticate independently of your Anthropic OAuth grant, survive account switches, and live in the vault — policy: **local over remote**. See [`mcps/_index.md`](./mcps/_index.md) for the canonical list, auth requirements, and add-a-new-MCP pattern.
 
