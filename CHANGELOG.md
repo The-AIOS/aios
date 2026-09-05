@@ -15,7 +15,8 @@
 >
 > Entries here are **date-keyed**. Releases are **tagged in git** with full notes, and published as GitHub Releases. A release contains every entry dated up to and including its tag date, back to the previous release:
 >
-> - **Unreleased** — entries dated after `2026-08-12`
+> - **Unreleased** — entries dated after `2026-09-04`
+> - **[v0.6.0](https://github.com/The-AIOS/aios/releases/tag/v0.6.0)** — tagged `2026-09-04` — covers `2026-08-13` → `2026-09-04`
 > - **[v0.5.0](https://github.com/The-AIOS/aios/releases/tag/v0.5.0)** — tagged `2026-08-12` — covers `2026-07-26` → `2026-08-12`
 > - **[v0.4.0](https://github.com/The-AIOS/aios/releases/tag/v0.4.0)** — tagged `2026-07-25` — covers `2026-05-26` → `2026-07-25`
 > - **[v0.2.0](https://github.com/The-AIOS/aios/releases/tag/v0.2.0)** — tagged `2026-05-25` — covers `2026-05-24` → `2026-05-25`
