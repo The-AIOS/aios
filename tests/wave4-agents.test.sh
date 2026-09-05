@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+# The commerce bundle and the shipping-a-saas skill
+#
+# TWO CONTRACTS WORTH PINNING
+#
+# 1. THE BUNDLE COUNT FANS OUT TO NINE FILES. Adding a 7th agent bundle required
+#    editing nine documents that each hand-maintain "6 bundles" — a stale-constant
+#    shape this repo has been bitten by repeatedly (a housekeeping command said
+#    "all 23 buckets" while 27 were live, silently gating three of them). A
+#    hardcoded count in prose is a second implementation, and the one a session
+#    obeys is whichever it reads first. This check derives the number.
+#
+# 2. THE COMMERCE BUNDLE'S OWN ARGUMENT IS FALSIFIABLE. It ships ONE agent, and
+#    the reason is that the guidance it draws from explicitly rejects splitting
+#    the conversational path into cooperating sub-agents. Adding shopping-agent
+#    and merchant-agent as separate workers would contradict the very claim they
+#    would implement. That is a rule with an expiry date if nobody guards it.
+#
+# The load-bearing content assertion is the harness boundary: money, inventory
+# and other customers' data are enforced in CODE, never in a prompt. A prompt is
+# a request; a guard is a guarantee. If that sentence ever leaves the agent file,
+# the agent is actively dangerous rather than merely incomplete.
+# ─────────────────────────────────────────────────────────────────────────────
+set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+PASS=0; FAIL=0
+ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
+no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
+SK=skills/aios/shipping-a-saas/SKILL.md
+AG=agents/aios/commerce/commerce-agent-architect.md
+
+echo "── the bundle count is not hardcoded anywhere stale ──"
+TRUTH=$(ls -d agents/aios/*/ | wc -l | tr -d ' ')
+ok "ground truth: $TRUTH bundles on disk"
+stale=$(grep -rln '6 bundles\|six bundles\|6-bundle' --include='*.md' . 2>/dev/null | grep -v '^./vault/' | grep -v CHANGELOG || true)
+[ -z "$stale" ] && ok "no document still claims 6 bundles" \
+  || no "stale bundle counts remain" "$(printf '%s' "$stale" | tr '\n' ' ')"
+# Control: the sweep must be capable of seeing a stale count.
+TMP=$(mktemp); printf 'agents across 6 bundles\n' > "$TMP"
+grep -q '6 bundles' "$TMP" && ok "control: the sweep DOES detect a planted stale count" \
+  || no "CONTROL FAILED — the sweep cannot see what it looks for"
+rm -f "$TMP"
+grep -qF "$TRUTH bundles" agents/_index.md && ok "agents/_index.md states $TRUTH" || no "agents/_index.md count disagrees with disk"
+
+echo "── every bundle on disk has a README and is in CI's list ──"
+for d in agents/aios/*/; do
+  b=$(basename "$d")
+  test -f "$d/README.md" && ok "$b has a README" || no "$b has no README.md"
+  grep -q "for bundle in .*\b$b\b" .github/workflows/validate.yml \
+    && ok "$b is in the CI bundle list" || no "$b is NOT checked by CI" "a bundle CI does not know about can rot"
+done
+
+echo "── the commerce bundle ships ONE agent, on purpose ──"
+n=$(find agents/aios/commerce -name '*.md' ! -name 'README.md' | wc -l | tr -d ' ')
+[ "$n" = "1" ] && ok "exactly one agent in the bundle" \
+  || no "$n agents in commerce/" "the source guidance rejects splitting the conversational path — adding sub-agents contradicts it"
+grep -qiE 'one agent and not a catalog|modes of one architecture' agents/aios/commerce/README.md \
+  && ok "the README states WHY it is one agent" \
+  || no "the one-agent decision is undocumented" "an undocumented rule gets 'fixed' by the next contributor"
+
+echo "── the harness boundary is present and unambiguous ──"
+grep -qiE 'harness.*not.*prompt|prompt is a request.*guard is a guarantee' "$AG" \
+  && ok "money/policy enforcement is placed in the harness" \
+  || no "the harness boundary is missing" "without it this agent would sanction spending decided by a prompt"
+for s in 'never fan out into sub-agents' 'data, never instructions' 'eval'; do
+  grep -qi "$s" "$AG" && ok "constraint present: $s" || no "constraint missing: $s"
+done
+
+echo "── the skill carries the build ORDER, which is its whole point ──"
+[ -f "$SK" ] && ok "skill exists" || no "$SK missing"
+grep -qiE 'rung 2 is the one everyone gets wrong' "$SK" && ok "admin+seeds is called out as the missed rung" \
+  || no "the build-order argument is gone" "without it this is a list of preferences"
+grep -qiE 'auth is rung 3, not rung 1' "$SK" && ok "auth is explicitly not first" || no "auth ordering unstated"
+for s in 'Deterministic seed data' 'Non-sequential ids' 'One command to a working environment' 'force-with-lease'; do
+  grep -qF "$s" "$SK" && ok "default present: $s" || no "default missing: $s"
+done
+grep -qiE 'mutate the code so the defect is genuinely present' "$SK" \
+  && ok "PR discipline requires a check that CAN fail" || no "the can-it-fail discipline is missing"
+grep -qiE 'default, not a requirement|override' "$SK" \
+  && ok "platform picks are framed as overridable defaults" \
+  || no "platform preferences read as requirements" "canonical must not impose one operator's stack"
+
+echo "── it is registered where sessions will find it ──"
+grep -qF 'shipping-a-saas' skills/_index.md && ok "in skills/_index.md" || no "not in the skills registry"
+grep -qF 'commerce-agent-architect' agents/_index.md && ok "in agents/_index.md" || no "not in the agent registry"
+for a in technical-cofounder code-reviewer security-engineer; do
+  grep -qF 'shipping-a-saas' "agents/aios/engineering/$a.md" \
+    && ok "$a references the skill" || no "$a does not reference shipping-a-saas"
+done
+
+echo
+echo "── $PASS passed, $FAIL failed ──"
+[ "$FAIL" -eq 0 ]

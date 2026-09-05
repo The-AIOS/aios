@@ -4,13 +4,13 @@ tags:
   - index
   - moc
 created: '2026-05-21'
-updated: '2026-05-21'
+updated: '2026-09-04'
 ---
 # Agents — Top-Level Registry
 
 > Specialized task agents that spawn as sessions, execute with loaded instructions, and call close-session when done. Not persistent identities — they receive tasks, ship, report back.
 
-Organized into **6 bundles by purpose**. Install only the bundles you need.
+Organized into **7 bundles by purpose**. Install only the bundles you need.
 
 ---
 
@@ -129,6 +129,10 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | [[report-drafter]] | Draft status reports and board updates from vault activity | status report, board update, weekly report, progress | on-demand |
 | [[design-md-author]] | Author design.md per Google's spec; interview + validate + optional Stitch upload | design system, design.md, brand identity, design tokens | on-demand |
 | [[animation-composer]] | Own the deck-animation component library — audit · build-to-contract · mine sources for gaps (placement stays the operator's) | animation, deck component, motion, educational animation, gallery, animate this concept, animation audit | on-demand |
+
+### aios/commerce/ — Customer-facing commerce agents
+
+- `commerce-agent-architect` — design, build, tune or review a **shopping agent** (buyers: search, comparison, cart, order assembly) or a **merchant agent** (operators: sales insight, inventory, pricing, promotions). One loop, skills for the long tail, tools onto the systems you already run — and every action touching money, inventory or another customer's data enforced **in the harness, not in a prompt**
 
 ### aios/personal/ — Growth, study, journaling, decisions, onboarding
 

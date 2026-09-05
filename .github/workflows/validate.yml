@@ -313,11 +313,11 @@ jobs:
         run: |
           set -e
           test -f "agents/_index.md" || { echo "::error::Missing canonical registry: agents/_index.md"; exit 1; }
-          for bundle in sales strategy finance-legal engineering communication personal; do
+          for bundle in sales strategy finance-legal engineering communication personal commerce; do
             test -d "agents/aios/$bundle" || { echo "::error::Missing agent bundle: agents/aios/$bundle/"; exit 1; }
             test -f "agents/aios/$bundle/README.md" || { echo "::error::Missing bundle README: agents/aios/$bundle/README.md"; exit 1; }
           done
-          echo "OK: all 6 agent bundles present at agents/aios/{bundle}/ with README.md, and agents/_index.md is in place"
+          echo "OK: all 7 agent bundles present at agents/aios/{bundle}/ with README.md, and agents/_index.md is in place"
 
       - name: No root doc claims a surface is limited to one platform
         run: |
@@ -1089,6 +1089,19 @@ jobs:
         # control. Also pins that no fortress COMMAND exists — the ladder is documentation
         # and the periodic check is a housekeeping bucket, deliberately not a new surface.
         run: bash tests/fortress-ladder.test.sh
+
+      - name: the commerce bundle and the build-order skill hold their contracts
+        # Two things that rot quietly. Adding one agent bundle touches NINE prose documents
+        # that hand-maintain the count, PLUS five enforcement sites — two independent
+        # hardcoded bundle lists in THIS file and three in agents/_index.md. The first
+        # pass updated four of the five and CI caught the fifth. Same stale-constant
+        # shape that had a housekeeping command claiming "all 23 buckets" while 27 were
+        # live, silently gating three of them. And the
+        # commerce bundle ships ONE agent on purpose: the guidance it draws from rejects
+        # splitting the conversational path, so adding sub-agents would contradict the
+        # claim they would implement. Both derive from disk rather than trusting prose,
+        # and the count sweep carries a control.
+        run: bash tests/wave4-agents.test.sh
 
       - name: the observation buffer is measured, not judged
         # Reported with machine-derived figures (#62) and reproduced independently on a

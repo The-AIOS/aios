@@ -1,7 +1,7 @@
 ---
 tags: [skills, index, ai-os]
 created: '2026-03-20'
-updated: '2026-07-27'
+updated: '2026-09-04'
 ---
 # Skills — Source-grouped Registry
 
@@ -101,6 +101,7 @@ Core software-engineering disciplines. Many of these reference each other (e.g.,
 - `prompt-engineering-patterns` — production LLM prompting
 - `data-presentation` — storytelling + dashboard design (consolidated)
 - `infographic-builder` — turn a structured doc (ingest, role report, weekly learnings) into a self-contained HTML one-pager; brand-first theming with [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) as the fallback library
+- `shipping-a-saas` — the build ORDER and the day-one defaults that decide whether a product is supportable later: admin view + impersonation + deterministic seed data at rung **2**, before auth and before the product (the rung everyone builds last and then spends months reading the database by hand). Plus deterministic seeds, non-sequential ids, one-command environments, integer money, PR discipline, and platform traps. Opinionated defaults, overridable in `USER.md`. Wired into `technical-cofounder`, `code-reviewer`, `security-engineer`
 - `voice-gate` — grade AI-writing tells before anything ships in the operator's name: density and paragraph bursts against *their own* baseline, weighted by position (a tell in a title costs far more than one mid-paragraph). Reports, never rewrites — a banned list flattens the voice it exists to protect. Wired into `content-writer`, `email-drafter`, `report-drafter`, `deck-builder`, `sales-proposal-writer`
 
 **Systems & stewardship**

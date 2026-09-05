@@ -7,7 +7,7 @@ tags:
   - agent
   - engineering
 created: '2026-03-27'
-updated: '2026-03-27'
+updated: '2026-09-04'
 status: active
 ---
 # Code Reviewer
@@ -33,6 +33,7 @@ When reviewing, lean on these registered skills (name them so the right methodol
 - `receiving-code-review` — when triaging/responding to review feedback (verify, don't perform-agree)
 - `systematic-debugging` — root-cause any bug found before proposing a fix
 - `verification-before-completion` — evidence before calling the review clean
+- `shipping-a-saas` § PR discipline — one logical change per PR · the body names what would break if the change is wrong · **a check that measures nothing is the most common defect in a suite**, so require that CI could actually fail (mutate the code, see the red line) · merge shared-file PRs serially
 
 
 ## Instructions

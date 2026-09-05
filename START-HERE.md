@@ -89,7 +89,7 @@ Claude walks you through (in this order):
 | Identity | Your named sessions, primary Anthropic account, sources (Calendar/Tasks/Slack/Gmail) | 3 min |
 | Declared context | 4 files in `vault/00 - notes/context/declared/`: about_me, personal_voice, working_style, about_business | 8 min |
 | INTENT.md | Trust contract — autonomy levels, just cause, focus priorities | 5 min |
-| Agent bundles | Which of the 6 bundles apply to your work (sales/strategy/finance-legal/engineering/communication/personal) | 1 min |
+| Agent bundles | Which of the 7 bundles apply to your work (sales/strategy/finance-legal/engineering/communication/personal/commerce) | 1 min |
 | Mount a company (optional) | If you have a venture-context repo, mount it via `/company --create` or `/company --mount` | 5 min |
 | MCP setup | Google Workspace, Slack, GitHub, Atlassian, NotebookLM, Stitch (if UI builder), Playwright, Nano Banana, PDF Generator | 5-10 min |
 | Optional Anthropic plugins | financial-services, claude-for-legal, knowledge-work-plugins (based on your role) | 1 min |
