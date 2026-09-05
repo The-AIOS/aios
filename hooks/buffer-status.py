@@ -156,6 +156,20 @@ def build(sections, ecap, rcap):
                 f"on measured vaults ~80% of buffer intake is class:method, which exits by "
                 f"route/fold/drop rather than by waiting."
             )
+        elif any(e["class"] is None for e in em):
+            # MIXED: some classified, some not. The earlier version fell through to
+            # the all-classified message here and asserted "every entry is
+            # classified" while simultaneously reporting N unclassified entries in
+            # the next line — a self-contradicting report, and the same
+            # assert-a-cause-you-did-not-measure shape this file was written to
+            # avoid. Three states need three messages, not two.
+            unc = sum(1 for e in em if e["class"] is None)
+            actions.append(
+                f"Emerging is {len(em)}/{ecap} (over by {over}), and {unc} of them are still "
+                f"unclassified — the cause cannot be attributed yet. Classify those first; on "
+                f"measured vaults ~80% of buffer intake is class:method, which exits by "
+                f"route/fold/drop rather than by waiting."
+            )
         else:
             actions.append(
                 f"Emerging is {len(em)}/{ecap} (over by {over}). Every entry is classified and none "
