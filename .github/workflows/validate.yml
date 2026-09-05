@@ -1079,12 +1079,15 @@ jobs:
         run: bash tests/secret-scan.test.sh
 
       - name: the containment ladder's probes can actually fail
-        # /aios:fortress emits a SAFETY CLAIM, so a probe that silently fails and reads
-        # as a clean pass tells an operator they are contained when they are not. Three
-        # probes were wrong on their first live run and every one failed toward a false
-        # pass: a zsh-fatal unmatched glob, an unguarded call that printed a traceback,
-        # and a worktree count that is always >=1. Each regression check carries a
-        # control, and the glob one runs both forms under real zsh.
+        # FORTRESS.md's probe block emits a SAFETY CLAIM — a session runs it and concludes
+        # which containment rung the operator is on. A probe that silently fails and reads
+        # as a clean pass tells someone they are contained when they are not. FIVE probes
+        # were wrong on a live machine and every one failed toward a false reading: a
+        # tailscale check that misses a GUI install, a zsh-fatal unmatched glob, an
+        # unguarded call that printed a traceback, a worktree count that is always >=1,
+        # and pfctl-without-sudo reading as "no firewall". Each regression check carries a
+        # control. Also pins that no fortress COMMAND exists — the ladder is documentation
+        # and the periodic check is a housekeeping bucket, deliberately not a new surface.
         run: bash tests/fortress-ladder.test.sh
 
       - name: the observation buffer is measured, not judged
