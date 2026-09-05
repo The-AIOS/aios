@@ -1113,6 +1113,32 @@ jobs:
         # unparseable file reporting a healthy zero is the defect class this reduces.
         run: bash tests/buffer-status.test.sh
 
+      - name: every tracked file passes the secret scanner
+        # THE GAP THIS CLOSES. tests/secret-scan.test.sh proves the scanner behaves
+        # correctly on FIXTURES. Nothing ran it across the tracked tree — so canonical
+        # could (and did) ship a file the scanner rejects, and the failure appeared
+        # only on an operator's machine, at the worst possible moment: aios-commit
+        # refuses the commit, so the framework sync applies but cannot be committed.
+        #
+        # Found 2026-09-04 by dogfooding /aios:update on a live vault. The offender was
+        # the security-engineer agent DOCUMENTING credential patterns to grep for,
+        # including a literal PEM private-key header. Canonical developers never hit it
+        # because a checkout without the git hooks installed never runs this scanner;
+        # every operator using aios-commit does. That asymmetry is the whole bug.
+        run: |
+          set -e
+          FAIL=""
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            bash hooks/git/secret-scan.sh "$f" >/dev/null 2>&1 || FAIL="$FAIL $f"
+          done < <(git ls-files)
+          if [ -n "$FAIL" ]; then
+            echo "::error::Tracked file(s) rejected by hooks/git/secret-scan.sh — every operator would be unable to commit a sync that touches them:$FAIL"
+            echo "Describe the credential marker instead of reproducing it verbatim."
+            exit 1
+          fi
+          echo "OK: every tracked file passes the secret scanner"
+
       - name: the model-routing ladder agrees across both wrappers
         # The tier -> model map is implemented TWICE (a bash case, a PowerShell switch)
         # and nothing but this suite connects them. A fix applied to one and not the
