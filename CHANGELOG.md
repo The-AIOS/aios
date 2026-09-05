@@ -16,6 +16,7 @@
 > Entries here are **date-keyed**. Releases are **tagged in git** with full notes, and published as GitHub Releases. A release contains every entry dated up to and including its tag date, back to the previous release:
 >
 > - **Unreleased** — entries dated after `2026-09-04`
+> - **[v0.6.2](https://github.com/The-AIOS/aios/releases/tag/v0.6.2)** — tagged `2026-09-04` — patch: the day's action list rewritten as checks a receiving session executes, plus the two fixes that shipped undocumented
 > - **[v0.6.1](https://github.com/The-AIOS/aios/releases/tag/v0.6.1)** — tagged `2026-09-04` — patch: two defects found by dogfooding `/aios:update`, one of which blocked every operator's sync commit
 > - **[v0.6.0](https://github.com/The-AIOS/aios/releases/tag/v0.6.0)** — tagged `2026-09-04` — covers `2026-08-13` → `2026-09-04`
 > - **[v0.5.0](https://github.com/The-AIOS/aios/releases/tag/v0.5.0)** — tagged `2026-08-12` — covers `2026-07-26` → `2026-08-12`
@@ -198,22 +199,57 @@ Small, and worth naming because of where it happened. The tool printed, one line
 
 That is the same wrong-specific-cause shape this tool exists to reduce, occurring inside it. Fixed, with a regression test **and** a control asserting the all-classified branch is still reachable — otherwise the fix could have made one message correct by making the other unreachable.
 
-### What you need to do — the whole day in one list
+### What you need to do — checks first, then act
 
-**`/aios:update` handles almost all of it** — it lands the files, registers the new skills into `~/.claude/skills`, and re-runs the wrapper installer. Three things it cannot do for you:
+> **To the session reading this during `/aios:update`: run the checks below and act on what they return.** Do not print this list and wait. Every item is **check-then-act** — verify the operator's own state, act only if the condition holds, and report *"already satisfied — no action"* when it does not. Nothing here is destructive; the one item that touches a file asks first.
 
-1. **Open a new terminal** after the update. The new `--tier` words (`frontier`, `scale`, `fast`) live in the `spawn` shell function, and an already-open shell keeps the old one until you `source` your rc. Nothing breaks if you forget — `--tier mechanical` and `--tier judgment` keep working exactly as before; you simply will not see the new rungs.
-2. **Classify your buffer entries once, as you pass.** Run `python3 ~/aios/hooks/buffer-status.py`. Entries written before today carry no `class:` line and are reported as unclassified — classify them during a normal `/close-day` rather than as a migration. If Emerging is over cap, resist reaching for the cap: on measured vaults roughly 80% of intake is `method`, and those exit by disposal rather than by waiting.
-3. **Nothing at all for the model rail** unless you want it. `hooks/openrouter.py` is inert until you create a key file, and it tells you which file if you ever call it. If you never want a third-party model in your workflow, there is nothing to opt out of.
+**1 · The new `--tier` words are not in an already-open shell.** *(Session: check, then tell the operator precisely.)*
 
-**Two things worth ten minutes each, when convenient:**
+```bash
+grep -q "frontier)    spawn_model=" ~/.zshrc 2>/dev/null && echo installed || echo pending
+```
 
-- **Ask a session *"which containment rung am I on?"***. It runs read-only probes and reports with evidence. It never touches `~/.ssh/`, your keychain, or system security settings, and shows a diff before going near a shell rc.
-- **If you keep your own scorer** under `hooks/custom/` or `skills/custom/` that asks a Claude model to grade Claude-authored prose, that is worth a look by hand. Bucket 27 will find it on the next housekeeping run and offer you the two options.
+- `installed` → the wrapper is current on disk. Tell the operator: **any terminal opened before this update still holds the old `spawn` function** — `source ~/.zshrc` in the ones they are keeping. Nothing breaks if they don't; `--tier mechanical` and `--tier judgment` behave exactly as before, the new rungs simply are not there yet.
+- `pending` → the wrapper installer did not run. Run it: `bash ~/aios/hooks/claude-identity/install-wrappers.sh`, then re-check.
 
-**If you write your own hooks that call `claude -p`**, the next `/aios:housekeeping` will scan them (Bucket 29) and report any that name no tools. Report-only; it never edits a hook.
+**2 · The observation buffer needs classifying once.** *(Session: run it and report the real numbers — do not tell the operator to run it themselves.)*
 
-**If you keep a personal writing protocol or pre-publish checklist**, adding `voice-gate` as a step before your existing voice pass is the one manual edit worth making — it filters mechanically so your own pass spends its attention on judgment.
+```bash
+python3 ~/aios/hooks/buffer-status.py
+```
+
+- Exit `0` → within contract. **Say nothing.**
+- Exit `1` → report exactly what it printed. Entries written before today carry no `class:` line and are reported as unclassified — **classify them as you pass during a normal `/close-day`, not as a migration.** If Emerging is over cap, do **not** raise the cap: on measured vaults ~80% of intake is `class: method`, and those exit by route/fold/drop rather than by waiting.
+- Exit `2` → it could not measure. Report that as a failure to measure, never as a clean buffer.
+
+**3 · Any of the operator's own hooks calling `claude -p` without a tool allowlist.** *(Session: scan now. This is security-relevant and the check is cheap — do not defer it to the next housekeeping run.)*
+
+```bash
+grep -rnE '(^|[^[:alnum:]-])claude -p ' ~/aios/hooks/custom ~/aios/skills/custom ~/aios/plugins/custom 2>/dev/null \
+  | grep -v allowedTools
+```
+
+- **No output** → report *"no unguarded headless calls in your own surfaces."*
+- **Any hit** → for each, check whether the prompt carries text from outside the vault (a fetched page, an email body, a transcript). If it does, that call should name its tools. **Report it; do not edit the hook** — a tool restriction can break a working automation and only the operator knows what each call needs. Give them the working form and the three that do not work: `--allowedTools ""` is swallowed (variadic flag eats a following prompt) · `--permission-mode manual` does **not** block · `--disallowedTools` is a denylist that `Write`, `Edit` and `Agent` survive. What holds is an allowlist naming what the job needs, plus `--strict-mcp-config` **and an explicit `--permission-mode`** — a machine-level `permissions.defaultMode: "auto"` silently outranks the allowlist.
+- **Never verify a fix by asking the agent what tools it has.** Under a restrictive allowlist it still lists `Bash` and `Write`, because it describes its *schema*, not its permissions. **Only an absent side effect is evidence.**
+
+**4 · Any of the operator's own scorers that ask a Claude model to grade Claude-authored prose.** *(Session: scan now; the same cost as item 3.)*
+
+```bash
+grep -rlnE 'claude -p|Anthropic|claude_client' ~/aios/hooks/custom ~/aios/skills/custom 2>/dev/null \
+  | xargs -r grep -lE 'score|rubric|grade|judge|voice_score' 2>/dev/null
+```
+
+- **No output** → say nothing.
+- **Any hit** → a model cannot dock points for a tendency it shares, so a same-family judge misses whatever author and judge have in common. Report the file and offer the two fixes: make it **deterministic** (count a proxy — the `voice-gate` skill is that argument made concrete), or **cross the family** via `hooks/openrouter.py`. **Reading** an artifact Claude did not write is fine and not a finding; **grading** one Claude wrote is the finding.
+
+**5 · Containment rung.** *(Session: offer, then run if the operator says yes — the probes are read-only but the report is a safety claim, so do not assert a rung you did not measure.)* The probe block is in `FORTRESS.md` § *Which rung am I on?*. It never touches `~/.ssh/`, the keychain, or system security settings. Exclude any probe that could not run from the verdict rather than counting it either way.
+
+**6 · Nothing at all for the model rail** unless the operator wants it. `hooks/openrouter.py` is inert until a key file exists and names the file if it is ever called. **No action, and nothing to opt out of.**
+
+**7 · One manual edit, for the operator and not the session.** If they keep a personal writing protocol or pre-publish checklist, adding `voice-gate` as a step *before* their existing voice pass is worth it — it filters mechanically so their own pass spends its attention on judgment.
+
+**Report format when done:** one line per item — *"{item}: {what the check returned} → {what was done, or 'no action needed'}."* An item you skipped is reported as skipped, with why.
 
 ## 2026-08-29 — An opt-out for automated wrappers, and a skill that was installed but unloadable
 
