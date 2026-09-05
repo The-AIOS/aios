@@ -7,7 +7,11 @@ description: The build ORDER and the defaults that decide whether a product is d
 
 Most build advice is about *what* to build. This is about **what order**, which is the decision that quietly determines whether the thing can be operated later. The order below is not a preference; each rung exists because skipping it costs more than it saves, and the cost arrives months after the decision.
 
-Stack-agnostic unless a section says otherwise. Where this file names a specific platform it is a **default, not a requirement** — override in `USER.md` → `## Command personalizations`.
+> ### Read the operator's own stack declaration before anything below
+>
+> If `vault/00 - notes/context/declared/coding_style.md` or `coding-practices.md` exists, **it wins.** This file is the framework's recommendation for someone who has not decided yet; an operator who has decided has already written it down, and re-litigating their stack every session is the opposite of useful. Read theirs, apply §§ 1, 4 and 5 (which are stack-independent), and treat § 2's recommended stack as already answered.
+>
+> When their declaration and this file disagree, that is not drift — **a deviation is a decision.** Record it in their file with the reason, and move on.
 
 ---
 
@@ -31,7 +35,33 @@ Concretely, rung 2 means: **a way to look at any record**, **a way to become a u
 
 ---
 
-## 2 · Defaults that are hard to retrofit
+## 2 · The recommended stack
+
+For an operator with no existing opinion, this is the framework's recommendation. It is **one coherent stack rather than a menu**, which is the point — the value is that every piece was chosen to work with the others, and mixing halves of two stacks gets you the integration problems of both.
+
+```
+Backend    Elixir + Phoenix, API-only (REST/JSON — no server-rendered HTML)
+Frontend   React + TypeScript + Vite
+Data       PostgreSQL · Redis (cache) · Meilisearch (search) · a DB-backed job queue
+Dev env    Nix flakes — one command to a working environment, no Docker
+Deploy     a push-to-deploy platform for most things;
+           bare metal + declarative OS config when the economics or control win
+```
+
+**Why this shape, briefly.** API-only separates cleanly: backend is data and logic, frontend is presentation, and the boundary stays honest because there is no template layer to blur it. A DB-backed job queue means jobs are transactional with your data and visible in the same place — no second system to reason about at 2am. Nix gives the *same* definition across dev, CI and production, which is the actual property you want; the sentence that matters is **"`nix develop` gets you a working environment,"** not the tool's name.
+
+**The deploy line is deliberately two options.** A push-to-deploy platform is right for most products, most of the time — the build-and-ship loop is the thing you touch daily. Bare metal with a declarative OS config wins when you are running stateful always-on services and the per-month economics or the sovereignty actually matter. Choose per product and say which, on the record.
+
+**Where this recommendation comes from, and its honest caveats.** It is adapted from an open-sourced SaaS checklist by a working engineer, generalised here. Two caveats worth carrying:
+
+- **Nix has a genuine learning curve.** *Timebox the spike.* Keep a fallback (a conventional Linux box with native service management and a reverse proxy) so the stack never blocks the ship. Lean toward the reproducible end-state; do not yak-shave into it.
+- **A recommended stack and a shipping estate are different things.** Most operators already have running products on something else. That is not a migration order. **Every new product names its choice explicitly against this standard** — and inheriting an existing product's stack is a perfectly good reason, stated once, rather than a thing to feel bad about.
+
+**Not this stack?** Sections 1, 4 and 5 hold regardless — build order, PR discipline and the deploy properties are stack-independent, and they are where most of the durable value is.
+
+---
+
+## 3 · Defaults that are hard to retrofit
 
 Each of these is cheap on day one and expensive-to-impossible later. That asymmetry is the whole reason they are defaults.
 
@@ -47,7 +77,7 @@ Each of these is cheap on day one and expensive-to-impossible later. That asymme
 
 ---
 
-## 3 · PR discipline
+## 4 · PR discipline
 
 **Rebase onto the mainline before you build, not before you merge.** Building on a stale base means your tests pass against a repository that no longer exists. Rebase first, force-push with `--force-with-lease` so you cannot silently discard someone else's push. (A single-branch clone cannot evaluate the lease — verify the remote by hand there.)
 
@@ -63,7 +93,7 @@ Each of these is cheap on day one and expensive-to-impossible later. That asymme
 
 ---
 
-## 4 · Deploy and platform — defaults, override freely
+## 5 · Deploy and platform — the property that matters
 
 **The property that matters is a preview deployment per pull request.** Everything else is preference; this one changes how the team reviews, because a reviewer who can click the change reviews differently from one reading a diff. Choose whatever provides it.
 
@@ -83,7 +113,7 @@ The framework's default pairing is a **managed frontend host** for the web app a
 
 ---
 
-## 5 · Before you call it shipped
+## 6 · Before you call it shipped
 
 - **A new machine can run it** from the README alone, with no conversation.
 - **Someone else can support it** — the admin view answers "what happened to this user?" without a database client.

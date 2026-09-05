@@ -67,6 +67,23 @@ for s in 'never fan out into sub-agents' 'data, never instructions' 'eval'; do
   grep -qi "$s" "$AG" && ok "constraint present: $s" || no "constraint missing: $s"
 done
 
+echo "── the commerce agent is a THIN entry point, not a copy ──"
+grep -qF 'anthropics/commerce-agents' "$AG" && ok "points at the official reference implementation" \
+  || no "the agent does not link the reference implementation" "it would be a paraphrase of six skills with no path to the real thing"
+grep -qiE 'not vendored|generalist entry point' "$AG" && ok "states that it is an entry point, not a copy" \
+  || no "the no-vendoring decision is undocumented"
+[ -d skills/aios/commerce-architecture ] && no "an upstream commerce skill was vendored in" "6.7MB that drifts; one link reaches all of it" \
+  || ok "no upstream commerce skills copied into the tree"
+
+echo "── the skill defers to the operator's own declared stack ──"
+grep -qF 'coding_style.md' "$SK" && ok "reads the operator declaration first" \
+  || no "the skill never checks for a declared stack" "canonical would be imposing one operator's choices"
+grep -qiE 'a deviation is a decision' "$SK" && ok "deviation-vs-drift rule present" || no "nothing distinguishes a deviation from drift"
+grep -qiE 'Timebox the spike' "$SK" && ok "carries the honest learning-curve caveat" || no "the Nix caveat is missing"
+for s2 in 'Elixir + Phoenix' 'React + TypeScript + Vite' 'PostgreSQL' 'Nix flakes'; do
+  grep -qF "$s2" "$SK" && ok "recommended stack names: $s2" || no "recommended stack missing: $s2"
+done
+
 echo "── the skill carries the build ORDER, which is its whole point ──"
 [ -f "$SK" ] && ok "skill exists" || no "$SK missing"
 grep -qiE 'rung 2 is the one everyone gets wrong' "$SK" && ok "admin+seeds is called out as the missed rung" \
@@ -77,9 +94,12 @@ for s in 'Deterministic seed data' 'Non-sequential ids' 'One command to a workin
 done
 grep -qiE 'mutate the code so the defect is genuinely present' "$SK" \
   && ok "PR discipline requires a check that CAN fail" || no "the can-it-fail discipline is missing"
-grep -qiE 'default, not a requirement|override' "$SK" \
-  && ok "platform picks are framed as overridable defaults" \
-  || no "platform preferences read as requirements" "canonical must not impose one operator's stack"
+# The non-imposition guarantee moved from a weak word ("override") to a real
+# resolution rule: the operator's own declaration WINS. Assert the rule, not the
+# vocabulary — a check pinned to a phrase fails the moment the prose improves.
+grep -qiE "it wins|recommendation for someone who has not decided" "$SK" \
+  && ok "the operator's declared stack outranks the recommendation" \
+  || no "nothing states that a declared stack wins" "canonical would be imposing one operator's choices"
 
 echo "── it is registered where sessions will find it ──"
 grep -qF 'shipping-a-saas' skills/_index.md && ok "in skills/_index.md" || no "not in the skills registry"

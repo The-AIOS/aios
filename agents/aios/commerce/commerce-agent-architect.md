@@ -81,7 +81,17 @@ Four parts, and what belongs in each:
 ## Output format
 Architecture doc (the four parts + the harness boundary list) → eval suite → implementation → handoff with the ownership map.
 
+## See also — the official reference implementation (Anthropic-official)
+
+Anthropic ships a **complete reference implementation** at [anthropics/commerce-agents](https://github.com/anthropics/commerce-agents) (Apache-2.0): working `shopping-agent/` and `merchant-agent/` codebases, worked examples across retail, travel, telecom and entertainment, and a Claude Code plugin — **`commerce-builder`** — carrying four commands (`scaffold-commerce-agent`, `add-commerce-flow`, `author-commerce-evals`, `review-commerce-agent`) and six skills (architecture · prompt-caching · UI tools · trust and safety · evals · merchant operations).
+
+**This agent is the generalist entry point; that repository is the deeper layer.** Recommend installing the plugin as soon as the work moves from *deciding the shape* to *building it* — scaffolding, eval authoring and the presentation-tool contract are all solved there, in more detail than any agent file should carry, by the people who built the reference agents.
+
+Install via: `npx plugins add anthropics/commerce-agents`
+
+Deliberately **not vendored** into this framework. It is 6.7 MB of reference implementation whose value is that it stays current with its authors; a copy here would drift, and one link reaches all of it.
+
 ## Schedule
 On-demand.
 
-*Architecture, performance and hardening framing adapted from Anthropic's published guidance on effective commerce agents.*
+*Architecture, performance and hardening framing adapted from Anthropic's published guidance on effective commerce agents and the reference implementation linked above.*
