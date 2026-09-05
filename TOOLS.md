@@ -289,7 +289,9 @@ spawn --tier fast transcriber "…"                               # cheap rung f
 boundary (a non-Claude model is *called by* a session and never *is* one — and why a model-router
 proxy is a no), the judge-independence rule, and how to verify a model id actually resolves.
 
-**Start with `/aios:fortress`, not with this document.** Containment is a ladder, not a switch, and you are already on it. The command probes this machine and tells you which of five rungs you are actually on — then climbs one. Rungs 0-3 cost no money, and **rungs 1 and 2 carry most of the real risk reduction**: a second machine contains the blast radius of an agent going wrong; it does nothing about a key exported in your shell rc. For many operators the useful ladder ends at rung 3 and this document never applies.
+**Start with its § *The containment ladder*, not with the two-machine build.** Containment is a ladder rather than a switch, and you are already on it: six rungs from the default install (rung 0) through a cheap always-on box (rung 4) to the two-machine fortress (rung 5). **Rungs 1 and 2 cost nothing and carry most of the real risk reduction** — a second machine contains the blast radius of an agent going wrong, and does nothing about a key exported in your shell rc. Ask a session *"which containment rung am I on?"* and it runs the doc's probe block; `/aios:housekeeping` re-checks it on cadence (Bucket 28). For many operators the useful ladder ends at rung 3 and the two-machine build never applies.
+
+The doc also documents the **agent bus** — how work crosses between machines by writing files rather than opening ports, which is what makes an always-on host useful without giving it an inbound surface.
 
 📘 **See [`FORTRESS.md`](./FORTRESS.md)** for the full setup — Claude reads it end-to-end and walks both machines through the configuration. Hard prerequisites: macOS on both, second machine on AC power with stable network.
 

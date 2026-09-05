@@ -1,108 +1,107 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# The containment ladder, and the probes that decide which rung you are on
+# The containment ladder, its probes, and the agent-bus section
 #
-# WHY A SUITE FOR A DOC AND A COMMAND
-# /aios:fortress emits a SAFETY CLAIM. A probe that silently fails and is read
-# as a clean pass tells an operator they are contained when they are not — the
-# worst available failure here, and worse than printing nothing. Three of the
-# probes below were wrong on their first live run and every one of them failed
-# in the direction of a false pass:
+# WHY A SUITE FOR A DOCUMENT
+# FORTRESS.md now emits a SAFETY CLAIM: a reader (or a session running its probe
+# block) concludes which containment rung they are on. A probe that silently
+# fails and reads as a clean pass tells an operator they are contained when they
+# are not — the worst available failure, and worse than printing nothing.
 #
-#   1. `ls ~/.config/aios-secrets/*.env` — zsh ABORTS the command on an unmatched
-#      glob before ls runs, so redirecting ls's stderr does nothing. It died on
-#      exactly the machine it exists to describe: the one with no secrets yet.
-#   2. An unguarded call to hooks/openrouter.py printed a Python traceback on a
-#      vault that had not pulled the hook — reads as a broken machine rather than
-#      a missing update, which sends the operator to the wrong fix.
-#   3. `git worktree list` always prints the main tree, so the raw count of 1
-#      would have read as "a worktree exists" and satisfied rung 3 for everyone.
+# FIVE PROBES WERE WRONG ON A LIVE MACHINE, ALL TOWARD A FALSE READING:
+#   1. `command -v tailscale` misses a GUI install — reported ABSENT on a machine
+#      that reaches its fortress over Tailscale daily; the binary lives inside
+#      /Applications/Tailscale.app and is never on PATH.
+#   2. `ls ~/.config/aios-secrets/*.env` is FATAL under zsh: an unmatched glob
+#      aborts the command before ls runs, so 2>/dev/null cannot help. It died on
+#      exactly the machine it exists to describe.
+#   3. An unguarded call to hooks/openrouter.py printed a traceback on a vault
+#      that had not pulled it — reads as a broken machine, not a missing update.
+#   4. `git worktree list` always prints the main tree, so a raw count of 1 marks
+#      rung 3 satisfied for everybody.
+#   5. `pfctl` without sudo prints nothing and exits non-zero — not-readable,
+#      never "no firewall".
 #
-# This suite also pins the doc contract, because the ladder's value is that it
-# tells most operators to STOP before spending money — an easy sentence to lose
-# in a later edit of a document whose subject is a $600 build.
+# It also pins two things the roadmap asked for and that are easy to lose in a
+# later edit: the cheap always-on rung between "one laptop" and "two Macs", and
+# the agent-bus section — the doc described the walls and not the one door that
+# actually works across machines.
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
-CMD=plugins/aios/commands/fortress.md
 DOC=FORTRESS.md
+HK=plugins/aios/commands/housekeeping.md
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 
-echo "── the ladder exists and resolves the reference that points at it ──"
+echo "── the ladder exists and resolves the reference pointing at it ──"
 grep -qi 'containment ladder' "$DOC" && ok "FORTRESS.md defines the containment ladder" \
-  || no "FORTRESS.md has no ladder" "MODEL-ROUTING.md links to it — the reference would dangle"
-for r in 'Rung 0' 'Rung 1' 'Rung 2' 'Rung 3' 'Rung 4'; do
+  || no "no ladder in FORTRESS.md" "MODEL-ROUTING.md links to it — the reference would dangle"
+grep -qF 'containment ladder' MODEL-ROUTING.md && ok "MODEL-ROUTING.md still points here" || no "the inbound reference vanished"
+for r in 'Rung 0' 'Rung 1' 'Rung 2' 'Rung 3' 'Rung 4' 'Rung 5'; do
   grep -qF "$r" "$DOC" && ok "$DOC names $r" || no "$DOC is missing $r"
 done
+grep -qiE 'cheap always-on box' "$DOC" && ok "the cheap always-on rung exists between laptop and two-Macs" \
+  || no "no cheap rung" "the ladder jumps from free straight to ~\$600, which is the gap it exists to close"
 grep -qiE 'most of the real risk reduction is rungs 1 and 2' "$DOC" \
-  && ok "the doc says the cheap rungs carry most of the value" \
-  || no "the doc lost the point that rungs 1-2 matter most" "without it this is a brochure for a \$600 build"
-grep -qiE 'rung 4 is not a goal|ladder ends at 3|never present rung 4 as the finish line' "$CMD" \
-  && ok "the command refuses to push everyone to rung 4" \
-  || no "nothing stops the command from selling hardware to a single-laptop operator"
+  && ok "states the cheap rungs carry most of the value" || no "lost the point that rungs 1-2 matter most"
+grep -qiE 'rung 5 is not a goal|ladder ends at 3|not as contained as rung 5' "$DOC" \
+  && ok "does not present the top rung as the finish line" || no "reads as a brochure for the \$600 build"
+grep -qiE 'weakest link' "$DOC" && ok "rung = weakest link, not priciest component" \
+  || no "a fortress owner with keys in a shell rc could read as rung 5"
 
-echo "── REGRESSION: the zsh unmatched-glob probe ──"
-# Scoped to lines that would EXECUTE — a whole-file grep fires on the comment
-# that documents the bug, which is the sixth time that shape has bitten in this
-# repo. Strip comment lines first, then look.
-if sed 's/#.*//' "$CMD" | grep -qF "ls ~/.config/aios-secrets/"; then
-  no "the zsh-fatal glob probe is back in executable text" "zsh aborts before ls runs; 2>/dev/null cannot help"
-else
-  ok "no bare glob into ls for the secrets dir (comments excluded)"
-fi
-# Control: the scoping must not have made the check unable to see anything.
-printf 'x\nls ~/.config/aios-secrets/*.env\n' > "$T/planted.md"
-if sed 's/#.*//' "$T/planted.md" | grep -qF "ls ~/.config/aios-secrets/"; then
-  ok "control: the check DOES fire when the bad probe is genuinely present"
-else
-  no "CONTROL FAILED — the check cannot see the defect it looks for" "the assertion above is vacuous"
-fi
-grep -qF "find ~/.config/aios-secrets" "$CMD" && ok "uses find (pattern is an argument, not a glob)" \
-  || no "the secrets probe no longer uses find"
-# Prove the claim rather than asserting it: run BOTH forms under zsh against a
-# directory that does not exist, and require the old one to fail.
-if command -v zsh >/dev/null 2>&1; then
-  if zsh -c "ls $T/nope/*.env" >/dev/null 2>&1; then
-    no "CONTROL FAILED — the old glob form did NOT fail under this zsh" "the regression above proves nothing here"
-  else ok "control: the old glob form genuinely fails under zsh"; fi
-  zsh -c "find $T/nope -name '*.env' -maxdepth 1 2>/dev/null | wc -l" >/dev/null 2>&1 \
-    && ok "the find form survives a missing directory under zsh" || no "the find form failed under zsh"
-else
-  ok "zsh unavailable — control skipped (not counted as a pass of the probe itself)"
-fi
+echo "── the probes live in ONE place and are the fixed versions ──"
+grep -qiE 'Which rung am I on' "$DOC" && ok "probe block is in FORTRESS.md" || no "no probe block in the doc"
+# REGRESSION 1 — the tailscale GUI install
+grep -qF '/Applications/Tailscale.app' "$DOC" && ok "tailscale probe checks the app bundle too" \
+  || no "tailscale probe only checks PATH" "reports absent on a machine that uses it daily"
+# REGRESSION 2 — the zsh-fatal glob, scoped to executable text (a whole-file grep
+# fires on the reading-note that documents it; that shape has bitten 7x here).
+if sed 's/^ *- \*\*.*//' "$DOC" | grep -qE '^\s*ls ~/\.config/aios-secrets/\*'; then
+  no "the zsh-fatal glob is back in the probe block" "zsh aborts before ls runs"
+else ok "no bare glob into ls in the probe block"; fi
+printf 'ls ~/.config/aios-secrets/*.env\n' > "$T/planted"
+grep -qE '^\s*ls ~/\.config/aios-secrets/\*' "$T/planted" \
+  && ok "control: that check DOES fire on a planted bad probe" || no "CONTROL FAILED — check is vacuous"
+grep -qF "find ~/.config/aios-secrets" "$DOC" && ok "uses find instead" || no "the find form is missing"
+# REGRESSIONS 3-5
+grep -qF 'test -f ~/aios/hooks/openrouter.py' "$DOC" && ok "rail probe is file-guarded" || no "unguarded rail probe"
+grep -qE 'worktree list.*wc -l\) - 1' "$DOC" && ok "worktree count subtracts the main tree" || no "raw worktree count"
+# Markdown emphasis sits between the words ("**not-readable**, never *no
+# firewall*"), so match with the inline markers allowed rather than assuming
+# plain prose — the pattern must survive the doc being formatted.
+grep -qiE 'not-readable[*_ ]*,? *never' "$DOC" \
+  && ok "pfctl-without-sudo is called not-readable, not 'no firewall'" \
+  || no "unreadable firewall could read as absent"
+grep -qiE 'exclude it from the verdict' "$DOC" && ok "unrunnable probes are excluded from the verdict" \
+  || no "nothing says to exclude a probe that could not run"
 
-echo "── REGRESSION: the rail probe is guarded ──"
-grep -qF 'test -f ~/aios/hooks/openrouter.py' "$CMD" \
-  && ok "the rail probe file-tests before invoking python" \
-  || no "an absent hook would print a traceback" "reads as a broken machine, not a missing update"
-grep -qF 'rail:not-installed' "$CMD" && ok "not-installed is a distinct answer from inert" \
-  || no "'not installed' and 'inert' are conflated" "they imply different next steps"
+echo "── the agent bus: the door, not just the walls ──"
+n=$(grep -c -iE 'spawn-inbox|agent bus|pull-based' "$DOC")
+[ "$n" -ge 3 ] && ok "the bus is documented ($n references)" \
+  || no "FORTRESS.md still describes only the walls" "the bus is how work actually crosses machines"
+grep -qiE 'zero inbound surface' "$DOC" && ok "the zero-inbound design invariant is stated" \
+  || no "the invariant that makes the bus fortress-compatible is missing"
+grep -qiE 'no cloud transit' "$DOC" && ok "says why a file bus over the native relay" \
+  || no "does not answer why not the built-in cross-session messaging"
+grep -qiE 'no authentication and no requester identity' "$DOC" \
+  && ok "states the bus is unauthenticated" \
+  || no "the missing-auth warning is gone" "a shared inbox is remote code execution"
+grep -qiE 'Do not share a spawn-inbox' "$DOC" && ok "warns against sharing an inbox" || no "no warning against sharing"
 
-echo "── REGRESSION: the worktree off-by-one ──"
-grep -qE 'worktree list.*wc -l\) - 1|- 1 \)\)' "$CMD" \
-  && ok "the worktree count subtracts the main tree" \
-  || no "raw worktree count used" "always >=1, so rung 3 would read as satisfied for everyone"
-
-echo "── the command must not claim what it could not measure ──"
-grep -qiE 'exclude it from the rung verdict|cannot run, say so' "$CMD" \
-  && ok "unreadable probes are excluded from the verdict" \
-  || no "nothing tells the command to exclude unmeasurable probes"
-grep -qiE 'not-readable, never \*no firewall\*|never \*no firewall\*' "$CMD" \
-  && ok "pfctl-without-sudo is called out as not-readable" \
-  || no "an unreadable firewall probe could read as 'no firewall'"
-grep -qiE 'weakest link' "$CMD" && ok "the rung is the weakest link, not the priciest component" \
-  || no "nothing prevents a mini-owner with keys in .zshrc reading as rung 4"
-
-echo "── hands-off boundaries ──"
-for s in '~/.ssh/' 'keychain' 'showing the diff'; do
-  grep -qF "$s" "$CMD" && ok "boundary stated: $s" || no "the command never protects: $s"
-done
-
-echo "── it is discoverable ──"
-grep -qF '`fortress`' CLAUDE.md && ok "listed in CLAUDE.md's command index" || no "not in the command list"
+echo "── the periodic check is a housekeeping bucket, not a new command ──"
+grep -qF 'Bucket 28' "$HK" && ok "Bucket 28 exists" || no "no containment bucket"
+grep -qiE 'do not re-derive it here' "$HK" && ok "the bucket defers to the doc for the probes" \
+  || no "the bucket may re-derive the probes" "a second copy is a second implementation"
+sed -n '/Bucket 28/,/^#### /p' "$HK" | grep -qiE 'READ-ONLY' \
+  && ok "the bucket is read-only" || no "the bucket could edit a shell rc"
+[ ! -f plugins/aios/commands/fortress.md ] && ok "no /aios:fortress command (consolidated into the doc + bucket)" \
+  || no "a new command surface exists" "the ladder is documentation; the periodic check is a bucket"
+truth=$(ls plugins/aios/commands/*.md 2>/dev/null | grep -v _index | wc -l | tr -d ' ')
+grep -qF "**$truth commands" README.md && ok "README command count matches disk ($truth)" \
+  || no "README command count disagrees with disk" "expected $truth"
 
 echo
 echo "── $PASS passed, $FAIL failed ──"

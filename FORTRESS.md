@@ -10,7 +10,7 @@
 
 ## The containment ladder — find your rung before you buy hardware
 
-**This document describes the top rung.** It costs about $600 and a weekend, and most operators do not need it. But *containment* is not a thing you either have or lack — it is a ladder, and **you are already standing on it.** The rungs below are ordered by what they cost you, and each one is complete on its own: rung 2 is worth doing whether or not rung 4 ever happens.
+**This document describes the top rung — rung 5 of 5.** It costs about $600 and a weekend, and most operators do not need it. But *containment* is not a thing you either have or lack — it is a ladder, and **you are already standing on it.** The rungs below are ordered by what they cost you, and each one is complete on its own: rung 2 is worth doing whether or not rung 4 ever happens.
 
 The uncomfortable part, stated plainly: **most of the real risk reduction is rungs 1 and 2, and neither costs money.** A second machine contains the blast radius of an agent that misbehaves; it does nothing about a credential in a shell rc or a permission set that was never scoped. Buying the mini first is the satisfying move and the wrong order.
 
@@ -26,10 +26,58 @@ Set permissions deliberately in `.claude/settings.json` rather than accepting wh
 **Rung 3 — separate the risky work.** Software, per task.
 Run experimental or untrusted work in its own git worktree so a bad edit cannot reach your main tree. For anything you would not want reading your keychain, a second macOS user account is a stronger boundary than any flag. Keep judgment work in sessions you can watch, and autonomous loops on machine-checkable changes only — the reasoning for that is in [`CLAUDE.md`](./CLAUDE.md) § Comprehension debt.
 
-**Rung 4 — the two-machine fortress.** ~$600 and a weekend. **The rest of this document.**
-An always-on agent host, firewalled at the OS level, that can be compromised without reaching your primary machine, your network, or your identity. Worth it when agents genuinely run unattended around the clock and the blast radius of one going wrong is the thing you are managing.
+**Rung 4 — a cheap always-on box.** Roughly €5-10 a month, an afternoon.
+The rung most people skip straight past, and usually the right one. A small VPS gives you the property that actually matters — *something that stays running when the laptop closes* — without $600 of hardware or a machine on your desk. Declare it rather than hand-configure it (a declarative OS config, or at minimum a scripted build you can re-run from zero), so the box is reproducible rather than a pet. It is not as contained as rung 5: it is somebody else's hypervisor, and it is on the public internet rather than behind your own firewall. For most operators those trades are fine, and an always-on agent that exists beats a perfectly-isolated one that does not.
 
-> **Climb in order, and stop where the cost stops being worth it.** A single-laptop operator sitting deliberately on rung 2 is in better shape than one who bought a mini and left their keys exported in `~/.zshrc`. If you want a session to work out where you actually are, run **`/aios:fortress`** — it inspects the machine, tells you your rung, and offers to execute the next one.
+**Rung 5 — the two-machine fortress.** ~$600 and a weekend. **The rest of this document.**
+An always-on agent host on hardware you own, firewalled at the OS level, that can be compromised without reaching your primary machine, your network, or your identity. Worth it when agents genuinely run unattended around the clock, when the data may not sit on rented infrastructure, and when the blast radius of one going wrong is the thing you are managing.
+
+> **Climb in order, and stop where the cost stops being worth it.** A single-laptop operator sitting deliberately on rung 2 is in better shape than one who bought a mini and left their keys exported in `~/.zshrc`. To find out where you actually are, ask a session: *"which containment rung am I on?"* — the probes are in the next section and any session can run them.
+---
+
+## Which rung am I on? — the probes
+
+Read-only, and safe to run at any time. Ask a session *"which containment rung am I on?"* and it should run these and report the rung with its evidence. **Name the rung by what is true, not what is aspired to** — a rung-5 owner with an API key exported in a shell rc is on rung 1, because containment is the weakest link and not the most expensive component.
+
+```bash
+# ── rung 1 · what leaves ────────────────────────────────────────────────────
+git -C ~/aios remote -v 2>/dev/null | awk '{print $2}' | sort -u        # any PUBLIC remote?
+grep -c 'AIOS-OPERATOR-IGNORES' ~/aios/.gitignore 2>/dev/null           # operator marker?
+test -f ~/aios/hooks/openrouter.py \
+  && python3 ~/aios/hooks/openrouter.py --check 2>&1 | tail -2 \
+  || echo "rail:not-installed (run /aios:update)"
+
+# ── rung 2 · what an agent can touch ────────────────────────────────────────
+test -f ~/aios/.claude/settings.json && echo "settings:present" || echo "settings:absent"
+find ~/.config/aios-secrets -name '*.env' -maxdepth 1 2>/dev/null | wc -l
+test -x ~/aios/.git/hooks/pre-commit && echo "githook:installed" || echo "githook:ABSENT"
+grep -lE '^[[:space:]]*export[[:space:]]+[A-Z0-9_]*(API_KEY|TOKEN|SECRET)' \
+  ~/.zshrc ~/.zshenv ~/.bashrc ~/.bash_profile 2>/dev/null   # empty output = good
+
+# ── rung 3 · separation ─────────────────────────────────────────────────────
+echo $(( $(git -C ~/aios worktree list 2>/dev/null | wc -l) - 1 ))      # ADDITIONAL worktrees
+
+# ── rung 4/5 · always-on + isolation ────────────────────────────────────────
+command -v tailscale >/dev/null 2>&1 && echo "tailscale:cli" \
+  || { test -d /Applications/Tailscale.app && echo "tailscale:app (GUI install)" \
+       || echo "tailscale:absent"; }
+sudo -n pfctl -s rules 2>/dev/null | head -3 || echo "pf:not-readable (needs sudo)"
+```
+
+### Reading them — five of these lie if taken at face value
+
+Every one of these was wrong on a live machine before it was fixed, and **each failed in the direction of a false reading**, which is what matters when the output is a safety claim.
+
+- **`command -v tailscale` misses a GUI install.** The Mac app ships its binary inside the bundle and never puts it on `PATH`, so the naive probe reports *absent* on a machine that reaches its fortress over Tailscale daily. Check the app bundle too.
+- **`pfctl` without sudo** prints nothing and exits non-zero. That is **not-readable**, never *no firewall*.
+- **The rc-grep prints filenames only when it matches**, so **empty output is the good case**. An error is neither good nor bad.
+- **`git worktree list` always prints the main tree**, so the useful number is one less than the line count. Reporting the raw `1` marks rung 3 satisfied for everybody.
+- **`ls ~/.config/aios-secrets/*.env` is fatal under zsh** — an unmatched glob aborts the command *before* `ls` runs, so redirecting stderr does nothing and the probe dies on exactly the machine it exists to describe. Use `find`, which takes the pattern as an argument.
+
+**When a probe cannot run, say so and exclude it from the verdict** rather than counting it either way. A rung claimed on the strength of a probe that never executed is worse than no verdict at all.
+
+`/aios:housekeeping` runs this as **Bucket 28** on its normal cadence, so the check happens without anyone remembering to ask.
+
 
 ---
 
@@ -365,6 +413,44 @@ screen-mini() {
 **Why `mini-kill` uses a process-group kill, not a single-PID kill:** the spawn wrapper runs the Claude session inside a parent zsh that lives in the spawned Terminal tab. That zsh is a respawn-loop body — if you SIGKILL only the named `claude` process, the loop respawns it within 60 seconds, defeating the kill. The negative-PGID `kill -KILL -- -PGID` form takes down the launcher zsh + claude + recovery prompt + any descendants in one syscall.
 
 ---
+
+## The agent bus — the one door through the wall
+
+Everything above describes **walls**. This section describes the door, because the two machines are not useful to each other unless work can cross between them, and the way it crosses is the part that decides whether the walls still hold.
+
+**Agents coordinate across machines by writing files, not by opening ports.** A JSON request dropped into `~/.aios/spawn-inbox/` on the far machine is picked up and fulfilled by whatever AIOS surface is running there. Three verbs, all of them just files:
+
+- **`spawn`** — `{"name":"<kebab>","task":"<first prompt>"}` opens a named worker session there
+- **`send`** — `{"action":"send","name":"<kebab>","prompt":"<one line>"}` delivers a prompt into a session already running
+- **`kill`** — `{"action":"kill","name":"<kebab>"}` retires one
+
+The far machine's own surface fulfils the request natively. No keystroke injection, no remote-execution helper, and **no listener**.
+
+### Why this is fortress-compatible rather than a hole in it
+
+**It is pull-based.** The receiving machine opens no port and runs no listener — it watches a directory it already owns. Layer 1 blocks every inbound connection except SSH, and this passes *through* that posture rather than against it, because nothing inbound is ever initiated. There is also no broker in the middle to fail or to compromise.
+
+**The transport is a file, so the substrate is pluggable by construction** — `scp` over the existing SSH trust, a synced folder, a git repo, an object store, a Tailscale share. That is the same shape `/aios:collaborate` and `/aios:company` already use, and swapping the transport changes nothing about the protocol.
+
+> ### ⚠️ The design invariant to protect
+> **Zero inbound surface.** If a future design needs a listening port on the agent host, find another way. That single property is the reason this is compatible with everything above; trade it away and the six layers are defending a machine that now invites connections.
+
+### Why a file bus rather than the built-in cross-session messaging
+
+Claude Code ships native cross-session messaging that relays between your own sessions across machines. It is genuinely easier to set up, and for many people it is the right answer. The file bus is kept for four properties it does not have:
+
+- **No cloud transit.** Relayed messages travel through a third party's servers and may be retained there while connected. The file bus is machine-to-machine over infrastructure you already control, which is the whole premise of this document.
+- **No plan gate**, and it keeps working under configurations where the relay is unavailable.
+- **Substrate-pluggable** — see above. The relay is one transport, permanently.
+- **No inbound anything**, which is the invariant this document exists to protect.
+
+Use the native relay when convenience wins and the content is unremarkable. Use the bus when the point is that nothing left your own metal.
+
+### What is missing, stated plainly
+
+**A request file carries no authentication and no requester identity.** It is an unauthenticated instruction to run an agent with arbitrary text. That is harmless when the only writer is you, across an SSH trust that already existed — and it becomes remote code execution the moment an inbox is shared with anyone else. **Do not share a spawn-inbox until requests are signed and the fulfiller verifies the signature before executing.** Treat the current bus as a single-operator convenience, not a multi-party protocol.
+
+The protocol reference that cannot drift from the running code is written at startup by whichever surface boots: **`~/.aios/spawn-inbox/README.md`**. Read that for the details this section deliberately omits.
 
 ## INSTRUCTIONS — Per machine
 

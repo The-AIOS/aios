@@ -290,7 +290,7 @@ When the operator asks *"where is X documented?"* — route by role, don't read 
 | `CLAUDE.md` (this file) | Behavioral contract — auto-loaded every session | When explaining Claude's behavior |
 | [`CHEATSHEET.md`](./CHEATSHEET.md) | Day-to-day operating index | *"Which command for X?"* / *"How do I customize Y?"* |
 | [`TOOLS.md`](./TOOLS.md) | Full menu — commands + agents + skills + MCPs | *"Is there a tool for X?"* |
-| [`FORTRESS.md`](./FORTRESS.md) | Two-machine architecture (+ Mac mini agent host) | *"How do I run agents 24/7?"* |
+| [`FORTRESS.md`](./FORTRESS.md) | **Containment ladder (6 rungs)** · the agent bus · two-machine architecture | *"How contained am I?"* / *"How do I run agents 24/7?"* |
 | [`MODEL-ROUTING.md`](./MODEL-ROUTING.md) | Which model for which task · the non-Claude boundary · judge independence | *"Which model should do this?"* / *"Can I use Gemini/DeepSeek?"* |
 
 **Plus 2 operator-owned files** Claude reads every session: [`USER.md`](./USER.md) (identity, sources, command overrides) + [`INTENT.md`](./INTENT.md) (trust contract — autonomy per domain).
@@ -383,7 +383,7 @@ Custom slash commands invoked via `aios:<name>`.
 
 **Monthly:** `compact` (digest + archive previous month's snapshots + role logs)
 
-**As needed:** `ideas` · `ghost` · `challenge` · `trace` · `connect` · `learned` · `fortress` (containment rung — detect where you are, climb one) · `housekeeping` · `role-report` · `update` · `mcps-setup` · `ingest` · `agent` · `company` (multi-company mount/sync — `--create`/`--mount`/`--sync`/`--sync-all`/`--status`/`--invite`/`--dry-run`) · `collaborate` (shared spaces, Drive/GitHub/local — `--add-project`/`--status`/`--dry-run`)
+**As needed:** `ideas` · `ghost` · `challenge` · `trace` · `connect` · `learned` · `housekeeping` · `role-report` · `update` · `mcps-setup` · `ingest` · `agent` · `company` (multi-company mount/sync — `--create`/`--mount`/`--sync`/`--sync-all`/`--status`/`--invite`/`--dry-run`) · `collaborate` (shared spaces, Drive/GitHub/local — `--add-project`/`--status`/`--dry-run`)
 
 See `vault/00 - notes/context/observed/vault-routine.md` for recommended cadence.
 
