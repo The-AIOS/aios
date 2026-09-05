@@ -37,7 +37,7 @@
 
 ## 2026-09-04 — Four ladders: which writing tells to keep, which Claude to spend, how contained you are, and what to build first
 
-`hash: {HASH}`
+`hash: 25d4a9f`
 
 > **The shape of the day.** Four things shipped that are all the same move: replacing a judgement call you were making by feel with **a rung you can locate yourself on**. Which AI-writing tells to keep. Which Claude model to spend. How contained your machine actually is. What to build first in a product. Each one used to be answered by instinct; each now has a ladder and, where it is measurable, a script that measures it.
 >
