@@ -103,6 +103,37 @@
 *Reported with machine-derived figures from a vault running a multi-session fleet — 34 entries against a raised cap of 25, 23 of them under a week old, zero near-duplicates across 561 pairwise comparisons, and 28 of 34 classified as system observations. Two of those measurements reproduced independently on a second vault that had never seen the report (14/10 Emerging, median entry ~1,857 characters, ~86% system-class); a third did not, and is noted as vault-specific rather than general. The doctrine change is ours; the write-path primitive (`add` / `reinforce` / `route`) remains open for the reporter, who offered to build it against a settled schema — this ships the parser and the measurement it needs, and deliberately not the write path.*
 
 ### The containment ladder — six rungs, and the one door the walls document never mentioned
+### `shipping-a-saas` + a commerce bundle — the build order, and one agent rather than a catalog
+
+> **What this delivers.** A new skill carrying the **order** a product gets built in and the defaults that are cheap on day one and near-impossible to retrofit — plus a seventh agent bundle for **customer-facing commerce agents**, holding exactly one agent, deliberately.
+
+**The build order, and the rung everyone gets wrong:**
+
+```
+1  Foundation      environment · repo shape · database · migrations
+2  Admin + seeds   admin view · impersonation · deterministic seed data   ← day one
+3  Auth            signup · login · sessions · password reset
+4  The product     the thing you actually set out to build
+5  Polish          errors · loading states · accessibility · performance
+```
+
+**Rung 2 is second on purpose.** The instinct is to build admin tooling last, because no customer asks for it — and the consequence is that for the whole period *before* it exists, which is the period when everything is broken, nobody can see inside the system. Every support question becomes a hand-written database query, and every demo is either fake or terrifying. Once a way to look at any record, a way to become a user, and one-command realistic seed data exist, everything after them is faster to build and to debug. Nobody stops to add them later.
+
+**Auth is rung 3, not rung 1.** An admin view behind a single environment variable is enough to make rungs 1–2 real, and a product with no users does not need a password-reset flow. Building auth first is a common way to spend three weeks producing nothing anyone can see.
+
+**Defaults the skill also carries** — each cheap now, expensive-to-impossible later: deterministic seed data with **no random generators** (*a test whose input you cannot reconstruct is not a test, it is an anecdote*) · non-sequential ids on anything a client can see · one command from a fresh clone to a running app with data in it · one place for the data model · integer minor units for money and UTC everywhere, decided on day one. Plus **PR discipline** — rebase before you *build* rather than before you merge · say what would break if the change is wrong · **require that CI could actually fail**, by mutating the code and seeing the red line · merge shared-file PRs serially — and the platform traps that each cost somebody a day. **Every platform pick is framed as an overridable default**, because canonical must not impose one operator's stack. Wired into `technical-cofounder`, `code-reviewer` and `security-engineer`.
+
+**The commerce bundle — `agents/aios/commerce/`, one agent.** `commerce-agent-architect` designs, builds and hardens a **shopping agent** (buyers: search, comparison, cart, order assembly) or a **merchant agent** (operators: sales insight, inventory, pricing, promotions). One model in a standard agent loop, skills for the long tail, tools onto the systems you already run, and memory in a database rather than accumulated in context.
+
+**The load-bearing rule in it:** *model intelligence decides what to do; the harness decides what is allowed.* Reasoning and tool selection are the model's job — **policy enforcement, money movement, discount ceilings and inventory decrements are code, not instructions in a prompt.** A prompt is a request; a guard is a guarantee. Same principle as the observation buffer above, and it fails the same way when ignored: silently, except here it fails silently while spending someone's money.
+
+**Why one agent and not three.** The guidance this bundle draws from makes a specific architectural claim — *one model in a standard loop*, explicitly rejecting decomposition into cooperating sub-agents for the conversational path. Shipping `shopping-agent` and `merchant-agent` as separate bundled workers would contradict the very argument they would be implementing; they are modes of one architecture. A test pins the decision, because an undocumented rule is one the next contributor "fixes".
+
+**Action required — none.** The skill auto-loads on match; the bundle ships with your next `/aios:update`. Adding the seventh bundle also required correcting **nine documents** that each hand-maintained the number "6 bundles" — the same stale-constant shape that had `/aios:housekeeping` claiming 23 buckets while 27 were live. That count is now derived from disk and guarded by a test carrying a control.
+
+*Build-order argument and the seed-data and id defaults adapted from an open-source SaaS checklist by an outside engineer, generalised off its original stack. Commerce architecture framing adapted from Anthropic's published guidance on effective commerce agents.*
+
+## 2026-08-29 — An opt-out for automated wrappers, and a skill that was installed but unloadable
 
 > **What this delivers.** `FORTRESS.md` described a two-machine build costing about $600 and a weekend, and it was the **only** containment guidance the framework had — so the honest answer to *"how safe is my setup?"* was either *"buy a Mac mini"* or nothing. It now opens with a **six-rung ladder** you are already standing on, carries a **probe block** any session can run to tell you which rung, and finally documents the **agent bus** — the mechanism by which work actually crosses between machines.
 
