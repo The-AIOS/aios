@@ -52,10 +52,20 @@ Model ids churn. An id AIOS does not recognise **does not fail loudly** — Clau
 means *"the spawn worked"* is worthless as evidence on its own. The check that can actually fail:
 
 ```bash
-claude -p --model "$ID" --output-format json 'ok' 2>&1 | head -c 200
+# Prompt FIRST, then flags — `--allowedTools` is variadic and will swallow a
+# prompt that follows it. Both guard flags are required, and so is the explicit
+# permission mode: see the note below.
+claude -p 'ok' --model "$ID" --output-format json \
+  --allowedTools NoSuchTool --strict-mcp-config --permission-mode default 2>&1 | head -c 200
 # real id  → JSON with non-zero total_cost_usd and non-zero input tokens
 # bad id   → the literal string  [claude-code:unrecognized_model]
 ```
+
+> **Why a probe that only says `ok` carries an allowlist.** Reported by an operator, 2026-08-31, after auditing their own fleet. Any shipped `claude -p` invocation should name the tools it actually needs — this one needs none — because the cost of adding it is a flag and the cost of retrofitting it across a fleet is a weekend. Three of the four obvious ways to do this **do not work**: `--allowedTools ""` is swallowed by the variadic flag · `--permission-mode manual` does **not** block (Bash still runs) · `--disallowedTools Bash` is a denylist, so `Write`, `Edit` and `Agent` survive it. The allowlist naming a tool that does not exist, plus `--strict-mcp-config`, is the form that holds.
+>
+> **And it holds only if you also pass `--permission-mode` explicitly.** Measured 2026-09-04 on a machine whose `~/.claude/settings.json` sets `permissions.defaultMode: "auto"`: the allowlist form alone **created a file**, with `permission_denials: []`. Adding `--permission-mode default` (or `plan`) blocked it. A machine-level auto mode silently outranks the flag — which is consistent with the vendor's own position that auto mode is a convenience feature backed by a best-effort classifier, **not a security boundary**.
+>
+> **You cannot verify any of this by asking the agent what tools it has.** Under a restrictive allowlist it still lists `Bash` and `Write`, because it is describing its *schema* rather than its *permissions*. **Only an absent side effect is evidence** — did a file appear, did the command run. Every claim in this note was measured that way.
 
 Note what `modelUsage` in that JSON is **not**: it echoes the id you *requested*, so a bogus id
 appears there verbatim and looks confirmed. Cost and token counts are the discriminating signal.

@@ -351,7 +351,12 @@ spawn() {
   # Code does not recognise does NOT error into the void — it prints
   # [claude-code:unrecognized_model] and then bills zero tokens, so "the spawn
   # worked" is not evidence. The check that can fail:
-  #   claude -p --model "$ID" --output-format json 'ok' 2>&1 | head -c 200
+  #   claude -p 'ok' --model "$ID" --output-format json \\
+  #     --allowedTools NoSuchTool --strict-mcp-config --permission-mode default
+  # (prompt FIRST — --allowedTools is variadic and swallows a following prompt.
+  #  Both guard flags AND the explicit permission-mode are needed: a machine-level
+  #  permissions.defaultMode of "auto" silently outranks the allowlist. See
+  #  MODEL-ROUTING.md § Verify an id before you trust it.)
   # (`modelUsage` in that JSON echoes the id you ASKED for, so a bogus id looks
   # confirmed there — cost and token counts are the discriminating signal.)
   #

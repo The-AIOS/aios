@@ -1113,6 +1113,26 @@ jobs:
         # unparseable file reporting a healthy zero is the defect class this reduces.
         run: bash tests/buffer-status.test.sh
 
+      - name: every shipped `claude -p` invocation names its tools
+        # Reported by an operator 2026-08-31 after auditing their own fleet, prompted by a
+        # published RCE against Claude Code from a "summarise this website" request. The
+        # vendor's own response is the part that matters: auto mode is a convenience feature
+        # backed by a best-effort classifier, NOT a security boundary. A headless `claude -p`
+        # spawning another headless `claude -p` is the normal topology for a routine fleet,
+        # so a rogue one looks ordinary.
+        #
+        # Canonical was clean when they checked. This guard is so it STAYS clean — an
+        # allowlist is a flag now and a fleet-wide retrofit later.
+        #
+        # SCOPED TO EXECUTABLE FILES AND TO STATEMENTS, NOT TEXT. The first version grepped
+        # line-by-line across all tracked files and produced five false positives out of
+        # five: two were continuation lines whose --allowedTools sat on the NEXT line, and
+        # three were log strings in video-watch.py that merely MENTION `claude -p`. A guard
+        # that flags the prose describing a call is the same measuring-the-wrong-thing shape
+        # this repo keeps hitting, so this one joins continuations, strips comments, and
+        # only considers .py/.sh.
+        run: python3 tests/lint-claude-p.py
+
       - name: every tracked file passes the secret scanner
         # THE GAP THIS CLOSES. tests/secret-scan.test.sh proves the scanner behaves
         # correctly on FIXTURES. Nothing ran it across the tracked tree — so canonical
