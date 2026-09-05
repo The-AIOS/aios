@@ -81,6 +81,30 @@ case "$out" in
   *) no "unclassified over-cap produced no recognisable diagnosis" "$out" ;;
 esac
 
+echo "── REGRESSION: a MIXED buffer does not claim everything is classified ──"
+# Three states need three messages. The first version had two, so a buffer with
+# SOME entries classified fell through to the all-classified branch and asserted
+# "every entry is classified" one line above reporting N unclassified. A report
+# that contradicts itself is the same assert-a-cause-you-did-not-measure shape
+# this whole file exists to reduce — caught by running it on a real buffer.
+{ echo "## Emerging"
+  i=0; while [ "$i" -lt 11 ]; do i=$((i+1)); echo "### old $i"; echo "body"; echo; done
+  echo "### classified one"; echo '`class: behavioural` · `route: patterns.md`'; echo "body"; } > "$T/mixed.md"
+out=$(python3 "$B" "$T/mixed.md")
+case "$out" in
+  *"Every entry is classified"*) no "claims every entry is classified while some are not" "self-contradicting report" ;;
+  *"still unclassified — the cause cannot be attributed"*) ok "mixed buffer refuses to attribute the cause" ;;
+  *) no "mixed buffer produced no recognisable diagnosis" "$(printf '%s' "$out" | tail -2)" ;;
+esac
+# Control: the all-classified branch must STILL be reachable, or the fix above
+# just made one message unreachable instead of correct.
+{ echo "## Emerging"
+  i=0; while [ "$i" -lt 12 ]; do i=$((i+1)); echo "### b $i"; echo '`class: behavioural` · `route: patterns.md`'; echo "body"; echo; done; } > "$T/allb.md"
+case "$(python3 "$B" "$T/allb.md")" in
+  *"Every entry is classified"*) ok "control: the all-classified branch is still reachable" ;;
+  *) no "CONTROL FAILED — the all-classified message is now unreachable" ;;
+esac
+
 echo "── REGRESSION: the pre-contract **Route to:** form counts as a route ──"
 { echo "## Emerging"; echo "### legacy entry"; echo "body"; echo '**Route to:** [[patterns]] (some reason)'; } > "$T/legacy.md"
 out=$(python3 "$B" "$T/legacy.md" --json)
