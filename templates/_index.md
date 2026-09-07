@@ -44,7 +44,7 @@ Templates for the standard files used across the vault. Each template includes s
 | [[role-log-template]] | `vault/00 - notes/logs/role-logs/{date}.md` | Daily role activity log |
 | [[meeting-prep-template]] | `vault/03 - export/meetings/{YYYY-MM-DD}-{slug}-prep.md` | High-stakes meeting prep — disambiguation, two-path flow (demo vs discovery), materials checklist, post-call routing |
 | [[agent-template]] | `agents/custom/{name}.md` | Specialized task agent — purpose, tools, instructions, constraints |
-| [[roadmap-template]] | anywhere in `vault/` (e.g. `00 - notes/reflections/{push}/roadmap.md`) | **Opt-in** keyed roadmap for a big multi-project push — one prioritized truth surface with stable keys; wired to the ship-time truth-flip contract (CLAUDE.md § Discipline) via `type: roadmap` frontmatter |
+| [[roadmap-template]] | one file for the push → graduates to `vault/00 - notes/roadmaps/` (folder born at graduation — [[vault-grammar]] § 7) | **Opt-in** keyed roadmap for a big multi-project push — one prioritized truth surface with stable keys; wired to the ship-time truth-flip contract (CLAUDE.md § Discipline) via `type: roadmap` frontmatter. *(Not `reflections/` — a live roadmap is lifecycle, reflections are records.)* |
 | [[vault-grammar]] | read in place (not copied) | **Reference, not fill-in** — the vault structure grammar: record vs lifecycle species, `_archived/` retirement, folder naming, what a rename owes the graph. Consulted before archiving/renaming/restructuring; `/aios:housekeeping` (Bucket 21) audits against its checklist; the `vault-migrations` skill executes the changes |
 
 ### Operator extensions

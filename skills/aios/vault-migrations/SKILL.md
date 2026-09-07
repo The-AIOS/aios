@@ -7,6 +7,8 @@ description: The craft of restructuring a vault without losing a byte — bulk m
 
 A vault migration is a refactor of *meaning-bearing text* with no compiler to catch what you drop. The failure mode is silent: a file left behind in a deleted folder, a table row swallowed by a regex, a wiki-link that stops resolving — none of it errors, all of it surfaces weeks later as "where did X go?" This skill is the discipline that makes structure changes safe enough to do boldly.
 
+The canonical worked example is the **roadmap-layer graduation** (`templates/aios/vault-grammar.md` § 7): a vault whose prioritized backlogs outgrew per-note tracking migrates scattered planning notes into keyed roadmap maps — hundreds of rows across dozens of files, where losing a single keyed row means a commitment silently vanishing. Every rule below was proven on exactly that migration shape.
+
 ## The contract (non-negotiable)
 
 1. **Dry-run first, always.** Every migration is a script (or explicit plan) that runs in report-only mode and prints its full audit — what moves where, what gets rewritten, what the verification found — *before* any write. The write pass runs the identical logic behind a `--write` flag. Never "carefully do it live."
