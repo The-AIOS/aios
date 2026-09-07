@@ -40,7 +40,7 @@
 
 ## 2026-09-07 — Two readers of one file disagreed, and Windows operators could not run the hooks at all
 
-`hash: bbf60df · e81993c` · [#83](https://github.com/The-AIOS/aios/pull/83) · [#84](https://github.com/The-AIOS/aios/pull/84) · [#85](https://github.com/The-AIOS/aios/pull/85) · [#91](https://github.com/The-AIOS/aios/pull/91)
+`hash: bbf60df · e81993c · ba2a010` · [#83](https://github.com/The-AIOS/aios/pull/83) · [#84](https://github.com/The-AIOS/aios/pull/84) · [#85](https://github.com/The-AIOS/aios/pull/85) · [#91](https://github.com/The-AIOS/aios/pull/91) · [#89](https://github.com/The-AIOS/aios/pull/89) · [#92](https://github.com/The-AIOS/aios/pull/92) · [#94](https://github.com/The-AIOS/aios/pull/94)
 
 > **What you can now do.** **Trust what `buffer-status.py` tells you** — if your `session-insights.md` uses top-level `- ` bullets rather than `### ` headings, it was reporting **`0/10` and `0/5`, "within contract", exit 0** on a buffer that was actually at its cap. And **run the framework's hooks and its own test suite on Windows**, where six of them previously died mid-report rather than printing a mangled character. Both were reported by operators running the framework on surfaces the maintainers do not use daily.
 
