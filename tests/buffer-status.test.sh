@@ -185,6 +185,27 @@ case "$(python3 "$B" "$T/badclass.md")" in
   *) no "an unrecognised class passed silently" "a typo would make an entry invisible to disposition" ;;
 esac
 
+echo "── the file's cost is reported, not only the entries' ──"
+# Furniture: tombstones the entry parser never sees but every session pays to load.
+mk "$T/furn.md" 2 2
+i=0; while [ "$i" -lt 40 ]; do i=$((i+1))
+  echo "<!-- ROUTED 2026-01-01 → [[x]]: «tombstone $i — a routed entry whose body already lives in its target file, kept here only as a receipt» -->" >> "$T/furn.md"
+done
+out=$(python3 "$B" "$T/furn.md" --json)
+gt=$(printf '%s' "$out" | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["approx_tokens_file"] > d["approx_tokens_entries"])')
+[ "$gt" = "True" ] && ok "file cost is reported above entry cost when furniture is present" || no "file cost not above entry cost" "$out"
+case "$(python3 "$B" "$T/furn.md")" in
+  *"NOT entries"*) ok "the report names the share that is not entries" ;;
+  *) no "furniture-heavy buffer printed no warning" "the caps read fine while most of the file was tombstones" ;;
+esac
+mk "$T/lean.md" 2 2
+case "$(python3 "$B" "$T/lean.md")" in
+  *"NOT entries"*) no "CONTROL FAILED — a lean buffer triggered the furniture warning" ;;
+  *) ok "control: a lean buffer prints no furniture warning" ;;
+esac
+old=$(printf '%s' "$out" | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["approx_tokens_to_read_in_full"] == d["approx_tokens_entries"])')
+[ "$old" = "True" ] && ok "the original JSON key keeps its meaning (entries)" || no "approx_tokens_to_read_in_full changed meaning" "a consumer reading the old key would silently get a different number"
+
 echo "── it never writes ──"
 mk "$T/ro.md" 4 1
 before=$(shasum -a 256 < "$T/ro.md")

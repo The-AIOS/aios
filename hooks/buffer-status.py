@@ -268,7 +268,19 @@ def build(sections, ecap, rcap):
         "invalid_class": len(bad_class),
         "missing_route": len(no_route),
         "stale_over_30d": len(stale),
+        # `entry_chars` counts ONLY the entries. `file_chars` (set in main(), the one
+        # caller holding the text) is what a session actually pays to read the file,
+        # and the two drift apart: routing tombstones (`<!-- ROUTED ... -->`), front
+        # matter and any prose outside an entry are invisible to the entry parser yet
+        # billed on every load. A buffer can sit "within contract" on the caps while
+        # most of its weight is furniture the caps say nothing about. Report both and
+        # name each for what it is: the caps govern the entries; the token bill is the
+        # file. The original key keeps its meaning so existing consumers are unaffected.
+        "entry_chars": total_chars,
+        "approx_tokens_entries": total_chars // 4,
         "approx_tokens_to_read_in_full": total_chars // 4,
+        "file_chars": None,             # filled by main()
+        "approx_tokens_file": None,     # filled by main()
         "actions": actions,
     }
 
@@ -294,6 +306,8 @@ def main():
         return 2
 
     r = build(sections, a.emerging_cap, a.reinforced_cap)
+    r["file_chars"] = len(text)
+    r["approx_tokens_file"] = len(text) // 4
     if a.json:
         print(json.dumps(r, indent=2))
     else:
@@ -301,7 +315,13 @@ def main():
         print(f"Reinforced {r['reinforced']}/{r['reinforced_cap']}" + ("  ⚠ OVER" if r["reinforced"] > r["reinforced_cap"] else ""))
         if r["by_class"]:
             print("  by class : " + " · ".join(f"{k} {v}" for k, v in sorted(r["by_class"].items())))
-        print(f"  reading the buffer in full costs ~{r['approx_tokens_to_read_in_full']:,} tokens")
+        _ent, _fil = r["approx_tokens_entries"], r["approx_tokens_file"]
+        print(f"  entries      ~{_ent:,} tokens   (what the caps govern)")
+        print(f"  WHOLE FILE   ~{_fil:,} tokens   (what every session actually pays)")
+        if _fil >= _ent * 1.25:
+            _pct = round((1 - _ent / _fil) * 100)
+            print(f"  ⚠ {_pct}% of the file is NOT entries — comments, tombstones, front matter.")
+            print("    The caps say nothing about that share. Condense or relocate it.")
         if r["actions"]:
             print("\nAction needed:")
             for i, x in enumerate(r["actions"], 1):
