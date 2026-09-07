@@ -66,6 +66,16 @@ import subprocess
 import sys
 import tempfile
 
+# Windows consoles default to cp1252, which cannot encode the em dashes and
+# symbols this script prints — so on Windows the report raised
+# UnicodeEncodeError and aborted instead of printing. Already guarded this way
+# in pipeline-executor.py, route-insight.py and claude-identity/context-monitor.py;
+# these callers were simply missed. Safe on macOS/Linux, where stdout is UTF-8.
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
+
 HOOKS = os.path.dirname(os.path.abspath(__file__))
 OCR_SWIFT = os.path.join(HOOKS, "ocr-image.swift")
 YT_TRANSCRIPT = os.path.join(HOOKS, "custom", "youtube-transcript.py")
