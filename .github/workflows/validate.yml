@@ -1133,6 +1133,19 @@ jobs:
         # only considers .py/.sh.
         run: python3 tests/lint-claude-p.py
 
+      - name: a headless allowlist is documented where a session will meet it
+        # Reported in #90. tests/lint-claude-p.py checks that hooks PASS --allowedTools;
+        # nothing checked that passing it restricts anything. So the framework linted the
+        # flag and asserted the guarantee while never measuring it — a check measuring a
+        # cousin of the requirement, on a security boundary.
+        #
+        # The runtime half needs a real `claude` binary and network, which this runner
+        # has neither of, so that assertion SKIPS here with a stated reason and exits 0.
+        # A skip that announces itself is honest; a green tick from a check that never
+        # ran is the defect this suite is about. What DOES run here is the documentation
+        # and shipped-invocation half, which is where the class actually recurs.
+        run: bash tests/headless-allowlist.test.sh
+
       - name: the pre-push owner guard is inert until configured
         # Contributed in #92. The property that matters is INERTNESS: canonical ships
         # with no organisation names inside it, and a fresh clone must exit 0 until the

@@ -115,6 +115,22 @@ Unset → exit 0, nothing happens. The escape hatch is explicit and announces it
 
 ---
 
+### A headless tool allowlist is advisory unless you pass `--permission-mode` with it
+
+> **What you can now do.** Trust a scoped `claude -p` — or know precisely when you cannot. Reported by an operator who measured it rather than reading it.
+
+`--allowedTools` on a headless run **does not hold on its own.** Measured with `permissions.defaultMode: "auto"` in `settings.json`: a `claude -p` passing an allowlist naming a nonexistent tool, plus `--strict-mcp-config`, still performed `Bash` and `Write` calls — no error, no prompt, `permission_denials: []`. **A machine-level auto mode silently outranks the flag.** Adding `--permission-mode default` (or `plan`) blocks the same call.
+
+That is the vendor's own position arriving from the other direction: auto mode is a convenience feature backed by a best-effort classifier, **not a security boundary**. So it is not only what auto mode fails to *stop* — it is what auto mode will happily *allow* over an explicit allowlist.
+
+**Three shapes that look like the fix and are not:** `--allowedTools ""` is swallowed (the flag is variadic and eats a prompt placed after it — put the prompt **first**) · `--permission-mode manual` does **not** block · `--disallowedTools` is a denylist, so `Write`, `Edit` and `Agent` survive it.
+
+**And you cannot verify it by asking the agent what tools it has.** Under a restrictive allowlist it still lists `Bash` and `Write`, because it is describing its *schema* rather than its permissions. **Only an absent side effect is evidence** — did a file appear, did the command run.
+
+The precondition now lives in `CLAUDE.md` § Spawning Sessions and in the `orchestration-ladder` skill, not only in `MODEL-ROUTING.md` — those are the surfaces a session reads *before* delegating, and a rule stated only where you would look afterwards is a rule that does not fire. `tests/headless-allowlist.test.sh` measures it: the documentation and shipped-invocation halves run everywhere, and the live runtime check **skips loudly** where no `claude` binary exists rather than reporting a pass it did not earn.
+
+*What was already right, and what was not: the caveat had been documented in `MODEL-ROUTING.md` since 2026-09-04, and the report cited a different entry that never carried the claim. But the two gaps it named were real — the precondition was missing from every surface an agent actually reads when deciding to delegate, and the existing lint checked only that hooks **pass** the flag, never that passing it restricts anything. Linting the flag while asserting the guarantee is the same check-measures-a-cousin shape this framework keeps finding in its own work.*
+
 ### What you need to do — checks first, then act
 
 > **To the session reading this during `/aios:update`: run the checks and act on what they return.** Both are read-only. Report *"already satisfied — no action"* when a check comes back clean.
