@@ -38,6 +38,32 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-06 — Structure evolution gets its grammar: how retired content is named, and how to restructure without losing a byte
+
+`hash: 0e61aa6` · [#81](https://github.com/The-AIOS/aios/pull/81)
+
+> **The shape of the change.** The File Placement Router has always answered *"where does a NEW file go?"* Nothing answered the questions that come later: where does *retired* content go, what do folders get named as species accumulate, and what does a rename owe the rest of the graph. Every vault answered those differently each time (`archive/` here, `done/` there, a rename that silently orphaned its inbound links) — invisible until retrieval fails. This entry ships the grammar, the execution craft, and the periodic audit.
+
+### What you can now do
+
+- **Ask "where does this retire to?" and get one answer.** `templates/aios/vault-grammar.md` is the structure grammar: **record species** (audits, ingests, books, research — each file IS the record) never grow archive shelves; **lifecycle species** (projects, roadmaps, briefs) retire into **`_archived/`** — one name, so one grep finds every retirement shelf in the vault. Plus folder naming (plain nouns, never dates) and what a rename owes the graph (`aliases:` on every rename, redirect stubs for high-traffic basenames, basename-collision checks before moves).
+- **Restructure boldly without losing a byte.** Say *"dissolve this folder"* / *"split this note"* / *"rename this everywhere"* and your session loads the **`vault-migrations`** skill: dry-run first with a printed audit, inventory verification (file/key/line accounting — "probably nothing was dropped" is not a verification), no silent overwrites, one commit per verified stage, and the field-tested gotchas that each cost a real migration a real bug.
+- **Get structure drift surfaced before it taxes you.** `/aios:housekeeping` Bucket 21 (now *File placement drift + structure grammar*) audits the vault against the grammar's checklist — mixed retirement names, archive shelves inside record folders, archived notes still carrying live obligations, alias-less renames — as **proposals only**, never auto-moves.
+
+### Components (for the record)
+
+- `templates/aios/vault-grammar.md` — NEW (reference template, read in place; registered in `templates/_index.md`)
+- `skills/aios/vault-migrations/SKILL.md` — NEW bundled skill (27→28 aios skills, 52→53 total; registered in `skills/_index.md` + TOOLS.md)
+- `plugins/aios/commands/housekeeping.md` — Bucket 21 upgraded (placement scan unchanged; grammar scan added; propose-only contract unchanged)
+- `CLAUDE.md` § IV File Placement Router — one new paragraph: *Structure evolution follows the vault grammar* (consult before archiving/renaming/restructuring; bulk changes via `vault-migrations`)
+
+### Action required
+
+1. **Nothing manual for the files** — `/aios:update` lands them (Tier 1) and, because a bundled `SKILL.md` was added, **runs the skills registrar automatically** (`skills/setup.sh` / `.ps1`). Check: after sync, `ls ~/.claude/skills/ | grep vault-migrations` shows the symlink; if missing, run `bash ~/aios/skills/setup.sh` (Windows: `skills/setup.ps1`), then **restart sessions** (skills load at session start) — restart is the last step.
+2. **Optional, when you next run `/aios:housekeeping`:** expect the new grammar findings. They are proposals — a vault that deliberately diverges from the grammar can keep its shape; the point is that divergence be a decision, not an accident.
+
+---
+
 ## 2026-09-04 — Four ladders: which writing tells to keep, which Claude to spend, how contained you are, and what to build first
 
 `hash: 25d4a9f · 6a6b815 · 7f3b96d · 5c11809 · 8cb3c3e · 0094e48 · 2595e7f · 4dbc909`
