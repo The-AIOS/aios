@@ -7,15 +7,24 @@ set -uo pipefail
 
 HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"          # …/hooks
 
-# Make every hook runnable — DERIVED from what is in hooks/git, never a hardcoded list.
-# The list used to name pre-commit and secret-scan.sh literally, so pre-push shipped
-# without an exec bit the day it was added. Same class as this framework's other
-# enumeration bugs: a list can only describe the files that existed when it was written.
-chmod +x "$HOOKS_DIR/aios-commit" 2>/dev/null || true
-for _h in "$HOOKS_DIR"/* "$HOOKS_DIR/git/"*; do
+# Make every hook runnable — DERIVED, never a hardcoded list (the list used to name
+# pre-commit and secret-scan.sh literally, so pre-push shipped without an exec bit the day
+# it was added). But scoped to what is actually invoked BY NAME:
+#
+#   hooks/git/*        git execs these itself — a lost exec bit means the hook does not run
+#   extensionless      aios-commit · aios-snapshot · aios-star-check · resolve-tier, all
+#                      called as `~/aios/hooks/<name>` by commands and rituals
+#
+# Deliberately NOT every shebang file. The repo distinguishes 755 (invoked by name) from
+# 644 (library code run through an interpreter — pipeline-executor.py, route-insight.py,
+# guard-venture-mount.py), and a broader loop chmods the 644 ones on every operator's next
+# update. Measured on a live vault: three mode-only 644→755 changes, zero content changed,
+# which `aios-commit --vault` would then sweep into a session commit as if they were work.
+# Nothing is gained by it either — a 644 `.py` invoked as `python3 hooks/x.py` runs fine.
+for _h in "$HOOKS_DIR/git/"* "$HOOKS_DIR"/*; do
   case "$_h" in *.md|*.ps1|*'*') continue ;; esac
   [ -f "$_h" ] || continue
-  head -1 "$_h" 2>/dev/null | grep -q '^#!' || continue
+  case "$(basename "$_h")" in *.*) [ "${_h#$HOOKS_DIR/git/}" != "$_h" ] || continue ;; esac
   chmod +x "$_h" 2>/dev/null || true
 done
 

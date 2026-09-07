@@ -96,6 +96,41 @@ printf '# notes\n' > "$R/hooks/git/README.md"
 install_into "$R" >/dev/null
 [ -x "$R/hooks/git/README.md" ] && no "README.md was chmod +x" "the loop must skip .md — a doc is not a hook" || ok ".md skipped by the chmod loop"
 
+echo "── the installer causes NO mode churn on a correct checkout ──"
+# It must repair a LOST exec bit, never invent one. The repo distinguishes 755 (invoked by
+# name: the git hooks, aios-commit, aios-snapshot, aios-star-check, resolve-tier) from 644
+# (library code run through an interpreter: pipeline-executor.py, route-insight.py,
+# guard-venture-mount.py). A loop over every shebang file chmods the 644 ones on every
+# operator's next update — measured on a live vault: three mode-only 644→755 changes, zero
+# content changed, which `aios-commit --vault` would then sweep into a session commit as if
+# they were the operator's work. Nothing is gained: a 644 `.py` run as `python3 x.py` works.
+R=$(mkrepo modes)
+for lib in hooks/pipeline-executor.py hooks/route-insight.py hooks/guard-venture-mount.py; do
+  [ -f "$R/$lib" ] && chmod 644 "$R/$lib"
+done
+install_into "$R" >/dev/null 2>&1
+bad=0
+for lib in hooks/pipeline-executor.py hooks/route-insight.py hooks/guard-venture-mount.py; do
+  [ -f "$R/$lib" ] || continue
+  if [ -x "$R/$lib" ]; then bad=$((bad+1)); printf '     BECAME EXECUTABLE %s\n' "$lib"; fi
+done
+[ "$bad" = "0" ] && ok "library .py files left at 644 — no mode churn" \
+  || no "$bad library file(s) chmodded" "mode-only diffs land in the operator's tree, then in a session commit as if they were work"
+
+echo "── but a LOST exec bit on a by-name hook is still repaired ──"
+R=$(mkrepo lostbit)
+for f in hooks/aios-snapshot hooks/aios-star-check hooks/resolve-tier hooks/git/pre-push; do
+  [ -f "$R/$f" ] && chmod -x "$R/$f"
+done
+install_into "$R" >/dev/null 2>&1
+lost=0
+for f in hooks/aios-snapshot hooks/aios-star-check hooks/resolve-tier hooks/git/pre-push; do
+  [ -f "$R/$f" ] || continue
+  [ -x "$R/$f" ] || { lost=$((lost+1)); printf '     STILL NOT EXECUTABLE %s\n' "$f"; }
+done
+[ "$lost" = "0" ] && ok "every by-name hook's exec bit restored" \
+  || no "$lost by-name hook(s) left non-executable" "aios-snapshot is called by name in the Session End ritual; a lost bit means the archive silently fails"
+
 echo
 echo "── $PASS passed, $FAIL failed ──"
 [ "$FAIL" -eq 0 ]
