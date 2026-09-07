@@ -1,0 +1,95 @@
+"model":"<id>"
+"surface"
+"tier":"mechanical"|"judgment"
+## Remote machines
+$CLAUDE_AGENT_NAME
+--allowedTools
+--model
+--model <id>
+--permission-mode
+--permission-mode default
+--profile <name>
+--remote-control --name
+--strict-mcp-config
+--tier
+--tier frontier|judgment|scale|fast
+--tier mechanical
+-Tier fast
+-p
+.mcp.json
+.ps1
+/aios:housekeeping
+/close-day
+/mcp
+/today
+03 - export/{type-or-venture}/
+<name>.json.undelivered
+Bash
+CLAUDE_MODEL
+Get-Command spawn
+MODEL-ROUTING.md
+SETUP.md
+USER.md
+Write
+_
+_claim
+_inbox
+_releases
+_tried
+_undelivered
+audits
+claude
+claude --remote-control
+claude -p
+export CLAUDE_MODEL
+export/
+fast
+frontier
+hooks/claude-identity/install-wrappers.sh
+hooks/openrouter.py
+judgment
+kill
+name
+npx
+orchestration-ladder
+permission_denials: []
+permissions.defaultMode: "auto"
+pgrep
+pid
+plan
+prompt
+reflections/{subfolder}
+research
+scale
+send
+sessionId
+settings.json
+source ~/.zshrc
+spawn
+spawn --model claude-fable-5 {name} "{task}"
+spawn --profile {name} {worker} "{task}"
+spawn <name> "<task>"
+spawn <name> …
+spawn accountant "Help me analyze Q1 financials"
+spawn-kill
+spawn-kill {name}
+status
+surface
+surface:pid
+type spawn
+uvx
+vault/00 - notes/reflections/_inbox/
+vscode.createTerminal
+{"action":"kill","name":"<kebab>"}
+{"action":"send","name":"<kebab>","prompt":"<one line>"}
+{"name":"<kebab>","task":"<first prompt>"}
+~/.aios/bus-payloads/<name>-<ts>.md
+~/.aios/mcp-profiles/{name}.json
+~/.aios/spawn-inbox/
+~/.aios/spawn-inbox/<name>.json
+~/.aios/spawn-inbox/README.md
+~/.aios/surfaces/<surface>.json
+~/.claude/projects/*/<sessionId>.jsonl
+~/.claude/sessions/*.json
+~/.zshrc
+~/aios

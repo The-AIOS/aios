@@ -153,6 +153,17 @@ exit 127
 Two things the fix had to get right that look like details and are not. The rewrite goes **through the existing inode** (`cat tmp > hook`, never `mv`), because `mv` would hand the hook the temp file's mode and drop the exec bit that had just been set — trading a CRLF hook that cannot run for an LF hook that cannot run. And **`/aios:update` now names this installer in its auto-run list**: the script's own header had claimed for months that the command auto-runs it while the command never said so, which would have shipped this fix as a file that never executes. A rule that lives only in the thing being run is a rule the runner never reads.
 
 `tests/install-git-hooks.test.sh` (12 cases) asserts the hook **executes** after install rather than that no `\r` byte remains — those come apart, and the `mv` variant produces exactly the CR-free hook that still cannot run. Its first case is a control that plants a CRLF hook and requires it to fail; if that control ever passes, the suite says the passes below it prove nothing instead of banking them. Verified by mutation, twice: removing the normalization turns 6 cases red, reverting the `chmod` to its hardcoded list turns 3 red.
+### `CLAUDE.md` § Spawning Sessions: 46 lines → 36, every rule kept — and now a test says so
+
+The section every session loads at startup had grown by accretion: each rule arrived with the incident that produced it, and the incidents stayed. This entry condenses the section to the rules plus their one-clause reasons (14,918 → 10,951 bytes, −27%; about 1,200 fewer tokens on every turn of every session) and drops the dated narratives, whose home is a vault's own `antifragile.md`, not the framework file.
+
+**Nothing was removed on judgment alone.** The acceptance rule was pre-registered before the condensed text existed: ten task-shaped scenarios, one per rule the section must make a session apply (write the inbox request rather than call `spawn`; a >~1024-byte `send` arrives as a pointer; never hand-write a `_` field; no surface → hand the exact line to the operator; route the deliverable to `export/`; `fast` for a file sweep; a worker is always Claude; `--allowedTools` needs `--permission-mode`; `--model` per spawn, never a global export; `spawn-kill`, not Cmd+W). Each ran on the same frontier model twice, with the *old* section and with the *new* one as the only context, and was read by hand against the written criterion. **Old 10/10, new 10/10, bonus criteria 10/10 both** — no scenario the old text passes and the new one fails. The rubric, the per-scenario verdicts and the cost sit in the PR.
+
+**What guards the next edit** — `tests/claude-md-integrity.test.sh`, two checks that fail before a reader notices:
+- **Every `§` reference across the repo still resolves** to a heading in `CLAUDE.md` (41 references in 327 files today; a roman numeral alone is accepted, a numeral followed by a capitalised section name must match that name — so a renamed sub-section is caught rather than hidden behind the numeral).
+- **95 pinned literals are still present** — `tests/fixtures/claude-md-literals.txt`, one per line: every path, flag, JSON shape, command and bold rule the section carried before the edit. Condense freely; drop a literal and the test names it.
+
+The test is the CI form of the review conditions agreed on #93 (section by section, anchors and literals as greps, one-clause reasons kept). It runs green on the untouched `main` text and on the condensed one.
 
 ### What you need to do — checks first, then act
 
