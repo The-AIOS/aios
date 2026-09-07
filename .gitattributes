@@ -23,6 +23,7 @@
 # the next addition cannot slip through even if it doesn't match these patterns.
 hooks/aios-*            text eol=lf
 hooks/git/pre-commit    text eol=lf
+hooks/git/pre-push      text eol=lf
 
 # `hooks/git/pre-commit` above is the one with teeth: git invokes hooks through `sh`, so a CRLF
 # checkout does not merely warn — the hook fails to execute, and the secret scan that gates every

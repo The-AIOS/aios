@@ -1133,6 +1133,14 @@ jobs:
         # only considers .py/.sh.
         run: python3 tests/lint-claude-p.py
 
+      - name: the pre-push owner guard is inert until configured
+        # Contributed in #92. The property that matters is INERTNESS: canonical ships
+        # with no organisation names inside it, and a fresh clone must exit 0 until the
+        # operator names one in `git config`. A guard that blocks by default would be
+        # discovered as a broken push on someone else's machine. The suite runs against
+        # a scratch GIT_CONFIG_GLOBAL so it can never read or write the real config.
+        run: bash tests/pre-push.test.sh
+
       - name: the statusline account chip falls back safely
         # This renders on EVERY prompt, so a raise in the alias lookup is not a wrong
         # label — it is a broken statusline. The suite spends most of its effort on
