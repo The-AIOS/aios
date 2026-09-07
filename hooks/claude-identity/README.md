@@ -92,9 +92,15 @@ Paths below assume the vault is at `~/aios`. If you cloned elsewhere, either sym
 ## Anthropic accounts (quota management)
 
 > `hooks/claude-identity/claude-identity.sh` parses the numbered list below as rotation slots. Order defines rotation. The parser requires backticks around each email — `N. \`email\``.
-
+>
+> **Optional per line: `alias **short-name**`.** The statusline's `👤` chip and the
+> `🔄 from→to` swap banner render this instead of the email's local-part. Worth setting
+> when two accounts **share a local-part** — the same person on two providers, or one
+> Google address behind two separate Anthropic accounts — because the bare local-part
+> then renders both identically and the usage percentages become the only way to tell
+> them apart. Omit it and that account keeps its local-part, exactly as before.
 1. `{email_1}` — primary
-2. `{email_2}` — overflow
+2. `{email_2}` — overflow · alias **{short_name_2}**
 {...etc for N accounts}
 ```
 

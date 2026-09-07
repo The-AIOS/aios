@@ -8,6 +8,7 @@ cumulative monthly cost tracking, and people-equivalent productivity metric.
 import json
 import sys
 import os
+from pathlib import Path
 import re
 import subprocess
 import time
@@ -528,7 +529,13 @@ def _account_aliases():
         return _ACCOUNT_ALIASES
     aliases = {}
     try:
-        user_md = os.environ.get("USER_MD_PATH") or os.path.expanduser("~/aios/USER.md")
+        # SELF-LOCATE, do not hardcode ~/aios. This file lives at
+        # hooks/claude-identity/, so the repo root is two parents up. Hardcoding
+        # `~/aios` depends on the operator's symlink existing, and the shell
+        # sibling that does it (claude-identity.sh) is exempt only because the CI
+        # rule covers .py/.js/.ts and not .sh — an asymmetry, not a licence.
+        default_user_md = Path(__file__).resolve().parents[2] / "USER.md"
+        user_md = os.environ.get("USER_MD_PATH") or str(default_user_md)
         in_sec = False
         with open(user_md, encoding="utf-8") as f:
             for line in f:
