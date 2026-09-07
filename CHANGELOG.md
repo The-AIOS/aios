@@ -95,6 +95,16 @@ Declare an alias per line in `USER.md` → `## Anthropic accounts` and the chip 
 
 **Do not reach for it to save tokens.** Measured on a live vault, a profile trims 2–4k off a ~50k startup, because MCP tool definitions load *deferred*. The payoff is blast radius — a file sweep has no business holding Gmail, Drive or home-automation credentials — plus one failure mode that is not about size: **a server that disconnects mid-session invalidates the whole prompt prefix and pays a full cache rebuild**, however small it was. Two things CLAUDE.md now says because each costs an hour if met blind: a per-project `.mcp.json` keys off the **directory** and does nothing on a vault-anchored setup where every session runs from the same one; and an http server that authenticates by OAuth holds its grant under the name it was authorised as — renamed inside a profile it *loads but cannot be called* until `/mcp` is run once interactively. **No operator action required**; create `~/.aios/mcp-profiles/` when you want a profile.
 
+### A `pre-push` hook that refuses off-limits remote owners — inert until you name one
+
+`hooks/git/pre-push` (active wherever `install-git-hooks.sh` set `core.hooksPath`) rejects a push whose remote **owner** is on a per-machine list, on either URL shape and case-insensitively, with a whole-segment match so `AcmeCorpOSS` is not `AcmeCorp`. The push is the one place the destination is unambiguous: a permission glob over `gh`/`git` command lines is best-effort by construction (a novel invocation slips past); this is not. **The list lives in git config, not in the file** — the framework ships with no operator's organisations baked in, and a fresh clone is never blocked by someone else's list:
+
+```bash
+git config --global aios.blockedRemoteOwners "AcmeCorp anotherorg"
+```
+
+Unset → exit 0, nothing happens. The escape hatch is explicit and announces itself: `AIOS_ALLOW_BLOCKED_REMOTE=1 git push …`. Pinned by `tests/pre-push.test.sh` (11 cases: inert, both URL shapes, case, whole-segment, hatch, message). **Optional operator action:** set the key if you have an organisation you must never push to from this machine.
+
 ---
 
 ### What you need to do — checks first, then act
