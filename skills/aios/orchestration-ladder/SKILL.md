@@ -75,6 +75,20 @@ Every primitive lets you pick the worker's model — a third decision, orthogona
 
 One lens across all three: *the model is a spend↔quality dial on each unit of delegated work.* Cheap where the work is mechanical, frontier where it's judgment — this is `Calibrate Don't Choose` (operating principles) applied to delegation. Don't pay frontier rates for a file sweep; don't cheap out on a synthesis or a verify pass.
 
+## Scoping a worker's tools — the allowlist is not self-sufficient
+
+Two levers, and they are not interchangeable. **`spawn --profile <name>`** scopes which **MCP servers** a worker loads — that is about blast radius (a file sweep should not hold live Gmail/Drive credentials) and about churn, since a server disconnecting mid-session invalidates the whole prompt prefix. **`--allowedTools`** on a headless `claude -p` scopes which **built-in tools** may run — and it is the one with a precondition.
+
+> ⚠️ **`--allowedTools` alone does not hold.** Measured on a machine with `permissions.defaultMode: "auto"` in `settings.json`: a `claude -p` passing an allowlist naming a nonexistent tool, plus `--strict-mcp-config`, still performed `Bash` and `Write` calls — no error, no prompt, `permission_denials: []`. **A machine-level auto mode silently outranks the flag.** Pass `--permission-mode default` (or `plan`) beside it and the same call is blocked.
+>
+> This is the vendor's own position arriving from the other side: auto mode is a convenience feature backed by a best-effort classifier, **not a security boundary** — so it is not only what auto mode fails to *stop*, it is what auto mode will happily *allow* over an explicit allowlist.
+
+Three shapes that look like the fix and are not: `--allowedTools ""` is swallowed (the flag is variadic and eats a prompt that follows it, so put the prompt **first**) · `--permission-mode manual` does **not** block · `--disallowedTools` is a denylist, so `Write`, `Edit` and `Agent` survive it.
+
+**And you cannot verify any of this by asking the worker what tools it has.** Under a restrictive allowlist it still lists `Bash` and `Write` — it is describing its *schema*, not its permissions. **Only an absent side effect is evidence:** did a file appear, did the command run. `tests/headless-allowlist.test.sh` is that check; it skips loudly rather than passing where no `claude` binary exists.
+
+Matters most when a delegated prompt carries text from **outside** the vault — a fetched page, an email body, a transcript. A published RCE against Claude Code came from a *"summarise this website"* request.
+
 ## Decision flow
 
 ```dot
