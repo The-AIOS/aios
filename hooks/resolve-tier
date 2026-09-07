@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# resolve-tier — print the model id for a tier rung. ONE table, readable by any surface.
+#
+# WHY THIS EXISTS. The rung→model table lived in exactly one place: the `spawn` shell
+# function appended to the operator's rc file by install-wrappers.sh. Any surface that
+# launches `claude` directly instead of going through that function therefore loses the
+# feature *silently* — the request field is accepted, no error is raised, and the worker
+# runs on the session default. Measured 2026-09-07 on a live App: a request carrying
+# "tier":"fast" produced `claude --name probe-inbox` with no --model at all, and the
+# worker ran on the frontier model. The same request carrying "model":"<id>" was honoured.
+# So the field every doc recommends was the broken one, and the 22x spend spread that
+# carries the whole Calibrate-Don't-Choose argument did not apply on that path.
+#
+# The fix is not for each surface to copy the table — that is a second implementation of a
+# fact that churns, the exact shape deleted from the orchestration-ladder skill the same
+# day. A surface resolves through this script, or launches through the wrapper. Nothing
+# else should ever hold a rung→model mapping.
+#
+#   resolve-tier fast        -> claude-haiku-4-5-20251001
+#   resolve-tier judgment    -> (empty, exit 0) = inherit the binary's default
+#   resolve-tier bogus       -> error on stderr, exit 2, rungs listed
+#   resolve-tier --list      -> every rung and what it resolves to
+#
+# An EMPTY stdout with exit 0 is a real answer, not a failure: `judgment` deliberately
+# means "the frontier default", which is expressed by passing no --model. A caller must
+# distinguish empty-and-0 from non-zero, exactly as the framework's other measurements do.
+#
+# Documentation of what each rung is FOR lives in MODEL-ROUTING.md and nowhere else.
+set -uo pipefail
+
+# ── the table ────────────────────────────────────────────────────────────────
+# Kept byte-comparable with the wrapper's own case statement by
+# tests/resolve-tier.test.sh, so the two cannot drift apart unnoticed.
+rung_model() {
+  case "$1" in
+    frontier)   printf 'claude-fable-5-1' ;;
+    judgment)   printf '' ;;                            # inherit the binary's default
+    scale)      printf 'claude-sonnet-5' ;;
+    fast)       printf 'claude-haiku-4-5-20251001' ;;
+    mechanical) printf 'claude-sonnet-4-6' ;;           # legacy alias — do not remap
+    *)         return 2 ;;
+  esac
+}
+RUNGS="frontier judgment scale fast mechanical"
+
+usage() {
+  echo "usage: resolve-tier <rung>   |   resolve-tier --list" >&2
+  echo "rungs: $RUNGS" >&2
+  echo "(what each rung is for: MODEL-ROUTING.md)" >&2
+}
+
+case "${1:-}" in
+  ''|-h|--help) usage; exit 2 ;;
+  --list)
+    for r in $RUNGS; do m=$(rung_model "$r"); printf '%-11s %s\n' "$r" "${m:-<inherit default>}"; done
+    exit 0 ;;
+esac
+
+if ! m=$(rung_model "$1"); then
+  echo "resolve-tier: unknown rung '$1'" >&2
+  usage
+  exit 2
+fi
+printf '%s' "$m"
+[ -n "$m" ] && echo
+exit 0
