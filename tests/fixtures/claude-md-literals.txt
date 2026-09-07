@@ -1,6 +1,6 @@
 "model":"<id>"
 "surface"
-"tier":"mechanical"|"judgment"
+"tier":"<rung>"
 ## Remote machines
 $CLAUDE_AGENT_NAME
 --allowedTools
@@ -89,6 +89,7 @@ vscode.createTerminal
 ~/.aios/spawn-inbox/<name>.json
 ~/.aios/spawn-inbox/README.md
 ~/.aios/surfaces/<surface>.json
+~/.aios/surfaces/*.json
 ~/.claude/projects/*/<sessionId>.jsonl
 ~/.claude/sessions/*.json
 ~/.zshrc

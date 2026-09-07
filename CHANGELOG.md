@@ -165,6 +165,16 @@ The section every session loads at startup had grown by accretion: each rule arr
 
 The test is the CI form of the review conditions agreed on #93 (section by section, anchors and literals as greps, one-clause reasons kept). It runs green on the untouched `main` text and on the condensed one.
 
+**Then the review spent the reclaimed space, deliberately.** Condensing this section put it under a microscope, and the microscope found three things wrong with it that predate the condensation — so the merge gave ~1.5 KB back and the section lands at **−16 %** rather than −27 %. That is the intended trade: this is the wiring that decides how every AIOS session delegates work, and *shorter* is only worth having if it is also *right*.
+
+- **"A surface is available" was an existence test, and it needed to be a liveness test.** Both this section and the `orchestration-ladder` skill gated on *"if `~/.aios/spawn-inbox/` exists."* That directory persists forever once created, so an operator who quit the App or closed the IDE has the directory and **no fulfiller** — and a request written into it is never picked up, never dead-lettered, and therefore never surfaced (`/today` and `/close-day` report `.undelivered`, not *unclaimed*). Measured on a live machine: one surface's `~/.aios/surfaces/*.json` named a pid that had been dead for three weeks, sitting beside another's live one. The rule is now **a surface is available iff some `~/.aios/surfaces/*.json` names a running pid** — the same artifact already walked for `"surface"` derivation, asked a different question. This is the fix that makes the documented flow true for all three ways people run AIOS: the App, Glass, and a plain clone with no surface at all.
+- **The `orchestration-ladder` skill described a world with only one surface.** It named Glass eleven times and the App zero, calling the bus *"the Glass spawn-inbox"* and instructing *"no Glass → hand it to the operator"* — so a session on the App would follow it into asking a human to do what the App fulfils natively. The protocol's own README says the verbs are identical and there is no surface-specific dialect; the skill now says so too. **Both surfaces implement all three verbs on every platform they ship to.**
+- **The skill's model table had gone a version stale** — still offering a two-rung `"tier"` choice after the ladder grew to four. Its rung vocabulary is deleted rather than corrected: the skill now owns *which primitive* and *where the model goes* for each, and `MODEL-ROUTING.md` owns the rungs and ids alone. A doc that does not restate a list cannot fall behind it. **The three surfaces now divide cleanly:** `CLAUDE.md` = what you decide before opening anything else · `orchestration-ladder` = which primitive · `MODEL-ROUTING.md` = which model.
+
+Two smaller repairs in the same pass: the clause **"un-sandboxing does not help — the classifier gates it, not the sandbox"** is back in the always-loaded file, because a permission denial is precisely the signal that otherwise tells a session to retry with the sandbox off, and that reflex fires long before a skill loads. And **killing** now names the agent path first (`{"action":"kill"}` through the inbox) with `spawn-kill` marked as the human one — the paragraph sat twenty lines below the gate and read as an invitation to call a gated command.
+
+*One limit, stated so a green build is not over-read: the literals manifest pins paths, flags and JSON shapes — never the one-clause `why` beside them. Measured during review: 279 bytes of pure reason-clause removed, zero literals touched, both checks green. The task-shaped rubric is what guards the reasoning, and it needs credentials so it cannot run in CI. Green here means no literal was dropped, not that nothing was lost — the test header now says this, and each further section runs its own rubric.*
+
 ### What you need to do — checks first, then act
 
 > **To the session reading this during `/aios:update`: run the checks and act on what they return.** All are read-only. Report *"already satisfied — no action"* when a check comes back clean.
@@ -214,6 +224,23 @@ done
 
 - **No output** → every hook is runnable. **Say nothing.**
 - **Any line printed** → run `bash ~/aios/hooks/install-git-hooks.sh` (Windows: `powershell -File ~/aios/hooks/install-git-hooks.ps1`), then re-run the check. If a line survives, report it as a hook that cannot run — **never** as a cosmetic line-ending difference, because git's response to it is to refuse the operation.
+
+**5 · Re-read `CLAUDE.md` § Spawning Sessions — your loaded copy is now stale.** *(Session: this one is about you, not the operator's machine. `CLAUDE.md` is auto-loaded at session start, so the copy in your context is the one from before this sync. `/aios:update` replaced the file on disk; it did not replace what you are reasoning from — the same trap as a command file served from its startup snapshot.)*
+
+```bash
+# Read the section you now delegate by. Do this even though the file "already applied" —
+# applying a file and loading it are different events.
+awk '/^## Spawning Sessions/{f=1} f&&/^---$/{exit} f' ~/aios/CLAUDE.md
+```
+
+Four things in it changed how you should act, and the first one changes an answer you may have given earlier in this very session:
+
+- **Availability is a live pid, not a directory.** `~/.aios/spawn-inbox/` existing is **not** evidence a surface will fulfil your request. Check `~/.aios/surfaces/*.json` for a running pid before writing one; with none live, hand the operator the exact `spawn <name> "<task>"` line instead. A request nobody claims is never reported to anyone.
+- **Write surface-neutrally.** Glass and the AIOS App both implement all three verbs, on every platform they ship to. Never branch on "is Glass installed."
+- **To kill a worker, use the inbox** (`{"action":"kill","name":"<kebab>"}`). `spawn-kill` is the human path and is gated for you exactly like `spawn`.
+- **A denied `spawn` is not a sandbox problem.** Un-sandboxing it does not help — the classifier gates it, not the sandbox — so do not retry with the sandbox disabled.
+
+**Then say what you re-read**, in one line, so the operator knows the session they are talking to is running on the current contract rather than the one it booted with.
 
 **Nothing else.** No restart, no re-registration, no config change.
 

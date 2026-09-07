@@ -14,6 +14,14 @@
 #      appear, backticked, in CLAUDE.md. The manifest is edited DELIBERATELY when
 #      a literal is retired — that edit is the review surface, not an accident.
 #
+# WHAT THIS CANNOT PROTECT, stated so a green run is not over-read: the manifest pins
+# LITERALS, so it guards paths, flags, verbs and JSON shapes — never the one-clause
+# *why* beside them. Measured: 279 bytes of pure reason-clause removed from the section,
+# zero literals touched, both checks green. The reasoning is guarded by the task-shaped
+# rubric a condensation PR runs (see #93 / #98), which needs credentials and cannot live
+# in CI. So for each further section: green here means no literal was dropped, NOT that
+# nothing was lost. Run the rubric per section; this suite is the floor, not the ceiling.
+#
 # Both halves run anywhere (no claude binary, no credentials). Written for bash 3.2.
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
