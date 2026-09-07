@@ -99,6 +99,16 @@ jobs:
           bash tests/close-session-idempotency.test.sh
           echo "OK: the duplicate branch is reachable and the fix is falsifiable"
 
+      - name: CLAUDE.md integrity — § references resolve, pinned literals present
+        run: |
+          set -e
+          # CLAUDE.md is edited section by section to stay short. Two things break silently
+          # when it is: a "§ Heading" reference somewhere in the repo stops resolving, and a
+          # rule's literal (a path, a flag, a JSON shape) is dropped in a condensation. Both
+          # are greps; the fixture pins the literals so a reviewer can diff intent, not prose.
+          bash tests/claude-md-integrity.test.sh
+          echo "OK: every § reference resolves and every pinned literal is present"
+
       - name: A source is enabled only by a line the OPERATOR wrote
         run: |
           set -e

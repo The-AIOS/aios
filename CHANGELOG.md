@@ -40,7 +40,7 @@
 
 ## 2026-09-07 — Two readers of one file disagreed, and Windows operators could not run the hooks at all
 
-`hash: bbf60df · e81993c · ba2a010 · d3b4457` · [#83](https://github.com/The-AIOS/aios/pull/83) · [#84](https://github.com/The-AIOS/aios/pull/84) · [#85](https://github.com/The-AIOS/aios/pull/85) · [#91](https://github.com/The-AIOS/aios/pull/91) · [#89](https://github.com/The-AIOS/aios/pull/89) · [#92](https://github.com/The-AIOS/aios/pull/92) · [#94](https://github.com/The-AIOS/aios/pull/94) · [#96](https://github.com/The-AIOS/aios/pull/96)
+`hash: bbf60df · e81993c · ba2a010 · d3b4457` · [#83](https://github.com/The-AIOS/aios/pull/83) · [#84](https://github.com/The-AIOS/aios/pull/84) · [#85](https://github.com/The-AIOS/aios/pull/85) · [#91](https://github.com/The-AIOS/aios/pull/91) · [#89](https://github.com/The-AIOS/aios/pull/89) · [#92](https://github.com/The-AIOS/aios/pull/92) · [#94](https://github.com/The-AIOS/aios/pull/94) · [#96](https://github.com/The-AIOS/aios/pull/96) · [#98](https://github.com/The-AIOS/aios/pull/98)
 
 > **What you can now do.** **Trust what `buffer-status.py` tells you** — if your `session-insights.md` uses top-level `- ` bullets rather than `### ` headings, it was reporting **`0/10` and `0/5`, "within contract", exit 0** on a buffer that was actually at its cap. And **run the framework's hooks and its own test suite on Windows**, where six of them previously died mid-report rather than printing a mangled character. Both were reported by operators running the framework on surfaces the maintainers do not use daily.
 
@@ -153,6 +153,27 @@ exit 127
 Two things the fix had to get right that look like details and are not. The rewrite goes **through the existing inode** (`cat tmp > hook`, never `mv`), because `mv` would hand the hook the temp file's mode and drop the exec bit that had just been set — trading a CRLF hook that cannot run for an LF hook that cannot run. And **`/aios:update` now names this installer in its auto-run list**: the script's own header had claimed for months that the command auto-runs it while the command never said so, which would have shipped this fix as a file that never executes. A rule that lives only in the thing being run is a rule the runner never reads.
 
 `tests/install-git-hooks.test.sh` (12 cases) asserts the hook **executes** after install rather than that no `\r` byte remains — those come apart, and the `mv` variant produces exactly the CR-free hook that still cannot run. Its first case is a control that plants a CRLF hook and requires it to fail; if that control ever passes, the suite says the passes below it prove nothing instead of banking them. Verified by mutation, twice: removing the normalization turns 6 cases red, reverting the `chmod` to its hardcoded list turns 3 red.
+### `CLAUDE.md` § Spawning Sessions: 46 lines → 36, every rule kept — and now a test says so
+
+The section every session loads at startup had grown by accretion: each rule arrived with the incident that produced it, and the incidents stayed. This entry condenses the section to the rules plus their one-clause reasons (14,918 → 10,951 bytes, −27%; about 1,200 fewer tokens on every turn of every session) and drops the dated narratives, whose home is a vault's own `antifragile.md`, not the framework file.
+
+**Nothing was removed on judgment alone.** The acceptance rule was pre-registered before the condensed text existed: ten task-shaped scenarios, one per rule the section must make a session apply (write the inbox request rather than call `spawn`; a >~1024-byte `send` arrives as a pointer; never hand-write a `_` field; no surface → hand the exact line to the operator; route the deliverable to `export/`; `fast` for a file sweep; a worker is always Claude; `--allowedTools` needs `--permission-mode`; `--model` per spawn, never a global export; `spawn-kill`, not Cmd+W). Each ran on the same frontier model twice, with the *old* section and with the *new* one as the only context, and was read by hand against the written criterion. **Old 10/10, new 10/10, bonus criteria 10/10 both** — no scenario the old text passes and the new one fails. The rubric, the per-scenario verdicts and the cost sit in the PR.
+
+**What guards the next edit** — `tests/claude-md-integrity.test.sh`, two checks that fail before a reader notices:
+- **Every `§` reference across the repo still resolves** to a heading in `CLAUDE.md` (41 references in 327 files today; a roman numeral alone is accepted, a numeral followed by a capitalised section name must match that name — so a renamed sub-section is caught rather than hidden behind the numeral).
+- **95 pinned literals are still present** — `tests/fixtures/claude-md-literals.txt`, one per line: every path, flag, JSON shape, command and bold rule the section carried before the edit. Condense freely; drop a literal and the test names it.
+
+The test is the CI form of the review conditions agreed on #93 (section by section, anchors and literals as greps, one-clause reasons kept). It runs green on the untouched `main` text and on the condensed one.
+
+**Then the review spent the reclaimed space, deliberately.** Condensing this section put it under a microscope, and the microscope found three things wrong with it that predate the condensation — so the merge gave ~1.5 KB back and the section lands at **−16 %** rather than −27 %. That is the intended trade: this is the wiring that decides how every AIOS session delegates work, and *shorter* is only worth having if it is also *right*.
+
+- **"A surface is available" was an existence test, and it needed to be a liveness test.** Both this section and the `orchestration-ladder` skill gated on *"if `~/.aios/spawn-inbox/` exists."* That directory persists forever once created, so an operator who quit the App or closed the IDE has the directory and **no fulfiller** — and a request written into it is never picked up, never dead-lettered, and therefore never surfaced (`/today` and `/close-day` report `.undelivered`, not *unclaimed*). Measured on a live machine: one surface's `~/.aios/surfaces/*.json` named a pid that had been dead for three weeks, sitting beside another's live one. The rule is now **a surface is available iff some `~/.aios/surfaces/*.json` names a running pid** — the same artifact already walked for `"surface"` derivation, asked a different question. This is the fix that makes the documented flow true for all three ways people run AIOS: the App, Glass, and a plain clone with no surface at all.
+- **The `orchestration-ladder` skill described a world with only one surface.** It named Glass eleven times and the App zero, calling the bus *"the Glass spawn-inbox"* and instructing *"no Glass → hand it to the operator"* — so a session on the App would follow it into asking a human to do what the App fulfils natively. The protocol's own README says the verbs are identical and there is no surface-specific dialect; the skill now says so too. **Both surfaces implement all three verbs on every platform they ship to.**
+- **The skill's model table had gone a version stale** — still offering a two-rung `"tier"` choice after the ladder grew to four. Its rung vocabulary is deleted rather than corrected: the skill now owns *which primitive* and *where the model goes* for each, and `MODEL-ROUTING.md` owns the rungs and ids alone. A doc that does not restate a list cannot fall behind it. **The three surfaces now divide cleanly:** `CLAUDE.md` = what you decide before opening anything else · `orchestration-ladder` = which primitive · `MODEL-ROUTING.md` = which model.
+
+Two smaller repairs in the same pass: the clause **"un-sandboxing does not help — the classifier gates it, not the sandbox"** is back in the always-loaded file, because a permission denial is precisely the signal that otherwise tells a session to retry with the sandbox off, and that reflex fires long before a skill loads. And **killing** now names the agent path first (`{"action":"kill"}` through the inbox) with `spawn-kill` marked as the human one — the paragraph sat twenty lines below the gate and read as an invitation to call a gated command.
+
+*One limit, stated so a green build is not over-read: the literals manifest pins paths, flags and JSON shapes — never the one-clause `why` beside them. Measured during review: 279 bytes of pure reason-clause removed, zero literals touched, both checks green. The task-shaped rubric is what guards the reasoning, and it needs credentials so it cannot run in CI. Green here means no literal was dropped, not that nothing was lost — the test header now says this, and each further section runs its own rubric.*
 
 ### What you need to do — checks first, then act
 
@@ -203,6 +224,23 @@ done
 
 - **No output** → every hook is runnable. **Say nothing.**
 - **Any line printed** → run `bash ~/aios/hooks/install-git-hooks.sh` (Windows: `powershell -File ~/aios/hooks/install-git-hooks.ps1`), then re-run the check. If a line survives, report it as a hook that cannot run — **never** as a cosmetic line-ending difference, because git's response to it is to refuse the operation.
+
+**5 · Re-read `CLAUDE.md` § Spawning Sessions — your loaded copy is now stale.** *(Session: this one is about you, not the operator's machine. `CLAUDE.md` is auto-loaded at session start, so the copy in your context is the one from before this sync. `/aios:update` replaced the file on disk; it did not replace what you are reasoning from — the same trap as a command file served from its startup snapshot.)*
+
+```bash
+# Read the section you now delegate by. Do this even though the file "already applied" —
+# applying a file and loading it are different events.
+awk '/^## Spawning Sessions/{f=1} f&&/^---$/{exit} f' ~/aios/CLAUDE.md
+```
+
+Four things in it changed how you should act, and the first one changes an answer you may have given earlier in this very session:
+
+- **Availability is a live pid, not a directory.** `~/.aios/spawn-inbox/` existing is **not** evidence a surface will fulfil your request. Check `~/.aios/surfaces/*.json` for a running pid before writing one; with none live, hand the operator the exact `spawn <name> "<task>"` line instead. A request nobody claims is never reported to anyone.
+- **Write surface-neutrally.** Glass and the AIOS App both implement all three verbs, on every platform they ship to. Never branch on "is Glass installed."
+- **To kill a worker, use the inbox** (`{"action":"kill","name":"<kebab>"}`). `spawn-kill` is the human path and is gated for you exactly like `spawn`.
+- **A denied `spawn` is not a sandbox problem.** Un-sandboxing it does not help — the classifier gates it, not the sandbox — so do not retry with the sandbox disabled.
+
+**Then say what you re-read**, in one line, so the operator knows the session they are talking to is running on the current contract rather than the one it booted with.
 
 **Nothing else.** No restart, no re-registration, no config change.
 
