@@ -84,5 +84,27 @@ rm -rf "$tmp"
 [ "$out" = "ALI" ] && ok "emphasis row skipped, backticked uppercase row used" || no "got '$out', expected ALI"
 
 echo ""
+echo "── --profile: an unknown profile fails in spawn(), before any launcher exists ──"
+# Validate in spawn(), not in the launcher: a typo'd profile must not open a worker with
+# the full default MCP set (which would read as the flag being ignored). Extract only the
+# functions the refusal path needs — the installer wraps them in a heredoc, so a line-range
+# grab would drag the installer's own machinery in with them.
+tmp=$(mktemp -d); mkdir -p "$tmp/aios"
+FNS=$( for f in _spawn_adj_animal spawn; do sed -n "/^$f() {/,/^}/p" "$SRC"; done )
+out=$( HOME="$tmp" bash -c 'eval "$1"; spawn --profile nope worker "task"' _ "$FNS" 2>&1 ); rc=$?
+[ "$rc" != "0" ] && ok "unknown --profile → non-zero exit" || no "unknown --profile exited 0 (a worker would have opened with the default MCP set)"
+case "$out" in *"unknown --profile"*) ok "unknown --profile names the flag in its refusal" ;; *) no "refusal does not mention --profile: $out" ;; esac
+if [ -e "/tmp/spawn-launch-worker.sh" ] && [ "$(find /tmp/spawn-launch-worker.sh -newer "$tmp" 2>/dev/null)" ]; then
+  no "a launcher was written for a spawn that should have been refused"
+else
+  ok "no launcher was written for the refused spawn"
+fi
+rm -rf "$tmp"
+
+echo "── --profile: the mechanism is wired end to end (static) ──"
+grep -q 'CLAUDE_MCP_PROFILE' "$SRC" && ok "launcher exports CLAUDE_MCP_PROFILE for the spawn" || no "CLAUDE_MCP_PROFILE never exported"
+grep -q -- '--strict-mcp-config --mcp-config' "$SRC" && ok "_claude_with_respawn passes --strict-mcp-config + --mcp-config" || no "the strict flag pair is missing"
+grep -q '"${mcp_args\[@\]}"' "$SRC" && ok "mcp_args reach the claude invocation" || no "mcp_args built but never passed"
+
 echo "── RESULT: $PASS passed, $FAIL failed  (bash $BASH_VERSION) ──"
 [ "$FAIL" = "0" ] || exit 1

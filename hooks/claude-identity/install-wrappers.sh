@@ -185,6 +185,28 @@ _claude_with_respawn() {
   local model_to_use="${CLAUDE_MODEL:-claude-opus-5[1m]}"
   local -a model_args=(--model "$model_to_use")
 
+  # MCP profile (optional). $CLAUDE_MCP_PROFILE names a file in ~/.aios/mcp-profiles/;
+  # the session then loads ONLY the servers that file declares. Unset → no flags at
+  # all, so behaviour is byte-identical to before for every spawn that omits it.
+  #
+  # Why per-invocation and not project-scoped .mcp.json: .mcp.json keys off the
+  # DIRECTORY, and a vault-anchored setup runs every workload from the same one, so
+  # a per-directory config cannot separate them. A flag on the invocation can.
+  #
+  # Caveat worth knowing before you build a profile: an http server that authenticates
+  # by OAuth carries its grant under the name it was authorised as. Renaming it inside
+  # a profile yields a server that LOADS but cannot be called until it is authorised
+  # again (`/mcp`, interactive terminal). stdio servers have no such step.
+  local -a mcp_args=()
+  if [ -n "$CLAUDE_MCP_PROFILE" ]; then
+    local _prof="$HOME/.aios/mcp-profiles/${CLAUDE_MCP_PROFILE}.json"
+    if [ -f "$_prof" ]; then
+      mcp_args=(--strict-mcp-config --mcp-config "$_prof")
+    else
+      echo "⚠️  spawn: MCP profile '$CLAUDE_MCP_PROFILE' not found at $_prof — starting with the default MCP set." >&2
+    fi
+  fi
+
   export CLAUDE_AGENT_NAME="$name"
   export CLAUDE_RESPAWN_CAPABLE=1
   # A spawned worker is an INDEPENDENT, named session — NOT a sub-agent child. But it
@@ -209,9 +231,9 @@ _claude_with_respawn() {
     # CLI — see detect_primary_session; this guard now covers only the explicit
     # "claude" session-name case.) Safe for all primary names.
     if [ -n "$bootstrap" ]; then
-      command claude "${model_args[@]}" "${resume_args[@]}" --remote-control --name "$name" "$bootstrap"
+      command claude "${model_args[@]}" "${mcp_args[@]}" "${resume_args[@]}" --remote-control --name "$name" "$bootstrap"
     else
-      command claude "${model_args[@]}" "${resume_args[@]}" --remote-control --name "$name"
+      command claude "${model_args[@]}" "${mcp_args[@]}" "${resume_args[@]}" --remote-control --name "$name"
     fi
     local exit_code=$?
 
@@ -246,7 +268,7 @@ _claude_with_respawn() {
     consecutive_failures=$((consecutive_failures + 1))
     echo ""
     echo "⚠️  Claude exited with code $exit_code (no swap marker)."
-    echo "    Last command: claude ${model_args[*]} ${resume_args[*]} --remote-control --name $name"
+    echo "    Last command: claude ${model_args[*]} ${mcp_args[*]} ${resume_args[*]} --remote-control --name $name"
     echo "    Likely: auth issue, malformed session-id, network, or transient error."
     echo "    Consecutive failures: $consecutive_failures"
     echo ""
@@ -302,15 +324,17 @@ spawn() {
   # explicit/specialist model per-spawn (e.g. `--model claude-fable-5`) with NO
   # global env mutation. Strip the flags first, THEN parse positionals so
   # `spawn name task` is byte-identical to before when no flag is passed.
-  local tier="" model=""
+  local tier="" model="" profile=""
   local -a _args=()
   while [ $# -gt 0 ]; do
     case "$1" in
-      --tier)    tier="$2"; shift 2 ;;
-      --tier=*)  tier="${1#*=}"; shift ;;
-      --model)   model="$2"; shift 2 ;;
-      --model=*) model="${1#*=}"; shift ;;
-      *)         _args+=("$1"); shift ;;
+      --tier)      tier="$2"; shift 2 ;;
+      --tier=*)    tier="${1#*=}"; shift ;;
+      --model)     model="$2"; shift 2 ;;
+      --model=*)   model="${1#*=}"; shift ;;
+      --profile)   profile="$2"; shift 2 ;;
+      --profile=*) profile="${1#*=}"; shift ;;
+      *)           _args+=("$1"); shift ;;
     esac
   done
   set -- "${_args[@]}"
@@ -382,6 +406,21 @@ spawn() {
   # pinned to the model if the revert was ever missed).
   [ -n "$model" ] && spawn_model="$model"
 
+  # --profile <name> — load ONLY the MCP servers declared in
+  # ~/.aios/mcp-profiles/<name>.json. Fail loudly here rather than in the launcher:
+  # a typo'd profile would otherwise open a worker with the full default MCP set,
+  # which looks like the flag was ignored. Omitted → no MCP flags, unchanged behaviour.
+  local spawn_profile=""
+  if [ -n "$profile" ]; then
+    if [ ! -f "$HOME/.aios/mcp-profiles/${profile}.json" ]; then
+      echo "⚠️  spawn: unknown --profile '$profile'." >&2
+      echo "    Available: $(ls "$HOME/.aios/mcp-profiles"/*.json 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/\.json$//' | tr '\n' ' ')" >&2
+      echo "    A profile is a JSON file with an \"mcpServers\" object, same shape as ~/.claude.json." >&2
+      return 1
+    fi
+    spawn_profile="$profile"
+  fi
+
   # Empty name → generate adj-animal handle + print onboarding tip
   if [ -z "$name" ]; then
     name=$(_spawn_adj_animal)
@@ -389,6 +428,7 @@ spawn() {
     echo "[spawn] Tip: name a specific agent for matched expertise (e.g. \`spawn accountant\`)."
     echo "[spawn] Tip: --tier fast (high-frequency) | scale (volume) | judgment (default: reasoning) | frontier (hardest, long-running autonomy)."
     echo "[spawn] Tip: add \`--model <id>\` to pin a specific model (e.g. \`--model claude-fable-5\`) — no global env hack."
+    echo "[spawn] Tip: --profile <name> loads only the MCP servers in ~/.aios/mcp-profiles/<name>.json."
     echo "[spawn] See agents/_index.md for the full list."
     echo "[spawn] Opening session: $name"
   fi
@@ -449,6 +489,7 @@ spawn() {
 #!$_sh
 [ -f "$_rc" ] && source "$_rc"
 ${spawn_model:+export CLAUDE_MODEL='$spawn_model'}
+${spawn_profile:+export CLAUDE_MCP_PROFILE='$spawn_profile'}
 cd ~/aios 2>/dev/null
 _claude_with_respawn '$name' 'Read $task_file and follow the instructions inside.'
 LAUNCHER
