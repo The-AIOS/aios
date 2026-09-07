@@ -160,6 +160,9 @@ Fire ALL of these as direct parallel tool calls in **one single message**:
 - **Staleness check:** Scan the `_index.md` timestamp per project snapshot. If any active project snapshot is older than 7 days, flag it: "⚠️ [[project]] snapshot is {N} days stale — refreshing." Read just the `## To-Dos` section from that project note (search heading + offset, not full note) and update the snapshot in Message 2. This prevents to-dos from going invisible in untouched projects.
 - **If no snapshots exist** (cold-start path): read all project files discovered in Message 1a directory listing, batched in groups of 10. **Only extract what `/today` needs:** frontmatter `status`, `## Current State` (or `## Overview` first paragraph), and `## To-Dos`. Skip architecture, decisions log, session notes, links.
 
+**Roadmap layer (only if the vault has one — most vaults don't, and this whole block then costs nothing):**
+- The `_index.md` already loaded in Message 1a is the check: does it have a `## Roadmap board` section (any heading containing "Roadmap board")? **Present** → that section is the source for `## The Board` in today's note; note its generation date for the staleness rule. **Absent** → one existence probe: `Grep` for `type: roadmap` in frontmatter across `00 - notes/` and check any hit's `status:` isn't `archived`. **No live roadmap files → skip everything Board-related silently** (the zero-config path — project notes are the truth surface and the snapshots already carry them). Live files found but no board section yet (the vault graduated but `/close-day` hasn't run since) → read the live roadmap file(s) directly this once and derive the Board inline; tonight's close-day takes over the derivation.
+
 **This is the only data-gathering message.** After this, no more Read or MCP read calls. API data (Calendar, Tasks, Slack) comes from the pre-loaded context — not from tool calls.
 
 ### Message 2 — Analyze + write (minimal reads only for stale snapshots)
@@ -298,6 +301,9 @@ If there ARE action items, add them as tasks in the appropriate Rhythm block wit
 ## Today I ship
 **→ {The single most important deliverable for the day}**
 _{Why this matters or what it unblocks — one line}_
+
+## The Board
+{**OMIT THIS ENTIRE SECTION — heading included — when the vault has no live roadmap layer** (no `## Roadmap board` in `_index.md` and no live `type: roadmap` files — see Message 1b's roadmap-layer check). For vaults that have one: the top 1–3 OPEN rows per roadmap file — `key · one-line description`, keys verbatim so one grep connects the note to the map. Roadmap files with 0 open rows collapse to one line (`{map} — clear`). **This is a derived view — keys and one-liners only, never status the roadmap doesn't carry.** Its job: the answer to *"if today opens up, what's the highest-value thing per front?"* is on the page before the day starts. Priority = each map's own list order (the roadmap template's law) unless the operator's USER.md defines richer ranking. It's also the natural place to pick **Today I ship** from. If the board section's generation date is >3 days old, prefix with a staleness warning instead of rendering it as fact.}
 
 ## Rhythm
 

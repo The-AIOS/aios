@@ -40,7 +40,7 @@
 
 ## 2026-09-06 — The vault learns to grow up: the roadmap-layer graduation, the structure grammar, and migrations that lose nothing
 
-`hash: 0e61aa6` · [#81](https://github.com/The-AIOS/aios/pull/81)
+`hash: 0e61aa6 · 0d15b49` · [#81](https://github.com/The-AIOS/aios/pull/81) · [#82](https://github.com/The-AIOS/aios/pull/82)
 
 > **The shape of the change.** The File Placement Router has always answered *"where does a NEW file go?"* Nothing answered the questions a *growing* vault asks later: when have project notes outgrown per-note tracking? Where does retired content go? What does a rename owe the graph? Every vault answered those differently each time — invisible until retrieval fails, or until a cross-project push fragments across a dozen dashboards with no surface owning priority. This entry ships the growth path, the grammar, the execution craft, and the periodic audit. **None of it imposes a working style** — it teaches your sessions to *recognize the signals and make the offer*; every structural change stays your call.
 
@@ -59,10 +59,23 @@
 - `CLAUDE.md` § IV File Placement Router — one new paragraph: *Structure evolution follows the vault grammar* (retirement + the growth path; bulk changes via `vault-migrations`)
 - `templates/_index.md` — roadmap-template's suggested location corrected: a live roadmap is *lifecycle*, so it never instantiates under `reflections/` (records); it lives with the push and graduates to `00 - notes/roadmaps/`
 
+### The complement, same day (#82) — the loop comes wired: `/today` and `/close-day` learn to read a live roadmap layer
+
+**This is explicitly a complement to the morning's ship, not a separate feature.** § 7 taught sessions to *recommend* the roadmap-layer birth — and then a live-vault check found that canonical `/today` referenced roadmaps **zero times** and `/close-day` only reconciled status at close: a graduated vault would get correct flips and an invisible roadmap. A clean roadmap nothing surfaces is worse than no roadmap, so recommending the layer means recommending the loop — and now the framework carries both. Everything below is **existence-gated**: no live `type: roadmap` files in the vault → every step skips silently, and a zero-config vault feels nothing.
+
+**What you can now do (once your vault has a roadmap layer — opt-in, per § 7):**
+
+- **Your morning plan opens on the highest-value item per front.** `/aios:today` renders a `## The Board` section right after *Today I ship*: the top 1–3 open rows per roadmap file, keys verbatim, maps with 0 open collapsing to one line — the answer to *"if today opens up, what matters most per front?"* is on the page before the day starts, and it's the natural place to pick *Today I ship* from. Stale board (>3 days) → flagged as a hint, never rendered as fact.
+- **Your maps show what's ahead, automatically.** `/aios:close-day` sweeps freshly-flipped ✅/❌ rows down into each map's `## ✅ Done & dropped` ledger (a foldable heading section, created on first need — rows stay verbatim so every key keeps its single greppable definition) and regenerates the `## Roadmap board` in `projects/_index.md` from the open rows. Ship-time flips stay a one-line edit; the derivation has an owner.
+- **Your personalizations still win.** The canonical board is the zero-personalization default — richer ranking (urgency ladders, value tags, family grouping) in `USER.md → ### /close-day` overrides it, as before.
+
+Components: `plugins/aios/commands/today.md` (Message 1b roadmap-layer check + The Board template section) · `plugins/aios/commands/close-day.md` (step 13 + § Roadmap board regeneration + ledger sweep) · `templates/aios/vault-grammar.md` § 7 (*the loop comes wired* bullet).
+
 ### Action required
 
 1. **Nothing manual for the files** — `/aios:update` lands them (Tier 1) and, because a bundled `SKILL.md` was added, **runs the skills registrar automatically** (`skills/setup.sh` / `.ps1`). Check: after sync, `ls ~/.claude/skills/ | grep vault-migrations` shows the symlink; if missing, run `bash ~/aios/skills/setup.sh` (Windows: `skills/setup.ps1`), then **restart sessions** (skills load at session start) — restart is the last step.
 2. **Optional, when you next run `/aios:housekeeping`:** expect the new grammar findings. They are proposals — a vault that deliberately diverges from the grammar can keep its shape; the point is that divergence be a decision, not an accident.
+3. **Nothing to run for the wiring (#82)** — `/aios:update` lands the two command files and syncs them to the plugin cache automatically. Check-then-act: if your vault has no live `type: roadmap` files, nothing changes for you; if it has, your next `/aios:close-day` starts the loop (first board generation + ledger sweep) and the morning after, `## The Board` appears in your daily note.
 
 ---
 
