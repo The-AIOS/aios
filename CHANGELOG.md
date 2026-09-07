@@ -74,6 +74,21 @@ This is a **consistency fix, not a new convention** — three hooks already carr
 
 ---
 
+### The statusline account chip can carry a name you choose
+
+`👤` and the `🔄 from→to` swap banner showed the email's **local-part**. Two accounts can legitimately share one — the same person on two providers, or a single Google address behind two separate Anthropic accounts — and then both chips render **identically**, leaving the usage percentages as the only way to tell which account you are on.
+
+Declare an alias per line in `USER.md` → `## Anthropic accounts` and the chip uses it:
+
+```markdown
+1. `you@example.com` — primary
+2. `you@example.com.alt` — overflow · alias **overflow**
+```
+
+**Omit it and nothing changes** — that account keeps its local-part, so every existing vault renders exactly as before. The convention is documented in `hooks/claude-identity/README.md`, which is where the accounts section's format already lives.
+
+*Merged with three additions the contribution could not have anticipated. The default `USER.md` path now derives from the file's own location rather than hardcoding `~/aios` — CI forbids that in `.py` because it depends on the operator's symlink existing, and the shell sibling that does it is exempt only because the rule covers `.py`/`.js`/`.ts`, which is an asymmetry rather than a licence. The convention moved out of the parser into a **Tier-1** doc: `USER.md` is Tier-2 and never syncs, so documenting it only there would have reached fresh clones and no existing operator — a convention living in one parser is folklore. And a suite now covers the fallback path, because this code renders on every prompt, so a raise there is a broken statusline rather than a wrong label.*
+
 ### What you need to do — checks first, then act
 
 > **To the session reading this during `/aios:update`: run the checks and act on what they return.** Both are read-only. Report *"already satisfied — no action"* when a check comes back clean.
@@ -96,6 +111,18 @@ python3 ~/aios/hooks/buffer-status.py --json > /dev/null && echo ok
 
 - `ok` → the guard is in place; nothing further.
 - A `UnicodeEncodeError` → the update did not land the hook files. Re-run `/aios:update` and report that it did not apply, rather than working around it with `PYTHONIOENCODING`.
+
+**3 · Optional — name the accounts if two of them share a local-part.** *(Session: check, then offer. Do not edit `USER.md` unprompted; it is the operator's file.)*
+
+```bash
+# Section-scoped on purpose: an unscoped grep reads numbered lists from every
+# other section of USER.md and reports phantom collisions.
+awk '/^## Anthropic accounts/{f=1;next} f&&/^## /{exit} f' ~/aios/USER.md 2>/dev/null \
+  | grep -oE '^[0-9]+\. `[^`]+`' | sed -E 's/.*`(.*)@.*/\1/' | sort | uniq -d
+```
+
+- **No output** → every account has a distinct local-part. **Say nothing**; the chip is already unambiguous.
+- **A local-part printed twice or more** → those accounts render identically in the statusline. Offer: *"you can add `alias **short-name**` to those lines in `USER.md` → `## Anthropic accounts` and the chip will use it — want me to?"* Format and reasoning: `hooks/claude-identity/README.md`.
 
 **Nothing else.** No restart, no re-registration, no config change.
 

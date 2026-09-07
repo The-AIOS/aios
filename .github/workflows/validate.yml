@@ -1133,6 +1133,16 @@ jobs:
         # only considers .py/.sh.
         run: python3 tests/lint-claude-p.py
 
+      - name: the statusline account chip falls back safely
+        # This renders on EVERY prompt, so a raise in the alias lookup is not a wrong
+        # label — it is a broken statusline. The suite spends most of its effort on
+        # absent/malformed USER.md, and asserts the no-alias case explicitly, because
+        # that is the property keeping every existing vault rendering as before.
+        # Contributed in #83; the self-locate and doc-placement assertions were added
+        # on merge — USER.md is Tier-2 and never syncs, so a convention documented
+        # only there would reach fresh clones and no existing operator.
+        run: bash tests/statusline-account-alias.test.sh
+
       - name: every non-ASCII-printing hook guards Windows stdout
         # Windows consoles are cp1252, so a print() carrying an em dash raises
         # UnicodeEncodeError and the hook does NOT RUN — the failure is absence, not a
