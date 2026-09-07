@@ -58,8 +58,22 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
 10. Ask the user: "What happened today that isn't in the notes? Anything on your mind?"
 11. Synthesize the review
 12. **Truth-surface reconcile (ship-time truth-flip — see CLAUDE.md § Discipline).** For each ship in today's note (the `### Shipped` candidates + `[x]` items), verify its truth surface already flipped: keyed items (grep the key's definition — a live `type: roadmap` file) show ✅ + their declared `ledger:` row appended; unkeyed items show done at their project note. Any miss → flip it now and record the miss in the Observed line (a repeated miss pattern is antifragile material). Close-day is the backstop, never the primary writer.
-13. **Update weekly plan progress** (see Weekly Plan Progress Update below)
-14. **Sync Google Tasks** — use pre-loaded Tasks data (see Google Tasks Sync below)
+13. **Roadmap board regeneration + ledger sweep** — only when the vault has a live roadmap layer (see the section below; zero-config vaults skip silently)
+14. **Update weekly plan progress** (see Weekly Plan Progress Update below)
+15. **Sync Google Tasks** — use pre-loaded Tasks data (see Google Tasks Sync below)
+
+## Roadmap board regeneration + ledger sweep (live-roadmap vaults only)
+
+**Existence gate:** `Grep` for `type: roadmap` frontmatter across `00 - notes/`; keep files whose `status:` isn't `archived`. **None → skip this entire section silently** — most vaults track everything in project notes, and that's the design, not a gap. (The roadmap layer is opt-in: `templates/aios/vault-grammar.md` § 7 defines when a session should *recommend* its birth; this section is what makes the layer surface daily once it exists.)
+
+When live roadmap files exist, two moves — the derivation gets an owner:
+
+1. **Ledger sweep.** Ship-time flips mark rows ✅/❌ *in place* (the flipping session never relocates rows). Sweep any `- {KEY} · ✅/❌` row sitting in a map's live sections down into that map's `## ✅ Done & dropped` section (create the section at the file's bottom on first need — plain rows under the heading, verbatim, so keys keep a single greppable definition and Obsidian's heading fold collapses the history). This keeps the maps showing what's ahead.
+2. **Regenerate `projects/_index.md` § `## Roadmap board`.** For each live roadmap file: take the OPEN rows (skip ✅ ❌ ⏸), priority = the file's own list order (the roadmap template's law), keep the top ~5, render `key · one-line description`. Stamp the generation date. **Never invent status the roadmaps don't carry** — this is a derived surface; the maps stay the truth. Why the board exists: `/today` reads `_index.md` as its single source for project context and never reads the roadmaps — the board is the only bridge between *what is most valuable* and *what the morning plan sees*.
+
+If a map's open count changed by more than ~5 since the last generation, say so in the Close-of-Day Observed line — a big swing is either a real sprint or an unflipped batch.
+
+**USER.md wins on format:** if `### /close-day` personalizations define a richer board (urgency ladders, value tags, per-family grouping), follow those — this section is the zero-personalization default, not a ceiling.
 
 ## Bus dead-letter rendering
 
