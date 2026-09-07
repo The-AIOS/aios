@@ -99,23 +99,43 @@ done
 [ "$miss" = "0" ] && ok "every .gitattributes-protected hook is inside the installer's globs" \
   || no "$miss protected hook(s) outside the installer's normalization" "widen the globs in install-git-hooks.sh/.ps1 — .gitattributes cannot reach an operator"
 
-echo "-- 6. the two installers cover the same three sets (no platform left behind) --"
-# Each side is matched with ITS OWN idiom, on code lines only. Two earlier versions of this
-# check were wrong in opposite directions and both are instructive: matching raw file text
-# let a comment mentioning aios- satisfy it (a guard firing on its own prose), and then
-# matching one shared literal across both files reported a false gap, because PowerShell
-# writes `Join-Path $HooksDir 'git'` where bash writes `$HOOKS_DIR/git/`. A cross-language
-# substring compare measures textual similarity, not coverage.
-strip_sh(){  sed -E 's/#.*//'  hooks/install-git-hooks.sh; }
-strip_ps(){  sed -E 's/#.*//'  hooks/install-git-hooks.ps1; }
+echo "-- 6. both installers SELECT the same way: derive, never enumerate --"
+# The purpose is that neither platform lags the other in coverage. Asserting shared
+# literals was wrong twice before this version, in opposite directions: matching raw file
+# text let a COMMENT mentioning aios- satisfy it, and matching one literal across both
+# files reported a FALSE gap because PowerShell writes `Join-Path $HooksDir 'git'` where
+# bash writes `$HOOKS_DIR/git/`. Then the literals themselves went away when both loops
+# were changed to derive from the directory + a shebang test — at which point a
+# token-matching check was asserting an implementation detail that had been deliberately
+# removed. So assert the SHAPE: each side sweeps both directories and filters on a shebang.
+strip_sh(){ sed -E 's/#.*//' hooks/install-git-hooks.sh; }
+strip_ps(){ sed -E 's/#.*//' hooks/install-git-hooks.ps1; }
 chk(){ # label · bash regex · powershell regex
   a=$(strip_sh | grep -cE "$2"); b=$(strip_ps | grep -cE "$3")
-  if [ "${a:-0}" -gt 0 ] && [ "${b:-0}" -gt 0 ]; then ok "both installers cover $1"
+  if [ "${a:-0}" -gt 0 ] && [ "${b:-0}" -gt 0 ]; then ok "both installers $1"
   else no "$1 — bash=$a powershell=$b" "Windows is the platform this exists for; the .ps1 may not lag the .sh"; fi
 }
-chk "the git/ hook dir"   'HOOKS_DIR/git/'         "Join-Path \\\$HooksDir 'git'"
-chk "the aios-* hooks"    'HOOKS_DIR"?/aios-\*'   "Join-Path \\\$HooksDir 'aios-\*'"
-chk "the *.sh hooks"      'HOOKS_DIR"?/\*\.sh'   "Join-Path \\\$HooksDir '\*\.sh'"
+chk "sweep the hooks dir itself"     'HOOKS_DIR"?/\*'        "Join-Path \\\$HooksDir '\*'"
+chk "sweep the git/ subdir"          'HOOKS_DIR/git/'         "Join-Path \\\$HooksDir 'git'"
+# The shebang filter is matched on the RAW files, deliberately. The comment-stripper above
+# cuts at the first `#`, which eats the very token being searched for — `grep -q '^#!'` in
+# bash and `-like '#!*'` in PowerShell both contain a `#` inside quotes. Stripping-at-hash is
+# a cousin of removing comments, and it silently scored 0 on code that was plainly there.
+# Prose cannot produce these two shapes, so the raw match is safe here.
+a=$(grep -cE "grep -q '\\^#!'" hooks/install-git-hooks.sh)
+b=$(grep -cE "like '#!\\*'" hooks/install-git-hooks.ps1)
+if [ "${a:-0}" -gt 0 ] && [ "${b:-0}" -gt 0 ]; then ok "both installers filter on a shebang rather than a name list"
+else no "shebang filter — bash=$a powershell=$b" "Windows is the platform this exists for; the .ps1 may not lag the .sh"; fi
+
+# A NEGATIVE assertion — "the loop does not enumerate hook names" — was attempted here and
+# removed rather than shipped at a third try. It cannot be measured textually: both files
+# legitimately NAME hooks outside the selection loop (the PATH shim, the operator-facing
+# echo lines), so every counting version scored those and fired on healthy code. Deciding
+# whether a name sits in selection logic or in a message needs a shell parser, and a check
+# that cannot tell them apart is worse than no check — it trains the reader to ignore it.
+# The positive assertions above cover the regression that actually occurred: if a future
+# edit narrows a loop back to a name list, § 5 catches it by comparing the installer's own
+# globs against .gitattributes, and it names the exposed files.
 
 echo
 echo "-- $PASS passed, $FAIL failed --"

@@ -12,9 +12,11 @@ HOOKS_DIR="$(cd "$(dirname "$0")" && pwd)"          # …/hooks
 # without an exec bit the day it was added. Same class as this framework's other
 # enumeration bugs: a list can only describe the files that existed when it was written.
 chmod +x "$HOOKS_DIR/aios-commit" 2>/dev/null || true
-for _h in "$HOOKS_DIR/git/"*; do
-  case "$_h" in *.md|*'*') continue ;; esac
-  [ -f "$_h" ] && { chmod +x "$_h" 2>/dev/null || true; }
+for _h in "$HOOKS_DIR"/* "$HOOKS_DIR/git/"*; do
+  case "$_h" in *.md|*.ps1|*'*') continue ;; esac
+  [ -f "$_h" ] || continue
+  head -1 "$_h" 2>/dev/null | grep -q '^#!' || continue
+  chmod +x "$_h" 2>/dev/null || true
 done
 
 # Normalize CRLF -> LF on the hook scripts. This is the ONLY surface that reaches every
@@ -32,7 +34,7 @@ done
 # Derived from globs, never a name list: the first version of this loop covered git/* and
 # aios-commit only, which left aios-snapshot (mandatory in the Session End ritual) and
 # aios-star-check (/aios:update Step 6.9) exposed on exactly the platform this exists for.
-for _h in "$HOOKS_DIR/git/"* "$HOOKS_DIR"/aios-* "$HOOKS_DIR"/*.sh; do
+for _h in "$HOOKS_DIR"/* "$HOOKS_DIR/git/"*; do
   case "$_h" in *.md|*.ps1|*'*') continue ;; esac
   [ -f "$_h" ] || continue
   head -1 "$_h" 2>/dev/null | grep -q '^#!' || [ -x "$_h" ] || continue
