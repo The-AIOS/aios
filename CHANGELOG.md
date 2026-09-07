@@ -72,6 +72,14 @@ This is a **consistency fix, not a new convention** — three hooks already carr
 
 **`tests/lint-windows-stdout.py` is what makes it a contract**, and it matters more than usual because **CI runs on ubuntu, so this whole class is invisible here by construction** — the lint is the only thing standing between it and every Windows operator. Verified by mutation rather than by watching it pass: removing the guard from one hook turns it red and names the offending lines. That mutation also caught the linter **reproducing the very bug it detects** — it echoes non-ASCII source lines, so it crashed on cp1252 *while reporting the defect*. It now carries the guard it enforces.
 
+### The buffer reader measured the entries and titled over the file
+
+`buffer-status.py` summed the characters of the **entries** and printed the result as *"reading the buffer in full costs ~N tokens"*. But a session does not read the entries — it reads the **file**, and the file also carries every `<!-- ROUTED … -->` tombstone, the front matter and any prose outside an entry. On a buffer whose routed-entry receipts had accumulated, the report announced a cost under half of what every load actually paid, and *"Within contract — nothing to dispose"* over the share it happened to measure.
+
+Same class as the bullet-reader defect above, one step removed: not a reader that **missed** entries, but a reader that measured the right thing and **titled it as a different thing**. The caps govern the entries; the token bill is the file; a report that names one as the other hides exactly the share the caps cannot see.
+
+**The fix** reports both, named for what they are — `entries ~N tokens (what the caps govern)` and `WHOLE FILE ~M tokens (what every session actually pays)` — and prints a warning with the percentage when the file is 25 % or more furniture. JSON callers get `approx_tokens_entries`, `approx_tokens_file`, `entry_chars` and `file_chars`; the original `approx_tokens_to_read_in_full` keeps its value and meaning, so nothing reading it changes behaviour. Pinned in `tests/buffer-status.test.sh` with a furniture-heavy fixture, a lean control, and a check that the original key did not drift. **No operator action required** — the next `/close-day` simply shows the second line.
+
 ---
 
 ### The statusline account chip can carry a name you choose
