@@ -25,13 +25,20 @@ git -C $Repo config core.hooksPath "hooks/git"
 # The installer is the only surface that reaches every operator.
 # Byte-level on purpose: Set-Content re-encodes and can add a BOM, which breaks a shebang
 # just as thoroughly as the \r did. Only a CR that precedes LF is dropped.
+# The set mirrors what .gitattributes declares (hooks/aios-* · hooks/git/* · *.sh) -- same
+# files, same reason, and .gitattributes cannot reach an operator. Globs, never a name list:
+# the first version covered git/* and aios-commit only, leaving aios-snapshot (mandatory in
+# the Session End ritual) and aios-star-check (/aios:update Step 6.9) exposed on exactly the
+# platform this code exists for.
 $hookFiles = @()
 $gitHookDir = Join-Path $HooksDir 'git'
 if (Test-Path $gitHookDir) {
-  $hookFiles += Get-ChildItem -File $gitHookDir | Where-Object { $_.Extension -ne '.md' }
+  $hookFiles += Get-ChildItem -File $gitHookDir | Where-Object { $_.Extension -notin '.md', '.ps1' }
 }
-$ac = Join-Path $HooksDir 'aios-commit'
-if (Test-Path $ac) { $hookFiles += Get-Item $ac }
+$hookFiles += Get-ChildItem -File -Path (Join-Path $HooksDir 'aios-*') -ErrorAction SilentlyContinue |
+              Where-Object { $_.Extension -notin '.md', '.ps1' }
+$hookFiles += Get-ChildItem -File -Path (Join-Path $HooksDir '*.sh') -ErrorAction SilentlyContinue
+$hookFiles = $hookFiles | Sort-Object FullName -Unique
 foreach ($f in $hookFiles) {
   try {
     $bytes = [System.IO.File]::ReadAllBytes($f.FullName)

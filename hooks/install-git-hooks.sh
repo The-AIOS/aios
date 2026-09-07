@@ -27,9 +27,15 @@ done
 # The consequence is not a mangled message: git treats any non-zero pre-commit/pre-push exit
 # as a refusal, so the operator simply cannot commit or push, with an error naming neither
 # AIOS nor the cause. Strip only a CR that terminates a line; a lone CR inside a string stays.
-for _h in "$HOOKS_DIR/git/"* "$HOOKS_DIR/aios-commit"; do
-  case "$_h" in *.md|*'*') continue ;; esac
+# The set mirrors what .gitattributes declares (hooks/aios-* · hooks/git/* · *.sh), because
+# those are the same files for the same reason — and .gitattributes cannot reach an operator.
+# Derived from globs, never a name list: the first version of this loop covered git/* and
+# aios-commit only, which left aios-snapshot (mandatory in the Session End ritual) and
+# aios-star-check (/aios:update Step 6.9) exposed on exactly the platform this exists for.
+for _h in "$HOOKS_DIR/git/"* "$HOOKS_DIR"/aios-* "$HOOKS_DIR"/*.sh; do
+  case "$_h" in *.md|*.ps1|*'*') continue ;; esac
   [ -f "$_h" ] || continue
+  head -1 "$_h" 2>/dev/null | grep -q '^#!' || [ -x "$_h" ] || continue
   LC_ALL=C grep -q $'\r' "$_h" 2>/dev/null || continue
   _t="$_h.aios-eol.$$"
   # `cat "$_t" > "$_h"`, NOT `mv "$_t" "$_h"`. mv replaces the inode, so the hook would

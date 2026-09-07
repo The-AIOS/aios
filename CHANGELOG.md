@@ -175,6 +175,24 @@ Two smaller repairs in the same pass: the clause **"un-sandboxing does not help 
 
 *One limit, stated so a green build is not over-read: the literals manifest pins paths, flags and JSON shapes — never the one-clause `why` beside them. Measured during review: 279 bytes of pure reason-clause removed, zero literals touched, both checks green. The task-shaped rubric is what guards the reasoning, and it needs credentials so it cannot run in CI. Green here means no literal was dropped, not that nothing was lost — the test header now says this, and each further section runs its own rubric.*
 
+---
+
+### The tier dial now resolves from one table, and the bus reports requests nobody claimed
+
+> **What you can now do.** Nothing yet, on purpose — and that is the point of the entry. Two pieces of plumbing that the orchestration docs *assume* work were measured today and one of them does not. This ships the canonical half so the surface half can be a one-line change.
+
+**`hooks/resolve-tier` — the rung→model table, readable by anything.** It lived in exactly one place: the `spawn` shell function that `install-wrappers.sh` appends to your rc file. Any surface that launches `claude` directly instead of going through that function therefore loses tiering **silently**. Measured on a live App: a request carrying `"tier":"fast"` was fulfilled as `claude --name <n>` with **no `--model` at all**, and the worker ran on the frontier model — confirmed in its transcript, not just in argv. The same request carrying `"model":"<id>"` was honoured.
+
+That inverts the advice every doc gives. `CLAUDE.md` offers `"model"` **or** `"tier":"<rung>"`, the `orchestration-ladder` skill says pick by cognitive load, and `MODEL-ROUTING.md` owns the rung table precisely so callers never hardcode ids — so **the recommended field was the broken one and the discouraged one worked**, and the ~22× spend spread that carries the whole *Calibrate Don't Choose* argument did not apply on the path most operators use. Same shape as `--allowedTools` under auto mode: a flag that is passed and does not bind.
+
+`resolve-tier fast` prints `claude-haiku-4-5-20251001`; `resolve-tier judgment` prints **nothing at exit 0**, which is a real answer meaning *pass no `--model`*; an unknown rung exits 2 and lists the rungs rather than quietly falling back to the frontier default, since silently defaulting is the bug being replaced. **Nothing calls it yet** — it is deliberately additive, so no behaviour changes anywhere and it is on disk before any surface adopts it. `tests/resolve-tier.test.sh` asserts the two *shipped* copies agree (the resolver against the wrapper text in `install-wrappers.sh`) rather than restating the mapping a third time.
+
+**The bus now reports a second failure shape: requests nobody ever claimed.** A retired `<name>.json.undelivered` was already surfaced by `/today` and `/close-day`. A plain `<name>.json` that no surface ever picked up was invisible **everywhere** — because retirement needs a surface to perform it, and a surface that quit performs nothing. Measured: a request addressed to a surface whose pid had been dead three weeks sat completely unseen, while an identical one addressed to the live surface was claimed in ~1s.
+
+Safe to report because pickup **renames** the file to `.holding`, so a claimed request legitimately waiting out its 45-minute hold is never flagged, and a five-minute grace period keeps the normal ~1s pickup window silent. Both false-positive directions carry a control in `tests/bus-dead-letters.test.sh` — a script that had no test at all until now — because `close-day.md` already warns in writing that a check which always fires is a check the operator stops reading.
+
+**And `install-git-hooks` now normalizes every hook `.gitattributes` protects.** Today's earlier fix covered `hooks/git/*` and `aios-commit` while `.gitattributes` declares `hooks/aios-*` too — leaving `aios-snapshot` (mandatory in the Session End ritual) and `aios-star-check` (`/aios:update` Step 6.9) CRLF-exposed on Windows, the one platform the fix exists for. The globs now mirror the declaration, and the suite extracts the installer's **own** globs to check it, after an earlier version carrying its own glob list stayed green when the installer was narrowed. Found by finally reading a roadmap row that had described this exact gap since 2026-08-13.
+
 ### What you need to do — checks first, then act
 
 > **To the session reading this during `/aios:update`: run the checks and act on what they return.** All are read-only. Report *"already satisfied — no action"* when a check comes back clean.

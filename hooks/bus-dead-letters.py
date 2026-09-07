@@ -26,15 +26,37 @@ Keeping it in a file (rather than inline `python3 -c "…"`) also means permissi
 matching sees a short, stable command prefix, and /today · /close-day ·
 /housekeeping can share ONE implementation instead of drifting into three.
 
+TWO FAILURE SHAPES, NOT ONE (the second added 2026-09-07)
+---------------------------------------------------------
+A request can fail to reach a session in two distinguishable ways, and only one of
+them used to be reported:
+
+  <name>.json.undelivered  a surface CLAIMED it, tried, and gave up. Retirement is
+                           not delivery: the work did not happen and nobody was told.
+  <name>.json              NOBODY EVER CLAIMED IT. On pickup a surface renames the
+                           file to `<name>.json.holding`, so a plain `.json` still
+                           sitting there after minutes means no fulfiller took it —
+                           the operator quit the App, closed the IDE, or never had a
+                           surface. It is never dead-lettered (retirement needs a
+                           surface to perform it), so nothing surfaced it at all.
+
+Measured 2026-09-07: a request addressed to a surface whose pid had been dead three
+weeks sat unclaimed and completely invisible, while an identical one addressed to the
+live surface was picked up in ~1s. The `.holding` rename is what makes this safe to
+report — a legitimate wait (up to HOLD_STALE_MS, 45 min) is a `.holding` file and is
+never flagged here, so this cannot become the check that always fires.
+
 CONTRACT (relied on by the commands that call it)
 -------------------------------------------------
-  * no dead letters      -> print exactly `bus-dead-letters: none`
+  * nothing wrong        -> print exactly `bus-dead-letters: none`
   * each dead letter     -> one line with to / action / reason / at
+  * each unclaimed req   -> one `bus-unclaimed:` line with to / action / age
   * unreadable file      -> still reported BY NAME, with the reason why
   * exit code            -> always 0; finding nothing is not a failure
 
-Retirement is not delivery: a `.undelivered` file means the work definitively did
-NOT happen and nobody was told. See CLAUDE.md § Spawning Sessions.
+A fresh request is NOT an anomaly: only files older than UNCLAIMED_AFTER_S are
+reported, so the normal ~1s window between writing a request and its pickup never
+shows up. See CLAUDE.md § Spawning Sessions.
 
 Usage:  python3 hooks/bus-dead-letters.py [inbox-dir]
 """
@@ -43,17 +65,69 @@ import glob
 import json
 import os
 import sys
+import time
 
 DEFAULT_INBOX = "~/.aios/spawn-inbox"
+
+# Grace period before an unclaimed request is worth mentioning. Pickup is ~1s in
+# practice; 5 min is far outside that and far inside RETIRE_TTL_MS (10 min), so a
+# stuck request is raised BEFORE the protocol would retire it rather than after.
+UNCLAIMED_AFTER_S = 300
+
+
+def _age(path):
+    try:
+        return time.time() - os.path.getmtime(path)
+    except OSError:
+        return None
+
+
+def _fmt_age(secs):
+    if secs is None:
+        return "?"
+    m = int(secs // 60)
+    return "%dm" % m if m < 60 else "%dh%dm" % (m // 60, m % 60)
+
+
+def unclaimed(inbox):
+    """Plain *.json files nobody renamed to .holding, older than the grace period."""
+    out = []
+    for path in sorted(glob.glob(os.path.join(inbox, "*.json"))):
+        secs = _age(path)
+        if secs is None or secs < UNCLAIMED_AFTER_S:
+            continue
+        name = os.path.basename(path)
+        try:
+            with open(path, encoding="utf-8") as fh:
+                doc = json.load(fh)
+            doc = doc if isinstance(doc, dict) else {}
+            # A hand-written `_claim` is not a real claim (the rename is), but if one
+            # is present the file is at least mid-protocol — say so rather than guess.
+            out.append(
+                "bus-unclaimed: to=%s action=%s age=%s%s"
+                % (
+                    doc.get("name", "?"),
+                    doc.get("action", "spawn"),
+                    _fmt_age(secs),
+                    " (carries _claim but was never renamed)" if doc.get("_claim") else "",
+                )
+            )
+        except Exception as exc:
+            out.append("bus-unclaimed: %s (unreadable: %s)" % (name, exc))
+    return out
 
 
 def main(argv):
     inbox = os.path.expanduser(argv[1] if len(argv) > 1 else DEFAULT_INBOX)
     files = sorted(glob.glob(os.path.join(inbox, "*.undelivered")))
+    stuck = unclaimed(inbox)
 
-    if not files:
+    if not files and not stuck:
         print("bus-dead-letters: none")
         return 0
+
+    for line in stuck:
+        print(line)
 
     for path in files:
         name = os.path.basename(path)

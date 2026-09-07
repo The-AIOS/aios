@@ -1164,6 +1164,35 @@ jobs:
         # a scratch GIT_CONFIG_GLOBAL so it can never read or write the real config.
         run: bash tests/pre-push.test.sh
 
+      - name: the tier dial resolves from ONE table, and the installers cover the same hooks
+        # The rung→model table lived only inside the spawn shell function, so any surface
+        # launching `claude` directly lost tiering SILENTLY — measured 2026-09-07 on a live
+        # App: a request carrying "tier":"fast" produced `claude --name <n>` with no --model
+        # and the worker ran frontier, while the same request with "model":"<id>" was
+        # honoured. The recommended field was the broken one, so the 22x spend spread that
+        # carries Calibrate-Don't-Choose did not apply on the majority path.
+        #
+        # hooks/resolve-tier is the one table any surface can read. This suite asserts the
+        # two SHIPPED copies agree (resolver vs the wrapper text in install-wrappers.sh)
+        # rather than restating the mapping — a third copy would be the same bug again.
+        # It also asserts the installers normalize every hook .gitattributes protects, by
+        # extracting the installer's own globs; an earlier version carried its own glob list
+        # and stayed green when the installer was narrowed, which mutation testing caught.
+        run: bash tests/resolve-tier.test.sh
+
+      - name: the bus reports unclaimed requests, not only dead letters
+        # Two failure shapes. A retired `.undelivered` request was already reported; a plain
+        # `*.json` NOBODY EVER CLAIMED was invisible everywhere, because retirement needs a
+        # surface to perform it and a surface that quit performs nothing. Measured: a request
+        # addressed to a surface dead three weeks sat unseen while an identical one to the
+        # live surface was picked up in ~1s.
+        #
+        # The false-positive half is the real risk and carries a control each: a fresh
+        # request (~1s of normal life) and a `.holding` file (a claimed request legitimately
+        # waiting out HOLD_STALE_MS, 45 min) must both stay SILENT. close-day.md already
+        # warns in writing that a check which always fires is one the operator stops reading.
+        run: bash tests/bus-dead-letters.test.sh
+
       - name: install-git-hooks leaves every hook runnable (CRLF + exec bit)
         # The hooks are bash, and on Windows core.autocrlf=true (the Git-for-Windows
         # default) rewrites them to CRLF on checkout — after which the shebang cannot
