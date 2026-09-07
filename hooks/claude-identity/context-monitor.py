@@ -510,18 +510,68 @@ def get_rate_limit_display(rate_limits):
     return f" \033[90m|{reset} ⚡ " + f" \033[90m·{reset} ".join(parts)
 
 
+_ACCOUNT_ALIASES = None
+
+
+def _account_aliases():
+    """Operator-declared short names for Anthropic accounts, read from
+    USER.md → `## Anthropic accounts`. Convention, per numbered line:
+
+        1. `someone@example.com` — alias **work** · any other prose
+
+    Returns {email: alias}. Optional: a line without `alias **x**` simply
+    has no entry and falls back to the email's local-part. This exists
+    because two accounts can share a local-part (same person, two
+    providers), which made the bare local-part ambiguous in the bar."""
+    global _ACCOUNT_ALIASES
+    if _ACCOUNT_ALIASES is not None:
+        return _ACCOUNT_ALIASES
+    aliases = {}
+    try:
+        user_md = os.environ.get("USER_MD_PATH") or os.path.expanduser("~/aios/USER.md")
+        in_sec = False
+        with open(user_md, encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("## Anthropic accounts"):
+                    in_sec = True
+                    continue
+                if in_sec and line.startswith("## "):
+                    break
+                if not in_sec:
+                    continue
+                m = re.match(r"\s*\d+\.\s*`([^`]+)`(.*)$", line)
+                if not m:
+                    continue
+                email, rest = m.group(1), m.group(2)
+                a = re.search(r"alias\s+\*\*([^*]+)\*\*", rest)
+                if a:
+                    aliases[email] = a.group(1).strip()
+    except Exception:
+        pass
+    _ACCOUNT_ALIASES = aliases
+    return aliases
+
+
+def _account_label(email):
+    """Alias from USER.md if declared, else the local-part (before @)."""
+    if not email:
+        return "?"
+    return _account_aliases().get(email) or email.split("@")[0]
+
+
 def get_account_display():
-    """Show the active Anthropic account's local-part (before @) so you can
-    tell at a glance whether you're on j@ or cc@ after an auto-swap.
-    Cheap — reads ~/.claude.json once per statusline refresh."""
+    """Show the active Anthropic account so you can tell at a glance which
+    one you're on after an auto-swap. Uses the operator's alias from USER.md
+    when declared (two accounts can share a local-part), else the local-part.
+    Cheap — reads ~/.claude.json once per statusline refresh; USER.md once
+    per process."""
     try:
         with open(os.path.expanduser("~/.claude.json")) as f:
             d = json.load(f)
         email = d.get("oauthAccount", {}).get("emailAddress", "")
         if not email:
             return ""
-        label = email.split("@")[0]
-        # Green by default — colored red if we couldn't match an Anthropic account
+        label = _account_label(email)
         return f" \033[90m|\033[0m \033[36m👤 {label}\033[0m"
     except Exception:
         return ""
@@ -553,8 +603,8 @@ def get_swap_banner():
         age = int(time.time() - ts)
         if age < 0 or age > SWAP_BANNER_TTL_SECS:
             return ""
-        from_local = (m.get("from") or "?").split("@")[0]
-        to_local = (m.get("to") or "?").split("@")[0]
+        from_local = _account_label(m.get("from"))
+        to_local = _account_label(m.get("to"))
         return (
             f"\033[31;1m🔄 {from_local}→{to_local}\033[0m "
             f"\033[90m|\033[0m "
