@@ -40,7 +40,7 @@
 
 ## 2026-09-07 — Two readers of one file disagreed, and Windows operators could not run the hooks at all
 
-`hash: bbf60df · e81993c · ba2a010` · [#83](https://github.com/The-AIOS/aios/pull/83) · [#84](https://github.com/The-AIOS/aios/pull/84) · [#85](https://github.com/The-AIOS/aios/pull/85) · [#91](https://github.com/The-AIOS/aios/pull/91) · [#89](https://github.com/The-AIOS/aios/pull/89) · [#92](https://github.com/The-AIOS/aios/pull/92) · [#94](https://github.com/The-AIOS/aios/pull/94)
+`hash: bbf60df · e81993c · ba2a010` · [#83](https://github.com/The-AIOS/aios/pull/83) · [#84](https://github.com/The-AIOS/aios/pull/84) · [#85](https://github.com/The-AIOS/aios/pull/85) · [#91](https://github.com/The-AIOS/aios/pull/91) · [#89](https://github.com/The-AIOS/aios/pull/89) · [#92](https://github.com/The-AIOS/aios/pull/92) · [#94](https://github.com/The-AIOS/aios/pull/94) · [#96](https://github.com/The-AIOS/aios/pull/96)
 
 > **What you can now do.** **Trust what `buffer-status.py` tells you** — if your `session-insights.md` uses top-level `- ` bullets rather than `### ` headings, it was reporting **`0/10` and `0/5`, "within contract", exit 0** on a buffer that was actually at its cap. And **run the framework's hooks and its own test suite on Windows**, where six of them previously died mid-report rather than printing a mangled character. Both were reported by operators running the framework on surfaces the maintainers do not use daily.
 
@@ -131,9 +131,32 @@ The precondition now lives in `CLAUDE.md` § Spawning Sessions and in the `orche
 
 *What was already right, and what was not: the caveat had been documented in `MODEL-ROUTING.md` since 2026-09-04, and the report cited a different entry that never carried the claim. But the two gaps it named were real — the precondition was missing from every surface an agent actually reads when deciding to delegate, and the existing lint checked only that hooks **pass** the flag, never that passing it restricts anything. Linting the flag while asserting the guarantee is the same check-measures-a-cousin shape this framework keeps finding in its own work.*
 
+---
+
+### Windows operators: the git hooks are installed, not just copied
+
+> **What you can now do.** Commit and push on Windows with the git hooks installed. Found by dogfooding `/aios:update` against a live vault an hour after the `pre-push` guard above shipped — the guard was correct, and no operator running Windows could have used it.
+
+The hooks in `hooks/git/` are bash scripts. On Windows, `core.autocrlf=true` — the Git-for-Windows default — rewrites them to CRLF on checkout, and git then runs them through `sh`, where a trailing `\r` makes the shebang unresolvable. Measured:
+
+```
+env: bash\r: No such file or directory
+exit 127
+```
+
+**git reads any non-zero `pre-commit`/`pre-push` exit as a refusal**, so the symptom is not a mangled message or a guard that quietly fails to fire — it is **the operator unable to commit or push at all**, with an error naming neither AIOS nor the cause. `pre-commit` has shipped since July with the same exposure.
+
+**`.gitattributes` carries `text eol=lf` for these paths and cannot be the fix.** It is **Tier-0**: it never reaches an operator vault through `/aios:update`, and a fork's copy freezes at fork time. So the rule protected canonical's own checkout and the sync's delivery path — everything except the machine where it matters. A guard placed one repo short of its target is the shape worth naming: *a fix that cannot reach the affected population is not a fix, however correct it is where it sits.*
+
+**The fix is in the installer**, the one surface that reaches every operator: `install-git-hooks.sh` / `.ps1` now strip line-terminating CR from `hooks/git/*` and `aios-commit`, and set the exec bit on **every** hook in `hooks/git/` rather than the three the old `chmod` line named — `pre-push` shipped without one, the same enumeration bug this command's own docs warn about at length. A lone CR inside a string survives; an already-clean checkout is left byte-identical.
+
+Two things the fix had to get right that look like details and are not. The rewrite goes **through the existing inode** (`cat tmp > hook`, never `mv`), because `mv` would hand the hook the temp file's mode and drop the exec bit that had just been set — trading a CRLF hook that cannot run for an LF hook that cannot run. And **`/aios:update` now names this installer in its auto-run list**: the script's own header had claimed for months that the command auto-runs it while the command never said so, which would have shipped this fix as a file that never executes. A rule that lives only in the thing being run is a rule the runner never reads.
+
+`tests/install-git-hooks.test.sh` (12 cases) asserts the hook **executes** after install rather than that no `\r` byte remains — those come apart, and the `mv` variant produces exactly the CR-free hook that still cannot run. Its first case is a control that plants a CRLF hook and requires it to fail; if that control ever passes, the suite says the passes below it prove nothing instead of banking them. Verified by mutation, twice: removing the normalization turns 6 cases red, reverting the `chmod` to its hardcoded list turns 3 red.
+
 ### What you need to do — checks first, then act
 
-> **To the session reading this during `/aios:update`: run the checks and act on what they return.** Both are read-only. Report *"already satisfied — no action"* when a check comes back clean.
+> **To the session reading this during `/aios:update`: run the checks and act on what they return.** All are read-only. Report *"already satisfied — no action"* when a check comes back clean.
 
 **1 · Re-measure the observation buffer.** *(Session: run it and report the real numbers. If this operator's buffer uses bullets, every previous report was a false zero.)*
 
@@ -165,6 +188,21 @@ awk '/^## Anthropic accounts/{f=1;next} f&&/^## /{exit} f' ~/aios/USER.md 2>/dev
 
 - **No output** → every account has a distinct local-part. **Say nothing**; the chip is already unambiguous.
 - **A local-part printed twice or more** → those accounts render identically in the statusline. Offer: *"you can add `alias **short-name**` to those lines in `USER.md` → `## Anthropic accounts` and the chip will use it — want me to?"* Format and reasoning: `hooks/claude-identity/README.md`.
+
+**4 · Confirm the git hooks can actually run.** *(Session: `/aios:update` re-runs the installer for you when this ships, so this is a verification, not a repair. It is worth running anyway on any machine whose vault was checked out on Windows — including a vault cloned there once and used elsewhere since.)*
+
+```bash
+# Any hook carrying a line-terminating CR cannot run: git refuses the commit or push.
+for h in ~/aios/hooks/git/* ~/aios/hooks/aios-commit; do
+  case "$h" in *.md) continue ;; esac
+  [ -f "$h" ] || continue
+  LC_ALL=C grep -q $'\r' "$h" && echo "CRLF: $h"
+  [ -x "$h" ] || echo "NOT EXECUTABLE: $h"
+done
+```
+
+- **No output** → every hook is runnable. **Say nothing.**
+- **Any line printed** → run `bash ~/aios/hooks/install-git-hooks.sh` (Windows: `powershell -File ~/aios/hooks/install-git-hooks.ps1`), then re-run the check. If a line survives, report it as a hook that cannot run — **never** as a cosmetic line-ending difference, because git's response to it is to refuse the operation.
 
 **Nothing else.** No restart, no re-registration, no config change.
 

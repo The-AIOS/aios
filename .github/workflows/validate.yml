@@ -1154,6 +1154,25 @@ jobs:
         # a scratch GIT_CONFIG_GLOBAL so it can never read or write the real config.
         run: bash tests/pre-push.test.sh
 
+      - name: install-git-hooks leaves every hook runnable (CRLF + exec bit)
+        # The hooks are bash, and on Windows core.autocrlf=true (the Git-for-Windows
+        # default) rewrites them to CRLF on checkout — after which the shebang cannot
+        # resolve (`env: bash\r`, exit 127) and git reads that non-zero exit as a
+        # refusal. The operator cannot commit or push, with an error naming neither
+        # AIOS nor the cause.
+        #
+        # .gitattributes carries `text eol=lf` for these paths and is NOT the fix:
+        # it is Tier-0, so it never reaches an operator vault through /aios:update,
+        # and a fork's copy freezes at fork time. The installer is the only surface
+        # that reaches every operator, so the normalization lives there.
+        #
+        # The suite asserts the hook EXECUTES, not that no \r byte remains — those
+        # come apart, and normalizing through `mv` produces exactly the CR-free hook
+        # that still cannot run. Its first case is a control that plants a CRLF hook
+        # and requires it to fail; if that control ever passes, the passes below prove
+        # nothing and the suite says so instead of banking them.
+        run: bash tests/install-git-hooks.test.sh
+
       - name: the statusline account chip falls back safely
         # This renders on EVERY prompt, so a raise in the alias lookup is not a wrong
         # label — it is a broken statusline. The suite spends most of its effort on
