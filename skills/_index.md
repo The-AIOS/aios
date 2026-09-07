@@ -110,6 +110,7 @@ Core software-engineering disciplines. Many of these reference each other (e.g.,
 - `commons-governance` — Ostrom's commons design principles applied to shared vaults, collab spaces, company sync, and multi-agent repos
 - `team-archetypes` — Cherny's five product archetypes (Prototyper/Builder/Sweeper/Grower/Maintainer); compose a team or agent fleet by lifecycle posture matched to product stage
 - `comprehension-debt` — keep the operator's understanding from falling behind what their agents ship; the defensive complement to Arc sessions (detection via `/close-session`, prevention via `/aios:housekeeping`)
+- `vault-migrations` — the craft of restructuring a vault without losing a byte: dry-run first, inventory-verify (file/key/line accounting), wiki-link safety (aliases, redirect stubs, basename collisions), one commit per verified stage, field-tested gotchas. Pairs with `templates/aios/vault-grammar.md` (the target structure); executes `/aios:housekeeping` Bucket 21 approvals
 
 **Compliance**
 - `accessibility-compliance` — WCAG 2.2 audits
