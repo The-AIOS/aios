@@ -40,7 +40,7 @@
 
 ## 2026-09-07 — Two readers of one file disagreed, and Windows operators could not run the hooks at all
 
-`hash: bbf60df · e81993c` · [#83](https://github.com/The-AIOS/aios/pull/83) · [#84](https://github.com/The-AIOS/aios/pull/84) · [#85](https://github.com/The-AIOS/aios/pull/85)
+`hash: bbf60df · e81993c` · [#83](https://github.com/The-AIOS/aios/pull/83) · [#84](https://github.com/The-AIOS/aios/pull/84) · [#85](https://github.com/The-AIOS/aios/pull/85) · [#91](https://github.com/The-AIOS/aios/pull/91)
 
 > **What you can now do.** **Trust what `buffer-status.py` tells you** — if your `session-insights.md` uses top-level `- ` bullets rather than `### ` headings, it was reporting **`0/10` and `0/5`, "within contract", exit 0** on a buffer that was actually at its cap. And **run the framework's hooks and its own test suite on Windows**, where six of them previously died mid-report rather than printing a mangled character. Both were reported by operators running the framework on surfaces the maintainers do not use daily.
 
@@ -88,6 +88,14 @@ Declare an alias per line in `USER.md` → `## Anthropic accounts` and the chip 
 **Omit it and nothing changes** — that account keeps its local-part, so every existing vault renders exactly as before. The convention is documented in `hooks/claude-identity/README.md`, which is where the accounts section's format already lives.
 
 *Merged with three additions the contribution could not have anticipated. The default `USER.md` path now derives from the file's own location rather than hardcoding `~/aios` — CI forbids that in `.py` because it depends on the operator's symlink existing, and the shell sibling that does it is exempt only because the rule covers `.py`/`.js`/`.ts`, which is an asymmetry rather than a licence. The convention moved out of the parser into a **Tier-1** doc: `USER.md` is Tier-2 and never syncs, so documenting it only there would have reached fresh clones and no existing operator — a convention living in one parser is folklore. And a suite now covers the fallback path, because this code renders on every prompt, so a raise there is a broken statusline rather than a wrong label.*
+
+### `spawn --profile <name>` — a worker loads only the MCP servers you name
+
+`spawn --profile {name} {worker} "{task}"` starts the session with `--strict-mcp-config --mcp-config ~/.aios/mcp-profiles/{name}.json`, so it holds **only** the servers that file declares. Omit the flag and nothing changes. Same plumbing as `--tier`/`--model`: `spawn()` validates and sets it, the launcher exports `CLAUDE_MCP_PROFILE`, `_claude_with_respawn` resolves it to flags. An unknown profile **refuses in `spawn()`**, listing what exists — a typo must not open a worker with the full default set, which reads as the flag being ignored.
+
+**Do not reach for it to save tokens.** Measured on a live vault, a profile trims 2–4k off a ~50k startup, because MCP tool definitions load *deferred*. The payoff is blast radius — a file sweep has no business holding Gmail, Drive or home-automation credentials — plus one failure mode that is not about size: **a server that disconnects mid-session invalidates the whole prompt prefix and pays a full cache rebuild**, however small it was. Two things CLAUDE.md now says because each costs an hour if met blind: a per-project `.mcp.json` keys off the **directory** and does nothing on a vault-anchored setup where every session runs from the same one; and an http server that authenticates by OAuth holds its grant under the name it was authorised as — renamed inside a profile it *loads but cannot be called* until `/mcp` is run once interactively. **No operator action required**; create `~/.aios/mcp-profiles/` when you want a profile.
+
+---
 
 ### What you need to do — checks first, then act
 
