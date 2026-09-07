@@ -347,6 +347,8 @@ Before writing any new file, route it — never default to "wherever feels close
 
 **Bespoke rooms are legitimate** — grow custom folders under `00 - notes/` for genuine domain corpora (a family cookbook, a poetry archive): name it semantically, give it an `_index.md`, done. The rule is *deliberate birth*, not *no birth*. `/aios:housekeeping` surfaces placement drift, never auto-moves.
 
+**Structure evolution follows the vault grammar.** The Router places *new* files; how existing structure *evolves* — retiring notes (`_archived/`, record vs lifecycle species), naming folders, what a rename owes the graph (`aliases:`, redirect stubs) — is specified in `templates/aios/vault-grammar.md`. Consult it before archiving, renaming, or restructuring; execute anything beyond a handful of files via the `vault-migrations` skill (dry-run → inventory-verify → write). The grammar also names the **growth path** (§ 7): when prioritized cross-project backlogs outgrow per-note tracking, it defines the signals for *recommending* the opt-in keyed-roadmap layer (`templates/aios/roadmap-template.md` + the ship-time truth-flip contract, § VI) — surface the offer, the operator decides. `/aios:housekeeping` (Bucket 21) audits against it.
+
 ### Index Maintenance
 
 Folders with a `_index.md` file are self-documenting. **When you create, rename, or delete a file in any indexed folder, update its `_index.md` to reflect the change.** This keeps the vault navigable and the Obsidian graph connected.

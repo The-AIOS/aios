@@ -9,7 +9,7 @@ allowed-tools: mcp__obsidian__*, Read, Grep, Glob, Bash
 
 # /housekeeping — Vault Housekeeping
 
-Periodic care of the vault as it grows. Produces a review packet across **every bucket enumerated in Phase 1** — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification, file placement drift, agent-output gate health, truth-surface drift, memory-pressure channeling, spawned-output placement, antifragile fix-verification, same-family judge, containment rung drift, headless-call tool allowlists — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
+Periodic care of the vault as it grows. Produces a review packet across **every bucket enumerated in Phase 1** — link repairs, index refresh, project merges, archival, carry cleanup, task dedup, table trim, INTENT.md drift, antifragile cleanup, permissions audit, plugin-cache verification, antifragile compact, USER.md drift, missed reports, antifragile→USER.md graduation, radar health, CLAUDE.md+USER.md health, upstream freshness, observed-context lifecycle, skill-registration verification, file placement drift + structure grammar, agent-output gate health, truth-surface drift, memory-pressure channeling, spawned-output placement, antifragile fix-verification, same-family judge, containment rung drift, headless-call tool allowlists — with proposals the user approves before anything is applied. Writes a log of what was proposed, approved, and applied.
 
 **When to run:** monthly as a rhythm, or whenever the vault feels heavy (lots of carries, too many active projects, stale snapshots). `/today` will suggest it when triggers fire.
 
@@ -603,20 +603,29 @@ Show the actual evidence: `ls -la ~/.claude/skills/<name>` per finding — "`acc
 
 **Why this matters:** a skill that isn't symlinked is invisible — agents that name it in their `## Skills` block silently get nothing, and the operator hits *"I don't have that skill."* This bucket is the periodic floor-check that every AIOS-origin skill is actually loadable, mirroring what Bucket 11 does for commands.
 
-#### Bucket 21: File placement drift (NEW)
+#### Bucket 21: File placement drift + structure grammar
 
-Audits the vault against the **File Placement Router** (CLAUDE.md § IV) — the router exists so every session places files semantically; this bucket catches what slipped through.
+Audits the vault against the **File Placement Router** (CLAUDE.md § IV) *and* the **vault grammar** (`templates/aios/vault-grammar.md`) — the router places new files semantically, the grammar governs how existing structure evolves; this bucket catches what slipped through both.
 
-**Scan:**
+**Scan — placement (the router):**
 
 - **Species mismatch** → a file living in a zone whose question it doesn't answer. The classic: a human-authored, compounding note inside `00/logs/` (logs is for script/system output ONLY). Test each `logs/` root file: written by a script? If no → propose move (usually `reflections/` or a project note). Also check the reverse: machine output accumulating outside `logs/`.
 - **Folder-birth candidates (rule of 3)** → 3+ loose files of the same species sitting in a parent without a semantic subfolder. Evidence: list the candidate files + propose the subfolder name (plain noun, species not dates).
 - **Unsanctioned bespoke rooms** → custom folders under `00 - notes/` lacking an `_index.md`. Bespoke rooms are legitimate (a family cookbook, a poetry archive) — but deliberate: propose adding the `_index.md`, never removal.
 - **Source/deliverable splits** → deliverable sources (filled HTML, deck sources) living only outside the vault (`/tmp`, Downloads) or only as PDF. Propose persisting the source per the router's export rule.
 
-**Propose-only — never auto-move.** Placement is semantic judgment; the operator approves each move. On approval: `git mv`, update wiki-links pointing at the old path (grep first), update affected `_index.md` files.
+**Scan — structure grammar (run the checklist at the end of `templates/aios/vault-grammar.md`):**
 
-**Why this bucket exists:** placement drift is invisible until retrieval fails — the file exists but nobody finds it because it lives where it was *born*, not where it'll be *asked for*. Caught 2026-06-04 in the reference vault: a strategy-rich conference capture filed in `logs/` next to a machine-written bridge beacon — same folder, opposite species. The router (CLAUDE.md § IV) is the forward mechanism; this bucket is the periodic backstop.
+- **Retirement-name drift** → `archive/`, `done/`, `old/`, or date-suffixed variants where the grammar says `_archived/`. One name per concept — mixed conventions tax every future search with "which convention does *this* folder use?"
+- **Archive subfolders inside record species** → a record folder (audits, ingests, books, research…) growing a retirement shelf. Records never retire (grammar § 1); propose flattening.
+- **Orphaned-obligation archives** → archived notes (`status: archived`) still carrying open tasks/keys that were never re-homed to a successor surface (grammar § 4). Propose the re-home, not just the flag.
+- **Alias-less renames** → notes whose git history shows a rename but whose frontmatter has no `aliases:` for the old basename, while inbound `[[old-name]]` links still exist (grammar § 5). Propose adding the alias.
+- **Basename collisions** → two linked notes sharing a basename, making `[[name]]` ambiguous (grammar § 5).
+- **Roadmap-layer graduation signals (grammar § 7)** → the vault may have outgrown per-note tracking. Check the four signals: project notes repeatedly flagging the line-count ladder because they carry *prioritized cross-project backlogs* (not history); the same initiative's tasks fragmented across 3+ project notes with no surface owning priority; carries bouncing between notes; cross-everything questions no file can answer. **2+ signals firing → surface the recommendation**: instantiate `templates/aios/roadmap-template.md` (one file first; family maps only when that file grows heavy), wire each participating project note's `Roadmap` row, keys per the truth-flip contract. This is the framework's existing opt-in layer — the bucket's job is noticing *when it's worth offering*, never installing it. Adoption is entirely the operator's call, and "not yet" is a fine answer that shouldn't be re-proposed for 30+ days.
+
+**Propose-only — never auto-move.** Placement and structure are semantic judgment; the operator approves each move. On approval: `git mv`, update wiki-links pointing at the old path (grep first), update affected `_index.md` files — and for anything beyond a handful of files, execute via the **`vault-migrations`** skill (dry-run → inventory-verify → write), never ad-hoc.
+
+**Why this bucket exists:** placement drift is invisible until retrieval fails — the file exists but nobody finds it because it lives where it was *born*, not where it'll be *asked for*. Caught 2026-06-04 in the reference vault: a strategy-rich conference capture filed in `logs/` next to a machine-written bridge beacon — same folder, opposite species. The grammar half was added 2026-09-06 after a reference vault's full structure pass surfaced the drift classes the router alone never catches (mixed retirement names, record-species archives, alias-less renames) — the router fires at file *birth*; these accumulate as structure *evolves*. The router + grammar are the forward mechanism; this bucket is the periodic backstop.
 
 #### Bucket 22: Agent-output gate health (NEW — comprehension-debt sibling)
 
@@ -833,7 +842,7 @@ Categorize all findings into one review table:
 - CLAUDE.md + USER.md health check: {N} proposals
 - Upstream source freshness: {N} sources behind, {M} sources current
 - Skill registration verify: {N} auto-registered, {M} proposals (collisions/dangling)
-- File placement drift: {N} proposals
+- File placement drift + structure grammar: {N} proposals
 - Agent-output gate health: {N} samples checked, {M} hollow gates / stale permission audits
 - Truth-surface drift: {N} lagging notes, {M} roadmap flags
 
