@@ -16,6 +16,16 @@ if os.path.exists(venv_path):
 
 from markitdown import MarkItDown
 
+# Windows consoles default to cp1252, which cannot encode the em dashes and
+# symbols this script prints — so on Windows the report raised
+# UnicodeEncodeError and aborted instead of printing. Already guarded this way
+# in pipeline-executor.py, route-insight.py and claude-identity/context-monitor.py;
+# these callers were simply missed. Safe on macOS/Linux, where stdout is UTF-8.
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: markitdown-convert.py <input_file> [output_file]", file=sys.stderr)

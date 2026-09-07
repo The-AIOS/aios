@@ -1133,6 +1133,19 @@ jobs:
         # only considers .py/.sh.
         run: python3 tests/lint-claude-p.py
 
+      - name: every non-ASCII-printing hook guards Windows stdout
+        # Windows consoles are cp1252, so a print() carrying an em dash raises
+        # UnicodeEncodeError and the hook does NOT RUN — the failure is absence, not a
+        # mangled glyph. Measured: hooks/buffer-status.py scored 18 passed / 5 failed on
+        # Windows and 23 / 0 elsewhere, entirely from its own report line.
+        #
+        # The convention already existed in three hooks (pipeline-executor.py,
+        # route-insight.py, claude-identity/context-monitor.py) and was applied
+        # inconsistently to the rest, which is the shape a rule takes when nothing checks
+        # it. CI runs on ubuntu, so this class is invisible here by construction — the lint
+        # is the only thing standing between it and every Windows operator.
+        run: python3 tests/lint-windows-stdout.py
+
       - name: every tracked file passes the secret scanner
         # THE GAP THIS CLOSES. tests/secret-scan.test.sh proves the scanner behaves
         # correctly on FIXTURES. Nothing ran it across the tracked tree — so canonical
