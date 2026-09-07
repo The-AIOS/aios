@@ -38,6 +38,67 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-07 — Two readers of one file disagreed, and Windows operators could not run the hooks at all
+
+`hash: {HASH}` · [#84](https://github.com/The-AIOS/aios/pull/84) · [#85](https://github.com/The-AIOS/aios/pull/85)
+
+> **What you can now do.** **Trust what `buffer-status.py` tells you** — if your `session-insights.md` uses top-level `- ` bullets rather than `### ` headings, it was reporting **`0/10` and `0/5`, "within contract", exit 0** on a buffer that was actually at its cap. And **run the framework's hooks and its own test suite on Windows**, where six of them previously died mid-report rather than printing a mangled character. Both were reported by operators running the framework on surfaces the maintainers do not use daily.
+
+### The buffer reader was blind to bullet entries — and `/close-day` believed it
+
+`hooks/buffer-status.py` split entries on `^### ` only. But `hooks/route-insight.py` — the tool that **excises** entries from that same file — resolves **both** `### ` headings *and* top-level `- ` bullets, with a corpus-measured contract for each (indented lines are body; unindented continuation prose after a bullet legitimately belongs to it; a bullet ends at the next top-level bullet, any heading, or an HTML comment).
+
+So the framework shipped **two readers of one file that disagreed about what an entry is, and the measuring one lost silently.** On a live vault holding 5 Reinforced anchors and 9 Emerging entries, the report was:
+
+```
+Emerging   0/10
+Reinforced 0/5
+  reading the buffer in full costs ~0 tokens
+
+Within contract — nothing to dispose.        exit 0
+```
+
+The buffer was **at** the Reinforced cap, one off Emerging, and ~7,900 tokens to read. Every guard upstream of the split passed — file non-empty, `## ` sections present, both stages named — which is why nothing caught it. **`/close-day` calls this tool**, so on any bullet-form buffer the close ritual has been reporting a clean bill of health.
+
+The sharp part: `main()` already annotated its own failure path *"Loud, and exit 2. Never a healthy-looking zero."* This was that exact defect class occurring **inside the tool built to reduce it.**
+
+**The fix** mirrors `route-insight.py`'s boundary rules so the two cannot drift apart again, and adds a backstop the original got wrong for a different reason: a stage holding substantive prose matching **neither** style now refuses (exit 2) instead of reporting zero. Substance is measured outside HTML comments, so a stage holding only routed-entry tombstones stays legitimately empty at exit 0. Heading-form buffers are byte-identical before and after.
+
+### Every hook that prints non-ASCII now guards Windows stdout
+
+Windows consoles default to **cp1252**. A `print()` carrying an em dash, an arrow or an emoji raises `UnicodeEncodeError` there — so **the failure is not a mangled glyph, it is the hook not running.** The framework's prose style uses em dashes liberally, which makes this a standing trap rather than an edge case: `tests/buffer-status.test.sh` scored **18 passed / 5 failed** on Windows purely from its own report line, and **23 / 0** with the encoding forced.
+
+This is a **consistency fix, not a new convention** — three hooks already carried the guard (`pipeline-executor`, `route-insight`, `claude-identity/context-monitor`) and six did not (`buffer-status`, `claude-identity/_resume`, `markitdown-convert`, `openrouter`, `transcribe`, `video-watch`). A rule living in three files is folklore.
+
+**`tests/lint-windows-stdout.py` is what makes it a contract**, and it matters more than usual because **CI runs on ubuntu, so this whole class is invisible here by construction** — the lint is the only thing standing between it and every Windows operator. Verified by mutation rather than by watching it pass: removing the guard from one hook turns it red and names the offending lines. That mutation also caught the linter **reproducing the very bug it detects** — it echoes non-ASCII source lines, so it crashed on cp1252 *while reporting the defect*. It now carries the guard it enforces.
+
+---
+
+### What you need to do — checks first, then act
+
+> **To the session reading this during `/aios:update`: run the checks and act on what they return.** Both are read-only. Report *"already satisfied — no action"* when a check comes back clean.
+
+**1 · Re-measure the observation buffer.** *(Session: run it and report the real numbers. If this operator's buffer uses bullets, every previous report was a false zero.)*
+
+```bash
+python3 ~/aios/hooks/buffer-status.py
+```
+
+- Exit `0` → within contract. **Say nothing.**
+- Exit `1` → report what it printed. **If the counts are non-zero where earlier runs said `0/10` and `0/5`, say so explicitly** — the buffer was never empty, the reader was blind, and any `/close-day` that reported it clean was reporting the bug.
+- Exit `2` → it refuses to measure a shape it does not know. Report that as a failure to measure, **never** as a clean buffer.
+
+**2 · Windows operators only — confirm the hooks now run.** *(Session: skip entirely on macOS/Linux and say nothing.)*
+
+```bash
+python3 ~/aios/hooks/buffer-status.py --json > /dev/null && echo ok
+```
+
+- `ok` → the guard is in place; nothing further.
+- A `UnicodeEncodeError` → the update did not land the hook files. Re-run `/aios:update` and report that it did not apply, rather than working around it with `PYTHONIOENCODING`.
+
+**Nothing else.** No restart, no re-registration, no config change.
+
 ## 2026-09-06 — The vault learns to grow up: the roadmap-layer graduation, the structure grammar, and migrations that lose nothing
 
 `hash: 0e61aa6 · 0d15b49` · [#81](https://github.com/The-AIOS/aios/pull/81) · [#82](https://github.com/The-AIOS/aios/pull/82)
