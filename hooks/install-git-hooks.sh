@@ -20,4 +20,6 @@ ln -sf "$HOOKS_DIR/aios-commit" "$BINDIR/aios-commit"
 
 echo "aios git-hooks installed on $REPO → core.hooksPath = hooks/git"
 echo "  raw 'git commit' is now guarded; commit via  aios-commit -m \"…\" <paths>"
+echo "  pre-push refuses off-limits remote owners — inert until you set them:"
+echo "      git config --global aios.blockedRemoteOwners \"AcmeCorp anotherorg\""
 echo "  ('$BINDIR' on PATH? add it if not: export PATH=\"\$HOME/.local/bin:\$PATH\")"

@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# pre-push — refuse to push to a remote that belongs to an owner the operator has
+# declared off-limits. This is the ONE place where the intent is unambiguous: at push
+# time the destination is explicit, so there is no pattern to guess and no rule to
+# remember. A permission glob over `gh`/`git` command lines is best-effort by
+# construction (a novel invocation slips past); this is not.
+#
+# Configure per-machine — deliberately NOT in this file, so the framework ships with
+# no operator's org names baked in and every clone starts with the guard inert:
+#
+#     git config --global aios.blockedRemoteOwners "AcmeCorp anotherorg"
+#
+# Matching is case-insensitive on the OWNER segment of the remote URL, and covers both
+# https://host/owner/repo and git@host:owner/repo. Unset → the hook exits 0 and does
+# nothing, which is the correct default for a stranger's empty vault.
+#
+# Escape hatch, deliberate and loud:  AIOS_ALLOW_BLOCKED_REMOTE=1 git push …
+set -uo pipefail
+
+remote_name="${1:-}"
+remote_url="${2:-}"
+[ -z "$remote_url" ] && remote_url="$(git remote get-url "$remote_name" 2>/dev/null || true)"
+[ -z "$remote_url" ] && exit 0
+
+blocked="$(git config --get aios.blockedRemoteOwners 2>/dev/null || true)"
+[ -z "$blocked" ] && exit 0
+
+# owner = the segment right before the repo name, for either URL shape
+owner="$(printf '%s' "$remote_url" \
+  | sed -E 's#^[a-z+]+://[^/]+/#/#; s#^[^@]+@[^:]+:#/#' \
+  | sed -E 's#^/##; s#/[^/]*$##; s#.*/##')"
+[ -z "$owner" ] && exit 0
+
+lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+owner_lc="$(lc "$owner")"
+
+for b in $blocked; do
+  if [ "$owner_lc" = "$(lc "$b")" ]; then
+    if [ "${AIOS_ALLOW_BLOCKED_REMOTE:-0}" = "1" ]; then
+      echo "pre-push: AIOS_ALLOW_BLOCKED_REMOTE=1 — allowing push to blocked owner '$owner'." >&2
+      exit 0
+    fi
+    cat >&2 <<EOF
+──────────────────────────────────────────────────────────────────────────────
+ BLOCKED: push to '$owner' — an owner declared off-limits on this machine.
+
+   remote : $remote_name
+   url    : $remote_url
+   owner  : $owner   (listed in git config aios.blockedRemoteOwners)
+
+ Having access is not having authorization. If this push is genuinely intended,
+ it is a deliberate act and it looks like one:
+
+     AIOS_ALLOW_BLOCKED_REMOTE=1 git push $remote_name …
+
+ To change the list:  git config --global aios.blockedRemoteOwners "…"
+──────────────────────────────────────────────────────────────────────────────
+EOF
+    exit 1
+  fi
+done
+exit 0
