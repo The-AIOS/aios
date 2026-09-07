@@ -83,6 +83,51 @@ LEGACY_ROUTE = re.compile(r"^\s*\*\*Route to:\*\*\s*(.+)$", re.M | re.I)
 VALID_CLASSES = {"behavioural", "method"}
 
 
+# An entry is a `### ` heading OR a top-level `- ` bullet. This is not a new
+# convention: `route-insight.py` — the tool that EXCISES entries from this same
+# file — resolves both styles and documents why (indented `  - ` lines are body,
+# not entries; unindented continuation prose after a bullet legitimately belongs
+# to it, measured at 43 live instances). Counting only `### ` here meant the two
+# tools disagreed about what an entry is, and the reader silently lost.
+TOP_BULLET = re.compile(r"^- \S")
+ANY_HEADING = re.compile(r"^#{1,6} ")
+
+
+def _entry_chunks(body):
+    """Entry text blocks of ONE style, heading first then bullet.
+
+    Boundaries are style-dependent, exactly as in `route-insight.py`: a bullet
+    entry ends at the next top-level bullet, ANY heading level, or an HTML
+    comment (the `<!-- ROUTED ... -->` tombstones are file furniture, never
+    entries), so its indented facets travel with it.
+    """
+    lines = body.split('\n')
+    starts = [i for i, l in enumerate(lines) if l.startswith("### ")]
+    style = "heading"
+    if not starts:
+        style = "bullet"
+        starts = [i for i, l in enumerate(lines) if TOP_BULLET.match(l)]
+    chunks = []
+    for start in starts:
+        end = len(lines)
+        for j in range(start + 1, len(lines)):
+            ln = lines[j]
+            if ANY_HEADING.match(ln):
+                end = j
+                break
+            if style == "bullet" and (TOP_BULLET.match(ln) or ln.lstrip().startswith("<!--")):
+                end = j
+                break
+        chunks.append('\n'.join(lines[start:end]))
+    return chunks
+
+
+# A section body is "substantive" if it carries prose outside HTML comments — a
+# stage holding only routed-entry tombstones is legitimately empty.
+def _has_substance(body):
+    return len(re.sub(r"<!--.*?-->", "", body, flags=re.S).strip()) >= 80
+
+
 def parse(text):
     """-> {section: [entry, ...]}. Raises ValueError when it cannot measure."""
     if not text.strip():
@@ -102,8 +147,9 @@ def parse(text):
         if key is None:
             continue
         entries = []
-        for chunk in re.split(r"^###\s+", body, flags=re.M)[1:]:
-            title, _, rest = chunk.partition("\n")
+        for chunk in _entry_chunks(body):
+            first, _, rest = chunk.partition('\n')
+            title = re.sub(r"^(?:#{1,6} |- )", "", first)
             fields = {k.lower(): v for k, v in FIELD.findall(rest[:600])}
             if "route" not in fields:
                 m = LEGACY_ROUTE.search(rest)
@@ -119,6 +165,15 @@ def parse(text):
                 }
             )
         sections[key] = entries
+        # Neither style matched a section that plainly holds content: the shape
+        # is one this parser does not know. Reporting 0 there is the false-clean
+        # zero `main()` promises never to print, so refuse loudly instead.
+        if not entries and _has_substance(body):
+            raise ValueError(
+                f"section `## {name}` holds content but yielded no entries in "
+                "either supported style (`### ` heading or top-level `- ` "
+                "bullet) — cannot measure; not reporting an empty buffer"
+            )
     if not sections:
         raise ValueError(
             "found `## ` sections but none named Emerging or Reinforced — "

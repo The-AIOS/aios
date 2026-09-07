@@ -130,6 +130,54 @@ printf '## Something Else\n\n### x\nbody\n' > "$T/wrongsec.md"
 rc4=$(python3 "$B" "$T/wrongsec.md" >/dev/null 2>&1; echo $?)
 [ "$rc4" = "2" ] && ok "sections present but neither stage named → exit 2" || no "wrong-section file → exit $rc4, expected 2"
 
+echo '-- entries may be BULLETS, not only ### headings --'
+# `route-insight.py` — the tool that EXCISES entries from this same file — resolves
+# BOTH styles and documents why. This parser counted only `### `, so the framework's
+# two readers of session-insights.md disagreed about what an entry is, and this one
+# lost silently: a live vault holding 5 Reinforced anchors and 9 Emerging entries
+# reported `0/5`, `0/10`, `~0 tokens`, "Within contract", exit 0. Every guard above
+# passes on that file (non-empty, `## ` sections present, both stages named), which
+# is why nothing caught it.
+{ echo "# Session Insights"; echo; echo "## Emerging"; echo
+  echo "- **(2026-09-01)** first bullet entry"
+  echo '  `class: method` · `first-seen: 2026-09-01` · `route: antifragile.md`'
+  echo "  - an indented facet, which is BODY and must not count as an entry"
+  echo "  > a blockquote facet, likewise"
+  echo "- **(2026-09-02)** second bullet entry"
+  echo '  `class: behavioural` · `first-seen: 2026-09-02` · `route: patterns.md`'
+  echo "unindented continuation prose that belongs to the entry above"
+  echo
+  echo "<!-- ROUTED 2026-08-01: a tombstone is furniture, never an entry. -->"
+  echo; echo "## Reinforced"; echo
+  echo "- **An anchor.** Body."
+  echo '  `class: behavioural` · `first-seen: 2026-06-12` · `route: patterns.md`'
+} > "$T/bul.md"
+out=$(python3 "$B" "$T/bul.md" --json); rc=$?
+be=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
+br=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)["reinforced"])')
+bm=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)["method_awaiting_disposition"])')
+bu=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)["unclassified"])')
+[ "$be" = "2" ] && ok "counted 2 bullet Emerging entries" || no "counted $be bullet Emerging, expected 2" "indented facets or the tombstone were counted as entries"
+[ "$br" = "1" ] && ok "counted 1 bullet Reinforced entry" || no "counted $br bullet Reinforced, expected 1"
+[ "$bm" = "1" ] && ok "class: fields parse inside a bullet entry" || no "method count $bm, expected 1" "the class line sits on the bullet's indented continuation"
+[ "$bu" = "0" ] && ok "no bullet entry is misread as unclassified" || no "$bu unclassified, expected 0"
+# Control: the heading style must still work, or the change above just swapped one
+# blind spot for another.
+mk "$T/hd.md" 2 1
+he=$(python3 "$B" "$T/hd.md" --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
+[ "$he" = "3" ] && ok "control: heading-style entries still counted" || no "CONTROL FAILED — heading style now counts $he, expected 3"
+# Control: a stage holding ONLY tombstones is legitimately empty, not a parse failure.
+{ echo "## Reinforced"; echo; echo "## Emerging"; echo
+  echo "<!-- ROUTED 2026-08-24: graduated to patterns.md; removed from buffer. -->"
+} > "$T/tomb.md"
+rct=$(python3 "$B" "$T/tomb.md" >/dev/null 2>&1; echo $?)
+[ "$rct" = "0" ] && ok "control: a genuinely empty buffer still measures clean" || no "CONTROL FAILED — empty-but-valid buffer → exit $rct, expected 0"
+# A shape matching NEITHER style must refuse, not report zero.
+{ echo "## Emerging"; echo; echo "some prose that is neither a heading nor a top-level bullet,"
+  echo "long enough to be unmistakably substantive content in this stage."; } > "$T/neither.md"
+rcn=$(python3 "$B" "$T/neither.md" >/dev/null 2>&1; echo $?)
+[ "$rcn" = "2" ] && ok "an unknown entry shape refuses (exit 2), never reports 0" || no "unknown shape → exit $rcn, expected 2"
+
 echo "── an unrecognised class is surfaced ──"
 { echo "## Emerging"; echo "### weird"; echo '`class: sytem` · `route: x.md`'; echo body; } > "$T/badclass.md"
 case "$(python3 "$B" "$T/badclass.md")" in
