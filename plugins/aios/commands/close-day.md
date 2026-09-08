@@ -108,7 +108,9 @@ Append to the daily note being closed (may be today or yesterday if closing afte
 
 ## Close of Day
 
-> {Two sentences max. The honest, warm, big-picture read of what this day actually was. Not a summary — a verdict. Written like a friend who watched the whole day and wants to name what happened before you forget. This is the line you'll re-read in 6 months and remember exactly how the day felt.}
+> {Two sentences max. The honest, warm, big-picture read of what this day actually was. Not a summary — a verdict. Written like a friend who watched the whole day and wants to name what happened before you forget. This is the line you'll re-read in 6 months and remember exactly how the day felt.
+>
+> **If `growth.md` carries a `## Horizon`, this line answers the second question too.** Everything else in this block answers *what did I do* — Shipped, the strikes, the carries, all of which complete. The verdict is the one place that can answer *what did it mean*, so when a real ship landed, name what it expressed and not only that it landed. Never as a separate labelled field, never as praise, never as a lesson: the same two warm sentences, reading the day for who the operator was in it. **No horizon → write the verdict exactly as before and say nothing about purpose** (see § The compass offer).}
 
 ### Shipped
 {Did the "Today I ship" deliverable land? Be honest — yes/no + what actually happened.}
@@ -414,7 +416,7 @@ Wait for confirmation before writing to project notes.
 
 > The trust layer on the cascade. Before the snapshots refresh makes anything surface in tomorrow's `/today`, present ONE consolidated, legible ledger of everything cascading into project notes + everything that will surface tomorrow — each line carrying its **origin**. This is what lets the operator trust the pipeline instead of re-auditing it: nothing surfaces tomorrow that wasn't shown + traceable tonight.
 
-**Provenance stamp (the rule).** Every item that cascades into a project note OR will surface in tomorrow's `/today` carries an inline origin tag: `_(from: {source} · {date})_`. Sources: `session-insight` (Reinforced/Emerging), a specific meeting or dev-report, an audit / `/ingest` finding, a carry from {date}, an explicit user request. **An item with no traceable origin is a bug — flag it, don't surface it silently.** (Worked example: a "Zineb fee in writing" task surfacing as `_(from: 2026-06-11 protocols audit · 6-F3)_` reads as a known suggestion, not a mystery — the difference between trust and "where did this come from?")
+**Provenance stamp (the rule).** Every item that cascades into a project note OR will surface in tomorrow's `/today` carries an inline origin tag: `_(from: {source} · {date})_`. Sources: `session-insight` (Reinforced/Emerging), a specific meeting or dev-report, an audit / `/ingest` finding, a carry from {date}, an explicit user request. **An item with no traceable origin is a bug — flag it, don't surface it silently.** (Worked example: a "get the advisor fee in writing" task surfacing as `_(from: 2026-06-11 protocols audit · 6-F3)_` reads as a known suggestion, not a mystery — the difference between trust and "where did this come from?")
 
 **The ledger — present, then confirm (ONE pass; this consolidates the per-section project-note confirmations above into a single review):**
 
@@ -715,6 +717,48 @@ cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Close day {date}"
 ```
 
 `--vault` sweeps the dirty vault paths for you — **space- and rename-safe** (it enumerates `git diff --name-only HEAD` ∪ untracked under `vault/` + `.aios-update`, minus the machine-local noise), so it never truncates a path like `vault/00 - notes/…` the way a `git status | awk '{print $2}'` sweep would. It stages only those paths via a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. Run `/close-day` when active sessions have closed (that's what the Glass Close-all button is for) so nothing is mid-write.
+
+## The compass offer (at most once, and only when it has been earned)
+
+Everything else this command surfaces **completes** — ships, carries, streaks, keys. This is the one place the framework can offer the other kind of read, and the whole design rests on **not offering it too early**. Full method: the **`finding-your-why`** skill.
+
+**Check the state before anything else. In State 0 this section produces no output of any kind** — no prompt, no placeholder, no "consider setting a purpose" nudge. Silence is the correct behaviour, not a gap.
+
+- **`growth.md` has a `## Horizon`** → **State 2.** Nothing to offer. The verdict line already answers the second question (above), and `/today` carries the goal→value clause. Skip this section.
+- **No `## Horizon`, and the variation gate is NOT crossed** → **State 0.** Say nothing. Do not mention purpose, direction, or meaning as a missing thing.
+- **No `## Horizon`, and the gate IS crossed** → **State 1.** Make the offer **once**, at the end of the review, after the day's work has been read.
+
+**The variation gate — computed from disk, never from elapsed time.** An operator can run this system for months inside a single project and have nothing an invariant could be drawn from: with one domain's worth of evidence *the thing that did not change* is that domain, which is a goal, not a compass. So the gate asks for **maximal variation**, not tenure:
+
+- **3+ distinct projects** with real activity in `projects/` (not scaffolded, not archived on arrival), **and**
+- **2+ domains or ventures** represented across `context/ventures/` and `context/observed/business.md`, **and**
+- `context/observed/` describing the operator **across** contexts rather than only inside one
+
+Under the gate → State 0, silently. Do not "almost" offer.
+
+**The offer's tone is a contract, not a preference.** It is an observation shared warmly, never a verdict delivered:
+
+```
+> 🧭 Something I've noticed across your work — and I think it would help you with direction.
+>
+> The domains have changed several times ({name them}). One thing hasn't, and it shows up
+> in {the two or three strongest pieces of evidence, in the operator's own register}:
+>
+>   {candidate A — one sentence}
+>   {candidate B — one sentence, a genuinely different reading}
+>
+> If either lands, I'll set it as your horizon in `growth.md` — it has no checkbox and
+> nothing to advance; it's what the goals are expressions of. **Refine it, replace it, or
+> tell me I've read it wrong** — you hold the pen here, I'm only doing the reading.
+```
+
+Then stop. **Ask for nothing else in the same breath** — no task, no confirmation of anything unrelated, no next step. The rules:
+
+- **Candidates, never a conclusion.** Two or three readings, each with the evidence it rests on, in the operator's language. If the sentence would look at home on a careers page, it is wrong.
+- **Any candidate that could be checked off is rejected before it is offered.** A purpose that completes was a goal wearing purpose's clothes.
+- **If the operator edits it, their words win completely.** The derivation was a draft for them to correct.
+- **A rejection is a real answer.** Record it in `growth.md` as a dated line (*"compass offer declined {date} — not re-asking"*) and **do not re-offer for at least 90 days.** An operator saying *"that's not it"* has told you the evidence was thinner than the gate suggested.
+- **Never re-run the offer because a session forgot it happened.** The dated line is the check; read it before offering.
 
 ## Rules
 - **Shipped is binary.** Don't soften "didn't ship" into "made progress." Honesty compounds.
