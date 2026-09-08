@@ -179,6 +179,43 @@ groups=$(awk '/^### Launching from a terminal/{f=1} f&&/^## §2/{exit} f&&/^\*\*
 [ "${groups:-0}" -ge 4 ] && ok "grouped into $groups labelled sections" \
   || no "only $groups group heading(s)" "fifteen rows spanning launching, model choice, setup and context-mounting is a list, not a reference"
 
+echo "-- 10. the mechanical dance is EXECUTABLE, not just named --"
+# WHY. The file routed you to the right repo and then said "fork -> branch -> pull request"
+# once, in five words, with zero commands in 263 lines. That is not a gap in polish: the
+# install flow points an operator's `origin` at their OWN private vault repo and leaves
+# canonical as a `repo=` line in `.aios-update` rather than a remote -- so the five-word
+# clause has no starting point from where an operator actually stands. Worse, the obvious
+# reading of it (branch from your vault, push to a fork) puts `context/observed/` in the
+# PR diff, which is the one violation this file calls non-negotiable. So the commands are
+# load-bearing, and the vault-leak warning is the reason they exist.
+#
+# These greps target the COMMANDS and the concrete tell, never the prose around them --
+# a check that restates the sentence it is checking only tests its own restatement.
+for cmd in 'gh repo fork' 'git remote add upstream' 'git checkout -b' 'git push -u origin' 'gh pr create'; do
+  grep -qF "$cmd" "$C" && ok "documents \`$cmd\`" \
+    || no "no \`$cmd\`" "the dance is not executable without it"
+done
+# the commands must be COPYABLE -- i.e. inside a fenced block, not described in prose
+fenced=$(awk '/^```bash/{f=1;next} /^```/{f=0} f' "$C" | grep -cE '^(gh|git) ')
+[ "${fenced:-0}" -ge 6 ] && ok "$fenced git/gh lines sit in fenced blocks (copyable)" \
+  || no "only ${fenced:-0} fenced command lines" "commands described in prose cannot be pasted"
+
+# the accident this section exists to prevent
+grep -qF '.aios-update' "$C" && ok "names the vault-vs-contrib-clone tell (.aios-update)" \
+  || no "no concrete tell for 'is this tree a vault?'" "without a mechanical test the rule is advice"
+grep -qF 'context/observed/' "$C" && ok "names the path that leaks if you push from a vault" \
+  || no "the leak is abstract" "'personal data' is not actionable; the path is"
+grep -qE 'branch from (CANONICAL|`?upstream/main`?)' "$C" && ok "says which base to branch from" \
+  || no "no base-branch rule" "a branch cut from a stale fork main produces a diff nobody can review"
+# a refused push is the SUCCESS signal here, and a contributor who does not know that files a bug
+grep -qiE 'refused, and that is correct|permission error there means' "$C" \
+  && ok "pre-empts the refused-push-to-canonical confusion" \
+  || no "does not explain that no push access is expected" "reads as a broken setup"
+
+# the session-facing half: this file is read by Claude sessions, not only humans
+grep -qiE 'if you are a claude session' "$C" && ok "carries an explicit session-facing precondition" \
+  || no "no session-facing guidance" "a human hits 'no push access' and thinks; a session does not"
+
 echo
 echo "-- $PASS passed, $FAIL failed --"
 [ "$FAIL" -eq 0 ]

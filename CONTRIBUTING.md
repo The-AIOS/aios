@@ -31,7 +31,7 @@ Most things should stay in `custom/`. The bar for shipping something beyond your
 
 ## Which repo? — three repos, and the question that actually routes you
 
-The AIOS ships from **three public repos**, and every one of them takes contributions the same way: **fork → branch → pull request.**
+The AIOS ships from **three public repos**, and every one of them takes contributions the same way: **fork → branch → pull request** (the commands, and the one accident to avoid, are in § The contribution dance below).
 
 | Repo | Owns | You're here if… |
 |---|---|---|
@@ -60,6 +60,58 @@ Both surface repos carry their own `CONTRIBUTING.md` with their setup, gates and
 **The worked example, because it is the case the layer rule gets wrong.** A spawn request carrying `"tier":"fast"` was silently ignored: the field was accepted, no error, and the worker ran on the frontier model. `"tier"` is documented in **three canonical files** — so filing against canonical was the reasonable conclusion and the wrong one. The defect was in the App's fulfiller, which launched `claude` without the flag. Locating it took the launch `argv` **plus** the worker's own transcript, because argv alone is a cousin of the running behaviour.
 
 **If you're unsure after all that, file against canonical.** We route it. A misfiled issue costs a comment; an unfiled one costs the fix.
+
+---
+
+## The contribution dance — from "I found something" to an open PR
+
+The router above gets you to the right door. This gets you through it.
+
+### The rule that prevents the one accident that matters: never contribute from your vault
+
+**Your `~/aios` is not a clone of canonical, even though it started as one.** The setup flow clones the framework and then points `origin` at **your own private repo** — so on a live install `origin` is your vault, and canonical is usually **not a remote at all**. It exists as `repo=` in `.aios-update`, and `/aios:update` reaches it by cloning to a temp directory.
+
+That matters because canonical also ships a **template `vault/`** at the same paths your private content occupies. So the obvious sequence — branch from your vault's `main`, push it to a fork, open a PR — puts `vault/00 - notes/context/observed/` in the diff. It is the § Personal hygiene violation this file calls non-negotiable, reached by following the steps that look correct.
+
+So the mechanic is one sentence: **contributions come from a second, separate clone that has never held a vault.**
+
+> **The tell, for humans and sessions alike:** if the tree you are about to push from contains a **`.aios-update`** file, it is somebody's *vault*, not a contribution clone — stop. Canonical does not ship that file; it appears only once a vault has synced. This holds on both install paths, including a vault that was forked rather than cloned.
+
+### First time — set up a contribution clone
+
+```bash
+# Fork canonical, then clone YOUR FORK somewhere that is NOT ~/aios
+gh repo fork The-AIOS/aios --clone=false          # creates {your-username}/aios
+git clone git@github.com:{your-username}/aios.git ~/code/aios-contrib
+cd ~/code/aios-contrib
+git remote add upstream git@github.com:The-AIOS/aios.git    # canonical
+```
+
+You now have `origin` = your fork (you can push) and `upstream` = canonical (you cannot). That asymmetry is the point.
+
+### Every contribution after that
+
+```bash
+cd ~/code/aios-contrib
+git fetch upstream
+git checkout -b fix/short-slug upstream/main     # branch from CANONICAL main, never your fork's
+# ...make the change · add or extend a test · add the CHANGELOG entry...
+git push -u origin fix/short-slug
+gh pr create --repo The-AIOS/aios --fill
+```
+
+Then work the § Before-you-open-a-PR checklist, and watch CI on the PR.
+
+**Branch from `upstream/main` every time.** Your fork's `main` goes stale the moment canonical moves, and a branch cut from a stale base produces a diff full of changes you did not make — the review then cannot see your actual contribution.
+
+**`git push` to canonical will be refused, and that is correct.** Nobody outside the maintainers has push access, so a permission error there means your setup is right, not broken. You push to *your fork*; the PR crosses the gap.
+
+### If you are a Claude session doing this on an operator's behalf
+
+The sequence is the same, plus one hard precondition and one habit:
+
+- **Before the first push, run `git remote -v` and check for `.aios-update`.** A tree carrying that file is the operator's live vault — do not create a branch there, and do not push from it. Set up a contribution clone instead, per above. A session cannot un-publish an operator's observed context once it is in an open PR.
+- **`gh pr create` is an outward-facing action** — confirm with the operator before opening it, the same as any send. Everything up to the push is reversible; the PR is public.
 
 ---
 

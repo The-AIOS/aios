@@ -40,7 +40,7 @@
 
 ## 2026-09-08 — The framework could tell you what you did, and neither doc could tell you where to go
 
-`hash: 87092da · 82751c7` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105)
+`hash: 87092da · 82751c7` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107)
 
 > **What you can now do.** Nothing, on day one — and that is the design, not a gap. Every tracked thing in this framework *completes*: a key flips, a ship lands, a streak extends, and then asks what is next. That machinery answers **what did I do**. Nothing answered **what did it mean**. This adds the second answer — but only once your own vault holds enough evidence to derive it honestly, because a purpose the system invents for you is worse than none.
 
@@ -59,6 +59,18 @@ The worked example is one of ours, and it is why the layer rule needed replacing
 One sentence resolves a collision this file had been carrying: it uses **"extension"** to mean `custom/`, while **Glass is also an extension** — an IDE one, a separate repo, unrelated.
 
 And under the existing *"evidence before assertions"* rule, what that means when the claim is **behavioural** rather than mechanical: a test proves a function, but it cannot prove *"the rewrite still makes a session behave the same way."* For that, **pre-register the criteria** — write the scenarios before the new text exists, state the bar so it can fail, run both versions, read the results against the written criterion rather than by keyword, and publish the criteria **before** the numbers. The order is the evidence.
+
+### `CONTRIBUTING.md` — and then the dance itself, because "fork → branch → PR" was five words with no starting point
+
+The router above got a contributor to the right repo and stopped. The whole file carried **zero `git` or `gh` commands**, and the one path statement — *fork → branch → pull request* — appeared once, as a clause.
+
+That reads like missing polish. It is not. **The install flow points an operator's `origin` at their own private vault repo**, and leaves canonical as a `repo=` line in `.aios-update` rather than a git remote (`/aios:update` reaches it by cloning to a temp directory). So the five-word clause had **no starting point from where an operator actually stands** — and the obvious reading of it was the dangerous one: canonical ships a template `vault/` at the same paths a live vault fills, so branching from your vault's `main` and pushing to a fork puts `vault/00 - notes/context/observed/` in the PR diff. That is the § Personal hygiene violation the file calls non-negotiable, arrived at by following the steps that look correct, with *"grep your own diff"* as the only defence.
+
+New § **The contribution dance** states the mechanic in one sentence — *contributions come from a second, separate clone that has never held a vault* — and then makes it executable: fork, clone the fork somewhere that is not `~/aios`, add canonical as `upstream`, branch **from `upstream/main`** every time, push to your fork, `gh pr create --repo`. Two confusions are pre-empted rather than left to be discovered: a **refused push to canonical is the success signal**, not a broken setup; and a branch cut from a stale fork `main` produces a diff nobody can review.
+
+**The tell is mechanical, so it works for a session too:** a tree containing a **`.aios-update`** file is somebody's *vault*, not a contribution clone — canonical does not ship that file, it appears only after a first sync. That discriminates on both install paths, including a vault that was forked rather than cloned. The section closes with the session-facing half, because a human who hits *"no push access"* stops and thinks while a session has no such prompt: check the remotes and that file before the first push, and treat `gh pr create` as the outward-facing action it is.
+
+Checks 10 (11 assertions) target the **commands and the concrete tell**, never the prose around them — a guard that restates the sentence it checks only tests its own restatement, which is a shape this repo has now fixed in seven places. Each branch was mutation-verified reachable: dropping `gh pr create`, softening `.aios-update` to *"that config file"*, unfencing the blocks so the commands stop being copyable, removing the session precondition, and abstracting the leak path all fail the suite.
 
 ### `CHEATSHEET.md` — a phrasebook, because nobody with the app types commands
 
