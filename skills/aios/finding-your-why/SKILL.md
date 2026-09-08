@@ -50,9 +50,22 @@ Below the gate → stay in State 0. **Do not offer, do not hint, do not ask.**
 
 Above it → make the offer **once**, at `/close-day`, in a reflective moment rather than a morning full of intentions. See § How to offer it.
 
-### State 2 — a horizon exists. Connect the work to it.
+### State 2 — a compass exists. Connect the work to it.
 
-The horizon lives in `context/observed/growth.md` (§ Horizon). Once it is there:
+The compass lives in `context/observed/growth.md`, and it carries its own gloss so it explains itself to anyone who opens that file cold — including the operator six months from now:
+
+```markdown
+## Compass
+*What hasn't changed across everything you've done — derived from your observed
+context, not stated by you. It has no checkbox and nothing to advance; the goals
+elsewhere in this vault are expressions of it. Refine or replace it any time.*
+
+{one or two sentences, in the operator's own register}
+```
+
+**The heading is `## Compass`, and the word was chosen against a real alternative.** *Horizon* was the first pick and it is wrong twice over: this framework already has a `Horizon` — a carry-bearing section in the daily note, holding things that **complete** — and the ordinary idiom *"on the horizon"* means *approaching*. A word chosen to mean *you never arrive here* colloquially means *arriving soon*, which is precisely the destination reading the whole design exists to separate from. A compass, by contrast, cannot be arrived at; the property is in the word. Don't rename it back.
+
+Once the section is there:
 
 - `/today` adds **one clause** to the day's most significant item, naming the value it expresses. Not a section. A clause.
 - `/close-day`'s verdict line answers the second question alongside the first.
@@ -72,7 +85,7 @@ Three tells sharpen it, and all three are read from evidence rather than asked:
 
 **The definitional filter, applied without exception: if a candidate could ever be checked off, reject it.** A purpose that completes was a goal wearing purpose's clothes. This single test removes most of what a session will be tempted to write.
 
-**Say it in the operator's own register.** The horizon is not a mission statement and must not read like one. If the sentence would look at home on a careers page, it is wrong.
+**Say it in the operator's own register.** The compass is not a mission statement and must not read like one. If the sentence would look at home on a careers page, it is wrong.
 
 ---
 
@@ -123,9 +136,9 @@ This plugs into `USER.md` → `### Growth routines` as a **third routine shape**
 
 - **Do not name the mechanism after its neurochemistry.** The two layers have well-known biological names and using them in operator-facing text turns a design into a lecture, invites bad pop-science, and makes a claim about a person's body that a vault has no standing to make. Describe the behaviour: *what did you do* and *what did it mean*.
 - **Do not add a surface.** Everything here lands on `/today`, `/close-day`, and `growth.md`. A dashboard for purpose is the wanting system eating the other layer.
-- **Do not let the horizon become a to-do.** It has no checkbox, no progress bar, no percentage. The moment it can be advanced it has become a goal.
+- **Do not let the compass become a to-do.** It has no checkbox, no progress bar, no percentage. The moment it can be advanced it has become a goal.
 - **Do not re-derive it casually.** A compass that changes every month was never read correctly. Revisit on genuine evidence — a real pivot, a rejection, an operator's own revision — not on a cadence.
-- **Do not use it to justify a decision the operator did not make.** The horizon explains work; it does not authorise it.
+- **Do not use it to justify a decision the operator did not make.** The compass explains work; it does not authorise it.
 
 ## Related
 

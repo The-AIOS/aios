@@ -48,7 +48,7 @@
 
 Two footholds for this already existed and were unnamed: `/close-day`'s **verdict line** (specced as *"the honest, warm, big-picture read of what this day actually was — not a summary, a verdict"*) and the **"what was most useful?"** question. Both answer meaning rather than counting. Nothing connected them to anything, and nothing else in the framework tried.
 
-**What ships:** a **`finding-your-why`** skill holding the derivation method — hunt the invariant under maximal variation, sharpened by three tells (what you build when nobody is measuring · what makes you emotional, noting *where* the emotion sits · what you refuse to trade even at cost) and one filter that removes most candidates: **if it could ever be checked off, it was a goal wearing purpose's clothes.** The result lives as a `## Horizon` in `growth.md` — not a tenth observed file, which would add per-session load for every operator. `/today` then adds **one clause** to the day's biggest item naming the value it expresses, and `/close-day`'s verdict line answers the second question beside the first.
+**What ships:** a **`finding-your-why`** skill holding the derivation method — hunt the invariant under maximal variation, sharpened by three tells (what you build when nobody is measuring · what makes you emotional, noting *where* the emotion sits · what you refuse to trade even at cost) and one filter that removes most candidates: **if it could ever be checked off, it was a goal wearing purpose's clothes.** The result lives as a `## Compass` in `growth.md` — not a tenth observed file, which would add per-session load for every operator. `/today` then adds **one clause** to the day's biggest item naming the value it expresses, and `/close-day`'s verdict line answers the second question beside the first.
 
 **The part that matters most is when it stays quiet.** A stated purpose is exactly where the substitution heuristic hides: asked directly, a person answers *"what would a purposeful person say?"* and hands you that instead. And a compass derived from one project's evidence just names that project — which is a goal. So there are three states and the framework is **silent** in the first:
 
@@ -66,6 +66,31 @@ The README's title has always been *"AI as a Team, Not a Tool"* — the same cla
 
 Not a fifth principle: those four are method you apply, and this is an outcome you get.
 
+### `/7plan` now checks the bet against the compass — the one cadence where a mismatch is still actionable
+
+`/7plan` already described itself as *"the compass-set for the week"* before any of this existed — the concept reaching for a name it did not have. Its `## The bet` section holds *"THE one bet the next several weeks ladder up to"*, which makes it the **largest destination this framework tracks**. So it now asks one question, weekly: **is this bet an expression of the compass, and if not, which of the two is wrong?** A bet that no longer expresses the compass is either a bet taken for someone else's reasons or a compass that has gone stale, and both deserve a sentence *before* the week's priorities are set. Daily is too tight to see it; quarterly is too late to act on it. With no compass the line is omitted entirely — State-0 silence holds on every surface, not just two. And the spec forbids the tempting resolution: **never quietly edit the compass to fit the bet**, which would invert the hierarchy and let a destination rewrite the direction.
+
+So the three cadences each have a distinct job: `/today` links today's ship to the value it expresses · `/7plan` tests the multi-week bet against the compass · `/close-day` answers both questions in the verdict and carries the one-time offer.
+
+### The section is called `## Compass`, and the first name was wrong for a checkable reason
+
+It was `## Horizon` for most of a day. That is wrong twice over, and both are facts rather than taste: **this framework already has a `Horizon`** — a carry-bearing section in the daily note, listed beside Rhythm, Parking lot and Radar, holding things that *complete* — so a second unrelated concept would have shared a name with its own opposite. And the ordinary idiom *"on the horizon"* means **approaching**. A word chosen to mean *you never arrive here* colloquially means *arriving soon*, which is exactly the destination reading the design exists to separate out. A compass cannot be arrived at; the property is in the word.
+
+It ships with its own gloss, so the section explains itself to anyone opening `growth.md` cold:
+
+```markdown
+## Compass
+*What hasn't changed across everything you've done — derived from your observed
+context, not stated by you. It has no checkbox and nothing to advance; the goals
+elsewhere in this vault are expressions of it. Refine or replace it any time.*
+```
+
+### One operator's machine name was baked into three command specs
+
+`/close-day` (×3), `/today` (×2) and `/aios:housekeeping` (×1) referred to a specific machine by a personal name — *"before sarah's overnight queue"*, *"Sarah-results"*. **`FORTRESS.md` already states the convention** it violated: *"the mini is named in this doc as the mini or the secondary machine… teammates may give their own machines personal names"*, with `USER.md § Remote machines` as the home for those names. Beyond the leak, it made the specs incoherent for a single-machine operator reading instructions about a queue they do not have. All six now say *the secondary machine*.
+
+Left untouched on purpose: `skills/anthropic/skill-creator` contains a fictional *"Sarah Johnson"* twice in Anthropic's own sample data. That is vendored upstream — not a leak, and editing it would cross the boundary `LICENSE-AUDIT.md` draws.
+
 ### Two personal names were shipping inside worked examples
 
 Found by the new suite on its first run, both pre-existing: `/close-day` carried a real person's name **beside a fee** in a provenance example, and `/close-session` carried someone's **full name** in an ecosystem example. Both are now generic. This is the framework's own de-personalization rule — *names age into gossip* — failing on the framework itself, in the files most likely to be read as templates by an operator writing their own examples.
@@ -78,20 +103,20 @@ Found by the new suite on its first run, both pre-existing: `/close-day` carried
 
 > **To the session reading this during `/aios:update`: run the check and act on what it returns. It is read-only, and "no action" is the expected outcome on a young vault.** Report *"already satisfied — no action"* when it comes back clean.
 
-**1 · Does this vault already hold a derived purpose that should become the horizon instead of being re-derived?** *(Session: check before the next `/close-day`, because that is where the offer would otherwise fire.)*
+**1 · Does this vault already hold a derived purpose that should become the compass instead of being re-derived?** *(Session: check before the next `/close-day`, because that is where the offer would otherwise fire.)*
 
 ```bash
-# The one check that is reliable: is a horizon already installed?
-grep -c '^## Horizon' ~/aios/vault/00\ -\ notes/context/observed/growth.md 2>/dev/null || echo 0
+# The one check that is reliable: is a compass already installed?
+grep -c '^## Compass' ~/aios/vault/00\ -\ notes/context/observed/growth.md 2>/dev/null || echo 0
 ```
 
 **Deliberately only one command.** "Has the operator already written their purpose down somewhere" has **no reliable grep** — measured while writing this: a loose pattern (`my purpose|purpose is|the compass`) returned 11 files on a real vault, almost all of them ordinary prose, and a tightened frontmatter/heading version still returned 6 with 5 false positives. A detection that cannot be made precise does not belong in an action item; the second half is a **rule**, not a search:
 
-- **A `## Horizon` already exists** → nothing to do. `/today` and `/close-day` will use it from now on.
-- **No horizon, and the operator mentions they have already articulated this somewhere** (a reflection, a spec, a note they point you at) → **install what they already wrote** rather than deriving from scratch: *"you've already said this here — want it as your horizon, in your words?"* Their existing wording wins; a fresh derivation would be a worse copy of an answer they already gave. Do **not** go hunting for it unprompted — see the note above on why that search cannot be made precise.
+- **A `## Compass` already exists** → nothing to do. `/today` and `/close-day` will use it from now on.
+- **No compass, and the operator mentions they have already articulated this somewhere** (a reflection, a spec, a note they point you at) → **install what they already wrote** rather than deriving from scratch: *"you've already said this here — want it as your horizon, in your words?"* Their existing wording wins; a fresh derivation would be a worse copy of an answer they already gave. Do **not** go hunting for it unprompted — see the note above on why that search cannot be made precise.
 - **Neither, and the vault is young** → **say nothing.** This is the common case and the correct one. Do not derive, do not offer, do not mention purpose as a missing thing. The offer fires on its own at `/close-day` once the variation gate is crossed (3+ distinct projects with real activity, 2+ domains) — and never before.
 
-**2 · Nothing else.** No restart, no re-registration, no config change, no new file to create. If you added a `## Horizon`, `/today` picks it up on the next run.
+**2 · Nothing else.** No restart, no re-registration, no config change, no new file to create. If you added a `## Compass`, `/today` picks it up on the next run.
 
 **A note on what NOT to do with this update, because it is the tempting move:** do not ask the operator what their purpose is. The whole design rests on the observation that a stated purpose is where the substitution heuristic hides — asked directly, a person answers *"what would a purposeful person say?"* and hands you that. If the evidence is not there yet, the honest output is silence.
 

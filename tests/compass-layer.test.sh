@@ -130,9 +130,9 @@ echo "-- 6. State 0 is SILENCE — no surface prompts for a purpose --"
 # substitution heuristic the design rejects and would look like a helpful feature.
 for f in "$TODAY" "$CLOSE"; do
   b=$(basename "$f")
-  grep -qE 'no `?##? ?Horizon`?|No `## Horizon`|without a horizon|No horizon' "$f" 2>/dev/null \
+  grep -qE 'no `?##? ?Compass`?|No `## Compass`|without a compass|No compass' "$f" 2>/dev/null \
     && ok "$b states the no-horizon behaviour explicitly" \
-    || no "$b never says what to do when there is no horizon" "silence has to be written down or it will be filled in"
+    || no "$b never says what to do when there is no compass" "silence has to be written down or it will be filled in"
 done
 for f in "$TODAY" "$CLOSE"; do
   b=$(basename "$f")
@@ -157,11 +157,11 @@ grep -qiE '3\+ distinct projects|2\+ domains' "$CLOSE" 2>/dev/null \
   && ok "the gate is concrete enough to compute from disk" \
   || no "the gate has no computable threshold" "a gate a session has to feel out will be crossed whenever the session is in the mood"
 
-echo "-- 8. the horizon cannot become a goal --"
+echo "-- 8. the compass cannot become a goal --"
 if grep -qiE 'no checkbox|has no checkbox' "$SKILL" && grep -qiE 'no checkbox|nothing to advance' "$CLOSE" "CLAUDE.md" 2>/dev/null; then
-  ok "the no-checkbox rule is stated where the horizon is defined and where it is offered"
+  ok "the no-checkbox rule is stated where the compass is defined and where it is offered"
 else
-  no "the no-checkbox rule is missing from one of its two homes" "the moment a horizon can be advanced it has become a goal, which is the thing it exists to sit above"
+  no "the no-checkbox rule is missing from one of its two homes" "the moment a compass can be advanced it has become a goal, which is the thing it exists to sit above"
 fi
 
 echo "-- 9. a rejection is durable (the offer cannot loop) --"
@@ -170,6 +170,60 @@ if grep -qiE '90 days|do not re-offer|not re-asking|not re-asked' "$CLOSE" "$SKI
 else
   no "nothing stops the offer repeating" "a warm offer made every month is a nag, and the operator already answered"
 fi
+
+echo "-- 10. the section is named Compass, and Horizon still means the daily-note section --"
+# "Horizon" was the first choice and it was wrong for a checkable reason: this framework
+# ALREADY has a Horizon — a carry-bearing daily-note section in /today, /7plan and
+# /close-day, holding things that COMPLETE. And the idiom "on the horizon" means
+# approaching. The one word chosen to mean "you never arrive" colloquially means
+# "arriving soon". Renamed to Compass, which is the design's own metaphor and cannot be
+# arrived at by definition.
+grep -q '## Compass' "$SKILL" && ok "the skill names the section Compass" || no "the skill does not name the Compass section"
+for f in "$TODAY" "$CLOSE" CLAUDE.md; do
+  b=$(basename "$f")
+  grep -q '`## Compass`' "$f" 2>/dev/null && ok "$b references \`## Compass\`" || no "$b does not reference the Compass section"
+done
+# The rename must NOT have eaten the pre-existing daily-note section. It did, on the
+# first attempt — a blanket string replace hit three unrelated lines including a live
+# daily-note heading. This is the guard for that.
+grep -q 'Parking lot, Horizon' "$TODAY" && ok "the pre-existing daily-note Horizon section survived in today.md" \
+  || no "today.md's daily-note Horizon reference was clobbered" "the rename must touch only the compass concept, never the carry-bearing section that shares the old name"
+grep -q 'Horizon (this week)' "$TODAY" && ok "the daily-note Horizon heading survived" || no "the Horizon (this week) heading was clobbered"
+grep -q 'Parking lot, Horizon' plugins/aios/commands/7plan.md && ok "7plan's daily-note Horizon reference survived" || no "7plan's Horizon reference was clobbered"
+
+echo "-- 11. /7plan checks the bet against the compass, at weekly cadence --"
+# 7plan already called itself "the compass-set for the week" before this feature existed
+# — the concept reaching for a name. The bet is the largest destination the vault tracks,
+# so it is the one place a bet/compass mismatch is both visible and still actionable.
+SEVEN=plugins/aios/commands/7plan.md
+grep -q 'Compass check' "$SEVEN" && ok "7plan carries the compass check" || no "7plan has no compass check" "the weekly bet is the largest destination tracked; nothing else can catch a bet that stopped expressing the compass"
+grep -qiE 'omit this line entirely|otherwise omit' "$SEVEN" && ok "7plan omits it when there is no compass (State 0 silence holds here too)" \
+  || no "7plan does not state the no-compass behaviour" "every surface must be silent in State 0, not just today and close-day"
+grep -qiE '[Nn]ever resolve the mismatch by quietly editing the compass' "$SEVEN" \
+  && ok "7plan forbids editing the compass to fit the bet" \
+  || no "nothing stops the compass being edited to match the bet" "that inverts the hierarchy — the destination would be rewriting the direction"
+
+echo "-- 12. no operator's machine name is baked into a shipped spec --"
+# FORTRESS.md line ~91 already states the convention: "the mini" / "the secondary
+# machine", and notes that operators may name their machines personally. Canonical's own
+# command files were violating it — six instances of one operator's machine name, which
+# also made the specs incoherent for a single-machine operator reading about a queue they
+# do not have. USER.md § Remote machines is where a personal name belongs.
+# Scoped to AIOS-AUTHORED text. skills/anthropic and skills/superpowers are vendored
+# upstream and contain a fictional "Sarah Johnson" in Anthropic's own sample data —
+# flagging that would be a false positive AND editing it would cross the vendored-content
+# boundary in LICENSE-AUDIT.md. The first version of this check globbed '*.md' across the
+# whole repo: 310 files, 163 of them vendored, and it would have reported those samples
+# as leaks while taking long enough to look hung.
+mach=0
+for f in plugins/aios/commands/*.md skills/aios/*/SKILL.md CLAUDE.md README.md TOOLS.md CHEATSHEET.md FORTRESS.md SETUP.md; do
+  [ -f "$f" ] || continue
+  h=$(grep -noiE '\bsarah\b' "$f" 2>/dev/null | head -1)
+  [ -n "$h" ] && { mach=$((mach+1)); printf '     MACHINE NAME in %s: %s\n' "$f" "$h"; }
+done
+[ "$mach" = "0" ] && ok "no personal machine name in AIOS-authored specs" \
+  || no "$mach spec(s) name one operator's machine" "FORTRESS.md already says to write 'the secondary machine'; a personal name belongs in USER.md § Remote machines"
+grep -qiE 'secondary machine|secondary-machine' "$CLOSE" && ok "close-day uses the generic form" || no "close-day does not use the generic machine form"
 
 echo
 echo "-- $PASS passed, $FAIL failed --"
