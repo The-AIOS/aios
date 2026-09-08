@@ -724,13 +724,13 @@ Everything else this command surfaces **completes** — ships, carries, streaks,
 
 **Check the state before anything else. In State 0 this section produces no output of any kind** — no prompt, no placeholder, no "consider setting a purpose" nudge. Silence is the correct behaviour, not a gap.
 
-- **`growth.md` has a `## Compass` WITH CONTENT under it** → **State 2.** Nothing to offer. The verdict line already answers the second question (above), and `/today` carries the goal→value clause. Skip this section.
+- **`growth.md` has a `## Compass` WITH CONTENT under it** → **State 2.** Probe it with `awk '/^## Compass/{f=1;next} f&&/^## /{exit} f&&NF{print "present";exit}'` — **never `grep -c`**, which prints `0` *and* exits non-zero on no-match, so a `|| echo 0` fallback emits two values and the comparison silently yields the wrong state. Nothing to offer. The verdict line already answers the second question (above), and `/today` carries the goal→value clause. Skip this section.
 - **No `## Compass`, and the variation gate is NOT crossed** → **State 0.** Say nothing. Do not mention purpose, direction, or meaning as a missing thing.
 - **No `## Compass`, and the gate IS crossed** → **State 1.** Make the offer **once**, at the end of the review, after the day's work has been read.
 
 **The variation gate — computed from disk, never from elapsed time.** An operator can run this system for months inside a single project and have nothing an invariant could be drawn from: with one domain's worth of evidence *the thing that did not change* is that domain, which is a goal, not a compass. So the gate asks for **maximal variation**, not tenure:
 
-- **3+ distinct projects** with real activity in `projects/` (not scaffolded, not archived on arrival), **and**
+- **3+ distinct projects** in `projects/` carrying `status: active` in frontmatter — that field is the computable definition of "real activity" and is named here on purpose: the first draft said *"real activity (not scaffolded, not archived on arrival)"* and a dry run against a live vault had to invent a proxy to proceed, which means every session would invent its own. **and**
 - **2+ domains or ventures** represented across `context/ventures/` and `context/observed/business.md`, **and**
 - `context/observed/` describing the operator **across** contexts rather than only inside one
 

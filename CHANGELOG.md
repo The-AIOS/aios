@@ -114,9 +114,17 @@ Found by the new suite on its first run, both pre-existing: `/close-day` carried
 **1 · Does this vault already hold a derived purpose that should become the compass instead of being re-derived?** *(Session: check before the next `/close-day`, because that is where the offer would otherwise fire.)*
 
 ```bash
-# The one check that is reliable: is a compass already installed?
-grep -c '^## Compass' ~/aios/vault/00\ -\ notes/context/observed/growth.md 2>/dev/null || echo 0
+# Is a compass already installed, WITH content under it? Prints "present" or nothing.
+awk '/^## Compass/{f=1;next} f&&/^## /{exit} f&&NF{print "present";exit}' \
+    ~/aios/vault/00\ -\ notes/context/observed/growth.md 2>/dev/null
 ```
+
+> **Not `grep -c`.** `grep -c` prints `0` *and* exits non-zero on no-match, so the obvious
+> `grep -c … || echo 0` emits **two** values and a session comparing the result to `0` gets
+> `false` — concluding a compass exists when none does, which inverts the gate silently.
+> Caught by dry-running this action item against a real vault before the feature merged.
+> The `awk` form has no exit-code trap and answers the sharper question anyway: is there
+> **content** under the heading, not merely a heading.
 
 **Deliberately only one command.** "Has the operator already written their purpose down somewhere" has **no reliable grep** — measured while writing this: a loose pattern (`my purpose|purpose is|the compass`) returned 11 files on a real vault, almost all of them ordinary prose, and a tightened frontmatter/heading version still returned 6 with 5 false positives. A detection that cannot be made precise does not belong in an action item; the second half is a **rule**, not a search:
 

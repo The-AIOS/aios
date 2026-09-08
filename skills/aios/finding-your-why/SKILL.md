@@ -42,7 +42,7 @@ The system is not idle in this state: observed context accrues, `/close-day` ask
 
 Computable from what is on disk:
 
-- distinct projects with real activity (not scaffolded, not archived-on-arrival)
+- **3+ distinct projects carrying `status: active`** in `projects/` frontmatter. That field is named deliberately: the first draft said *"real activity (not scaffolded, not archived-on-arrival)"*, and a dry run against a live vault had to invent a proxy to proceed — which means every session would invent its own.
 - distinct ventures or domains represented in `context/ventures/` and `context/observed/business.md`
 - how much of `context/observed/` describes the operator across contexts rather than inside one
 
@@ -76,6 +76,8 @@ Once the section is there:
 ## How to derive it — hunt the invariant under maximal variation
 
 The domains an operator works in change, sometimes completely. Whatever survives every one of those changes unchanged is the compass; everything that completed along the way was a goal. So read across the widest span of observed context available and look for what did not move.
+
+**These are READ, not grepped — and an empty search is not evidence of absence.** Dry-running this method against a mature vault, keyword searches for each tell (`unpaid|nobody asked`, `emotional|moved|proud`, `refuses|will not`) returned **nothing at all**, while the same vault's `profile.md` carried the answer in its second paragraph as a named identity thread. Observed context is written as narrative about a person, not as tagged evidence, so the invariant is almost never phrased in the vocabulary you would search for. A session that greps, finds nothing and concludes *"insufficient evidence"* has measured its own query, not the vault. Read `profile.md`, `growth.md`, `patterns.md` and `business.md` — actually read them — before deciding the evidence is thin.
 
 Three tells sharpen it, and all three are read from evidence rather than asked:
 

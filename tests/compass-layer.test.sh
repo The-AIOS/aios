@@ -257,6 +257,43 @@ for f in "$TODAY" "$CLOSE" plugins/aios/commands/7plan.md; do
     || no "$b treats a bare heading as State 2" "someone will add the heading by hand; an empty compass must not switch the surfaces on"
 done
 
+echo "-- 15. the state probe is not the grep -c trap --"
+# Found by dry-running the shipped action item against a live vault BEFORE merge, which is
+# the entire reason that dry run happened. `grep -c` prints 0 AND exits non-zero on
+# no-match, so the natural `grep -c … || echo 0` emits TWO values; a session comparing the
+# result to "0" gets false and concludes a compass exists when none does — the gate
+# inverted, silently, on every fresh vault. Same shape as antifragile #101: a fallback that
+# makes "it found nothing" and "it failed" indistinguishable.
+for f in "$CLOSE" CHANGELOG.md; do
+  b=$(basename "$f")
+  if grep -qE "grep -c '\^## Compass'" "$f" 2>/dev/null; then
+    no "$b probes the compass with grep -c" "grep -c prints 0 and exits non-zero; a || fallback then emits two values and the state comparison silently yields the wrong answer"
+  else
+    ok "$b does not use the grep -c probe"
+  fi
+done
+grep -qF 'never `grep -c`' "$CLOSE" && ok "close-day names the trap so it is not reintroduced" || no "close-day does not warn against grep -c" "the next author reaches for it first; the warning is the guard"
+
+# The probe must actually work, both ways. Controls rather than assertions about text.
+PROBE='/^## Compass/{f=1;next} f&&/^## /{exit} f&&NF{print "present";exit}'
+TD=$(mktemp -d)
+printf '# Growth\n\n## Compass\n*gloss*\n\nYou make people capable.\n\n## Edges\n' > "$TD/full.md"
+printf '# Growth\n\n## Compass\n\n## Edges\n' > "$TD/empty.md"
+printf '# Growth\n\n## Edges\n' > "$TD/none.md"
+[ "$(awk "$PROBE" "$TD/full.md")" = "present" ] && ok "probe: compass with content → present" || no "probe missed a real compass"
+[ -z "$(awk "$PROBE" "$TD/empty.md")" ] && ok "probe: bare heading → absent (State 2 does not fire)" || no "probe treats an empty heading as a compass" "that is the placeholder failure the seed check also guards"
+[ -z "$(awk "$PROBE" "$TD/none.md")" ] && ok "probe: no heading → absent" || no "probe found a compass in a file without one"
+rm -rf "$TD"
+
+echo "-- 16. the method says the tells are READ, not grepped --"
+# Dry run against a mature vault: keyword searches for all three tells returned NOTHING,
+# while profile.md carried the answer in its second paragraph as a named identity thread.
+# Observed context is narrative about a person, not tagged evidence. A session that greps,
+# finds nothing and concludes "insufficient evidence" has measured its own query.
+grep -qiE 'READ, not grepped|not evidence of absence' "$SKILL" \
+  && ok "the skill warns that an empty search is not absent evidence" \
+  || no "the skill implies the tells are searchable" "a session will grep first, find nothing, and wrongly stay in State 0 on a vault full of evidence"
+
 echo
 echo "-- $PASS passed, $FAIL failed --"
 [ "$FAIL" -eq 0 ]
