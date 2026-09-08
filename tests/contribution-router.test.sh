@@ -72,42 +72,76 @@ grep -qiE 'read theirs|their own .?CONTRIBUTING' "$C" \
   && ok "canonical points at the siblings' own guides" \
   || no "canonical does not hand off to the siblings' guides"
 
-echo "-- 5. CHEATSHEET answers the operating questions --"
-for probe in 'spawn-inbox' 'orchestration-ladder' 'tier' 'agents/_index.md'; do
-  grep -qF "$probe" "$H" && ok "CHEATSHEET references $probe" \
-    || no "CHEATSHEET never mentions $probe" "it is the day-to-day index; an operator who cannot find this from here will not find it"
+echo "-- 5. CHEATSHEET is a PHRASEBOOK: it teaches what to SAY, not what to type --"
+# The operator's correction, and it reframes the file: someone running the desktop app never
+# types a command — they ask a session, which does the work including the parts needing a
+# terminal, a second session, or a file edited on their behalf. So the highest-value content
+# is what to SAY. A command table cannot teach that, and none of these capabilities announce
+# themselves: you have to know they exist to ask for them.
+grep -q 'Just say it' "$H" && ok "the phrasebook section exists" || no "CHEATSHEET has no phrasebook" "a command reference cannot teach a non-technical operator what their session can do"
+sayc=$(grep -c 'Say something like' "$H")
+[ "${sayc:-0}" -ge 3 ] && ok "prompts are phrased as things to say ($sayc tables)" \
+  || no "only $sayc 'say something like' table(s)" "rows written as 'do this' assume a terminal; the point is the words"
+grep -qiE 'pick the right tier yourself' "$H" \
+  && ok "covers letting the session choose the tier" \
+  || no "no 'you pick the tier' example" "often the best move — the session knows the task's cognitive load better than the operator does at that moment"
+for cap in 'voice gate' 'atlas' 'Ingest this' 'deep research'; do
+  grep -qi "$cap" "$H" && ok "phrasebook covers: $cap" || no "phrasebook omits: $cap"
 done
-grep -qiE 'running pid|alive, not when' "$H" \
-  && ok "CHEATSHEET carries the liveness rule (not directory-existence)" \
-  || no "CHEATSHEET omits the liveness rule" "a request written when no surface is alive is never picked up AND never reported — that is the trap worth one line"
-grep -qiE 'you wanted a subagent' "$H" \
-  && ok "CHEATSHEET carries the wrong-primitive tell" \
-  || no "CHEATSHEET has no primitive-choice tell"
+grep -qiE 'USER.md|INTENT.md' "$H" && ok "covers personalization and autonomy by prompt" \
+  || no "no prompts for USER.md / INTENT.md" "an operator who does not know these are editable by asking will hand-edit them or never change them"
+grep -qiE 'take it from here|autonomy is supposed to grow' "$H" \
+  && ok "tells the operator autonomy is meant to move" \
+  || no "autonomy reads as fixed" "a trust contract nobody knows is negotiable is a ceiling"
 
-echo "-- 6. the operating examples sit ABOVE the terminal path --"
-# Operator's call: the terminal table is the advanced / no-surface fallback, so it
-# must not be the first thing a new App user meets.
+echo "-- 6. every agent and skill the phrasebook names actually EXISTS --"
+# A phrasebook full of prompts that resolve to nothing is worse than no phrasebook. These are
+# extracted from the file and checked against the tree, so a rename breaks the build rather
+# than an operator's morning.
+# EXTRACTED FROM THE DOCUMENT, never a list kept here. The first version walked a
+# hardcoded list of agent names and `continue`d on any it did not find — so renaming an
+# agent in the doc made the check SKIP it, and a mutation replacing a real agent with an
+# invented one passed. The check was testing its own list. Third instance of that shape in
+# one day; the fix is always the same: read the artifact under test.
+miss=0; checked=0
+# Single-word names count too (`lawyer`, `accountant`) — the first pattern required a
+# hyphen and silently skipped them, which is how a threshold of 6 failed on a doc that
+# summons eight. The "the `x`" framing below is what discriminates a summonable name from
+# an ordinary code span, so the extraction can afford to be wide.
+NAMES=$(grep -oE '`[a-z][a-z0-9-]{2,}`' "$H" | tr -d '`' | sort -u)
+for n in $NAMES; do
+  # A backticked hyphenated token is a claim only if it is presented as an agent or a skill.
+  hit_a=$(find agents -name "$n.md" -print -quit 2>/dev/null)
+  hit_s=""; [ -f "skills/aios/$n/SKILL.md" ] && hit_s=1
+  # tokens that are neither are ordinary prose or paths — ignore unless the doc frames them
+  # as something to summon
+  if grep -qiE "(the|our|a) \`$n\`" "$H" 2>/dev/null; then
+    checked=$((checked+1))
+    [ -n "$hit_a" ] || [ -n "$hit_s" ] || { miss=$((miss+1)); printf '     NAMED BUT MISSING: %s (no agent or skill by that name)\n' "$n"; }
+  fi
+done
+[ "$checked" -ge 6 ] && ok "checked $checked summoned names, extracted from the doc" \
+  || no "only $checked names extracted" "the extraction is matching too little to be a real check — fix the pattern, do not hardcode a list"
+[ "$miss" = "0" ] && ok "every agent/skill the phrasebook tells you to summon exists" \
+  || no "$miss named capability/ies do not exist" "a prompt that resolves to nothing teaches the operator the docs lie"
+
+echo "-- 7. it still ROUTES rather than restating, and sits above the terminal path --"
+grep -qiE 'running|alive' "$H" && ok "carries the surface-liveness caveat" || no "omits the liveness caveat"
+grep -qiE 'you wanted a subagent' "$H" && ok "carries the wrong-primitive tell" || no "no primitive-choice tell"
+grep -qF 'orchestration-ladder' "$H" && ok "routes to the ladder skill" || no "does not route to the ladder"
+grep -qF 'agents/_index.md' "$H" && ok "routes to the agent registry" || no "does not route to the registry"
 wl=$(grep -n 'from a terminal' "$H" | head -1 | cut -d: -f1)
-ql=$(grep -n 'Getting a worker' "$H" | head -1 | cut -d: -f1)
+ql=$(grep -n 'Just say it' "$H" | head -1 | cut -d: -f1)
 if [ -n "$wl" ] && [ -n "$ql" ]; then
-  [ "$ql" -lt "$wl" ] && ok "the worker examples precede the terminal table (line $ql < $wl)" \
+  [ "$ql" -lt "$wl" ] && ok "the phrasebook precedes the terminal table (line $ql < $wl)" \
     || no "the terminal table comes first (line $wl < $ql)" "opening a new App operator's quick-reference with shell commands teaches them the AIOS is a terminal product that happens to have an app"
-  grep -qiE 'advanced path|plain clone with no surface' "$H" \
-    && ok "the terminal section is labelled as the advanced/no-surface path" \
-    || no "the terminal section is not framed as the fallback"
+  grep -qiE 'advanced path|plain clone with no surface' "$H" && ok "the terminal section is labelled the fallback" || no "the terminal section is not framed as the fallback"
 else
-  no "could not locate both sections" "worker-examples=$ql terminal=$wl — fix this locator, do not delete the check"
+  no "could not locate both sections" "phrasebook=$ql terminal=$wl — fix this locator, do not delete the check"
 fi
-
-echo "-- 7. CHEATSHEET stays an index: it ROUTES rather than restating --"
-# It must not become a second copy of the ladder or the bus protocol. Proxy: the
-# additions reference their owning surfaces, and no code fence reimplements them.
-grep -qiE 'Full protocol|Depth, plus how' "$H" \
-  && ok "the additions hand off to their owning docs" \
-  || no "the additions do not route onward" "a cheatsheet that explains everything is a manual, and then it drifts from the spec it copied"
-n=$(awk '/^### Getting a worker/{f=1} f&&/^### Launching from a terminal/{exit} f&&/^```/{c++} END{print c+0}' "$H")
-[ "${n:-0}" -eq 0 ] && ok "no code blocks reimplementing the protocol in the new sections" \
-  || no "the new sections contain $n code fence(s)" "worked examples belong in tables that point at the spec; a fence here becomes a second implementation"
+n=$(awk '/^### Just say it/{f=1} f&&/^### Launching from a terminal/{exit} f&&/^```/{c++} END{print c+0}' "$H")
+[ "${n:-0}" -eq 0 ] && ok "no code fences in the phrasebook" \
+  || no "the phrasebook contains $n code fence(s)" "a fence here turns a phrasebook back into a command reference, and then it drifts from the spec it copied"
 
 echo
 echo "-- $PASS passed, $FAIL failed --"

@@ -83,47 +83,86 @@ commands is not a prerequisite for using this.
 > happens to have an app — which is backwards, and is the same friction `AI-122` removed from the
 > setup flow. The commands are not going anywhere; they are just no longer the first thing.
 
-### Getting a worker — the ten questions people actually ask
+### Just say it — the phrasebook
 
-Every row is a real question with the answer and the *why*. **If a surface is running (the App or Glass), you never type any of this** — you ask your session for a worker and it writes the request; these are the answers it is working from, and the reasons are the useful part.
+**You don't run the AIOS by typing commands. You ask, and your session does the work** — including the parts that need a terminal, a second session, or a file edited on your behalf. Every row below is something to *say*, in your own words; the wording is a starting point, not a syntax.
 
-| You want… | Do this | Because |
+The reason this is the first section: the capabilities below are the difference between a chat window and an operating system, and none of them announce themselves. You have to know they exist to ask for them.
+
+#### Getting a second pair of hands
+
+| You want… | Say something like… | What happens |
 |---|---|---|
-| A worker to review Q1 financials | Ask your session for it. It writes `~/.aios/spawn-inbox/<name>.json` = `{"name","task"}` and a surface opens it. | An agent that runs `spawn` itself is auto-denied by the permission classifier — silently, no prompt. Un-sandboxing does not help; the classifier gates it, not the sandbox. |
-| That worker on a cheaper model | Add `"tier":"fast"` (or `scale`) to the request | Pick the rung by the **shape** of the work, not its importance. A 400-file rename is `fast`; a synthesis pass is `judgment`. Top and bottom rungs differ ~**22×** in cost, so frontier rates on a file sweep are a transfer, not a rounding error. |
-| A specific model, outside the ladder | `"model":"<id>"` in the request | `model` wins over `tier`. Never `export CLAUDE_MODEL` in your shell rc — miss the revert and *every* future terminal is pinned. |
-| To send a live worker a long brief | Ask for a `send`. Keep the prompt **one line**. | Multi-line is typed as many Enters. Over ~1024 bytes it is written to a payload file and a pointer line is typed instead — **if you get a pointer, read that file**; never act on the pointer alone. |
-| To know whether a worker actually did it | Read its transcript: `~/.claude/projects/*/<sessionId>.jsonl` | A request file disappearing means a surface **picked it up**, not that the work succeeded. `<name>.json.undelivered` means it definitively did **not** happen and nobody was told. |
-| To know who is live | The session registry: `~/.claude/sessions/*.json` | **Never `pgrep`, never a terminal tab title** — a resumed session keeps its old title, so matching by name makes a live peer look dead. |
-| A worker that only touches files | `spawn --profile <name>` (servers declared in `~/.aios/mcp-profiles/<name>.json`) | Blast radius, not tokens: a file sweep has no business holding your Gmail, Drive and Slack credentials. A profile saves only 2–4k of a ~50k startup. |
-| A worker on a non-Claude model | You can't — and that boundary is deliberate | A worker is always Claude. Another family is **called as a tool** (`hooks/openrouter.py`), never put in the request path of a session holding live credentials and your private vault. |
-| A headless run that must not write | Prompt **first**, then `--allowedTools … --permission-mode default` | `--allowedTools` alone does **not** hold under a machine-level auto mode. And you cannot verify it by asking the agent what tools it has — it describes its *schema*. **Only an absent side effect is evidence.** |
-| To stop a stuck worker | Ask for a `kill` (`{"action":"kill","name":"<n>"}`) | Typed by a human it is `spawn-kill <name>` — never SIGTERM (the respawn loop catches it) and never Cmd+W (risks orphaning the process). |
+| Someone else to take a whole task | *"Get me a worker to review the Q1 financials."* | Your session writes a request; whichever surface you're running opens a real session with the task pre-loaded. It has its own window and its own context. |
+| It done cheaply, because it's mechanical | *"Spawn a worker to rename the wikilinks across those 400 files — put it on a fast model, it's a sweep."* | The rung is picked by the **shape** of the work, not its importance. Top and bottom rungs differ ~**22×** in cost. |
+| The session to choose the model for me | *"Spawn a worker for this and pick the right tier yourself — tell me what you chose and why."* | Often the best move: it knows the task's cognitive load better than you do at that moment. Asking it to *say* what it picked keeps you in the loop without making you decide. |
+| A specific model, deliberately | *"Spawn it on Haiku"* / *"…on the frontier model, this one's hard."* | An explicit model wins over the tier. |
+| To hand a live worker more instructions | *"Tell the `deck-builder` session to use the new positioning line."* | Delivered into that session's terminal. Keep it to one thought — a very long brief is written to a file and the worker is pointed at it. |
+| To know if it actually did the work | *"Did the researcher session actually finish that?"* | It reads the worker's **transcript**. A picked-up request is not a completed one. |
+| To see who's working right now | *"Which sessions are live?"* | Read from the session registry, not from window titles. |
+| A worker that can't touch your email | *"Spawn it with a profile that only has filesystem access."* | Blast radius: a file sweep has no business holding your Gmail, Drive and Slack credentials. |
+| To stop one | *"Kill the karma session."* | Clean shutdown, no orphaned processes. |
 
-> **The one thing worth memorising:** a surface is available when one is **alive**, not when `~/.aios/spawn-inbox/` exists. That directory persists forever once created, so if you closed the IDE or quit the App, a request written there is never picked up **and never reported**. Liveness is a running pid in `~/.aios/surfaces/*.json`.
+> **The one caveat worth knowing:** this needs a surface running (the App, or your editor with Glass). If you've quit both, your session will tell you and hand you a line to paste instead — it won't fail silently.
 
-Full protocol: `~/.aios/spawn-inbox/README.md` (rewritten by whichever surface boots, so it cannot drift from the running code) · the **`orchestration-ladder`** skill · [CLAUDE.md](./CLAUDE.md) → § Spawning Sessions.
+#### Reaching for a specialist
 
-### Naming a worker picks its expertise
+Naming a worker is how you choose its expertise — the name **is** the role, and the session arrives already thinking like that specialist.
 
-The session name **is** the role. `spawn lawyer "review this NDA"` matches `agents/aios/finance-legal/lawyer.md` and the session greets you in character, with that agent's judgment loaded.
+| You want… | Say something like… |
+|---|---|
+| A technical co-founder's judgment on a build | *"Bring in the `technical-cofounder` to pressure-test this architecture."* |
+| Writing that sounds like you | *"Get the `content-writer` working on the newsletter draft."* |
+| A deck built, not outlined | *"Have the `deck-builder` turn that spec into slides."* |
+| A contract read | *"Ask the `lawyer` to review this NDA and flag what I'd regret."* |
+| Books and reading turned into something durable | *"Study with me as the `study-buddy` — I want an atlas of this book, not notes."* |
+| The month's numbers reconciled | *"Put the `accountant` on last month's invoices."* |
+| Research that goes wide before it concludes | *"Have the `market-researcher` map who else is doing this."* |
+| A second opinion on a decision | *"Bring in the `consultant` and argue the other side."* |
 
-Seven bundles ship: **sales** · **strategy** · **finance-legal** · **engineering** · **communication** · **personal** · **commerce** — 35 agents. Exact filename match wins; no exact file falls back to a fuzzy match against the registry (and tells you which it picked and why); `agents/custom/<name>.md` always overrides a bundled one.
+**35 agents across seven bundles** — sales · strategy · finance-legal · engineering · communication · personal · commerce. You don't need the list: describe the job and ask for "someone who does X"; the session matches and tells you who it picked. Registry: [`agents/_index.md`](./agents/_index.md).
 
-So the practical move is to **name the worker after the job**: `spawn accountant`, `spawn code-review`, `spawn writing`. Registry and matching rules: [`agents/_index.md`](./agents/_index.md).
+#### Reaching for a capability
 
-### Which primitive — before you spawn anything
+Skills are the deep know-how your session loads on demand. Most fire on their own when the task matches — these are the ones worth asking for **by name**, because you'd never guess they exist.
 
-Two questions, asked in order. Most misfires come from answering neither.
+| You want… | Say something like… | Why it's more than it sounds |
+|---|---|---|
+| To know if a draft sounds like a machine | *"Run the voice gate on this before I publish it."* | Measures the AI-writing tells against **your own** voice and reports *where* — it does not rewrite you. |
+| A video actually watched, not transcribed | *"Watch this talk and tell me what's on the slides — not just what he says."* | The **visual** channel: slides, code, diagrams, on-screen text a transcript throws away. |
+| Real research, not a search | *"Do a deep research pass on this before we commit."* | Maps what your vault already decided first, then sweeps multiple sources, then ranks proposals. |
+| To know what you're actually building toward | *"What do you think I'm actually building toward?"* | Derives it from what it has observed of your work — and says nothing if it hasn't earned an answer yet. |
+| A one-pager that looks designed | *"Turn that report into a visual one-pager."* | A self-contained, brand-aware infographic. |
+| To ship a product in the right order | *"Walk me through the build order before we start coding."* | Admin and seed data **before** the product — the part everyone skips. |
+| An honest read on your pace | *"Am I actually overloaded, or does it just feel that way?"* | Treats your capacity as a design input rather than something to optimise away. |
+| A source filed so it compounds | *"Ingest this and cross-reference it with what we already have."* | Extracts, files by type, links it into the graph, logs it. |
+
+#### Making it yours — the two files you never edit by hand
+
+Both of these are yours, both are read every session, and **you change them by asking**.
+
+| You want… | Say something like… | What it edits |
+|---|---|---|
+| A ritual to work your way | *"When I run the morning plan, always put study before email — remember that."* | Your `USER.md` → command personalizations. Commands read it before running. |
+| Your own routines tracked | *"Add a writing routine — 20:00, from my content queue."* | `USER.md` → growth routines. Your morning plan starts showing the streak. |
+| Less asking, more doing | *"You don't need to check with me on daily-note edits anymore — just do them."* | Your `INTENT.md` → autonomy levels. This is the trust contract, and it's meant to move. |
+| A guardrail, not a permission | *"Never send anything to a client without showing me first."* | `INTENT.md` → decision boundaries. |
+| To park something honestly | *"Stop surfacing the podcast idea — I'm not doing it this quarter."* | `INTENT.md` → explicitly-not-doing. Carries stop nagging you about it. |
+
+> **Autonomy is supposed to grow.** If your sessions still ask permission for things you've approved twenty times, say so — *"you've asked me this enough times, take it from here."* That sentence is a real config change, and your session will make it.
+
+#### Which primitive — when you're deciding how to delegate
+
+Two questions, in order. Most misfires come from answering neither.
 
 | Question | Answer |
 |---|---|
-| **How much structure?** | One coherent task → a single agent. 2+ **independent** tasks → parallel agents. An ordered multi-stage pipeline you want repeatable → a dynamic workflow. |
-| **Do you need the result back *in this session*?** | Yes → a **subagent** (the harness tracks it and returns the result). No, and you want to watch it work → a **spawned session** (independent; you read its surface). |
+| **How much structure does the work need?** | One coherent task → a single agent. 2+ **independent** tasks → parallel agents. An ordered, repeatable pipeline → a dynamic workflow. |
+| **Do you need the result back in *this* conversation?** | Yes → a **subagent** (it returns the answer here). No, and you want to watch it work → a **spawned session** (its own window; you read its output). |
 
-> **The tell you picked wrong:** if your plan needs a file-sentinel plus a monitor loop to notice a delegated session finished, **you wanted a subagent.** The harness already gives you completion and the result for free.
+> **The tell you picked wrong:** if the plan needs a file-watcher and a polling loop to notice a delegated session finished, **you wanted a subagent.** You get completion and the result for free.
 
-Depth, plus how to choose the model per primitive: the **`orchestration-ladder`** skill.
+Depth, including how to pick the model per primitive: the **`orchestration-ladder`** skill · the protocol itself: `~/.aios/spawn-inbox/README.md` · [CLAUDE.md](./CLAUDE.md) → § Spawning Sessions.
 
 ---
 
