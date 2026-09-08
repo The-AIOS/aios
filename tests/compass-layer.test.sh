@@ -264,12 +264,18 @@ echo "-- 15. the state probe is not the grep -c trap --"
 # result to "0" gets false and concludes a compass exists when none does — the gate
 # inverted, silently, on every fresh vault. Same shape as antifragile #101: a fallback that
 # makes "it found nothing" and "it failed" indistinguishable.
+# Scoped to what a session would RUN — inside a bash code fence — never the whole file.
+# Both files legitimately DISCUSS the trap in prose (the changelog explains why the probe
+# changed; close-day warns the next author off it), and the first version of this check
+# fired on those explanations: the guard-matches-its-own-documentation defect, reproduced
+# in a check written the same day to prevent a different one. Extract the fence, then look.
 for f in "$CLOSE" CHANGELOG.md; do
   b=$(basename "$f")
-  if grep -qE "grep -c '\^## Compass'" "$f" 2>/dev/null; then
-    no "$b probes the compass with grep -c" "grep -c prints 0 and exits non-zero; a || fallback then emits two values and the state comparison silently yields the wrong answer"
+  fenced=$(awk '/^```bash/{f=1;next} /^```/{f=0} f' "$f" 2>/dev/null)
+  if printf '%s' "$fenced" | grep -q "grep -c '\^## Compass'"; then
+    no "$b RUNS a grep -c compass probe" "grep -c prints 0 and exits non-zero; a || fallback then emits two values and the state comparison silently yields the wrong answer"
   else
-    ok "$b does not use the grep -c probe"
+    ok "$b runs no grep -c probe (prose may discuss it)"
   fi
 done
 grep -qF 'never `grep -c`' "$CLOSE" && ok "close-day names the trap so it is not reintroduced" || no "close-day does not warn against grep -c" "the next author reaches for it first; the warning is the guard"
@@ -293,6 +299,21 @@ echo "-- 16. the method says the tells are READ, not grepped --"
 grep -qiE 'READ, not grepped|not evidence of absence' "$SKILL" \
   && ok "the skill warns that an empty search is not absent evidence" \
   || no "the skill implies the tells are searchable" "a session will grep first, find nothing, and wrongly stay in State 0 on a vault full of evidence"
+
+echo "-- 17. the once-only offer is not spent on a late catch-up close --"
+# Operator-reported: some people avoid /close-day and only reach it when the next /today
+# notices the previous day was never closed — which fires Skill(aios:close-day) in the
+# MORNING, days late. That is the opposite of the reflective moment a once-only offer
+# needs, and landing it there burns it permanently.
+grep -qiE 'timely.{0,30}close|catch-up|catch up' "$CLOSE" \
+  && ok "close-day distinguishes a timely close from a catch-up" \
+  || no "close-day makes the offer on any close" "/today auto-fires close-day for a skipped day; the offer would arrive mid-morning, days late, once, and be spent"
+grep -qiE 'do not record a decline|nothing was offered' "$CLOSE" \
+  && ok "a skipped offer does not record a decline" "nothing was offered, so nothing was refused — recording one would silence it for 90 days" \
+  || no "a deferred offer may be mistaken for a decline"
+grep -qiE 'never receive the offer|never crosses this condition' "$CLOSE" \
+  && ok "the limitation is stated rather than hidden by the silence" \
+  || no "the never-closes case is silently unreachable" "a condition that can never be met must say so, or it reads as a working feature that simply never fires"
 
 echo
 echo "-- $PASS passed, $FAIL failed --"
