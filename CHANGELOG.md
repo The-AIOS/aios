@@ -38,6 +38,123 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-08 — The framework could tell you what you did, and nothing could tell you what it meant
+
+`hash: PENDING` · [#PENDING](https://github.com/The-AIOS/aios/pull/PENDING)
+
+> **What you can now do.** Nothing, on day one — and that is the design, not a gap. Every tracked thing in this framework *completes*: a key flips, a ship lands, a streak extends, and then asks what is next. That machinery answers **what did I do**. Nothing answered **what did it mean**. This adds the second answer — but only once your own vault holds enough evidence to derive it honestly, because a purpose the system invents for you is worse than none.
+
+### The compass layer — the method that derives your why, never an answer
+
+Two footholds for this already existed and were unnamed: `/close-day`'s **verdict line** (specced as *"the honest, warm, big-picture read of what this day actually was — not a summary, a verdict"*) and the **"what was most useful?"** question. Both answer meaning rather than counting. Nothing connected them to anything, and nothing else in the framework tried.
+
+**What ships:** a **`finding-your-why`** skill holding the derivation method — hunt the invariant under maximal variation, sharpened by three tells (what you build when nobody is measuring · what makes you emotional, noting *where* the emotion sits · what you refuse to trade even at cost) and one filter that removes most candidates: **if it could ever be checked off, it was a goal wearing purpose's clothes.** The result lives as a `## Compass` in `growth.md` — not a tenth observed file, which would add per-session load for every operator. `/today` then adds **one clause** to the day's biggest item naming the value it expresses, and `/close-day`'s verdict line answers the second question beside the first.
+
+**The part that matters most is when it stays quiet.** A stated purpose is exactly where the substitution heuristic hides: asked directly, a person answers *"what would a purposeful person say?"* and hands you that instead. And a compass derived from one project's evidence just names that project — which is a goal. So there are three states and the framework is **silent** in the first:
+
+- **No evidence** → nothing about purpose. No prompt, no placeholder, no "set your purpose" nudge anywhere. The full working system runs; the meaning layer says nothing it has not earned. *(The precedent was already here: with no growth routine configured, `/today` prints one gentle line rather than manufacturing one.)*
+- **The variation gate crosses** → **one** warm offer, once, at `/close-day`. **The gate is variation, not tenure** — 3+ distinct projects with real activity and 2+ domains, computed from disk. You can run this system for six months inside one project and still have nothing an invariant could be drawn from.
+- **A horizon exists** → the goal→value clause and the second verdict question.
+
+**The offer's tone is a contract.** It arrives as *"something I've noticed across your work — and I think it would help you with direction"*, offers **two or three candidates rather than a conclusion**, each with the evidence it rests on, in your own register — and explicitly invites you to refine it, replace it, or say it is wrong. If you edit it, your words win completely. **Declining is a real answer**: it is recorded with a date and not re-asked for 90 days.
+
+**A third growth-routine shape** joins reading and writing, documented in `/today` rather than in `USER.md`'s example block — because `USER.md` is Tier-2 and never syncs, so a convention living only there would reach fresh clones and no existing operator. **Becoming**: one voice-answerable question a day, drawn from whichever dimension of your own context is *thinnest, computed from disk* (deficit-driven, never the next card in a deck), measured by **the share, not the streak** — an activity count can be fully satisfied while the thing it exists to grow keeps falling. Why it needs a forcing function at all: every other layer grows as a byproduct of work, so the identity layer **falls every time anything else succeeds**. Nothing is removed; the denominator grows. Questions ask for an **episode and its specifics**, never for feelings in the abstract — this framework is explicit that a vault is not a journal.
+
+### The offer will not be spent on a late catch-up close
+
+Operator-reported, and it turned a nice-to-have into a correctness fix: **some people avoid `/close-day` entirely** and only reach it when the next `/today` notices the previous day was never closed. That path already works — `/today` fires `Skill(aios:close-day)` and waits — which means the offer *does* reach them, **in the morning, days late, while they are trying to start their day.** That is the opposite of the reflective moment a once-only offer needs, and it happens **once**: landing it there burns it permanently.
+
+So the offer now also requires a **timely** close — the note being closed is today's or yesterday's. On a multi-day catch-up it **defers silently and records nothing**, because nothing was offered and a recorded decline would silence it for 90 days.
+
+**The limitation is stated rather than hidden by that silence:** an operator who never closes on time never crosses the condition, so they never receive the offer. That trade is deliberate — a compass offered in the middle of a rushed catch-up is worse than no compass. After several consecutive catch-ups they get **one** plain line carrying none of the offer's content: *"worth a proper close-day one evening this week; there's something I'd like to show you that needs the quiet slot."* A scheduling nudge, not the offer.
+
+### Four defects found by dry-running this against a live vault before merge
+
+The whole feature was run against a real, mature vault — reading these specs, computing the gate, probing the state, attempting the derivation — **before** it merged, so that merging and syncing would be confirmation rather than discovery. It found four things, and the first would have shipped broken:
+
+1. **The state probe was the `grep -c` trap.** The action item shipped `grep -c '^## Compass' … || echo 0`. `grep -c` prints `0` **and** exits non-zero on no-match, so the fallback fires too and the command emits **two** values. A session comparing that to `0` gets false and concludes a compass **exists** — the gate inverted, silently, on every fresh vault. Measured live: the vault had no compass and the shipped probe reported State 2. Replaced with an `awk` content probe that has no exit-code trap and answers the better question anyway. Same shape as the silenced-repair class: a fallback that makes *"found nothing"* and *"failed"* indistinguishable.
+2. **The gate was not computable.** *"3+ distinct projects with real activity (not scaffolded, not archived on arrival)"* — the dry run had to invent a proxy to proceed, which means every session would invent its own. Now names the field: `status: active`. Fixed in `/close-day` **and** the skill, which had already drifted apart in the same breath.
+3. **The three tells are not greppable, and a session will grep first.** Keyword searches for all three (`unpaid|nobody asked`, `emotional|moved|proud`, `refuses|will not`) returned **nothing** against that vault — while its `profile.md` carried the answer in the second paragraph as a named identity thread. Observed context is narrative about a person, not tagged evidence. The skill now says an empty search is not evidence of absence, and a session concluding *"insufficient evidence"* from a grep has measured its own query.
+4. **The health test found the gap it was built for, on real data.** Of three recent verdict lines, two were inventories of what was done and one named what the day *meant*. The second layer already fires sometimes — by chance, not by design. That is the whole argument for wiring it.
+
+`tests/compass-layer.test.sh` grew to **47 checks** across this, each mutation-verified, and three of the mutations initially escaped: one whose injection silently failed on a case mismatch, one that revealed a check satisfied by *either* of two files where it needed to hold for each, and one that ran against an already-mutated copy. Also caught while writing: two checks that contradicted each other, and a machine-name scan that would have flagged Anthropic's own vendored sample data.
+
+### "Someone, not something" — the claim the README was making without saying
+
+The README's title has always been *"AI as a Team, Not a Tool"* — the same claim, weaker — and its § *What makes The AIOS different* listed **five mechanisms** while never naming what they add up to. The section read as a feature list rather than an argument. One line now sits above the five: **everyone else teaches you to use a *something*; this produces a *someone*** — a tool you prompt stays an appliance and forgets you between sessions, while an AI that receives your context long enough acquires memory, identity and a working relationship. Every mechanism below it is a way of getting from the first to the second, which is why they only make sense together. One matching clause landed in `CLAUDE.md` § The Belief, because that file loads every session and the claim is *why* observed context and naming are load-bearing rather than nice extras.
+
+Not a fifth principle: those four are method you apply, and this is an outcome you get.
+
+### The `growth.md` seed describes the compass and deliberately ships no empty section
+
+Asked whether a newcomer's `growth.md` should arrive with a `## Compass` placeholder to fill in. It must not, and the reason is functional rather than stylistic: **the presence of that heading is the state flag** the surfaces read. Ship it empty and every fresh vault reports "compass exists" on its first run — `/today` would try to link a goal to nothing, `/7plan` would test a bet against nothing, and the variation gate would be inverted from day one. An empty placeholder is also the *"set your purpose"* prompt in passive form: a blank the operator feels invited to fill, which is the substitution heuristic the whole design refuses.
+
+So the seed does what canonical's other observed seeds do — describes what the file holds and ships no sections — with one added paragraph naming the compass, where it comes from, and *why there is nothing to fill in*. That last part matters: an unexplained absence gets helpfully filled in by the next tidy-minded person who reads the file.
+
+**Hardened in the same pass:** State 2 now requires a `## Compass` **with content under it**, not merely the heading — because someone will eventually add the heading by hand, and an empty compass must not switch the surfaces on.
+
+### `/7plan` now checks the bet against the compass — the one cadence where a mismatch is still actionable
+
+`/7plan` already described itself as *"the compass-set for the week"* before any of this existed — the concept reaching for a name it did not have. Its `## The bet` section holds *"THE one bet the next several weeks ladder up to"*, which makes it the **largest destination this framework tracks**. So it now asks one question, weekly: **is this bet an expression of the compass, and if not, which of the two is wrong?** A bet that no longer expresses the compass is either a bet taken for someone else's reasons or a compass that has gone stale, and both deserve a sentence *before* the week's priorities are set. Daily is too tight to see it; quarterly is too late to act on it. With no compass the line is omitted entirely — State-0 silence holds on every surface, not just two. And the spec forbids the tempting resolution: **never quietly edit the compass to fit the bet**, which would invert the hierarchy and let a destination rewrite the direction.
+
+So the three cadences each have a distinct job: `/today` links today's ship to the value it expresses · `/7plan` tests the multi-week bet against the compass · `/close-day` answers both questions in the verdict and carries the one-time offer.
+
+### The section is called `## Compass`, and the first name was wrong for a checkable reason
+
+It was `## Horizon` for most of a day. That is wrong twice over, and both are facts rather than taste: **this framework already has a `Horizon`** — a carry-bearing section in the daily note, listed beside Rhythm, Parking lot and Radar, holding things that *complete* — so a second unrelated concept would have shared a name with its own opposite. And the ordinary idiom *"on the horizon"* means **approaching**. A word chosen to mean *you never arrive here* colloquially means *arriving soon*, which is exactly the destination reading the design exists to separate out. A compass cannot be arrived at; the property is in the word.
+
+It ships with its own gloss, so the section explains itself to anyone opening `growth.md` cold:
+
+```markdown
+## Compass
+*What hasn't changed across everything you've done — derived from your observed
+context, not stated by you. It has no checkbox and nothing to advance; the goals
+elsewhere in this vault are expressions of it. Refine or replace it any time.*
+```
+
+### One operator's machine name was baked into three command specs
+
+`/close-day` (×3), `/today` (×2) and `/aios:housekeeping` (×1) referred to a specific machine by a personal name — *"before sarah's overnight queue"*, *"Sarah-results"*. **`FORTRESS.md` already states the convention** it violated: *"the mini is named in this doc as the mini or the secondary machine… teammates may give their own machines personal names"*, with `USER.md § Remote machines` as the home for those names. Beyond the leak, it made the specs incoherent for a single-machine operator reading instructions about a queue they do not have. All six now say *the secondary machine*.
+
+Left untouched on purpose: `skills/anthropic/skill-creator` contains a fictional *"Sarah Johnson"* twice in Anthropic's own sample data. That is vendored upstream — not a leak, and editing it would cross the boundary `LICENSE-AUDIT.md` draws.
+
+### Two personal names were shipping inside worked examples
+
+Found by the new suite on its first run, both pre-existing: `/close-day` carried a real person's name **beside a fee** in a provenance example, and `/close-session` carried someone's **full name** in an ecosystem example. Both are now generic. This is the framework's own de-personalization rule — *names age into gossip* — failing on the framework itself, in the files most likely to be read as templates by an operator writing their own examples.
+
+`tests/compass-layer.test.sh` (18 checks) guards three things prose cannot: **no derivation evidence travels** (this feature was derived from a live vault — a student's AI session, a biography, corpus percentages — and canonical is authored from inside a vault, so the leak is a reflex rather than a lapse); **the neurochemistry vocabulary never appears** (the two layers map onto well-known biology, and naming it turns a design into a lecture while making a claim about your body a vault has no standing to make); and **silence is asserted** — a "set your purpose" prompt would rebuild the substitution heuristic as a feature and pass every other check in the file. Verified by mutation, including two mutants that escaped the first pass: one whose injection silently failed (a lowercase anchor against bold text — the control reported green having changed nothing), and one that revealed a check satisfied by *either* of two files when it needed to hold for each.
+
+*Provenance: "a goal is a destination on the map, purpose is the compass" is compressed from an arrival-fallacy framing and carries that attribution wherever it is quoted. "When agents can chase any destination, goals stop being identity — only the compass is inalienable" is ours.*
+
+### What you need to do — one check, and for most vaults the answer is nothing
+
+> **To the session reading this during `/aios:update`: run the check and act on what it returns. It is read-only, and "no action" is the expected outcome on a young vault.** Report *"already satisfied — no action"* when it comes back clean.
+
+**1 · Does this vault already hold a derived purpose that should become the compass instead of being re-derived?** *(Session: check before the next `/close-day`, because that is where the offer would otherwise fire.)*
+
+```bash
+# Is a compass already installed, WITH content under it? Prints "present" or nothing.
+awk '/^## Compass/{f=1;next} f&&/^## /{exit} f&&NF{print "present";exit}' \
+    ~/aios/vault/00\ -\ notes/context/observed/growth.md 2>/dev/null
+```
+
+> **Not `grep -c`.** `grep -c` prints `0` *and* exits non-zero on no-match, so the obvious
+> `grep -c … || echo 0` emits **two** values and a session comparing the result to `0` gets
+> `false` — concluding a compass exists when none does, which inverts the gate silently.
+> Caught by dry-running this action item against a real vault before the feature merged.
+> The `awk` form has no exit-code trap and answers the sharper question anyway: is there
+> **content** under the heading, not merely a heading.
+
+**Deliberately only one command.** "Has the operator already written their purpose down somewhere" has **no reliable grep** — measured while writing this: a loose pattern (`my purpose|purpose is|the compass`) returned 11 files on a real vault, almost all of them ordinary prose, and a tightened frontmatter/heading version still returned 6 with 5 false positives. A detection that cannot be made precise does not belong in an action item; the second half is a **rule**, not a search:
+
+- **A `## Compass` already exists** → nothing to do. `/today` and `/close-day` will use it from now on.
+- **No compass, and the operator mentions they have already articulated this somewhere** (a reflection, a spec, a note they point you at) → **install what they already wrote** rather than deriving from scratch: *"you've already said this here — want it as your horizon, in your words?"* Their existing wording wins; a fresh derivation would be a worse copy of an answer they already gave. Do **not** go hunting for it unprompted — see the note above on why that search cannot be made precise.
+- **Neither, and the vault is young** → **say nothing.** This is the common case and the correct one. Do not derive, do not offer, do not mention purpose as a missing thing. The offer fires on its own at `/close-day` once the variation gate is crossed (3+ distinct projects with real activity, 2+ domains) — and never before.
+
+**2 · Nothing else.** No restart, no re-registration, no config change, no new file to create. If you added a `## Compass`, `/today` picks it up on the next run.
+
+**A note on what NOT to do with this update, because it is the tempting move:** do not ask the operator what their purpose is. The whole design rests on the observation that a stated purpose is where the substitution heuristic hides — asked directly, a person answers *"what would a purposeful person say?"* and hands you that. If the evidence is not there yet, the honest output is silence.
+
 ## 2026-09-07 — Two readers of one file disagreed, and Windows operators could not run the hooks at all
 
 `hash: bbf60df · e81993c · ba2a010 · d3b4457 · c5482ed · 282c47d · 4d7ee3d` · [#83](https://github.com/The-AIOS/aios/pull/83) · [#84](https://github.com/The-AIOS/aios/pull/84) · [#85](https://github.com/The-AIOS/aios/pull/85) · [#91](https://github.com/The-AIOS/aios/pull/91) · [#89](https://github.com/The-AIOS/aios/pull/89) · [#92](https://github.com/The-AIOS/aios/pull/92) · [#94](https://github.com/The-AIOS/aios/pull/94) · [#96](https://github.com/The-AIOS/aios/pull/96) · [#98](https://github.com/The-AIOS/aios/pull/98) · [#100](https://github.com/The-AIOS/aios/pull/100)

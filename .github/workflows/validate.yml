@@ -1193,6 +1193,25 @@ jobs:
         # warns in writing that a check which always fires is one the operator stops reading.
         run: bash tests/bus-dead-letters.test.sh
 
+      - name: the compass layer ships the method, not one operator's answer
+        # This feature was derived from a live vault — a named student's AI session, a
+        # biography, corpus percentages, a purpose statement. Every one of those is the
+        # kind of concrete detail that makes prose better, which is exactly why it leaks;
+        # canonical is authored from inside a vault, so it is a reflex rather than a lapse.
+        # The suite asserts the boundary the docs only state, and it caught two REAL
+        # pre-existing leaks on its first run (a person's name beside a fee, and a full
+        # name, both in worked examples that had been shipping to every operator).
+        #
+        # It also bans the neurochemistry vocabulary. The two layers map onto well-known
+        # biology, and naming that in operator-facing text turns a design into a lecture
+        # and makes a claim about someone's body a vault has no standing to make — while
+        # being the first thing every future author will independently reach for.
+        #
+        # And it asserts SILENCE: with no horizon, the surfaces must say nothing about
+        # purpose. A "set your purpose" prompt rebuilds the substitution heuristic as a
+        # feature and would pass every other check in the file.
+        run: bash tests/compass-layer.test.sh
+
       - name: install-git-hooks leaves every hook runnable (CRLF + exec bit)
         # The hooks are bash, and on Windows core.autocrlf=true (the Git-for-Windows
         # default) rewrites them to CRLF on checkout — after which the shebang cannot

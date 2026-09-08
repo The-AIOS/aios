@@ -299,7 +299,7 @@ Older gaps are silently skipped — assume intentional cadence choice. User can 
 | # | Type | Period | Command | Source confirmed |
 |---|------|--------|---------|------------------|
 | 14.1 | Weekly | W17 (Apr 20-26) | `/weekly-learnings W17` | 5 daily notes present, no summary.md, no HTML |
-| 14.2 | Weekly | W18 (Apr 27-May 3) | `/weekly-learnings W18` | 4 daily notes, no summary.md, HTML exists (sarah bonus run) |
+| 14.2 | Weekly | W18 (Apr 27-May 3) | `/weekly-learnings W18` | 4 daily notes, no summary.md, HTML exists (secondary-machine bonus run) |
 | 14.3 | Monthly | April 2026 | `/weekly-learnings month April` | 4 weekly summaries present |
 | 14.4 | Role | April 2026 | `/role-report April 2026` | role-expectations.md present, 22 daily notes |
 

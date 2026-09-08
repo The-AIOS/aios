@@ -30,7 +30,7 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
 
 1. **Run executor + read vault** — fire these in **one parallel batch**:
    - `Bash(uv run ~/aios/hooks/pipeline-executor.py --command close-day)` — pre-loads Calendar (detailed, with attachments), Calendar next 7 days, Tasks, Slack
-   - `Bash(cfg=~/aios/.aios-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && { hr=$(echo "$repo" | sed -E 's#git@github\.com:#https://github.com/#'); r=$(git ls-remote "$hr" HEAD 2>/dev/null | awk '{print $1}'); }; [ -z "$r" ] && echo "aios-update: unreachable" || { [ "$h" = "$r" ] && echo "aios-update: synced" || echo "aios-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "aios-update: no-config"; fi)` — **infrastructure freshness check** (mirror of `/today`'s morning check; SSH `ls-remote` falls back to public HTTPS so a fresh HTTPS clone with no SSH keys still resolves). Render per § Aios-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before sarah's overnight queue (or first thing tomorrow)".
+   - `Bash(cfg=~/aios/.aios-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && { hr=$(echo "$repo" | sed -E 's#git@github\.com:#https://github.com/#'); r=$(git ls-remote "$hr" HEAD 2>/dev/null | awk '{print $1}'); }; [ -z "$r" ] && echo "aios-update: unreachable" || { [ "$h" = "$r" ] && echo "aios-update: synced" || echo "aios-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "aios-update: no-config"; fi)` — **infrastructure freshness check** (mirror of `/today`'s morning check; SSH `ls-remote` falls back to public HTTPS so a fresh HTTPS clone with no SSH keys still resolves). Render per § Aios-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before the secondary machine's overnight queue (or first thing tomorrow)".
    - `Bash(python3 ~/aios/hooks/bus-dead-letters.py)` — **bus dead-letter + unclaimed-request check** (same script `/today` runs — one implementation, so the two surfaces can't drift; requires `python3`). It reports two distinct shapes: a retired `.undelivered` request, and a plain `*.json` **nobody ever claimed** — the second is invisible everywhere else, because retirement needs a surface to perform it and a surface that quit performs nothing. Retirement to `.undelivered` stops a request *blocking another surface*; it does not deliver it, and nothing reads that directory. At close-day this matters more than in the morning: an undelivered handoff means a worker was never told to start, so whatever it was meant to produce **will not exist overnight** — and the sender still believes it landed. Render per § Bus dead-letter rendering below.
    - `Read` → `USER.md` (for dev project paths, growth routines, session cascade, organization, and `### /close-day` command personalizations)
    - `Read` → `INTENT.md` (if it exists — for focus alignment check, parked item handling in carries)
@@ -93,7 +93,7 @@ Apply the result from step 1's dead-letter check:
 Apply the result from step 1's `.aios-update` check (BEHIND / synced / unreachable / no-config):
 
 - **`synced`** → silent. No surface in the close-of-day section.
-- **`BEHIND`** → surface as a callout at the top of the `## Close of Day` block, before the verdict line: `> 🆕 **Aios-update pending** — local hash `{h}`, upstream `{r}`. Run `/aios:update` before sarah's overnight queue (or first thing tomorrow morning) so fresh commands/templates land in her shift.` This is consequential at close-day specifically because sarah's queue is generated FROM your local state — stale local = stale handoff.
+- **`BEHIND`** → surface as a callout at the top of the `## Close of Day` block, before the verdict line: `> 🆕 **Aios-update pending** — local hash `{h}`, upstream `{r}`. Run `/aios:update` before the secondary machine's overnight queue (or first thing tomorrow morning) so fresh commands/templates land in her shift.` This is consequential at close-day specifically because that queue is generated FROM your local state — stale local = stale handoff.
 - **`unreachable`** → soft mention near the Observed section: *"aios-update check unreachable at close (offline — fine for now; /today will retry tomorrow)."* Don't escalate.
 - **`no-config`** → silent (no Organization configured = single-vault user, nothing to sync).
 
@@ -108,7 +108,9 @@ Append to the daily note being closed (may be today or yesterday if closing afte
 
 ## Close of Day
 
-> {Two sentences max. The honest, warm, big-picture read of what this day actually was. Not a summary — a verdict. Written like a friend who watched the whole day and wants to name what happened before you forget. This is the line you'll re-read in 6 months and remember exactly how the day felt.}
+> {Two sentences max. The honest, warm, big-picture read of what this day actually was. Not a summary — a verdict. Written like a friend who watched the whole day and wants to name what happened before you forget. This is the line you'll re-read in 6 months and remember exactly how the day felt.
+>
+> **If `growth.md` carries a `## Compass`, this line answers the second question too.** Everything else in this block answers *what did I do* — Shipped, the strikes, the carries, all of which complete. The verdict is the one place that can answer *what did it mean*, so when a real ship landed, name what it expressed and not only that it landed. Never as a separate labelled field, never as praise, never as a lesson: the same two warm sentences, reading the day for who the operator was in it. **No compass → write the verdict exactly as before and say nothing about purpose** (see § The compass offer).}
 
 ### Shipped
 {Did the "Today I ship" deliverable land? Be honest — yes/no + what actually happened.}
@@ -414,7 +416,7 @@ Wait for confirmation before writing to project notes.
 
 > The trust layer on the cascade. Before the snapshots refresh makes anything surface in tomorrow's `/today`, present ONE consolidated, legible ledger of everything cascading into project notes + everything that will surface tomorrow — each line carrying its **origin**. This is what lets the operator trust the pipeline instead of re-auditing it: nothing surfaces tomorrow that wasn't shown + traceable tonight.
 
-**Provenance stamp (the rule).** Every item that cascades into a project note OR will surface in tomorrow's `/today` carries an inline origin tag: `_(from: {source} · {date})_`. Sources: `session-insight` (Reinforced/Emerging), a specific meeting or dev-report, an audit / `/ingest` finding, a carry from {date}, an explicit user request. **An item with no traceable origin is a bug — flag it, don't surface it silently.** (Worked example: a "Zineb fee in writing" task surfacing as `_(from: 2026-06-11 protocols audit · 6-F3)_` reads as a known suggestion, not a mystery — the difference between trust and "where did this come from?")
+**Provenance stamp (the rule).** Every item that cascades into a project note OR will surface in tomorrow's `/today` carries an inline origin tag: `_(from: {source} · {date})_`. Sources: `session-insight` (Reinforced/Emerging), a specific meeting or dev-report, an audit / `/ingest` finding, a carry from {date}, an explicit user request. **An item with no traceable origin is a bug — flag it, don't surface it silently.** (Worked example: a "get the advisor fee in writing" task surfacing as `_(from: 2026-06-11 protocols audit · 6-F3)_` reads as a known suggestion, not a mystery — the difference between trust and "where did this come from?")
 
 **The ledger — present, then confirm (ONE pass; this consolidates the per-section project-note confirmations above into a single review):**
 
@@ -715,6 +717,48 @@ cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Close day {date}"
 ```
 
 `--vault` sweeps the dirty vault paths for you — **space- and rename-safe** (it enumerates `git diff --name-only HEAD` ∪ untracked under `vault/` + `.aios-update`, minus the machine-local noise), so it never truncates a path like `vault/00 - notes/…` the way a `git status | awk '{print $2}'` sweep would. It stages only those paths via a throwaway index (working tree untouched), self-scans for secrets, and pushes with defer-on-offline. Run `/close-day` when active sessions have closed (that's what the Glass Close-all button is for) so nothing is mid-write.
+
+## The compass offer (at most once, and only when it has been earned)
+
+Everything else this command surfaces **completes** — ships, carries, streaks, keys. This is the one place the framework can offer the other kind of read, and the whole design rests on **not offering it too early**. Full method: the **`finding-your-why`** skill.
+
+**Check the state before anything else. In State 0 this section produces no output of any kind** — no prompt, no placeholder, no "consider setting a purpose" nudge. Silence is the correct behaviour, not a gap.
+
+- **`growth.md` has a `## Compass` WITH CONTENT under it** → **State 2.** Probe it with `awk '/^## Compass/{f=1;next} f&&/^## /{exit} f&&NF{print "present";exit}'` — **never `grep -c`**, which prints `0` *and* exits non-zero on no-match, so a `|| echo 0` fallback emits two values and the comparison silently yields the wrong state. Nothing to offer. The verdict line already answers the second question (above), and `/today` carries the goal→value clause. Skip this section.
+- **No `## Compass`, and the variation gate is NOT crossed** → **State 0.** Say nothing. Do not mention purpose, direction, or meaning as a missing thing.
+- **No `## Compass`, and the gate IS crossed** → **State 1.** Make the offer **once**, at the end of the review, after the day's work has been read.
+
+**The variation gate — computed from disk, never from elapsed time.** An operator can run this system for months inside a single project and have nothing an invariant could be drawn from: with one domain's worth of evidence *the thing that did not change* is that domain, which is a goal, not a compass. So the gate asks for **maximal variation**, not tenure:
+
+- **3+ distinct projects** in `projects/` carrying `status: active` in frontmatter — that field is the computable definition of "real activity" and is named here on purpose: the first draft said *"real activity (not scaffolded, not archived on arrival)"* and a dry run against a live vault had to invent a proxy to proceed, which means every session would invent its own. **and**
+- **2+ domains or ventures** represented across `context/ventures/` and `context/observed/business.md`, **and**
+- `context/observed/` describing the operator **across** contexts rather than only inside one
+
+Under the gate → State 0, silently. Do not "almost" offer.
+
+**The offer's tone is a contract, not a preference.** It is an observation shared warmly, never a verdict delivered:
+
+```
+> 🧭 Something I've noticed across your work — and I think it would help you with direction.
+>
+> The domains have changed several times ({name them}). One thing hasn't, and it shows up
+> in {the two or three strongest pieces of evidence, in the operator's own register}:
+>
+>   {candidate A — one sentence}
+>   {candidate B — one sentence, a genuinely different reading}
+>
+> If either lands, I'll set it as your horizon in `growth.md` — it has no checkbox and
+> nothing to advance; it's what the goals are expressions of. **Refine it, replace it, or
+> tell me I've read it wrong** — you hold the pen here, I'm only doing the reading.
+```
+
+Then stop. **Ask for nothing else in the same breath** — no task, no confirmation of anything unrelated, no next step. The rules:
+
+- **Candidates, never a conclusion.** Two or three readings, each with the evidence it rests on, in the operator's language. If the sentence would look at home on a careers page, it is wrong.
+- **Any candidate that could be checked off is rejected before it is offered.** A purpose that completes was a goal wearing purpose's clothes.
+- **If the operator edits it, their words win completely.** The derivation was a draft for them to correct.
+- **A rejection is a real answer.** Record it in `growth.md` as a dated line (*"compass offer declined {date} — not re-asking"*) and **do not re-offer for at least 90 days.** An operator saying *"that's not it"* has told you the evidence was thinner than the gate suggested.
+- **Never re-run the offer because a session forgot it happened.** The dated line is the check; read it before offering.
 
 ## Rules
 - **Shipped is binary.** Don't soften "didn't ship" into "made progress." Honesty compounds.
