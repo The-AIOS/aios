@@ -168,33 +168,52 @@ Depth, including how to pick the model per primitive: the **`orchestration-ladde
 
 ### Launching from a terminal — the advanced path
 
-*Everything above works without a terminal. This table is for operators running a plain clone with no surface installed, and for anyone who prefers typing it.*
+*Everything above works without a terminal. This section is for operators running a plain clone with no surface installed, and for anyone who would simply rather type it. Same capabilities, same flags — nothing here is a lesser path.*
 
-How to launch, name, and resume sessions **from a terminal**.
+**Launch, name, resume**
 
-| You want to... | Command | Notes |
+| You want to… | Command |
+|---|---|
+| Start a session in the vault | `cd ~/aios && claude` |
+| Open a named worker with a task | `spawn <name> "<task>"` |
+| Open a named worker, no task | `spawn <name>` |
+| Open an ad-hoc worker | `spawn` — generates a handle like `amber-otter` and prints the specialists available |
+| Resume a named worker | `spawn <name>` again — the wrapper detects the live session and reattaches |
+| Resume any past session | `claude --resume` |
+| Retire a worker | `spawn-kill <name>` |
+
+**Choose its model, its tools, its blast radius** — the same three choices the phrasebook makes by asking
+
+| You want to… | Command | Notes |
 |---|---|---|
-| Launch a session in the vault | `cd ~/aios && claude` | Loads CLAUDE.md + USER.md + observed context |
-| Open a named worker session | `spawn <name> "<task>"` | New terminal tab/window, named identity, task pre-loaded |
-| Open a named session, no task | `spawn <name>` | Sends `"Start session."` as the first prompt |
-| Spawn an ad-hoc worker (no name) | `spawn` | Generates a memorable adj-animal handle (e.g. `amber-otter`) + prints a tip surfacing available specific agents. Great when you want a fresh session and don't need a meaningful name yet. |
-| Resume a named worker | `spawn <name>` again | Wrapper detects existing session, reattaches |
-| Resume any past session | `claude --resume` | Pick from the list of recent sessions |
-| Kill a spawned worker cleanly | `spawn-kill <name>` | Atomic process-group kill + closes the Terminal window (macOS). Avoids orphan Claude processes + Terminal's "terminate?" modal. Doesn't affect IDE-integrated terminals (the IDE manages those). |
-| Override model for spawned workers | `export CLAUDE_MODEL='claude-sonnet-4-6'` (or any model) in `~/.zshrc` | Wrapper **defaults to `claude-opus-5[1m]` (1M context Opus)** since AIOS leans on context engineering. Override for cheaper Sonnet sessions, 3P providers, or non-1M Opus. Note: `/config` and `/model` are session-scoped — they DON'T propagate to spawned children. The wrapper's `--model` flag does. |
-| Install the spawn wrapper | `bash ~/aios/hooks/claude-identity/install-wrappers.sh` | One-time setup. Idempotent — safe to re-run. Installs `spawn`, `spawn-kill`, `_claude_with_respawn`, plus a shell function named after your primary session (read from USER.md → ## Identity; falls back to `primary` if no identity declared yet — re-run after editing USER.md to rename). |
-| Mount your company context | `/aios:company --mount {url}` | One-time per company. Pulls venture context (positioning, gtm, pricing, primitives, etc.) into `vault/00 - notes/context/ventures/{name}/` + registers in `USER.md → ## Companies (mounted)`. Works for a company you own OR one you collaborate on. |
-| Create a NEW company context repo | `/aios:company --create` | Interview-driven scaffold from [`The-AIOS/company-template`](https://github.com/The-AIOS/company-template). Lands at `{org}/{company}-context`. Includes 10 canonical context files + 6 optional infra folders (agents/plugins/hooks/MCPs/skills/templates) for company-distributed shipment. |
-| Refresh mounted company context | `/aios:company --sync {name}` (or `--sync-all`) | Pulls remote → vault for the named company. Run when contributors push updates. |
-| Scaffold a shared **collaboration space** | `/aios:collaborate` | Substrate-pluggable shared OS with a stable group of collaborators (Drive for non-coders, GitHub for code-adjacent, local for testing). Creates `collaborate.md` (protocol) + `README.md` + first project + a router note in your vault. Subcommands: `--add-project`, `--status`, `--dry-run`. |
-| Add a project to an existing collab space | `/aios:collaborate --add-project` | Adds a new project under an existing collaboration space (same substrate). |
-| Run Claude without spawn | `claude --remote-control --name <name>` | Bypasses wrapper; not recommended |
+| Pick by the **shape** of the work | `spawn --tier fast <name> "<task>"` | `frontier` · `judgment` (default) · `scale` · `fast`. Rungs differ ~**22×** in cost; `fast` for sweeps and high-frequency work, `judgment` for reasoning and production code. Windows: `-Tier fast`. |
+| Pin one **specific** model | `spawn --model claude-fable-5 <name> "<task>"` | Overrides `--tier`. Exported for **that launcher only** — see the warning below. |
+| Limit which MCP servers it holds | `spawn --profile <name> <worker> "<task>"` | Loads only the servers in `~/.aios/mcp-profiles/<name>.json`. For blast radius, not tokens: a file sweep has no business holding your Gmail. An unknown profile **refuses** and lists what exists. |
 
-**Why use `spawn` over raw `claude`:** the wrapper sets `$CLAUDE_AGENT_NAME` so CLAUDE.md can match an agent profile (`agents/<name>.md`), greet you in character, and route close-session reports back to the right project. Raw `claude` works but loses the identity-aware behavior.
+> **⚠️ Don't `export CLAUDE_MODEL` in your shell rc.** It used to be the only way to change a worker's model, and it is a footgun: miss the revert and *every* future terminal you open is pinned to it. `--model` and `--tier` exist precisely to remove that, and they scope to the one spawn. The rung→model table lives in [MODEL-ROUTING.md](./MODEL-ROUTING.md) and nowhere else.
 
-**Where session transcripts live:** `~/.claude/projects/<vault-path-slug>/*.jsonl` — one file per session. Useful when you want to grep across past conversations.
+**Mount and share context**
 
-See: [SETUP.md](./SETUP.md) for first-machine install · [CLAUDE.md](./CLAUDE.md) → § Spawning Sessions for the full wrapper spec.
+| You want to… | Command |
+|---|---|
+| Mount an existing company's context | `/aios:company --mount {url}` — one-time per company |
+| Create a new company context repo | `/aios:company --create` — interview-driven scaffold from [`company-template`](https://github.com/The-AIOS/company-template) |
+| Refresh a mounted company | `/aios:company --sync {name}` · or `--sync-all` |
+| Scaffold a shared collaboration space | `/aios:collaborate` — substrate-pluggable (Drive, GitHub, local) |
+| Add a project to an existing space | `/aios:collaborate --add-project` |
+
+**One-time setup**
+
+| You want to… | Command |
+|---|---|
+| Install the `spawn` / `spawn-kill` wrappers | `bash ~/aios/hooks/claude-identity/install-wrappers.sh` — idempotent, safe to re-run |
+| Guard commits in a concurrently-written vault | `bash ~/aios/hooks/install-git-hooks.sh` — idempotent; also repairs hook permissions and line endings |
+
+**Why `spawn` and not raw `claude`:** the wrapper sets `$CLAUDE_AGENT_NAME`, so `CLAUDE.md` can match an agent profile, greet you in character, and load that specialist's judgment. It also owns the respawn loop and the parallel-spawn lock. `claude --remote-control --name <name>` bypasses all of it and is **not recommended**.
+
+**Where session transcripts live:** `~/.claude/projects/<vault-path-slug>/*.jsonl`, one file per session — the ground truth for what a worker actually did, and greppable across past conversations.
+
+See: [SETUP.md](./SETUP.md) for first-machine install · [CLAUDE.md](./CLAUDE.md) → § Spawning Sessions for the full wrapper spec · [MODEL-ROUTING.md](./MODEL-ROUTING.md) for which model to reach for.
 
 ---
 

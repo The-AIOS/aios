@@ -110,14 +110,23 @@ miss=0; checked=0
 # an ordinary code span, so the extraction can afford to be wide.
 NAMES=$(grep -oE '`[a-z][a-z0-9-]{2,}`' "$H" | tr -d '`' | sort -u)
 for n in $NAMES; do
-  # A backticked hyphenated token is a claim only if it is presented as an agent or a skill.
-  hit_a=$(find agents -name "$n.md" -print -quit 2>/dev/null)
-  hit_s=""; [ -f "skills/aios/$n/SKILL.md" ] && hit_s=1
-  # tokens that are neither are ordinary prose or paths — ignore unless the doc frames them
-  # as something to summon
+  # A backticked name is a claim only if the doc frames it as something to reach for.
+  # It RESOLVES if it has any of the four homes a capability can live in — an agent file,
+  # a bundled skill, a slash command, or a wrapper the installer defines. All four are
+  # checked because the framing filter cannot tell them apart: the doc says "the `lawyer`"
+  # and "the `spawn` wrappers" in the same grammar, and only the second is a shell function.
+  # Resolving against agents+skills ALONE reported `spawn` missing — a false positive on a
+  # name that is real, documented, and invocable. The check's promise is that a name the
+  # phrasebook hands the operator resolves to SOMETHING they can invoke, not that it is
+  # specifically an agent.
+  hit=$(find agents -name "$n.md" -print -quit 2>/dev/null)
+  [ -n "$hit" ] || { [ -f "skills/aios/$n/SKILL.md" ] && hit=1; }
+  [ -n "$hit" ] || { [ -f "plugins/aios/commands/$n.md" ] && hit=1; }
+  # a wrapper is a shell function the installer emits — no file bears its name
+  [ -n "$hit" ] || { grep -qE "^(function )?$n *\\(\\) *\\{" hooks/claude-identity/install-wrappers.sh 2>/dev/null && hit=1; }
   if grep -qiE "(the|our|a) \`$n\`" "$H" 2>/dev/null; then
     checked=$((checked+1))
-    [ -n "$hit_a" ] || [ -n "$hit_s" ] || { miss=$((miss+1)); printf '     NAMED BUT MISSING: %s (no agent or skill by that name)\n' "$n"; }
+    [ -n "$hit" ] || { miss=$((miss+1)); printf '     NAMED BUT MISSING: %s (no agent, skill, command or wrapper by that name)\n' "$n"; }
   fi
 done
 [ "$checked" -ge 6 ] && ok "checked $checked summoned names, extracted from the doc" \
@@ -142,6 +151,33 @@ fi
 n=$(awk '/^### Just say it/{f=1} f&&/^### Launching from a terminal/{exit} f&&/^```/{c++} END{print c+0}' "$H")
 [ "${n:-0}" -eq 0 ] && ok "no code fences in the phrasebook" \
   || no "the phrasebook contains $n code fence(s)" "a fence here turns a phrasebook back into a command reference, and then it drifts from the spec it copied"
+
+echo "-- 8. the terminal path is not left behind --"
+# Operator-reported after the phrasebook landed: the phrasebook could ask for a tier, a
+# model and a scoped profile, and the terminal table had NONE of those flags — while still
+# teaching `export CLAUDE_MODEL` in the shell rc, which CLAUDE.md calls the footgun that
+# --model exists to remove. A doc that teaches the deprecated path as the only path is worse
+# than one that omits it: the omission is discoverable, the wrong answer is not.
+for flag in -- '--tier' '--model' '--profile'; do
+  [ "$flag" = "--" ] && continue
+  grep -qF "spawn $flag" "$H" && ok "the terminal path documents \`spawn $flag\`" \
+    || no "the terminal path omits \`spawn $flag\`" "the phrasebook can ask for it; a terminal operator must be able to type it"
+done
+# The footgun may be WARNED about but never taught. Distinguish the two by looking for the
+# warning marker on the same line — prose may discuss it, a table row may not offer it.
+bad=$(grep -n 'export CLAUDE_MODEL' "$H" | grep -vciE "don't|do not|footgun|⚠")
+[ "${bad:-0}" -eq 0 ] && ok "the global export appears only as a warning, never as an instruction" \
+  || no "$bad line(s) still teach export CLAUDE_MODEL" "miss the revert and every future terminal is pinned; --model scopes to the one spawn"
+grep -qiE 'nothing here is a lesser path|same capabilities, same flags' "$H" \
+  && ok "the terminal path is framed as equal, not remedial" \
+  || no "the terminal section reads as second-class" "it is the only path for a plain clone with no surface installed"
+
+echo "-- 9. the terminal path is grouped, not one flat list --"
+# It had grown into fifteen rows mixing launching, model choice, wrapper install and company
+# mounting in a single table — four concerns, one list, no ordering an operator could use.
+groups=$(awk '/^### Launching from a terminal/{f=1} f&&/^## §2/{exit} f&&/^\*\*[A-Z]/{c++} END{print c+0}' "$H")
+[ "${groups:-0}" -ge 4 ] && ok "grouped into $groups labelled sections" \
+  || no "only $groups group heading(s)" "fifteen rows spanning launching, model choice, setup and context-mounting is a list, not a reference"
 
 echo
 echo "-- $PASS passed, $FAIL failed --"
