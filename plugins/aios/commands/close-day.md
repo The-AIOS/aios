@@ -722,6 +722,12 @@ cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Close day {date}"
 
 Everything else this command surfaces **completes** — ships, carries, streaks, keys. This is the one place the framework can offer the other kind of read, and the whole design rests on **not offering it too early**. Full method: the **`finding-your-why`** skill.
 
+**And check WHEN this close is running, because a once-only offer must not be spent at the wrong moment.** `/today` fires `Skill(aios:close-day)` automatically when it finds the previous note unclosed — so an operator who habitually skips close-day only ever reaches this command through that catch-up path, in the morning, days late, while trying to start their day. That is the opposite of the reflective moment this offer needs, and the offer happens **once**: landing it there burns it.
+
+So the offer additionally requires a **timely** close — the note being closed is today's or yesterday's. On a multi-day catch-up, **skip the offer silently and leave the state untouched** (do not record a decline; nothing was offered). It will fire at the next close that runs on its own day.
+
+> **Stated limitation, because silence must not hide it:** an operator who *never* closes on time never crosses this condition, so they never receive the offer. That is the deliberate trade — a compass offered in the middle of a rushed morning catch-up is worse than no compass, and an operator who has not closed a day in a fortnight is not in a state where this would land. If several consecutive closes have all been catch-ups, say **one** plain line at the end of the run — *"worth a proper close-day one evening this week; there's something I'd like to show you that needs the quiet slot"* — and nothing more. That is a scheduling nudge, not the offer, and it carries none of the offer's content.
+
 **Check the state before anything else. In State 0 this section produces no output of any kind** — no prompt, no placeholder, no "consider setting a purpose" nudge. Silence is the correct behaviour, not a gap.
 
 - **`growth.md` has a `## Compass` WITH CONTENT under it** → **State 2.** Probe it with `awk '/^## Compass/{f=1;next} f&&/^## /{exit} f&&NF{print "present";exit}'` — **never `grep -c`**, which prints `0` *and* exits non-zero on no-match, so a `|| echo 0` fallback emits two values and the comparison silently yields the wrong state. Nothing to offer. The verdict line already answers the second question (above), and `/today` carries the goal→value clause. Skip this section.
