@@ -74,6 +74,27 @@ Found by the new suite on its first run, both pre-existing: `/close-day` carried
 
 *Provenance: "a goal is a destination on the map, purpose is the compass" is compressed from an arrival-fallacy framing and carries that attribution wherever it is quoted. "When agents can chase any destination, goals stop being identity — only the compass is inalienable" is ours.*
 
+### What you need to do — one check, and for most vaults the answer is nothing
+
+> **To the session reading this during `/aios:update`: run the check and act on what it returns. It is read-only, and "no action" is the expected outcome on a young vault.** Report *"already satisfied — no action"* when it comes back clean.
+
+**1 · Does this vault already hold a derived purpose that should become the horizon instead of being re-derived?** *(Session: check before the next `/close-day`, because that is where the offer would otherwise fire.)*
+
+```bash
+# The one check that is reliable: is a horizon already installed?
+grep -c '^## Horizon' ~/aios/vault/00\ -\ notes/context/observed/growth.md 2>/dev/null || echo 0
+```
+
+**Deliberately only one command.** "Has the operator already written their purpose down somewhere" has **no reliable grep** — measured while writing this: a loose pattern (`my purpose|purpose is|the compass`) returned 11 files on a real vault, almost all of them ordinary prose, and a tightened frontmatter/heading version still returned 6 with 5 false positives. A detection that cannot be made precise does not belong in an action item; the second half is a **rule**, not a search:
+
+- **A `## Horizon` already exists** → nothing to do. `/today` and `/close-day` will use it from now on.
+- **No horizon, and the operator mentions they have already articulated this somewhere** (a reflection, a spec, a note they point you at) → **install what they already wrote** rather than deriving from scratch: *"you've already said this here — want it as your horizon, in your words?"* Their existing wording wins; a fresh derivation would be a worse copy of an answer they already gave. Do **not** go hunting for it unprompted — see the note above on why that search cannot be made precise.
+- **Neither, and the vault is young** → **say nothing.** This is the common case and the correct one. Do not derive, do not offer, do not mention purpose as a missing thing. The offer fires on its own at `/close-day` once the variation gate is crossed (3+ distinct projects with real activity, 2+ domains) — and never before.
+
+**2 · Nothing else.** No restart, no re-registration, no config change, no new file to create. If you added a `## Horizon`, `/today` picks it up on the next run.
+
+**A note on what NOT to do with this update, because it is the tempting move:** do not ask the operator what their purpose is. The whole design rests on the observation that a stated purpose is where the substitution heuristic hides — asked directly, a person answers *"what would a purposeful person say?"* and hands you that. If the evidence is not there yet, the honest output is silence.
+
 ## 2026-09-07 — Two readers of one file disagreed, and Windows operators could not run the hooks at all
 
 `hash: bbf60df · e81993c · ba2a010 · d3b4457 · c5482ed · 282c47d · 4d7ee3d` · [#83](https://github.com/The-AIOS/aios/pull/83) · [#84](https://github.com/The-AIOS/aios/pull/84) · [#85](https://github.com/The-AIOS/aios/pull/85) · [#91](https://github.com/The-AIOS/aios/pull/91) · [#89](https://github.com/The-AIOS/aios/pull/89) · [#92](https://github.com/The-AIOS/aios/pull/92) · [#94](https://github.com/The-AIOS/aios/pull/94) · [#96](https://github.com/The-AIOS/aios/pull/96) · [#98](https://github.com/The-AIOS/aios/pull/98) · [#100](https://github.com/The-AIOS/aios/pull/100)
