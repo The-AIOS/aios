@@ -1193,6 +1193,23 @@ jobs:
         # warns in writing that a check which always fires is one the operator stops reading.
         run: bash tests/bus-dead-letters.test.sh
 
+      - name: CONTRIBUTING routes to all three repos; CHEATSHEET stays an index
+        # The contribution graph was one-way: both surface repos told contributors when a
+        # change belonged to canonical, and canonical told nobody the reverse — while being
+        # the repo every install funnels into. So a Glass or App bug got filed here by
+        # default, and the only written rule was a LAYER rule, which helps only if you
+        # already know your layer. It fails in the one case where misrouting happens: a
+        # documented thing that does not work (measured — a "tier" field documented in three
+        # canonical files, defect in the App's fulfiller).
+        #
+        # Two failure modes in scope. A route going stale, and canonical growing a second
+        # copy of a sibling's setup instructions — the drift class removed from three
+        # separate places in this repo. The CHEATSHEET half asserts it ROUTES rather than
+        # restates, and that the worked examples sit above the terminal table: opening a new
+        # App operator's quick-reference with shell commands teaches them the AIOS is a
+        # terminal product that happens to have an app.
+        run: bash tests/contribution-router.test.sh
+
       - name: the compass layer ships the method, not one operator's answer
         # This feature was derived from a live vault — a named student's AI session, a
         # biography, corpus percentages, a purpose statement. Every one of those is the

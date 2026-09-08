@@ -29,6 +29,40 @@ Most things should stay in `custom/`. The bar for shipping something beyond your
 
 ---
 
+## Which repo? — three repos, and the question that actually routes you
+
+The AIOS ships from **three public repos**, and every one of them takes contributions the same way: **fork → branch → pull request.**
+
+| Repo | Owns | You're here if… |
+|---|---|---|
+| **[The-AIOS/aios](https://github.com/The-AIOS/aios)** (canonical) | The framework: commands, agents, skills, hooks, MCPs, templates, and the docs you're reading | Your change is to a `/aios:` command, an agent, a skill, a hook, a template, or a rule in `CLAUDE.md` |
+| **[The-AIOS/aios-glass](https://github.com/The-AIOS/aios-glass)** | The IDE surface — the panel, its controls, the in-editor session experience | Your change is to what the panel shows or does |
+| **[The-AIOS/aios-app](https://github.com/The-AIOS/aios-app)** | The desktop app — installer, first-run, the explorer, viewers, session panes | Your change is to the app's windows, setup flow, or packaging |
+
+Both surface repos carry their own `CONTRIBUTING.md` with their setup, gates and house style — **read theirs once you know you're in the right place.** This section's only job is getting you to the right door, not through it.
+
+> **⚠️ "Extension" means two unrelated things in this document, and the collision is worth one sentence.** Above, *"the extension layer"* means **`custom/`** — your own agents and skills inside a vault. **AIOS Glass is also an extension** — an IDE extension, a separate repo, nothing to do with `custom/`. When this file says *extension layer*, it always means `custom/`.
+
+### The question that routes you is what you OBSERVED, not which layer you think you're in
+
+*"Agent/skill/command/template → canonical"* is a **layer** rule, and it only helps if you already know your layer. It fails in exactly the case where misrouting actually happens: **when a documented thing does not work.** The doc is canonical; the behaviour may not be.
+
+| What you observed | Suspect | Why |
+|---|---|---|
+| **A documented flag or field has no effect** | The surface that **executes** it — not the doc that **describes** it | Check the launch args (`ps -p <pid> -o command=`) **and** the running behaviour before filing. A flag can be accepted and silently dropped. |
+| A command's *instructions* are wrong, unclear, or missing a case | canonical | The spec is the artifact |
+| A rule in `CLAUDE.md` produced the wrong behaviour | canonical | …unless the surface never applied it — see row 1 |
+| The panel shows the wrong thing, or a button does nothing | Glass | |
+| Install, first-run, updates, windows, packaging | the App | |
+| An agent/skill/template is missing or wrong | canonical | |
+| It works in one surface and not the other | the surface that's wrong | Glass and the App are **two independent implementations of one protocol**. A fix ported into one and not the other is the expected shape of the bug, not a surprise |
+
+**The worked example, because it is the case the layer rule gets wrong.** A spawn request carrying `"tier":"fast"` was silently ignored: the field was accepted, no error, and the worker ran on the frontier model. `"tier"` is documented in **three canonical files** — so filing against canonical was the reasonable conclusion and the wrong one. The defect was in the App's fulfiller, which launched `claude` without the flag. Locating it took the launch `argv` **plus** the worker's own transcript, because argv alone is a cousin of the running behaviour.
+
+**If you're unsure after all that, file against canonical.** We route it. A misfiled issue costs a comment; an unfiled one costs the fix.
+
+---
+
 ## The two flavors of contribution
 
 You've found something the framework should absorb. There are two ways to give it back, depending on whether you're shipping *code* or *signal*.
@@ -130,6 +164,7 @@ New bundled plugins register in `.claude-plugin/marketplace.json` (`name`, `disp
 - **Run a premortem / inversion pass.** Ask *"how does this fail?"* — timeouts, offline, concurrency, cost ceilings, platform differences (macOS vs Linux vs Windows). Report what testing caught.
 - **Concurrency matters.** The AIOS often runs several agents at once, and they all read and write the same vault — a single shared git repo. If your contribution touches git, files, or shared state, test it with **2+ agents running in parallel** before you ship it.
 - **Don't claim it passes without showing the command + output.** Evidence before assertions, always.
+- **When the claim is behavioural rather than mechanical, pre-register the criteria.** A test proves a function; it cannot prove *"the rewrite still makes a session behave the same way."* For that, write the acceptance scenarios **before** the new text exists, state the bar so it can fail (*accepted only if the new version passes every scenario the old one passes*), run both, and read the results against the written criterion rather than by keyword. Publish the criteria before the numbers — the order is the evidence. [#98](https://github.com/The-AIOS/aios/pull/98) is the worked example.
 
 ### The contribution we cannot make ourselves: a platform or locale nobody here runs
 

@@ -83,6 +83,54 @@ commands is not a prerequisite for using this.
 > happens to have an app — which is backwards, and is the same friction `AI-122` removed from the
 > setup flow. The commands are not going anywhere; they are just no longer the first thing.
 
+### Getting a worker — the ten questions people actually ask
+
+Every row is a real question with the answer and the *why*. **If a surface is running (the App or Glass), you never type any of this** — you ask your session for a worker and it writes the request; these are the answers it is working from, and the reasons are the useful part.
+
+| You want… | Do this | Because |
+|---|---|---|
+| A worker to review Q1 financials | Ask your session for it. It writes `~/.aios/spawn-inbox/<name>.json` = `{"name","task"}` and a surface opens it. | An agent that runs `spawn` itself is auto-denied by the permission classifier — silently, no prompt. Un-sandboxing does not help; the classifier gates it, not the sandbox. |
+| That worker on a cheaper model | Add `"tier":"fast"` (or `scale`) to the request | Pick the rung by the **shape** of the work, not its importance. A 400-file rename is `fast`; a synthesis pass is `judgment`. Top and bottom rungs differ ~**22×** in cost, so frontier rates on a file sweep are a transfer, not a rounding error. |
+| A specific model, outside the ladder | `"model":"<id>"` in the request | `model` wins over `tier`. Never `export CLAUDE_MODEL` in your shell rc — miss the revert and *every* future terminal is pinned. |
+| To send a live worker a long brief | Ask for a `send`. Keep the prompt **one line**. | Multi-line is typed as many Enters. Over ~1024 bytes it is written to a payload file and a pointer line is typed instead — **if you get a pointer, read that file**; never act on the pointer alone. |
+| To know whether a worker actually did it | Read its transcript: `~/.claude/projects/*/<sessionId>.jsonl` | A request file disappearing means a surface **picked it up**, not that the work succeeded. `<name>.json.undelivered` means it definitively did **not** happen and nobody was told. |
+| To know who is live | The session registry: `~/.claude/sessions/*.json` | **Never `pgrep`, never a terminal tab title** — a resumed session keeps its old title, so matching by name makes a live peer look dead. |
+| A worker that only touches files | `spawn --profile <name>` (servers declared in `~/.aios/mcp-profiles/<name>.json`) | Blast radius, not tokens: a file sweep has no business holding your Gmail, Drive and Slack credentials. A profile saves only 2–4k of a ~50k startup. |
+| A worker on a non-Claude model | You can't — and that boundary is deliberate | A worker is always Claude. Another family is **called as a tool** (`hooks/openrouter.py`), never put in the request path of a session holding live credentials and your private vault. |
+| A headless run that must not write | Prompt **first**, then `--allowedTools … --permission-mode default` | `--allowedTools` alone does **not** hold under a machine-level auto mode. And you cannot verify it by asking the agent what tools it has — it describes its *schema*. **Only an absent side effect is evidence.** |
+| To stop a stuck worker | Ask for a `kill` (`{"action":"kill","name":"<n>"}`) | Typed by a human it is `spawn-kill <name>` — never SIGTERM (the respawn loop catches it) and never Cmd+W (risks orphaning the process). |
+
+> **The one thing worth memorising:** a surface is available when one is **alive**, not when `~/.aios/spawn-inbox/` exists. That directory persists forever once created, so if you closed the IDE or quit the App, a request written there is never picked up **and never reported**. Liveness is a running pid in `~/.aios/surfaces/*.json`.
+
+Full protocol: `~/.aios/spawn-inbox/README.md` (rewritten by whichever surface boots, so it cannot drift from the running code) · the **`orchestration-ladder`** skill · [CLAUDE.md](./CLAUDE.md) → § Spawning Sessions.
+
+### Naming a worker picks its expertise
+
+The session name **is** the role. `spawn lawyer "review this NDA"` matches `agents/aios/finance-legal/lawyer.md` and the session greets you in character, with that agent's judgment loaded.
+
+Seven bundles ship: **sales** · **strategy** · **finance-legal** · **engineering** · **communication** · **personal** · **commerce** — 35 agents. Exact filename match wins; no exact file falls back to a fuzzy match against the registry (and tells you which it picked and why); `agents/custom/<name>.md` always overrides a bundled one.
+
+So the practical move is to **name the worker after the job**: `spawn accountant`, `spawn code-review`, `spawn writing`. Registry and matching rules: [`agents/_index.md`](./agents/_index.md).
+
+### Which primitive — before you spawn anything
+
+Two questions, asked in order. Most misfires come from answering neither.
+
+| Question | Answer |
+|---|---|
+| **How much structure?** | One coherent task → a single agent. 2+ **independent** tasks → parallel agents. An ordered multi-stage pipeline you want repeatable → a dynamic workflow. |
+| **Do you need the result back *in this session*?** | Yes → a **subagent** (the harness tracks it and returns the result). No, and you want to watch it work → a **spawned session** (independent; you read its surface). |
+
+> **The tell you picked wrong:** if your plan needs a file-sentinel plus a monitor loop to notice a delegated session finished, **you wanted a subagent.** The harness already gives you completion and the result for free.
+
+Depth, plus how to choose the model per primitive: the **`orchestration-ladder`** skill.
+
+---
+
+### Launching from a terminal — the advanced path
+
+*Everything above works without a terminal. This table is for operators running a plain clone with no surface installed, and for anyone who prefers typing it.*
+
 How to launch, name, and resume sessions **from a terminal**.
 
 | You want to... | Command | Notes |

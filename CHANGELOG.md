@@ -38,11 +38,41 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
-## 2026-09-08 — The framework could tell you what you did, and nothing could tell you what it meant
+## 2026-09-08 — The framework could tell you what you did, and neither doc could tell you where to go
 
 `hash: 87092da · 82751c7` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105)
 
 > **What you can now do.** Nothing, on day one — and that is the design, not a gap. Every tracked thing in this framework *completes*: a key flips, a ship lands, a streak extends, and then asks what is next. That machinery answers **what did I do**. Nothing answered **what did it mean**. This adds the second answer — but only once your own vault holds enough evidence to derive it honestly, because a purpose the system invents for you is worse than none.
+
+> **Also today, and the same shape one layer out:** `CONTRIBUTING.md` named two of three repos and routed nobody to Glass or the App, while `CHEATSHEET.md` opened its session chapter with shell commands. **Now you can find the right repo before you file, and get a worker without opening a terminal.**
+
+### `CONTRIBUTING.md` — three repos, and a router that asks what you OBSERVED
+
+The graph was one-way. Both surface repos already do their half — `aios-app` says *"if your change is to an agent, skill, command or template, it belongs in The-AIOS/aios"*, `aios-glass` opens with *"Glass, not engine"* — and both link back here. **Canonical linked to neither**, in 228 lines naming only itself and `company-template`. So a Glass or App bug got filed against the framework by default, which is also the only repo `/aios:update` tracks.
+
+Now: the three repos with what each owns, and one contribution path stated once for all of them — **fork → branch → pull request.** Their setup, gates and house style stay in *their* files; this section's only job is the door, not the doorway.
+
+**The router asks what you observed, not which layer you think you're in.** *"Agent/skill/command/template → canonical"* is a layer rule, and it only helps if you already know your layer. It fails in exactly the case where misrouting happens — **a documented thing that does not work.** The anchor entry: *a documented flag or field has no effect → suspect the surface that **executes** it, not the doc that **describes** it; check the launch args **and** the running behaviour before filing.*
+
+The worked example is one of ours, and it is why the layer rule needed replacing: a spawn request carrying `"tier":"fast"` was accepted and silently dropped, and `"tier"` is documented in **three canonical files** — so filing against canonical was the reasonable conclusion and the wrong one. The defect sat in a surface's fulfiller. Also added: *if you're unsure after all that, file against canonical — we route it.* A router with no fallback turns uncertainty into an unfiled issue.
+
+One sentence resolves a collision this file had been carrying: it uses **"extension"** to mean `custom/`, while **Glass is also an extension** — an IDE one, a separate repo, unrelated.
+
+And under the existing *"evidence before assertions"* rule, what that means when the claim is **behavioural** rather than mechanical: a test proves a function, but it cannot prove *"the rewrite still makes a session behave the same way."* For that, **pre-register the criteria** — write the scenarios before the new text exists, state the bar so it can fail, run both versions, read the results against the written criterion rather than by keyword, and publish the criteria **before** the numbers. The order is the evidence.
+
+### `CHEATSHEET.md` — the ten questions people actually ask, above the shell commands
+
+§1 opened with *"How to launch, name, and resume sessions from a terminal"* and a table of commands. That is the wrong first thing: the operator most likely to open this file just installed the desktop app and has never typed `cd`. The terminal table is now labelled the **advanced / no-surface path** and sits below three new sections.
+
+**Getting a worker — ten rows, each a real question with the answer and the *why*.** How to get one at all (ask your session; it writes the request — an agent that runs `spawn` itself is auto-denied by the permission classifier, silently, and un-sandboxing does not help because the classifier gates it, not the sandbox) · how to put it on a cheaper model (`"tier":"fast"`, chosen by the **shape** of the work, with the ~22× spread named so a file sweep on frontier rates reads as the transfer it is) · pinning a model outside the ladder, and why never to `export CLAUDE_MODEL` in your shell rc · sending a live worker a long brief (one line; over ~1024 bytes it becomes a pointer file — **read the file, never act on the pointer alone**) · how to know it actually did the work (**its transcript** — a vanished request file means *picked up*, not *done*) · who is live (the session registry, **never `pgrep` or a tab title**, because a resumed session keeps its old name) · scoping its credentials with `--profile` (blast radius, not tokens) · why a worker is always Claude and another family is *called as a tool* · what a headless allowlist needs beside it · and how to stop one.
+
+Plus the line worth memorising: **a surface is available when one is alive, not when the inbox directory exists** — that directory persists forever, so a request written after you quit the app is never picked up *and never reported*.
+
+**Naming a worker picks its expertise.** `spawn lawyer "review this NDA"` matches `agents/aios/finance-legal/lawyer.md` and the session arrives in character with that agent's judgment loaded. Seven bundles, 35 agents; exact filename wins, no match falls back to a fuzzy pick that tells you what it chose, and `agents/custom/` always overrides bundled. So name the worker after the job.
+
+**Which primitive, before you spawn anything.** Two questions in order — how much structure (one agent · parallel agents · a workflow), and do you need the result back *in this session* (subagent) or do you want to watch it work (spawned session). With the tell: **if your plan needs a file-sentinel and a monitor loop to notice a delegated session finished, you wanted a subagent.**
+
+Every one of these routes onward — to `orchestration-ladder`, `agents/_index.md`, and the inbox's own README — rather than restating them. `tests/contribution-router.test.sh` (20 checks) asserts that, along with the routes resolving, the ordering holding, and canonical **not** accumulating a copy of a sibling's build commands. Mutation-verified: dropping a repo, copying in `npm run dist`, and swapping the sections back all turn it red.
 
 ### The compass layer — the method that derives your why, never an answer
 
