@@ -225,6 +225,38 @@ done
   || no "$mach spec(s) name one operator's machine" "FORTRESS.md already says to write 'the secondary machine'; a personal name belongs in USER.md § Remote machines"
 grep -qiE 'secondary machine|secondary-machine' "$CLOSE" && ok "close-day uses the generic form" || no "close-day does not use the generic machine form"
 
+echo "-- 13. the growth.md seed DESCRIBES the compass but ships no empty section --"
+# The operator asked whether the seed should carry a `## Compass` placeholder. It must not,
+# and the reason is functional rather than stylistic: the presence of that heading IS the
+# State-0/State-2 flag that /today, /close-day and /7plan read. Ship it empty and every
+# fresh vault reports State 2 on day one — surfaces would link goals to an empty compass
+# and the variation gate would be inverted from the first run. An empty placeholder is also
+# the "set your purpose" nudge in passive form: a blank the operator feels invited to fill,
+# which is exactly the substitution heuristic the design refuses.
+SEED="vault/00 - notes/context/observed/growth.md"
+if [ -f "$SEED" ]; then
+  grep -qE '^## Compass' "$SEED" \
+    && no "the growth.md seed ships a '## Compass' heading" "that heading is the state flag — an empty one puts every fresh vault into State 2 on its first run" \
+    || ok "the seed ships no empty Compass section"
+  grep -qi 'Compass' "$SEED" \
+    && ok "the seed still DESCRIBES the compass (discoverable without a blank to fill)" \
+    || no "the seed never mentions the compass" "a newcomer opening growth.md should learn the concept exists, just not be handed an empty field"
+  grep -qiE 'no empty section|nothing to fill in|deliberately no' "$SEED" \
+    && ok "the seed says the absence is deliberate" "so a tidy-minded operator does not add the heading themselves" \
+    || no "the seed does not explain why there is no section" "an unexplained absence gets helpfully filled in by the next person who reads it"
+else
+  sk "growth.md seed check" "seed not present at $SEED. NOT a pass."
+fi
+
+echo "-- 14. State 2 requires CONTENT, not just a heading --"
+# Hardening from the same question: a hand-added bare heading must not flip the state.
+for f in "$TODAY" "$CLOSE" plugins/aios/commands/7plan.md; do
+  b=$(basename "$f")
+  grep -qiE 'with content under it|WITH CONTENT' "$f" 2>/dev/null \
+    && ok "$b requires content under the heading" \
+    || no "$b treats a bare heading as State 2" "someone will add the heading by hand; an empty compass must not switch the surfaces on"
+done
+
 echo
 echo "-- $PASS passed, $FAIL failed --"
 [ "$FAIL" -eq 0 ]

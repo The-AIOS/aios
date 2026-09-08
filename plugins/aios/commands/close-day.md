@@ -724,7 +724,7 @@ Everything else this command surfaces **completes** — ships, carries, streaks,
 
 **Check the state before anything else. In State 0 this section produces no output of any kind** — no prompt, no placeholder, no "consider setting a purpose" nudge. Silence is the correct behaviour, not a gap.
 
-- **`growth.md` has a `## Compass`** → **State 2.** Nothing to offer. The verdict line already answers the second question (above), and `/today` carries the goal→value clause. Skip this section.
+- **`growth.md` has a `## Compass` WITH CONTENT under it** → **State 2.** Nothing to offer. The verdict line already answers the second question (above), and `/today` carries the goal→value clause. Skip this section.
 - **No `## Compass`, and the variation gate is NOT crossed** → **State 0.** Say nothing. Do not mention purpose, direction, or meaning as a missing thing.
 - **No `## Compass`, and the gate IS crossed** → **State 1.** Make the offer **once**, at the end of the review, after the day's work has been read.
 

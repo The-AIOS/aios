@@ -66,6 +66,14 @@ The README's title has always been *"AI as a Team, Not a Tool"* — the same cla
 
 Not a fifth principle: those four are method you apply, and this is an outcome you get.
 
+### The `growth.md` seed describes the compass and deliberately ships no empty section
+
+Asked whether a newcomer's `growth.md` should arrive with a `## Compass` placeholder to fill in. It must not, and the reason is functional rather than stylistic: **the presence of that heading is the state flag** the surfaces read. Ship it empty and every fresh vault reports "compass exists" on its first run — `/today` would try to link a goal to nothing, `/7plan` would test a bet against nothing, and the variation gate would be inverted from day one. An empty placeholder is also the *"set your purpose"* prompt in passive form: a blank the operator feels invited to fill, which is the substitution heuristic the whole design refuses.
+
+So the seed does what canonical's other observed seeds do — describes what the file holds and ships no sections — with one added paragraph naming the compass, where it comes from, and *why there is nothing to fill in*. That last part matters: an unexplained absence gets helpfully filled in by the next tidy-minded person who reads the file.
+
+**Hardened in the same pass:** State 2 now requires a `## Compass` **with content under it**, not merely the heading — because someone will eventually add the heading by hand, and an empty compass must not switch the surfaces on.
+
 ### `/7plan` now checks the bet against the compass — the one cadence where a mismatch is still actionable
 
 `/7plan` already described itself as *"the compass-set for the week"* before any of this existed — the concept reaching for a name it did not have. Its `## The bet` section holds *"THE one bet the next several weeks ladder up to"*, which makes it the **largest destination this framework tracks**. So it now asks one question, weekly: **is this bet an expression of the compass, and if not, which of the two is wrong?** A bet that no longer expresses the compass is either a bet taken for someone else's reasons or a compass that has gone stale, and both deserve a sentence *before* the week's priorities are set. Daily is too tight to see it; quarterly is too late to act on it. With no compass the line is omitted entirely — State-0 silence holds on every surface, not just two. And the spec forbids the tempting resolution: **never quietly edit the compass to fit the bet**, which would invert the hierarchy and let a destination rewrite the direction.
