@@ -81,7 +81,12 @@ grep -qiE 'mechanism is now the memory|mechanism is the memory' "$CL" \
 # GENERIC on purpose. Hardcoding the numbers that motivated the rule would only ever catch
 # THIS vault's measurement -- and would itself put a vault-specific figure in canonical's repo.
 # Match the SHAPE of a vault measurement instead, so any contributor's numbers are caught too.
-grep -qiE '[0-9]+ of [0-9]+ (antifragile )?entries|[0-9]+ (antifragile )?entries[,.]? (against|vs)|my vault|this vault (has|holds)' "$CL" \
+# The leak signature is a NUMERIC RATIO, nothing else. An earlier version also matched
+# "my vault" / "this vault has|holds" -- which fired on two long-standing canonical lines
+# ("This vault holds two kinds of knowledge", "This vault has two persistence layers") where
+# "this vault" means ANY vault. Broadening a pattern to catch more made it wrong: the right
+# generalization axis was the number shape, not possessive phrasing about vaults.
+grep -qiE '[0-9]+ of [0-9]+ (antifragile )?entries|[0-9]+ (antifragile )?entries[,.]? (against|vs)' "$CL" \
   && no "a vault-specific measurement leaked into CLAUDE.md" "canonical must never carry a ratio measured on one operator's vault -- the seed ships zero entries, so it is undefined there" \
   || ok "no vault measurement in the canonical rule"
 
