@@ -300,6 +300,27 @@ No "primary" / "come-home" semantics. Earlier versions returned to a preferred a
 
 **If you want to force a specific account** (e.g., machine A back to `primary@example.com` so machine B can use `secondary@example.com` exclusively): run `claude-identity.sh switch primary@example.com` manually. That's the escape hatch.
 
+### Pausing the autopilot temporarily
+
+`switch` above is the *spatial* escape hatch — force one account. This is the **temporal** one: suspend rotation entirely for a while, without uninstalling the launchd agent or editing thresholds.
+
+Write a future expiry into `$CLAUDE_CONFIG_DIR/quota-watch.paused` (`~/.claude/quota-watch.paused` unless you set `CLAUDE_CONFIG_DIR`). Either form is accepted:
+
+```bash
+# epoch seconds — pause two hours (macOS)
+date -v+2H +%s > ~/.claude/quota-watch.paused
+# epoch seconds — pause two hours (Linux)
+date -d '+2 hours' +%s > ~/.claude/quota-watch.paused
+# or ISO-8601 with an offset
+echo '2026-09-09T18:00:00-06:00' > ~/.claude/quota-watch.paused
+```
+
+While it holds a future timestamp the watcher logs `PAUSED by operator until …` and returns immediately — **no rotation and no adoption check.** Resume early by deleting the file.
+
+**It cannot be forgotten into permanence, and that is the point.** An expired *or malformed* marker is ignored **and removed**, with the reason logged — so a typo, a stale pause from last week, or an empty file all fail toward the autopilot running rather than toward it silently staying off. A capability that can quietly disable your quota protection forever is worse than not having it.
+
+**Why a file rather than an environment variable:** the hot path runs from the statusLine pipe, whose environment the operator does not control. A file under the config dir is the one channel both the launchd agent and the statusLine kick can read.
+
 **Cross-machine coordination is not solved here.** If two machines share an account pool, both can end up on the same account and compete for its caps. Future work: a shared state file over git / iCloud that both watchers read to coordinate. Until then, the manual escape hatch is the only lever.
 
 ## Files written
@@ -312,6 +333,7 @@ No "primary" / "come-home" semantics. Earlier versions returned to a preferred a
 | `~/.claude/rate-limit-cache.json` | Latest quota snapshot from Stop hook | 600 |
 | `~/.claude/quota-watch.log` | Watcher's per-tick decision log | 644 |
 | `~/.claude/swap-log.jsonl` | Append-only log of every auto-swap | 644 |
+| `~/.claude/quota-watch.paused` | **Operator-written** — future expiry that suspends rotation; auto-removed once past | 644 |
 | `~/.claude.json.bak-claude-switch` | Rollback snapshot of last swap | 644 |
 
 None of these should ever be committed — `~/.claude/` is outside the vault by design.

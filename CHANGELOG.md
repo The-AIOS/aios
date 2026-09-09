@@ -106,6 +106,21 @@ CI now enforces both halves, gated by event so an open PR is never failed for do
 
 **Action required:** none.
 
+### You can pause the quota autopilot for a while
+
+**What you can now do.** Suspend account rotation temporarily without uninstalling anything or editing thresholds — useful when you want to stay on one account through a piece of work. Write a future expiry into `~/.claude/quota-watch.paused`:
+
+```bash
+date -v+2H +%s > ~/.claude/quota-watch.paused    # macOS — pause two hours
+date -d '+2 hours' +%s > ~/.claude/quota-watch.paused    # Linux
+```
+
+ISO-8601 with an offset works too. While it holds a future time the watcher does nothing — no rotation, no adoption check — and logs that it is paused. Delete the file to resume early.
+
+**It cannot be forgotten into permanence.** An expired *or malformed* marker is ignored and deleted, with the reason logged, so a typo or a stale pause from last week fails toward the autopilot **running**. A capability that can quietly leave your quota protection off is worse than not having it.
+
+**Action required:** none — the marker is opt-in and no file means no change.
+
 ## 2026-09-08 — Your why, your agents badge, and docs that route you
 
 `hash: 87092da · 82751c7 · 12c2559 · 3b9f43e · 3940ac8 · 3f2c8db` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107) · [#108](https://github.com/The-AIOS/aios/pull/108) · [#109](https://github.com/The-AIOS/aios/pull/109) · [#110](https://github.com/The-AIOS/aios/pull/110)

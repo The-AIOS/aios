@@ -1258,6 +1258,15 @@ jobs:
         # the no-baseline case and say so) rather than that the optimisation is merely described.
         run: bash tests/changelog-read-scope.test.sh
 
+      - name: the quota-watch pause cannot silently disable the autopilot
+        # A pause is the one operator capability whose failure mode is SILENCE: a stale,
+        # empty or mistyped marker that was honoured would leave rotation off with nothing
+        # saying so, and the operator would start hitting caps believing the autopilot runs.
+        # The contract is fail-toward-running -- anything that is not a FUTURE timestamp is
+        # ignored AND removed. These import the shipped paused_until() rather than restating
+        # its parsing, so the checks cannot pass while the real function drifts.
+        run: bash tests/quota-watch-pause.test.sh
+
       - name: the compass layer ships the method, not one operator's answer
         # This feature was derived from a live vault — a named student's AI session, a
         # biography, corpus percentages, a purpose statement. Every one of those is the
