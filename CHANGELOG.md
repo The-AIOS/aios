@@ -90,6 +90,14 @@ The probe now reports **entries, highest number, and duplicates** in one pass, c
 
 **Action required:** none. Next time `/aios:compact` runs it measures this way. If it reports a mismatch, stop and diff before letting it compact.
 
+### Eleven "adoption failed" alerts in six minutes, for a rotation that worked
+
+**What you can now do.** Stop getting that. When the quota autopilot rotates accounts, it checks afterwards that the live session actually picked up the new credential — and it was checking the wrong number. A swap triggered by the **7-day** cap was judged on whether **5-hour** usage fell, and those two have nothing to do with each other: the new account's 5h baseline reflects whatever you were doing on it, not the account you left. So a rotation that worked perfectly reported failure, once per tick.
+
+It now compares the metric that actually triggered the swap. And a failed adoption is a **state, not an event** — the log still records every tick, but your desktop gets **one** notification per rotation instead of one every three seconds.
+
+**Action required:** none.
+
 ### An entry could ship with an empty `hash:` and read as new forever
 
 **What you can now do.** Nothing to change — this one is about entries reaching you correctly. `CONTRIBUTING.md` told contributors to cite the PR number and add the hash after merge, without saying what the field holds meanwhile. It now says: **leave the line present with an empty value, never omit the line** — because the two mistakes are not symmetric. An empty value keeps the entry *shown* until a maintainer fills it. A missing line has nothing to test, so "already synced" is vacuously true and the entry is **silently skipped for every operator, forever.**

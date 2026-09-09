@@ -219,8 +219,19 @@ def check_adoption(cache: dict) -> None:
     # would report a failure that has not had a chance to happen yet.
     if (cache.get("captured_at") or 0) <= (last.get("ts") or 0):
         return
-    before = last.get("five_hour_pct") or 0
-    current = cache.get("five_hour_pct") or 0
+    # Compare the metric that TRIGGERED the rotation, not always the 5h window.
+    # A swap fired by the 7d cap lands on an account whose 5h baseline has nothing
+    # to do with the source's, so "5h did not fall" is not evidence of anything.
+    # Measured 2026-09-08: gmail rotated to sovra on 7d 98%; gmail's 5h was 7%,
+    # sovra's own 5h sat at 21-35% because the operator was using it — eleven
+    # "adoption failed" alerts in six minutes while the 7d had gone 98% -> 17%.
+    reason = last.get("reason") or ""
+    if reason.startswith("7d"):
+        key, label = "seven_day_pct", "7d"
+    else:
+        key, label = "five_hour_pct", "5h"
+    before = last.get(key) or 0
+    current = cache.get(key) or 0
     if current < before - ADOPTION_DROP_PTS:
         # It fell: adopted. Clear any previous alert so a recovered system does
         # not keep showing a stale warning.
@@ -230,20 +241,34 @@ def check_adoption(cache: dict) -> None:
             except OSError:
                 pass
         return
+    swap_ts = int(last.get("ts") or 0)
     msg = (
-        f"rotation to {_read_active_email()} happened {int(elapsed)}s ago but 5h usage "
+        f"rotation to {_read_active_email()} happened {int(elapsed)}s ago but {label} usage "
         f"is still {round(current)}% (was {round(before)}% before the swap). The live "
         f"session did not adopt the new credential — most likely Claude Code stopped "
         f"re-reading the credential store. Restart open sessions and check whether an "
         f"update changed that behaviour."
     )
     log(f"ADOPTION FAILED: {msg}")
-    notify(msg)
+    # Notify ONCE per rotation. This runs on every tick (30 s, 3 s in the hot
+    # zone) and a failed adoption is a STATE, not an event: the log carries every
+    # tick, the desktop gets one notification per swap. The alert file keyed by
+    # the swap's ts is what remembers that the operator was already told.
+    already_notified = False
+    try:
+        with open(ALERT_FILE) as f:
+            already_notified = json.load(f).get("swap_ts") == swap_ts
+    except Exception:
+        pass
+    if not already_notified:
+        notify(msg)
     try:
         with open(ALERT_FILE, "w") as f:
             json.dump({
                 "ts": int(now),
+                "swap_ts": swap_ts,
                 "kind": "adoption_failed",
+                "metric": label,
                 "message": msg,
                 "pct_before": before,
                 "pct_now": current,
