@@ -90,7 +90,13 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
        printf '%s' "$B" | head -1 | grep -qE '^session: ' && continue    # my own close → not work
        echo x
      done | grep -c .)
-     if [ "$ANYTAG" -eq 1 ]; then
+     # `-ge 1`, NOT `-eq 1`: ANYTAG is a COUNT of tagged commits, not a boolean. The degrade
+     # branch below is for "provenance is unknowable", which is ANYTAG == 0 and nothing else.
+     # With `-eq 1` any range holding TWO OR MORE tagged commits — the normal case in an
+     # active vault — fell through to the coarse rule and counted a PEER session's commit as
+     # work of mine, which is the exact bug the trailer was introduced to kill. Measured
+     # 2026-09-05: ANYTAG=4, MINE=0 (a true duplicate) and the fallback answered WORK=1 → append.
+     if [ "$ANYTAG" -ge 1 ]; then
        WORK=$MINE                                                        # precise path
      else
        # No commit in range carries a trailer → this vault predates the stamping,

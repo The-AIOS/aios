@@ -68,6 +68,20 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-09 — A duplicate close could append a second block
+
+`hash: `
+
+> **What you can now do.** Nothing new to learn — one thing stops going wrong. `/aios:close-session` no longer appends a second block to your daily note when the only commits since your last close belong to **other sessions**.
+
+The idempotency gate reads the `AIOS-Session:` trailer to tell your session's commits apart from a peer's, and falls back to a coarse subject-based rule only when *no* commit in range carries a trailer — a vault that predates the trailer, where provenance is genuinely unknowable.
+
+The gate asked `ANYTAG -eq 1`. But `ANYTAG` is a **count** of tagged commits, not a boolean. So any range holding two or more tagged commits — the ordinary case in a vault written by several sessions at once — fell through to the fallback and counted a peer's commit as your session's work: exactly the failure the trailer was introduced to kill. Measured on a live vault, `ANYTAG=4` with `MINE=0` (a genuine duplicate) still appended.
+
+The condition is now `-ge 1`, so the precise path is taken whenever provenance exists at all and the fallback is reserved for the case it was written for: `ANYTAG == 0`.
+
+**Action required:** none — `/aios:update` lands it. If a recent daily note carries two near-identical `## Session —` blocks written minutes apart, that was this; delete the extra by hand.
+
 ## 2026-09-08 — Your why, your agents badge, and docs that route you
 
 `hash: 87092da · 82751c7 · 12c2559 · 3b9f43e · 3940ac8 · 3f2c8db` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107) · [#108](https://github.com/The-AIOS/aios/pull/108) · [#109](https://github.com/The-AIOS/aios/pull/109) · [#110](https://github.com/The-AIOS/aios/pull/110)
