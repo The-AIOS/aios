@@ -249,7 +249,32 @@ If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git
 
 ### 1.5. Show changelog context
 
-Read `CHANGELOG.md` from the cloned repo root. If absent, skip silently. Otherwise:
+**Do NOT `Read` the whole `CHANGELOG.md` — stream it and stop.** The file is large and grows monotonically (measured 2026-09-08: **74,627 words / 2,977 lines / 68 entries**), while a sync typically needs **one** entry. Entries are newest-first, so reading the head and stopping at the first fully-synced entry costs a fraction and loses nothing — the tail is, by construction, already synced.
+
+```bash
+# Newest-first slice: everything ABOVE the first fully-synced entry.
+# Print entry-by-entry and stop; never load the tail. Evaluate the hash line with the
+# ANY-hash rule below -- this is a cheaper READ of the same decision, never a different one.
+awk '/^## [0-9]{4}-[0-9]{2}-[0-9]{2}/{n++} n>0' "$CLONE/CHANGELOG.md" |   awk -v stop="$STOP_HEADER" '$0==stop{exit} {print}'
+```
+
+> ⚠️ **Two ways to get this wrong, and both are worse than reading the whole file.**
+>
+> **Never stop on the first SYNCED HASH — stop on the first fully-synced ENTRY.** An entry's `hash:` field carries many ` · `-separated hashes and is NEW if **any** of them is unsynced (see the rule below). On 2026-08-13 an entry cited five hashes of which the first four were already ancestors; stopping at the first synced hash hides that afternoon's subsections and any `Action required` inside them. The streamer changes *how much you read*, never *what counts as new*.
+>
+> **An unreachable hash is NOT synced, so it never satisfies the stop condition** — which means a `hash=initial` or cross-repo tracker never stops, and the streamer degrades to the whole file. That is correct-but-useless, so it is guarded explicitly: see § *A tracker with no usable baseline*.
+>
+> If in doubt, read **one entry more**. Under-reporting is the one failure a changelog cannot afford; over-reading merely costs tokens.
+
+### A tracker with no usable baseline shows the newest few, never all 68
+
+`hash=initial` (a tracker created by Step 7 because none existed) and a cross-repo hash both make **every** `merge-base --is-ancestor` return 128 → *inconclusive, not synced* → every entry reads as NEW. Without a cap that dumps the entire file at one operator in a single message.
+
+A **fresh install is not affected and must not be "fixed" here** — `SETUP.md` records the real HEAD at setup precisely so a newcomer starts synced (*"a placeholder reads as 'you are behind' forever"*). This is the **recovery** path: someone who lost or never had `.aios-update`.
+
+So when no hash in the newest entry is resolvable, present the **newest 3 entries** plus one line — *"your tracker has no usable baseline, so this shows only the most recent changes; the full history is in `CHANGELOG.md`"* — and continue the sync normally. Never silently truncate without saying so.
+
+Read the streamed slice. If `CHANGELOG.md` is absent, skip silently. Otherwise:
 
 1. Parse `## ` entries. Each is `## YYYY-MM-DD — title` followed by `` `hash: {short_hash}` `` — **and that field carries one OR MANY hashes**, ` · `-separated (`` `hash: 200bec5 · 7b5a2d9 · 7055d09` ``), because a day's entry accumulates a `###` subsection per merge and each cites its own PR head. Parse the field into a **list**, always; a single hash is just a list of one.
 2. **For each entry newest first, an entry is NEW if ANY of its hashes is not yet synced. Stop scanning only when ALL of an entry's hashes are ancestors of `{stored_hash}`.**
@@ -264,10 +289,11 @@ Read `CHANGELOG.md` from the cloned repo root. If absent, skip silently. Otherwi
    - **any hash → exit 128** (unreachable) → treat that hash as **inconclusive, not synced**, and fall back to content-comparison against the local `CHANGELOG.md` by date header + title. Never let an unreachable hash *satisfy* the synced test.
 
    > **Why "any", and why this is not a hypothetical.** The rule used to read *"check `{entry_hash}`… exit 0 = synced, stop scanning"*, written when an entry cited exactly one hash. Same-day accumulation broke that silently: on 2026-08-13 the entry cited **five** hashes, of which the first four were already ancestors of an operator's stored hash and the fifth was not. Taking the first hash returns exit 0, the scan stops, and **the entry reads as fully synced** — so the afternoon's subsections are never shown, and any `Action required` inside them is never executed. The operator sees a silent, plausible "nothing new" and has no way to notice. **The failure mode is under-reporting, which is exactly what a changelog cannot afford**, so bias the test the other way: one unsynced hash makes the whole entry new, and showing an already-seen subsection twice is a trivially cheaper error than hiding one.
-3. If new entries exist, show them before applying changes — **lead with each entry's "What you can now do" section** (the plain-language capability read — this is the part that actually tells the operator what the new version unlocks; read it back to them, don't make them open the file), then **Action required** (skip Why/FYI for brevity; full details in CHANGELOG.md). Aggregate + deduplicate Action required across all new entries. If an entry predates the convention and has no "What you can now do" section, fall back to its "What changed" / "What you're getting".
-4. Execute the action items inline as part of this run — don't list them and wait for the operator to ask. This command IS the implementation arm of CHANGELOG action items.
+3. **Present every entry in the OPERATOR'S language — the entries are English source text, not the delivery.** The rule and where to take the language from live in `CHANGELOG.md`'s own header (§ *How to read this TO the operator*); read it there rather than restating it. An operator who clicks *Update* on a Spanish surface and gets an English wall cannot act on any of it, and the sync becomes unverifiable to them.
+4. If new entries exist, show them before applying changes — **lead with each entry's "What you can now do" section** (the plain-language capability read — this is the part that actually tells the operator what the new version unlocks; read it back to them, don't make them open the file), then **Action required** (skip Why/FYI for brevity; full details in CHANGELOG.md). Aggregate + deduplicate Action required across all new entries. If an entry predates the convention and has no "What you can now do" section, fall back to its "What changed" / "What you're getting".
+5. Execute the action items inline as part of this run — don't list them and wait for the operator to ask. This command IS the implementation arm of CHANGELOG action items.
    - **After applying, close with a one-line-per-capability recap** — *"This update lets you: {do X}, {do Y}, {do Z}."* — so the operator leaves the sync knowing what they gained, not just that files changed. (This is the comprehension-debt guard for the framework's own release channel: an update the operator can't translate into a capability is debt, not a gift.)
-5. **Treat every action item as CHECK-THEN-ACT (idempotent).** Each operator's session verifies its OWN current state against the item's precondition, then acts ONLY if the condition holds — and reports "already satisfied, no action" when it doesn't. Many fixes self-resolve or were fixed another way (a teammate who synced independently, a fresh install, a prior run, a manual fix). **Never run a destructive or state-changing action blindly** — a well-written action item carries its own check (e.g. *"run `claude plugin marketplace list`; re-point only if the source is a frozen copy"*). This is what makes the CHANGELOG safe to execute on every operator's machine, regardless of how they got to their current state.
+6. **Treat every action item as CHECK-THEN-ACT (idempotent).** Each operator's session verifies its OWN current state against the item's precondition, then acts ONLY if the condition holds — and reports "already satisfied, no action" when it doesn't. Many fixes self-resolve or were fixed another way (a teammate who synced independently, a fresh install, a prior run, a manual fix). **Never run a destructive or state-changing action blindly** — a well-written action item carries its own check (e.g. *"run `claude plugin marketplace list`; re-point only if the source is a frozen copy"*). This is what makes the CHANGELOG safe to execute on every operator's machine, regardless of how they got to their current state.
 
 ### 2. Find what changed
 

@@ -91,7 +91,7 @@ The reason this is the first section: the capabilities below are the difference 
 
 #### Getting a second pair of hands
 
-| You want… | Say something like… | What happens |
+| You want… | Prompt something like this… | What happens |
 |---|---|---|
 | Someone else to take a whole task | *"Get me a worker to review the Q1 financials."* | Your session writes a request; whichever surface you're running opens a real session with the task pre-loaded. It has its own window and its own context. |
 | It done cheaply, because it's mechanical | *"Spawn a worker to rename the wikilinks across those 400 files — put it on a fast model, it's a sweep."* | The rung is picked by the **shape** of the work, not its importance. Top and bottom rungs differ ~**22×** in cost. |
@@ -109,7 +109,7 @@ The reason this is the first section: the capabilities below are the difference 
 
 Naming a worker is how you choose its expertise — the name **is** the role, and the session arrives already thinking like that specialist.
 
-| You want… | Say something like… |
+| You want… | Prompt something like this… |
 |---|---|
 | A technical co-founder's judgment on a build | *"Bring in the `technical-cofounder` to pressure-test this architecture."* |
 | Writing that sounds like you | *"Get the `content-writer` working on the newsletter draft."* |
@@ -126,7 +126,7 @@ Naming a worker is how you choose its expertise — the name **is** the role, an
 
 Skills are the deep know-how your session loads on demand. Most fire on their own when the task matches — these are the ones worth asking for **by name**, because you'd never guess they exist.
 
-| You want… | Say something like… | Why it's more than it sounds |
+| You want… | Prompt something like this… | Why it's more than it sounds |
 |---|---|---|
 | To know if a draft sounds like a machine | *"Run the voice gate on this before I publish it."* | Measures the AI-writing tells against **your own** voice and reports *where* — it does not rewrite you. |
 | A video actually watched, not transcribed | *"Watch this talk and tell me what's on the slides — not just what he says."* | The **visual** channel: slides, code, diagrams, on-screen text a transcript throws away. |
@@ -141,7 +141,7 @@ Skills are the deep know-how your session loads on demand. Most fire on their ow
 
 Both of these are yours, both are read every session, and **you change them by asking**.
 
-| You want… | Say something like… | What it edits |
+| You want… | Prompt something like this… | What it edits |
 |---|---|---|
 | A ritual to work your way | *"When I run the morning plan, always put study before email — remember that."* | Your `USER.md` → command personalizations. Commands read it before running. |
 | Your own routines tracked | *"Add a writing routine — 20:00, from my content queue."* | `USER.md` → growth routines. Your morning plan starts showing the streak. |

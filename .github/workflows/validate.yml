@@ -1229,6 +1229,16 @@ jobs:
         # Checks the NEWEST entry only; history predates the rule and is not rewritten.
         run: bash tests/changelog-entry-shape.test.sh
 
+      - name: the changelog is read in the operator's language, and only as far as needed
+        # Two operator reports. The file is 74k+ words and grows, while a sync needs one entry --
+        # Step 1.5 used to say "Read CHANGELOG.md", so everyone ingested all of it every time. And
+        # an operator clicked Update on a Spanish surface, got an English wall, and could not
+        # follow what changed: the entries are English SOURCE TEXT, not the delivery. The read
+        # optimisation is the dangerous half -- cheaper must not mean stopping earlier, so these
+        # assert the guard rails (stop on the ENTRY not a hash; unreachable is never synced; cap
+        # the no-baseline case and say so) rather than that the optimisation is merely described.
+        run: bash tests/changelog-read-scope.test.sh
+
       - name: the compass layer ships the method, not one operator's answer
         # This feature was derived from a live vault — a named student's AI session, a
         # biography, corpus percentages, a purpose statement. Every one of those is the

@@ -79,9 +79,13 @@ echo "-- 5. CHEATSHEET is a PHRASEBOOK: it teaches what to SAY, not what to type
 # is what to SAY. A command table cannot teach that, and none of these capabilities announce
 # themselves: you have to know they exist to ask for them.
 grep -q 'Just say it' "$H" && ok "the phrasebook section exists" || no "CHEATSHEET has no phrasebook" "a command reference cannot teach a non-technical operator what their session can do"
-sayc=$(grep -c 'Say something like' "$H")
+# The operator's literal instruction was "all 'Do this' should be 'Prompt something like this'".
+# This assertion previously hard-coded 'Say something like' -- the wording a session substituted
+# because it read better -- which made the GUARD the authority for the deviation: the doc could not
+# be corrected without failing CI. A check must assert the requirement, never a paraphrase of it.
+sayc=$(grep -c 'Prompt something like this' "$H")
 [ "${sayc:-0}" -ge 3 ] && ok "prompts are phrased as things to say ($sayc tables)" \
-  || no "only $sayc 'say something like' table(s)" "rows written as 'do this' assume a terminal; the point is the words"
+  || no "only $sayc 'prompt something like this' table(s)" "rows written as 'do this' assume a terminal; the point is the words"
 grep -qiE 'pick the right tier yourself' "$H" \
   && ok "covers letting the session choose the tier" \
   || no "no 'you pick the tier' example" "often the best move — the session knows the task's cognitive load better than the operator does at that moment"
