@@ -350,8 +350,9 @@ If USER.md has no `### Growth routines` section: include one gentle line: "No gr
 
 ## Agents can handle
 🤖 **{N} tasks agents can handle:**
-{List each delegatable task with its matched agent. Only tasks that an agent could realistically execute with available tools.}
+{List each delegatable task with its matched agent OR command. Only tasks an agent or command could realistically execute with available tools — and only with a bindable target (see the rules below).}
 - 🤖 {task} _(→ agent: [[agent-name]])_
+- 🤖 {task} _(→ command: `/aios:{command-name}`)_
 
 Say "go with agents" to spawn them all, or `/agent {name}` to wear the hat yourself in this session.
 
@@ -359,6 +360,13 @@ Say "go with agents" to spawn them all, or `/agent {name}` to wear the hat yours
 
 - **Built fresh, every day — never carried.** Assemble this list from the day's genuinely-open delegatable tasks (the Rhythm / "Today I ship" list + carries you already assembled above — which themselves draw from `projects/_index.md`, Google Tasks, and the calendar; that upstream gathering is unchanged). This section is a *regenerated mirror*, NOT a carry source: it is never scanned for carry-forwards and never synced to project notes (see § carries and `/close-day`).
 - **Exclude anything already done.** Skip any task marked `[x]` or `~~struck~~` in today's note, or completed in its source. Never re-list a finished task — that is the over-count bug this rule exists to prevent.
+- **Every bullet MUST carry a bindable dispatch target — this is what the surfaces parse, and getting it wrong fails SILENTLY.** Glass and the App each bind from tokens in the line: a `[[wikilink]]` → an agent to spawn · a **backticked** `` `/command` `` → a command to run (a URL on the line is lifted as its argument). A bullet with neither is **skipped**: it still reads perfectly to the operator while the badge counts one fewer, with no error anywhere. Two forms bind and nothing else does:
+  - agent → `- 🤖 {task} _(→ agent: [[name]])_`
+  - command → ``- 🤖 {task} _(→ command: `/aios:{name}`)_``
+  - **An ingest is a command: write `` `/aios:ingest` ``.** Never `` `spawn ingest` ``, never `` `ingest` ``, never a bare session name — the slash and the backticks are both required, so those three look right and bind nothing. (They also name the human-only `spawn` path, which an agent must never invoke — see CLAUDE.md § Spawning Sessions.)
+  - Work **this session** will do itself is not agent-dispatchable → ordinary `- [ ]` task, not this mirror.
+  - No agent or command fits → **leave it out.** An unroutable bullet is worse than an absent one: it makes the badge lie without telling anyone.
+- **Write `**{N} tasks agents can handle:**` as the count of bullets that are LIVE and BINDABLE** — not the number you wish were delegable. Done/struck/🚀 lines are excluded by the parsers, and that header is prose they ignore, so it is free to disagree with the badge and will.
 - **Delegatable means an agent could realistically execute it** with available tools (research, draft, ingest, analysis, review) — not tasks that need the operator's presence, judgment call, or live participation.
 
 **Maximize — aim toward more of the day being delegable (trust-growth):**
