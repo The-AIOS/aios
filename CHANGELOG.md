@@ -62,7 +62,7 @@
 
 ## 2026-09-08 — Your why, your agents badge, and docs that route you
 
-`hash: 87092da · 82751c7 · 12c2559 · 3b9f43e` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107) · [#108](https://github.com/The-AIOS/aios/pull/108) · [#109](https://github.com/The-AIOS/aios/pull/109)
+`hash: 87092da · 82751c7 · 12c2559 · 3b9f43e · 3940ac8` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107) · [#108](https://github.com/The-AIOS/aios/pull/108) · [#109](https://github.com/The-AIOS/aios/pull/109)
 
 > **What you can now do.** Four things: the framework can derive **what you are building toward** and connect your work to it — while staying completely silent until your vault has the evidence to do it honestly. Your agents badge stops silently reading zero. `CHEATSHEET.md` §1 tells you **what to say** to get the most out of AIOS rather than what to type. And `CONTRIBUTING.md` now routes you to the right repo of the three and gives you the actual commands to contribute.
 
