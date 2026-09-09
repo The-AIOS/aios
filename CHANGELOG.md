@@ -84,10 +84,6 @@ A new **`finding-your-why`** skill derives the second answer from your observed 
 
 When you cross it, you get **one** warm offer at a `/close-day` — two or three candidates with their evidence, in your own words, open to refinement. Edit it and your words win; decline and it waits 90 days. It also requires a *timely* close, so a multi-day catch-up never burns it.
 
-### `/aios:compact` — the antifragile count now measures structure
-
-The old quick-read could report a file *doubled by a bad edit* as a plausible entry count — and compacting a doubled file can tombstone into the copy holding your newest content. Step 3.5's probe now reports `entries / highest / duplicated` and **stops on mismatch**. **Nothing for you to do.** ([#112](https://github.com/The-AIOS/aios/pull/112))
-
 ### Your agents badge could read 0 while the note listed tasks
 
 If you have seen your surface's agents badge at **0** beside a `## Agents can handle` section that visibly lists work — the app and the IDE panel were being honest. The note was wrong.
