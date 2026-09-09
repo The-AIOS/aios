@@ -1054,6 +1054,15 @@ jobs:
         # produces the downgrade on the same inputs.
         run: bash tests/update-local-ahead.test.sh
 
+      - name: Step 2.7 gives one rule per dual-owned file, with no replaced prose left behind
+        # A session reads the spec top-down and acts on the FIRST matching instruction, so a
+        # stale description is not dead text -- it is the rule that runs. On 2026-09-08 an edit
+        # replaced the mcps/_index.md handling by anchoring on the code fence, which left the
+        # sentence introducing the OLD approach sitting above the new one: two contradictory
+        # rules for one file, data-losing one first. Only reading the spec as written catches
+        # this; a hand-run of the command follows intent and sails past it.
+        run: bash tests/update-dual-owned-rules.test.sh
+
       - name: the snapshot archiver survives concurrent writers
         # AI-102's whole point. The suite injects a realistic decide-to-write window into a
         # locked and an unlocked copy and races six writers through each: the unlocked control

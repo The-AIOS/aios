@@ -106,6 +106,14 @@ CI now enforces both halves, gated by event so an open PR is never failed for do
 
 **Action required:** none.
 
+### `/aios:update` held two contradictory rules for one file, and the losing one came first
+
+**What you can now do.** Nothing to change — but if you keep your own notes in `mcps/_index.md`, this protected them. Step 2.7 was carrying **two** rules for that file: the current one (keep your version and show you canonical's diff) and a replaced one that copied only your `## Bundling candidates` section forward — silently dropping anything you'd written elsewhere in the file. The replaced rule appeared **first**, and a session acts on the first instruction that matches.
+
+Both are cleaned up, and a check now asserts Step 2.7 states exactly one strategy per shared file with no prose from a replaced approach left behind.
+
+**Action required:** none. If you have written in `mcps/_index.md` outside the bundling-candidates section, it is worth a look — but the current rule never overwrites that file, so nothing should be missing.
+
 ### You can pause the quota autopilot for a while
 
 **What you can now do.** Suspend account rotation temporarily without uninstalling anything or editing thresholds — useful when you want to stay on one account through a piece of work. Write a future expiry into `~/.claude/quota-watch.paused`:
