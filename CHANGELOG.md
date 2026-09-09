@@ -40,7 +40,7 @@
 
 ## 2026-09-08 — The framework could tell you what you did, and neither doc could tell you where to go
 
-`hash: 87092da · 82751c7` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107)
+`hash: 87092da · 82751c7 · 12c2559` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107) · [#108](https://github.com/The-AIOS/aios/pull/108)
 
 > **What you can now do.** Nothing, on day one — and that is the design, not a gap. Every tracked thing in this framework *completes*: a key flips, a ship lands, a streak extends, and then asks what is next. That machinery answers **what did I do**. Nothing answered **what did it mean**. This adds the second answer — but only once your own vault holds enough evidence to derive it honestly, because a purpose the system invents for you is worse than none.
 
@@ -59,6 +59,23 @@ The worked example is one of ours, and it is why the layer rule needed replacing
 One sentence resolves a collision this file had been carrying: it uses **"extension"** to mean `custom/`, while **Glass is also an extension** — an IDE one, a separate repo, unrelated.
 
 And under the existing *"evidence before assertions"* rule, what that means when the claim is **behavioural** rather than mechanical: a test proves a function, but it cannot prove *"the rewrite still makes a session behave the same way."* For that, **pre-register the criteria** — write the scenarios before the new text exists, state the bar so it can fail, run both versions, read the results against the written criterion rather than by keyword, and publish the criteria **before** the numbers. The order is the evidence.
+
+### The `## Agents can handle` mirror could under-count to ZERO, silently
+
+**State.** Your surface's agents badge can read **0** while today's note visibly lists tasks under `## Agents can handle`. If you have seen that, nothing was broken in the app or the IDE panel — they were being honest, and the note was the thing that was wrong.
+
+Both surfaces parse that section into a dispatch picker, and a bullet binds only if it carries a `[[wikilink]]` **or** a **backticked** `` `/command` ``. The failure runs two ways and only one is loud: an over-count announces itself as a phantom button you can click, while an **under-count is silent** — the bullet is skipped, the badge counts one fewer, and there is no error, no phantom and no missing UI to notice. Measured with the surfaces' own parser over one vault's recent notes: **0 of 3** bullets bound one day, **1 of 3** the next, **1 of 4** the next, with the section's own header claiming `3` throughout.
+
+**The cause was not sloppy prose.** It was `` `spawn ingest` `` and `` `ingest` `` written in backticks *without the slash* — tokens that read as command references, so nothing about them looks wrong. Two things in the docs made that the path of least resistance, and both are fixed:
+
+- `CLAUDE.md` stated that *"a `/token` becomes a command to run"*. **It does not** — the backticks are mandatory in both parsers, so a bare `/aios:ingest` binds nothing. A documented form with no effect.
+- `CLAUDE.md` and `/today`'s template documented **only the agent form**, while `/today`'s own rules list *ingest* as delegatable. A writer with an ingest task had no template to copy, so it improvised — and improvisation does not bind.
+
+**Act — nothing for you to do; three canonical fixes land on your next sync.** `CLAUDE.md` now states that the failure runs both ways, corrects the bare-`/token` claim, documents **both** binding forms, and names the substitution to avoid (route an ingest to `` `/aios:ingest` ``, never `` `spawn ingest` `` — which is also the human-only path an agent must never invoke). `/today` shows both forms **in the template**, not only in prose, and writes the `**N tasks…**` header from the count that is live *and* bindable. `/close-day`'s existing agents-mirror reconcile — which handled only the over-count — now also reports the silent direction: *"{N} of {M} bullets carry no dispatch target, so the surfaces cannot see them."*
+
+**Deliberately NOT changed: the surfaces.** Both parsers were correct throughout, and were verified byte-for-byte equivalent in behaviour (`aios-glass/src/tasks/agentParse.ts`, `aios-app/src/main/aios.ts`). Making a badge count unroutable rows would trade a silent under-count for a button that does nothing. A surface reporting *"M listed, N routable"* so the number explains itself is a payload change shared by every surface, and belongs in its own keyed item.
+
+`tests/agents-mirror-contract.test.sh` (11 checks) pins the binding contract and asserts the documented forms bind while all five near-misses do not — the negative cases are the control, and the whole suite is worthless without them. The contract was then cross-checked against the **compiled shipping Glass parser** and agrees on all 7 cases, so this is not canonical describing a surface from memory. Mutation-verified: restoring the false `/token` claim, dropping the command form, deleting the template's second line, removing close-day's under-count paragraph, and loosening the contract to accept a slash-less token each fail the suite.
 
 ### `CONTRIBUTING.md` — and then the dance itself, because "fork → branch → PR" was five words with no starting point
 

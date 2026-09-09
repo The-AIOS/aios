@@ -1210,6 +1210,16 @@ jobs:
         # terminal product that happens to have an app.
         run: bash tests/contribution-router.test.sh
 
+      - name: the agents mirror stays bindable (the silent under-count)
+        # The mirror is parsed into a dispatch picker by both surfaces, and its failure
+        # runs two ways with only one loud. An over-count announces itself as a phantom
+        # button; an UNDER-count is silent -- a bullet with no bindable target is skipped,
+        # the badge reads zero beside a note that visibly lists the tasks, and nothing
+        # reports it. Measured cause was not prose but `spawn ingest` in backticks with no
+        # slash: it looks like a command reference. This asserts the docs teach only forms
+        # that actually bind, and that close-day checks the silent direction unprompted.
+        run: bash tests/agents-mirror-contract.test.sh
+
       - name: the compass layer ships the method, not one operator's answer
         # This feature was derived from a live vault — a named student's AI session, a
         # biography, corpus percentages, a purpose statement. Every one of those is the
