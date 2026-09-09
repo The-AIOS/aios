@@ -70,7 +70,7 @@
 
 ## 2026-09-09 — A duplicate close, and a measurement that hid the damage it should have shown
 
-`hash: 49cd137 · 01b46ca · d580446 · 5a0b340 · fa03b0f` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113) · [#117](https://github.com/The-AIOS/aios/pull/117)
+`hash: 49cd137 · 01b46ca · d580446 · 5a0b340 · fa03b0f` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113) · [#111](https://github.com/The-AIOS/aios/pull/111) · [#117](https://github.com/The-AIOS/aios/pull/117) · [#118](https://github.com/The-AIOS/aios/pull/118) · [#119](https://github.com/The-AIOS/aios/pull/119)
 
 > **What you can now do.** Nothing new to learn — one thing stops going wrong. `/aios:close-session` no longer appends a second block to your daily note when the only commits since your last close belong to **other sessions**.
 
@@ -105,6 +105,14 @@ It now compares the metric that actually triggered the swap. And a failed adopti
 CI now enforces both halves, gated by event so an open PR is never failed for doing the right thing: the line is required always, a filled value only once it lands on `main`.
 
 **Action required:** none.
+
+### `/aios:update` held two contradictory rules for one file, and the losing one came first
+
+**What you can now do.** Nothing to change — but if you keep your own notes in `mcps/_index.md`, this protected them. Step 2.7 was carrying **two** rules for that file: the current one (keep your version and show you canonical's diff) and a replaced one that copied only your `## Bundling candidates` section forward — silently dropping anything you'd written elsewhere in the file. The replaced rule appeared **first**, and a session acts on the first instruction that matches.
+
+Both are cleaned up, and a check now asserts Step 2.7 states exactly one strategy per shared file with no prose from a replaced approach left behind.
+
+**Action required:** none. If you have written in `mcps/_index.md` outside the bundling-candidates section, it is worth a look — but the current rule never overwrites that file, so nothing should be missing.
 
 ### You can pause the quota autopilot for a while
 

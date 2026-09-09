@@ -474,7 +474,7 @@ For each changed Tier 1 file:
      # Report: old .gitignore backed up to vault/04 - backups/…, and say WHICH carry path ran.
    fi
    ```
-   For `marketplace.json`: apply the JSON union (its Tier-1 entry). For **`mcps/_index.md`**: take upstream's file, then carry the operator's `## Bundling candidates` body over upstream's — the heading is the ownership boundary, so no marker has to be introduced and a legacy copy needs no migration.
+   For `marketplace.json`: apply the JSON union (its Tier-1 entry).
    For **`mcps/_index.md`** the rule is **KEEP LOCAL AND REPORT, never merge and never overwrite.** A section-scoped splice was built and tested first and is deliberately *not* shipped: operators write wherever the point belongs — measured on a live vault, one addition sat in `## Bundling candidates` (which a splice carries) and another under `## Adding a new MCP` (which it silently dropped). Arbitrary prose in arbitrary sections has no mechanical merge, so the honest move is to protect the data and hand the human the delta:
 
    ```bash
@@ -491,7 +491,7 @@ For each changed Tier 1 file:
 
    This trades an automatic canonical update for a guarantee that nothing of the operator's is lost, which is the right side of that trade for a registry file: a missed canonical row is visible in the diff above and costs a manual paste, while a silent overwrite of their rows is unrecoverable without going to `vault/04 - backups/` — and backups are never auto-restored. If canonical's guidance in this file ever needs to reach every operator regardless, that is a CHANGELOG action item, not a silent replace.
 
-   These three never take the plain overwrite below.   These three never take the plain overwrite below.
+   These three never take the plain overwrite below.
 3. **Overwrite** (every OTHER changed file) using the right tool:
    - `.md` files **inside** `vault/` → `mcp__obsidian__write_note` (keeps Obsidian graph consistent)
    - `.md` files **outside** `vault/` (root + `hooks/`, `mcps/`, `plugins/`, `skills/`, `agents/`, `templates/`) → `Bash cp` or `Write`
