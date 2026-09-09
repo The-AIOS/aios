@@ -65,8 +65,16 @@ hline=$(awk '/^## [0-9]{4}-[0-9]{2}-[0-9]{2}/{n++} n==1 && /^`hash:/{print; exit
   || no "the newest entry has NO \`hash:\` line" "with no hashes to test, the entry is silently skipped for every operator forever"
 if [ "${AIOS_CHANGELOG_REQUIRE_HASH:-0}" = "1" ]; then
   val=$(printf '%s' "$hline" | sed -E 's/^`hash:([^`]*)`.*/\1/' | tr -d ' ')
-  [ -n "$val" ] && ok "on main: the hash is filled ($val)" \
+  [ -n "$val" ] && ok "on main: the hash field is filled" \
     || no "on main: \`hash:\` is still empty" "fill it with the squash-merge commit; an empty value reads NEW for every operator until someone does"
+  # EVERY ELEMENT, not just the field. A trailing or interior empty element -- the shape
+  # `a · b · ` that an unset shell variable produces -- passes the non-empty test above and
+  # then exits 128 on the ancestor check, which the any-hash rule reads as "not synced", so
+  # the entry reads NEW forever. That is the exact failure this section exists to prevent,
+  # one level down, and it shipped to main once before this check existed.
+  bad=$(printf '%s' "$val" | awk -F'·' '{for(i=1;i<=NF;i++){e=$i; gsub(/^[ \t]+|[ \t]+$/,"",e); if(e=="") printf "%d ", i; else if(e !~ /^[0-9a-f]{7,40}$/) printf "%d(%s) ", i, e}}')
+  [ -z "$bad" ] && ok "on main: every hash element is a short SHA ($(printf '%s' "$val" | awk -F'·' '{print NF}') elements)" \
+    || no "on main: malformed hash element(s) at position $bad" "an empty or non-SHA element exits 128 on the ancestor test -> the entry reads NEW for every operator forever"
 else
   printf '  ok   hash value not required here (open PR: empty is the correct pre-merge state)\n'; PASS=$((PASS+1))
 fi
