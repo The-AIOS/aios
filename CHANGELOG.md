@@ -68,9 +68,9 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
-## 2026-09-09 — A duplicate close could append a second block
+## 2026-09-09 — A duplicate close, and a measurement that hid the damage it should have shown
 
-`hash: ` · [#113](https://github.com/The-AIOS/aios/pull/113)
+`hash: 49cd137 · 01b46ca` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113)
 
 > **What you can now do.** Nothing new to learn — one thing stops going wrong. `/aios:close-session` no longer appends a second block to your daily note when the only commits since your last close belong to **other sessions**.
 
@@ -81,6 +81,14 @@ The gate asked `ANYTAG -eq 1`. But `ANYTAG` is a **count** of tagged commits, no
 The condition is now `-ge 1`, so the precise path is taken whenever provenance exists at all and the fallback is reserved for the case it was written for: `ANYTAG == 0`.
 
 **Action required:** none — `/aios:update` lands it. If a recent daily note carries two near-identical `## Session —` blocks written minutes apart, that was this; delete the extra by hand.
+
+### `/aios:compact` counted your antifragile entries in a way that could hide a damaged file
+
+**What you can now do.** Trust the number. Step 3.5's size gate used a bare heading count, which broke two ways: on a vault whose meta-pattern index uses numbered headings it counted the index as entries (roughly double), and on a file carrying a stale copy of itself it reported a plausible entry total instead of *"damaged"* — so the count concealed the very corruption a measurement exists to expose.
+
+The probe now reports **entries, highest number, and duplicates** in one pass, counted *outside* the `## Meta-patterns` section, and carries an invariant: **entries == highest, duplicates == 0.** A mismatch means structural damage and the pass **stops and diffs** before compacting anything — tombstoning against a doubled file can destroy the one copy holding the newest content. The index boundary is now the section itself rather than a heading shape, because an index may be numbered *or* lettered.
+
+**Action required:** none. Next time `/aios:compact` runs it measures this way. If it reports a mismatch, stop and diff before letting it compact.
 
 ## 2026-09-08 — Your why, your agents badge, and docs that route you
 
