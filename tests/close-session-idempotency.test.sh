@@ -137,7 +137,34 @@ gate3(){
   range=$(git log --format='%H' "${stamped}..HEAD" 2>/dev/null)
   for c in $range; do
     b=$(git log -1 --format='%B' "$c" 2>/dev/null)
-    printf '%s' "$b" | grep -q '^AIOS-Session: ' && anytag=1
+    # A COUNT, exactly as the shipped gate computes it (`... | grep -c .`). Transcribing
+    # this as a boolean is what let the -eq/-ge defect live: the suite then exercised
+    # logic the command does not run. See tests 15-16.
+    printf '%s' "$b" | grep -q '^AIOS-Session: ' && anytag=$((anytag+1))
+    printf '%s' "$b" | grep -q "^AIOS-Session: ${sid}$" || continue
+    printf '%s' "$b" | head -1 | grep -qE '^session: ' && continue
+    mine=$((mine+1))
+  done
+  if [ "$anytag" -ge 1 ]; then
+    [ "$mine" -eq 0 ] && echo SKIP || echo APPEND
+  else
+    local w
+    w=$(printf '%s\n' "$range" | while IFS= read -r c; do [ -n "$c" ] && git log -1 --format=%s "$c"; done | grep -cvE '^session: ')
+    [ "$w" -eq 0 ] && echo SKIP || echo APPEND
+  fi
+}
+
+# the SHIPPED-BUT-BROKEN variant: identical except `-eq 1`. Kept so test 16 can prove
+# the regression case actually discriminates.
+gate3_eq(){
+  local sid="$1" prior stamped range mine=0 anytag=0 b
+  prior=$(grep -o "<!-- close-session: ${sid} @ [0-9a-f]* -->" "$NOTE" 2>/dev/null | tail -1)
+  [ -z "$prior" ] && { echo APPEND; return; }
+  stamped=$(printf '%s' "$prior" | sed -E 's/.* @ ([0-9a-f]*) -->/\1/')
+  range=$(git log --format='%H' "${stamped}..HEAD" 2>/dev/null)
+  for c in $range; do
+    b=$(git log -1 --format='%B' "$c" 2>/dev/null)
+    printf '%s' "$b" | grep -q '^AIOS-Session: ' && anytag=$((anytag+1))
     printf '%s' "$b" | grep -q "^AIOS-Session: ${sid}$" || continue
     printf '%s' "$b" | head -1 | grep -qE '^session: ' && continue
     mine=$((mine+1))
@@ -197,6 +224,27 @@ if command -v zsh >/dev/null 2>&1; then
 else
   sk "14. zsh unavailable — the portability proof cannot run"
 fi
+
+# ---------------------------------------------------------------------------
+# TESTS 15-16 — ANYTAG IS A COUNT, NOT A BOOLEAN.
+# The precise path must be taken whenever provenance EXISTS (anytag >= 1). The degrade
+# branch is for "provenance is unknowable", which is anytag == 0 and nothing else.
+# With `-eq 1`, any range holding TWO OR MORE tagged commits — the normal case in a vault
+# written by several sessions — fell through to the coarse rule, which counts a PEER's
+# commit as this session's work: the exact failure the AIOS-Session trailer was added to
+# kill. Measured on a live vault 2026-09-05: ANYTAG=4, MINE=0 (a true duplicate) and the
+# fallback still answered APPEND.
+# ---------------------------------------------------------------------------
+SID3="12341234-5678-90ab-cdef-000000000000"
+printf '# note3\n' > "$NOTE"
+echo y >> f; git add f; git commit -q -m "base3"
+printf '## Session — 12:00 | w\n<!-- close-session: %s @ %s -->\nb\n' "$SID" "$(git rev-parse HEAD)" >> "$NOTE"
+git add "$NOTE"; commit_as "$SID" "session: 12:00 w"
+# TWO peers commit; this session does nothing. anytag=3, mine=0 → a true duplicate.
+commit_as "$SID2" "feat: peer one ships"
+commit_as "$SID3" "feat: peer two ships"
+have "$(gate3 "$SID")" "SKIP"   "15. 2+ tagged commits, none mine → SKIP (precise path still taken)"
+have "$(gate3_eq "$SID")" "APPEND" "16. the -eq 1 variant APPENDs on that same state (the defect, reproduced)"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1
