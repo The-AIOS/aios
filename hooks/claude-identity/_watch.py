@@ -395,9 +395,52 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
     return None, "all alternatives still capped: " + "; ".join(blocked)
 
 
+PAUSE_FILE = os.path.join(CONFIG_DIR, "quota-watch.paused")
+
+
+def paused_until() -> float:
+    """Operator pause: rotation is suspended while PAUSE_FILE holds a future
+    epoch (or ISO-8601 with offset). An expired or malformed marker is ignored
+    and removed, so a forgotten pause cannot silently disable the autopilot
+    forever. 0 means not paused.
+
+    Why a file and not an env var: the hot path runs from the statusLine pipe,
+    whose environment the operator does not control; a file under CONFIG_DIR is
+    the one channel both the launchd agent and the statusLine kick can read."""
+    try:
+        with open(PAUSE_FILE) as f:
+            raw = f.read().strip()
+    except FileNotFoundError:
+        return 0
+    except Exception:
+        return 0
+    until = 0.0
+    try:
+        until = float(raw)
+    except ValueError:
+        try:
+            from datetime import datetime
+            until = datetime.fromisoformat(raw).timestamp()
+        except Exception:
+            until = 0.0
+    if until <= time.time():
+        try:
+            os.remove(PAUSE_FILE)
+            log(f"pause marker expired or unreadable ({raw!r}) — removed, autopilot resumes")
+        except OSError:
+            pass
+        return 0
+    return until
+
+
 def main(self_path: str) -> None:
     try:
         t5, t7 = thresholds()
+
+        until = paused_until()
+        if until:
+            log(f"PAUSED by operator until {time.strftime('%Y-%m-%d %H:%M', time.localtime(until))} — no rotation, no adoption check")
+            return
 
         if not os.path.exists(CACHE):
             log("no cache yet — skip (is the Stop hook installed?)")
