@@ -1229,6 +1229,13 @@ jobs:
         # Checks the NEWEST entry only; history predates the rule and is not rewritten.
         run: bash tests/changelog-entry-shape.test.sh
 
+      - name: compact's antifragile entry probe measures structure, not a bare count
+        # The retired quick-read (grep -c '^### [0-9]') over-counted numbered meta-pattern
+        # indexes (~2x) and read a file DOUBLED by a bad edit as "207 entries" instead of
+        # "damaged" -- concealing the exact failure a measurement exists to expose. The suite
+        # extracts the document's own probe and runs it against incident-shaped fixtures.
+        run: bash tests/compact-entry-count.test.sh
+
       - name: the changelog is read in the operator's language, and only as far as needed
         # Two operator reports. The file is 74k+ words and grows, while a sync needs one entry --
         # Step 1.5 used to say "Read CHANGELOG.md", so everyone ingested all of it every time. And
