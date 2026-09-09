@@ -70,7 +70,7 @@
 
 ## 2026-09-09 — A duplicate close, and a measurement that hid the damage it should have shown
 
-`hash: 49cd137 · 01b46ca` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113)
+`hash: 49cd137 · 01b46ca` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113) · [#117](https://github.com/The-AIOS/aios/pull/117)
 
 > **What you can now do.** Nothing new to learn — one thing stops going wrong. `/aios:close-session` no longer appends a second block to your daily note when the only commits since your last close belong to **other sessions**.
 
@@ -89,6 +89,14 @@ The condition is now `-ge 1`, so the precise path is taken whenever provenance e
 The probe now reports **entries, highest number, and duplicates** in one pass, counted *outside* the `## Meta-patterns` section, and carries an invariant: **entries == highest, duplicates == 0.** A mismatch means structural damage and the pass **stops and diffs** before compacting anything — tombstoning against a doubled file can destroy the one copy holding the newest content. The index boundary is now the section itself rather than a heading shape, because an index may be numbered *or* lettered.
 
 **Action required:** none. Next time `/aios:compact` runs it measures this way. If it reports a mismatch, stop and diff before letting it compact.
+
+### An entry could ship with an empty `hash:` and read as new forever
+
+**What you can now do.** Nothing to change — this one is about entries reaching you correctly. `CONTRIBUTING.md` told contributors to cite the PR number and add the hash after merge, without saying what the field holds meanwhile. It now says: **leave the line present with an empty value, never omit the line** — because the two mistakes are not symmetric. An empty value keeps the entry *shown* until a maintainer fills it. A missing line has nothing to test, so "already synced" is vacuously true and the entry is **silently skipped for every operator, forever.**
+
+CI now enforces both halves, gated by event so an open PR is never failed for doing the right thing: the line is required always, a filled value only once it lands on `main`.
+
+**Action required:** none.
 
 ## 2026-09-08 — Your why, your agents badge, and docs that route you
 

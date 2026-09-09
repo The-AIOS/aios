@@ -1229,6 +1229,18 @@ jobs:
         # Checks the NEWEST entry only; history predates the rule and is not rewritten.
         run: bash tests/changelog-entry-shape.test.sh
 
+      - name: on main, the newest changelog entry's hash is filled in
+        # Same suite, one extra assertion enabled only for a push to main. An empty
+        # `hash: ` is CORRECT on an open PR (the squash commit does not exist yet) and
+        # wrong the moment it lands: merge-base exits 128 on an empty value, the any-hash
+        # rule reads that as "not synced", and the entry reads NEW for every operator
+        # until a maintainer fills it. Gating by event is what lets the check be strict
+        # on main without failing contributors for doing the right thing.
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          AIOS_CHANGELOG_REQUIRE_HASH: '1'
+        run: bash tests/changelog-entry-shape.test.sh
+
       - name: compact's antifragile entry probe measures structure, not a bare count
         # The retired quick-read (grep -c '^### [0-9]') over-counted numbered meta-pattern
         # indexes (~2x) and read a file DOUBLED by a bad edit as "207 entries" instead of
