@@ -53,6 +53,43 @@ check_ban "development archaeology"      'took (two|three|four) tries|the first 
 check_ban "naming deliberation"          'the first name was wrong|was .Horizon. for|chosen against a real alternative' "the spec that owns the concept"
 check_ban "vendored-license asides"      "vendored upstream|anthropic's own sample data" "LICENSE-AUDIT.md"
 
+echo "-- 3. the closing rule is stated where entries are written, and is satisfiable without CI --"
+# WHY THE SECOND HALF. The rule was first drafted as "names the deterministic CHECK that catches
+# its class" -- and `tests/` + `.github/` are Tier-0: they NEVER reach an operator vault, while
+# `antifragile.md` is Tier-2 (canonical ships a seed with zero entries). So the file the rule
+# governs is the operator's and the only thing it let them name was the maintainer's: a rule 100%
+# of operators could never satisfy, landing in the file every one of them loads at session start.
+# Same class as a fix placed where it cannot reach the population it governs.
+CL=CLAUDE.md
+grep -qiE 'may not close until it names' "$CL" && ok "the closing rule is in CLAUDE.md" \
+  || no "no closing rule" "an entry that changes nothing is a permanent read cost with no payoff"
+# SCOPED to the rule sentence itself. A file-wide OR alternation passed a mutation that
+# reverted the RULE to "the deterministic check" while a later explanatory paragraph still
+# mentioned hooks -- one survivor satisfied the check. Assert the requirement where it is
+# normative, not wherever the words appear.
+rule_line=$(grep -m1 'may not close until it names' "$CL")
+printf '%s' "$rule_line" | grep -qiE 'hook' && printf '%s' "$rule_line" | grep -qiE 'structural change' \
+  && ok "the mechanism is generalized beyond a CI check (in the rule sentence)" \
+  || no "the rule names only a check" "an operator vault has no tests/ or .github/ -- Tier-0 never syncs, so the rule would be unsatisfiable for every operator"
+grep -qiE 'explicit reason no mechanism can|reason no mechanism' "$CL" \
+  && ok "'no mechanism can' is an allowed answer" \
+  || no "no escape hatch" "judgment calls and operator-behaviour lessons cannot be caught mechanically; forbidding that answer forces a lie"
+grep -qiE 'mechanism is now the memory|mechanism is the memory' "$CL" \
+  && ok "states the compaction payoff" \
+  || no "the payoff is unstated" "without it the rule reads as bookkeeping rather than the lever /aios:compact lacks"
+# canonical hygiene: the rule must not carry the vault measurement that motivated it
+# GENERIC on purpose. Hardcoding the numbers that motivated the rule would only ever catch
+# THIS vault's measurement -- and would itself put a vault-specific figure in canonical's repo.
+# Match the SHAPE of a vault measurement instead, so any contributor's numbers are caught too.
+# The leak signature is a NUMERIC RATIO, nothing else. An earlier version also matched
+# "my vault" / "this vault has|holds" -- which fired on two long-standing canonical lines
+# ("This vault holds two kinds of knowledge", "This vault has two persistence layers") where
+# "this vault" means ANY vault. Broadening a pattern to catch more made it wrong: the right
+# generalization axis was the number shape, not possessive phrasing about vaults.
+grep -qiE '[0-9]+ of [0-9]+ (antifragile )?entries|[0-9]+ (antifragile )?entries[,.]? (against|vs)' "$CL" \
+  && no "a vault-specific measurement leaked into CLAUDE.md" "canonical must never carry a ratio measured on one operator's vault -- the seed ships zero entries, so it is undefined there" \
+  || ok "no vault measurement in the canonical rule"
+
 echo "-- 3. it fits the budget every operator pays for --"
 w=$(wc -w < "$E" | tr -d ' ')
 [ "$w" -le 1500 ] && ok "$w words (budget 1500)" \

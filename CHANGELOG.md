@@ -11,6 +11,14 @@
 >
 > **Retired 2026-07-27:** the 1,002-line `2026-05-23 — Migration playbook` entry (moving off the pre-extraction `{user}/aios` / `{org}/internal-vault` lineage) was removed. It could only ever apply to operators who migrated in May 2026, and it was 45% of this file's lines — read in full by every `/aios:update` on every sync, forever, by everyone it could never apply to. Full text remains in git: `git show b98e84c:CHANGELOG.md`.
 
+> ## How to read this TO the operator — in their language, not this file's
+>
+> **These entries are written in English. That is the source text, not the delivery.** A session presenting them — `/aios:update` shows every new entry — **renders them in the operator's language**, translating as it reads. Reported by an operator: they clicked *Update* in a Spanish-language surface, received an English wall, and could not follow what had changed. An update an operator cannot read is an update that did not land.
+>
+> Take the language from the strongest signal available: the **surface's own language setting** (the AIOS App ships English and Spanish) · the operator's **declared context** (`vault/00 - notes/context/declared/`) · the language they are **writing to you in right now**. Never default to English merely because the file is.
+>
+> Translate the **capability and the action**. Leave unchanged: command names, file paths, `hash:` values, code blocks, and anything the operator has to type.
+
 > ## What belongs in an entry — and what does not
 >
 > **Every entry is read by every operator's session on every `/aios:update`.** That is the whole economics of this file: a sentence written once here is re-read by every operator forever. So an entry answers exactly **two** questions and stops.
@@ -62,9 +70,9 @@
 
 ## 2026-09-08 — Your why, your agents badge, and docs that route you
 
-`hash: 87092da · 82751c7 · 12c2559 · 3b9f43e · 3940ac8` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107) · [#108](https://github.com/The-AIOS/aios/pull/108) · [#109](https://github.com/The-AIOS/aios/pull/109)
+`hash: 87092da · 82751c7 · 12c2559 · 3b9f43e · 3940ac8` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107) · [#108](https://github.com/The-AIOS/aios/pull/108) · [#109](https://github.com/The-AIOS/aios/pull/109) · [#110](https://github.com/The-AIOS/aios/pull/110)
 
-> **What you can now do.** Four things: the framework can derive **what you are building toward** and connect your work to it — while staying completely silent until your vault has the evidence to do it honestly. Your agents badge stops silently reading zero. `CHEATSHEET.md` §1 tells you **what to say** to get the most out of AIOS rather than what to type. And `CONTRIBUTING.md` now routes you to the right repo of the three and gives you the actual commands to contribute.
+> **What you can now do.** The framework can derive **what you are building toward** and connect your work to it — staying silent until your vault has the evidence to do it honestly. Your agents badge stops reading zero. `CHEATSHEET.md` §1 tells you **what to say** rather than what to type. `CONTRIBUTING.md` routes you to the right repo of the three, with the commands. And updates now arrive in your language.
 
 ### The compass — what hasn't changed across everything you've done
 
@@ -72,15 +80,15 @@ Everything this framework tracks *completes*: a key flips, a ship lands, a strea
 
 A new **`finding-your-why`** skill derives the second answer from your observed context — the invariant under maximal variation, filtered by one rule: *if it could ever be checked off, it was a goal, not a purpose*. The result lives as a `## Compass` section in `growth.md`. Once it exists, `/today` adds one clause to the day's biggest item naming the value it expresses, `/7plan` tests your multi-week bet against it, and `/close-day`'s verdict line answers both questions.
 
-**Expect to see nothing for a while, and that is the feature.** You are never asked to state your purpose — asked directly, people answer *"what would a purposeful person say?"* rather than the truth. And a compass drawn from one project's evidence just names that project. So until your vault shows real variation (**3+ projects with `status: active`, 2+ domains**), the framework says nothing about purpose at all: no prompt, no placeholder, no nudge.
+**Expect to see nothing for a while, and that is the feature.** You are never asked to state your purpose — asked directly, people answer *"what would a purposeful person say?"* And a compass drawn from one project just names that project. So until your vault shows real variation (**3+ projects with `status: active`, 2+ domains**), the framework says nothing about purpose: no prompt, no placeholder, no nudge.
 
-When you cross that, you get **one** warm offer at a `/close-day`, as two or three candidates with the evidence behind each, in your own words — explicitly open to refinement. Edit it and your words win; decline and it is not raised again for 90 days. The offer also waits for a *timely* close (today's or yesterday's note), so a multi-day catch-up in the morning never burns it.
+When you cross it, you get **one** warm offer at a `/close-day` — two or three candidates with their evidence, in your own words, open to refinement. Edit it and your words win; decline and it waits 90 days. It also requires a *timely* close, so a multi-day catch-up never burns it.
 
 ### Your agents badge could read 0 while the note listed tasks
 
 If you have seen your surface's agents badge at **0** beside a `## Agents can handle` section that visibly lists work — the app and the IDE panel were being honest. The note was wrong.
 
-A bullet is only dispatchable if it names a target a machine can bind: a `[[wikilink]]` or a **backticked** `` `/command` ``. Anything else is skipped, and the miss is silent — no error, no phantom button, nothing to notice. `/today` had a template for the agent form only, so tasks that belong to a command (an ingest, most often) were written as `` `spawn ingest` `` — which looks right and binds nothing.
+A bullet is only dispatchable if it names a target a machine can bind: a `[[wikilink]]` or a **backticked** `` `/command` ``. Anything else is skipped silently — no error, no phantom button. `/today` had a template for the agent form only, so command-routed tasks (an ingest, most often) were written as `` `spawn ingest` `` — which looks right and binds nothing.
 
 **Nothing for you to do.** `/today` now writes both forms, `CLAUDE.md` documents both, and `/close-day` reports any bullet the surfaces cannot see. Your next morning plan will bind what it lists.
 
@@ -88,16 +96,16 @@ A bullet is only dispatchable if it names a target a machine can bind: a `[[wiki
 
 §1 used to open with shell commands, which an operator running the desktop app never types. It is now a phrasebook of **things to say**, because none of these capabilities announce themselves — you have to know they exist to ask:
 
-- **A second pair of hands** — getting a worker, putting it on a cheap rung for mechanical work (the top and bottom rungs differ ~22× in cost), **letting the session pick the rung and tell you what it picked**, messaging a live worker, asking whether one *actually* finished, and scoping its credentials so a file sweep isn't holding your Gmail.
+- **A second pair of hands** — getting a worker, putting it on a cheap rung for mechanical work (top and bottom differ ~22× in cost), **letting the session pick the rung and say what it picked**, messaging a live worker, asking whether one *actually* finished, and scoping its credentials so a file sweep isn't holding your Gmail.
 - **A specialist**, by the job rather than the filename — pressure-test an architecture, writing that sounds like you, a deck built rather than outlined, a contract read with *"flag what I'd regret"*, an atlas of a book. Describe the job and the session picks from 35 agents.
-- **Capabilities you would not guess are there** — measuring a draft's AI-writing tells against *your own* voice, **watching** a video so the slides and on-screen code survive, research that maps what your vault already decided before sweeping outward.
-- **The two files you never edit by hand** — `USER.md` and `INTENT.md` change by *asking*: *"always put study before email in my morning plan"*, *"you don't need to check with me on daily-note edits anymore"*. And the one that matters most: **autonomy is supposed to grow** — if your sessions still ask permission for things you have approved twenty times, say *"take it from here."*
+- **Capabilities you would not guess are there** — measuring a draft's AI-writing tells against *your own* voice, **watching** a video so slides and on-screen code survive, research that maps what your vault already decided first.
+- **The two files you never edit by hand** — `USER.md` and `INTENT.md` change by *asking*: *"always put study before email in my morning plan"*. And the one that matters most: **autonomy is supposed to grow** — if your sessions still ask permission for things you approved twenty times, say *"take it from here."*
 
 The terminal path keeps every capability, now with `--tier`, `--model` and `--profile` documented and grouped by what you are trying to do.
 
 ### `CONTRIBUTING.md` — which repo, and the actual commands
 
-AIOS ships from three repos and canonical named only itself, so Glass and App bugs got filed here by default. Now: a table of what each repo owns, plus a router that asks **what you observed** rather than which layer you think you are in — the useful case being *a documented flag that has no effect → suspect the surface that executes it, not the doc that describes it*. Unsure after that, file against canonical and we route it.
+AIOS ships from three repos and canonical named only itself, so Glass and App bugs got filed here by default. Now: a table of what each repo owns, plus a router that asks **what you observed** rather than which layer you think you are in — the useful case being *a documented flag with no effect → suspect the surface that executes it, not the doc that describes it*. Unsure after that, file against canonical.
 
 And the mechanics, which were missing entirely: **contribute from a separate clone, never from `~/aios`.** Your vault's `origin` points at your own private repo, and canonical ships a template `vault/` at the same paths your private notes occupy — so branching from your vault and pushing to a fork puts your `context/observed/` in the diff. The new § *The contribution dance* has the commands end to end and the tell that keeps you safe: a tree containing a `.aios-update` file is somebody's vault, not a contribution clone.
 
@@ -106,6 +114,10 @@ And the mechanics, which were missing entirely: **contribute from a separate clo
 - Six references to one operator's personal machine name, and two real people's names inside worked examples, are now generic — the framework's own de-personalization rule applied to itself.
 - `README.md` and `CLAUDE.md` now name the claim the five mechanisms were already making: everyone else teaches you to use a *something*; this produces a *someone*.
 - **Entries like this one are now shorter on purpose.** Every entry is read by your session on every sync, so an entry answers two questions — what you can now do, and what you must do — and the proof (test counts, mutation runs, what we chose *not* to change) stays in the pull request. Today's entry was 5,300 words; this is the same update in 1,300.
+- **Updates now speak your language.** These entries are written in English, but that is the source — the session presenting them translates as it reads, taking your language from your surface, your declared context, or how you write to it. Reported by an operator who clicked *Update* and got an English wall. Commands, paths and anything you type stay unchanged.
+- **Syncing got cheaper.** `/aios:update` read the whole 75,000-word changelog to show you one new entry; it now reads only as far as it needs. A lost tracker gets the three most recent entries plus a note, not the entire history.
+- **`CHEATSHEET.md` §1 now says "Prompt something like this"** where it said "Say something like" — the wording an operator actually asked for.
+- **An `antifragile.md` entry now closes by naming what catches its class** — a check, a hook, a structural change — or by saying nothing mechanical can, which is fine for a judgment call. Once something enforces it, the entry shrinks to a pointer: the mechanism is the memory.
 - **Your notes in `mcps/_index.md` are no longer overwritten.** That file is where sessions record bundling candidates, so it is now treated as shared: if canonical changes it and you have written in it, `/aios:update` **keeps your version** and prints canonical's changes for you to fold in.
 
 ### What you need to do — one read-only check
