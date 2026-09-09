@@ -90,6 +90,14 @@ The probe now reports **entries, highest number, and duplicates** in one pass, c
 
 **Action required:** none. Next time `/aios:compact` runs it measures this way. If it reports a mismatch, stop and diff before letting it compact.
 
+### An entry could ship with an empty `hash:` and read as new forever
+
+**What you can now do.** Nothing to change — this one is about entries reaching you correctly. `CONTRIBUTING.md` told contributors to cite the PR number and add the hash after merge, without saying what the field holds meanwhile. It now says: **leave the line present with an empty value, never omit the line** — because the two mistakes are not symmetric. An empty value keeps the entry *shown* until a maintainer fills it. A missing line has nothing to test, so "already synced" is vacuously true and the entry is **silently skipped for every operator, forever.**
+
+CI now enforces both halves, gated by event so an open PR is never failed for doing the right thing: the line is required always, a filled value only once it lands on `main`.
+
+**Action required:** none.
+
 ## 2026-09-08 — Your why, your agents badge, and docs that route you
 
 `hash: 87092da · 82751c7 · 12c2559 · 3b9f43e · 3940ac8 · 3f2c8db` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107) · [#108](https://github.com/The-AIOS/aios/pull/108) · [#109](https://github.com/The-AIOS/aios/pull/109) · [#110](https://github.com/The-AIOS/aios/pull/110)
