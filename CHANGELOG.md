@@ -70,7 +70,7 @@
 
 ## 2026-09-09 — A duplicate close, and a measurement that hid the damage it should have shown
 
-`hash: 49cd137 · 01b46ca · d580446 · 5a0b340 · fa03b0f · ` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113) · [#111](https://github.com/The-AIOS/aios/pull/111) · [#117](https://github.com/The-AIOS/aios/pull/117) · [#118](https://github.com/The-AIOS/aios/pull/118) · [#119](https://github.com/The-AIOS/aios/pull/119)
+`hash: 49cd137 · 01b46ca · d580446 · 5a0b340 · fa03b0f · 1f08508` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113) · [#111](https://github.com/The-AIOS/aios/pull/111) · [#117](https://github.com/The-AIOS/aios/pull/117) · [#118](https://github.com/The-AIOS/aios/pull/118) · [#119](https://github.com/The-AIOS/aios/pull/119)
 
 > **What you can now do.** Nothing new to learn — one thing stops going wrong. `/aios:close-session` no longer appends a second block to your daily note when the only commits since your last close belong to **other sessions**.
 
@@ -103,6 +103,14 @@ It now compares the metric that actually triggered the swap. And a failed adopti
 **What you can now do.** Nothing to change — this one is about entries reaching you correctly. `CONTRIBUTING.md` told contributors to cite the PR number and add the hash after merge, without saying what the field holds meanwhile. It now says: **leave the line present with an empty value, never omit the line** — because the two mistakes are not symmetric. An empty value keeps the entry *shown* until a maintainer fills it. A missing line has nothing to test, so "already synced" is vacuously true and the entry is **silently skipped for every operator, forever.**
 
 CI now enforces both halves, gated by event so an open PR is never failed for doing the right thing: the line is required always, a filled value only once it lands on `main`.
+
+**Action required:** none.
+
+### The hash check I shipped this morning validated the field, not its elements
+
+**What you can now do.** Nothing to change — this closes a hole in the guard from earlier today. That check asserted the `hash:` field was non-empty once an entry reached `main`. It didn't look *inside*: a field like `` `hash: a · b · ` `` — the shape an unset variable produces — passed, and then the empty element exits 128 on the ancestor test, which is read as *"not synced"*, so the entry reads NEW for you forever. The same failure the check exists to prevent, one level down.
+
+It now validates **every** element as a short SHA, and the open-PR case is unchanged (an empty value is still correct before merge).
 
 **Action required:** none.
 
