@@ -70,7 +70,7 @@
 
 ## 2026-09-09 — A duplicate close could append a second block
 
-`hash: `
+`hash: ` · [#113](https://github.com/The-AIOS/aios/pull/113)
 
 > **What you can now do.** Nothing new to learn — one thing stops going wrong. `/aios:close-session` no longer appends a second block to your daily note when the only commits since your last close belong to **other sessions**.
 
