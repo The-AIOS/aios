@@ -38,7 +38,7 @@ Every file below is overwritten byte-identical to upstream. If the operator cust
 - **Templates:** `templates/aios/` (bundled templates, e.g. `templates/aios/about_me-template.md`) — never `templates/custom/` or `templates/<company>/`. (Moved from the layer root into `templates/aios/` to match the `{layer}/aios/` + `custom/` + `<company>/` convention used by agents, skills, and plugins.)
 - **Skills:** `skills/aios/`, `skills/anthropic/`, `skills/superpowers/` (never `skills/custom/`)
 - **Hooks:** `hooks/*` except `hooks/custom/` (pipeline executor, markitdown converter, claude-identity wrappers)
-- **MCPs:** `mcps/*` except `mcps/custom/` (vendored MCP servers — code + README). **`mcps/custom/_index.md` included in that exception** — canonical ships it as a seed, but an operator's copy carries their own registry rows, so syncing it overwrites their content. Enforced by the `:(exclude)*/custom/**` pathspec in Step 2, not by remembering.
+- **MCPs:** `mcps/*` except `mcps/custom/` (vendored MCP servers — code + README). **`mcps/_index.md` is DUAL-OWNED — MERGE, never byte-replace** (Step 2.7): canonical owns the registry and the guidance, but `CLAUDE.md` § MCP Policy instructs sessions to record bundling candidates in its `## Bundling candidates` section, so that section is the operator's. It is the same shape as `.gitignore` and `marketplace.json`, and the same shape as the `mcps/custom/_index.md` loss below — one directory up, where the AHEAD branch is the only thing that has been protecting it, and only for as long as canonical leaves the file alone. **`mcps/custom/_index.md` included in that exception** — canonical ships it as a seed, but an operator's copy carries their own registry rows, so syncing it overwrites their content. Enforced by the `:(exclude)*/custom/**` pathspec in Step 2, not by remembering.
 - **Agents:** `agents/aios/` (bundled 7-bundle structure: `aios/sales/`, `aios/strategy/`, `aios/finance-legal/`, `aios/engineering/`, `aios/communication/`, `aios/personal/`, `aios/commerce/`) and `agents/_index.md`. Never overwrite `agents/custom/` or `agents/<company>/`.
 - **Plugins:** `plugins/aios/**` (full plugin folder replace, INCLUDING `plugins/aios/commands/*` — these are framework commands, not operator content) except `plugins/aios/commands/custom/`
 - **Other bundled plugins** at top level except `plugins/custom/`, `plugins/aios/`, and `plugins/<company>/`
@@ -448,7 +448,24 @@ For each changed Tier 1 file:
      # Report: old .gitignore backed up to vault/04 - backups/…, and say WHICH carry path ran.
    fi
    ```
-   For `marketplace.json`: apply the JSON union (its Tier-1 entry). These two never take the plain overwrite below.
+   For `marketplace.json`: apply the JSON union (its Tier-1 entry). For **`mcps/_index.md`**: take upstream's file, then carry the operator's `## Bundling candidates` body over upstream's — the heading is the ownership boundary, so no marker has to be introduced and a legacy copy needs no migration.
+   For **`mcps/_index.md`** the rule is **KEEP LOCAL AND REPORT, never merge and never overwrite.** A section-scoped splice was built and tested first and is deliberately *not* shipped: operators write wherever the point belongs — measured on a live vault, one addition sat in `## Bundling candidates` (which a splice carries) and another under `## Adding a new MCP` (which it silently dropped). Arbitrary prose in arbitrary sections has no mechanical merge, so the honest move is to protect the data and hand the human the delta:
+
+   ```bash
+   CLONE="/tmp/aios-update-check"; V="$HOME/aios"; F="mcps/_index.md"
+   if [ ! -f "$V/$F" ]; then cp "$CLONE/$F" "$V/$F"                      # first sync — just take it
+   elif diff -q "$V/$F" "$CLONE/$F" >/dev/null 2>&1; then :              # identical — nothing to do
+   else
+     # DIVERGED. Never overwrite: this file is where CLAUDE.md § MCP Policy tells sessions to
+     # record bundling candidates, so the local copy holds operator content by design.
+     echo "mcps/_index.md diverged — KEPT YOUR VERSION. Canonical's changes, for you to fold in by hand:"
+     diff "$V/$F" "$CLONE/$F" | sed 's/^/    /'
+   fi
+   ```
+
+   This trades an automatic canonical update for a guarantee that nothing of the operator's is lost, which is the right side of that trade for a registry file: a missed canonical row is visible in the diff above and costs a manual paste, while a silent overwrite of their rows is unrecoverable without going to `vault/04 - backups/` — and backups are never auto-restored. If canonical's guidance in this file ever needs to reach every operator regardless, that is a CHANGELOG action item, not a silent replace.
+
+   These three never take the plain overwrite below.   These three never take the plain overwrite below.
 3. **Overwrite** (every OTHER changed file) using the right tool:
    - `.md` files **inside** `vault/` → `mcp__obsidian__write_note` (keeps Obsidian graph consistent)
    - `.md` files **outside** `vault/` (root + `hooks/`, `mcps/`, `plugins/`, `skills/`, `agents/`, `templates/`) → `Bash cp` or `Write`
@@ -582,7 +599,7 @@ fi
   | grep -vE "/custom(/|: )" \
   | grep -vE "(/|: )(\.venv|__pycache__|node_modules|auth|\.DS_Store)(/|$)" \
   | grep -vE "\.(log|pyc)$|oauth|egg-info|\.session$" \
-  | grep -vE "(\.gitignore|marketplace\.json)"   # dual-owned — merged in Step 2.7, never plain-reconciled
+  | grep -vE "(\.gitignore|marketplace\.json|mcps/_index\.md)"   # dual-owned — merged in Step 2.7, never plain-reconciled
 # `/custom(/|: )` drops the operator namespace in BOTH line shapes — a
 # `Files …/custom/_index.md … differ` (framework ships a custom/_index.md SEED;
 # the operator's customized copy is Tier-2 denylist, never overwritten) AND any

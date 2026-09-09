@@ -1220,6 +1220,15 @@ jobs:
         # that actually bind, and that close-day checks the silent direction unprompted.
         run: bash tests/agents-mirror-contract.test.sh
 
+      - name: a changelog entry answers what-you-can-do and what-to-do, and stops
+        # Every entry is read by every operator's session on every /aios:update, so a
+        # sentence here is re-read forever. This file drifted to 5,000-word entries twice
+        # while each paragraph looked worth keeping -- test counts, mutation runs,
+        # "deliberately NOT changed", naming archaeology, a vendored-license aside about a
+        # fictional name in upstream sample data. An operator cannot act on any of it.
+        # Checks the NEWEST entry only; history predates the rule and is not rewritten.
+        run: bash tests/changelog-entry-shape.test.sh
+
       - name: the compass layer ships the method, not one operator's answer
         # This feature was derived from a live vault — a named student's AI session, a
         # biography, corpus percentages, a purpose statement. Every one of those is the

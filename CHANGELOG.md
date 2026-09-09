@@ -11,6 +11,28 @@
 >
 > **Retired 2026-07-27:** the 1,002-line `2026-05-23 — Migration playbook` entry (moving off the pre-extraction `{user}/aios` / `{org}/internal-vault` lineage) was removed. It could only ever apply to operators who migrated in May 2026, and it was 45% of this file's lines — read in full by every `/aios:update` on every sync, forever, by everyone it could never apply to. Full text remains in git: `git show b98e84c:CHANGELOG.md`.
 
+> ## What belongs in an entry — and what does not
+>
+> **Every entry is read by every operator's session on every `/aios:update`.** That is the whole economics of this file: a sentence written once here is re-read by every operator forever. So an entry answers exactly **two** questions and stops.
+>
+> 1. **What can I now do?** — the capability, in plain language.
+> 2. **What must I do?** — the action, or an explicit *nothing*.
+>
+> **The test for any sentence: could the operator do something differently because they read it?** If no, it belongs in the pull request, where it is read once by the person deciding whether to merge.
+>
+> **Out of scope here, with its real home:**
+>
+> - *How it was proven* — test names, check counts, mutation runs, controls, parity verification → **the PR body**. Post-merge, the operator inherits the guarantee, not the argument for it.
+> - *What we deliberately did NOT change*, and why → **the PR body**. An operator cannot act on a non-change.
+> - *Development archaeology* — how many attempts it took, what the first version got wrong → **the commit message**, and `antifragile.md` when the lesson generalises.
+> - *Naming and design deliberation* — the word we rejected and why → the spec or skill that owns the concept.
+> - *Vendored-license and boundary reasoning* → **`LICENSE-AUDIT.md`**, which is where the boundary is drawn.
+> - *Internal hygiene with no operator-visible effect* → one line, or nothing.
+>
+> A fix's **mechanism** is in scope exactly as far as the operator needs it to recognise the symptom or trust the fix — usually a sentence. Its **proof** is not.
+>
+> Keep the whole entry under ~1,500 words including subsections. `tests/changelog-entry-shape.test.sh` enforces the phrase-level bans and the budget, because this file has drifted to 5,000-word entries twice while every individual paragraph looked worth keeping.
+
 > ## Releases → entries
 >
 > Entries here are **date-keyed**. Releases are **tagged in git** with full notes, and published as GitHub Releases. A release contains every entry dated up to and including its tag date, back to the previous release:
@@ -38,185 +60,71 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
-## 2026-09-08 — The framework could tell you what you did, and neither doc could tell you where to go
+## 2026-09-08 — Your why, your agents badge, and docs that route you
 
-`hash: 87092da · 82751c7 · 12c2559 · 3b9f43e` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107) · [#108](https://github.com/The-AIOS/aios/pull/108)
+`hash: 87092da · 82751c7 · 12c2559 · 3b9f43e` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107) · [#108](https://github.com/The-AIOS/aios/pull/108) · [#109](https://github.com/The-AIOS/aios/pull/109)
 
-> **What you can now do.** Nothing, on day one — and that is the design, not a gap. Every tracked thing in this framework *completes*: a key flips, a ship lands, a streak extends, and then asks what is next. That machinery answers **what did I do**. Nothing answered **what did it mean**. This adds the second answer — but only once your own vault holds enough evidence to derive it honestly, because a purpose the system invents for you is worse than none.
+> **What you can now do.** Four things: the framework can derive **what you are building toward** and connect your work to it — while staying completely silent until your vault has the evidence to do it honestly. Your agents badge stops silently reading zero. `CHEATSHEET.md` §1 tells you **what to say** to get the most out of AIOS rather than what to type. And `CONTRIBUTING.md` now routes you to the right repo of the three and gives you the actual commands to contribute.
 
-> **Also today, and the same shape one layer out:** `CONTRIBUTING.md` named two of three repos and routed nobody to Glass or the App, while `CHEATSHEET.md` opened its session chapter with shell commands. **Now you can find the right repo before you file, and get a worker without opening a terminal.**
+### The compass — what hasn't changed across everything you've done
 
-### `CONTRIBUTING.md` — three repos, and a router that asks what you OBSERVED
+Everything this framework tracks *completes*: a key flips, a ship lands, a streak extends, and then asks what is next. That answers **what did I do**. Nothing answered **what did it mean**.
 
-The graph was one-way. Both surface repos already do their half — `aios-app` says *"if your change is to an agent, skill, command or template, it belongs in The-AIOS/aios"*, `aios-glass` opens with *"Glass, not engine"* — and both link back here. **Canonical linked to neither**, in 228 lines naming only itself and `company-template`. So a Glass or App bug got filed against the framework by default, which is also the only repo `/aios:update` tracks.
+A new **`finding-your-why`** skill derives the second answer from your observed context — the invariant under maximal variation, filtered by one rule: *if it could ever be checked off, it was a goal, not a purpose*. The result lives as a `## Compass` section in `growth.md`. Once it exists, `/today` adds one clause to the day's biggest item naming the value it expresses, `/7plan` tests your multi-week bet against it, and `/close-day`'s verdict line answers both questions.
 
-Now: the three repos with what each owns, and one contribution path stated once for all of them — **fork → branch → pull request.** Their setup, gates and house style stay in *their* files; this section's only job is the door, not the doorway.
+**Expect to see nothing for a while, and that is the feature.** You are never asked to state your purpose — asked directly, people answer *"what would a purposeful person say?"* rather than the truth. And a compass drawn from one project's evidence just names that project. So until your vault shows real variation (**3+ projects with `status: active`, 2+ domains**), the framework says nothing about purpose at all: no prompt, no placeholder, no nudge.
 
-**The router asks what you observed, not which layer you think you're in.** *"Agent/skill/command/template → canonical"* is a layer rule, and it only helps if you already know your layer. It fails in exactly the case where misrouting happens — **a documented thing that does not work.** The anchor entry: *a documented flag or field has no effect → suspect the surface that **executes** it, not the doc that **describes** it; check the launch args **and** the running behaviour before filing.*
+When you cross that, you get **one** warm offer at a `/close-day`, as two or three candidates with the evidence behind each, in your own words — explicitly open to refinement. Edit it and your words win; decline and it is not raised again for 90 days. The offer also waits for a *timely* close (today's or yesterday's note), so a multi-day catch-up in the morning never burns it.
 
-The worked example is one of ours, and it is why the layer rule needed replacing: a spawn request carrying `"tier":"fast"` was accepted and silently dropped, and `"tier"` is documented in **three canonical files** — so filing against canonical was the reasonable conclusion and the wrong one. The defect sat in a surface's fulfiller. Also added: *if you're unsure after all that, file against canonical — we route it.* A router with no fallback turns uncertainty into an unfiled issue.
+### Your agents badge could read 0 while the note listed tasks
 
-One sentence resolves a collision this file had been carrying: it uses **"extension"** to mean `custom/`, while **Glass is also an extension** — an IDE one, a separate repo, unrelated.
+If you have seen your surface's agents badge at **0** beside a `## Agents can handle` section that visibly lists work — the app and the IDE panel were being honest. The note was wrong.
 
-And under the existing *"evidence before assertions"* rule, what that means when the claim is **behavioural** rather than mechanical: a test proves a function, but it cannot prove *"the rewrite still makes a session behave the same way."* For that, **pre-register the criteria** — write the scenarios before the new text exists, state the bar so it can fail, run both versions, read the results against the written criterion rather than by keyword, and publish the criteria **before** the numbers. The order is the evidence.
+A bullet is only dispatchable if it names a target a machine can bind: a `[[wikilink]]` or a **backticked** `` `/command` ``. Anything else is skipped, and the miss is silent — no error, no phantom button, nothing to notice. `/today` had a template for the agent form only, so tasks that belong to a command (an ingest, most often) were written as `` `spawn ingest` `` — which looks right and binds nothing.
 
-### The `## Agents can handle` mirror could under-count to ZERO, silently
+**Nothing for you to do.** `/today` now writes both forms, `CLAUDE.md` documents both, and `/close-day` reports any bullet the surfaces cannot see. Your next morning plan will bind what it lists.
 
-**State.** Your surface's agents badge can read **0** while today's note visibly lists tasks under `## Agents can handle`. If you have seen that, nothing was broken in the app or the IDE panel — they were being honest, and the note was the thing that was wrong.
+### `CHEATSHEET.md` §1 — what to say, not what to type
 
-Both surfaces parse that section into a dispatch picker, and a bullet binds only if it carries a `[[wikilink]]` **or** a **backticked** `` `/command` ``. The failure runs two ways and only one is loud: an over-count announces itself as a phantom button you can click, while an **under-count is silent** — the bullet is skipped, the badge counts one fewer, and there is no error, no phantom and no missing UI to notice. Measured with the surfaces' own parser over one vault's recent notes: **0 of 3** bullets bound one day, **1 of 3** the next, **1 of 4** the next, with the section's own header claiming `3` throughout.
+§1 used to open with shell commands, which an operator running the desktop app never types. It is now a phrasebook of **things to say**, because none of these capabilities announce themselves — you have to know they exist to ask:
 
-**The cause was not sloppy prose.** It was `` `spawn ingest` `` and `` `ingest` `` written in backticks *without the slash* — tokens that read as command references, so nothing about them looks wrong. Two things in the docs made that the path of least resistance, and both are fixed:
+- **A second pair of hands** — getting a worker, putting it on a cheap rung for mechanical work (the top and bottom rungs differ ~22× in cost), **letting the session pick the rung and tell you what it picked**, messaging a live worker, asking whether one *actually* finished, and scoping its credentials so a file sweep isn't holding your Gmail.
+- **A specialist**, by the job rather than the filename — pressure-test an architecture, writing that sounds like you, a deck built rather than outlined, a contract read with *"flag what I'd regret"*, an atlas of a book. Describe the job and the session picks from 35 agents.
+- **Capabilities you would not guess are there** — measuring a draft's AI-writing tells against *your own* voice, **watching** a video so the slides and on-screen code survive, research that maps what your vault already decided before sweeping outward.
+- **The two files you never edit by hand** — `USER.md` and `INTENT.md` change by *asking*: *"always put study before email in my morning plan"*, *"you don't need to check with me on daily-note edits anymore"*. And the one that matters most: **autonomy is supposed to grow** — if your sessions still ask permission for things you have approved twenty times, say *"take it from here."*
 
-- `CLAUDE.md` stated that *"a `/token` becomes a command to run"*. **It does not** — the backticks are mandatory in both parsers, so a bare `/aios:ingest` binds nothing. A documented form with no effect.
-- `CLAUDE.md` and `/today`'s template documented **only the agent form**, while `/today`'s own rules list *ingest* as delegatable. A writer with an ingest task had no template to copy, so it improvised — and improvisation does not bind.
+The terminal path keeps every capability, now with `--tier`, `--model` and `--profile` documented and grouped by what you are trying to do.
 
-**Act — nothing for you to do; three canonical fixes land on your next sync.** `CLAUDE.md` now states that the failure runs both ways, corrects the bare-`/token` claim, documents **both** binding forms, and names the substitution to avoid (route an ingest to `` `/aios:ingest` ``, never `` `spawn ingest` `` — which is also the human-only path an agent must never invoke). `/today` shows both forms **in the template**, not only in prose, and writes the `**N tasks…**` header from the count that is live *and* bindable. `/close-day`'s existing agents-mirror reconcile — which handled only the over-count — now also reports the silent direction: *"{N} of {M} bullets carry no dispatch target, so the surfaces cannot see them."*
+### `CONTRIBUTING.md` — which repo, and the actual commands
 
-**Deliberately NOT changed: the surfaces.** Both parsers were correct throughout, and were verified byte-for-byte equivalent in behaviour (`aios-glass/src/tasks/agentParse.ts`, `aios-app/src/main/aios.ts`). Making a badge count unroutable rows would trade a silent under-count for a button that does nothing. A surface reporting *"M listed, N routable"* so the number explains itself is a payload change shared by every surface, and belongs in its own keyed item.
+AIOS ships from three repos and canonical named only itself, so Glass and App bugs got filed here by default. Now: a table of what each repo owns, plus a router that asks **what you observed** rather than which layer you think you are in — the useful case being *a documented flag that has no effect → suspect the surface that executes it, not the doc that describes it*. Unsure after that, file against canonical and we route it.
 
-`tests/agents-mirror-contract.test.sh` (11 checks) pins the binding contract and asserts the documented forms bind while all five near-misses do not — the negative cases are the control, and the whole suite is worthless without them. The contract was then cross-checked against the **compiled shipping Glass parser** and agrees on all 7 cases, so this is not canonical describing a surface from memory. Mutation-verified: restoring the false `/token` claim, dropping the command form, deleting the template's second line, removing close-day's under-count paragraph, and loosening the contract to accept a slash-less token each fail the suite.
+And the mechanics, which were missing entirely: **contribute from a separate clone, never from `~/aios`.** Your vault's `origin` points at your own private repo, and canonical ships a template `vault/` at the same paths your private notes occupy — so branching from your vault and pushing to a fork puts your `context/observed/` in the diff. The new § *The contribution dance* has the commands end to end and the tell that keeps you safe: a tree containing a `.aios-update` file is somebody's vault, not a contribution clone.
 
-### `CONTRIBUTING.md` — and then the dance itself, because "fork → branch → PR" was five words with no starting point
+### Also
 
-The router above got a contributor to the right repo and stopped. The whole file carried **zero `git` or `gh` commands**, and the one path statement — *fork → branch → pull request* — appeared once, as a clause.
+- Six references to one operator's personal machine name, and two real people's names inside worked examples, are now generic — the framework's own de-personalization rule applied to itself.
+- `README.md` and `CLAUDE.md` now name the claim the five mechanisms were already making: everyone else teaches you to use a *something*; this produces a *someone*.
+- **Entries like this one are now shorter on purpose.** Every entry is read by your session on every sync, so an entry answers two questions — what you can now do, and what you must do — and the proof (test counts, mutation runs, what we chose *not* to change) stays in the pull request. Today's entry was 5,300 words; this is the same update in 1,300.
+- **Your notes in `mcps/_index.md` are no longer overwritten.** That file is where sessions record bundling candidates, so it is now treated as shared: if canonical changes it and you have written in it, `/aios:update` **keeps your version** and prints canonical's changes for you to fold in.
 
-That reads like missing polish. It is not. **The install flow points an operator's `origin` at their own private vault repo**, and leaves canonical as a `repo=` line in `.aios-update` rather than a git remote (`/aios:update` reaches it by cloning to a temp directory). So the five-word clause had **no starting point from where an operator actually stands** — and the obvious reading of it was the dangerous one: canonical ships a template `vault/` at the same paths a live vault fills, so branching from your vault's `main` and pushing to a fork puts `vault/00 - notes/context/observed/` in the PR diff. That is the § Personal hygiene violation the file calls non-negotiable, arrived at by following the steps that look correct, with *"grep your own diff"* as the only defence.
+### What you need to do — one read-only check
 
-New § **The contribution dance** states the mechanic in one sentence — *contributions come from a second, separate clone that has never held a vault* — and then makes it executable: fork, clone the fork somewhere that is not `~/aios`, add canonical as `upstream`, branch **from `upstream/main`** every time, push to your fork, `gh pr create --repo`. Two confusions are pre-empted rather than left to be discovered: a **refused push to canonical is the success signal**, not a broken setup; and a branch cut from a stale fork `main` produces a diff nobody can review.
+> **Session reading this during `/aios:update`:** run the check and act on what it returns. *"Already satisfied — no action"* is the expected result on most vaults.
 
-**The tell is mechanical, so it works for a session too:** a tree containing a **`.aios-update`** file is somebody's *vault*, not a contribution clone — canonical does not ship that file, it appears only after a first sync. That discriminates on both install paths, including a vault that was forked rather than cloned. The section closes with the session-facing half, because a human who hits *"no push access"* stops and thinks while a session has no such prompt: check the remotes and that file before the first push, and treat `gh pr create` as the outward-facing action it is.
-
-Checks 10 (11 assertions) target the **commands and the concrete tell**, never the prose around them — a guard that restates the sentence it checks only tests its own restatement, which is a shape this repo has now fixed in seven places. Each branch was mutation-verified reachable: dropping `gh pr create`, softening `.aios-update` to *"that config file"*, unfencing the blocks so the commands stop being copyable, removing the session precondition, and abstracting the leak path all fail the suite.
-
-### `CHEATSHEET.md` — a phrasebook, because nobody with the app types commands
-
-§1 opened with *"How to launch, name, and resume sessions from a terminal"* and a table of shell commands. That is the wrong first thing, and the reason cuts deeper than ordering: **an operator running the desktop app never types any of it.** They ask a session, and the session does the work — including the parts that need a terminal, a second session, or a file edited on their behalf. So the highest-value content in an operating index is not what to *type*. It is **what to say.**
-
-§1 is now a phrasebook. Four tables of *"say something like…"*, and the reason each row exists is that **none of these capabilities announce themselves** — you have to know they exist to ask for them.
-
-**Getting a second pair of hands.** How to get a worker at all · how to put it on a cheap rung when the work is mechanical, with the ~22× spread named so frontier rates on a file sweep read as the transfer they are · **how to let the session choose the rung and say what it picked** — often the best move, since it knows the task's cognitive load better than you do at that moment · handing a live worker more instructions · asking whether it *actually* finished (it reads the worker's transcript; a picked-up request is not a completed one) · who is live · scoping a worker's credentials so a file sweep isn't holding your Gmail · and stopping one.
-
-**Reaching for a specialist**, phrased as jobs rather than filenames: a technical co-founder to pressure-test an architecture, writing that sounds like you, a deck built rather than outlined, a contract read with *"flag what I'd regret"*, an **atlas** of a book instead of notes. Thirty-five agents across seven bundles — and you don't need the list: describe the job, ask for someone who does it, and the session tells you who it picked.
-
-**Reaching for a capability** — the skills you would never guess were there. Measuring a draft's AI-writing tells against **your own** voice before you publish. **Watching** a video rather than transcribing it, so the slides and on-screen code survive. Research that maps what your vault already decided before it sweeps outward. An honest read on whether you're overloaded or it just feels that way.
-
-**And the two files you never edit by hand.** `USER.md` and `INTENT.md` are yours, are read every session, and **change by asking** — *"always put study before email in my morning plan"*, *"you don't need to check with me on daily-note edits anymore"*, *"stop surfacing the podcast idea, I'm not doing it this quarter."* Each of those is a real config change your session makes for you. With the line that matters most: **autonomy is supposed to grow** — if your sessions still ask permission for things you've approved twenty times, say *"take it from here."*
-
-The terminal table survives intact, relabelled the **advanced / no-surface path**, below all of it.
-
-`tests/contribution-router.test.sh` (29 checks) asserts the shape holds: prompts phrased as things to say, the let-the-session-choose row present, personalization and autonomy covered, the ordering, no code fence turning it back into a command reference — and that **every agent and skill it tells you to summon actually exists**, extracted from the document rather than from a list kept in the test. That last one took three tries: the first version walked its own hardcoded list and `continue`d past anything it didn't find, so renaming an agent in the doc made the check *skip* it and an invented `chief-vibes-officer` passed. Same guard-restates-what-it-checks shape as two other checks fixed today.
-
-### The compass layer — the method that derives your why, never an answer
-
-Two footholds for this already existed and were unnamed: `/close-day`'s **verdict line** (specced as *"the honest, warm, big-picture read of what this day actually was — not a summary, a verdict"*) and the **"what was most useful?"** question. Both answer meaning rather than counting. Nothing connected them to anything, and nothing else in the framework tried.
-
-**What ships:** a **`finding-your-why`** skill holding the derivation method — hunt the invariant under maximal variation, sharpened by three tells (what you build when nobody is measuring · what makes you emotional, noting *where* the emotion sits · what you refuse to trade even at cost) and one filter that removes most candidates: **if it could ever be checked off, it was a goal wearing purpose's clothes.** The result lives as a `## Compass` in `growth.md` — not a tenth observed file, which would add per-session load for every operator. `/today` then adds **one clause** to the day's biggest item naming the value it expresses, and `/close-day`'s verdict line answers the second question beside the first.
-
-**The part that matters most is when it stays quiet.** A stated purpose is exactly where the substitution heuristic hides: asked directly, a person answers *"what would a purposeful person say?"* and hands you that instead. And a compass derived from one project's evidence just names that project — which is a goal. So there are three states and the framework is **silent** in the first:
-
-- **No evidence** → nothing about purpose. No prompt, no placeholder, no "set your purpose" nudge anywhere. The full working system runs; the meaning layer says nothing it has not earned. *(The precedent was already here: with no growth routine configured, `/today` prints one gentle line rather than manufacturing one.)*
-- **The variation gate crosses** → **one** warm offer, once, at `/close-day`. **The gate is variation, not tenure** — 3+ distinct projects with real activity and 2+ domains, computed from disk. You can run this system for six months inside one project and still have nothing an invariant could be drawn from.
-- **A horizon exists** → the goal→value clause and the second verdict question.
-
-**The offer's tone is a contract.** It arrives as *"something I've noticed across your work — and I think it would help you with direction"*, offers **two or three candidates rather than a conclusion**, each with the evidence it rests on, in your own register — and explicitly invites you to refine it, replace it, or say it is wrong. If you edit it, your words win completely. **Declining is a real answer**: it is recorded with a date and not re-asked for 90 days.
-
-**A third growth-routine shape** joins reading and writing, documented in `/today` rather than in `USER.md`'s example block — because `USER.md` is Tier-2 and never syncs, so a convention living only there would reach fresh clones and no existing operator. **Becoming**: one voice-answerable question a day, drawn from whichever dimension of your own context is *thinnest, computed from disk* (deficit-driven, never the next card in a deck), measured by **the share, not the streak** — an activity count can be fully satisfied while the thing it exists to grow keeps falling. Why it needs a forcing function at all: every other layer grows as a byproduct of work, so the identity layer **falls every time anything else succeeds**. Nothing is removed; the denominator grows. Questions ask for an **episode and its specifics**, never for feelings in the abstract — this framework is explicit that a vault is not a journal.
-
-### The offer will not be spent on a late catch-up close
-
-Operator-reported, and it turned a nice-to-have into a correctness fix: **some people avoid `/close-day` entirely** and only reach it when the next `/today` notices the previous day was never closed. That path already works — `/today` fires `Skill(aios:close-day)` and waits — which means the offer *does* reach them, **in the morning, days late, while they are trying to start their day.** That is the opposite of the reflective moment a once-only offer needs, and it happens **once**: landing it there burns it permanently.
-
-So the offer now also requires a **timely** close — the note being closed is today's or yesterday's. On a multi-day catch-up it **defers silently and records nothing**, because nothing was offered and a recorded decline would silence it for 90 days.
-
-**The limitation is stated rather than hidden by that silence:** an operator who never closes on time never crosses the condition, so they never receive the offer. That trade is deliberate — a compass offered in the middle of a rushed catch-up is worse than no compass. After several consecutive catch-ups they get **one** plain line carrying none of the offer's content: *"worth a proper close-day one evening this week; there's something I'd like to show you that needs the quiet slot."* A scheduling nudge, not the offer.
-
-### Four defects found by dry-running this against a live vault before merge
-
-The whole feature was run against a real, mature vault — reading these specs, computing the gate, probing the state, attempting the derivation — **before** it merged, so that merging and syncing would be confirmation rather than discovery. It found four things, and the first would have shipped broken:
-
-1. **The state probe was the `grep -c` trap.** The action item shipped `grep -c '^## Compass' … || echo 0`. `grep -c` prints `0` **and** exits non-zero on no-match, so the fallback fires too and the command emits **two** values. A session comparing that to `0` gets false and concludes a compass **exists** — the gate inverted, silently, on every fresh vault. Measured live: the vault had no compass and the shipped probe reported State 2. Replaced with an `awk` content probe that has no exit-code trap and answers the better question anyway. Same shape as the silenced-repair class: a fallback that makes *"found nothing"* and *"failed"* indistinguishable.
-2. **The gate was not computable.** *"3+ distinct projects with real activity (not scaffolded, not archived on arrival)"* — the dry run had to invent a proxy to proceed, which means every session would invent its own. Now names the field: `status: active`. Fixed in `/close-day` **and** the skill, which had already drifted apart in the same breath.
-3. **The three tells are not greppable, and a session will grep first.** Keyword searches for all three (`unpaid|nobody asked`, `emotional|moved|proud`, `refuses|will not`) returned **nothing** against that vault — while its `profile.md` carried the answer in the second paragraph as a named identity thread. Observed context is narrative about a person, not tagged evidence. The skill now says an empty search is not evidence of absence, and a session concluding *"insufficient evidence"* from a grep has measured its own query.
-4. **The health test found the gap it was built for, on real data.** Of three recent verdict lines, two were inventories of what was done and one named what the day *meant*. The second layer already fires sometimes — by chance, not by design. That is the whole argument for wiring it.
-
-`tests/compass-layer.test.sh` grew to **47 checks** across this, each mutation-verified, and three of the mutations initially escaped: one whose injection silently failed on a case mismatch, one that revealed a check satisfied by *either* of two files where it needed to hold for each, and one that ran against an already-mutated copy. Also caught while writing: two checks that contradicted each other, and a machine-name scan that would have flagged Anthropic's own vendored sample data.
-
-### "Someone, not something" — the claim the README was making without saying
-
-The README's title has always been *"AI as a Team, Not a Tool"* — the same claim, weaker — and its § *What makes The AIOS different* listed **five mechanisms** while never naming what they add up to. The section read as a feature list rather than an argument. One line now sits above the five: **everyone else teaches you to use a *something*; this produces a *someone*** — a tool you prompt stays an appliance and forgets you between sessions, while an AI that receives your context long enough acquires memory, identity and a working relationship. Every mechanism below it is a way of getting from the first to the second, which is why they only make sense together. One matching clause landed in `CLAUDE.md` § The Belief, because that file loads every session and the claim is *why* observed context and naming are load-bearing rather than nice extras.
-
-Not a fifth principle: those four are method you apply, and this is an outcome you get.
-
-### The `growth.md` seed describes the compass and deliberately ships no empty section
-
-Asked whether a newcomer's `growth.md` should arrive with a `## Compass` placeholder to fill in. It must not, and the reason is functional rather than stylistic: **the presence of that heading is the state flag** the surfaces read. Ship it empty and every fresh vault reports "compass exists" on its first run — `/today` would try to link a goal to nothing, `/7plan` would test a bet against nothing, and the variation gate would be inverted from day one. An empty placeholder is also the *"set your purpose"* prompt in passive form: a blank the operator feels invited to fill, which is the substitution heuristic the whole design refuses.
-
-So the seed does what canonical's other observed seeds do — describes what the file holds and ships no sections — with one added paragraph naming the compass, where it comes from, and *why there is nothing to fill in*. That last part matters: an unexplained absence gets helpfully filled in by the next tidy-minded person who reads the file.
-
-**Hardened in the same pass:** State 2 now requires a `## Compass` **with content under it**, not merely the heading — because someone will eventually add the heading by hand, and an empty compass must not switch the surfaces on.
-
-### `/7plan` now checks the bet against the compass — the one cadence where a mismatch is still actionable
-
-`/7plan` already described itself as *"the compass-set for the week"* before any of this existed — the concept reaching for a name it did not have. Its `## The bet` section holds *"THE one bet the next several weeks ladder up to"*, which makes it the **largest destination this framework tracks**. So it now asks one question, weekly: **is this bet an expression of the compass, and if not, which of the two is wrong?** A bet that no longer expresses the compass is either a bet taken for someone else's reasons or a compass that has gone stale, and both deserve a sentence *before* the week's priorities are set. Daily is too tight to see it; quarterly is too late to act on it. With no compass the line is omitted entirely — State-0 silence holds on every surface, not just two. And the spec forbids the tempting resolution: **never quietly edit the compass to fit the bet**, which would invert the hierarchy and let a destination rewrite the direction.
-
-So the three cadences each have a distinct job: `/today` links today's ship to the value it expresses · `/7plan` tests the multi-week bet against the compass · `/close-day` answers both questions in the verdict and carries the one-time offer.
-
-### The section is called `## Compass`, and the first name was wrong for a checkable reason
-
-It was `## Horizon` for most of a day. That is wrong twice over, and both are facts rather than taste: **this framework already has a `Horizon`** — a carry-bearing section in the daily note, listed beside Rhythm, Parking lot and Radar, holding things that *complete* — so a second unrelated concept would have shared a name with its own opposite. And the ordinary idiom *"on the horizon"* means **approaching**. A word chosen to mean *you never arrive here* colloquially means *arriving soon*, which is exactly the destination reading the design exists to separate out. A compass cannot be arrived at; the property is in the word.
-
-It ships with its own gloss, so the section explains itself to anyone opening `growth.md` cold:
-
-```markdown
-## Compass
-*What hasn't changed across everything you've done — derived from your observed
-context, not stated by you. It has no checkbox and nothing to advance; the goals
-elsewhere in this vault are expressions of it. Refine or replace it any time.*
-```
-
-### One operator's machine name was baked into three command specs
-
-`/close-day` (×3), `/today` (×2) and `/aios:housekeeping` (×1) referred to a specific machine by a personal name — *"before sarah's overnight queue"*, *"Sarah-results"*. **`FORTRESS.md` already states the convention** it violated: *"the mini is named in this doc as the mini or the secondary machine… teammates may give their own machines personal names"*, with `USER.md § Remote machines` as the home for those names. Beyond the leak, it made the specs incoherent for a single-machine operator reading instructions about a queue they do not have. All six now say *the secondary machine*.
-
-Left untouched on purpose: `skills/anthropic/skill-creator` contains a fictional *"Sarah Johnson"* twice in Anthropic's own sample data. That is vendored upstream — not a leak, and editing it would cross the boundary `LICENSE-AUDIT.md` draws.
-
-### Two personal names were shipping inside worked examples
-
-Found by the new suite on its first run, both pre-existing: `/close-day` carried a real person's name **beside a fee** in a provenance example, and `/close-session` carried someone's **full name** in an ecosystem example. Both are now generic. This is the framework's own de-personalization rule — *names age into gossip* — failing on the framework itself, in the files most likely to be read as templates by an operator writing their own examples.
-
-`tests/compass-layer.test.sh` (18 checks) guards three things prose cannot: **no derivation evidence travels** (this feature was derived from a live vault — a student's AI session, a biography, corpus percentages — and canonical is authored from inside a vault, so the leak is a reflex rather than a lapse); **the neurochemistry vocabulary never appears** (the two layers map onto well-known biology, and naming it turns a design into a lecture while making a claim about your body a vault has no standing to make); and **silence is asserted** — a "set your purpose" prompt would rebuild the substitution heuristic as a feature and pass every other check in the file. Verified by mutation, including two mutants that escaped the first pass: one whose injection silently failed (a lowercase anchor against bold text — the control reported green having changed nothing), and one that revealed a check satisfied by *either* of two files when it needed to hold for each.
-
-*Provenance: "a goal is a destination on the map, purpose is the compass" is compressed from an arrival-fallacy framing and carries that attribution wherever it is quoted. "When agents can chase any destination, goals stop being identity — only the compass is inalienable" is ours.*
-
-### What you need to do — one check, and for most vaults the answer is nothing
-
-> **To the session reading this during `/aios:update`: run the check and act on what it returns. It is read-only, and "no action" is the expected outcome on a young vault.** Report *"already satisfied — no action"* when it comes back clean.
-
-**1 · Does this vault already hold a derived purpose that should become the compass instead of being re-derived?** *(Session: check before the next `/close-day`, because that is where the offer would otherwise fire.)*
+**Does this vault already hold a purpose that should become the compass instead of being re-derived?**
 
 ```bash
-# Is a compass already installed, WITH content under it? Prints "present" or nothing.
+# Prints "present" only if a Compass exists WITH content under it.
 awk '/^## Compass/{f=1;next} f&&/^## /{exit} f&&NF{print "present";exit}' \
     ~/aios/vault/00\ -\ notes/context/observed/growth.md 2>/dev/null
 ```
 
-> **Not `grep -c`.** `grep -c` prints `0` *and* exits non-zero on no-match, so the obvious
-> `grep -c … || echo 0` emits **two** values and a session comparing the result to `0` gets
-> `false` — concluding a compass exists when none does, which inverts the gate silently.
-> Caught by dry-running this action item against a real vault before the feature merged.
-> The `awk` form has no exit-code trap and answers the sharper question anyway: is there
-> **content** under the heading, not merely a heading.
+- **Prints `present`** → nothing to do; `/today` and `/close-day` use it from now on.
+- **Prints nothing, and the operator points you at something they have already written** → install *their* wording rather than deriving a worse copy: *"you've already said this here — want it as your compass, in your words?"*
+- **Prints nothing otherwise** → **say nothing.** Do not derive, do not offer, do not mention purpose as a missing thing. The offer fires on its own once the variation gate is crossed.
 
-**Deliberately only one command.** "Has the operator already written their purpose down somewhere" has **no reliable grep** — measured while writing this: a loose pattern (`my purpose|purpose is|the compass`) returned 11 files on a real vault, almost all of them ordinary prose, and a tightened frontmatter/heading version still returned 6 with 5 false positives. A detection that cannot be made precise does not belong in an action item; the second half is a **rule**, not a search:
-
-- **A `## Compass` already exists** → nothing to do. `/today` and `/close-day` will use it from now on.
-- **No compass, and the operator mentions they have already articulated this somewhere** (a reflection, a spec, a note they point you at) → **install what they already wrote** rather than deriving from scratch: *"you've already said this here — want it as your horizon, in your words?"* Their existing wording wins; a fresh derivation would be a worse copy of an answer they already gave. Do **not** go hunting for it unprompted — see the note above on why that search cannot be made precise.
-- **Neither, and the vault is young** → **say nothing.** This is the common case and the correct one. Do not derive, do not offer, do not mention purpose as a missing thing. The offer fires on its own at `/close-day` once the variation gate is crossed (3+ distinct projects with real activity, 2+ domains) — and never before.
-
-**2 · Nothing else.** No restart, no re-registration, no config change, no new file to create. If you added a `## Compass`, `/today` picks it up on the next run.
-
-**A note on what NOT to do with this update, because it is the tempting move:** do not ask the operator what their purpose is. The whole design rests on the observation that a stated purpose is where the substitution heuristic hides — asked directly, a person answers *"what would a purposeful person say?"* and hands you that. If the evidence is not there yet, the honest output is silence.
+**And the thing not to do with this update:** do not ask the operator what their purpose is. The design rests on the fact that a stated purpose is where the substitution heuristic hides. With no evidence, the honest output is silence.
 
 ## 2026-09-07 — Two readers of one file disagreed, and Windows operators could not run the hooks at all
 
