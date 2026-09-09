@@ -70,7 +70,7 @@
 
 ## 2026-09-09 — A duplicate close, and a measurement that hid the damage it should have shown
 
-`hash: 49cd137 · 01b46ca` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113)
+`hash: 49cd137 · 01b46ca` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113) · [#117](https://github.com/The-AIOS/aios/pull/117)
 
 > **What you can now do.** Nothing new to learn — one thing stops going wrong. `/aios:close-session` no longer appends a second block to your daily note when the only commits since your last close belong to **other sessions**.
 
