@@ -38,11 +38,57 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
-## 2026-09-08 — The framework could tell you what you did, and nothing could tell you what it meant
+## 2026-09-08 — The framework could tell you what you did, and neither doc could tell you where to go
 
-`hash: 87092da · 82751c7` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105)
+`hash: 87092da · 82751c7` · [#104](https://github.com/The-AIOS/aios/pull/104) · [#105](https://github.com/The-AIOS/aios/pull/105) · [#107](https://github.com/The-AIOS/aios/pull/107)
 
 > **What you can now do.** Nothing, on day one — and that is the design, not a gap. Every tracked thing in this framework *completes*: a key flips, a ship lands, a streak extends, and then asks what is next. That machinery answers **what did I do**. Nothing answered **what did it mean**. This adds the second answer — but only once your own vault holds enough evidence to derive it honestly, because a purpose the system invents for you is worse than none.
+
+> **Also today, and the same shape one layer out:** `CONTRIBUTING.md` named two of three repos and routed nobody to Glass or the App, while `CHEATSHEET.md` opened its session chapter with shell commands. **Now you can find the right repo before you file, and get a worker without opening a terminal.**
+
+### `CONTRIBUTING.md` — three repos, and a router that asks what you OBSERVED
+
+The graph was one-way. Both surface repos already do their half — `aios-app` says *"if your change is to an agent, skill, command or template, it belongs in The-AIOS/aios"*, `aios-glass` opens with *"Glass, not engine"* — and both link back here. **Canonical linked to neither**, in 228 lines naming only itself and `company-template`. So a Glass or App bug got filed against the framework by default, which is also the only repo `/aios:update` tracks.
+
+Now: the three repos with what each owns, and one contribution path stated once for all of them — **fork → branch → pull request.** Their setup, gates and house style stay in *their* files; this section's only job is the door, not the doorway.
+
+**The router asks what you observed, not which layer you think you're in.** *"Agent/skill/command/template → canonical"* is a layer rule, and it only helps if you already know your layer. It fails in exactly the case where misrouting happens — **a documented thing that does not work.** The anchor entry: *a documented flag or field has no effect → suspect the surface that **executes** it, not the doc that **describes** it; check the launch args **and** the running behaviour before filing.*
+
+The worked example is one of ours, and it is why the layer rule needed replacing: a spawn request carrying `"tier":"fast"` was accepted and silently dropped, and `"tier"` is documented in **three canonical files** — so filing against canonical was the reasonable conclusion and the wrong one. The defect sat in a surface's fulfiller. Also added: *if you're unsure after all that, file against canonical — we route it.* A router with no fallback turns uncertainty into an unfiled issue.
+
+One sentence resolves a collision this file had been carrying: it uses **"extension"** to mean `custom/`, while **Glass is also an extension** — an IDE one, a separate repo, unrelated.
+
+And under the existing *"evidence before assertions"* rule, what that means when the claim is **behavioural** rather than mechanical: a test proves a function, but it cannot prove *"the rewrite still makes a session behave the same way."* For that, **pre-register the criteria** — write the scenarios before the new text exists, state the bar so it can fail, run both versions, read the results against the written criterion rather than by keyword, and publish the criteria **before** the numbers. The order is the evidence.
+
+### `CONTRIBUTING.md` — and then the dance itself, because "fork → branch → PR" was five words with no starting point
+
+The router above got a contributor to the right repo and stopped. The whole file carried **zero `git` or `gh` commands**, and the one path statement — *fork → branch → pull request* — appeared once, as a clause.
+
+That reads like missing polish. It is not. **The install flow points an operator's `origin` at their own private vault repo**, and leaves canonical as a `repo=` line in `.aios-update` rather than a git remote (`/aios:update` reaches it by cloning to a temp directory). So the five-word clause had **no starting point from where an operator actually stands** — and the obvious reading of it was the dangerous one: canonical ships a template `vault/` at the same paths a live vault fills, so branching from your vault's `main` and pushing to a fork puts `vault/00 - notes/context/observed/` in the PR diff. That is the § Personal hygiene violation the file calls non-negotiable, arrived at by following the steps that look correct, with *"grep your own diff"* as the only defence.
+
+New § **The contribution dance** states the mechanic in one sentence — *contributions come from a second, separate clone that has never held a vault* — and then makes it executable: fork, clone the fork somewhere that is not `~/aios`, add canonical as `upstream`, branch **from `upstream/main`** every time, push to your fork, `gh pr create --repo`. Two confusions are pre-empted rather than left to be discovered: a **refused push to canonical is the success signal**, not a broken setup; and a branch cut from a stale fork `main` produces a diff nobody can review.
+
+**The tell is mechanical, so it works for a session too:** a tree containing a **`.aios-update`** file is somebody's *vault*, not a contribution clone — canonical does not ship that file, it appears only after a first sync. That discriminates on both install paths, including a vault that was forked rather than cloned. The section closes with the session-facing half, because a human who hits *"no push access"* stops and thinks while a session has no such prompt: check the remotes and that file before the first push, and treat `gh pr create` as the outward-facing action it is.
+
+Checks 10 (11 assertions) target the **commands and the concrete tell**, never the prose around them — a guard that restates the sentence it checks only tests its own restatement, which is a shape this repo has now fixed in seven places. Each branch was mutation-verified reachable: dropping `gh pr create`, softening `.aios-update` to *"that config file"*, unfencing the blocks so the commands stop being copyable, removing the session precondition, and abstracting the leak path all fail the suite.
+
+### `CHEATSHEET.md` — a phrasebook, because nobody with the app types commands
+
+§1 opened with *"How to launch, name, and resume sessions from a terminal"* and a table of shell commands. That is the wrong first thing, and the reason cuts deeper than ordering: **an operator running the desktop app never types any of it.** They ask a session, and the session does the work — including the parts that need a terminal, a second session, or a file edited on their behalf. So the highest-value content in an operating index is not what to *type*. It is **what to say.**
+
+§1 is now a phrasebook. Four tables of *"say something like…"*, and the reason each row exists is that **none of these capabilities announce themselves** — you have to know they exist to ask for them.
+
+**Getting a second pair of hands.** How to get a worker at all · how to put it on a cheap rung when the work is mechanical, with the ~22× spread named so frontier rates on a file sweep read as the transfer they are · **how to let the session choose the rung and say what it picked** — often the best move, since it knows the task's cognitive load better than you do at that moment · handing a live worker more instructions · asking whether it *actually* finished (it reads the worker's transcript; a picked-up request is not a completed one) · who is live · scoping a worker's credentials so a file sweep isn't holding your Gmail · and stopping one.
+
+**Reaching for a specialist**, phrased as jobs rather than filenames: a technical co-founder to pressure-test an architecture, writing that sounds like you, a deck built rather than outlined, a contract read with *"flag what I'd regret"*, an **atlas** of a book instead of notes. Thirty-five agents across seven bundles — and you don't need the list: describe the job, ask for someone who does it, and the session tells you who it picked.
+
+**Reaching for a capability** — the skills you would never guess were there. Measuring a draft's AI-writing tells against **your own** voice before you publish. **Watching** a video rather than transcribing it, so the slides and on-screen code survive. Research that maps what your vault already decided before it sweeps outward. An honest read on whether you're overloaded or it just feels that way.
+
+**And the two files you never edit by hand.** `USER.md` and `INTENT.md` are yours, are read every session, and **change by asking** — *"always put study before email in my morning plan"*, *"you don't need to check with me on daily-note edits anymore"*, *"stop surfacing the podcast idea, I'm not doing it this quarter."* Each of those is a real config change your session makes for you. With the line that matters most: **autonomy is supposed to grow** — if your sessions still ask permission for things you've approved twenty times, say *"take it from here."*
+
+The terminal table survives intact, relabelled the **advanced / no-surface path**, below all of it.
+
+`tests/contribution-router.test.sh` (29 checks) asserts the shape holds: prompts phrased as things to say, the let-the-session-choose row present, personalization and autonomy covered, the ordering, no code fence turning it back into a command reference — and that **every agent and skill it tells you to summon actually exists**, extracted from the document rather than from a list kept in the test. That last one took three tries: the first version walked its own hardcoded list and `continue`d past anything it didn't find, so renaming an agent in the doc made the check *skip* it and an invented `chief-vibes-officer` passed. Same guard-restates-what-it-checks shape as two other checks fixed today.
 
 ### The compass layer — the method that derives your why, never an answer
 

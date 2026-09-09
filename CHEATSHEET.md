@@ -83,31 +83,137 @@ commands is not a prerequisite for using this.
 > happens to have an app — which is backwards, and is the same friction `AI-122` removed from the
 > setup flow. The commands are not going anywhere; they are just no longer the first thing.
 
-How to launch, name, and resume sessions **from a terminal**.
+### Just say it — the phrasebook
 
-| You want to... | Command | Notes |
+**You don't run the AIOS by typing commands. You ask, and your session does the work** — including the parts that need a terminal, a second session, or a file edited on your behalf. Every row below is something to *say*, in your own words; the wording is a starting point, not a syntax.
+
+The reason this is the first section: the capabilities below are the difference between a chat window and an operating system, and none of them announce themselves. You have to know they exist to ask for them.
+
+#### Getting a second pair of hands
+
+| You want… | Say something like… | What happens |
 |---|---|---|
-| Launch a session in the vault | `cd ~/aios && claude` | Loads CLAUDE.md + USER.md + observed context |
-| Open a named worker session | `spawn <name> "<task>"` | New terminal tab/window, named identity, task pre-loaded |
-| Open a named session, no task | `spawn <name>` | Sends `"Start session."` as the first prompt |
-| Spawn an ad-hoc worker (no name) | `spawn` | Generates a memorable adj-animal handle (e.g. `amber-otter`) + prints a tip surfacing available specific agents. Great when you want a fresh session and don't need a meaningful name yet. |
-| Resume a named worker | `spawn <name>` again | Wrapper detects existing session, reattaches |
-| Resume any past session | `claude --resume` | Pick from the list of recent sessions |
-| Kill a spawned worker cleanly | `spawn-kill <name>` | Atomic process-group kill + closes the Terminal window (macOS). Avoids orphan Claude processes + Terminal's "terminate?" modal. Doesn't affect IDE-integrated terminals (the IDE manages those). |
-| Override model for spawned workers | `export CLAUDE_MODEL='claude-sonnet-4-6'` (or any model) in `~/.zshrc` | Wrapper **defaults to `claude-opus-5[1m]` (1M context Opus)** since AIOS leans on context engineering. Override for cheaper Sonnet sessions, 3P providers, or non-1M Opus. Note: `/config` and `/model` are session-scoped — they DON'T propagate to spawned children. The wrapper's `--model` flag does. |
-| Install the spawn wrapper | `bash ~/aios/hooks/claude-identity/install-wrappers.sh` | One-time setup. Idempotent — safe to re-run. Installs `spawn`, `spawn-kill`, `_claude_with_respawn`, plus a shell function named after your primary session (read from USER.md → ## Identity; falls back to `primary` if no identity declared yet — re-run after editing USER.md to rename). |
-| Mount your company context | `/aios:company --mount {url}` | One-time per company. Pulls venture context (positioning, gtm, pricing, primitives, etc.) into `vault/00 - notes/context/ventures/{name}/` + registers in `USER.md → ## Companies (mounted)`. Works for a company you own OR one you collaborate on. |
-| Create a NEW company context repo | `/aios:company --create` | Interview-driven scaffold from [`The-AIOS/company-template`](https://github.com/The-AIOS/company-template). Lands at `{org}/{company}-context`. Includes 10 canonical context files + 6 optional infra folders (agents/plugins/hooks/MCPs/skills/templates) for company-distributed shipment. |
-| Refresh mounted company context | `/aios:company --sync {name}` (or `--sync-all`) | Pulls remote → vault for the named company. Run when contributors push updates. |
-| Scaffold a shared **collaboration space** | `/aios:collaborate` | Substrate-pluggable shared OS with a stable group of collaborators (Drive for non-coders, GitHub for code-adjacent, local for testing). Creates `collaborate.md` (protocol) + `README.md` + first project + a router note in your vault. Subcommands: `--add-project`, `--status`, `--dry-run`. |
-| Add a project to an existing collab space | `/aios:collaborate --add-project` | Adds a new project under an existing collaboration space (same substrate). |
-| Run Claude without spawn | `claude --remote-control --name <name>` | Bypasses wrapper; not recommended |
+| Someone else to take a whole task | *"Get me a worker to review the Q1 financials."* | Your session writes a request; whichever surface you're running opens a real session with the task pre-loaded. It has its own window and its own context. |
+| It done cheaply, because it's mechanical | *"Spawn a worker to rename the wikilinks across those 400 files — put it on a fast model, it's a sweep."* | The rung is picked by the **shape** of the work, not its importance. Top and bottom rungs differ ~**22×** in cost. |
+| The session to choose the model for me | *"Spawn a worker for this and pick the right tier yourself — tell me what you chose and why."* | Often the best move: it knows the task's cognitive load better than you do at that moment. Asking it to *say* what it picked keeps you in the loop without making you decide. |
+| A specific model, deliberately | *"Spawn it on Haiku"* / *"…on the frontier model, this one's hard."* | An explicit model wins over the tier. |
+| To hand a live worker more instructions | *"Tell the `deck-builder` session to use the new positioning line."* | Delivered into that session's terminal. Keep it to one thought — a very long brief is written to a file and the worker is pointed at it. |
+| To know if it actually did the work | *"Did the researcher session actually finish that?"* | It reads the worker's **transcript**. A picked-up request is not a completed one. |
+| To see who's working right now | *"Which sessions are live?"* | Read from the session registry, not from window titles. |
+| A worker that can't touch your email | *"Spawn it with a profile that only has filesystem access."* | Blast radius: a file sweep has no business holding your Gmail, Drive and Slack credentials. |
+| To stop one | *"Kill the karma session."* | Clean shutdown, no orphaned processes. |
 
-**Why use `spawn` over raw `claude`:** the wrapper sets `$CLAUDE_AGENT_NAME` so CLAUDE.md can match an agent profile (`agents/<name>.md`), greet you in character, and route close-session reports back to the right project. Raw `claude` works but loses the identity-aware behavior.
+> **The one caveat worth knowing:** this needs a surface running (the App, or your editor with Glass). If you've quit both, your session will tell you and hand you a line to paste instead — it won't fail silently.
 
-**Where session transcripts live:** `~/.claude/projects/<vault-path-slug>/*.jsonl` — one file per session. Useful when you want to grep across past conversations.
+#### Reaching for a specialist
 
-See: [SETUP.md](./SETUP.md) for first-machine install · [CLAUDE.md](./CLAUDE.md) → § Spawning Sessions for the full wrapper spec.
+Naming a worker is how you choose its expertise — the name **is** the role, and the session arrives already thinking like that specialist.
+
+| You want… | Say something like… |
+|---|---|
+| A technical co-founder's judgment on a build | *"Bring in the `technical-cofounder` to pressure-test this architecture."* |
+| Writing that sounds like you | *"Get the `content-writer` working on the newsletter draft."* |
+| A deck built, not outlined | *"Have the `deck-builder` turn that spec into slides."* |
+| A contract read | *"Ask the `lawyer` to review this NDA and flag what I'd regret."* |
+| Books and reading turned into something durable | *"Study with me as the `study-buddy` — I want an atlas of this book, not notes."* |
+| The month's numbers reconciled | *"Put the `accountant` on last month's invoices."* |
+| Research that goes wide before it concludes | *"Have the `market-researcher` map who else is doing this."* |
+| A second opinion on a decision | *"Bring in the `consultant` and argue the other side."* |
+
+**35 agents across seven bundles** — sales · strategy · finance-legal · engineering · communication · personal · commerce. You don't need the list: describe the job and ask for "someone who does X"; the session matches and tells you who it picked. Registry: [`agents/_index.md`](./agents/_index.md).
+
+#### Reaching for a capability
+
+Skills are the deep know-how your session loads on demand. Most fire on their own when the task matches — these are the ones worth asking for **by name**, because you'd never guess they exist.
+
+| You want… | Say something like… | Why it's more than it sounds |
+|---|---|---|
+| To know if a draft sounds like a machine | *"Run the voice gate on this before I publish it."* | Measures the AI-writing tells against **your own** voice and reports *where* — it does not rewrite you. |
+| A video actually watched, not transcribed | *"Watch this talk and tell me what's on the slides — not just what he says."* | The **visual** channel: slides, code, diagrams, on-screen text a transcript throws away. |
+| Real research, not a search | *"Do a deep research pass on this before we commit."* | Maps what your vault already decided first, then sweeps multiple sources, then ranks proposals. |
+| To know what you're actually building toward | *"What do you think I'm actually building toward?"* | Derives it from what it has observed of your work — and says nothing if it hasn't earned an answer yet. |
+| A one-pager that looks designed | *"Turn that report into a visual one-pager."* | A self-contained, brand-aware infographic. |
+| To ship a product in the right order | *"Walk me through the build order before we start coding."* | Admin and seed data **before** the product — the part everyone skips. |
+| An honest read on your pace | *"Am I actually overloaded, or does it just feel that way?"* | Treats your capacity as a design input rather than something to optimise away. |
+| A source filed so it compounds | *"Ingest this and cross-reference it with what we already have."* | Extracts, files by type, links it into the graph, logs it. |
+
+#### Making it yours — the two files you never edit by hand
+
+Both of these are yours, both are read every session, and **you change them by asking**.
+
+| You want… | Say something like… | What it edits |
+|---|---|---|
+| A ritual to work your way | *"When I run the morning plan, always put study before email — remember that."* | Your `USER.md` → command personalizations. Commands read it before running. |
+| Your own routines tracked | *"Add a writing routine — 20:00, from my content queue."* | `USER.md` → growth routines. Your morning plan starts showing the streak. |
+| Less asking, more doing | *"You don't need to check with me on daily-note edits anymore — just do them."* | Your `INTENT.md` → autonomy levels. This is the trust contract, and it's meant to move. |
+| A guardrail, not a permission | *"Never send anything to a client without showing me first."* | `INTENT.md` → decision boundaries. |
+| To park something honestly | *"Stop surfacing the podcast idea — I'm not doing it this quarter."* | `INTENT.md` → explicitly-not-doing. Carries stop nagging you about it. |
+
+> **Autonomy is supposed to grow.** If your sessions still ask permission for things you've approved twenty times, say so — *"you've asked me this enough times, take it from here."* That sentence is a real config change, and your session will make it.
+
+#### Which primitive — when you're deciding how to delegate
+
+Two questions, in order. Most misfires come from answering neither.
+
+| Question | Answer |
+|---|---|
+| **How much structure does the work need?** | One coherent task → a single agent. 2+ **independent** tasks → parallel agents. An ordered, repeatable pipeline → a dynamic workflow. |
+| **Do you need the result back in *this* conversation?** | Yes → a **subagent** (it returns the answer here). No, and you want to watch it work → a **spawned session** (its own window; you read its output). |
+
+> **The tell you picked wrong:** if the plan needs a file-watcher and a polling loop to notice a delegated session finished, **you wanted a subagent.** You get completion and the result for free.
+
+Depth, including how to pick the model per primitive: the **`orchestration-ladder`** skill · the protocol itself: `~/.aios/spawn-inbox/README.md` · [CLAUDE.md](./CLAUDE.md) → § Spawning Sessions.
+
+---
+
+### Launching from a terminal — the advanced path
+
+*Everything above works without a terminal. This section is for operators running a plain clone with no surface installed, and for anyone who would simply rather type it. Same capabilities, same flags — nothing here is a lesser path.*
+
+**Launch, name, resume**
+
+| You want to… | Command |
+|---|---|
+| Start a session in the vault | `cd ~/aios && claude` |
+| Open a named worker with a task | `spawn <name> "<task>"` |
+| Open a named worker, no task | `spawn <name>` |
+| Open an ad-hoc worker | `spawn` — generates a handle like `amber-otter` and prints the specialists available |
+| Resume a named worker | `spawn <name>` again — the wrapper detects the live session and reattaches |
+| Resume any past session | `claude --resume` |
+| Retire a worker | `spawn-kill <name>` |
+
+**Choose its model, its tools, its blast radius** — the same three choices the phrasebook makes by asking
+
+| You want to… | Command | Notes |
+|---|---|---|
+| Pick by the **shape** of the work | `spawn --tier fast <name> "<task>"` | `frontier` · `judgment` (default) · `scale` · `fast`. Rungs differ ~**22×** in cost; `fast` for sweeps and high-frequency work, `judgment` for reasoning and production code. Windows: `-Tier fast`. |
+| Pin one **specific** model | `spawn --model claude-fable-5 <name> "<task>"` | Overrides `--tier`. Exported for **that launcher only** — see the warning below. |
+| Limit which MCP servers it holds | `spawn --profile <name> <worker> "<task>"` | Loads only the servers in `~/.aios/mcp-profiles/<name>.json`. For blast radius, not tokens: a file sweep has no business holding your Gmail. An unknown profile **refuses** and lists what exists. |
+
+> **⚠️ Don't `export CLAUDE_MODEL` in your shell rc.** It used to be the only way to change a worker's model, and it is a footgun: miss the revert and *every* future terminal you open is pinned to it. `--model` and `--tier` exist precisely to remove that, and they scope to the one spawn. The rung→model table lives in [MODEL-ROUTING.md](./MODEL-ROUTING.md) and nowhere else.
+
+**Mount and share context**
+
+| You want to… | Command |
+|---|---|
+| Mount an existing company's context | `/aios:company --mount {url}` — one-time per company |
+| Create a new company context repo | `/aios:company --create` — interview-driven scaffold from [`company-template`](https://github.com/The-AIOS/company-template) |
+| Refresh a mounted company | `/aios:company --sync {name}` · or `--sync-all` |
+| Scaffold a shared collaboration space | `/aios:collaborate` — substrate-pluggable (Drive, GitHub, local) |
+| Add a project to an existing space | `/aios:collaborate --add-project` |
+
+**One-time setup**
+
+| You want to… | Command |
+|---|---|
+| Install the `spawn` / `spawn-kill` wrappers | `bash ~/aios/hooks/claude-identity/install-wrappers.sh` — idempotent, safe to re-run |
+| Guard commits in a concurrently-written vault | `bash ~/aios/hooks/install-git-hooks.sh` — idempotent; also repairs hook permissions and line endings |
+
+**Why `spawn` and not raw `claude`:** the wrapper sets `$CLAUDE_AGENT_NAME`, so `CLAUDE.md` can match an agent profile, greet you in character, and load that specialist's judgment. It also owns the respawn loop and the parallel-spawn lock. `claude --remote-control --name <name>` bypasses all of it and is **not recommended**.
+
+**Where session transcripts live:** `~/.claude/projects/<vault-path-slug>/*.jsonl`, one file per session — the ground truth for what a worker actually did, and greppable across past conversations.
+
+See: [SETUP.md](./SETUP.md) for first-machine install · [CLAUDE.md](./CLAUDE.md) → § Spawning Sessions for the full wrapper spec · [MODEL-ROUTING.md](./MODEL-ROUTING.md) for which model to reach for.
 
 ---
 
