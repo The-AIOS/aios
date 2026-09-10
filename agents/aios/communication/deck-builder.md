@@ -134,7 +134,7 @@ Co-author the outline in a vault note:
   output: html                            # html (recommended) | slides
   pdf: no                                 # yes | no — Phase 3.B opt-in
   offline: no                             # yes | no — Phase 3.B opt-in (embed fonts for offline-safe HTML)
-  click-nav: off                          # off (default) | edges | halves — Feature 2: DESKTOP click-to-navigate zones. off = keyboard/clicker only. MOBILE always gets tap-nav ('halves') regardless — touch has no keyboard
+  click-nav: off                          # off (default) | edges | halves — Feature 2: DESKTOP click-to-navigate zones. A BUILD-TIME default only: C toggles off<->halves live during a talk. off = keyboard/clicker only. MOBILE always gets tap-nav ('halves') regardless — touch has no keyboard
   tiers:                                  # set in Phase 1.5 — drives the K toggle. Omit / "none" = single version (no K).
     short: Keynote                        # label for the core-only cut (evocative, honest-for-THIS-deck — NOT a hardcoded duration)
     full: Full                            # label for everything (core + full-tier slides)
@@ -301,7 +301,7 @@ imgs[0].save(PDF_OUT, save_all=True, append_images=imgs[1:],
 python3 "$WORK/build.py"
 ```
 
-- HTML lands at `vault/03 - export/decks/{DATE}-{SLUG}.html` — F11-presentable. The full nav kit is keyboard-driven: `← →`/space navigate · **F** fullscreen · **M** slide menu · **K** toggles the short cut ↔ full version (labels set per deck in Phase 1.5; absent when `tiers: none`) · **N** presenter notes (audience-invisible, never printed) · **S** search the deck (titles · slide text · notes, both languages) · **B** black out (for live demos) · type a number + Enter to jump · **?** help · Esc closes overlays. Clicks never navigate by default (`click-nav: off`) — opt into `edges`/`halves` per deck.
+- HTML lands at `vault/03 - export/decks/{DATE}-{SLUG}.html` — F11-presentable. The full nav kit is keyboard-driven: `← →`/space navigate · **F** fullscreen · **M** slide menu · **K** toggles the short cut ↔ full version (labels set per deck in Phase 1.5; absent when `tiers: none`) · **N** presenter notes (audience-invisible, never printed) · **S** search the deck (titles · slide text · notes, both languages) · **B** black out (for live demos) · type a number + Enter to jump · **?** help · **C** toggles click/tap-to-advance live · Esc closes overlays. Clicks never navigate by default (`click-nav: off`) — opt into `edges`/`halves` per deck.
 - PDF (if requested) lands at `~/Downloads/{DATE}-{SLUG}.pdf` — raster, instant-open, sharing copy.
 - `build.py` lives in `/tmp` and is **discarded** — not preserved in the vault. If the deck needs editing later, re-spawn `deck-builder` on the outline at `vault/03 - export/decks/outlines/{DATE}-{SLUG}.md`.
 
@@ -346,7 +346,7 @@ Joint review pass. Checklist depends on output-format from Phase 0.
 - [ ] Master HTML loads in browser: F enters fullscreen · M opens the slide menu · K toggles the short cut ⇄ full version using the Phase-1.5 labels (or is inert/absent when `tiers: none`) · B blacks out for a live demo · type-#-Enter jumps
 - [ ] **Presenter notes (N)** — N opens the panel; its accent tracks the *active slide's* `--accent` (not the root default — the 7/16 gotcha); `.s-notes` is invisible to the audience; nothing prints (`@media print` hides `.s-notes` + `#notes`)
 - [ ] **Deck search (S)** — S opens the palette; typing filters across slide titles / slide text / presenter notes in BOTH languages (`data-es` indexed); ↑↓ selects, Enter jumps (including to an off-cut slide, which shows a `not in this cut` badge), Esc closes; deck keys (K/T/B…) stay inert while the search input is focused
-- [ ] **Click-nav (`click-nav`)** — DESKTOP: with `off` (default) center + edge clicks never navigate (keyboard/clicker intact); with `edges`/`halves`, only the intended zones advance and clicks inside `#menu`/`#help`/`#search` never navigate. **MOBILE (touch / coarse pointer): always `halves` — tap-right advances, tap-left back — regardless of the config, so phone users (no keyboard) aren't stuck on slide 1**
+- [ ] **Click-nav (`click-nav`)** — DESKTOP: with `off` (default) center + edge clicks never navigate (keyboard/clicker intact); with `edges`/`halves`, only the intended zones advance and clicks inside `#menu`/`#help`/`#search` never navigate. **MOBILE (touch / coarse pointer): always `halves` — tap-right advances, tap-left back — regardless of the config, so phone users (no keyboard) aren't stuck on slide 1** **Runtime toggle:** press **C** — the mode flips off↔halves and a toast names the new state; press it again and the previous behaviour returns. Verify a click on a link, a button and an embedded iframe still does NOT advance while the toggle is on.
 
 Surface issues for user judgment — don't auto-fix in Phase 5. Surface + ask.
 
@@ -562,6 +562,14 @@ body.light .sr-row.sel,body.light .sr-row:hover{background:rgba(0,0,0,0.05);}
   function setMode(m){ if(!hasTiers) return; mode=m; const l=activeList();
     if(l.indexOf(current)<0){ const near=l.find(n=>n>=current)||l[l.length-1]; show(near); } else refresh();
     toast(mode==='keynote'?TIER.short:TIER.full); }
+  // ONE resolver for click-to-advance, read by both the click handler and the C toggle so they can
+  // never disagree. Precedence: runtime override (C) > mobile default > build-time `click-nav`.
+  // Mobile defaults to halves because touch has no keyboard; C still lets a presenter turn it off.
+  function clickNav(){
+    if(window.__CN != null) return window.__CN;
+    var isMobile = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+    return isMobile ? 'halves' : (window.CLICK_NAV || 'off');
+  }
   let toastT; function toast(msg){ let el=document.getElementById('toast');
     if(!el){ el=document.createElement('div'); el.id='toast';
       el.style.cssText='position:fixed;top:22px;left:50%;transform:translateX(-50%);font-family:Inter,sans-serif;font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:var(--accent);background:var(--surface-1);border:1px solid var(--accent);padding:8px 16px;z-index:400;transition:opacity .4s;'; document.body.appendChild(el); }
@@ -595,14 +603,23 @@ body.light .sr-row.sel,body.light .sr-row:hover{background:rgba(0,0,0,0.05);}
     else if(k==='b'||k==='B'){ document.getElementById('blackout').classList.toggle('on'); }
     else if(k==='k'||k==='K'){ setMode(mode==='keynote'?'full':'keynote'); }
     else if(k==='s'||k==='S'){ if(searchEl.classList.contains('open')) closeSearch(); else openSearch(); e.preventDefault(); }
-    else if(k==='?'){ document.getElementById('help').classList.toggle('open'); } });
+    else if(k==='?'){ document.getElementById('help').classList.toggle('open'); }
+    // C — toggle click/tap-to-advance at RUNTIME. `click-nav` in frontmatter is a build-time
+    // default; a presenter discovers mid-talk that they want it (a tablet on a lectern) or that
+    // they do not (a deck full of clickable demos), and rebuilding is not an option on stage.
+    // Cycles off <-> halves only: `edges` is a deliberate build-time choice, not a stage decision.
+    else if(k==='c'||k==='C'){ window.__CN = (clickNav()==='off') ? 'halves' : 'off';
+      toast('Click to advance: ' + (window.__CN==='off' ? 'off' : 'on')); } });
   document.addEventListener('click',function(e){ if(e.target.closest('a'))return;
+    // Never steal a click meant for something interactive. `a` alone is not enough: a deck with a
+    // form control, an embedded player or a live iframe demo would advance the slide out from under
+    // the audience the first time anyone used it.
+    if(e.target.closest('button,input,select,textarea,summary,[contenteditable],iframe,video,audio'))return;
     if(e.target.closest('#menu')||e.target.closest('#help')||e.target.closest('#search'))return;
     if(document.getElementById('menu').classList.contains('open')||document.getElementById('help').classList.contains('open')){ closeAll(); return; }
     if(document.getElementById('blackout').classList.contains('on')){ document.getElementById('blackout').classList.remove('on'); return; }
     // Feature 2 — configurable click-to-nav. DESKTOP default off (clickers/keyboard drive; no accidental/interaction nav). MOBILE (touch / coarse pointer) ALWAYS gets tap-nav ('halves': tap-right advances, tap-left back) — touch has no keyboard, so without this a phone user is stuck on slide 1. Set window.CLICK_NAV = "off" | "edges" | "halves" for desktop.
-    var isMobile = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
-    var CN = isMobile ? 'halves' : (window.CLICK_NAV || 'off');
+    var CN = clickNav();                       // resolved per click, so C takes effect immediately
     if(CN==='off') return;
     var w = window.innerWidth, edge = w*0.05;
     if(CN==='edges'){ if(e.clientX<edge) step(-1); else if(e.clientX>w-edge) step(1); }

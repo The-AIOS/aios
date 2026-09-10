@@ -80,5 +80,34 @@ grep -q 'is \*\*AHEAD\*\*' "$SPEC" && ok "spec names the AHEAD outcome" || no "s
 grep -q 'never DOWNGRADE' "$SPEC" && ok "the auto-apply rule states the downgrade limit" || no "auto-apply rule no longer qualifies itself"
 grep -q 'Known limit' "$SPEC" && ok "the DIVERGED limit is stated, not implied" || no "the known limit was dropped"
 
+
+# ── the BOTH-MOVED branch must report loudly, not as a plain success ─────────
+# Reported by an operator, 2026-09-09: three of their own hunks left CLAUDE.md
+# on a live sync and the run reported success. The merge they proposed was
+# declined on architecture (CLAUDE.md is Tier-1; its value is being the same
+# file for every operator). The SILENCE was not declined -- a rule removed from
+# the file every session loads does not surface as a missing file or a broken
+# command, it surfaces as agents behaving differently weeks later with nothing
+# to trace back to. And the backup is not a remedy: this spec argues in its own
+# words that "backups are never auto-restored".
+BM=$(awk '/upstream != baseline.*both sides moved/{f=1} f&&/^2\.7\./{exit} f' "$SPEC")
+[ -n "$BM" ] && ok "both-moved branch extracted" || no "could not extract the both-moved branch" "anchors moved"
+printf '%s' "$BM" | grep -qiE 'never be reported as a plain success|SAY SO' \
+  && ok "the branch forbids a silent success report" \
+  || no "a replaced file can still be reported as success" "the operator learns weeks later, from behaviour"
+printf '%s' "$BM" | grep -qF 'backup path' \
+  && ok "the report names the backup path" || no "the backup path is not required in the report"
+# the three legitimate homes, so the report ROUTES instead of only informing
+for home in 'Command personalizations' 'INTENT.md' 'working_style.md'; do
+  printf '%s' "$BM" | grep -qF "$home" && ok "routes to: $home" \
+    || no "does not route to $home" "a loud replace that teaches nothing is only a louder loss"
+done
+printf '%s' "$BM" | grep -qiE 'same file for every operator' \
+  && ok "states WHY, so the operator does not read it as a bug" \
+  || no "no reason given for the replace" "without it the operator reasonably assumes a defect"
+printf '%s' "$BM" | grep -qiE 'PR to canonical' \
+  && ok "offers the universal-rule route (PR), not just the personal ones" \
+  || no "does not mention upstreaming" "a good rule stuck in one vault is a loss too"
+
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

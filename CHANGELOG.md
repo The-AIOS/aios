@@ -70,7 +70,7 @@
 
 ## 2026-09-09 — A duplicate close, and a measurement that hid the damage it should have shown
 
-`hash: 49cd137 · 01b46ca · d580446 · 5a0b340 · fa03b0f · 1f08508 · d5f8312` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113) · [#111](https://github.com/The-AIOS/aios/pull/111) · [#117](https://github.com/The-AIOS/aios/pull/117) · [#118](https://github.com/The-AIOS/aios/pull/118) · [#119](https://github.com/The-AIOS/aios/pull/119) · [#120](https://github.com/The-AIOS/aios/pull/120)
+`hash: 49cd137 · 01b46ca · d580446 · 5a0b340 · fa03b0f · 1f08508 · d5f8312` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113) · [#111](https://github.com/The-AIOS/aios/pull/111) · [#117](https://github.com/The-AIOS/aios/pull/117) · [#118](https://github.com/The-AIOS/aios/pull/118) · [#119](https://github.com/The-AIOS/aios/pull/119) · [#120](https://github.com/The-AIOS/aios/pull/120) · [#121](https://github.com/The-AIOS/aios/pull/121)
 
 > **What you can now do.** Nothing new to learn — one thing stops going wrong. `/aios:close-session` no longer appends a second block to your daily note when the only commits since your last close belong to **other sessions**.
 
@@ -100,19 +100,31 @@ It now compares the metric that actually triggered the swap. And a failed adopti
 
 ### An entry could ship with an empty `hash:` and read as new forever
 
-**What you can now do.** Nothing to change — this one is about entries reaching you correctly. `CONTRIBUTING.md` told contributors to cite the PR number and add the hash after merge, without saying what the field holds meanwhile. It now says: **leave the line present with an empty value, never omit the line** — because the two mistakes are not symmetric. An empty value keeps the entry *shown* until a maintainer fills it. A missing line has nothing to test, so "already synced" is vacuously true and the entry is **silently skipped for every operator, forever.**
-
-CI now enforces both halves, gated by event so an open PR is never failed for doing the right thing: the line is required always, a filled value only once it lands on `main`.
+**What you can now do.** Nothing to change. `CONTRIBUTING.md` never said what the `hash:` field holds before a PR merges. It now does: **keep the line, leave the value empty.** The two mistakes are not symmetric — an empty value keeps the entry *shown* until someone fills it, while a missing line is **silently skipped for every operator, forever.** CI enforces both, gated so an open PR is never failed for doing it right.
 
 **Action required:** none.
 
 ### The hash check I shipped this morning validated the field, not its elements
 
-**What you can now do.** Nothing to change — this closes a hole in the guard from earlier today. That check asserted the `hash:` field was non-empty once an entry reached `main`. It didn't look *inside*: a field like `` `hash: a · b · ` `` — the shape an unset variable produces — passed, and then the empty element exits 128 on the ancestor test, which is read as *"not synced"*, so the entry reads NEW for you forever. The same failure the check exists to prevent, one level down.
-
-It now validates **every** element as a short SHA, and the open-PR case is unchanged (an empty value is still correct before merge).
+**What you can now do.** Nothing to change — this closes a hole in the guard from earlier today. That check asserted the `hash:` field was non-empty; it didn't look *inside*. A field like `` `hash: a · b · ` `` passed, and the empty element then reads as *"not synced"*, so the entry shows as NEW for you forever. It now validates **every** element as a short SHA.
 
 **Action required:** none.
+
+### Press **C** mid-talk to turn click/tap-to-advance on or off
+
+**What you can now do.** Change your mind about tap-to-advance **during** a talk. `click-nav` in a deck's frontmatter was a build-time default: you decided at build time and lived with it. Now **C** toggles it live, with a toast naming the new state — useful when you end up presenting from a tablet you hadn't planned on, or when a deck turns out to be full of clickable demos and every stray tap jumps a slide.
+
+Mobile still defaults to tap-halves (touch has no keyboard) and **C** can now turn that off too. A click meant for something interactive never navigates: links, buttons, form fields, embedded players and iframes are all excluded, so a live demo inside a slide no longer advances it the first time anyone uses it.
+
+**Action required:** none — regenerate or rebuild a deck to pick it up.
+
+### A replaced `CLAUDE.md` is no longer reported as a plain success
+
+**What you can now do.** Find out, at the moment it happens, if a sync replaced a `CLAUDE.md` you had edited. Previously `/aios:update` backed the file up, overwrote it, and **reported success** — so an operator who had written their own rules there lost one that every session loads, and learned of it weeks later through agents quietly behaving differently. The backup didn't help, because backups are never auto-restored.
+
+The report now names the file, the backup path, **and where that kind of rule belongs instead** — `USER.md` → `## Command personalizations`, `INTENT.md`, or `context/declared/working_style.md`, which is read in full at every Session Start and is the one most people miss. It also says *why*: `CLAUDE.md` is shared infrastructure, and its value is being the same file for every operator. If your rule is good for everyone, the route is a PR rather than a local edit.
+
+**Action required:** none. If you have edited `CLAUDE.md`, consider moving those rules to one of the three homes above — they'll survive every sync there.
 
 ### `/aios:update` held two contradictory rules for one file, and the losing one came first
 

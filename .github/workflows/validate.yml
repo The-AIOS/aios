@@ -1054,6 +1054,15 @@ jobs:
         # produces the downgrade on the same inputs.
         run: bash tests/update-local-ahead.test.sh
 
+      - name: the deck-builder binds every presenter key it advertises
+        # The agent tells operators which keys a generated deck answers to, in prose, while the
+        # bindings live far away in the toolkit code blocks. Nothing connected them, so either
+        # side could drift: a promised key that does nothing on stage, or a working one nobody
+        # is told about. The cost was already paid in the second direction -- a roadmap row
+        # claimed five kit items were missing when all five were bound, because the only way to
+        # check was to grep the dispatch by hand. Both sets are EXTRACTED, never restated.
+        run: bash tests/deck-builder-nav-kit.test.sh
+
       - name: Step 2.7 gives one rule per dual-owned file, with no replaced prose left behind
         # A session reads the spec top-down and acts on the FIRST matching instruction, so a
         # stale description is not dead text -- it is the rule that runs. On 2026-09-08 an edit

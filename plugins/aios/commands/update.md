@@ -434,6 +434,18 @@ For each changed Tier 1 file:
    - If `local != baseline` → the operator changed it, and **now ask the second question, because "changed" is two different situations:**
      - **`upstream == baseline`** (canonical never touched this file) → the local copy is **AHEAD**. **KEEP IT. Skip the overwrite entirely.** Report *"kept your newer version"*. This branch can only ever PREVENT a write, so it cannot introduce a new failure mode — and without it the command silently downgrades the file, reports success, and the operator must re-apply the same improvement on every sync forever.
      - **`upstream != baseline`** (both sides moved) → genuine divergence → **backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{YYYY-MM-DD}/{flattened-path}.md` BEFORE overwrite.
+
+       **SAY SO — a replaced file must never be reported as a plain success.** The backup is not a remedy: this command already argues, about `mcps/custom/_index.md`, that *"backups are never auto-restored, so the default outcome was silent loss of their own content."* That reasoning applies here verbatim, and hardest to the files an operator reads without opening — a rule removed from `CLAUDE.md` does not surface as a missing file or a broken command. It surfaces as **agents quietly behaving differently, weeks later, with no event to trace back to.**
+
+       So the report for this branch names three things, always:
+
+       1. **the file**, by path — not a count, not "some files"
+       2. **the backup path** it was written to
+       3. **where that kind of rule belongs instead**, when the file is `CLAUDE.md`: `USER.md` → `## Command personalizations` · `INTENT.md` (autonomy and boundaries) · `vault/00 - notes/context/declared/working_style.md`, which is read **in full at every Session Start** and is the home operators most often miss.
+
+       For `CLAUDE.md` specifically, add one sentence of *why*, because without it the operator reasonably assumes a bug: **it is Tier-1 infrastructure and its value is being the same file for every operator** — one behavioural contract, improved once, inherited everywhere. A per-vault merge would institutionalise divergence, so the overwrite is the mechanism that keeps the contract shared rather than a lossy shortcut. If the rule they wrote is good for everyone, the route is a PR to canonical, not a local edit — say that too.
+
+       _(Reported by an operator, 2026-09-09, from a live sync where three of their own hunks left `CLAUDE.md` and the run reported success. They proposed a conflict-free three-way merge; that was declined for the architectural reason above, and this is the half of the report that survived the decision.)_
    - If baseline unreachable (cross-repo hash or `stored_hash=initial`) → conservative fallback: backup.
 2.7. **Dual-owned files MERGE, never overwrite** — `.gitignore` and `.claude-plugin/marketplace.json` (see their Tier-1 entries). **Skip the three-way backup for these** (the merge itself preserves operator content). For **`.gitignore`**: keep upstream's file (framework rules + the `AIOS-OPERATOR-IGNORES` marker) and append the operator's below-marker lines —
    ```bash
