@@ -68,6 +68,14 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-11 — A refused login no longer reads as "offline — fine"
+
+`hash: `
+
+> **What you can now do.** Tell a lost login from a lost network. `/today`'s framework and company freshness checks, and `/close-day`'s framework check, used to throw away git's error message — so *"GitHub refused this machine's key"* and *"no internet"* both printed `unreachable`, and the plan called that *"offline — fine for now"*. A machine whose key had been removed from its GitHub account was reassured every morning. The checks now run `hooks/freshness-probe.sh`, which keeps the error text and reports a new state, **`access-denied`**, whenever the server answered and refused the credential. `/today` shows it as a task naming the repo and the fix; `/close-day` puts it above the verdict line. A genuine outage still reads `unreachable`, and only that state is called offline.
+
+**Action required:** none — `/aios:update` lands it. If you added your own `USER.md` override for this, retire it once this lands (check: your `### /today` section names `freshness-probe.sh` from `hooks/custom/`). If a check has said `unreachable` on mornings when your network was fine, run `bash ~/aios/hooks/freshness-probe.sh` — it names the repo that is refusing you.
+
 ## 2026-09-09 — A duplicate close, and a measurement that hid the damage it should have shown
 
 `hash: 49cd137 · 01b46ca · d580446 · 5a0b340 · fa03b0f · 1f08508 · d5f8312 · dfc63af` · [#112](https://github.com/The-AIOS/aios/pull/112) · [#113](https://github.com/The-AIOS/aios/pull/113) · [#111](https://github.com/The-AIOS/aios/pull/111) · [#117](https://github.com/The-AIOS/aios/pull/117) · [#118](https://github.com/The-AIOS/aios/pull/118) · [#119](https://github.com/The-AIOS/aios/pull/119) · [#120](https://github.com/The-AIOS/aios/pull/120) · [#121](https://github.com/The-AIOS/aios/pull/121)

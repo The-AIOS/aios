@@ -30,7 +30,7 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
 
 1. **Run executor + read vault** — fire these in **one parallel batch**:
    - `Bash(uv run ~/aios/hooks/pipeline-executor.py --command close-day)` — pre-loads Calendar (detailed, with attachments), Calendar next 7 days, Tasks, Slack
-   - `Bash(cfg=~/aios/.aios-update; if [ -f "$cfg" ]; then repo=$(grep ^repo= "$cfg" | cut -d= -f2); h=$(grep ^hash= "$cfg" | cut -d= -f2); r=$(git ls-remote "$repo" HEAD 2>/dev/null | awk '{print $1}'); [ -z "$r" ] && { hr=$(echo "$repo" | sed -E 's#git@github\.com:#https://github.com/#'); r=$(git ls-remote "$hr" HEAD 2>/dev/null | awk '{print $1}'); }; [ -z "$r" ] && echo "aios-update: unreachable" || { [ "$h" = "$r" ] && echo "aios-update: synced" || echo "aios-update: BEHIND (local=${h:0:7} remote=${r:0:7})"; }; else echo "aios-update: no-config"; fi)` — **infrastructure freshness check** (mirror of `/today`'s morning check; SSH `ls-remote` falls back to public HTTPS so a fresh HTTPS clone with no SSH keys still resolves). Render per § Aios-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before the secondary machine's overnight queue (or first thing tomorrow)".
+   - `Bash(bash ~/aios/hooks/freshness-probe.sh --aios-update)` — **infrastructure freshness check** (the same script `/today` runs — one implementation, so the two surfaces can't drift; SSH `ls-remote` falls back to public HTTPS, and git's error output is kept so a refused credential reads `access-denied`, never `unreachable`). Render per § Aios-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before the secondary machine's overnight queue (or first thing tomorrow)".
    - `Bash(python3 ~/aios/hooks/bus-dead-letters.py)` — **bus dead-letter + unclaimed-request check** (same script `/today` runs — one implementation, so the two surfaces can't drift; requires `python3`). It reports two distinct shapes: a retired `.undelivered` request, and a plain `*.json` **nobody ever claimed** — the second is invisible everywhere else, because retirement needs a surface to perform it and a surface that quit performs nothing. Retirement to `.undelivered` stops a request *blocking another surface*; it does not deliver it, and nothing reads that directory. At close-day this matters more than in the morning: an undelivered handoff means a worker was never told to start, so whatever it was meant to produce **will not exist overnight** — and the sender still believes it landed. Render per § Bus dead-letter rendering below.
    - `Read` → `USER.md` (for dev project paths, growth routines, session cascade, organization, and `### /close-day` command personalizations)
    - `Read` → `INTENT.md` (if it exists — for focus alignment check, parked item handling in carries)
@@ -90,10 +90,11 @@ Apply the result from step 1's dead-letter check:
 
 ## Aios-update freshness rendering
 
-Apply the result from step 1's `.aios-update` check (BEHIND / synced / unreachable / no-config):
+Apply the result from step 1's `.aios-update` check (BEHIND / synced / access-denied / unreachable / no-config):
 
 - **`synced`** → silent. No surface in the close-of-day section.
 - **`BEHIND`** → surface as a callout at the top of the `## Close of Day` block, before the verdict line: `> 🆕 **Aios-update pending** — local hash `{h}`, upstream `{r}`. Run `/aios:update` before the secondary machine's overnight queue (or first thing tomorrow morning) so fresh commands/templates land in her shift.` This is consequential at close-day specifically because that queue is generated FROM your local state — stale local = stale handoff.
+- **`access-denied`** → callout at the top of the `## Close of Day` block, before the verdict line: `> 🔐 **Framework check refused** — {why}. This machine cannot pull updates until its key or the account's access to the repo is restored.` A task, not a soft mention — it does not fix itself overnight.
 - **`unreachable`** → soft mention near the Observed section: *"aios-update check unreachable at close (offline — fine for now; /today will retry tomorrow)."* Don't escalate.
 - **`no-config`** → silent (no Organization configured = single-vault user, nothing to sync).
 
