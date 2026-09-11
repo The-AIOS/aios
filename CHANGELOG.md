@@ -88,6 +88,28 @@ The API list is **derived** from the `--permissions` list in `mcps/google-worksp
 
 **Action required:** none if Google already works for you — nothing about your existing setup changes. Setting it up for the first time, or redoing it: run `connect.sh` instead of the console walkthrough. It needs `gcloud` for the automated half; without `gcloud` it says so and stops, and `mcps/google-workspace-mcp/personal-account-setup.md` still carries the full manual path plus the one trap no script can remove — on a consumer `@gmail.com` account, an app left in *Testing* expires its refresh token every 7 days.
 
+### You should not have been running those Google scripts yourself
+
+**What you can now do.** Say *"connect my Google Workspace"*, or run `/aios:mcps-setup` and pick it. Your session creates the Cloud project, enables the APIs, hands you only the two or three console pages Google exposes no API for, and once you say you are done it validates the credential you downloaded and registers the server. **Your part is about six clicks and one download — no terminal commands.**
+
+This morning's version shipped the tooling and pointed *you* at it: run a script, click through the console, then run a second script with a project id you had to copy and a path into `~/Downloads` you had to get right, then run a third printed command. One command from the framework's point of view; three from yours.
+
+Two changes make the session the one holding the tooling. `connect.sh --finish` now needs **no arguments** — it reads the project id the connect run recorded and finds the newest `client_secret_*.json` itself, and because it already refuses a wrong-type or wrong-project client, guessing the file is safe rather than risky. And the connect run prints one stable `AIOS_PROJECT_ID=` line, so a session driving it reads that instead of parsing prose written for a human.
+
+`/aios:mcps-setup` was the worst offender and is rewritten: it had been telling sessions to *"ask user to run"* a `uvx` command with a hand-typed permission list — which had drifted to six services while the connector requested nine, so following it produced a server that started cleanly and then returned `403` on Gmail at the first call. It now drives the tooling and never types a permission list; `connector.json` is the only place that list lives.
+
+**If you don't have `gcloud`, you find out before anything happens** — the preflight runs first, including under `--dry-run`, and says plainly that nothing was created so you are not left half-configured. It names the install command for your actual platform (on a Mac with Homebrew, the one-liner) and offers the by-hand console path as a real alternative. Same for not being logged in.
+
+**Action required:** none, and nothing about a working setup changes. If you have been putting off connecting Google because the instructions read like a build script, this is the version to ask your session about.
+
+### On macOS, `git` was probably never the thing blocking you
+
+**What you can now do.** Know that you are not blocked on `git` when Homebrew misbehaves. macOS ships `git` with the **Xcode Command Line Tools** (`xcode-select --install` — no Apple ID, not the full Xcode), so this guide's GitHub steps work before you have a package manager at all. `git --version` settles it in one line; if it answers, `brew install git` would only put a second copy ahead of it on your `PATH`.
+
+Homebrew is still the simplest way to get `node`, `gh`, `python` and `uv` in one command, so it stays step 1 of the macOS prerequisites. `SETUP.md` just no longer implies that everything after it is waiting on it.
+
+**Action required:** none.
+
 ### `## Close of Day` goes back to the end of your daily note
 
 **What you can now do.** Trust your daily note's order. `/close-day` now appends its `## Close of Day` block at the **end** of the note, and writes it through the same per-file locking helper `/close-session` uses.

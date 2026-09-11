@@ -186,6 +186,63 @@ ctl "unrelated prose using both words far apart" silent <<'FIX'
 - **Which Google Tasks list to read.** Without it the Tasks source is enabled but never queried — `/aios:today` will have no tasks. Get the ID from the Tasks API (`tasklists.list`).
 FIX
 
+echo "── 3a. no doc hands the operator a hand-typed --permissions list ──"
+# The SEVENTH copy of this fact was not an API list at all -- it was a
+# `--permissions` list inside a `uvx` command that mcps-setup.md told the
+# operator to run, and it had drifted to SIX services while the connector
+# requested nine. Following it produced a server that started fine and 403'd on
+# Gmail at the first call. Same class as the API list, different surface, so it
+# needs its own assertion: a LIST is three or more service:level tokens on ONE
+# line -- that is the shape someone copies. Individual services named in
+# explanatory prose (`chat:full` is off by default, `search:full` needs a key)
+# are not a list and must not fire.
+SVC='(drive|sheets|slides|docs|calendar|tasks|gmail|contacts|forms|chat|search|appscript):(full|readonly|organize|drafts|send)'
+perm_lists(){ # $1 = file → prints "path:line" for any line carrying >=3 tokens
+  grep -nE -- "$SVC" "$1" 2>/dev/null | while IFS= read -r hit; do
+    ln="${hit%%:*}"; body="${hit#*:}"
+    n="$(printf '%s' "$body" | grep -oE -- "$SVC" | sort -u | grep -c .)"
+    [ "$n" -ge 3 ] && printf '%s:%s(%s tokens) ' "$1" "$ln" "$n"
+  done
+}
+HARD=""
+for f in SETUP.md README.md CHEATSHEET.md TOOLS.md plugins/aios/commands/mcps-setup.md \
+         mcps/google-workspace-mcp/README.md mcps/google-workspace-mcp/personal-account-setup.md \
+         mcps/google-workspace-mcp/TROUBLESHOOTING.md; do
+  [ -f "$f" ] || continue
+  HARD="$HARD$(perm_lists "$f")"
+done
+[ -z "$HARD" ] \
+  && ok "no hand-typed --permissions list outside connector.json" \
+  || no "a doc hard-codes the permission list:" "$HARD
+        connector.json is its only home; connect.sh --finish prints the registration from it"
+
+# CONTROLS — the exact drifted line that shipped, and the prose that must not fire.
+CTL2="$TMP/permctl"; mkdir -p "$CTL2"
+printf '%s\n' 'ask user to run `uvx workspace-mcp --single-user --permissions drive:full sheets:full slides:full docs:full calendar:full tasks:full`' > "$CTL2/SETUP.md"
+R="$(cd "$CTL2" && grep -nE -- "$SVC" SETUP.md | while IFS= read -r h; do b="${h#*:}"; n="$(printf '%s' "$b" | grep -oE -- "$SVC" | sort -u | grep -c .)"; [ "$n" -ge 3 ] && echo hit; done)"
+[ -n "$R" ] && ok "control: the drifted uvx list → caught" || no "control: the real drifted list → MISSED"
+printf '%s\n' '**Google Chat is off by default.** Add `chat:full` (or `chat:readonly`) for spaces.' > "$CTL2/SETUP.md"
+R="$(cd "$CTL2" && grep -nE -- "$SVC" SETUP.md | while IFS= read -r h; do b="${h#*:}"; n="$(printf '%s' "$b" | grep -oE -- "$SVC" | sort -u | grep -c .)"; [ "$n" -ge 3 ] && echo hit; done)"
+[ -z "$R" ] && ok "control: prose naming one service → silent" || no "control: prose fired a false positive"
+
+echo "── 3c. a session can drive it without parsing prose ──"
+BIN="$TMP/drv"; mk_gcloud "$BIN" authed ""
+export GCLOUD_LOG="$TMP/drv.log"; : > "$GCLOUD_LOG"; export STUB_DOMAIN=example.com STUB_ENABLED=""
+export GOOGLE_WORKSPACE_CRED_DIR="$TMP/drvcreds"
+run "$BIN" --dry-run
+ID="$(printf '%s' "$OUTPUT" | sed -n 's/^AIOS_PROJECT_ID=//p')"
+{ [ -n "$ID" ] && [ "$(printf '%s' "$ID" | grep -c .)" = 1 ]; } \
+  && ok "one stable AIOS_PROJECT_ID= line ($ID)" \
+  || no "no single machine-readable project id line" "a driver would have to parse prose"
+# --dry-run must not leave state behind
+[ -f "$TMP/drvcreds/.aios-project" ] && no "--dry-run recorded project state" || ok "--dry-run records no state"
+# a real run records it, and --finish then needs NO arguments
+export GCLOUD_LOG="$TMP/drv2.log"; : > "$GCLOUD_LOG"
+run "$BIN"
+[ "$(cat "$TMP/drvcreds/.aios-project" 2>/dev/null)" = "$(printf '%s' "$OUTPUT" | sed -n 's/^AIOS_PROJECT_ID=//p')" ] \
+  && ok "a real run records the project id for --finish" \
+  || no "project id not recorded, or disagrees with the emitted line"
+
 echo "── 3b. the mapping covers every service the upstream supports ──"
 # connector.json only requests nine today, so the other suites cannot notice a
 # missing row until someone edits the manifest and the script stops. The README
@@ -210,8 +267,18 @@ echo "── 4. preflight refuses cleanly ──"
 # also remove bash and python3, so the run would die for the wrong reason and the
 # check would pass without ever exercising the branch it names.
 NOGC="$TMP/nogcloud"; mkdir -p "$NOGC"
+# `type -P` resolves ONLY a real executable on disk. `command -v` would answer
+# with a bare name for a shell function -- and an interactive shell may well wrap
+# `grep` in one -- producing a farm of DANGLING symlinks. The script then fails
+# with "grep: command not found" and the check appears to pass for the right
+# reason while actually never reaching the branch it names.
 for t in bash env python3 dirname basename grep sed awk tr cat date mkdir head cut sort uniq wc ls cp chmod printf; do
-  p="$(command -v "$t" 2>/dev/null)" && ln -sf "$p" "$NOGC/$t"
+  p="$(type -P "$t" 2>/dev/null)" || p=""
+  [ -n "$p" ] && [ -x "$p" ] && ln -sf "$p" "$NOGC/$t"
+done
+for t in grep sed python3; do
+  [ -x "$NOGC/$t" ] || no "harness: $NOGC/$t is not a working executable" \
+    "a dangling link makes the no-gcloud check fail for the wrong reason"
 done
 [ -x "$NOGC/python3" ] && ok "harness: python3 reachable without gcloud" \
   || no "harness: could not stage python3 — the no-gcloud check cannot run"
@@ -238,6 +305,39 @@ else
   no "refused but never named the fix" "$OUTPUT"
 fi
 grep -q 'projects create' "$GCLOUD_LOG" && no "created a project despite refusing" || ok "no project created on refusal"
+
+echo "── 4b. --dry-run refuses too, and says nothing was created ──"
+# A dry run must NOT skip the preflight. Skipping it would print a confident
+# plan that cannot execute -- the operator's whole reason for running --dry-run
+# is to find out whether this will work on their machine. And a red refusal
+# mid-setup makes anyone wonder if they are now half-configured, so both
+# refusals say plainly that nothing was created.
+OUTPUT="$(PATH="$NOGC" "$BASH_BIN" "$SCRIPT" --dry-run 2>&1)"; RC=$?
+{ [ "$RC" -ne 0 ] && printf '%s' "$OUTPUT" | grep -q 'gcloud is not installed'; } \
+  && ok "--dry-run with no gcloud → refuses, naming gcloud" \
+  || no "--dry-run skipped the missing-gcloud preflight" "it would print a plan that cannot run" 
+printf '%s' "$OUTPUT" | grep -qi 'nothing has been created' \
+  && ok "and says nothing was created" || no "refusal leaves the operator wondering if they are half-configured"
+# the hint must be actionable for THIS platform, not a bare doc URL when a one-liner exists
+if [ "$(uname -s)" = Darwin ] && command -v brew >/dev/null 2>&1; then
+  printf '%s' "$OUTPUT" | grep -q 'brew install --cask google-cloud-sdk' \
+    && ok "macOS + brew → the hint is the one-liner" \
+    || no "on a Mac with brew the hint is still a doc URL" "$OUTPUT"
+else
+  printf '%s' "$OUTPUT" | grep -q 'cloud.google.com/sdk' \
+    && ok "hint points at the installer for this platform" || no "no install hint at all"
+fi
+
+BIN="$TMP/anon2"; mk_gcloud "$BIN" anon ""
+export GCLOUD_LOG="$TMP/anon2.log"; : > "$GCLOUD_LOG"; export STUB_DOMAIN=gmail.com STUB_ENABLED=""
+run "$BIN" --dry-run
+{ [ "$RC" -ne 0 ] && printf '%s' "$OUTPUT" | grep -q 'gcloud auth login'; } \
+  && ok "--dry-run while logged out → refuses, naming \`gcloud auth login\`" \
+  || no "--dry-run skipped the authentication preflight" "$OUTPUT"
+printf '%s' "$OUTPUT" | grep -qi 'nothing has been created' \
+  && ok "and says nothing was created" || no "logged-out refusal does not reassure"
+grep -qE 'projects create|services enable' "$GCLOUD_LOG" \
+  && no "mutated despite refusing" || ok "no mutating call on either refusal"
 
 echo "── 5. --dry-run mutates nothing ──"
 BIN="$TMP/dry"; mk_gcloud "$BIN" authed ""

@@ -200,12 +200,25 @@ Creates a dedicated Slack app. Messages post AS THE BOT, not as the user. Requir
 - **Register:** `claude mcp add stitch -- npx -y @_davideast/stitch-mcp proxy` (reads `STITCH_API_KEY` from env at launch — keep it in the marker block, not in args)
 - **Bonus — seed a known design system:** by default, Stitch auto-invents a design system per project. To generate screens in a reference brand's style (Stripe, Linear, Apple, etc.), paste a pre-built `DESIGN.md` from [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) (69 files) into `create_design_system` → `apply_design_system` before `generate_screen_from_text`. The same files also drop into any code project root for Claude Code / Cursor — no Stitch dependency.
 
-### Google Workspace (interactive OAuth, one-time per machine)
+### Google Workspace (one-time per machine — YOU run the tooling, the operator clicks)
 
-- **Ask first:** "Want Google Workspace MCP (Calendar, Tasks, Drive, Docs, Sheets, Slides, Gmail)? This is the most-used MCP for /today and /close-day — skip only if you genuinely don't use Google Workspace. (y/skip)"
-- No token to paste. This MCP uses OAuth browser flow.
-- After deps installed, ask user to run `uvx workspace-mcp --single-user --permissions drive:full sheets:full slides:full docs:full calendar:full tasks:full` once in a terminal — it opens a browser, user signs in, OAuth token is cached locally.
-- Already registered in `~/.claude.json` on most setups (top-level `mcpServers`). If not, register: `claude mcp add google-workspace -- uvx workspace-mcp --single-user --permissions drive:full sheets:full slides:full docs:full calendar:full tasks:full`
+- **Ask first:** "Want Google Workspace (Calendar, Tasks, Drive, Docs, Sheets, Slides, Gmail, Contacts, Forms)? It's what makes `/today` and `/close-day` read your real day instead of guessing — skip only if you genuinely don't use Google. (y/skip)"
+- No token to paste. OAuth browser flow.
+
+> ⚠️ **Do NOT hand the operator a shell command, and do NOT type a `--permissions` list into this file.** Both were here and both were wrong: the list that sat in this section had drifted to six services while the connector requested nine, so following it produced a working server that 403'd on Gmail at the first call. **The permission list has exactly one home — `mcps/google-workspace-mcp/connector.json`** — and `connect.sh` derives everything from it. An operator who is asked to run a script is also being asked to get its arguments right; that is the friction this flow exists to remove, and a C-level operator is the last person who should be assembling a `uvx` invocation.
+
+**The division of labour, and it is the whole point of this section: Google exposes no API for the consent screen or the OAuth client, so a human must click roughly six times. Everything either side of those clicks is yours.**
+
+1. **You run** `bash ~/aios/mcps/google-workspace-mcp/connect.sh`. It creates the Cloud project and enables every API the connector needs. **Read the project id from the `AIOS_PROJECT_ID=` line**, never from the surrounding prose — that line exists so you don't parse prose that is free to change.
+   - No `gcloud`? It says so and stops. Offer the operator the choice rather than deciding for them: install `gcloud` (one `brew install --cask google-cloud-sdk`, then you re-run this), or walk the console by hand via `personal-account-setup.md`. Don't install a package manager or an SDK on their machine without asking.
+2. **You present only the clicks** — the three deep links the script printed, already pointed at their project, plus what each screen needs. Do not paste the script's full output at them; it also talks to you. Close with: *"Download the JSON when you create the client, then tell me you're done."*
+3. **The operator clicks and downloads.** Irreducible — no API exists for any of it.
+4. **On "done", you run** `bash ~/aios/mcps/google-workspace-mcp/connect.sh --finish`. Both of its arguments default: the project id from the connect run, the client from the newest `client_secret_*.json` in `~/Downloads`. It refuses a Web-type client or one belonging to a different project — so if the operator created the wrong thing you find out **here**, with the fix named, instead of weeks later as `redirect_uri_mismatch` or `403 org_internal`.
+5. **You register it** with the `claude mcp add` line `--finish` prints. It is generated from the manifest, so it carries the current permission list by construction — use it verbatim rather than composing one.
+   - **`claude mcp add` writes `~/.claude.json`, which a sandboxed tool call cannot touch — and it prints success anyway.** Run it un-sandboxed, then **verify by reading the file back**, not by trusting the exit code: `python3 -c "import json,os;print('google-workspace' in json.load(open(os.path.expanduser('~/.claude.json'))).get('mcpServers',{}))"`. A registration that silently did not land looks identical to one that did.
+6. **Tell them to restart the session**, and that the first Google tool call opens a browser once for consent. MCP tools register at session start, so it is not callable until then.
+
+**The operator's total: one `y`, about six clicks, one download, one "done". No terminal commands.** If you find yourself about to type a `bash` line into the chat for them to run, you have taken a step that belongs to you.
 
 ### NotebookLM (interactive CLI, one-time per machine)
 

@@ -132,8 +132,19 @@ Run your two side-by-side: Obsidian on the left for context, your execution surf
 
 ### macOS (~5 min)
 
+> **`git` is very likely already installed, and that matters if Homebrew gives you trouble.** macOS
+> ships `git` with the **Xcode Command Line Tools** — `xcode-select --install`, which needs no Apple
+> ID and is not the full Xcode. So the GitHub steps in this guide work *before* you have a package
+> manager at all. Check with `git --version`: if it answers, `git` is done, and `brew install git`
+> would only add a second copy ahead of it on your `PATH`.
+>
+> Homebrew is still the simplest way to get `node`, `gh`, `python` and `uv` in one command, so it
+> stays step 1. The point is narrower and worth knowing while you are in it: **if the Homebrew
+> install is what is blocking you, you are not blocked on `git`** — and a guide that opens with
+> "install Homebrew" makes it look like you are.
+
 ```bash
-# 1. Homebrew (skip if you have it)
+# 1. Homebrew (skip if you have it — and see the note above if it gives you trouble)
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # 2. Toolchain
@@ -329,18 +340,24 @@ claude mcp add obsidian -- npx -y @mauricio.wolff/mcp-obsidian@latest ~/aios/vau
 
 Enables Google Calendar, Tasks, Drive, Docs, Sheets, Slides, Gmail, Contacts and Forms.
 
-**One command does most of it:**
+**Ask your Claude session to do it** — *"connect my Google Workspace"*, or run
+`/aios:mcps-setup` and pick it. **You should not be running scripts for this.** The session creates
+the Cloud project, enables every API the connector needs, hands you the two or three console pages
+Google exposes no API for, and once you say you are done it validates the credential you downloaded
+and registers the server. Your part: about six clicks and one download.
+
+The tooling underneath is `mcps/google-workspace-mcp/connect.sh` — documented here because it is
+worth knowing what is running on your machine, not because you have to type it:
 
 ```bash
-cd ~/aios
-bash mcps/google-workspace-mcp/connect.sh
+bash mcps/google-workspace-mcp/connect.sh            # project + every API, then the clicks left
+bash mcps/google-workspace-mcp/connect.sh --finish   # validates + installs the client you downloaded
 ```
 
-It creates your Google Cloud project, enables every API the connector needs in a single call, and
-then prints the handful of console steps it cannot do — as links that land on the exact page for
-your project. After those, `connect.sh --finish --project-id <id> --client <downloaded.json>`
-installs the credential and prints the `claude mcp add` command with the permission list already
-filled in from the manifest. `--dry-run` changes nothing; `--verify` re-checks the APIs later.
+`--finish` needs no arguments — it reads the project id recorded by the connect run and the newest
+`client_secret_*.json` in `~/Downloads`, then prints the `claude mcp add` line with the permission
+list already filled in from the manifest. `--dry-run` changes nothing; `--verify` re-checks the APIs;
+`--print-apis` prints just the derived list.
 
 **Why not all of it.** Google publishes an API for project creation and API enablement, and none for
 the consent screen or for creating an OAuth client. So the floor is one command plus roughly six
