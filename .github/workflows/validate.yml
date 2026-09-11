@@ -1358,6 +1358,25 @@ jobs:
         # -- a suite that cannot detect the defect it was written for measures nothing.
         run: bash tests/daily-note-block-order.test.sh
 
+      - name: the documented MCP registration read-back checks both scopes
+        # `claude mcp add` prints success even when a sandboxed call wrote nothing, so
+        # mcps-setup.md tells sessions to verify by reading ~/.claude.json back. The
+        # first version of that read-back looked only at top-level `mcpServers` -- and
+        # the command DEFAULTS to local (per-directory) scope, so a normal registration
+        # lands under projects["<cwd>"].mcpServers.
+        #
+        # Measured on a live vault: connector running, all nine services present, and
+        # the documented check printed False. A session acting on that re-registers
+        # something that already worked -- and two registrations drift independently
+        # (one grew Gmail, the other did not). So the wrong check pushed toward the
+        # failure it was meant to detect.
+        #
+        # The suite EXTRACTS the snippet from the command file and runs it against
+        # fixtures rather than restating the logic -- a guard that reimplements what it
+        # checks would have passed against the broken original. Its control replays that
+        # original and requires it to still answer False.
+        run: bash tests/mcp-registration-readback.test.sh
+
       - name: the Google connector's API set derives from one manifest
         # The set of Google APIs an operator must enable existed in SIX places before
         # AI-126 -- connector.json's --permissions, SETUP.md's prose, the setup doc's

@@ -68,7 +68,7 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
-## 2026-09-11 — Google in one command, a refused login that says so, and Close of Day back at the end
+## 2026-09-11 — Google connects by asking, a refused login that says so, and Close of Day back at the end
 
 `hash: 61e7d9c · 398e526 · 0a2e3db · 236e899` · [#122](https://github.com/The-AIOS/aios/pull/122) · [#123](https://github.com/The-AIOS/aios/pull/123)
 
@@ -76,31 +76,27 @@
 
 **Action required:** none — `/aios:update` lands it. If you added your own `USER.md` override for this, retire it once this lands (check: your `### /today` section names `freshness-probe.sh` from `hooks/custom/`). If a check has said `unreachable` on mornings when your network was fine, run `bash ~/aios/hooks/freshness-probe.sh` — it names the repo that is refusing you.
 
-### Google Workspace connects with one command
+### Google Workspace connects by asking, not by running scripts
 
-**What you can now do.** Run `bash mcps/google-workspace-mcp/connect.sh`. It creates your Google Cloud project and enables every API the connector needs in a single call, then prints the steps Google publishes no API for — as links that land on the exact page for *your* project. Afterwards, `connect.sh --finish --project-id <id> --client <downloaded.json>` installs the credential and prints the `claude mcp add` line with the permission list already filled in. `--verify` re-checks the APIs later; `--dry-run` changes nothing; `--print-apis` shows just the list.
+**What you can now do.** Say *"connect my Google Workspace"*, or run `/aios:mcps-setup` and pick it. Your session creates the Cloud project, enables every API the connector needs, hands you only the two or three console pages Google publishes no API for, and once you say you are done it validates the credential you downloaded and registers the server. **Your part is about six clicks and one download — no terminal commands.**
 
-It also checks the two things that used to fail *much* later: that the client you downloaded is a **Desktop** type (a Web client fails with `redirect_uri_mismatch`) and that it belongs to the project whose APIs were enabled (using one from another project is what `403 org_internal` means). Both now stop the run and name the fix.
+It also catches the two mistakes that used to fail *much* later: a client downloaded as **Web application** instead of Desktop (`redirect_uri_mismatch`) and one belonging to a different project (`403 org_internal`). Both now stop the setup and name the fix.
 
-The API list is **derived** from the `--permissions` list in `mcps/google-workspace-mcp/connector.json` — the same manifest that registers the server. It used to be written out separately in five other places, and those had drifted apart: one sent you to enable a Chat API nothing requests, another omitted Gmail, contacts and forms entirely. That mismatch is the worst failure in this setup because it fails late and blames the wrong thing — consent succeeds, the tool appears, and the first call returns `403 SERVICE_DISABLED`, which reads like an auth problem. It can no longer be expressed.
+**If you do not have `gcloud`, you find out before anything happens.** The preflight runs first and says plainly that nothing was created, so you are never left half-configured. It names the install command for your actual platform — on a Mac with Homebrew, the one-liner — and offers the by-hand console path as a real alternative. Same for not being signed in.
+
+**The API list is derived, not written down.** It comes from the `--permissions` list in `mcps/google-workspace-mcp/connector.json`, the same manifest that registers the server. It had been restated in six other places and they disagreed: one sent you to enable a Chat API nothing requests, another omitted Gmail, contacts and forms entirely. That mismatch is the worst failure here because it fails late and blames the wrong thing — consent succeeds, the tool appears, and the first call returns `403 SERVICE_DISABLED`, which reads like an auth problem. It can no longer be expressed.
 
 **No credential ships in the repo, deliberately.** A shared OAuth client carries a hard cap of **100 grants for the life of the project, unresettable** — it would work for a while and then fail for everyone after that, with nothing in the repo able to explain why. Your own project also avoids your Workspace admin's third-party app gate, since an internal app is trusted by default.
 
-**Action required:** none if Google already works for you — nothing about your existing setup changes. Setting it up for the first time, or redoing it: run `connect.sh` instead of the console walkthrough. It needs `gcloud` for the automated half; without `gcloud` it says so and stops, and `mcps/google-workspace-mcp/personal-account-setup.md` still carries the full manual path plus the one trap no script can remove — on a consumer `@gmail.com` account, an app left in *Testing* expires its refresh token every 7 days.
+**Action required:** none if Google already works for you — nothing about your existing setup changes. Setting it up for the first time, or redoing it: ask your session rather than following the old console walkthrough. `mcps/google-workspace-mcp/personal-account-setup.md` still has the full manual path for anyone who wants it, plus the one trap no script can remove — on a consumer `@gmail.com` account, an app left in *Testing* expires its refresh token every 7 days.
 
-### You should not have been running those Google scripts yourself
+### A check that said your Google connector was not registered, on machines where it was
 
-**What you can now do.** Say *"connect my Google Workspace"*, or run `/aios:mcps-setup` and pick it. Your session creates the Cloud project, enables the APIs, hands you only the two or three console pages Google exposes no API for, and once you say you are done it validates the credential you downloaded and registers the server. **Your part is about six clicks and one download — no terminal commands.**
+**What you can now do.** Trust the answer. `/aios:mcps-setup` verifies a registration by reading `~/.claude.json` back — because `claude mcp add` prints success even when nothing was written — and that read-back looked only at the top-level `mcpServers`. But `claude mcp add` **defaults to local, per-directory scope**, so a normal registration lands under `projects["<your directory>"]`. On a live vault with the connector running and all nine services present, the check answered *not registered*.
 
-This morning's version shipped the tooling and pointed *you* at it: run a script, click through the console, then run a second script with a project id you had to copy and a path into `~/Downloads` you had to get right, then run a third printed command. One command from the framework's point of view; three from yours.
+Acting on that answer is worse than ignoring it: it invites a second registration, and two of them drift independently — which is exactly how one copy grew Gmail and the other did not, with nothing reporting the difference. It now reads both scopes and names where it found each, so being registered twice is surfaced rather than hidden.
 
-Two changes make the session the one holding the tooling. `connect.sh --finish` now needs **no arguments** — it reads the project id the connect run recorded and finds the newest `client_secret_*.json` itself, and because it already refuses a wrong-type or wrong-project client, guessing the file is safe rather than risky. And the connect run prints one stable `AIOS_PROJECT_ID=` line, so a session driving it reads that instead of parsing prose written for a human.
-
-`/aios:mcps-setup` was the worst offender and is rewritten: it had been telling sessions to *"ask user to run"* a `uvx` command with a hand-typed permission list — which had drifted to six services while the connector requested nine, so following it produced a server that started cleanly and then returned `403` on Gmail at the first call. It now drives the tooling and never types a permission list; `connector.json` is the only place that list lives.
-
-**If you don't have `gcloud`, you find out before anything happens** — the preflight runs first, including under `--dry-run`, and says plainly that nothing was created so you are not left half-configured. It names the install command for your actual platform (on a Mac with Homebrew, the one-liner) and offers the by-hand console path as a real alternative. Same for not being logged in.
-
-**Action required:** none, and nothing about a working setup changes. If you have been putting off connecting Google because the instructions read like a build script, this is the version to ask your session about.
+**Action required:** none. If you want to know where yours lives, ask your session to run the check in `/aios:mcps-setup` — and if it reports two, keep one.
 
 ### On macOS, `git` was probably never the thing blocking you
 
