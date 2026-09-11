@@ -119,7 +119,9 @@ load-bearing, and both were learned from the same incident (2026-09-09, operator
   marker being last is what keeps session blocks *above* it. Anchor this block anywhere else —
   the Energy note, the close-day question, wherever the eye lands while reading the note — and
   every session block already written below that point ends up **below Close of Day**, which is
-  what an operator sees and reports.
+  what an operator sees and reports. **This is about where YOU write, not a permanent invariant
+  of the note** — a session that genuinely runs after the close is appended afterwards and
+  legitimately sits below the marker. Do not "repair" notes on that basis.
 - **Through the helper, not a direct write.** A lock only works if every writer takes it. The
   note is written concurrently by `/close-session` (including `--auto` broadcasts closing several
   sessions at once), and those take a per-file lock and re-read the latest note under it. A

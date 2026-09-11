@@ -94,7 +94,7 @@ The API list is **derived** from the `--permissions` list in `mcps/google-worksp
 
 Two things were wrong. The command never said *where* its block went, so it could be anchored partway up the note — and every `## Session —` block already written below that point then sat **below** Close of Day. Because `/close-session` inserts its blocks with `--before "## Close of Day"`, the marker being last is exactly what keeps session blocks above it. Separately, `/close-day` wrote the note directly while every other writer took a lock; a session block landing between its read and its write was silently overwritten. Both are fixed by the same change.
 
-**Action required:** none — `/aios:update` lands it. If a recent daily note has `## Session —` blocks sitting below `## Close of Day`, move them above it by hand — nothing will reorder them for you.
+**Action required:** none — `/aios:update` lands it. **Do not bulk-reorder your old notes on the strength of this.** A `## Session —` block below `## Close of Day` is only wrong when it was written *before* the close — the case above. A session that genuinely ran after you closed the day belongs below the marker, and moving it up would make the note's chronology wrong. Scanning one vault for this turned up 14 notes going back six months and almost all of them were the legitimate kind, one even labelled *"post-close"*. If you do find blocks that predate their own close sitting underneath it, move those by hand; nothing will reorder them for you.
 
 ## 2026-09-09 — A duplicate close, and a measurement that hid the damage it should have shown
 
