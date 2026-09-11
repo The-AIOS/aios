@@ -22,12 +22,25 @@ Accounts (primary + optional personal) are configured in your `USER.md` → Sour
 
 ## Setup
 
-Full walkthrough: [`SETUP.md` → Google Workspace MCP](../../SETUP.md). In short:
+```bash
+bash connect.sh                # project + every API, then the clicks that are left
+bash connect.sh --finish --project-id <id> --client ~/Downloads/client_secret_*.json
+```
 
-1. Create your own **Desktop app** OAuth client — [`personal-account-setup.md`](./personal-account-setup.md), steps 0–4.
-2. `cp oauth.json.template oauth.json`, then paste your client id + secret. **`oauth.json` is gitignored** — OAuth credentials are per-person secrets and are never committed, which is why the repo ships only the template.
-3. Register with `claude mcp add … -- uvx workspace-mcp --single-user --permissions …`.
-4. The first call opens a browser for consent. Tokens cache in `~/.google_workspace_mcp/credentials/`.
+`connect.sh` creates the Cloud project, enables the APIs **derived from `connector.json`'s
+`--permissions`** (so a scope whose API is off cannot happen), and prints the console steps Google
+exposes no API for. `--finish` checks the downloaded client is a Desktop type belonging to that
+project — the two mistakes that otherwise surface much later as `redirect_uri_mismatch` and
+`403 org_internal` — installs it `0600` outside the vault, and prints the registration command.
+`--print-apis` shows the derived list; `--verify` re-checks it; `--dry-run` changes nothing.
+
+By hand instead: [`personal-account-setup.md`](./personal-account-setup.md) — full console
+walkthrough, plus the one trap no script removes (a consumer-account app in *Testing* expires its
+refresh token every 7 days). Longer context: [`SETUP.md` → Google Workspace MCP](../../SETUP.md).
+
+**No credential ships here.** `oauth.json` is gitignored — OAuth credentials are per-person secrets,
+so the repo carries only `oauth.json.template`. The first call opens a browser for consent; tokens
+cache in `~/.google_workspace_mcp/credentials/`.
 
 **Register it once, from `~/aios`.** `claude mcp add` defaults to *local* (per-directory) scope, so a registration made from a second directory becomes an independent copy that drifts — exactly how two registrations here ended up with different service lists, with no surface reporting the difference. If you want it available everywhere, use a single `--scope user` registration rather than several local ones.
 

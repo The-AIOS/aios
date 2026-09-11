@@ -102,7 +102,37 @@ Apply the result from step 1's `.aios-update` check (BEHIND / synced / access-de
 
 ## Output
 
-Append to the daily note being closed (may be today or yesterday if closing after midnight):
+**Write it through the race-safe helper, at the END of the note.** Both halves of that are
+load-bearing, and both were learned from the same incident (2026-09-09, operator-reported):
+
+```bash
+# write the block below to a temp file first, then:
+~/aios/hooks/aios-note-append \
+  --note "$HOME/aios/vault/01 - calendar/{YYYY-MM}/{YYYY-MM-DD}.md" \
+  -m "Close day {YYYY-MM-DD} — {verdict in a few words}" \
+  --block-file /tmp/aios-close-day-block.$$.md
+```
+
+- **No `--before`** — the helper appends at the end, which is exactly where this block goes.
+  **`## Close of Day` is the LAST section of the note**, after every `## Session —` block. This is
+  not cosmetic: `/close-session` inserts its blocks with `--before "## Close of Day"`, so the
+  marker being last is what keeps session blocks *above* it. Anchor this block anywhere else —
+  the Energy note, the close-day question, wherever the eye lands while reading the note — and
+  every session block already written below that point ends up **below Close of Day**, which is
+  what an operator sees and reports.
+- **Through the helper, not a direct write.** A lock only works if every writer takes it. The
+  note is written concurrently by `/close-session` (including `--auto` broadcasts closing several
+  sessions at once), and those take a per-file lock and re-read the latest note under it. A
+  direct read-modify-write here does not, so a session block landing between this command's read
+  and its write is **silently overwritten** — the failure that costs a session its capture with
+  nothing reporting it.
+
+**Updating an existing block** (the note already has a `## Close of Day` — re-running on the same
+day) is the one case the helper cannot do, since it appends rather than replacing a section. Then:
+re-read the note immediately before writing, merge into the existing section rather than adding a
+second one, and **never relocate an existing `## Session —` block** while doing it.
+
+The block, appended to the daily note being closed (may be today or yesterday if closing after midnight):
 
 ```
 ---

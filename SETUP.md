@@ -329,39 +329,41 @@ claude mcp add obsidian -- npx -y @mauricio.wolff/mcp-obsidian@latest ~/aios/vau
 
 Enables Google Calendar, Tasks, Drive, Docs, Sheets, Slides, Gmail, Contacts and Forms.
 
-**First, create your own OAuth client.** OAuth credentials are per-person secrets, so the repo cannot ship them — it ships a template and gitignores the filled-in file. Follow [`mcps/google-workspace-mcp/personal-account-setup.md`](./mcps/google-workspace-mcp/personal-account-setup.md) (steps 0–4) to create a **Desktop app** OAuth client in Google Cloud Console, then:
+**One command does most of it:**
 
 ```bash
 cd ~/aios
-cp mcps/google-workspace-mcp/oauth.json.template mcps/google-workspace-mcp/oauth.json
-# edit oauth.json — paste your client_id + client_secret (the file is gitignored)
+bash mcps/google-workspace-mcp/connect.sh
 ```
 
-**Then register the server.** The server itself is installed on demand from PyPI by `uvx` — nothing to build, and you stay current with upstream (which ships frequently):
+It creates your Google Cloud project, enables every API the connector needs in a single call, and
+then prints the handful of console steps it cannot do — as links that land on the exact page for
+your project. After those, `connect.sh --finish --project-id <id> --client <downloaded.json>`
+installs the credential and prints the `claude mcp add` command with the permission list already
+filled in from the manifest. `--dry-run` changes nothing; `--verify` re-checks the APIs later.
 
-```bash
-cd ~/aios
-CLIENT_ID=$(python3 -c "import json; print(json.load(open('mcps/google-workspace-mcp/oauth.json'))['client_id'])")
-CLIENT_SECRET=$(python3 -c "import json; print(json.load(open('mcps/google-workspace-mcp/oauth.json'))['client_secret'])")
+**Why not all of it.** Google publishes an API for project creation and API enablement, and none for
+the consent screen or for creating an OAuth client. So the floor is one command plus roughly six
+clicks, and the script is explicit about which is which rather than implying it automated the lot.
 
-claude mcp add google-workspace \
-  -e GOOGLE_OAUTH_CLIENT_ID="$CLIENT_ID" \
-  -e GOOGLE_OAUTH_CLIENT_SECRET="$CLIENT_SECRET" \
-  -e MCP_SINGLE_USER_MODE=true \
-  -e USER_GOOGLE_EMAIL="you@company.io" \
-  -e WORKSPACE_MCP_CREDENTIALS_DIR="$HOME/.google_workspace_mcp/credentials" \
-  -- uvx workspace-mcp --single-user --permissions \
-  drive:full sheets:full slides:full docs:full calendar:full tasks:full \
-  gmail:full contacts:full forms:full
-```
+**The API list is not printed in this document, on purpose.** It is derived from the `--permissions`
+list in `mcps/google-workspace-mcp/connector.json` — the same manifest that registers the server —
+so a scope whose API is not enabled cannot be expressed. That failure is the worst one here: consent
+succeeds, the tool appears, and the first call returns `403 SERVICE_DISABLED`, which looks like an
+auth failure and is not. To see the list: `bash mcps/google-workspace-mcp/connect.sh --print-apis`.
 
-On first use, Claude opens a browser for Google OAuth consent.
+**No credential ships in this repo.** OAuth credentials are per-person secrets; a shared client
+would also carry a hard cap of 100 lifetime grants that cannot be reset, so it would work for a
+while and then fail for everyone after it with nothing in the repo able to explain why.
 
-> **Enable one Google API per service you list.** The permission list above spans nine services, so your Cloud project needs the matching nine APIs enabled — the core seven (Drive, Docs, Sheets, Slides, Calendar, Tasks, Gmail) **plus People API for `contacts` and Forms API for `forms`** (and Chat API if you add `chat`). A mismatch fails *late*: consent succeeds, the tool appears, then the call returns `403 SERVICE_DISABLED`, which looks like an auth failure and isn't. The error text includes a one-click activation URL. Enabling an API is a project setting, so no re-consent is needed. If you'd rather not enable the extras, drop `contacts:full` / `forms:full` from the list instead — an unused service costs nothing, but a listed-and-unenabled one produces a confusing error the first time you touch it.
+**Prefer to do it by hand, or have no `gcloud`?**
+[`mcps/google-workspace-mcp/personal-account-setup.md`](./mcps/google-workspace-mcp/personal-account-setup.md)
+has the full console walkthrough, the four failure modes with their causes, and the one trap no
+script can remove (a consumer-account app in *Testing* expires its refresh token every 7 days).
 
 > **Register it once, from your vault.** `claude mcp add` defaults to **local** scope, which is *per-directory* — the registration only applies to sessions started in that directory. Run it from `~/aios` and that covers vault sessions, which is where this MCP is used. Adding it again from another directory creates a **second, independent copy that silently drifts** (two registrations diverged exactly this way — one grew Gmail, the other didn't, and neither surface said so). If you genuinely want it everywhere, use one `--scope user` registration instead of several local ones.
 >
-> **Google Chat is supported but off by default.** The upstream server ships Chat tools (list spaces, read/search/send messages, reactions, attachments); this permission list omits them. To enable, add `chat:full` (or `chat:readonly`) — it requests **new OAuth scopes, so it triggers a fresh consent prompt**. Note that Google restricts *sending* to some space types when using user credentials rather than an app, so verify sending against your own spaces before relying on it.
+> **Google Chat is supported but off by default.** The upstream server ships Chat tools (list spaces, read/search/send messages, reactions, attachments); the manifest's permission list omits them. To enable, add `chat:full` (or `chat:readonly`) to `connector.json` — it requests **new OAuth scopes, so it triggers a fresh consent prompt**, and re-running `connect.sh` will enable its API. Note that Google restricts *sending* to some space types when using user credentials rather than an app, so verify sending against your own spaces before relying on it.
 
 ### 3. GitHub CLI
 

@@ -68,13 +68,33 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
-## 2026-09-11 — A refused login no longer reads as "offline — fine"
+## 2026-09-11 — Google in one command, a refused login that says so, and Close of Day back at the end
 
-`hash: 61e7d9c`
+`hash: 61e7d9c` · [#122](https://github.com/The-AIOS/aios/pull/122) · [#123](https://github.com/The-AIOS/aios/pull/123)
 
 > **What you can now do.** Tell a lost login from a lost network. `/today`'s framework and company freshness checks, and `/close-day`'s framework check, used to throw away git's error message — so *"GitHub refused this machine's key"* and *"no internet"* both printed `unreachable`, and the plan called that *"offline — fine for now"*. A machine whose key had been removed from its GitHub account was reassured every morning. The checks now run `hooks/freshness-probe.sh`, which keeps the error text and reports a new state, **`access-denied`**, whenever the server answered and refused the credential. `/today` shows it as a task naming the repo and the fix; `/close-day` puts it above the verdict line. A genuine outage still reads `unreachable`, and only that state is called offline.
 
 **Action required:** none — `/aios:update` lands it. If you added your own `USER.md` override for this, retire it once this lands (check: your `### /today` section names `freshness-probe.sh` from `hooks/custom/`). If a check has said `unreachable` on mornings when your network was fine, run `bash ~/aios/hooks/freshness-probe.sh` — it names the repo that is refusing you.
+
+### Google Workspace connects with one command
+
+**What you can now do.** Run `bash mcps/google-workspace-mcp/connect.sh`. It creates your Google Cloud project and enables every API the connector needs in a single call, then prints the steps Google publishes no API for — as links that land on the exact page for *your* project. Afterwards, `connect.sh --finish --project-id <id> --client <downloaded.json>` installs the credential and prints the `claude mcp add` line with the permission list already filled in. `--verify` re-checks the APIs later; `--dry-run` changes nothing; `--print-apis` shows just the list.
+
+It also checks the two things that used to fail *much* later: that the client you downloaded is a **Desktop** type (a Web client fails with `redirect_uri_mismatch`) and that it belongs to the project whose APIs were enabled (using one from another project is what `403 org_internal` means). Both now stop the run and name the fix.
+
+The API list is **derived** from the `--permissions` list in `mcps/google-workspace-mcp/connector.json` — the same manifest that registers the server. It used to be written out separately in five other places, and those had drifted apart: one sent you to enable a Chat API nothing requests, another omitted Gmail, contacts and forms entirely. That mismatch is the worst failure in this setup because it fails late and blames the wrong thing — consent succeeds, the tool appears, and the first call returns `403 SERVICE_DISABLED`, which reads like an auth problem. It can no longer be expressed.
+
+**No credential ships in the repo, deliberately.** A shared OAuth client carries a hard cap of **100 grants for the life of the project, unresettable** — it would work for a while and then fail for everyone after that, with nothing in the repo able to explain why. Your own project also avoids your Workspace admin's third-party app gate, since an internal app is trusted by default.
+
+**Action required:** none if Google already works for you — nothing about your existing setup changes. Setting it up for the first time, or redoing it: run `connect.sh` instead of the console walkthrough. It needs `gcloud` for the automated half; without `gcloud` it says so and stops, and `mcps/google-workspace-mcp/personal-account-setup.md` still carries the full manual path plus the one trap no script can remove — on a consumer `@gmail.com` account, an app left in *Testing* expires its refresh token every 7 days.
+
+### `## Close of Day` goes back to the end of your daily note
+
+**What you can now do.** Trust your daily note's order. `/close-day` now appends its `## Close of Day` block at the **end** of the note, and writes it through the same per-file locking helper `/close-session` uses.
+
+Two things were wrong. The command never said *where* its block went, so it could be anchored partway up the note — and every `## Session —` block already written below that point then sat **below** Close of Day. Because `/close-session` inserts its blocks with `--before "## Close of Day"`, the marker being last is exactly what keeps session blocks above it. Separately, `/close-day` wrote the note directly while every other writer took a lock; a session block landing between its read and its write was silently overwritten. Both are fixed by the same change.
+
+**Action required:** none — `/aios:update` lands it. If a recent daily note has `## Session —` blocks sitting below `## Close of Day`, move them above it by hand — nothing will reorder them for you.
 
 ## 2026-09-09 — A duplicate close, and a measurement that hid the damage it should have shown
 

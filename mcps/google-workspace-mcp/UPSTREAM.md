@@ -49,6 +49,8 @@ everyone else's behavior, which is harder to debug than either extreme.
 
 | File | Ours? | Purpose |
 |---|---|---|
+| `connect.sh` | AIOS | One-command setup: creates the Cloud project and enables every API, derived from `connector.json`'s `--permissions`. Prints the console-only steps Google exposes no API for. |
+| `connector.json` | AIOS | The manifest — registration command **and** the permission list every other surface derives from. The one place the service list is written. |
 | `oauth.json.template` | AIOS | Shape of the gitignored `oauth.json` you create. Credentials are per-person secrets; the repo ships only the template. |
 | `personal-account-setup.md` | AIOS | Google Cloud Console walkthrough — create a Desktop OAuth client, wire a personal/agent account. |
 | `TROUBLESHOOTING.md` | AIOS | Local-first recovery: stale token, scope mismatch, port held by a dead process. |
