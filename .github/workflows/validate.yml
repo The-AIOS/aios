@@ -1343,6 +1343,40 @@ jobs:
         # only there would reach fresh clones and no existing operator.
         run: bash tests/statusline-account-alias.test.sh
 
+      - name: the daily note's Close of Day block stays last
+        # Reported 2026-09-09 as "aios-note-append --before lands blocks at the end
+        # instead of above the marker". The history says otherwise: when those blocks
+        # were appended the note contained no `## Close of Day` at any line, so the end
+        # was the only correct place and the helper was right. The marker arrived later,
+        # inserted by /close-day mid-note, ABOVE session blocks already written below it.
+        #
+        # Worth a suite because the two commands share an invariant that neither one
+        # states on its own: /close-session inserts `--before "## Close of Day"`, so the
+        # marker being LAST is what keeps session blocks above it. Nothing connected the
+        # two, and /close-day never said where its block went. Checked end to end
+        # against the real helper, with a control that replays the buggy mid-note anchor
+        # -- a suite that cannot detect the defect it was written for measures nothing.
+        run: bash tests/daily-note-block-order.test.sh
+
+      - name: the Google connector's API set derives from one manifest
+        # The set of Google APIs an operator must enable existed in SIX places before
+        # AI-126 -- connector.json's --permissions, SETUP.md's prose, the setup doc's
+        # blockquote, TROUBLESHOOTING's service->API mapping, the oauth template's
+        # scopes array, and the folder README -- and they had drifted apart: one sent
+        # people to enable a Chat API nothing requests, another omitted Gmail, contacts
+        # and forms entirely.
+        #
+        # Nothing noticed because the failure is late and blames the wrong thing: a
+        # scope whose API is off consents fine, exposes the tool, and returns
+        # `403 SERVICE_DISABLED` on the first call, which reads as an auth problem. So
+        # the suite asserts the property rather than the current values -- one list,
+        # every permission group resolving through it, an unmapped group STOPPING the
+        # script, and no doc re-enumerating it. The drift scanner carries its own
+        # controls: each historical copy is replayed as a fixture and must still be
+        # caught, because a detector that cannot fail reports "clean" just as
+        # convincingly when it is broken.
+        run: bash tests/google-connect.test.sh
+
       - name: every non-ASCII-printing hook guards Windows stdout
         # Windows consoles are cp1252, so a print() carrying an em dash raises
         # UnicodeEncodeError and the hook does NOT RUN — the failure is absence, not a

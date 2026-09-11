@@ -70,9 +70,12 @@ brand-new service like `chat` or `appscript` → both.
 **The procedure:**
 
 1. Edit the `--permissions` list (re-register, or edit the registration in place).
-2. **Enable the matching Google API** for each service you added — People for `contacts`,
-   Forms for `forms`, Google Chat for `chat`, Apps Script for `appscript`, Custom Search for
-   `search`. Do this *before* re-consenting, so you don't approve scopes and then still 403.
+2. **Enable the matching Google API** for each service you added:
+   `bash connect.sh --verify --project-id <id>` names anything missing and prints the command
+   that enables it — or just re-run `bash connect.sh --project-id <id>`, which enables the full
+   derived set again and is idempotent. Do this *before* re-consenting, so you don't approve
+   scopes and then still 403. (Which API serves which service is written once, in `connect.sh`'s
+   `api_for()`; it used to be repeated here and the two copies disagreed.)
 3. **Restart Claude Code.** A running MCP server keeps its old command line; re-registering
    does not reload it in place.
 4. Trigger any tool call → approve the consent prompt (incognito if you're signed into
