@@ -1376,6 +1376,18 @@ jobs:
         # checks would have passed against the broken original. Its control replays that
         # original and requires it to still answer False.
         run: bash tests/mcp-registration-readback.test.sh
+      - name: the bus verb set agrees across both documents
+        # Canonical states the spawn-inbox verbs twice -- CLAUDE.md (loaded by every
+        # session at startup) and the orchestration-ladder skill (loaded when a session
+        # is deciding how to delegate). Two hand-maintained copies of one fact, and
+        # nothing compared them until this suite. The failure is worse than confusing:
+        # the documents are read at DIFFERENT moments, so a verb in the skill and not in
+        # CLAUDE.md is invisible to a session that never had reason to load the skill.
+        #
+        # The verbs are the App's to define; canonical mirrors them. So this asserts
+        # AGREEMENT plus the presence of the rules that change an agent's behaviour --
+        # never a verb list of its own, which would be the third copy.
+        run: bash tests/bus-verb-parity.test.sh
 
       - name: the Google connector's API set derives from one manifest
         # The set of Google APIs an operator must enable existed in SIX places before

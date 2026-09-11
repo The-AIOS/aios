@@ -76,6 +76,16 @@
 
 **Action required:** none — `/aios:update` lands it. If you added your own `USER.md` override for this, retire it once this lands (check: your `### /today` section names `freshness-probe.sh` from `hooks/custom/`). If a check has said `unreachable` on mornings when your network was fine, run `bash ~/aios/hooks/freshness-probe.sh` — it names the repo that is refusing you.
 
+### `resume` — reopen a closed session as the same someone
+
+**What you can now do.** Bring a session back instead of starting over. With the AIOS App on **v0.9.5** or later, a request of `{"action":"resume","name":"<kebab>","prompt":"…"}` reopens a **closed** named session with the context it already had — the corrections it absorbed, the shape of the thing you were building. A `spawn` hands you a fresh *something*; `resume` hands you back the same *someone*. Reach for it whenever a closed session's context is worth more than a clean start.
+
+Canonical's side is documentation — `CLAUDE.md` and the `orchestration-ladder` skill now carry the verb, so a session knows it exists without opening the App's protocol file. The behaviour is the App's.
+
+**One change affects you even if you never use `resume`.** A *written* `action` that is not one of the four verbs is now **refused with a dead letter naming what you wrote**, instead of quietly running as a spawn. Omitting `action` still means spawn, so the original `{name, task}` requests keep working untouched. Before `resume`, degrading an unknown verb to spawn was harmless — spawn was the only thing it could have meant. Now a typo'd `"resmue"` would hand back a brand-new session in place of the one you asked to reopen, context gone, nothing reporting it. Case and whitespace are ignored, so a refusal always means an unimplemented verb, never a formatting slip.
+
+**Action required:** none, and nothing you already do breaks. **`resume` needs App v0.9.5** — on an older App the verb is not implemented and the request is refused rather than silently doing something else. To check what the surface on your machine supports, read the stamp it writes into `~/.aios/spawn-inbox/README.md`: an HTML comment reading `aios-spawn-inbox: contract N`, where this verb set is contract **3**.
+
 ### Google Workspace connects by asking, not by running scripts
 
 **What you can now do.** Say *"connect my Google Workspace"*, or run `/aios:mcps-setup` and pick it. Your session creates the Cloud project, enables every API the connector needs, hands you only the two or three console pages Google publishes no API for, and once you say you are done it validates the credential you downloaded and registers the server. **Your part is about six clicks and one download — no terminal commands.**
