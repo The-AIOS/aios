@@ -31,7 +31,15 @@ classify() {
   if printf '%s' "$err" | grep -Eq "$ACCESS_RE"; then echo access-denied; else echo unreachable; fi
 }
 
-reason() { printf '%s' "$1" | grep -Eo "$ACCESS_RE|$NET_RE" | head -1; }
+# Quote the reason that matches the CLASS, not the first match of either pattern. Both
+# attempts' stderr is accumulated, so on a network where port 22 is blocked and 443 is open
+# the SSH error is a network one while the HTTPS error is the refusal that decided the
+# classification -- and searching both patterns at once printed
+# "access-denied (Connection refused)", a line that contradicts itself.
+reason() {  # $1 errs · $2 classification
+  local re="$NET_RE"; [ "${2:-}" = access-denied ] && re="$ACCESS_RE"
+  printf '%s' "$1" | grep -Eo "$re" | head -1
+}
 
 probe() {  # $1 label · $2 repo url · $3 local hash
   local label="$1" repo="$2" h="$3" r="" errs="" e hr cls why
@@ -54,7 +62,7 @@ probe() {  # $1 label · $2 repo url · $3 local hash
     return
   fi
   cls=$(printf '%s' "$errs" | classify)
-  why=$(reason "$errs")
+  why=$(reason "$errs" "$cls")
   echo "$label: $cls${why:+ ($why)}"
 }
 

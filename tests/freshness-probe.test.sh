@@ -31,6 +31,28 @@ expect "https no creds"    "$(printf "fatal: could not read Username for 'https:
 expect "dns failure"       "$(printf "fatal: unable to access 'https://x/': Could not resolve host: x\n" | bash "$S" --classify)" unreachable
 expect "no error text"     "$(printf '' | bash "$S" --classify)" unreachable
 
+# The reason must match the CLASS, not the first pattern that hits. Both attempts' stderr is
+# accumulated, so on a network with port 22 blocked and 443 open the SSH error is a network
+# one while the HTTPS refusal is what decided the classification. Searching both patterns at
+# once printed "access-denied (Connection refused)" -- a line that contradicts itself and
+# sends the operator to check their wifi over a credential problem.
+echo "-- the quoted reason agrees with the classification --"
+BOTH=$(printf 'ssh: connect to host github.com port 22: Connection refused\nfatal: could not read Username for '"'"'https://github.com'"'"': terminal prompts disabled\n')
+cls=$(printf '%s' "$BOTH" | bash "$S" --classify)
+[ "$cls" = access-denied ] && ok "mixed network+refusal classifies as access-denied" \
+  || no "mixed errors classified '$cls'" "the server answered and refused; that is the actionable half"
+# extract the shipped reason() and run it, rather than restating its regexes here
+eval "$(sed -n '/^ACCESS_RE=/p;/^NET_RE=/p' "$S")"
+eval "$(sed -n '/^reason() {/,/^}/p' "$S")"
+got=$(reason "$BOTH" access-denied)
+printf '%s' "$got" | grep -Eq "$ACCESS_RE" \
+  && ok "access-denied quotes the refusal ($got)" \
+  || no "access-denied quoted '$got'" "quoting a network error beside access-denied contradicts itself"
+got2=$(reason "$BOTH" unreachable)
+printf '%s' "$got2" | grep -Eq "$NET_RE" \
+  && ok "unreachable quotes the network error ($got2)" \
+  || no "unreachable quoted '$got2'"
+
 echo "-- end to end: stub git, a fake root --"
 V="$T/root/vault/00 - notes/context/ventures"
 mkdir -p "$T/bin" "$V/acme" "$V/beta" "$V/gamma"
