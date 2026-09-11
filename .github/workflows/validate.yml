@@ -1054,6 +1054,16 @@ jobs:
         # produces the downgrade on the same inputs.
         run: bash tests/update-local-ahead.test.sh
 
+      - name: a refused login is reported as access-denied, never as "offline"
+        # /today and /close-day ran `git ls-remote … 2>/dev/null` and mapped any empty result
+        # to `unreachable`, which both render as "offline — fine for now". Throwing away stderr
+        # deleted the only evidence separating an outage from a credential the server actively
+        # refused -- reported from a live install as a month of false "offline" mornings while
+        # GitHub was rejecting the machine's key. The suite needs no network: a stub `git` on
+        # PATH emits the real error strings, and a control runs the OLD inline probe against
+        # the same stub to prove the two behaviours are actually separated.
+        run: bash tests/freshness-probe.test.sh
+
       - name: the deck-builder binds every presenter key it advertises
         # The agent tells operators which keys a generated deck answers to, in prose, while the
         # bindings live far away in the toolkit code blocks. Nothing connected them, so either
