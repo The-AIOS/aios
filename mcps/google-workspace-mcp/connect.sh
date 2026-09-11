@@ -172,8 +172,29 @@ esac
 
 # ── finish: install the downloaded client, then print the registration ───────
 if [ "$MODE" = finish ]; then
-  [ -n "$PROJECT_ID" ] || die "--finish needs --project-id (the project whose APIs were enabled)"
-  [ -n "$CLIENT_JSON" ] || die "--finish needs --client <path to the downloaded client_secret_*.json>"
+  # Both arguments DEFAULT, because every argument is something that can be got
+  # wrong -- and these two are the worst kind: a project id that must be copied
+  # exactly, and a glob path into ~/Downloads. The connect run already knew the
+  # project id, so asking for it back makes the tool's own bookkeeping the
+  # operator's problem.
+  if [ -z "$PROJECT_ID" ] && [ -f "$CRED_DIR/.aios-project" ]; then
+    PROJECT_ID="$(cat "$CRED_DIR/.aios-project" 2>/dev/null)"
+    [ -n "$PROJECT_ID" ] && say "project: $PROJECT_ID (recorded by your last connect run)"
+  fi
+  [ -n "$PROJECT_ID" ] || die \
+    "no project id — pass --project-id, or run \`connect.sh\` first so it records one." \
+    "The connect run writes it to $CRED_DIR/.aios-project."
+
+  if [ -z "$CLIENT_JSON" ]; then
+    # Newest client_secret_*.json in ~/Downloads. Safe to guess precisely BECAUSE
+    # the checks below reject a client of the wrong type or from another project,
+    # so a wrong guess fails loudly instead of installing quietly.
+    CLIENT_JSON="$(ls -t "$HOME"/Downloads/client_secret_*.json 2>/dev/null | head -1)"
+    [ -n "$CLIENT_JSON" ] || die \
+      "no client_secret_*.json found in ~/Downloads." \
+      "Download it from the Clients page, or pass --client <path>."
+    say "client: $CLIENT_JSON (newest in ~/Downloads)"
+  fi
   [ -f "$CLIENT_JSON" ] || die "no such file: $CLIENT_JSON"
 
   # Two traps that ARE readable, so they stop the run instead of surfacing later
@@ -294,6 +315,13 @@ else
   say "Using project $PROJECT_ID"
 fi
 
+# One stable, greppable line. A session driving this reads THIS, never the prose
+# below it -- prose is written for the human and is free to be rewritten.
+printf 'AIOS_PROJECT_ID=%s\n' "$PROJECT_ID"
+if [ "$DRY_RUN" = 0 ]; then
+  mkdir -p "$CRED_DIR" && printf '%s\n' "$PROJECT_ID" > "$CRED_DIR/.aios-project"
+fi
+
 if [ "$DRY_RUN" = 1 ]; then
   say "dry-run: would enable $API_COUNT APIs in $PROJECT_ID:"
   printf '%s\n' "$APIS" | sed 's/^/    /'
@@ -341,8 +369,9 @@ say "     $CONSOLE/auth/clients/create?project=$PROJECT_ID"
 say "     Desktop is required: it is the only type that allows the http://localhost redirect"
 say "     this flow uses. A Web client fails with redirect_uri_mismatch."
 say ""
-b "Then come back and run"
-say "  bash $0 --finish --project-id $PROJECT_ID --client ~/Downloads/client_secret_*.json"
+b "Then say \"done\" — your Claude session finishes the rest"
+say "  It reads the project id and the downloaded client on its own. By hand:"
+say "  bash $0 --finish"
 say ""
 say "It checks the client is Desktop and belongs to this project — the two mistakes that"
 say "otherwise surface much later as redirect_uri_mismatch and 403 org_internal — installs"
