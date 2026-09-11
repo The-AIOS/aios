@@ -98,6 +98,8 @@ Two changes make the session the one holding the tooling. `connect.sh --finish` 
 
 `/aios:mcps-setup` was the worst offender and is rewritten: it had been telling sessions to *"ask user to run"* a `uvx` command with a hand-typed permission list — which had drifted to six services while the connector requested nine, so following it produced a server that started cleanly and then returned `403` on Gmail at the first call. It now drives the tooling and never types a permission list; `connector.json` is the only place that list lives.
 
+**If you don't have `gcloud`, you find out before anything happens** — the preflight runs first, including under `--dry-run`, and says plainly that nothing was created so you are not left half-configured. It names the install command for your actual platform (on a Mac with Homebrew, the one-liner) and offers the by-hand console path as a real alternative. Same for not being logged in.
+
 **Action required:** none, and nothing about a working setup changes. If you have been putting off connecting Google because the instructions read like a build script, this is the version to ask your session about.
 
 ### On macOS, `git` was probably never the thing blocking you

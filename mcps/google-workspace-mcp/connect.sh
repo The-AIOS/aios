@@ -88,6 +88,26 @@ api_for(){
 # `openid`, `userinfo.email` and `userinfo.profile` are deliberately absent:
 # they are granted by the consent screen itself and have no API to enable.
 
+# The most actionable install instruction for THIS machine. A doc URL is the
+# fallback, not the answer: on macOS with Homebrew already present there is a
+# one-liner, and handing someone a documentation page instead is the same
+# friction this script exists to remove. It SUGGESTS and never installs —
+# putting an SDK on an operator's machine is their call, not a script's.
+gcloud_install_hint(){
+  case "$OSTYPE" in
+    darwin*)
+      if command -v brew >/dev/null 2>&1; then
+        printf 'brew install --cask google-cloud-sdk'
+      else
+        printf 'https://cloud.google.com/sdk/docs/install — or install Homebrew first, then: brew install --cask google-cloud-sdk'
+      fi ;;
+    msys*|cygwin*|win*)
+      printf 'https://cloud.google.com/sdk/docs/install (Windows installer)' ;;
+    *)
+      printf 'https://cloud.google.com/sdk/docs/install' ;;
+  esac
+}
+
 need_python(){
   command -v python3 >/dev/null 2>&1 \
     || die "python3 not found." "It reads connector.json. On macOS: xcode-select --install"
@@ -155,14 +175,24 @@ API_COUNT="$(printf '%s\n' "$APIS" | grep -c .)"
 # ── preflight ────────────────────────────────────────────────────────────────
 command -v gcloud >/dev/null 2>&1 || die \
   "gcloud is not installed — this script needs it to create the project and enable APIs." \
-  "Install: https://cloud.google.com/sdk/docs/install  ·  then re-run this script.
-  Prefer to do it all by hand? personal-account-setup.md still has the full console walkthrough."
+  "Nothing has been created, so you are not half-configured.
+
+  Install it:  $(gcloud_install_hint)
+  Then re-run this script.
+
+  Or skip gcloud entirely: personal-account-setup.md walks the whole thing through
+  the console by hand. Same result, more clicks."
 
 ACCOUNT="$(gcloud auth list --filter=status:ACTIVE --format='value(account)' 2>/dev/null | head -1)"
 [ -n "$ACCOUNT" ] || die \
-  "gcloud is installed but not authenticated." \
-  "Run: gcloud auth login
-  Sign in as the ACCOUNT YOU WANT THE MCP TO ACT AS — the project must belong to it."
+  "gcloud is installed but nobody is logged in." \
+  "Nothing has been created, so you are not half-configured.
+
+  Run:  gcloud auth login
+
+  Sign in as the ACCOUNT YOU WANT THE MCP TO ACT AS — the project is created under
+  whoever is logged in, and a client from one account cannot serve another. Then
+  re-run this script."
 
 DOMAIN="${ACCOUNT##*@}"
 case "$DOMAIN" in

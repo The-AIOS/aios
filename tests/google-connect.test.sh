@@ -267,8 +267,18 @@ echo "── 4. preflight refuses cleanly ──"
 # also remove bash and python3, so the run would die for the wrong reason and the
 # check would pass without ever exercising the branch it names.
 NOGC="$TMP/nogcloud"; mkdir -p "$NOGC"
+# `type -P` resolves ONLY a real executable on disk. `command -v` would answer
+# with a bare name for a shell function -- and an interactive shell may well wrap
+# `grep` in one -- producing a farm of DANGLING symlinks. The script then fails
+# with "grep: command not found" and the check appears to pass for the right
+# reason while actually never reaching the branch it names.
 for t in bash env python3 dirname basename grep sed awk tr cat date mkdir head cut sort uniq wc ls cp chmod printf; do
-  p="$(command -v "$t" 2>/dev/null)" && ln -sf "$p" "$NOGC/$t"
+  p="$(type -P "$t" 2>/dev/null)" || p=""
+  [ -n "$p" ] && [ -x "$p" ] && ln -sf "$p" "$NOGC/$t"
+done
+for t in grep sed python3; do
+  [ -x "$NOGC/$t" ] || no "harness: $NOGC/$t is not a working executable" \
+    "a dangling link makes the no-gcloud check fail for the wrong reason"
 done
 [ -x "$NOGC/python3" ] && ok "harness: python3 reachable without gcloud" \
   || no "harness: could not stage python3 — the no-gcloud check cannot run"
@@ -295,6 +305,39 @@ else
   no "refused but never named the fix" "$OUTPUT"
 fi
 grep -q 'projects create' "$GCLOUD_LOG" && no "created a project despite refusing" || ok "no project created on refusal"
+
+echo "── 4b. --dry-run refuses too, and says nothing was created ──"
+# A dry run must NOT skip the preflight. Skipping it would print a confident
+# plan that cannot execute -- the operator's whole reason for running --dry-run
+# is to find out whether this will work on their machine. And a red refusal
+# mid-setup makes anyone wonder if they are now half-configured, so both
+# refusals say plainly that nothing was created.
+OUTPUT="$(PATH="$NOGC" "$BASH_BIN" "$SCRIPT" --dry-run 2>&1)"; RC=$?
+{ [ "$RC" -ne 0 ] && printf '%s' "$OUTPUT" | grep -q 'gcloud is not installed'; } \
+  && ok "--dry-run with no gcloud → refuses, naming gcloud" \
+  || no "--dry-run skipped the missing-gcloud preflight" "it would print a plan that cannot run" 
+printf '%s' "$OUTPUT" | grep -qi 'nothing has been created' \
+  && ok "and says nothing was created" || no "refusal leaves the operator wondering if they are half-configured"
+# the hint must be actionable for THIS platform, not a bare doc URL when a one-liner exists
+if [ "$(uname -s)" = Darwin ] && command -v brew >/dev/null 2>&1; then
+  printf '%s' "$OUTPUT" | grep -q 'brew install --cask google-cloud-sdk' \
+    && ok "macOS + brew → the hint is the one-liner" \
+    || no "on a Mac with brew the hint is still a doc URL" "$OUTPUT"
+else
+  printf '%s' "$OUTPUT" | grep -q 'cloud.google.com/sdk' \
+    && ok "hint points at the installer for this platform" || no "no install hint at all"
+fi
+
+BIN="$TMP/anon2"; mk_gcloud "$BIN" anon ""
+export GCLOUD_LOG="$TMP/anon2.log"; : > "$GCLOUD_LOG"; export STUB_DOMAIN=gmail.com STUB_ENABLED=""
+run "$BIN" --dry-run
+{ [ "$RC" -ne 0 ] && printf '%s' "$OUTPUT" | grep -q 'gcloud auth login'; } \
+  && ok "--dry-run while logged out → refuses, naming \`gcloud auth login\`" \
+  || no "--dry-run skipped the authentication preflight" "$OUTPUT"
+printf '%s' "$OUTPUT" | grep -qi 'nothing has been created' \
+  && ok "and says nothing was created" || no "logged-out refusal does not reassure"
+grep -qE 'projects create|services enable' "$GCLOUD_LOG" \
+  && no "mutated despite refusing" || ok "no mutating call on either refusal"
 
 echo "── 5. --dry-run mutates nothing ──"
 BIN="$TMP/dry"; mk_gcloud "$BIN" authed ""
