@@ -215,7 +215,23 @@ Creates a dedicated Slack app. Messages post AS THE BOT, not as the user. Requir
 3. **The operator clicks and downloads.** Irreducible — no API exists for any of it.
 4. **On "done", you run** `bash ~/aios/mcps/google-workspace-mcp/connect.sh --finish`. Both of its arguments default: the project id from the connect run, the client from the newest `client_secret_*.json` in `~/Downloads`. It refuses a Web-type client or one belonging to a different project — so if the operator created the wrong thing you find out **here**, with the fix named, instead of weeks later as `redirect_uri_mismatch` or `403 org_internal`.
 5. **You register it** with the `claude mcp add` line `--finish` prints. It is generated from the manifest, so it carries the current permission list by construction — use it verbatim rather than composing one.
-   - **`claude mcp add` writes `~/.claude.json`, which a sandboxed tool call cannot touch — and it prints success anyway.** Run it un-sandboxed, then **verify by reading the file back**, not by trusting the exit code: `python3 -c "import json,os;print('google-workspace' in json.load(open(os.path.expanduser('~/.claude.json'))).get('mcpServers',{}))"`. A registration that silently did not land looks identical to one that did.
+   - **`claude mcp add` writes `~/.claude.json`, which a sandboxed tool call cannot touch — and it prints success anyway.** Run it un-sandboxed, then **verify by reading the file back**, not by trusting the exit code — a registration that silently did not land looks identical to one that did.
+
+     **Read BOTH scopes, and understand why: `claude mcp add` defaults to *local* (per-directory) scope**, so the entry normally lands under `projects["<cwd>"].mcpServers`, **not** the top-level `mcpServers`. A check that reads only the top level reports `NOT REGISTERED` on a perfectly working install — measured on a live vault whose connector was running at the time — and a session acting on that answer would re-register something that already worked.
+
+     ```bash
+     python3 - <<'PY' google-workspace
+     import json, os, sys
+     cfg = json.load(open(os.path.expanduser("~/.claude.json")))
+     name = sys.argv[1]
+     at = ["user"] if name in cfg.get("mcpServers", {}) else []
+     at += [p for p, v in cfg.get("projects", {}).items()
+            if isinstance(v, dict) and name in v.get("mcpServers", {})]
+     print(f"{name}: {' + '.join(at) if at else 'NOT REGISTERED'}")
+     PY
+     ```
+
+     Registered in more than one place is worth reporting rather than celebrating: two registrations drift independently (this is how one grew Gmail and the other did not), so tell the operator and let them pick which to keep.
 6. **Tell them to restart the session**, and that the first Google tool call opens a browser once for consent. MCP tools register at session start, so it is not callable until then.
 
 **The operator's total: one `y`, about six clicks, one download, one "done". No terminal commands.** If you find yourself about to type a `bash` line into the chat for them to run, you have taken a step that belongs to you.
