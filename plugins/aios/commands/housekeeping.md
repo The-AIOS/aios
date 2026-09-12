@@ -816,6 +816,23 @@ It runs for months without complaining, which is why it needs a periodic sweep r
 
 **Don't propose:** editing a hook (read-only) · flagging a call whose prompt is entirely vault-local and fixed · flagging prose or log lines that mention `claude -p` · verifying a fix by asking the agent what tools it has — under a restrictive allowlist it still lists `Bash` and `Write`, because it is describing its **schema**, not its permissions. **Only an absent side effect is evidence.**
 
+#### Bucket 30: Spawned workers that loaded no operator context (NEW — REPORT-ONLY, never edits)
+
+**The gap.** `CLAUDE.md` tells a spawned worker to load context, and nothing anywhere reports when it doesn't. The failure is silent by construction: the worker still answers, still sounds right, and is simply missing whatever would have made the answer *this operator's* rather than merely correct. There is no error, no empty output, and no tell — so a vault can run for months with workers that read nothing and never learn it.
+
+That is not hypothetical. Measured across one live vault's spawned workers that did real work (≥20 tool calls): **3 read zero context files, 9 read one or two, and only 4 came close to the full set.** The stated rule was "read everything".
+
+**The check.** Walk `~/.claude/projects/*/*.jsonl`. For each transcript whose first `agent-name` record is **not** a primary session from `USER.md`, scan the first ~120 `tool_use` events and count distinct files matched by `context/(declared|observed)/([a-z_-]+)\.md`. Report any worker with **≥20 tool calls and 0 context files**, and the distribution across the rest.
+
+- **Count `tool_use`, never `tool_result` or prose.** A transcript mentions paths constantly; only a tool call is evidence the file was opened.
+- **Skip transcripts under 20 tool calls.** Probes and one-shot spawns never had work to contextualise, and counting them makes the number look worse than it is.
+- **Primary sessions are the CONTROL, not the subject.** They should score high. If they don't, the detector is broken — say so and report nothing else, because a scan that cannot see a primary's reads cannot be trusted about a worker's.
+
+**Propose:** nothing automatic. Report the names and counts, and let the operator decide whether a given worker should have been reading more. The value is that the number exists at all and can be watched over time — a floor that stops firing shows up here before it shows up as work that quietly stopped sounding like them.
+
+**Why this bucket exists.** Context loading was narrowed from "read everything" to a floor plus a sized read, on the evidence that "read everything" was not happening. A narrowing justified by a measurement has to keep being measured, or the justification expires silently and nobody notices.
+
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:

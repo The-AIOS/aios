@@ -176,5 +176,38 @@ grep -qiE 'unsure is not a third answer|[Uu]nsure .*read the full' "$CM" \
   && ok "CLAUDE.md resolves the unsure case toward the full ritual" \
   || no "the unsure case is unresolved" "the two errors are asymmetric; silence favours under-reading"
 
+echo
+echo " the skipped context is named as available, not merely skipped"
+# Operator-raised. Without this the rule reads as a one-time boot decision, and a worker that
+# discovers mid-task that it needed the voice file has no signal that reaching for it is allowed.
+# Naming what was NOT read -- and that it can be opened later -- is what makes a narrowed floor
+# recoverable instead of a silent ceiling.
+for pair in "CLAUDE.md:$CM" "the wrapper:$WR" "the .ps1:$PS1"; do
+  label="${pair%%:*}"; f="${pair#*:}"
+  if grep -qiE "not because it is off limits" "$f" && grep -qiE "expected, not exceptional" "$f"; then
+    ok "$label tells the worker the rest is available mid-task"
+  else
+    no "$label does not say the unread context may be opened later" \
+       "a narrowed floor with no route back is a ceiling"
+  fi
+done
+# and it must name the scale, or "the rest" is an abstraction nobody acts on
+grep -qiE '150k tokens|six figures of tokens' "$CM" \
+  && ok "CLAUDE.md names how much is being skipped" \
+  || no "the skipped volume is unquantified" "a worker cannot weigh a cost it cannot see"
+
+echo
+echo " the narrowing stays measured"
+HK="plugins/aios/commands/housekeeping.md"
+if grep -q "Spawned workers that loaded no operator context" "$HK"; then
+  ok "housekeeping reports workers that loaded nothing"
+else
+  no "nothing measures whether the floor is firing" \
+     "a narrowing justified by a measurement must keep being measured, or the justification expires silently"
+fi
+grep -qiE 'Primary sessions are the CONTROL' "$HK" \
+  && ok "and that check carries its own control" \
+  || no "the bucket has no control" "a scan that cannot see a primary's reads cannot be trusted about a worker's"
+
 printf '\n%d passed · %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

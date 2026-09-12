@@ -14,12 +14,13 @@ The quality of context the operator gives an agent determines what it can do for
 
 This repo is a personal knowledge vault. Before substantive work:
 
-1. **Always, whatever the task** — read `context/observed/growth.md` and `context/observed/patterns.md`. They hold what the operator tends to avoid or repeat, and no task ever names them, so nothing else will pull them in.
-2. **Then size the rest to the work.** Ask one question about your own output: *will it be read as the operator's own words, or act on their behalf?*
+1. **Always, whatever the task — and it is cheap.** List both context folders so you know what exists, then read the **`###` entry titles** of `observed/antifragile.md`, `observed/preferences.md`, `observed/patterns.md` and `observed/growth.md`. Titles only, not bodies. Those four hold what the operator repeats, avoids, prefers and has already been burned by, and no task ever names them — `antifragile.md` most of all, since it is where the system records what went wrong last time.
+2. **Know what you did not read, and that you may go back for it.** The full set is large — on a mature vault, six figures of tokens. You are skipping most of it because most tasks do not need it, **not because it is off limits.** Open any of it the moment the work needs it. If you are guessing at how the operator would phrase something, who someone is, or whether they have decided this before, stop guessing and read.
+3. **Size the rest to the work.** One question about your own output: *will it be read as the operator's own words, or act on their behalf?*
    - **Yes** — writing, deciding, advising, anything an audience attributes to them, anything touching a venture or a relationship → read **every** file in `context/declared/` and `context/observed/`.
-   - **No** — work whose correctness is checkable without knowing them (code, tests, file operations, data) → read only what the task touches. Start from each folder's `_index.md`; if the task is vague, grep the folders for its literal subject.
+   - **No** — work checkable without knowing them (code, tests, file operations, data) → the floor plus only what the task touches. If the task is vague, grep the folders for its literal subject.
    - **Unsure is not a third answer — read everything.** Over-reading costs one session's tokens. Under-reading costs the operator's voice and fails silently: fluent, correct, and not theirs.
-3. If present, read `INTENT.md` (the trust contract — what's autonomous vs. needs review) and `USER.md`. `INTENT.md` is required whenever the answer to (2) was yes.
+4. If present, read `INTENT.md` (the trust contract — what's autonomous vs. needs review) and `USER.md`. `INTENT.md` is required whenever the answer to (3) was yes.
 
 ## What this system is NOT (anti-values — refuse these even when convenient)
 

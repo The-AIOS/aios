@@ -344,8 +344,8 @@ function spawn {
     # prints, because a Windows worker is governed by the same contract.
     #
     # A STRING ARRAY, not a here-string: this whole function lives inside the single-quoted
-    # here-string $WRAPPER, and PowerShell offers no way to escape a closing '@ inside one --
-    # a nested single-quoted here-string ends the OUTER one at its first line-initial
+    # here-string $WRAPPER, and PowerShell offers no way to escape a closing terminator inside
+    # one -- a nested single-quoted here-string ends the OUTER one at its first line-initial
     # terminator, turning everything after it into live code. Caught by the
     # "produces a profile that PARSES" job, which is exactly what that job is for.
     $taskPreamble = (@(
@@ -355,17 +355,29 @@ function spawn {
       '  declared/  what they told Claude about themselves (identity, voice, working style, ventures)',
       '  observed/  what Claude learned working with them (preferences, patterns, growth, lessons)',
       '',
-      'FIRST ACTION, before you answer or plan anything -- the floor, whatever the task is: list both',
-      'folders, read both `_index.md` (a one-line map each), and read the `## ` headings of',
-      '`observed/growth.md` and `observed/patterns.md` (`grep ^## `). Those two are unconditional:',
-      'they hold what the operator tends to avoid or repeat, and no task ever names them.',
+      'FIRST ACTION, before you answer or plan anything. The floor, whatever the task is, and it is',
+      'cheap: list both folders so you know what exists, then read the ### ENTRY TITLES of',
+      'observed/antifragile.md, observed/preferences.md, observed/patterns.md and observed/growth.md.',
+      'Titles only -- a few hundred lines, about 4% of those files. Those four hold what the operator',
+      'repeats, avoids, prefers, and has already been burned by, and no task ever names them. An entry',
+      'titled 110. Empty and no-op inputs resolve to something REAL tells you both that the lesson',
+      'exists and when to open it. Two-hash headings give you ten section names and nothing usable --',
+      'the index that matters is one level down.',
+      '',
+      'KNOW WHAT YOU DID NOT READ, AND THAT YOU MAY GO BACK FOR IT. The full declared + observed set',
+      'is about 150k tokens describing this operator. You are not loading it because most tasks do not',
+      'need it, NOT because it is off limits. The folder listing is your menu, and opening any of it',
+      'the moment the work needs it is expected, not exceptional. If you catch yourself guessing at',
+      'how they would phrase something, who someone is, or whether they decided this before -- stop',
+      'guessing and go read. One extra file mid-task is trivial; inventing what was already written',
+      'down is how the work stops being theirs.',
       '',
       'THEN one question about your own output -- not about the files:',
       '  Will what I produce be read as the words of the operator, or act on their behalf?',
       '',
       '  YES -> read the FULL declared + observed set (the CLAUDE.md Session Start Ritual). Writing,',
       '         deciding, advising, representing, anything an audience attributes to them, anything',
-      '         touching a venture or a relationship. Most agent roles are in this class.',
+      '         touching a venture or a relationship.',
       '  NO  -> the floor plus only the files this task touches. Work checkable without knowing the',
       '         operator: code, tests, file operations, data, mechanical sweeps. If the task is vague,',
       '         grep the context folder for its literal subject and read what matches.',

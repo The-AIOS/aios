@@ -321,20 +321,32 @@ _spawn_task_preamble() {
 # Before the task — load context, sized to the work
 
 Your operator's context lives in `vault/00 - notes/context/`:
-  declared/  what they told Claude about themselves (identity, voice, working style, ventures, role)
-  observed/  what Claude learned working with them (preferences, patterns, growth, antifragile lessons)
+  declared/  what they told Claude about themselves (identity, voice, working style, ventures)
+  observed/  what Claude learned working with them (preferences, patterns, growth, lessons)
 
-FIRST ACTION, before you answer or plan anything — the floor, whatever the task is: list both
-folders, read both `_index.md` (a one-line map each), and read the `## ` headings of
-`observed/growth.md` and `observed/patterns.md` (`grep '^## '`). Those two are unconditional:
-they hold what the operator tends to avoid or repeat, and no task ever names them.
+FIRST ACTION, before you answer or plan anything. The floor, whatever the task is, and it is
+cheap: list both folders so you know what exists, then read the `###` ENTRY TITLES of
+observed/antifragile.md, observed/preferences.md, observed/patterns.md and observed/growth.md
+(`grep '^### '`). Titles only — a few hundred lines, ~4% of those files. Those four hold what
+the operator repeats, avoids, prefers, and has already been burned by, and no task ever names
+them. An entry titled "110. Empty and no-op inputs resolve to something REAL" tells you both
+that the lesson exists and when to open it. (`## ` headings give you ten section names and
+nothing usable — the index that matters is one level down.)
+
+KNOW WHAT YOU DID NOT READ, AND THAT YOU MAY GO BACK FOR IT. The full declared + observed set
+is ~150k tokens about this operator. You are not loading it because most tasks do not need it,
+NOT because it is off limits. The folder listing is your menu, and opening any of it the moment
+the work needs it is expected, not exceptional. If you catch yourself guessing at how they
+would phrase something, who someone is, or whether they have decided this before — stop
+guessing and go read. One extra file mid-task is trivial; inventing what was already written
+down is how the work stops being theirs.
 
 THEN one question about your own output — not about the files:
   Will what I produce be read as the operator's own words, or act on their behalf?
 
   YES -> read the FULL declared + observed set (CLAUDE.md's Session Start Ritual). Writing,
          deciding, advising, representing, anything an audience attributes to them, anything
-         touching a venture or a relationship. Most agent roles are in this class.
+         touching a venture or a relationship.
   NO  -> the floor plus only the files this task touches. Work checkable without knowing the
          operator: code, tests, file operations, data, mechanical sweeps. If the task is vague,
          grep the context folder for its literal subject and read what matches.
@@ -342,9 +354,9 @@ THEN one question about your own output — not about the files:
 UNSURE IS NOT A THIRD ANSWER — read the full set. Over-reading costs tokens once; under-reading
 costs the operator's voice and fails silently: fluent, correct, and not theirs.
 
-Describing this rule is not doing it: right after CLAUDE.md's identity check, the next thing you do
-is the `ls`. `CLAUDE.md` is already loaded; `INTENT.md` (repo root) is the trust contract — read it
-whenever the task acts on the operator's behalf.
+Describing this rule is not doing it: right after CLAUDE.md's identity check, the next thing you
+do is the `ls`. `CLAUDE.md` is already loaded; `INTENT.md` (repo root) is the trust contract —
+read it whenever the task acts on the operator's behalf.
 
 PREAMBLE
 }
