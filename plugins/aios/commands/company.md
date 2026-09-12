@@ -552,7 +552,7 @@ When skills did change, run the registrar (idempotent — skips names already li
   fi
   ```
 
-Report: *"Registered {N} new {company} skill(s) into `~/.claude/skills` — restart Claude Code sessions to load them."*
+Report: *"Registered {N} new {company} skill(s) into `~/.claude/skills`. They load at session start, so **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working (they just won't see the new skills)."*
 
 ### Step 5.6 — Register newly-synced company plugins (ONLY if a company plugin changed)
 
@@ -578,7 +578,7 @@ For each company plugin that landed/changed:
    ```
 3. Optionally add `"<plugin>@the-aios": true` to `enabledPlugins` in `~/.claude/settings.json`.
 
-Report: *"Registered + installed {N} {company} plugin(s) — restart Claude Code sessions to load their commands."*
+Report: *"Registered + installed {N} {company} plugin(s). Their commands load at session start, so **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working (they just won't have the new commands)."*
 
 ### Step 6 — Update tracker + advisory
 
