@@ -76,6 +76,16 @@
 
 **Action required:** none — `/aios:update` lands it. If you added your own `USER.md` override for this, retire it once this lands (check: your `### /today` section names `freshness-probe.sh` from `hooks/custom/`). If a check has said `unreachable` on mornings when your network was fine, run `bash ~/aios/hooks/freshness-probe.sh` — it names the repo that is refusing you.
 
+### Your daily note's sections land where they belong again
+
+**What you can now do.** Trust your daily note's structure. Two placement defects are fixed; both made notes read wrong without erroring.
+
+**A session block could land in the middle of an unrelated section.** `/close-session` inserts with `aios-note-append --before "## Close of Day"`, and the marker used to match **anywhere in a line**. A daily note is prose, and prose quotes headings — so a note containing a sentence that mentioned that heading turned that sentence into an insertion anchor. Measured on a live vault: a morning bullet quoted the heading while explaining the protocol, an afternoon close anchored to it, and the block landed mid-note — splitting that section, heading above the block and its bullets stranded below. The marker now matches only a line that **starts** with it. The helper also used two different matchers to decide one question; that decision now lives in a single pass.
+
+**And `## Close of Day` goes back to the end.** `/close-day` now appends its block at the end of the note, through the same per-file locking helper `/close-session` uses. It never said *where* its block went, so it could be anchored partway up — and every `## Session —` block already below that point then sat beneath Close of Day. Because `/close-session` inserts before that marker, the marker being last is what keeps session blocks above it. Separately, `/close-day` wrote the note directly while every other writer took a lock, so a session block landing between its read and its write was silently overwritten.
+
+**Action required:** none — `/aios:update` lands both. **Worth one look at recent notes:** if a section's body appears *below* a session block instead of under its own heading, that was the marker bug — move the stranded lines back up, nothing was lost. And **do not bulk-reorder old notes** on the strength of the Close-of-Day fix: a `## Session —` block below `## Close of Day` is only wrong when it was written *before* the close. A session that genuinely ran after you closed the day belongs below it.
+
 ### `resume` — reopen a closed session as the same someone
 
 **What you can now do.** Bring a session back instead of starting over. With the AIOS App on **v0.9.5** or later, a request of `{"action":"resume","name":"<kebab>","prompt":"…"}` reopens a **closed** named session with the context it already had — the corrections it absorbed, the shape of the thing you were building. A `spawn` hands you a fresh *something*; `resume` hands you back the same *someone*. Reach for it whenever a closed session's context is worth more than a clean start.
@@ -94,17 +104,15 @@ It also catches the two mistakes that used to fail *much* later: a client downlo
 
 **If you do not have `gcloud`, you find out before anything happens.** The preflight runs first and says plainly that nothing was created, so you are never left half-configured. It names the install command for your actual platform — on a Mac with Homebrew, the one-liner — and offers the by-hand console path as a real alternative. Same for not being signed in.
 
-**The API list is derived, not written down.** It comes from the `--permissions` list in `mcps/google-workspace-mcp/connector.json`, the same manifest that registers the server. It had been restated in six other places and they disagreed: one sent you to enable a Chat API nothing requests, another omitted Gmail, contacts and forms entirely. That mismatch is the worst failure here because it fails late and blames the wrong thing — consent succeeds, the tool appears, and the first call returns `403 SERVICE_DISABLED`, which reads like an auth problem. It can no longer be expressed.
+**The API list is derived, not written down** — from the `--permissions` list in `mcps/google-workspace-mcp/connector.json`, the same manifest that registers the server. It had been restated in several other places and they disagreed. That mismatch is the worst failure here because it fails late and blames the wrong thing: consent succeeds, the tool appears, and the first call returns `403 SERVICE_DISABLED`, which reads like an auth problem. It can no longer be expressed.
 
-**No credential ships in the repo, deliberately.** A shared OAuth client carries a hard cap of **100 grants for the life of the project, unresettable** — it would work for a while and then fail for everyone after that, with nothing in the repo able to explain why. Your own project also avoids your Workspace admin's third-party app gate, since an internal app is trusted by default.
+**No credential ships in the repo, deliberately.** A shared OAuth client carries a hard cap of **100 grants for the life of the project, unresettable** — it would work for a while, then fail for everyone after, with nothing able to explain why. Your own project also avoids your Workspace admin's third-party app gate.
 
 **Action required:** none if Google already works for you — nothing about your existing setup changes. Setting it up for the first time, or redoing it: ask your session rather than following the old console walkthrough. `mcps/google-workspace-mcp/personal-account-setup.md` still has the full manual path for anyone who wants it, plus the one trap no script can remove — on a consumer `@gmail.com` account, an app left in *Testing* expires its refresh token every 7 days.
 
 ### A check that said your Google connector was not registered, on machines where it was
 
-**What you can now do.** Trust the answer. `/aios:mcps-setup` verifies a registration by reading `~/.claude.json` back — because `claude mcp add` prints success even when nothing was written — and that read-back looked only at the top-level `mcpServers`. But `claude mcp add` **defaults to local, per-directory scope**, so a normal registration lands under `projects["<your directory>"]`. On a live vault with the connector running and all nine services present, the check answered *not registered*.
-
-Acting on that answer is worse than ignoring it: it invites a second registration, and two of them drift independently — which is exactly how one copy grew Gmail and the other did not, with nothing reporting the difference. It now reads both scopes and names where it found each, so being registered twice is surfaced rather than hidden.
+**What you can now do.** Trust the answer. `/aios:mcps-setup` verifies a registration by reading `~/.claude.json` back, and that read-back looked only at the top-level `mcpServers`. But `claude mcp add` **defaults to local, per-directory scope**, so a normal registration lands under `projects["<your directory>"]` — and on a live vault with the connector running, the check answered *not registered*. Acting on that invites a **second** registration, and two drift independently. It now reads both scopes and names where it found each.
 
 **Action required:** none. If you want to know where yours lives, ask your session to run the check in `/aios:mcps-setup` — and if it reports two, keep one.
 
@@ -112,17 +120,9 @@ Acting on that answer is worse than ignoring it: it invites a second registratio
 
 **What you can now do.** Know that you are not blocked on `git` when Homebrew misbehaves. macOS ships `git` with the **Xcode Command Line Tools** (`xcode-select --install` — no Apple ID, not the full Xcode), so this guide's GitHub steps work before you have a package manager at all. `git --version` settles it in one line; if it answers, `brew install git` would only put a second copy ahead of it on your `PATH`.
 
-Homebrew is still the simplest way to get `node`, `gh`, `python` and `uv` in one command, so it stays step 1 of the macOS prerequisites. `SETUP.md` just no longer implies that everything after it is waiting on it.
+Homebrew stays step 1 of the macOS prerequisites; `SETUP.md` just no longer implies everything after it is waiting on it.
 
 **Action required:** none.
-
-### `## Close of Day` goes back to the end of your daily note
-
-**What you can now do.** Trust your daily note's order. `/close-day` now appends its `## Close of Day` block at the **end** of the note, and writes it through the same per-file locking helper `/close-session` uses.
-
-Two things were wrong. The command never said *where* its block went, so it could be anchored partway up the note — and every `## Session —` block already written below that point then sat **below** Close of Day. Because `/close-session` inserts its blocks with `--before "## Close of Day"`, the marker being last is exactly what keeps session blocks above it. Separately, `/close-day` wrote the note directly while every other writer took a lock; a session block landing between its read and its write was silently overwritten. Both are fixed by the same change.
-
-**Action required:** none — `/aios:update` lands it. **Do not bulk-reorder your old notes on the strength of this.** A `## Session —` block below `## Close of Day` is only wrong when it was written *before* the close — the case above. A session that genuinely ran after you closed the day belongs below the marker, and moving it up would make the note's chronology wrong. Scanning one vault for this turned up 14 notes going back six months and almost all of them were the legitimate kind, one even labelled *"post-close"*. If you do find blocks that predate their own close sitting underneath it, move those by hand; nothing will reorder them for you.
 
 ## 2026-09-09 — A duplicate close, and a measurement that hid the damage it should have shown
 

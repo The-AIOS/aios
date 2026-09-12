@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-transcribe.py — local audio/video → text transcription (custom hook, Chuy-only).
+transcribe.py — local audio/video → text transcription (optional hook; macOS only).
 
 A self-contained sibling to hooks/markitdown-convert.py. markitdown handles
 DOCUMENTS; this handles MEDIA. markitdown's audio path is unusable for long-form
@@ -128,7 +128,7 @@ def _transcribe(audio, dest_dir, model, language):
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Local audio/video → text (ffmpeg + mlx-whisper). Mac-only, Chuy custom hook.",
+        description="Local audio/video → text (ffmpeg + mlx-whisper). macOS only; optional hook.",
     )
     ap.add_argument("input", help="media file path OR direct media URL")
     ap.add_argument("output", nargs="?", default=None, help="output .txt path (omit → stdout)")

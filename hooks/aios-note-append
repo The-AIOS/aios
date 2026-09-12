@@ -44,11 +44,28 @@ trap release EXIT
 acquire; LOCKED=1
 
 # ── merge-append: re-read the LATEST note under the lock, then insert ──
-if [ -n "$BEFORE" ] && grep -qF -- "$BEFORE" "$NOTE"; then
+#
+# The marker must match a line that STARTS with it -- `index($0,marker)==1`, not
+# a bare `index($0,marker)`. A daily note is prose, and prose quotes headings:
+# the moment someone writes a sentence mentioning "## Close of Day" (explaining
+# the protocol, or documenting a bug in this very helper), an unanchored match
+# turns that sentence into an insertion anchor. Measured 2026-09-11: a session
+# block landed in the middle of an unrelated section, splitting it -- heading
+# above the block, its bullets stranded below -- because a bullet written hours
+# earlier happened to quote the marker. Nothing was lost, and nothing looked
+# wrong to either session.
+#
+# ONE matcher decides both branches. The retired version asked `grep -qF` whether
+# to enter the awk at all, so two different matchers had to agree about the same
+# question; a marker that grep found and awk placed differently -- or found at all
+# while awk's rule would not -- silently chose the wrong branch. The no-match case
+# is now the awk's own END, so "where does it go" is answered exactly once.
+if [ -n "$BEFORE" ]; then
   awk -v marker="$BEFORE" -v bf="$BLOCKFILE" '
     BEGIN{ blk=""; while((getline l < bf) > 0) blk = blk l "\n" }
-    !done && index($0, marker) { printf "%s%s\n", blk, $0; done=1; next }
+    !done && index($0, marker) == 1 { printf "%s%s\n", blk, $0; done=1; next }
     { print }
+    END{ if (!done) printf "\n%s", blk }      # marker absent -> append at the end
   ' "$NOTE" > "$NOTE.aiostmp" && mv "$NOTE.aiostmp" "$NOTE"
 else
   printf '\n' >> "$NOTE"; cat "$BLOCKFILE" >> "$NOTE"
