@@ -1417,6 +1417,22 @@ jobs:
         # never a verb list of its own, which would be the third copy.
         run: bash tests/bus-verb-parity.test.sh
 
+      - name: a spawned worker's context rule agrees across both copies
+        # The rule lives in two places because a worker is born on two paths: the wrapper
+        # injects it into the task file for `spawn` in a terminal, while a worker born
+        # from a surface fulfilling an inbox request never reads that file and is
+        # governed by CLAUDE.md alone. So CLAUDE.md is the ONLY cover for that path, not
+        # a duplicate.
+        #
+        # The dangerous half is the FLOOR -- the observed files read every time
+        # regardless of the task -- because dropping it fails SILENTLY: the worker still
+        # answers and still sounds right, missing only the context that made the answer
+        # that operator's. The suite DERIVES the floor from the wrapper rather than
+        # keeping a list of its own (a third copy is the thing being prevented) and
+        # refuses to pass on an empty floor, since "every file in an empty set is
+        # present" is true and useless.
+        run: bash tests/spawned-worker-context-parity.test.sh
+
       - name: the Google connector's API set derives from one manifest
         # The set of Google APIs an operator must enable existed in SIX places before
         # AI-126 -- connector.json's --permissions, SETUP.md's prose, the setup doc's
