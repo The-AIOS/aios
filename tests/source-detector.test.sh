@@ -31,7 +31,7 @@ printf 'USER.md source detector\n'
 probe(){ # $1 = USER.md content, $2 = keyword  →  prints ON | off
 python3 - "$EXEC" "$1" "$2" <<'PY'
 import re, sys
-src = open(sys.argv[1]).read()
+src = open(sys.argv[1], encoding='utf-8').read()   # explicit: the executor is UTF-8; the Windows default codec is not
 ns = {}
 exec(re.search(r'_NEGATION_MARKERS = \((?:.|\n)*?\)\n', src).group(0), ns)
 import re as _re
@@ -123,6 +123,30 @@ if [ -f "$ROOT/USER.md" ]; then
 else
   ok "8. skipped — no USER.md at repo root"
 fi
+
+# ---------------------------------------------------------------------------
+# TEST 9 - a source described as REMOVED stays off.
+#          Distinct from tests 3/4: those negate "never set up" ("no se usa",
+#          "not used, on purpose"). This is the OTHER half - a source that WAS
+#          set up and was later retired. An operator writes that in the past
+#          tense, and none of the never-set-up markers appear in that sentence,
+#          so the line read as naming an ACTIVE source and switched it back on.
+#          Writing the removal down is what re-enabled it.
+# ---------------------------------------------------------------------------
+have "$(probe '- Google Tasks - removed (operator decision: no lo utilizo)' 'Google Tasks')"  "off" "9. retired source stays off (removed)"
+have "$(probe '- Google Tasks - eliminado, fuera del sistema' 'Google Tasks')"                "off" "9. retired source stays off (eliminado)"
+have "$(probe '- Google Tasks - retirado el 2026-08-28, ya no se sincroniza' 'Google Tasks')" "off" "9. retired source stays off (retirado)"
+
+# ---------------------------------------------------------------------------
+# TEST 10 - counterpart guard: a retirement on one line must not silence an
+#           unrelated LIVE source on another. Test 7's no-over-correction
+#           rule, applied to the new markers.
+# ---------------------------------------------------------------------------
+REMOVED_MIX="- Google Tasks - removed, no lo utilizo
+- Slack - daily recap at 09:00
+"
+have "$(probe "$REMOVED_MIX" 'Google Tasks')" "off" "10. retired source off ..."
+have "$(probe "$REMOVED_MIX" 'Slack')"        "ON"  "10. ... while a live source beside it stays on"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1
