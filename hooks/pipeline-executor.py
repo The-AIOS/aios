@@ -213,6 +213,7 @@ def parse_sources():
         "slack_channels_monitor": [],
         "slack_channels_skip": [],
         "slack_recap_enabled": False,
+        "calendars_skip": [],
     }
     if not SOURCES_PATH.exists():
         # Loud on stderr, not only in the log. Running on defaults means every calendar,
@@ -296,6 +297,13 @@ def parse_sources():
         if "Close-day recap:" in line and "enabled" in line.lower():
             config["slack_recap_enabled"] = True
 
+        # Calendars the operator does not want in the daily plan (entertainment
+        # feeds, subscriptions). Matched case-insensitively against the calendar's
+        # display name OR its id, so either is a valid way to name one.
+        m = re.match(r'- \*\*Calendars to skip:\*\* (.+)', line)
+        if m:
+            config["calendars_skip"] = [c.strip() for c in m.group(1).split(",") if c.strip()]
+
     return config
 
 
@@ -355,35 +363,128 @@ def _save_refreshed_token(creds, creds_path):
             creds_path.write_text(json.dumps(current, indent=2))
 
 
-def google_calendar_events(creds_path, email, time_min, time_max, detailed=False):
-    """Fetch calendar events using Google Calendar API."""
+# Calendars that are feeds, not commitments. Holiday and birthday calendars are
+# auto-subscribed by Google and would pad every daily plan with all-day noise.
+_CALENDAR_FEED_SUFFIXES = (
+    "#holiday@group.v.calendar.google.com",
+    "#contacts@group.v.calendar.google.com",
+)
+
+
+def _calendar_ids(service, skip=()):
+    """Every calendar the account can read, primary first, feeds excluded.
+
+    Reading only `primary` was the original behaviour and it is silently lossy:
+    an account can carry many calendars (venture, role, personal), and work that
+    lives on any of them is invisible to the daily plan. Invisible-but-real is
+    the worst failure mode a planner can have — it does not look like an error,
+    it looks like a free afternoon.
+    """
+    skip_lower = {s.lower() for s in skip}
+    ids, primary = [], None
+    page_token = None
+    while True:
+        resp = service.calendarList().list(pageToken=page_token, maxResults=250).execute()
+        for cal in resp.get("items", []):
+            cal_id = cal.get("id", "")
+            if not cal_id or cal_id.endswith(_CALENDAR_FEED_SUFFIXES):
+                continue
+            name = cal.get("summaryOverride") or cal.get("summary") or cal_id
+            if name.lower() in skip_lower or cal_id.lower() in skip_lower:
+                continue
+            entry = (cal_id, name)
+            if cal.get("primary"):
+                primary = entry
+            else:
+                ids.append(entry)
+        page_token = resp.get("nextPageToken")
+        if not page_token:
+            break
+    return ([primary] if primary else []) + ids
+
+
+def _event_key(event):
+    """Identity of an event ACROSS calendars, for de-duplication.
+
+    `iCalUID` is the cross-calendar identity: the same meeting seen from the
+    organiser's calendar and from an invitee's calendar carries one iCalUID but
+    two different `id`s — so keying on `id` would double-count every shared
+    meeting, which is exactly what merging calendars makes possible. With
+    `singleEvents=True` each recurring instance gets its own iCalUID, so
+    distinct occurrences still stay distinct.
+
+    The start time is folded in as a guard, and the (summary, start) fallback
+    covers events that arrive without an iCalUID at all.
+    """
+    start = event.get("start", {})
+    when = start.get("dateTime") or start.get("date") or ""
+    uid = event.get("iCalUID")
+    return ("uid", uid, when) if uid else ("fallback", event.get("summary", ""), when)
+
+
+def google_calendar_events(creds_path, email, time_min, time_max, detailed=False, skip=()):
+    """Fetch events from EVERY calendar on the account, merged and de-duplicated."""
     from googleapiclient.discovery import build
 
     creds = _load_google_creds(creds_path)
     service = build("calendar", "v3", credentials=creds, cache_discovery=False)
-    result = service.events().list(
-        calendarId="primary",
-        timeMin=time_min,
-        timeMax=time_max,
-        singleEvents=True,
-        orderBy="startTime",
-        maxResults=50,
-    ).execute()
 
-    events = result.get("items", [])
+    seen = {}
+    order = []
+    for cal_id, cal_name in _calendar_ids(service, skip):
+        try:
+            result = service.events().list(
+                calendarId=cal_id,
+                timeMin=time_min,
+                timeMax=time_max,
+                singleEvents=True,
+                orderBy="startTime",
+                maxResults=50,
+            ).execute()
+        except Exception as exc:
+            # One unreadable calendar must not take the whole day's plan with it.
+            order.append((("~error", cal_id), f"- ⚠️ calendar '{cal_name}' could not be read: {exc}"))
+            continue
+
+        for event in result.get("items", []):
+            key = _event_key(event)
+            if key in seen:
+                continue
+            seen[key] = True
+            order.append((key, (cal_id, cal_name, event)))
+
     lines = []
-    for e in events:
+    rendered = []
+    for key, payload in order:
+        if key[0] == "~error":
+            lines.append(payload)
+            continue
+        rendered.append(payload)
+
+    # Chronological across all calendars. All-day events sort ahead of timed ones
+    # because they are the day's context ("Home", travel), not appointments in it.
+    def _sort_key(item):
+        start = item[2].get("start", {})
+        if "date" in start:
+            return (start["date"], 0, "")
+        when = start.get("dateTime", "")
+        return (when[:10], 1, when)
+
+    for cal_id, cal_name, e in sorted(rendered, key=_sort_key):
         start = e.get("start", {})
         end = e.get("end", {})
         summary = e.get("summary", "(no title)")
+        # Name the calendar for anything off the primary, so a Bloom commitment
+        # is not mistaken for a personal block (and vice versa).
+        origin = "" if cal_id == email or cal_id == "primary" else f"  _[{cal_name}]_"
         if "date" in start:
-            lines.append(f"- All day — {summary}")
+            lines.append(f"- All day — {summary}{origin}")
         else:
             s = start.get("dateTime", "")[:16].split("T")
             en = end.get("dateTime", "")[:16].split("T")
             s_time = s[1] if len(s) > 1 else ""
             e_time = en[1] if len(en) > 1 else ""
-            lines.append(f"- {s_time} – {e_time} — {summary}")
+            lines.append(f"- {s_time} – {e_time} — {summary}{origin}")
 
         if detailed:
             desc = e.get("description", "")
@@ -629,18 +730,20 @@ def run_pipeline(command_name):
             futures["calendar_primary"] = pool.submit(
                 google_calendar_events, creds_primary,
                 sources["google_email_primary"], time_min, time_max,
-                detailed=is_close_day
+                detailed=is_close_day, skip=sources["calendars_skip"]
             )
             # close-day also needs next 7 days for calendar cross-check
             if is_close_day:
                 futures["calendar_next_week"] = pool.submit(
                     google_calendar_events, creds_primary,
-                    sources["google_email_primary"], time_min, time_max_week
+                    sources["google_email_primary"], time_min, time_max_week,
+                    skip=sources["calendars_skip"]
                 )
         if "calendar-personal" in sources["configured"] and creds_personal and creds_personal.exists():
             futures["calendar_personal"] = pool.submit(
                 google_calendar_events, creds_personal,
-                sources["google_email_personal"], time_min, time_max
+                sources["google_email_personal"], time_min, time_max,
+                skip=sources["calendars_skip"]
             )
         if "tasks" in sources["configured"] and sources["google_tasks_list"] and creds_primary and creds_primary.exists():
             futures["tasks"] = pool.submit(
