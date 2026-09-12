@@ -70,35 +70,19 @@
 
 ## 2026-09-12 — A spawned worker that knows who it works for
 
-`hash: `
+`hash: ` · [#128](https://github.com/The-AIOS/aios/pull/128)
 
-> **What you can now do.** Trust that a worker you spawn knows who it is working for. `CLAUDE.md`
-> told a spawned worker to run the full Session Start Ritual, and in practice it often ran none of
-> it — so a worker could answer a question about your ventures having read nothing you ever wrote.
-> Step 4 now states a rule it can actually follow: list the two context folders, read their
-> `_index.md`, then read **only the files the task touches** — as the session's first tool calls, not
-> described and skipped. Measured on a live vault, three of three tasks reached the same or better
-> answers this way as with a full preload, at roughly a third of the cost. Your interactive session
-> is untouched and keeps the full ritual.
+> **What you can now do.** Trust that a worker you spawn knows who it is working for. `CLAUDE.md` told a spawned worker to run the full Session Start Ritual, and in practice it often ran none of it — so a worker could answer a question about your ventures having read nothing you ever wrote. Step 4 now states a rule it can actually follow, and it is sized to the work rather than to the worker.
 
-**The floor is the part that is not an optimisation.** Two observed files — `growth.md` and
-`patterns.md` — are read **every time, regardless of the task**, because they hold what an operator
-tends to avoid or repeat and *no task ever names them*. Without it, "read what the task touches"
-hands a fresh worker the relevance call, the one judgment it is worst placed to make: it cannot know
-that the file the task never mentions is the file that makes an answer *yours* rather than merely
-correct. That failure is silent — the worker still answers, and still sounds right.
+**Two files are read every time, whatever the task** — `observed/growth.md` and `observed/patterns.md`. They hold what you tend to avoid or repeat, and no task ever names them, so nothing else pulls them in. That floor is what ends "the worker read nothing".
 
-**Why two files change.** A worker born from `spawn` in a terminal gets the rule injected at the top
-of its task file by the wrapper; a worker born from a surface fulfilling an inbox request never reads
-that file and is governed by `CLAUDE.md` alone. Two hand-maintained copies of one rule is how a floor
-goes missing from one side, so `tests/spawned-worker-context-parity.test.sh` asserts they agree —
-deriving the floor from the wrapper rather than keeping a third list, and refusing to pass on an
-empty floor.
+**Then one question decides the rest, and it is about the output, not the reader:** *will this be read as your own words, or act on your behalf?* Writing, deciding, advising, anything an audience attributes to you, anything touching a venture or a relationship → **the full ritual, every declared and observed file**. Work whose correctness is checkable without knowing you — code, tests, file operations, data — → the floor plus only what the task touches. **Unsure is not a third answer: read everything.**
 
-**Action required:** none — `/aios:update` lands it. It auto-runs the wrapper installer when that
-file changes; open a new terminal so `spawn` picks it up. Workers already running keep the old
-behaviour until they close.
+That asymmetry is the reason for the whole shape. Over-reading costs one session's tokens. Under-reading costs your voice, and it fails *silently* — the work comes back fluent, correct, and not yours, with nothing to flag it. A rule keyed on *who is running* would have made every spawned agent permanently thinner than your own session, including the agents whose entire job is to sound like you.
 
+Measured on a live vault, several tasks reached the same or better answers loading on demand at roughly a third of the cost — a preload writes every context file to the cache on the first request. That saving is taken where the work does not need you in it.
+
+**Action required:** none. Spawned workers pick this up from `CLAUDE.md` immediately; the `spawn` wrapper also prints the rule at the top of every task file, so re-run `hooks/claude-identity/install-wrappers.sh` (macOS/Linux) or `install-wrappers.ps1` (Windows) if you want that half too — `/aios:update` runs it for you when the installer changes.
 ## 2026-09-11 — Google connects by asking, a refused login that says so, and Close of Day back at the end
 
 `hash: 61e7d9c · 398e526 · 0a2e3db · 236e899 · 921e991 · dbde860 · 83c73ba` · [#122](https://github.com/The-AIOS/aios/pull/122) · [#123](https://github.com/The-AIOS/aios/pull/123)

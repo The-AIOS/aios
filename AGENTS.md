@@ -14,9 +14,12 @@ The quality of context the operator gives an agent determines what it can do for
 
 This repo is a personal knowledge vault. Before substantive work:
 
-1. Read the operator's **declared context** — every file in `vault/00 - notes/context/declared/` (who they are, how they think/decide, their ventures).
-2. Read the **observed context** — every file in `vault/00 - notes/context/observed/` (what the system has learned working with them).
-3. If present, read `INTENT.md` (the trust contract — what's autonomous vs. needs review) and `USER.md`.
+1. **Always, whatever the task** — read `context/observed/growth.md` and `context/observed/patterns.md`. They hold what the operator tends to avoid or repeat, and no task ever names them, so nothing else will pull them in.
+2. **Then size the rest to the work.** Ask one question about your own output: *will it be read as the operator's own words, or act on their behalf?*
+   - **Yes** — writing, deciding, advising, anything an audience attributes to them, anything touching a venture or a relationship → read **every** file in `context/declared/` and `context/observed/`.
+   - **No** — work whose correctness is checkable without knowing them (code, tests, file operations, data) → read only what the task touches. Start from each folder's `_index.md`; if the task is vague, grep the folders for its literal subject.
+   - **Unsure is not a third answer — read everything.** Over-reading costs one session's tokens. Under-reading costs the operator's voice and fails silently: fluent, correct, and not theirs.
+3. If present, read `INTENT.md` (the trust contract — what's autonomous vs. needs review) and `USER.md`. `INTENT.md` is required whenever the answer to (2) was yes.
 
 ## What this system is NOT (anti-values — refuse these even when convenient)
 

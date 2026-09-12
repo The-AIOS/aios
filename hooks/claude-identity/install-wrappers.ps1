@@ -274,7 +274,7 @@ function spawn {
         #   about the turn and not about the ritual: passing a bootstrap only starts the ritual
         #   when the bootstrap CONTAINS an instruction. With an explicit task it always did;
         #   with the default it never did, and that is the path a first-time operator takes.
-        [Parameter(Position=1)] [string] $Task = 'Run the CLAUDE.md Session Start Ritual now: load my declared + observed context, match your session name to your role, and greet me in character before awaiting my task.',
+        [Parameter(Position=1)] [string] $Task = 'Match your session name to your role, greet me in character, then await my task. Load context per the rule above -- with no task yet, you cannot size it, so read the full set.',
         # -Tier frontier|judgment|scale|fast (plus the legacy 'mechanical'). Named for
         # the SHAPE of the work, not for a model, so the names outlive the lineup:
         #   frontier  hardest -- long-running autonomous agents, code migration,
@@ -340,8 +340,47 @@ function spawn {
         return
     }
 
+    # The task file opens with the on-demand context preamble -- the same rule the bash wrapper
+    # prints, because a Windows worker is governed by the same contract.
+    #
+    # A STRING ARRAY, not a here-string: this whole function lives inside the single-quoted
+    # here-string $WRAPPER, and PowerShell offers no way to escape a closing '@ inside one --
+    # a nested single-quoted here-string ends the OUTER one at its first line-initial
+    # terminator, turning everything after it into live code. Caught by the
+    # "produces a profile that PARSES" job, which is exactly what that job is for.
+    $taskPreamble = (@(
+      '# Before the task -- load context, sized to the work',
+      '',
+      'The context for whoever you work for lives in `vault/00 - notes/context/`:',
+      '  declared/  what they told Claude about themselves (identity, voice, working style, ventures)',
+      '  observed/  what Claude learned working with them (preferences, patterns, growth, lessons)',
+      '',
+      'FIRST ACTION, before you answer or plan anything -- the floor, whatever the task is: list both',
+      'folders, read both `_index.md` (a one-line map each), and read the `## ` headings of',
+      '`observed/growth.md` and `observed/patterns.md` (`grep ^## `). Those two are unconditional:',
+      'they hold what the operator tends to avoid or repeat, and no task ever names them.',
+      '',
+      'THEN one question about your own output -- not about the files:',
+      '  Will what I produce be read as the words of the operator, or act on their behalf?',
+      '',
+      '  YES -> read the FULL declared + observed set (the CLAUDE.md Session Start Ritual). Writing,',
+      '         deciding, advising, representing, anything an audience attributes to them, anything',
+      '         touching a venture or a relationship. Most agent roles are in this class.',
+      '  NO  -> the floor plus only the files this task touches. Work checkable without knowing the',
+      '         operator: code, tests, file operations, data, mechanical sweeps. If the task is vague,',
+      '         grep the context folder for its literal subject and read what matches.',
+      '',
+      'UNSURE IS NOT A THIRD ANSWER -- read the full set. Over-reading costs tokens once; under-reading',
+      'costs the voice of the operator and fails silently: fluent, correct, and not theirs.',
+      '',
+      'Describing this rule is not doing it: right after the CLAUDE.md identity check, the next thing',
+      'you do is the `ls`. CLAUDE.md is already loaded; INTENT.md (repo root) is the trust contract --',
+      'read it whenever the task acts on behalf of the operator.',
+      ''
+    ) -join [Environment]::NewLine)
+
     $taskFile = Join-Path $env:TEMP "spawn-task-$Name.md"
-    Set-Content -Path $taskFile -Value $Task -Encoding UTF8
+    Set-Content -Path $taskFile -Value ($taskPreamble + "`n" + $Task) -Encoding UTF8
 
     # In-process (in-shell) when NOT inside a Claude Code session, OR when this is an
     # AIOS-Glass-made terminal ($env:AIOS_GLASS_TERM). Glass created the terminal natively

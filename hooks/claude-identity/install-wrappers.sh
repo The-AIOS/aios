@@ -318,22 +318,33 @@ _spawn_task_preamble() {
   # Printed at the top of every spawn task file. Generic on purpose: the paths are the
   # framework's and the rule is the framework's — nothing here names an operator.
   cat <<'PREAMBLE'
-# Before the task — context on demand, not preloaded
+# Before the task — load context, sized to the work
 
 Your operator's context lives in `vault/00 - notes/context/`:
   declared/  what they told Claude about themselves (identity, voice, working style, ventures, role)
   observed/  what Claude learned working with them (preferences, patterns, growth, antifragile lessons)
 
-FIRST ACTION, before you answer or plan anything: list both folders and read both `_index.md` (a
-one-line map each). Then read the `## ` headings of `observed/growth.md` and `observed/patterns.md`
-(`grep '^## '`): those two are a floor and you read them every time, because they hold what the
-operator tends to avoid or repeat and no task ever names them. Then read ONLY the files this task
-touches — before acting, not after. Do NOT preload every file. When the task is vague, grep the
-context folder for the literal subject first, then read what matches.
+FIRST ACTION, before you answer or plan anything — the floor, whatever the task is: list both
+folders, read both `_index.md` (a one-line map each), and read the `## ` headings of
+`observed/growth.md` and `observed/patterns.md` (`grep '^## '`). Those two are unconditional:
+they hold what the operator tends to avoid or repeat, and no task ever names them.
+
+THEN one question about your own output — not about the files:
+  Will what I produce be read as the operator's own words, or act on their behalf?
+
+  YES -> read the FULL declared + observed set (CLAUDE.md's Session Start Ritual). Writing,
+         deciding, advising, representing, anything an audience attributes to them, anything
+         touching a venture or a relationship. Most agent roles are in this class.
+  NO  -> the floor plus only the files this task touches. Work checkable without knowing the
+         operator: code, tests, file operations, data, mechanical sweeps. If the task is vague,
+         grep the context folder for its literal subject and read what matches.
+
+UNSURE IS NOT A THIRD ANSWER — read the full set. Over-reading costs tokens once; under-reading
+costs the operator's voice and fails silently: fluent, correct, and not theirs.
 
 Describing this rule is not doing it: right after CLAUDE.md's identity check, the next thing you do
 is the `ls`. `CLAUDE.md` is already loaded; `INTENT.md` (repo root) is the trust contract — read it
-when the task acts on the operator's behalf.
+whenever the task acts on the operator's behalf.
 
 PREAMBLE
 }
@@ -380,7 +391,10 @@ spawn() {
   #   about the turn and not about the ritual: passing a bootstrap only starts the ritual
   #   when the bootstrap CONTAINS an instruction. With an explicit task it always did;
   #   with the default it never did, and that is the path a first-time operator takes.
-  local task="${2:-Run the CLAUDE.md Session Start Ritual now: load my declared + observed context, match your session name to your role, and greet me in character before awaiting my task.}"
+  # No task given. The preamble above already carries the context rule, so this must NOT restate
+  # it — an earlier version said "load my declared + observed context" and landed in the same
+  # task file as a preamble saying not to preload, telling the worker both things at once.
+  local task="${2:-Match your session name to your role, greet me in character, then await my task. Load context per the rule above — with no task yet, you cannot size it, so read the full set.}"
 
   # Map tier → model id. Empty spawn_model = no override → _claude_with_respawn
   # uses its frontier default (judgment). Four rungs, named for the SHAPE of the

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# A spawned worker's context rule is stated TWICE — the two copies must agree
+# A spawned worker's context rule is stated in FOUR places — all four must agree
 #
 # A worker is born on two paths, and only one of them reads the wrapper:
 #   · `spawn` typed in a terminal  → hooks/claude-identity/install-wrappers.sh
@@ -22,6 +22,19 @@
 # which is the thing being prevented. It also refuses to pass vacuously on an
 # empty floor, because "every file in an empty set is present" is true and
 # useless.
+#
+# EXTENDED after review: there were FOUR copies, not two, and the two that were
+# missed are the wrapper's own DEFAULT TASK on each platform — the text used when
+# `spawn <name>` is called with no task. That default said "load my declared +
+# observed context" while the preamble beside it said not to preload, so a
+# no-task spawn wrote both instructions into one file and told the worker to do
+# opposite things. Windows had no preamble at all, so the change reached two
+# platforms of three. A parity suite that compares only the copies you remembered
+# is the same failure it exists to prevent, one level up.
+#
+# Comments are STRIPPED before matching (antifragile #105): the fix's own comment
+# quotes the string it removed, and a whole-file grep cannot tell an explanation
+# from an instruction.
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -61,11 +74,18 @@ else
 fi
 
 # ── CLAUDE.md step 4 ────────────────────────────────────────────────────────
-STEP4="$(grep -n '^4\. After greeting' "$CM" | head -1 | cut -d: -f2-)"
-if printf '%s' "$STEP4" | grep -q 'on demand'; then
-  ok "CLAUDE.md step 4 states the on-demand rule"
+# Step 4 is a BLOCK, not a line: it carries sub-points (the floor, the output
+# question, the unsure case). Extracting only the first line -- which the first
+# version did, when step 4 happened to be one line -- silently measures a fraction
+# of the rule and reports on the rest. Read to the start of step 5.
+STEP4="$(awk '/^4\. After greeting/{f=1} f&&/^5\. \*\*When the task is done/{exit} f' "$CM")"
+# Assert the RULE, not the wording (#105): a check pinned to the phrase "on demand"
+# fails the moment the prose improves, which is exactly what happened on review.
+# What must be true is that step 4 sizes the read to the work and names a floor.
+if printf '%s' "$STEP4" | grep -qiE 'floor' && printf '%s' "$STEP4" | grep -qiE 'only what this task touches|only the files this task touches'; then
+  ok "CLAUDE.md step 4 states both halves: an unconditional floor and a sized read"
 else
-  no "CLAUDE.md step 4 states the on-demand rule" "got: ${STEP4:0:80}"
+  no "CLAUDE.md step 4 must state a floor AND a sized read" "got: ${STEP4:0:120}"
 fi
 
 # ── the assertion that matters ──────────────────────────────────────────────
@@ -94,4 +114,67 @@ while IFS= read -r f; do
 done <<< "$FLOOR"
 
 printf '\n  %d passed, %d failed\n\n' "$PASS" "$FAIL"
+[ "$FAIL" -eq 0 ]
+
+# ── the copies the first version missed ─────────────────────────────────────
+echo
+echo " the wrapper's DEFAULT TASK must not restate the rule"
+PS1="hooks/claude-identity/install-wrappers.ps1"
+# Strip comments first. The commit that removed the contradicting string explains
+# itself in a comment that necessarily contains it (#105) -- matching raw text here
+# would report a defect that is only an explanation.
+code_sh="$(sed 's/^[[:space:]]*#.*//' "$WR")"
+code_ps="$(sed 's/^[[:space:]]*#.*//' "$PS1")"
+for pair in "sh:$code_sh" "ps1:$code_ps"; do
+  label="${pair%%:*}"; body="${pair#*:}"
+  if printf '%s' "$body" | grep -q 'load my declared + observed context'; then
+    no "$label default task tells the worker to preload" \
+       "the preamble in the same file says the opposite; a no-task spawn gets both"
+  else
+    ok "$label default task does not contradict the preamble"
+  fi
+done
+
+echo
+echo " Windows gets the preamble too, or the change reaches two platforms of three"
+if grep -q 'load context, sized to the work' "$PS1"; then
+  ok "the .ps1 injects a context preamble"
+else
+  no "the .ps1 writes its task file with no preamble" \
+     "a Windows-spawned worker then boots with no operator context at all"
+fi
+# the floor must be the SAME two files on both platforms -- derived, never restated
+floor_sh="$(printf '%s' "$PREAMBLE" | grep -oE 'observed/[a-z]+\.md' | sort -u | tr '\n' ' ')"
+floor_ps="$(grep -oE 'observed/[a-z]+\.md' "$PS1" | sort -u | tr '\n' ' ')"
+if [ -z "$floor_sh" ]; then
+  no "no floor derivable from the wrapper preamble — this check would pass vacuously"
+elif [ "$floor_sh" = "$floor_ps" ]; then
+  ok "both platforms name the same floor ($floor_sh)"
+else
+  no "the floor differs by platform" "sh: $floor_sh | ps1: $floor_ps"
+fi
+
+echo
+echo " the rule is keyed on the WORK, not on being a worker"
+# The review that produced this: keying on identity makes every spawned agent
+# permanently thinner than the primary session -- including the agents whose whole
+# job is to sound like the operator. The discriminator must be the output.
+for pair in "CLAUDE.md:$CM" "the wrapper:$WR" "the .ps1:$PS1"; do
+  label="${pair%%:*}"; f="${pair#*:}"
+  # Match the RULE, not the phrasing (#105). The .ps1 says "the words of the operator"
+  # because it must avoid apostrophes -- it lives inside a single-quoted here-string --
+  # and a check pinned to one file's wording fails on a change that is purely mechanical.
+  # What must be true everywhere: the test is keyed on the OUTPUT acting for the operator.
+  if grep -qiE "act on their behalf|act on behalf of the operator" "$f"; then
+    ok "$label asks the output question"
+  else
+    no "$label does not state the work-shape test" \
+       "without it the rule reads as 'workers get less', which is the thing being avoided"
+  fi
+done
+grep -qiE 'unsure is not a third answer|[Uu]nsure .*read the full' "$CM" \
+  && ok "CLAUDE.md resolves the unsure case toward the full ritual" \
+  || no "the unsure case is unresolved" "the two errors are asymmetric; silence favours under-reading"
+
+printf '\n%d passed · %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
