@@ -146,6 +146,68 @@ else
      "if the defect no longer reproduces, re-derive why this suite exists before deleting it"
 fi
 
+echo "── 5b. refusals that a stranger's environment hits and this vault never does ──"
+# These three come from a review pass asking one question: does this work on a
+# machine whose disk, permissions and inputs are not the author's? Each was
+# reproduced before it was fixed.
+
+# An EMPTY block file used to produce a successful commit that captured nothing --
+# a caller whose block generation silently rendered empty was told it landed.
+# Antifragile #110: "nothing" canonicalises into something real unless refused.
+E="$TMP/emptyrepo"; mkdir -p "$E"
+( cd "$E" && git init -q . && git config user.email t@example.com && git config user.name t )
+printf '# Day\n\n## Rhythm\nx\n' > "$E/note.md"; : > "$E/empty.md"
+( cd "$E" && git add -A && git commit -qm init ) >/dev/null 2>&1
+BEFORE_N="$(git -C "$E" log --oneline | wc -l | tr -d ' ')"
+OUT="$( cd "$E" && "$HELPER" --note "$E/note.md" --block-file "$E/empty.md" -m x --no-push 2>&1 )"; RC=$?
+AFTER_N="$(git -C "$E" log --oneline | wc -l | tr -d ' ')"
+{ [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -qi 'empty'; } \
+  && ok "an empty block file is refused, naming the reason" \
+  || no "an empty block file was accepted" "$OUT"
+[ "$BEFORE_N" = "$AFTER_N" ] && ok "and no commit was made for it" \
+  || no "a commit was made for an empty block ($BEFORE_N → $AFTER_N)"
+
+# An UNWRITABLE location used to spin the full lock timeout and then report
+# "lock timeout" -- sending the operator to look for a peer session that never
+# existed. Read-only mounts, restrictive ACLs and cloud-sync folders all hit it.
+if [ "$(id -u)" = 0 ]; then
+  printf '  SKIP  unwritable-location check (running as root; -w is always true)\n'
+else
+  R="$TMP/ro"; mkdir -p "$R"
+  ( cd "$R" && git init -q . && git config user.email t@example.com && git config user.name t )
+  printf '# Day\n\n## Rhythm\nx\n' > "$R/note.md"; printf '\n## S\nb\n' > "$R/blk.md"
+  ( cd "$R" && git add -A && git commit -qm init ) >/dev/null 2>&1
+  chmod a-w "$R"
+  S=$(date +%s)
+  OUT="$( cd "$TMP" && "$HELPER" --note "$R/note.md" --block-file "$R/blk.md" --before "## Rhythm" -m x --no-push 2>&1 )"; RC=$?
+  EL=$(( $(date +%s) - S ))
+  chmod u+w "$R"
+  { [ "$RC" -ne 0 ] && printf '%s' "$OUT" | grep -qi 'not writable'; } \
+    && ok "an unwritable location is named as such, not reported as contention" \
+    || no "unwritable location gave the wrong diagnosis" "$OUT"
+  [ "$EL" -lt 10 ] && ok "and it fails immediately (${EL}s), not after the lock timeout" \
+    || no "took ${EL}s — it is still spinning the contention timeout"
+fi
+
+echo "── 5c. CONCURRENCY — the property all of the above must not break ──"
+# The writability guard must never fire on ordinary contention: a peer releasing
+# the lock in the window after our mkdir fails would, if inferred rather than
+# tested, turn the helper's whole reason for existing into a spurious failure.
+C="$TMP/conc"; mkdir -p "$C"
+( cd "$C" && git init -q . && git config user.email t@example.com && git config user.name t )
+printf 'x\n' > "$C/seed"; ( cd "$C" && git add -A && git commit -qm init ) >/dev/null 2>&1
+for i in 1 2 3 4 5 6; do printf '\n## Session — %s\nb\n' "$i" > "$C/b$i.md"; done
+printf '# Day\n\n## Close of Day\nv\n' > "$C/note.md"
+for i in 1 2 3 4 5 6; do
+  ( cd "$C" && "$HELPER" --note "$C/note.md" --block-file "$C/b$i.md" --before "## Close of Day" -m "s$i" --no-push >/dev/null 2>&1 ) &
+done
+wait
+LANDED="$(grep -c '^## Session — ' "$C/note.md" || true)"
+[ "$LANDED" = 6 ] && ok "6 concurrent writers, 6 blocks landed" \
+  || no "only $LANDED of 6 landed — contention is being mistaken for a failure"
+awk '/^## Close of Day/{c=NR} /^## Session/{s=NR} END{exit !(c>s)}' "$C/note.md" \
+  && ok "and the marker is still last" || no "marker no longer last after concurrent appends"
+
 echo "── 6. one matcher decides both branches ──"
 # The retired version asked `grep -qF` whether to enter the awk, so two different
 # matchers had to agree; a marker grep found but awk would not placed the block

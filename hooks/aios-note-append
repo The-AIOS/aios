@@ -4,8 +4,10 @@
 # and MERGE-APPENDS: under the lock it re-reads the LATEST note, then inserts. So when
 # /close-all fires N sessions at once, each lands its block in turn (A, then B reads the
 # note *with* A and appends after it, then C) — ordered, zero clobber, all visible now.
-# Inserts BEFORE the first line containing --before (e.g. "## Close of Day"), else appends
-# at end. Then commits the note via aios-commit (scoped — never touches other files).
+# Inserts BEFORE the first line that STARTS WITH --before (e.g. "## Close of Day"); if no
+# line starts with it, appends at the end. The anchoring is deliberate: a note is prose,
+# and a sentence that merely quotes a heading must not become an insertion point.
+# Then commits the note via aios-commit (scoped — never touches other files).
 #
 # Usage:
 #   aios-note-append --note <path> --block-file <path> [--before "<marker>"] [-m "<msg>"] [--no-push]
@@ -25,6 +27,11 @@ esac; done
 [ -n "$NOTE" ] || die "need --note <path>"
 [ -f "$NOTE" ] || die "note does not exist: $NOTE"
 [ -n "$BLOCKFILE" ] && [ -f "$BLOCKFILE" ] || die "need --block-file <existing file>"
+# -s, not just -f. An EMPTY block file is never a useful append: it produces a commit that
+# captured nothing and reports success, so a caller whose block-generation step silently
+# produced no output (a heredoc that failed, a template that rendered empty) is told its
+# capture landed. Refuse the no-op rather than record it.
+[ -s "$BLOCKFILE" ] || die "block file is empty: $BLOCKFILE — nothing to append"
 [ -n "$MSG" ] || MSG="session: append capture block"
 
 SELF="$(cd "$(dirname "$0")" && pwd)"
@@ -33,7 +40,20 @@ AC="$SELF/aios-commit"
 
 # ── per-file mutex (mkdir; dead-holder reclaim) ──
 LOCK="${NOTE}.aios-lock"
+LOCKDIR="$(dirname "$NOTE")"
 acquire(){ local t=0 h; while ! mkdir "$LOCK" 2>/dev/null; do
+    # mkdir can fail for two very different reasons, and only one of them is contention.
+    # If the lock directory does not exist afterwards, mkdir failed because the location
+    # is not writable — a read-only mount, a restrictive ACL, a cloud-sync folder mid-lock.
+    # Waiting cannot fix that, so spinning the full timeout and then reporting a "lock
+    # timeout" tells the operator to look for a peer session that was never there.
+    # Do NOT infer "unwritable" from the lock being absent: a peer can release it in the
+    # window between our mkdir failing and this test, and dying there would turn ordinary
+    # contention -- the case this helper exists for -- into a spurious failure. Ask the
+    # directory directly instead; that answer does not move underneath us.
+    if [ ! -d "$LOCK" ] && [ ! -w "$LOCKDIR" ]; then
+      die "cannot create the lock at $LOCK — $LOCKDIR is not writable (nothing was changed)"
+    fi
     h=$(cat "$LOCK/pid" 2>/dev/null || true)
     if [ -n "$h" ] && ! kill -0 "$h" 2>/dev/null; then rm -rf "$LOCK" 2>/dev/null; continue; fi
     t=$((t+1)); [ "$t" -gt 600 ] && die "note lock timeout on $NOTE"; sleep 0.1
@@ -66,9 +86,12 @@ if [ -n "$BEFORE" ]; then
     !done && index($0, marker) == 1 { printf "%s%s\n", blk, $0; done=1; next }
     { print }
     END{ if (!done) printf "\n%s", blk }      # marker absent -> append at the end
-  ' "$NOTE" > "$NOTE.aiostmp" && mv "$NOTE.aiostmp" "$NOTE"
+  ' "$NOTE" > "$NOTE.aiostmp" || { rm -f "$NOTE.aiostmp" 2>/dev/null
+        die "could not write $NOTE.aiostmp (disk full, or the directory is not writable) — note unchanged"; }
+  mv "$NOTE.aiostmp" "$NOTE" || die "could not replace $NOTE — note unchanged; your block is in $NOTE.aiostmp"
 else
-  printf '\n' >> "$NOTE"; cat "$BLOCKFILE" >> "$NOTE"
+  { printf '\n' >> "$NOTE" && cat "$BLOCKFILE" >> "$NOTE"; } \
+    || die "could not append to $NOTE (disk full, or not writable) — the note may be partially written"
 fi
 
 # ── commit the note via aios-commit (its own repo-mutex; lock order note→repo, no deadlock) ──
