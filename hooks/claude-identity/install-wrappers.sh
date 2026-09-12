@@ -314,6 +314,30 @@ _spawn_adj_animal() {
   echo "${adj}-${animal}"
 }
 
+_spawn_task_preamble() {
+  # Printed at the top of every spawn task file. Generic on purpose: the paths are the
+  # framework's and the rule is the framework's — nothing here names an operator.
+  cat <<'PREAMBLE'
+# Before the task — context on demand, not preloaded
+
+Your operator's context lives in `vault/00 - notes/context/`:
+  declared/  what they told Claude about themselves (identity, voice, working style, ventures, role)
+  observed/  what Claude learned working with them (preferences, patterns, growth, antifragile lessons)
+
+FIRST ACTION, before you answer or plan anything: list both folders and read both `_index.md` (a
+one-line map each). Then read the `## ` headings of `observed/growth.md` and `observed/patterns.md`
+(`grep '^## '`): those two are a floor and you read them every time, because they hold what the
+operator tends to avoid or repeat and no task ever names them. Then read ONLY the files this task
+touches — before acting, not after. Do NOT preload every file. When the task is vague, grep the
+context folder for the literal subject first, then read what matches.
+
+Describing this rule is not doing it: right after CLAUDE.md's identity check, the next thing you do
+is the `ls`. `CLAUDE.md` is already loaded; `INTENT.md` (repo root) is the trust contract — read it
+when the task acts on the operator's behalf.
+
+PREAMBLE
+}
+
 spawn() {
   # --tier frontier|judgment|scale|fast — optional, position-independent (plus the
   # legacy `mechanical`). See the map below for what each rung is for. `mechanical` routes
@@ -470,7 +494,12 @@ spawn() {
   fi
 
   local task_file="/tmp/spawn-task-$name.md"
-  printf '%s\n' "$task" > "$task_file"
+  # The task file opens with the on-demand context preamble (see _spawn_task_preamble): a spawned
+  # worker otherwise boots with NO operator context — CLAUDE.md tells it to load context on demand
+  # and in practice it often skips that step entirely. The preamble hands it the map and the rule.
+  # CLAUDE.md § Identity & Greeting step 4 carries the same rule, so workers spawned by another
+  # surface (which never reads this file) get it too; this is the reinforcement on the wrapper path.
+  { _spawn_task_preamble; printf '%s\n' "$task"; } > "$task_file"
 
   local launcher="/tmp/spawn-launch-$name.sh"
   # Match the launcher's shell + rc to the user's LOGIN shell — the same

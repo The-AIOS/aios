@@ -68,6 +68,37 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-12 — A spawned worker that knows who it works for
+
+`hash: `
+
+> **What you can now do.** Trust that a worker you spawn knows who it is working for. `CLAUDE.md`
+> told a spawned worker to run the full Session Start Ritual, and in practice it often ran none of
+> it — so a worker could answer a question about your ventures having read nothing you ever wrote.
+> Step 4 now states a rule it can actually follow: list the two context folders, read their
+> `_index.md`, then read **only the files the task touches** — as the session's first tool calls, not
+> described and skipped. Measured on a live vault, three of three tasks reached the same or better
+> answers this way as with a full preload, at roughly a third of the cost. Your interactive session
+> is untouched and keeps the full ritual.
+
+**The floor is the part that is not an optimisation.** Two observed files — `growth.md` and
+`patterns.md` — are read **every time, regardless of the task**, because they hold what an operator
+tends to avoid or repeat and *no task ever names them*. Without it, "read what the task touches"
+hands a fresh worker the relevance call, the one judgment it is worst placed to make: it cannot know
+that the file the task never mentions is the file that makes an answer *yours* rather than merely
+correct. That failure is silent — the worker still answers, and still sounds right.
+
+**Why two files change.** A worker born from `spawn` in a terminal gets the rule injected at the top
+of its task file by the wrapper; a worker born from a surface fulfilling an inbox request never reads
+that file and is governed by `CLAUDE.md` alone. Two hand-maintained copies of one rule is how a floor
+goes missing from one side, so `tests/spawned-worker-context-parity.test.sh` asserts they agree —
+deriving the floor from the wrapper rather than keeping a third list, and refusing to pass on an
+empty floor.
+
+**Action required:** none — `/aios:update` lands it. It auto-runs the wrapper installer when that
+file changes; open a new terminal so `spawn` picks it up. Workers already running keep the old
+behaviour until they close.
+
 ## 2026-09-11 — Google connects by asking, a refused login that says so, and Close of Day back at the end
 
 `hash: 61e7d9c · 398e526 · 0a2e3db · 236e899 · 921e991 · dbde860 · 83c73ba` · [#122](https://github.com/The-AIOS/aios/pull/122) · [#123](https://github.com/The-AIOS/aios/pull/123)
@@ -95,6 +126,41 @@ Now: one baseline per surface you publish to, scored against the surface the dra
 **And `## Close of Day` goes back to the end.** `/close-day` now appends there, through the same locking helper `/close-session` uses. It never said *where* its block went, so it could be anchored partway up — and every `## Session —` block below that point then sat beneath it. Since `/close-session` inserts *before* that marker, the marker being last is what keeps session blocks above it. `/close-day` also wrote the note directly while every other writer took a lock, so a block landing between its read and its write was silently overwritten.
 
 **Action required:** none — `/aios:update` lands both. **Worth one look at recent notes:** if a section's body appears *below* a session block instead of under its own heading, that was the marker bug — move the stranded lines back up, nothing was lost. And **do not bulk-reorder old notes** on the strength of the Close-of-Day fix: a `## Session —` block below `## Close of Day` is only wrong when it was written *before* the close. A session that genuinely ran after you closed the day belongs below it.
+
+### A spawned worker now loads your context, instead of booting blind
+
+**What you can now do.** Trust that a worker you spawn knows who it is working for. Until now
+`CLAUDE.md` told a spawned worker to run the full Session Start Ritual, and in practice it often ran
+none of it — so a worker could answer a question about your ventures having read nothing you ever
+wrote. Step 4 now states the rule it can actually follow: list the two context folders, read their
+`_index.md`, then read **only the files the task touches** — done as the session's first tool calls,
+not described and skipped.
+
+**The part that is not an optimisation is the floor.** Two observed files — `growth.md` and
+`patterns.md` — are read **every time, regardless of the task**, because they hold what an operator
+tends to avoid or repeat and *no task ever names them*. Without that floor, "read what the task
+touches" hands a fresh worker the relevance call, which is the one judgment it is worst placed to
+make: it cannot know that the file the task never mentions is the file that makes an answer *yours*
+rather than merely correct. That failure is silent — the worker still answers, and still sounds
+right.
+
+**Why this is cheaper and not just different.** A preload writes every context file to the cache on
+the first request. Measured on a live vault, three of three tasks reached the same or better answers
+on demand as with the full preload, at roughly a third of the cost. The interactive **primary**
+session is untouched and keeps the full ritual — the case for preloading is cross-file synthesis
+that no question triggers, and that case is untested.
+
+**It lands on both spawn paths, which is the whole reason it is two files.** A worker born from
+`spawn` in a terminal gets the rule injected at the top of its task file by the wrapper; a worker
+born from a surface fulfilling an inbox request never reads that file and is governed by `CLAUDE.md`
+alone. Two hand-maintained copies of one rule is exactly how a floor goes missing from one side, so
+`tests/spawned-worker-context-parity.test.sh` asserts they agree — deriving the floor from the
+wrapper rather than keeping a third list of its own, and refusing to pass on an empty floor.
+
+**Action required:** none — `/aios:update` lands it. Re-run
+`bash ~/aios/hooks/claude-identity/install-wrappers.sh` if your update did not (it is auto-run when
+the installer changes), and open a new terminal so `spawn` picks it up. Workers already running keep
+the old behaviour until they close.
 
 ### `resume` — reopen a closed session as the same someone
 
