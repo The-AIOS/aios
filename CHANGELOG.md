@@ -70,7 +70,7 @@
 
 ## 2026-09-11 — Google connects by asking, a refused login that says so, and Close of Day back at the end
 
-`hash: 61e7d9c · 398e526 · 0a2e3db · 236e899 · 921e991 · dbde860` · [#122](https://github.com/The-AIOS/aios/pull/122) · [#123](https://github.com/The-AIOS/aios/pull/123)
+`hash: 61e7d9c · 398e526 · 0a2e3db · 236e899 · 921e991 · dbde860 · 83c73ba` · [#122](https://github.com/The-AIOS/aios/pull/122) · [#123](https://github.com/The-AIOS/aios/pull/123)
 
 > **What you can now do.** Tell a lost login from a lost network. The freshness checks in `/today` and `/close-day` used to discard git's error, so *"GitHub refused this machine's key"* and *"no internet"* both printed `unreachable` — and the plan called that *"offline — fine for now"*. A machine whose key had been removed from its account was reassured every morning. They now run `hooks/freshness-probe.sh`, which keeps the error text and reports **`access-denied`** whenever the server answered and refused the credential. `/today` shows it as a task naming the repo and the fix; `/close-day` puts it above the verdict line. A genuine outage still reads `unreachable`, and only that is called offline.
 
