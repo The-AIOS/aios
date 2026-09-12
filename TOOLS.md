@@ -112,6 +112,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `prompt-engineering-patterns` | `skills/aios/` | "Improve this prompt" |
 | `deep-research` | `skills/aios/` | "What should we write / build / do next?" — multi-source research that returns ranked what/why/how proposals |
 | `orchestration-ladder` | `skills/aios/` | "Should this be one agent, a parallel fan-out, or a workflow?" |
+| `right-context` | `skills/aios/` | "How much of the operator's context does this task actually need?" |
 | `watch-video` | `skills/aios/` | "Watch this video / listen to this recording and tell me…" — comprehension only; `/aios:ingest` is the filing path |
 | `systematic-debugging` | `skills/superpowers/` | "Help me debug this systematically" |
 | `test-driven-development` | `skills/superpowers/` | "Let's write tests first" |
@@ -171,7 +172,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `accessibility-compliance` | `skills/aios/` | "Check this for accessibility (WCAG, ARIA, contrast)" |
 | `pci-compliance` | `skills/aios/` | "Audit this for PCI compliance" |
 
-**Source folders:** `skills/aios/` (AIOS-built — 29 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 54. Browse `skills/_index.md` for the full registry.
+**Source folders:** `skills/aios/` (AIOS-built — 30 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 55. Browse `skills/_index.md` for the full registry.
 
 **Marketplace skills** (NOT in `skills/`, install via `/plugin install`): `canvas-design`/`docx`/`pdf`/`pptx`/`xlsx` (via `document-skills` plugin) · `code-review-excellence` (via `code-review@claude-plugins-official`) · `defuddle` (via Anthropic skills marketplace) · `superpowers` full marketplace (`obra/superpowers-marketplace`).
 

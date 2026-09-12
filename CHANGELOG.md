@@ -68,6 +68,27 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-12 — A spawned worker that knows who it works for, and a vault that measures its own context
+
+`hash: ` · [#128](https://github.com/The-AIOS/aios/pull/128)
+
+> **What you can now do.** Trust that a worker you spawn arrives knowing who it works for — and does not spend the whole task finding out. **The map, always, whatever the task:** both context folders listed, both `_index.md` read, then the `###` **entry titles** of `observed/antifragile.md`, `preferences.md`, `patterns.md` and `growth.md`. A few hundred lines, and it is the floor and the index at once — a title tells a worker the lesson exists and when to open it, `antifragile.md` most of all, which the ritual already calls the file to scan before executing commands.
+
+**Then one question about the worker's own output:** *will this be read as your words, or act on your behalf?* **Yes → all of `declared/` plus `INTENT.md`. No → the map is enough.** The reason that split holds is an asymmetry in how the two failures surface: under-read `observed/` and the gap shows up as work visibly missing something, or a question the worker knows to ask. Under-read `declared/` and the work comes back fluent, correct, and **not yours** — with nothing in it looking wrong. **You cannot detect the absence of a voice from inside your own output.** Only one of the two failures announces itself, and that is the one worth paying to avoid.
+
+**What is skipped stays reachable.** A worker is told it is skipping `observed/` because most of it will not apply to this task — **not because it is off limits** — and that reaching for any of it mid-task is expected. If it catches itself guessing at how you would phrase something, or whether you have decided something before, it stops guessing and reads.
+
+**New: `/aios:housekeeping` Bucket 31 and `hooks/context-rungs.py` — the vault measures its own context.** The framework no longer writes any context volume down. It asks. `python3 ~/aios/hooks/context-rungs.py` reports the four rungs of the ladder *in your vault* — both `_index.md` · every heading in both folders (the floor) · all of `declared/` · everything — in words and estimated tokens, ending in a verdict that **flips**: a fresh clone is told its whole context is a few thousand tokens and it should **read all of it**; a grown vault is told where to stop. Same rule, opposite advice, both right. This is the actual bug behind the old rule: *"read everything"* was **correct when it was written** and silently stopped being correct as vaults grew, because nothing ever measured. A constant baked into a rule about a quantity that grows works, then doesn't, and nobody is told.
+
+**New: the `right-context` skill.** The floor and the one question stay in `CLAUDE.md`, unconditional. The full ladder, the escalation tells (*you are writing "probably" about their own preference* · *you are about to publish* · *a title you saw keeps coming to mind*) and the mid-task climb live in a skill that loads only when the call is genuinely hard — because every word in `CLAUDE.md` is paid by every session forever. The rule about what context to load now obeys the rule about what context to load.
+
+**Measured, three ways, on the same two-sentence task.** Under the old rule the worker made **zero tool calls** and produced a generic line. Told to read *everything*, it spent **38 calls and never delivered**. Under this split it delivered in **26** — in the operator's voice, applying a per-surface writing budget it found in their own files, and checking `INTENT.md` before assuming it could publish.
+
+**And it stays measured.** Bucket 30 names any spawned worker that did real work and loaded nothing, via `hooks/context-load-audit.py` — shipped as code rather than as instructions a command re-implements, because the first version matched only full paths and missed every worker that `cd`s into the context folder, reporting workers at zero that had read the whole floor. It counts `tool_use` only, is unaffected by compaction, and **refuses to report unless a primary session validates it**.
+
+**One correction worth stating plainly:** an earlier draft of this rule justified reading `declared/` whole by claiming that folder *"does not index"*. That was asserted, never measured, and it is **false** — `declared/` carries more headings per word than `observed/` does. The rule survived; the reason did not. The parity suite now asserts the real reason **and** carries a negative assertion so the false one cannot come back.
+
+**Action required:** none. Workers pick this up from `CLAUDE.md`; the `spawn` wrapper prints the same rule on macOS/Linux and Windows, so re-run the wrapper installer for that half — `/aios:update` does it when the installer changes.
 ## 2026-09-11 — Google connects by asking, a refused login that says so, and Close of Day back at the end
 
 `hash: 61e7d9c · 398e526 · 0a2e3db · 236e899 · 921e991 · dbde860 · 83c73ba` · [#122](https://github.com/The-AIOS/aios/pull/122) · [#123](https://github.com/The-AIOS/aios/pull/123)
@@ -95,6 +116,41 @@ Now: one baseline per surface you publish to, scored against the surface the dra
 **And `## Close of Day` goes back to the end.** `/close-day` now appends there, through the same locking helper `/close-session` uses. It never said *where* its block went, so it could be anchored partway up — and every `## Session —` block below that point then sat beneath it. Since `/close-session` inserts *before* that marker, the marker being last is what keeps session blocks above it. `/close-day` also wrote the note directly while every other writer took a lock, so a block landing between its read and its write was silently overwritten.
 
 **Action required:** none — `/aios:update` lands both. **Worth one look at recent notes:** if a section's body appears *below* a session block instead of under its own heading, that was the marker bug — move the stranded lines back up, nothing was lost. And **do not bulk-reorder old notes** on the strength of the Close-of-Day fix: a `## Session —` block below `## Close of Day` is only wrong when it was written *before* the close. A session that genuinely ran after you closed the day belongs below it.
+
+### A spawned worker now loads your context, instead of booting blind
+
+**What you can now do.** Trust that a worker you spawn knows who it is working for. Until now
+`CLAUDE.md` told a spawned worker to run the full Session Start Ritual, and in practice it often ran
+none of it — so a worker could answer a question about your ventures having read nothing you ever
+wrote. Step 4 now states the rule it can actually follow: list the two context folders, read their
+`_index.md`, then read **only the files the task touches** — done as the session's first tool calls,
+not described and skipped.
+
+**The part that is not an optimisation is the floor.** Two observed files — `growth.md` and
+`patterns.md` — are read **every time, regardless of the task**, because they hold what an operator
+tends to avoid or repeat and *no task ever names them*. Without that floor, "read what the task
+touches" hands a fresh worker the relevance call, which is the one judgment it is worst placed to
+make: it cannot know that the file the task never mentions is the file that makes an answer *yours*
+rather than merely correct. That failure is silent — the worker still answers, and still sounds
+right.
+
+**Why this is cheaper and not just different.** A preload writes every context file to the cache on
+the first request. Measured on a live vault, three of three tasks reached the same or better answers
+on demand as with the full preload, at roughly a third of the cost. The interactive **primary**
+session is untouched and keeps the full ritual — the case for preloading is cross-file synthesis
+that no question triggers, and that case is untested.
+
+**It lands on both spawn paths, which is the whole reason it is two files.** A worker born from
+`spawn` in a terminal gets the rule injected at the top of its task file by the wrapper; a worker
+born from a surface fulfilling an inbox request never reads that file and is governed by `CLAUDE.md`
+alone. Two hand-maintained copies of one rule is exactly how a floor goes missing from one side, so
+`tests/spawned-worker-context-parity.test.sh` asserts they agree — deriving the floor from the
+wrapper rather than keeping a third list of its own, and refusing to pass on an empty floor.
+
+**Action required:** none — `/aios:update` lands it. Re-run
+`bash ~/aios/hooks/claude-identity/install-wrappers.sh` if your update did not (it is auto-run when
+the installer changes), and open a new terminal so `spawn` picks it up. Workers already running keep
+the old behaviour until they close.
 
 ### `resume` — reopen a closed session as the same someone
 

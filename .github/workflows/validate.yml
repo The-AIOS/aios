@@ -1417,6 +1417,52 @@ jobs:
         # never a verb list of its own, which would be the third copy.
         run: bash tests/bus-verb-parity.test.sh
 
+      - name: a spawned worker's context rule agrees across both copies
+        # The rule lives in two places because a worker is born on two paths: the wrapper
+        # injects it into the task file for `spawn` in a terminal, while a worker born
+        # from a surface fulfilling an inbox request never reads that file and is
+        # governed by CLAUDE.md alone. So CLAUDE.md is the ONLY cover for that path, not
+        # a duplicate.
+        #
+        # The dangerous half is the FLOOR -- the observed files read every time
+        # regardless of the task -- because dropping it fails SILENTLY: the worker still
+        # answers and still sounds right, missing only the context that made the answer
+        # that operator's. The suite DERIVES the floor from the wrapper rather than
+        # keeping a list of its own (a third copy is the thing being prevented) and
+        # refuses to pass on an empty floor, since "every file in an empty set is
+        # present" is true and useless.
+        run: bash tests/spawned-worker-context-parity.test.sh
+
+      - name: the context-load detector counts what workers actually do
+        # Bucket 30's instrument. The FIRST version matched only
+        # `context/(declared|observed)/<file>.md` -- and workers routinely `cd` into the
+        # context folder first, so every such read was invisible. It reported three live
+        # workers at zero that had read the entire floor, and the clean number was
+        # believed. A check that under-reports is worse than none.
+        #
+        # So the detector ships as a hook with its own tests rather than as prose a command
+        # re-implements. Refusal cases first (#110): the cd-relative read, prose that merely
+        # mentions a path, and the control -- findings require a validated primary session,
+        # because without one a worker reading nothing and a detector seeing nothing produce
+        # the same output.
+        run: bash tests/context-load-audit.test.sh
+
+      - name: the context ladder is measured, not asserted
+        # This suite exists because a CONSTANT was baked into a rule about a quantity that
+        # GROWS. "Read everything" was correct when written -- a fresh clone's whole operator
+        # context is a few thousand tokens, cheaper than the paragraph telling a worker to
+        # skip it -- and it silently stopped being correct as vaults grew past six figures.
+        # Nothing reported the crossing, because nothing measured.
+        #
+        # So the property under test is that the VERDICT FLIPS with vault size: a tool that
+        # always answers the same thing is a hardcoded constant with extra steps, which is
+        # precisely what it replaces. The suite builds a small vault and a grown one and
+        # asserts they get opposite advice, with a control that fails if they ever agree.
+        # Refusal cases run first (#110): a half-present context must EXIT 2, never total
+        # the folder that is there -- a partial ladder reads as SMALL, and small is the
+        # answer that talks a session out of loading any context at all.
+        run: bash tests/context-rungs.test.sh
+
       - name: the Google connector's API set derives from one manifest
         # The set of Google APIs an operator must enable existed in SIX places before
         # AI-126 -- connector.json's --permissions, SETUP.md's prose, the setup doc's

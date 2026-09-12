@@ -274,7 +274,7 @@ function spawn {
         #   about the turn and not about the ritual: passing a bootstrap only starts the ritual
         #   when the bootstrap CONTAINS an instruction. With an explicit task it always did;
         #   with the default it never did, and that is the path a first-time operator takes.
-        [Parameter(Position=1)] [string] $Task = 'Run the CLAUDE.md Session Start Ritual now: load my declared + observed context, match your session name to your role, and greet me in character before awaiting my task.',
+        [Parameter(Position=1)] [string] $Task = 'Match your session name to your role, greet me in character, then await my task. Load context per the rule above -- with no task yet, you cannot size it, so read the full set.',
         # -Tier frontier|judgment|scale|fast (plus the legacy 'mechanical'). Named for
         # the SHAPE of the work, not for a model, so the names outlive the lineup:
         #   frontier  hardest -- long-running autonomous agents, code migration,
@@ -340,8 +340,66 @@ function spawn {
         return
     }
 
+    # The task file opens with the context preamble -- the same rule the bash wrapper prints,
+    # because a Windows worker is governed by the same contract.
+    #
+    # A STRING ARRAY, not a here-string: this function lives inside the single-quoted
+    # here-string $WRAPPER, and PowerShell offers no way to escape a closing terminator
+    # inside one -- a nested single-quoted here-string ends the OUTER one at its first
+    # line-initial terminator, turning everything after into live code. Caught by the
+    # "produces a profile that PARSES" job, which is exactly what that job is for.
+    $taskPreamble = (@(
+      '# Before the task -- two folders, read differently',
+      '',
+      '  vault/00 - notes/context/declared/   WHO THEY ARE -- voice, identity, how they decide,',
+      '                                       their ventures. The SMALL folder.',
+      '  vault/00 - notes/context/observed/   HOW YOU TWO WORK -- preferences, patterns, growth,',
+      '                                       lessons. Three-hash entries. SEVERAL TIMES LARGER.',
+      '',
+      'FIRST ACTION, before you answer or plan anything -- THE MAP, whatever the task is: list',
+      'both folders, read both _index.md (one line per file), then read the three-hash ENTRY',
+      'TITLES of observed/antifragile.md, observed/preferences.md, observed/patterns.md and',
+      '      observed/growth.md. A few',
+      'hundred lines. This is your floor and your index at once: a title like 110. Empty and',
+      'no-op inputs resolve to something REAL tells you the lesson exists and when to open it.',
+      'antifragile most of all -- it is the file to scan for relevant rules before executing',
+      'commands.',
+      '',
+      'THEN one question about your own output -- not about the files:',
+      '  Will what I produce be read as the words of the operator, or act on their behalf?',
+      '',
+      '  YES -> also read ALL of context/declared/, plus INTENT.md at the repo root. It is the',
+      '         SMALL folder, and voice is the one thing whose absence you cannot detect in',
+      '         your own output. Under-read observed/ and the gap shows as work visibly',
+      '         missing something. Under-read declared/ and the work comes back fluent,',
+      '         correct, and NOT THEIRS, with nothing in it looking wrong. Only one of the',
+      '         two failures announces itself. Do NOT also preload all of observed/ for this',
+      '         -- the map above is the way in, and a two-sentence task does not need the',
+      '         whole working history.',
+      '  NO  -> the map is enough. Code, tests, file operations, data, mechanical sweeps. Open an',
+      '         observed/ entry when one of its titles tells you it applies.',
+      '',
+      'EITHER WAY THE REST STAYS OPEN TO YOU -- that is what the map is for. You are not reading',
+      'observed/ up front because it is several times the size of the identity layer and most of',
+      'it will not apply to this task, NOT because it is off limits. Open any of it the moment a',
+      'title or the work points at it: a task touching',
+      'a person or a venture usually wants ecosystem.md or business.md; unsure how they like',
+      'something done, preferences.md. Reaching mid-task is expected, not exceptional. If you',
+      'catch yourself guessing at how they would phrase something, who someone is, or whether',
+      'they have already decided this -- stop guessing and read.',
+      '',
+      'UNSURE IS NOT A THIRD ANSWER -- read declared/, for that same asymmetry. Over-reading',
+      'costs tokens once; under-reading costs the voice of the operator and fails silently.',
+      'If the call is genuinely hard, load the right-context skill -- it carries the full',
+      'ladder and measures what each rung costs in THIS vault (hooks/context-rungs.py).',
+      '',
+      'Describing this rule is not doing it: right after the CLAUDE.md identity check, the next',
+      'thing you do is the ls.',
+      ''
+    ) -join [Environment]::NewLine)
+
     $taskFile = Join-Path $env:TEMP "spawn-task-$Name.md"
-    Set-Content -Path $taskFile -Value $Task -Encoding UTF8
+    Set-Content -Path $taskFile -Value ($taskPreamble + "`n" + $Task) -Encoding UTF8
 
     # In-process (in-shell) when NOT inside a Claude Code session, OR when this is an
     # AIOS-Glass-made terminal ($env:AIOS_GLASS_TERM). Glass created the terminal natively

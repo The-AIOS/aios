@@ -816,6 +816,53 @@ It runs for months without complaining, which is why it needs a periodic sweep r
 
 **Don't propose:** editing a hook (read-only) · flagging a call whose prompt is entirely vault-local and fixed · flagging prose or log lines that mention `claude -p` · verifying a fix by asking the agent what tools it has — under a restrictive allowlist it still lists `Bash` and `Write`, because it is describing its **schema**, not its permissions. **Only an absent side effect is evidence.**
 
+#### Bucket 30: Spawned workers that loaded no operator context (NEW — REPORT-ONLY, never edits)
+
+**The gap.** `CLAUDE.md` tells a spawned worker to load context, and nothing anywhere reports when it doesn't. The failure is silent by construction: the worker still answers, still sounds right, and is simply missing whatever would have made the answer *this operator's* rather than merely correct. No error, no empty output, no tell.
+
+**Run the shipped detector — do not re-implement it:**
+
+```bash
+python3 ~/aios/hooks/context-load-audit.py
+```
+
+**Why a hook and not a spec here.** The obvious implementation is wrong in one specific, reproducible way, and it was written that way once: a worker typically does `cd "<vault>/00 - notes/context/observed" && grep '^### ' antifragile.md …`, so matching only `context/(declared|observed)/<file>.md` misses every such read. That version reported three workers at zero who had in fact read the whole floor. **A check that under-reports is worse than none, because its clean answer gets trusted** — so the instrument is code with its own tests, and this bucket calls it.
+
+**What it measures.** Only `tool_use` events in `~/.claude/projects/*/<sessionId>.jsonl` — never prose, never `tool_result`. A transcript mentions context paths constantly; only a tool call is evidence a file was opened. It separates **titles-only** reads (the floor) from **full** reads, because a floor degrading to nothing looks identical to a floor that is firing if you only count files.
+
+**Compaction does not affect it.** Compaction rewrites the model's context window; the transcript on disk is append-only. Measured on a live session with 8 compaction events: all 10,241 `tool_use` records, spanning seven weeks, were still present. The audit sees what a session *did*, not what it still remembers.
+
+**It aborts rather than reassures.** Primary sessions are the control — they run the full ritual, so they must score. If none does, the detector prints `ABORT: the detector is broken, not the workers` and reports nothing else. A scan that cannot see a primary's reads cannot be trusted about a worker's.
+
+**Propose:** nothing automatic. Report the names and counts; the operator decides whether a given worker's task genuinely needed no context. The value is that the number exists and can be watched — a floor that stops firing shows up here before it shows up as work that quietly stopped sounding like them.
+
+**Why this bucket exists.** Context loading was narrowed from "read everything" to a floor plus a sized read, on the evidence that "read everything" was not happening. A narrowing justified by a measurement has to keep being measured, or the justification expires silently.
+
+
+#### Bucket 31: Context ladder shape — has the vault outgrown its own rule? (NEW — REPORT-ONLY, never edits)
+
+**The gap this closes is the one that produced Bucket 30.** *"Read everything"* was **correct when it was written**: a fresh clone's entire operator context is a few thousand tokens — less than the paragraph telling a worker to skip it. It silently stopped being correct as vaults grew past six figures of tokens, and nothing ever reported the crossing. **A constant baked into a rule about a quantity that grows works, then doesn't, and nobody is told.** That is not a bug in the old rule; it is a bug in having written a volume down at all.
+
+**Run the shipped measurement — do not eyeball the folders:**
+
+```bash
+python3 ~/aios/hooks/context-rungs.py
+```
+
+**What it reports.** The four rungs of the ladder in this vault — both `_index.md` (rung 0) · every heading in both folders (rung 1, the floor) · all of `declared/` (rung 2) · everything (rung 3) — in words and estimated tokens, plus the `observed/`-to-`declared/` ratio, ending in a verdict.
+
+**The verdict is the point, and it flips.** Below roughly 25k tokens total it says **read all of it** — the ladder is not for that vault yet. Above it, it says floor at rung 1 and climb deliberately. **Same rule, opposite advice, both correct.** An operator who is told "your whole context is 7k tokens, read it" is being told something the framework could not tell them before this existed.
+
+**It refuses rather than under-reporting.** A missing folder exits `2` naming what it could not measure, instead of totalling the folder that *is* there — because a total built from one folder reads as *small*, and small is precisely the answer that talks a session out of loading anything.
+
+**Propose:** nothing automatic, and specifically **do not propose restructuring `declared/`** on the strength of this. That folder is Tier 2 — the operator's own words — and it is already the more densely-headed of the two (an earlier version of the loading rule claimed the opposite, asserted rather than measured, and shipped that claim into four files and a test that enforced it). What to surface instead:
+
+- **The ratio crossed a threshold since last run** → mention it once. A vault whose `observed/` has grown to many multiples of `declared/` is one where the floor is carrying more weight; that is information, not a problem.
+- **Rung 3 is still cheap** → say so plainly. Sessions on this vault should be reading everything, and the narrowed rule is costing them context they could afford.
+- **`observed/` has files with very low heading density** → those are the ones the floor's titles index poorly. That *is* actionable, and it is Claude-authored content, so it is Claude's to fix at the next `/aios:compact`.
+
+**Why report-only, and why here rather than in a session.** The shape changes on the timescale of months, so a per-session check would be noise; housekeeping's cadence is the right one. And the ladder's consumers — `CLAUDE.md` § Identity & Greeting, the `right-context` skill, both spawn wrappers — deliberately state **no volume at all**, only ratios. This bucket is where the numbers are allowed to live, because it is the only surface that recomputes them.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:
