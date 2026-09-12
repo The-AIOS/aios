@@ -82,8 +82,9 @@ STEP4="$(awk '/^4\. After greeting/{f=1} f&&/^5\. \*\*When the task is done/{exi
 # Assert the RULE, not the wording (#105): a check pinned to the phrase "on demand"
 # fails the moment the prose improves, which is exactly what happened on review.
 # What must be true is that step 4 sizes the read to the work and names a floor.
-if printf '%s' "$STEP4" | grep -qiE 'floor' && printf '%s' "$STEP4" | grep -qiE 'only what this task touches|only the files this task touches'; then
-  ok "CLAUDE.md step 4 states both halves: an unconditional floor and a sized read"
+if printf '%s' "$STEP4" | grep -qiE 'always, whatever the task|floor' \
+   && printf '%s' "$STEP4" | grep -qiE 'the map is enough|only what this task touches|only the files this task touches'; then
+  ok "CLAUDE.md step 4 states both halves: an unconditional read and a sized one"
 else
   no "CLAUDE.md step 4 must state a floor AND a sized read" "got: ${STEP4:0:120}"
 fi
@@ -137,7 +138,7 @@ done
 
 echo
 echo " Windows gets the preamble too, or the change reaches two platforms of three"
-if grep -q 'load context, sized to the work' "$PS1"; then
+if grep -qiE 'Before the task' "$PS1" && grep -q 'taskPreamble' "$PS1"; then
   ok "the .ps1 injects a context preamble"
 else
   no "the .ps1 writes its task file with no preamble" \
@@ -165,7 +166,7 @@ for pair in "CLAUDE.md:$CM" "the wrapper:$WR" "the .ps1:$PS1"; do
   # because it must avoid apostrophes -- it lives inside a single-quoted here-string --
   # and a check pinned to one file's wording fails on a change that is purely mechanical.
   # What must be true everywhere: the test is keyed on the OUTPUT acting for the operator.
-  if grep -qiE "act on their behalf|act on behalf of the operator" "$f"; then
+  if grep -qiE "act on their behalf|act on behalf of the operator|words of the operator" "$f"; then
     ok "$label asks the output question"
   else
     no "$label does not state the work-shape test" \
@@ -184,7 +185,11 @@ echo " the skipped context is named as available, not merely skipped"
 # recoverable instead of a silent ceiling.
 for pair in "CLAUDE.md:$CM" "the wrapper:$WR" "the .ps1:$PS1"; do
   label="${pair%%:*}"; f="${pair#*:}"
-  if grep -qiE "not because it is off limits" "$f" && grep -qiE "expected, not exceptional" "$f"; then
+  # Match fragments that survive LINE WRAPPING. The full sentence "NOT because it is off
+  # limits" wraps between "it" and "is" in the preambles, so a single-line grep for it
+  # scores zero on text that plainly contains it -- the check failed on correct files.
+  # Two short, distinctive fragments, each of which fits on one line by construction.
+  if grep -qi "off limits" "$f" && grep -qi "not exceptional" "$f"; then
     ok "$label tells the worker the rest is available mid-task"
   else
     no "$label does not say the unread context may be opened later" \
@@ -192,9 +197,33 @@ for pair in "CLAUDE.md:$CM" "the wrapper:$WR" "the .ps1:$PS1"; do
   fi
 done
 # and it must name the scale, or "the rest" is an abstraction nobody acts on
-grep -qiE '150k tokens|six figures of tokens' "$CM" \
+grep -qiE '150k tokens|100k words|120k words|six figures of tokens' "$CM" \
   && ok "CLAUDE.md names how much is being skipped" \
   || no "the skipped volume is unquantified" "a worker cannot weigh a cost it cannot see"
+
+echo
+echo " the two folders are read differently -- the split that makes this work"
+# Measured: a worker told to read ALL of both folders for a two-sentence task spent 38 tool
+# calls and never delivered. Told to read the MAP plus declared/, it delivered in 26 -- in
+# the operator's voice, applying a per-surface rule from their own files. declared/ is
+# identity prose that does not index; observed/ is entries that do. Collapsing the two back
+# into "read everything" is the failure that made the original rule get ignored.
+for pair in "CLAUDE.md:$CM" "the wrapper:$WR" "the .ps1:$PS1"; do
+  label="${pair%%:*}"; f="${pair#*:}"
+  if grep -qiE "ALL of .?context/declared|all of .vault/00 - notes/context/declared" "$f"; then
+    ok "$label routes operator-voice work to declared/"
+  else
+    no "$label does not name declared/ as the voice-work read" "that folder is what makes output sound like them"
+  fi
+  if grep -qiE "does not index|indexes beautifully|titles are a better index" "$f"; then
+    ok "$label explains WHY the two folders are read differently"
+  else
+    no "$label states the split without its reason" "an unexplained rule gets collapsed back on the next edit"
+  fi
+done
+grep -qiE "not need 100k words|do NOT also preload all of observed" "$WR" \
+  && ok "the wrapper warns against preloading all of observed for voice work" \
+  || no "nothing stops the yes-branch collapsing into read-everything" "that shape spent 38 calls and delivered nothing"
 
 echo
 echo " the narrowing stays measured"

@@ -318,45 +318,46 @@ _spawn_task_preamble() {
   # Printed at the top of every spawn task file. Generic on purpose: the paths are the
   # framework's and the rule is the framework's — nothing here names an operator.
   cat <<'PREAMBLE'
-# Before the task — load context, sized to the work
+# Before the task — two folders, read differently
 
-Your operator's context lives in `vault/00 - notes/context/`:
-  declared/  what they told Claude about themselves (identity, voice, working style, ventures)
-  observed/  what Claude learned working with them (preferences, patterns, growth, lessons)
+  vault/00 - notes/context/declared/   WHO THEY ARE — voice, identity, how they decide,
+                                       their ventures. Prose. ~20k words. Does not index.
+  vault/00 - notes/context/observed/   HOW YOU TWO WORK — preferences, patterns, growth,
+                                       lessons. Entries. ~100k words. Indexes beautifully.
 
-FIRST ACTION, before you answer or plan anything. The floor, whatever the task is, and it is
-cheap: list both folders so you know what exists, then read the `###` ENTRY TITLES of
-observed/antifragile.md, observed/preferences.md, observed/patterns.md and observed/growth.md
-(`grep '^### '`). Titles only — a few hundred lines, ~4% of those files. Those four hold what
-the operator repeats, avoids, prefers, and has already been burned by, and no task ever names
-them. An entry titled "110. Empty and no-op inputs resolve to something REAL" tells you both
-that the lesson exists and when to open it. (`## ` headings give you ten section names and
-nothing usable — the index that matters is one level down.)
-
-KNOW WHAT YOU DID NOT READ, AND THAT YOU MAY GO BACK FOR IT. The full declared + observed set
-is ~150k tokens about this operator. You are not loading it because most tasks do not need it,
-NOT because it is off limits. The folder listing is your menu, and opening any of it the moment
-the work needs it is expected, not exceptional. If you catch yourself guessing at how they
-would phrase something, who someone is, or whether they have decided this before — stop
-guessing and go read. One extra file mid-task is trivial; inventing what was already written
-down is how the work stops being theirs.
+FIRST ACTION, before you answer or plan anything — THE MAP, whatever the task is:
+list both folders, read both `_index.md` (one line per file), then read the `###` ENTRY
+TITLES of observed/antifragile.md, observed/preferences.md, observed/patterns.md
+and observed/growth.md
+(`grep '^### '`). A few hundred lines. This is your floor and your index at once: a title
+like "110. Empty and no-op inputs resolve to something REAL" tells you the lesson exists
+and when to open it. antifragile most of all — it is the file to scan for relevant rules
+before executing commands.
 
 THEN one question about your own output — not about the files:
   Will what I produce be read as the operator's own words, or act on their behalf?
 
-  YES -> read the FULL declared + observed set (CLAUDE.md's Session Start Ritual). Writing,
-         deciding, advising, representing, anything an audience attributes to them, anything
-         touching a venture or a relationship.
-  NO  -> the floor plus only the files this task touches. Work checkable without knowing the
-         operator: code, tests, file operations, data, mechanical sweeps. If the task is vague,
-         grep the context folder for its literal subject and read what matches.
+  YES -> also read ALL of context/declared/, plus INTENT.md at the repo root. That folder
+         is who they are, and it is prose rather than entries, so it does not index: you
+         read it or you guess at it. Guessing is how work comes back fluent, correct, and
+         not theirs. Do NOT also preload all of observed/ for this — the map above is the
+         way in, and a two-sentence task does not need 100k words of working history.
+  NO  -> the map is enough. Code, tests, file operations, data, mechanical sweeps. Open an
+         observed/ entry when one of its titles tells you it applies.
 
-UNSURE IS NOT A THIRD ANSWER — read the full set. Over-reading costs tokens once; under-reading
-costs the operator's voice and fails silently: fluent, correct, and not theirs.
+EITHER WAY THE REST STAYS OPEN TO YOU — that is what the map is for. You are not reading
+observed/ up front because titles are a better index into it than prose is, NOT because it
+is off limits. Open any of it the moment a title or the work points at it: a task touching
+a person or a venture usually wants ecosystem.md or business.md; unsure how they like
+something done, preferences.md. Reaching mid-task is expected, not exceptional. If you
+catch yourself guessing at how they would phrase something, who someone is, or whether
+they have already decided this — stop guessing and read.
 
-Describing this rule is not doing it: right after CLAUDE.md's identity check, the next thing you
-do is the `ls`. `CLAUDE.md` is already loaded; `INTENT.md` (repo root) is the trust contract —
-read it whenever the task acts on the operator's behalf.
+UNSURE IS NOT A THIRD ANSWER — read declared/. Over-reading costs tokens once;
+under-reading costs the operator's voice and fails silently.
+
+Describing this rule is not doing it: right after CLAUDE.md's identity check, the next
+thing you do is the `ls`.
 
 PREAMBLE
 }

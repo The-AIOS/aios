@@ -14,13 +14,17 @@ The quality of context the operator gives an agent determines what it can do for
 
 This repo is a personal knowledge vault. Before substantive work:
 
-1. **Always, whatever the task — and it is cheap.** List both context folders so you know what exists, then read the **`###` entry titles** of `observed/antifragile.md`, `observed/preferences.md`, `observed/patterns.md` and `observed/growth.md`. Titles only, not bodies. Those four hold what the operator repeats, avoids, prefers and has already been burned by, and no task ever names them — `antifragile.md` most of all, since it is where the system records what went wrong last time.
-2. **Know what you did not read, and that you may go back for it.** The full set is large — on a mature vault, six figures of tokens. You are skipping most of it because most tasks do not need it, **not because it is off limits.** Open any of it the moment the work needs it. If you are guessing at how the operator would phrase something, who someone is, or whether they have decided this before, stop guessing and read.
-3. **Size the rest to the work.** One question about your own output: *will it be read as the operator's own words, or act on their behalf?*
-   - **Yes** — writing, deciding, advising, anything an audience attributes to them, anything touching a venture or a relationship → read **every** file in `context/declared/` and `context/observed/`.
-   - **No** — work checkable without knowing them (code, tests, file operations, data) → the floor plus only what the task touches. If the task is vague, grep the folders for its literal subject.
-   - **Unsure is not a third answer — read everything.** Over-reading costs one session's tokens. Under-reading costs the operator's voice and fails silently: fluent, correct, and not theirs.
-4. If present, read `INTENT.md` (the trust contract — what's autonomous vs. needs review) and `USER.md`. `INTENT.md` is required whenever the answer to (3) was yes.
+The two context folders are different in kind, and that decides how you read each:
+
+- `context/declared/` — **who they are**: voice, identity, how they decide, their ventures. Prose. Small. **Does not index — you read it or you guess at it.**
+- `context/observed/` — **how you two work**: preferences, patterns, growth, accumulated lessons. Written as discrete entries. Large. **Indexes beautifully.**
+
+1. **The map, always, whatever the task.** List both folders, read each `_index.md`, then read the **`###` entry titles** of `observed/antifragile.md`, `preferences.md`, `patterns.md` and `growth.md`. This is the floor and the index at once: a title tells you a lesson exists and when to open it. `antifragile.md` most of all — it is where the system records what went wrong last time.
+2. **Then one question about your own output:** *will it be read as the operator's own words, or act on their behalf?*
+   - **Yes** → also read **all of `context/declared/`** and `INTENT.md`. Do not also preload all of `observed/` — the map is the way in, and a short task does not need the whole working history.
+   - **No** → the map is enough. Code, tests, file operations, data. Open an `observed/` entry when a title says it applies.
+3. **Either way the rest stays open to you.** You are skipping `observed/` up front because titles index it better than prose does, **not because it is off limits.** Open any of it the moment the work points at it. If you are guessing at how they would phrase something, who someone is, or whether they have decided this before — stop guessing and read.
+4. **Unsure is not a third answer — read `declared/`.** Over-reading costs one session's tokens. Under-reading costs the operator's voice and fails silently.
 
 ## What this system is NOT (anti-values — refuse these even when convenient)
 
