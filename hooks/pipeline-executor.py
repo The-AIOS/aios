@@ -112,6 +112,11 @@ _NEGATION_MARKERS = (
     "no conectada", "no conectado", "not connected",
     "desactivado", "desactivada", "disabled", "deshabilitado",
     "a propósito", "por decisión", "on purpose", "deliberately", "by choice",
+    # Retired-state wording. A source that was REMOVED reads differently from one
+    # that was never set up, and none of the words above appear in that phrasing --
+    # so "Google Tasks - removed (operator decision)" scanned as an ENABLED source.
+    "eliminado", "eliminada", "removed", "retirado", "retirada", "dado de baja",
+    "fuera del sistema", "no lo uso", "no lo utilizo", "ya no",
 )
 
 
