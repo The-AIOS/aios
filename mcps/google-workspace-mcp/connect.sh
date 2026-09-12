@@ -279,8 +279,11 @@ cmd = ["claude", "mcp", "add", d.get("id", "google-workspace"), "--scope", "user
 print("  " + " ".join(shlex.quote(c) for c in cmd))
 PY
   say ""
-  say "Then restart your Claude session — MCP tools register at session start, so one added"
-  say "mid-session is not callable until the next one."
+  say "Then start a new Claude session: type /exit and run claude again, or use Close the"
+  say "Session and open a new tab in the AIOS App. Only the session needs to go — the app,"
+  say "this terminal window and your editor can all stay open."
+  say "MCP tools register at session start, so one added mid-session is not callable until"
+  say "the next one."
   exit 0
 fi
 

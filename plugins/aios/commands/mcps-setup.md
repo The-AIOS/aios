@@ -232,7 +232,7 @@ Creates a dedicated Slack app. Messages post AS THE BOT, not as the user. Requir
      ```
 
      Registered in more than one place is worth reporting rather than celebrating: two registrations drift independently (this is how one grew Gmail and the other did not), so tell the operator and let them pick which to keep.
-6. **Tell them to restart the session**, and that the first Google tool call opens a browser once for consent. MCP tools register at session start, so it is not callable until then.
+6. **Tell them to **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working.** Also tell them the first Google tool call opens a browser once for consent. MCP tools register at session start, so it is not callable until then.
 
 **The operator's total: one `y`, about six clicks, one download, one "done". No terminal commands.** If you find yourself about to type a `bash` line into the chat for them to run, you have taken a step that belongs to you.
 
