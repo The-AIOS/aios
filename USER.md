@@ -83,7 +83,12 @@ ssh my-server "osascript -e 'tell application \"Terminal\" to do script \"cd ~/a
 
 *Primary:*
 - *Google email: `you@company.com`*
-- *Google Calendar — via Google Workspace MCP*
+- *Google Calendar — via Google Workspace MCP. Every calendar the account can read is
+  merged, deduplicated by `iCalUID`, and non-primary events are tagged with their source.*
+- *Calendars to skip: `Formula 1, Holidays in Spain`*
+  > Optional. Comma-separated. Matched case-insensitively against a calendar's display name
+  > OR its id. Holiday and birthday feeds are excluded automatically — this is for the rest
+  > (sports, subscriptions, anything that is a feed rather than a commitment).*
 - *Google Tasks — via Google Workspace MCP*
 - *Google Tasks list: `your-list-id`*
 
