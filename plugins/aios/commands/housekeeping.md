@@ -839,6 +839,30 @@ python3 ~/aios/hooks/context-load-audit.py
 **Why this bucket exists.** Context loading was narrowed from "read everything" to a floor plus a sized read, on the evidence that "read everything" was not happening. A narrowing justified by a measurement has to keep being measured, or the justification expires silently.
 
 
+#### Bucket 31: Context ladder shape — has the vault outgrown its own rule? (NEW — REPORT-ONLY, never edits)
+
+**The gap this closes is the one that produced Bucket 30.** *"Read everything"* was **correct when it was written**: a fresh clone's entire operator context is a few thousand tokens — less than the paragraph telling a worker to skip it. It silently stopped being correct as vaults grew past six figures of tokens, and nothing ever reported the crossing. **A constant baked into a rule about a quantity that grows works, then doesn't, and nobody is told.** That is not a bug in the old rule; it is a bug in having written a volume down at all.
+
+**Run the shipped measurement — do not eyeball the folders:**
+
+```bash
+python3 ~/aios/hooks/context-rungs.py
+```
+
+**What it reports.** The four rungs of the ladder in this vault — both `_index.md` (rung 0) · every heading in both folders (rung 1, the floor) · all of `declared/` (rung 2) · everything (rung 3) — in words and estimated tokens, plus the `observed/`-to-`declared/` ratio, ending in a verdict.
+
+**The verdict is the point, and it flips.** Below roughly 25k tokens total it says **read all of it** — the ladder is not for that vault yet. Above it, it says floor at rung 1 and climb deliberately. **Same rule, opposite advice, both correct.** An operator who is told "your whole context is 7k tokens, read it" is being told something the framework could not tell them before this existed.
+
+**It refuses rather than under-reporting.** A missing folder exits `2` naming what it could not measure, instead of totalling the folder that *is* there — because a total built from one folder reads as *small*, and small is precisely the answer that talks a session out of loading anything.
+
+**Propose:** nothing automatic, and specifically **do not propose restructuring `declared/`** on the strength of this. That folder is Tier 2 — the operator's own words — and it is already the more densely-headed of the two (an earlier version of the loading rule claimed the opposite, asserted rather than measured, and shipped that claim into four files and a test that enforced it). What to surface instead:
+
+- **The ratio crossed a threshold since last run** → mention it once. A vault whose `observed/` has grown to many multiples of `declared/` is one where the floor is carrying more weight; that is information, not a problem.
+- **Rung 3 is still cheap** → say so plainly. Sessions on this vault should be reading everything, and the narrowed rule is costing them context they could afford.
+- **`observed/` has files with very low heading density** → those are the ones the floor's titles index poorly. That *is* actionable, and it is Claude-authored content, so it is Claude's to fix at the next `/aios:compact`.
+
+**Why report-only, and why here rather than in a session.** The shape changes on the timescale of months, so a per-session check would be noise; housekeeping's cadence is the right one. And the ladder's consumers — `CLAUDE.md` § Identity & Greeting, the `right-context` skill, both spawn wrappers — deliberately state **no volume at all**, only ratios. This bucket is where the numbers are allowed to live, because it is the only surface that recomputes them.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:

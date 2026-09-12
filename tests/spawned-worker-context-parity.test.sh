@@ -205,9 +205,14 @@ echo
 echo " the two folders are read differently -- the split that makes this work"
 # Measured: a worker told to read ALL of both folders for a two-sentence task spent 38 tool
 # calls and never delivered. Told to read the MAP plus declared/, it delivered in 26 -- in
-# the operator's voice, applying a per-surface rule from their own files. declared/ is
-# identity prose that does not index; observed/ is entries that do. Collapsing the two back
-# into "read everything" is the failure that made the original rule get ignored.
+# the operator's voice, applying a per-surface rule from their own files.
+#
+# The REASON the split holds is the asymmetry in how the two failures surface, NOT a claim
+# about indexability. An earlier version of this rule asserted that declared/ "does not
+# index" and shipped that into four files -- and into THIS test, which then enforced the
+# falsehood. Measured, declared/ carries MORE headings per word than observed/ does. The
+# conclusion survived; the reason did not. Hence both an assertion on the true reason and a
+# NEGATIVE assertion below, so the false one cannot come back.
 for pair in "CLAUDE.md:$CM" "the wrapper:$WR" "the .ps1:$PS1"; do
   label="${pair%%:*}"; f="${pair#*:}"
   if grep -qiE "ALL of .?context/declared|all of .vault/00 - notes/context/declared" "$f"; then
@@ -215,15 +220,52 @@ for pair in "CLAUDE.md:$CM" "the wrapper:$WR" "the .ps1:$PS1"; do
   else
     no "$label does not name declared/ as the voice-work read" "that folder is what makes output sound like them"
   fi
-  if grep -qiE "does not index|indexes beautifully|titles are a better index" "$f"; then
-    ok "$label explains WHY the two folders are read differently"
+  # The true reason: you cannot detect the ABSENCE of a voice from inside your own output.
+  # Match short fragments -- these sentences wrap differently in prose, in the .sh preamble
+  # and in the .ps1 string array, and a long phrase scores zero on text that contains it.
+  if grep -qi "cannot detect" "$f" && grep -qi "not theirs" "$f"; then
+    ok "$label gives the real reason (the failure that does not announce itself)"
   else
     no "$label states the split without its reason" "an unexplained rule gets collapsed back on the next edit"
+  fi
+  # NEGATIVE: the measured-false justification must not return.
+  if grep -qiE "does not index|doesn't index|indexes beautifully|titles are a better index" "$f"; then
+    no "$label revives the FALSE claim that declared/ does not index" \
+       "measured, declared/ is more densely headed than observed/ -- the rule is right, that reason is not"
+  else
+    ok "$label does not claim declared/ is unindexable"
   fi
 done
 grep -qiE "not need 100k words|do NOT also preload all of observed" "$WR" \
   && ok "the wrapper warns against preloading all of observed for voice work" \
   || no "nothing stops the yes-branch collapsing into read-everything" "that shape spent 38 calls and delivered nothing"
+
+echo
+echo " the floor stays UNCONDITIONAL -- the skill may hold judgment, never the floor"
+# The measured failure was workers ignoring an unenforced rule (1 of 28 loaded nothing;
+# 6 loaded one or two files). A floor that lives in a skill you must remember to load
+# inherits exactly that failure. So: CLAUDE.md keeps the floor, the skill keeps the ladder.
+SK="skills/aios/right-context/SKILL.md"
+[ -f "$SK" ] && ok "the right-context skill exists" \
+             || no "no right-context skill" "the hard-case ladder has nowhere to live but CLAUDE.md, which every session pays for"
+
+if grep -qiE "grep '\^### '|### entry titles|ENTRY[[:space:]]*$|TITLES of" "$CM"; then
+  ok "CLAUDE.md still carries the floor itself"
+else
+  no "the floor is no longer stated in CLAUDE.md" \
+     "if the floor moved into a skill, a worker that never loads the skill has no floor at all"
+fi
+
+for pair in "CLAUDE.md:$CM" "the wrapper:$WR" "the .ps1:$PS1"; do
+  label="${pair%%:*}"; f="${pair#*:}"
+  grep -qi "right-context" "$f" \
+    && ok "$label points at the skill for the hard cases" \
+    || no "$label never mentions right-context" "the escalation path exists but nothing routes to it"
+done
+
+grep -q "skills/aios/right-context" skills/_index.md 2>/dev/null || grep -q "right-context" skills/_index.md \
+  && ok "the skill is registered in skills/_index.md" \
+  || no "skill not registered" "an unregistered skill is not resolvable by name"
 
 echo
 echo " the narrowing stays measured"

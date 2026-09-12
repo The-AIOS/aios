@@ -112,6 +112,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `prompt-engineering-patterns` | `skills/aios/` | "Improve this prompt" |
 | `deep-research` | `skills/aios/` | "What should we write / build / do next?" — multi-source research that returns ranked what/why/how proposals |
 | `orchestration-ladder` | `skills/aios/` | "Should this be one agent, a parallel fan-out, or a workflow?" |
+| `right-context` | `skills/aios/` | "How much of the operator's context does this task actually need?" |
 | `watch-video` | `skills/aios/` | "Watch this video / listen to this recording and tell me…" — comprehension only; `/aios:ingest` is the filing path |
 | `systematic-debugging` | `skills/superpowers/` | "Help me debug this systematically" |
 | `test-driven-development` | `skills/superpowers/` | "Let's write tests first" |

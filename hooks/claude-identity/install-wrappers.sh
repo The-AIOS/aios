@@ -321,9 +321,9 @@ _spawn_task_preamble() {
 # Before the task — two folders, read differently
 
   vault/00 - notes/context/declared/   WHO THEY ARE — voice, identity, how they decide,
-                                       their ventures. Prose. ~20k words. Does not index.
+                                       their ventures. The SMALL folder.
   vault/00 - notes/context/observed/   HOW YOU TWO WORK — preferences, patterns, growth,
-                                       lessons. Entries. ~100k words. Indexes beautifully.
+                                       lessons. ### entries. SEVERAL TIMES LARGER.
 
 FIRST ACTION, before you answer or plan anything — THE MAP, whatever the task is:
 list both folders, read both `_index.md` (one line per file), then read the `###` ENTRY
@@ -337,24 +337,28 @@ before executing commands.
 THEN one question about your own output — not about the files:
   Will what I produce be read as the operator's own words, or act on their behalf?
 
-  YES -> also read ALL of context/declared/, plus INTENT.md at the repo root. That folder
-         is who they are, and it is prose rather than entries, so it does not index: you
-         read it or you guess at it. Guessing is how work comes back fluent, correct, and
-         not theirs. Do NOT also preload all of observed/ for this — the map above is the
-         way in, and a two-sentence task does not need 100k words of working history.
+  YES -> also read ALL of context/declared/, plus INTENT.md at the repo root. It is the
+         SMALL folder, and voice is the one thing whose absence you cannot detect in your
+         own output. Under-read observed/ and the gap shows as work visibly missing
+         something. Under-read declared/ and the work comes back fluent, correct, and
+         not theirs, with nothing in it looking wrong — only one of the two failures
+         announces itself. Do NOT also preload all of observed/ for this: the map above
+         is the way in, and a two-sentence task does not need the whole working history.
   NO  -> the map is enough. Code, tests, file operations, data, mechanical sweeps. Open an
          observed/ entry when one of its titles tells you it applies.
 
 EITHER WAY THE REST STAYS OPEN TO YOU — that is what the map is for. You are not reading
-observed/ up front because titles are a better index into it than prose is, NOT because it
-is off limits. Open any of it the moment a title or the work points at it: a task touching
+observed/ up front because it is several times the size of the identity layer and most of
+it will not apply to this task, NOT because it is off limits. Open any of it the moment a title or the work points at it: a task touching
 a person or a venture usually wants ecosystem.md or business.md; unsure how they like
 something done, preferences.md. Reaching mid-task is expected, not exceptional. If you
 catch yourself guessing at how they would phrase something, who someone is, or whether
 they have already decided this — stop guessing and read.
 
-UNSURE IS NOT A THIRD ANSWER — read declared/. Over-reading costs tokens once;
-under-reading costs the operator's voice and fails silently.
+UNSURE IS NOT A THIRD ANSWER — read declared/, for that same asymmetry. Over-reading
+costs tokens once; under-reading costs the operator's voice and fails silently. If the
+call is genuinely hard, load the `right-context` skill — it carries the full ladder and
+measures what each rung costs in THIS vault (hooks/context-rungs.py).
 
 Describing this rule is not doing it: right after CLAUDE.md's identity check, the next
 thing you do is the `ls`.

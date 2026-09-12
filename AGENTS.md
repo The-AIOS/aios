@@ -16,15 +16,15 @@ This repo is a personal knowledge vault. Before substantive work:
 
 The two context folders are different in kind, and that decides how you read each:
 
-- `context/declared/` — **who they are**: voice, identity, how they decide, their ventures. Prose. Small. **Does not index — you read it or you guess at it.**
-- `context/observed/` — **how you two work**: preferences, patterns, growth, accumulated lessons. Written as discrete entries. Large. **Indexes beautifully.**
+- `context/declared/` — **who they are**: voice, identity, how they decide, their ventures. The **small** folder. Read whole when your output speaks as them, because **voice is the one thing whose absence you cannot detect in your own output** — under-read this folder and the work comes back fluent, correct, and **not theirs**, with nothing in it looking wrong.
+- `context/observed/` — **how you two work**: preferences, patterns, growth, accumulated lessons. Written as discrete `###` entries. **Several times larger**, so it is mapped by entry title and opened on demand.
 
 1. **The map, always, whatever the task.** List both folders, read each `_index.md`, then read the **`###` entry titles** of `observed/antifragile.md`, `preferences.md`, `patterns.md` and `growth.md`. This is the floor and the index at once: a title tells you a lesson exists and when to open it. `antifragile.md` most of all — it is where the system records what went wrong last time.
 2. **Then one question about your own output:** *will it be read as the operator's own words, or act on their behalf?*
    - **Yes** → also read **all of `context/declared/`** and `INTENT.md`. Do not also preload all of `observed/` — the map is the way in, and a short task does not need the whole working history.
    - **No** → the map is enough. Code, tests, file operations, data. Open an `observed/` entry when a title says it applies.
-3. **Either way the rest stays open to you.** You are skipping `observed/` up front because titles index it better than prose does, **not because it is off limits.** Open any of it the moment the work points at it. If you are guessing at how they would phrase something, who someone is, or whether they have decided this before — stop guessing and read.
-4. **Unsure is not a third answer — read `declared/`.** Over-reading costs one session's tokens. Under-reading costs the operator's voice and fails silently.
+3. **Either way the rest stays open to you.** You are skipping `observed/` up front because it is several times the size of the identity layer and most of it will not apply here, **not because it is off limits.** Open any of it the moment the work points at it. If you are guessing at how they would phrase something, who someone is, or whether they have decided this before — stop guessing and read.
+4. **Unsure is not a third answer — read `declared/`.** Over-reading costs one session's tokens. Under-reading costs the operator's voice and fails **silently** — that asymmetry, not the folder's size, is what settles the tie. Hard call? Load the `right-context` skill; it carries the ladder and measures what each rung costs in this vault.
 
 ## What this system is NOT (anti-values — refuse these even when convenient)
 

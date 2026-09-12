@@ -1447,6 +1447,22 @@ jobs:
         # the same output.
         run: bash tests/context-load-audit.test.sh
 
+      - name: the context ladder is measured, not asserted
+        # This suite exists because a CONSTANT was baked into a rule about a quantity that
+        # GROWS. "Read everything" was correct when written -- a fresh clone's whole operator
+        # context is a few thousand tokens, cheaper than the paragraph telling a worker to
+        # skip it -- and it silently stopped being correct as vaults grew past six figures.
+        # Nothing reported the crossing, because nothing measured.
+        #
+        # So the property under test is that the VERDICT FLIPS with vault size: a tool that
+        # always answers the same thing is a hardcoded constant with extra steps, which is
+        # precisely what it replaces. The suite builds a small vault and a grown one and
+        # asserts they get opposite advice, with a control that fails if they ever agree.
+        # Refusal cases run first (#110): a half-present context must EXIT 2, never total
+        # the folder that is there -- a partial ladder reads as SMALL, and small is the
+        # answer that talks a session out of loading any context at all.
+        run: bash tests/context-rungs.test.sh
+
       - name: the Google connector's API set derives from one manifest
         # The set of Google APIs an operator must enable existed in SIX places before
         # AI-126 -- connector.json's --permissions, SETUP.md's prose, the setup doc's
