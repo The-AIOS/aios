@@ -667,6 +667,8 @@ CRLF-normalize when comparing file *contents* (`tr -d '\r'`) per the § Backup-o
 
 **Runs ONLY when this sync actually applied something.** If zero Tier-1 files changed and the reconcile was clean, skip this step entirely and say nothing. *"Already up to date — by the way, star us"* is asking to be paid for nothing, and it is the difference between a request and a nag.
 
+**Runs ONLY once the operator has actually used AIOS.** The check itself withholds the verdict until the vault is at least 7 days old (`AIOS_STAR_MIN_DAYS`, dated from the tracker's first commit). Nothing to do here — it is enforced inside `hooks/aios-star-check` so all three callers agree — but it is why a fresh install never sees this step. Asking on day one asks someone to vouch publicly for software they have not used, which is the same objection as asking on a no-op sync.
+
 **Runs ONLY when a human is in the loop.** `/aios:update` auto-fires from `/today` and `/close-day`, and those run in scheduled routines with nobody present. A prompt nobody sees cannot be answered, and **silence must never read as yes.** If this run was auto-fired, or you are executing in a routine / cron / bridge context, skip the step and set `AIOS_STAR_ASK=never` so the check itself agrees with you.
 
 ```bash

@@ -18,6 +18,17 @@
 #   declined   the operator already said no                 → say nothing, ever
 #   unknown    the check could not be completed             → say nothing (FAIL CLOSED)
 #
+# TENURE: the ask waits until the operator has actually used the thing. A star is a
+# public endorsement, and the ask's own copy says the count is what someone checks
+# before trusting an unknown repo — so asking on day one is asking a person to vouch
+# for something they have not used yet. That is the difference between a request and a
+# solicitation, and it is the same argument that already keeps the ask off a no-op sync
+# ("already up to date — by the way, star us" is asking to be paid for nothing).
+# Enforced HERE rather than per-caller, because the idea already existed in exactly one
+# caller: Glass asked after N successful sessions while /aios:update asked at the end of
+# the first applied sync, which on a fresh install is minutes after install. One rule in
+# the shared check is what makes the three callers agree.
+#
 # FAIL CLOSED IS THE LOAD-BEARING RULE. No network, no `gh`, no auth, a rate-limit, a
 # missing tracker — every one of them yields `unknown`, and `unknown` must never produce a
 # prompt. Nagging someone who already starred tells them the software doesn't notice what
@@ -35,6 +46,7 @@ set -u
 
 CONFIG_TRACKER="${AIOS_TRACKER:-$HOME/aios/.aios-update}"
 API_BASE="user/starred"
+MIN_TENURE_DAYS="${AIOS_STAR_MIN_DAYS:-7}"
 
 # ── The repo allowlist is FIXED and every entry is verified public ────────────────────
 # GET /user/starred/{repo} returns 404 for "not starred" AND for "private or nonexistent",
@@ -143,6 +155,35 @@ decline_state() {
   return 1
 }
 
+# ── Tenure: how long has this operator actually had AIOS? ─────────────────────────────
+# Derived from the FIRST COMMIT OF THE TRACKER ITSELF, and the choice matters three ways.
+#
+# (1) No new field, and no write. This function runs on the verdict path, whose documented
+#     contract one line above is "this never prompts and never writes". A `first-seen=`
+#     field would have been simpler to read and would have broken that, and would also
+#     have had nothing to say about every vault that already exists.
+# (2) `.aios-update` is NOT in canonical and is not gitignored, so it cannot carry the
+#     framework's history — it is written by the operator's own first `/aios:update`, and
+#     its first commit is therefore theirs by construction. The repo's first commit would
+#     NOT be safe: a vault started by cloning the framework inherits months of history and
+#     would read as tenured on day one.
+# (3) It travels with the vault, so a second machine inherits the real tenure instead of
+#     restarting the clock — the same reason the decline record lives in this file.
+#
+# %ct (committer date as a unix timestamp) plus `date +%s` avoids date PARSING entirely,
+# which is what makes this portable: GNU `date -d` and BSD `date -j -f` disagree, and this
+# runs on macOS, Linux and Git Bash on Windows.
+tenure_days() {
+  local repo first now
+  command -v git >/dev/null 2>&1 || { echo unknown; return; }
+  repo=$(dirname "$CONFIG_TRACKER")
+  first=$(git -C "$repo" log --reverse --format=%ct -- "$(basename "$CONFIG_TRACKER")" 2>/dev/null | head -1)
+  case "$first" in ''|*[!0-9]*) echo unknown; return ;; esac
+  now=$(date +%s 2>/dev/null)
+  case "$now" in ''|*[!0-9]*) echo unknown; return ;; esac
+  echo $(( (now - first) / 86400 ))
+}
+
 record_decline() {
   if [ ! -f "$CONFIG_TRACKER" ]; then
     echo "aios-star-check: no tracker at $CONFIG_TRACKER — nothing recorded" >&2
@@ -207,6 +248,12 @@ fi
 decline_state; case $? in
   0) finish declined "" "decline on file in .aios-update" ;;
   2) finish unknown  "" "tracker unreadable at $CONFIG_TRACKER — a prior decline would be invisible" ;;
+esac
+TENURE=$(tenure_days)
+case "$TENURE" in
+  unknown) finish unknown "" "cannot date this vault's first sync — tenure unverifiable" ;;
+  *) [ "$TENURE" -lt "$MIN_TENURE_DAYS" ] &&
+       finish unknown "" "vault is ${TENURE}d old — the ask waits for ${MIN_TENURE_DAYS}d of use" ;;
 esac
 command -v gh >/dev/null 2>&1      || finish unknown "" "gh not installed"
 gh auth status >/dev/null 2>&1     || finish unknown "" "gh not authenticated"
