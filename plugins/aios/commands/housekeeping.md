@@ -818,19 +818,25 @@ It runs for months without complaining, which is why it needs a periodic sweep r
 
 #### Bucket 30: Spawned workers that loaded no operator context (NEW — REPORT-ONLY, never edits)
 
-**The gap.** `CLAUDE.md` tells a spawned worker to load context, and nothing anywhere reports when it doesn't. The failure is silent by construction: the worker still answers, still sounds right, and is simply missing whatever would have made the answer *this operator's* rather than merely correct. There is no error, no empty output, and no tell — so a vault can run for months with workers that read nothing and never learn it.
+**The gap.** `CLAUDE.md` tells a spawned worker to load context, and nothing anywhere reports when it doesn't. The failure is silent by construction: the worker still answers, still sounds right, and is simply missing whatever would have made the answer *this operator's* rather than merely correct. No error, no empty output, no tell.
 
-That is not hypothetical. Measured across one live vault's spawned workers that did real work (≥20 tool calls): **3 read zero context files, 9 read one or two, and only 4 came close to the full set.** The stated rule was "read everything".
+**Run the shipped detector — do not re-implement it:**
 
-**The check.** Walk `~/.claude/projects/*/*.jsonl`. For each transcript whose first `agent-name` record is **not** a primary session from `USER.md`, scan the first ~120 `tool_use` events and count distinct files matched by `context/(declared|observed)/([a-z_-]+)\.md`. Report any worker with **≥20 tool calls and 0 context files**, and the distribution across the rest.
+```bash
+python3 ~/aios/hooks/context-load-audit.py
+```
 
-- **Count `tool_use`, never `tool_result` or prose.** A transcript mentions paths constantly; only a tool call is evidence the file was opened.
-- **Skip transcripts under 20 tool calls.** Probes and one-shot spawns never had work to contextualise, and counting them makes the number look worse than it is.
-- **Primary sessions are the CONTROL, not the subject.** They should score high. If they don't, the detector is broken — say so and report nothing else, because a scan that cannot see a primary's reads cannot be trusted about a worker's.
+**Why a hook and not a spec here.** The obvious implementation is wrong in one specific, reproducible way, and it was written that way once: a worker typically does `cd "<vault>/00 - notes/context/observed" && grep '^### ' antifragile.md …`, so matching only `context/(declared|observed)/<file>.md` misses every such read. That version reported three workers at zero who had in fact read the whole floor. **A check that under-reports is worse than none, because its clean answer gets trusted** — so the instrument is code with its own tests, and this bucket calls it.
 
-**Propose:** nothing automatic. Report the names and counts, and let the operator decide whether a given worker should have been reading more. The value is that the number exists at all and can be watched over time — a floor that stops firing shows up here before it shows up as work that quietly stopped sounding like them.
+**What it measures.** Only `tool_use` events in `~/.claude/projects/*/<sessionId>.jsonl` — never prose, never `tool_result`. A transcript mentions context paths constantly; only a tool call is evidence a file was opened. It separates **titles-only** reads (the floor) from **full** reads, because a floor degrading to nothing looks identical to a floor that is firing if you only count files.
 
-**Why this bucket exists.** Context loading was narrowed from "read everything" to a floor plus a sized read, on the evidence that "read everything" was not happening. A narrowing justified by a measurement has to keep being measured, or the justification expires silently and nobody notices.
+**Compaction does not affect it.** Compaction rewrites the model's context window; the transcript on disk is append-only. Measured on a live session with 8 compaction events: all 10,241 `tool_use` records, spanning seven weeks, were still present. The audit sees what a session *did*, not what it still remembers.
+
+**It aborts rather than reassures.** Primary sessions are the control — they run the full ritual, so they must score. If none does, the detector prints `ABORT: the detector is broken, not the workers` and reports nothing else. A scan that cannot see a primary's reads cannot be trusted about a worker's.
+
+**Propose:** nothing automatic. Report the names and counts; the operator decides whether a given worker's task genuinely needed no context. The value is that the number exists and can be watched — a floor that stops firing shows up here before it shows up as work that quietly stopped sounding like them.
+
+**Why this bucket exists.** Context loading was narrowed from "read everything" to a floor plus a sized read, on the evidence that "read everything" was not happening. A narrowing justified by a measurement has to keep being measured, or the justification expires silently.
 
 
 ### Phase 2 — Present the packet

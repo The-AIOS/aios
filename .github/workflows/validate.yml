@@ -1433,6 +1433,20 @@ jobs:
         # present" is true and useless.
         run: bash tests/spawned-worker-context-parity.test.sh
 
+      - name: the context-load detector counts what workers actually do
+        # Bucket 30's instrument. The FIRST version matched only
+        # `context/(declared|observed)/<file>.md` -- and workers routinely `cd` into the
+        # context folder first, so every such read was invisible. It reported three live
+        # workers at zero that had read the entire floor, and the clean number was
+        # believed. A check that under-reports is worse than none.
+        #
+        # So the detector ships as a hook with its own tests rather than as prose a command
+        # re-implements. Refusal cases first (#110): the cd-relative read, prose that merely
+        # mentions a path, and the control -- findings require a validated primary session,
+        # because without one a worker reading nothing and a detector seeing nothing produce
+        # the same output.
+        run: bash tests/context-load-audit.test.sh
+
       - name: the Google connector's API set derives from one manifest
         # The set of Google APIs an operator must enable existed in SIX places before
         # AI-126 -- connector.json's --permissions, SETUP.md's prose, the setup doc's
