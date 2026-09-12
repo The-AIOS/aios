@@ -72,9 +72,29 @@
 
 `hash: 61e7d9c · 398e526 · 0a2e3db · 236e899 · 921e991 · dbde860` · [#122](https://github.com/The-AIOS/aios/pull/122) · [#123](https://github.com/The-AIOS/aios/pull/123)
 
-> **What you can now do.** Tell a lost login from a lost network. `/today`'s framework and company freshness checks, and `/close-day`'s framework check, used to throw away git's error message — so *"GitHub refused this machine's key"* and *"no internet"* both printed `unreachable`, and the plan called that *"offline — fine for now"*. A machine whose key had been removed from its GitHub account was reassured every morning. The checks now run `hooks/freshness-probe.sh`, which keeps the error text and reports a new state, **`access-denied`**, whenever the server answered and refused the credential. `/today` shows it as a task naming the repo and the fix; `/close-day` puts it above the verdict line. A genuine outage still reads `unreachable`, and only that state is called offline.
+> **What you can now do.** Tell a lost login from a lost network. The freshness checks in `/today` and `/close-day` used to discard git's error, so *"GitHub refused this machine's key"* and *"no internet"* both printed `unreachable` — and the plan called that *"offline — fine for now"*. A machine whose key had been removed from its account was reassured every morning. They now run `hooks/freshness-probe.sh`, which keeps the error text and reports **`access-denied`** whenever the server answered and refused the credential. `/today` shows it as a task naming the repo and the fix; `/close-day` puts it above the verdict line. A genuine outage still reads `unreachable`, and only that is called offline.
 
-**Action required:** none — `/aios:update` lands it. If you added your own `USER.md` override for this, retire it once this lands (check: your `### /today` section names `freshness-probe.sh` from `hooks/custom/`). If a check has said `unreachable` on mornings when your network was fine, run `bash ~/aios/hooks/freshness-probe.sh` — it names the repo that is refusing you.
+**Action required:** none. If a check has said `unreachable` on mornings when your network was fine, run `bash ~/aios/hooks/freshness-probe.sh` — it names the repo refusing you. If you wrote your own `USER.md` override for this, retire it.
+
+### `voice-gate` judges a post against posts, not against your essays
+
+**What you can now do.** Get a usable answer on short-form. The skill built **one** baseline from your published work — but a post compresses a long piece to its quotable lines, so it runs several times long-form density while being the same writer at their best. One blended number is wrong both ways: it false-alarms on every short piece and false-cleans every essay. And the incident this skill exists for — someone calling a published **post** AI-written — happens exactly where a blended baseline is silent.
+
+Now: one baseline per surface you publish to, scored against the surface the draft is going to. **A post is a paragraph, so never two moves in one post** — the long-form burst rule does not transfer to a surface where every unit is already burst-sized. Baselines also **expire**: re-derive every ~5 publishes or quarterly, with the date recorded beside the number, because a corpus drifts while each individual draft still reads in range.
+
+**And one honesty line:** a mechanical pattern pass is a **candidate-finder, never the verdict** — it can score zero on a page a careful read finds several tells in. Use it to make a long draft tractable; never report its output as the score.
+
+**Action required:** none. Next run it will ask which surface the draft is for, and say so if your baseline is old.
+
+### Your daily note's sections land where they belong again
+
+**What you can now do.** Trust your daily note's structure. Two placement defects are fixed; both made notes read wrong without erroring.
+
+**A session block could land mid-note.** `/close-session` inserts with `aios-note-append --before "## Close of Day"`, and the marker matched **anywhere in a line**. A daily note is prose, and prose quotes headings — so a note containing a sentence mentioning that heading turned that sentence into an insertion anchor. Measured live: a morning bullet quoted the heading, an afternoon close anchored to it, and the block split that section — heading above, bullets stranded below. The marker now matches only a line that **starts** with it.
+
+**And `## Close of Day` goes back to the end.** `/close-day` now appends there, through the same locking helper `/close-session` uses. It never said *where* its block went, so it could be anchored partway up — and every `## Session —` block below that point then sat beneath it. Since `/close-session` inserts *before* that marker, the marker being last is what keeps session blocks above it. `/close-day` also wrote the note directly while every other writer took a lock, so a block landing between its read and its write was silently overwritten.
+
+**Action required:** none — `/aios:update` lands both. **Worth one look at recent notes:** if a section's body appears *below* a session block instead of under its own heading, that was the marker bug — move the stranded lines back up, nothing was lost. And **do not bulk-reorder old notes** on the strength of the Close-of-Day fix: a `## Session —` block below `## Close of Day` is only wrong when it was written *before* the close. A session that genuinely ran after you closed the day belongs below it.
 
 ### `resume` — reopen a closed session as the same someone
 
@@ -82,47 +102,33 @@
 
 Canonical's side is documentation — `CLAUDE.md` and the `orchestration-ladder` skill now carry the verb, so a session knows it exists without opening the App's protocol file. The behaviour is the App's.
 
-**One change affects you even if you never use `resume`.** A *written* `action` that is not one of the four verbs is now **refused with a dead letter naming what you wrote**, instead of quietly running as a spawn. Omitting `action` still means spawn, so the original `{name, task}` requests keep working untouched. Before `resume`, degrading an unknown verb to spawn was harmless — spawn was the only thing it could have meant. Now a typo'd `"resmue"` would hand back a brand-new session in place of the one you asked to reopen, context gone, nothing reporting it. Case and whitespace are ignored, so a refusal always means an unimplemented verb, never a formatting slip.
+**One change affects you even if you never use `resume`.** A *written* `action` that is not one of the four verbs is now **refused with a dead letter naming what you wrote**, instead of quietly running as a spawn. Omitting `action` still means spawn, so `{name, task}` requests keep working untouched. Before `resume` this was harmless — spawn was the only thing an unknown verb could have meant. Now a typo'd `"resmue"` would hand back a brand-new session in place of the one you asked to reopen. Case and whitespace are ignored, so a refusal always means an unimplemented verb, not a formatting slip.
 
 **Action required:** none, and nothing you already do breaks. **`resume` needs App v0.9.5** — on an older App the verb is not implemented and the request is refused rather than silently doing something else. To check what the surface on your machine supports, read the stamp it writes into `~/.aios/spawn-inbox/README.md`: an HTML comment reading `aios-spawn-inbox: contract N`, where this verb set is contract **3**.
 
 ### Google Workspace connects by asking, not by running scripts
 
-**What you can now do.** Say *"connect my Google Workspace"*, or run `/aios:mcps-setup` and pick it. Your session creates the Cloud project, enables every API the connector needs, hands you only the two or three console pages Google publishes no API for, and once you say you are done it validates the credential you downloaded and registers the server. **Your part is about six clicks and one download — no terminal commands.**
+**What you can now do.** Say *"connect my Google Workspace"*, or run `/aios:mcps-setup` and pick it. Your session creates the Cloud project, enables every API, hands you the two or three console pages Google publishes no API for, then validates the credential you downloaded and registers the server. **Your part: about six clicks and one download — no terminal commands.**
 
-It also catches the two mistakes that used to fail *much* later: a client downloaded as **Web application** instead of Desktop (`redirect_uri_mismatch`) and one belonging to a different project (`403 org_internal`). Both now stop the setup and name the fix.
+It also catches the two mistakes that used to fail *much* later: a client downloaded as **Web application** instead of Desktop (`redirect_uri_mismatch`), and one belonging to a different project (`403 org_internal`). Both now stop the setup and name the fix.
 
-**If you do not have `gcloud`, you find out before anything happens.** The preflight runs first and says plainly that nothing was created, so you are never left half-configured. It names the install command for your actual platform — on a Mac with Homebrew, the one-liner — and offers the by-hand console path as a real alternative. Same for not being signed in.
+**No `gcloud`? You find out before anything happens** — the preflight runs first, says plainly that nothing was created, names the install command for your platform, and offers the by-hand console path. Same for not being signed in.
 
-**The API list is derived, not written down.** It comes from the `--permissions` list in `mcps/google-workspace-mcp/connector.json`, the same manifest that registers the server. It had been restated in six other places and they disagreed: one sent you to enable a Chat API nothing requests, another omitted Gmail, contacts and forms entirely. That mismatch is the worst failure here because it fails late and blames the wrong thing — consent succeeds, the tool appears, and the first call returns `403 SERVICE_DISABLED`, which reads like an auth problem. It can no longer be expressed.
+**The API list is derived, not written down** — from the `--permissions` list in `mcps/google-workspace-mcp/connector.json`, the same manifest that registers the server. It had been restated in several other places and they disagreed. That mismatch is the worst failure here because it fails late and blames the wrong thing: consent succeeds, the tool appears, and the first call returns `403 SERVICE_DISABLED`, which reads like an auth problem. It can no longer be expressed.
 
-**No credential ships in the repo, deliberately.** A shared OAuth client carries a hard cap of **100 grants for the life of the project, unresettable** — it would work for a while and then fail for everyone after that, with nothing in the repo able to explain why. Your own project also avoids your Workspace admin's third-party app gate, since an internal app is trusted by default.
+**No credential ships in the repo, deliberately.** A shared OAuth client carries a hard cap of **100 grants for the life of the project, unresettable** — it would work for a while, then fail for everyone after it, with nothing able to explain why.
+
+**Also fixed:** the check that verifies a registration landed read only the *user* scope, while `claude mcp add` defaults to **per-directory** — so on a working install it answered *not registered*, inviting a second registration that then drifts. It reads both scopes now.
 
 **Action required:** none if Google already works for you — nothing about your existing setup changes. Setting it up for the first time, or redoing it: ask your session rather than following the old console walkthrough. `mcps/google-workspace-mcp/personal-account-setup.md` still has the full manual path for anyone who wants it, plus the one trap no script can remove — on a consumer `@gmail.com` account, an app left in *Testing* expires its refresh token every 7 days.
 
-### A check that said your Google connector was not registered, on machines where it was
-
-**What you can now do.** Trust the answer. `/aios:mcps-setup` verifies a registration by reading `~/.claude.json` back — because `claude mcp add` prints success even when nothing was written — and that read-back looked only at the top-level `mcpServers`. But `claude mcp add` **defaults to local, per-directory scope**, so a normal registration lands under `projects["<your directory>"]`. On a live vault with the connector running and all nine services present, the check answered *not registered*.
-
-Acting on that answer is worse than ignoring it: it invites a second registration, and two of them drift independently — which is exactly how one copy grew Gmail and the other did not, with nothing reporting the difference. It now reads both scopes and names where it found each, so being registered twice is surfaced rather than hidden.
-
-**Action required:** none. If you want to know where yours lives, ask your session to run the check in `/aios:mcps-setup` — and if it reports two, keep one.
-
 ### On macOS, `git` was probably never the thing blocking you
 
-**What you can now do.** Know that you are not blocked on `git` when Homebrew misbehaves. macOS ships `git` with the **Xcode Command Line Tools** (`xcode-select --install` — no Apple ID, not the full Xcode), so this guide's GitHub steps work before you have a package manager at all. `git --version` settles it in one line; if it answers, `brew install git` would only put a second copy ahead of it on your `PATH`.
+**What you can now do.** Know you are not blocked on `git` when Homebrew misbehaves. macOS ships `git` with the **Xcode Command Line Tools** (`xcode-select --install` — no Apple ID, not full Xcode), so this guide's GitHub steps work before you have a package manager. `git --version` settles it; if it answers, `brew install git` only puts a second copy ahead of it on your `PATH`.
 
-Homebrew is still the simplest way to get `node`, `gh`, `python` and `uv` in one command, so it stays step 1 of the macOS prerequisites. `SETUP.md` just no longer implies that everything after it is waiting on it.
+Homebrew stays step 1 of the macOS prerequisites; `SETUP.md` just no longer implies everything after it is waiting on it.
 
 **Action required:** none.
-
-### `## Close of Day` goes back to the end of your daily note
-
-**What you can now do.** Trust your daily note's order. `/close-day` now appends its `## Close of Day` block at the **end** of the note, and writes it through the same per-file locking helper `/close-session` uses.
-
-Two things were wrong. The command never said *where* its block went, so it could be anchored partway up the note — and every `## Session —` block already written below that point then sat **below** Close of Day. Because `/close-session` inserts its blocks with `--before "## Close of Day"`, the marker being last is exactly what keeps session blocks above it. Separately, `/close-day` wrote the note directly while every other writer took a lock; a session block landing between its read and its write was silently overwritten. Both are fixed by the same change.
-
-**Action required:** none — `/aios:update` lands it. **Do not bulk-reorder your old notes on the strength of this.** A `## Session —` block below `## Close of Day` is only wrong when it was written *before* the close — the case above. A session that genuinely ran after you closed the day belongs below the marker, and moving it up would make the note's chronology wrong. Scanning one vault for this turned up 14 notes going back six months and almost all of them were the legitimate kind, one even labelled *"post-close"*. If you do find blocks that predate their own close sitting underneath it, move those by hand; nothing will reorder them for you.
 
 ## 2026-09-09 — A duplicate close, and a measurement that hid the damage it should have shown
 

@@ -36,15 +36,25 @@ Do not carry a number in from outside. Establish what *this* writer's prose actu
 3. Sample their **published** work — the pieces they stand behind. Five to ten thousand words gives a stable number.
 4. Compute tells per 1,000 words, and record the count of paragraph bursts separately.
 
+**Build one baseline per surface class the operator publishes to — not one number for everything.** Short-form renderings (a post, a thread) compress a long piece down to its quotable lines, so by construction they run **several times the density of long-form** while being the same writer at their best. A single blended figure is therefore wrong in both directions at once: it false-alarms on every rendering, and it false-cleans every essay. Worse, the incident that motivates this skill — someone flagging a *published short post* as AI-written — happens precisely on the surface a blended baseline is silent about.
+
+So: long-form gets its own budget, each short-form surface gets its own, and a draft is scored against the baseline **for the surface it is going to**.
+
+**Burst granularity scales with the surface.** A burst is defined as a paragraph carrying two or more tells, and on a micro-surface the paragraph *is* the unit of publication: **a post is a paragraph — never two moves in one post.** On long-form, a paragraph is a paragraph. Do not carry the long-form burst rule onto a surface where every unit is already a burst-sized container.
+
+**Re-derive the baseline every ~5 publishes, or quarterly — whichever comes first.** A baseline computed once and never revisited lets the *corpus itself* drift while every individual draft reads comfortably in range: each piece is measured against a number that the previous pieces already moved. This is the same doctrine `CLAUDE.md` applies to derived observed files — a baseline is a **derived aggregate**, so it needs periodic re-derivation, not only event-driven updates. Record the date the baseline was computed next to the number, so its age is visible rather than assumed.
+
 That figure is the operator's **budget**, not a target to minimize. A writer who argues by reframe will legitimately run several times higher than one who argues by evidence, and cutting them to match would destroy the thesis. What you are looking for later is **drift from their own baseline**, plus any breach of the positional bar above.
 
 If the operator has supplied a writing sample, it overrides every default in this skill — including the dash guidance below. Match the sample's rate; do not impose a rule the sample contradicts.
 
 ## Step 2 — score the draft
 
+> ⚠️ **Any mechanical pattern pass is a CANDIDATE-FINDER, never the verdict — the walk is the instrument.** A regex under-counts in both of its usual directions: a pivot lands on any subject, not only the one shape a pattern was written for, and punctuation hides inside quotes, code spans and links where a naive scan either skips it or counts it twice. A conservative pass can score a live draft **zero** on a page a careful read finds several tells in. Use a pattern pass to point at candidates and to make a long draft tractable; never report its output as the score, and never let a clean automated pass stand in for reading the piece.
+
 Walk the draft and mark each instance with its **pattern**, **position zone**, and **paragraph**. Then report:
 
-- Density per 1,000 words, next to the operator's baseline.
+- Density per 1,000 words, next to the baseline **for this surface** — name which surface baseline was used, and when it was last derived.
 - Every paragraph containing two or more (the burst list).
 - Every instance in an exposed zone, quoted in full — this is the section the operator actually reads.
 - Drift: is this draft above or below their own norm, and by how much.

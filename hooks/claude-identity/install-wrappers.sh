@@ -527,7 +527,7 @@ LAUNCHER
       # dormant shell after the rename — wrong app, keystrokes go nowhere, system
       # beeps from rejected AppleEvents. Fix: detect by app-bundle PATH (robust to
       # process-name changes), and address via bundle ID in AppleScript (robust to
-      # LaunchServices display-name changes). Regression caught 2026-05-24 on chuy.
+      # LaunchServices display-name changes). Regression caught on a live macOS install.
       pgrep -fq "Antigravity IDE.app/Contents/" && {
         ide_app="Antigravity IDE"
         ide_bundle="com.google.antigravity-ide"

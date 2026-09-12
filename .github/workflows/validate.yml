@@ -1343,6 +1343,34 @@ jobs:
         # only there would reach fresh clones and no existing operator.
         run: bash tests/statusline-account-alias.test.sh
 
+      - name: a note-append marker anchors to the start of a line
+        # `--before "## Close of Day"` used to match with a bare index($0,marker), so
+        # ANY line quoting the marker became an insertion anchor. A daily note is prose,
+        # and prose quotes headings. Measured on a live vault: a bullet written in the
+        # morning contained a sentence DOCUMENTING this helper, and an afternoon
+        # close-session anchored to that sentence -- landing a session block inside an
+        # unrelated section, heading above it and bullets stranded below. Nothing was
+        # deleted, nothing errored, neither session could see it.
+        #
+        # Antifragile #105's family, one domain over: there the instrument was a grep
+        # scanning source, here an insertion anchor scanning a note. Both break because
+        # the behaviour was worth documenting. Refusal cases are asserted FIRST (#110),
+        # and the control replays the retired predicate and requires it to mis-anchor.
+        run: bash tests/note-append-marker.test.sh
+
+      - name: shipping files carry the rule, not one operator's evidence
+        # Canonical is authored from inside a live vault, so vault-personal references
+        # arrive as GOOD WRITING -- concrete evidence is what makes a rule persuasive.
+        # An audit found dated incidents from one operator's week and an example naming
+        # real third parties in files that ship to everyone.
+        #
+        # The suite names nobody: hardcoding the offenders would re-publish them on every
+        # run. It matches the shape instead, and its possessor allow-list is what keeps
+        # "the operator's vault" (correct, everywhere) from being flagged. A second check
+        # was written and DELETED for firing on its own fix -- the reasoning is in the
+        # file, because knowing when not to ship a guard is part of the rule.
+        run: bash tests/canonical-hygiene.test.sh
+
       - name: the daily note's Close of Day block stays last
         # Reported 2026-09-09 as "aios-note-append --before lands blocks at the end
         # instead of above the marker". The history says otherwise: when those blocks

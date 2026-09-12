@@ -597,7 +597,7 @@ Candidates:
 
 ### Tier A routing enforcement (Reinforced session-insights → target files, autonomous)
 
-**Why this step exists:** the session-insights lifecycle is *Emerging → Reinforced → Routed (to target file) → removed from buffer*. The buffer canibalizes target files when Reinforced entries linger with `Route to:` tags but the routing step never executes — observed in chuy's vault 2026-05-23 catch-up where 5 Reinforced entries sat 11-49 days marked "Ready to route on next /close-day or /emerge" while patterns/preferences/antifragile/business missed the additions. Same failure mode as Tier B drift; different layer.
+**Why this step exists:** the session-insights lifecycle is *Emerging → Reinforced → Routed (to target file) → removed from buffer*. The buffer canibalizes target files when Reinforced entries linger with `Route to:` tags but the routing step never executes — a real vault was found with Reinforced entries sitting for weeks, each already marked ready to route, because nothing ever performed the routing step. Same failure mode as Tier B drift; different layer.
 
 The substance bar for Tier A routing is already passed by the time an entry reaches Reinforced — Reinforced means 2+ sessions of evidence with target file identified. The remaining work is mechanical: snapshot target file, write the entry, remove from buffer.
 
