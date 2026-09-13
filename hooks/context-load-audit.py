@@ -64,7 +64,11 @@ def _context_names(root):
     return names
 
 
-VAULT_ROOT = os.environ.get("AIOS_VAULT", os.path.expanduser("~/aios"))
+# SELF-LOCATE. The framework must not hardcode its install path -- an operator who
+# cloned elsewhere, or a CI checkout, has no ~/aios. This file lives in hooks/, so the
+# repo root is two levels up; AIOS_VAULT overrides for tests and odd layouts.
+VAULT_ROOT = os.environ.get(
+    "AIOS_VAULT", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CONTEXT_FILES = sorted(_context_names(VAULT_ROOT))
 
 PATH_RE = re.compile(r"context/(?:declared|observed)/([A-Za-z0-9_\-]+)\.md")
