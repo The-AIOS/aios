@@ -72,7 +72,7 @@
 
 `hash: ` · [#128](https://github.com/The-AIOS/aios/pull/128)
 
-> **What you can now do.** Trust that a worker you spawn arrives already holding **what the system most recently learned about working with you** — not just a list of what exists. **The floor is now one command**, `python3 ~/aios/hooks/context-floor.py`, and it emits both `_index.md`, every heading in both folders, **and the last 5 `###` entries of every `observed/` file in full.**
+> **What you can now do.** Trust that a worker you spawn arrives already holding **what the system most recently learned about working with you** — not just a list of what exists. **The floor is now one command**, `python3 ~/aios/hooks/context-floor.py`, and it emits both `_index.md`, every heading in both folders, **the last 5 `###` entries of every `observed/` file in full**, and **`INTENT.md`** — your trust contract now reaches *every* session, not only the ones writing in your voice, because *what am I allowed to do* is a different question from *will this sound like them*, and it binds hardest on the mechanical worker: least contextualised, most able to commit, push, send or delete. **Each rung includes the one below it** — climbing adds to the floor, never replaces it.
 
 **Why the floor carries content.** A map of headings tells a session what *exists* and nothing about what has been *learned*. Every `/close-session` and `/close-day` appends to your observed files — and if the next session never reads what was appended, **the loop does not close** and you are maintaining files that change no later behaviour. The floor is where it closes. A session now starts holding the preference you corrected yesterday, not merely its title.
 
