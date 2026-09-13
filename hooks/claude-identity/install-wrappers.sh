@@ -337,7 +337,20 @@ commands. BOTH FOLDERS VARY FROM VAULT TO VAULT: the framework ships five declar
 and nine observed ones and operators add their own, so a named list silently skips
 whatever it does not mention. The glob costs the same to type and cannot go stale.
 
-THEN one question about your own output — not about the files:
+THEN judge the read against the task. This is a RANGE, not a switch — you hold the map
+now, so you know what exists. Both bounds are reachable:
+
+  MIN -> the map is enough. Code, tests, file operations, data, mechanical sweeps — work
+         whose correctness is checkable without knowing the operator. Open an observed/
+         entry the moment one of its titles tells you it applies.
+  MAX -> every file in BOTH folders, read whole. Not a failure state. Right when either
+         (i) the whole context is cheap — run `python3 ~/aios/hooks/context-rungs.py`, and
+         if its verdict says read all of it, read all of it; or (ii) THE TASK IS THE
+         CONTEXT ITSELF: synthesising across their history, auditing or compacting the
+         observed files, deriving a pattern that only shows across many of them, or
+         answering AS them. An index cannot serve those — the corpus is the input.
+
+  The question that settles most of what lies between:
   Will what I produce be read as the operator's own words, or act on their behalf?
 
   YES -> also read ALL of context/declared/, plus INTENT.md at the repo root. It is the
@@ -347,8 +360,8 @@ THEN one question about your own output — not about the files:
          not theirs, with nothing in it looking wrong — only one of the two failures
          announces itself. Do NOT also preload all of observed/ for this: the map above
          is the way in, and a two-sentence task does not need the whole working history.
-  NO  -> the map is enough. Code, tests, file operations, data, mechanical sweeps. Open an
-         observed/ entry when one of its titles tells you it applies.
+  Genuinely hard to place? Load the `right-context` skill — that is where this judgment
+  lives in full.
 
 EITHER WAY THE REST STAYS OPEN TO YOU — that is what the map is for. You are not reading
 observed/ up front because it is several times the size of the identity layer and most of
@@ -358,7 +371,7 @@ something done, preferences.md. Reaching mid-task is expected, not exceptional. 
 catch yourself guessing at how they would phrase something, who someone is, or whether
 they have already decided this — stop guessing and read.
 
-UNSURE IS NOT A THIRD ANSWER — read declared/, for that same asymmetry. Over-reading
+UNSURE IS NOT A THIRD ANSWER — read MORE, not less, for that same asymmetry. Over-reading
 costs tokens once; under-reading costs the operator's voice and fails silently. If the
 call is genuinely hard, load the `right-context` skill — it carries the full ladder and
 measures what each rung costs in THIS vault (hooks/context-rungs.py).

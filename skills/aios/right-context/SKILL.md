@@ -19,8 +19,8 @@ python3 ~/aios/hooks/context-rungs.py          # or --json
 
 It prints the four rungs **for the vault in front of you**, in words and estimated tokens, and ends in a verdict. Run it before reasoning about cost. Two vaults give opposite correct answers:
 
-- A **fresh clone** — the whole context is a handful of thousand tokens, less than this page. The verdict says *read all of it*, and that is right. The ladder is not for you yet.
-- A **mature vault** — six figures of tokens, `observed/` several times `declared/`. The verdict says floor at rung 1 and climb deliberately.
+- A **small context** — a handful of thousand tokens, less than this page. Usually a new vault, but just as often a long-standing one belonging to someone who writes little. The verdict says *read all of it*, and that is right: the ladder is not for this vault.
+- A **large context** — six figures of tokens, `observed/` several times `declared/`. The verdict says floor at rung 1 and climb deliberately. **Judge the vault in front of you, never its age** — the tool reports size because size is the thing that decides.
 
 **Never hardcode a number you read out of this tool into a file.** That is the bug the tool exists to end: *"read everything"* was correct when it was written, silently stopped being correct as the vault grew, and nothing reported the change. A constant about a growing quantity works, then doesn't, and no one is told.
 
@@ -32,7 +32,12 @@ It prints the four rungs **for the vault in front of you**, in words and estimat
 
 **Rung 2 — rung 1 plus all of `declared/`, plus `INTENT.md`.** When your output will be read as the operator's own words, or will act on their behalf.
 
-**Rung 3 — everything.** Correct on a small vault. On a grown one it is the failure mode below, not the safe choice.
+**Rung 3 — everything, both folders read whole.** Two distinct cases, and only one of them is about size.
+
+- **The context is small.** Run the tool; if the verdict says read all of it, read all of it. Nothing is being saved by climbing carefully through a ladder whose top rung costs less than a short document.
+- **The task IS the context.** True at any vault size, including the largest. Synthesising across the operator's history, auditing or compacting the observed files, deriving a pattern that only appears across many of them, answering *as* them from everything they have said. An index cannot serve these — the corpus is the input, and entry titles are a lossy summary of exactly the thing being analysed.
+
+What rung 3 is *not* is a safe default on a large vault for ordinary work. That is the 38-call failure below: it is not caution, it is a way of not doing the task.
 
 ## Why rung 2 reads a whole folder when rung 1 only reads titles
 

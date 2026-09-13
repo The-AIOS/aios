@@ -841,7 +841,7 @@ python3 ~/aios/hooks/context-load-audit.py
 
 #### Bucket 31: Context ladder shape — has the vault outgrown its own rule? (NEW — REPORT-ONLY, never edits)
 
-**The gap this closes is the one that produced Bucket 30.** *"Read everything"* was **correct when it was written**: a fresh clone's entire operator context is a few thousand tokens — less than the paragraph telling a worker to skip it. It silently stopped being correct as vaults grew past six figures of tokens, and nothing ever reported the crossing. **A constant baked into a rule about a quantity that grows works, then doesn't, and nobody is told.** That is not a bug in the old rule; it is a bug in having written a volume down at all.
+**The gap this closes is the one that produced Bucket 30.** *"Read everything"* was **correct when it was written**: a small vault's entire operator context is a few thousand tokens — less than the paragraph telling a worker to skip it. It silently stopped being correct as vaults grew past six figures of tokens, and nothing ever reported the crossing. **A constant baked into a rule about a quantity that grows works, then doesn't, and nobody is told.** That is not a bug in the old rule; it is a bug in having written a volume down at all.
 
 **Run the shipped measurement — do not eyeball the folders:**
 

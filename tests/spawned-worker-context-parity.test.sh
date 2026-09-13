@@ -279,6 +279,46 @@ grep -qiE "not need 100k words|do NOT also preload all of observed" "$WR" \
   || no "nothing stops the yes-branch collapsing into read-everything" "that shape spent 38 calls and delivered nothing"
 
 echo
+echo " the ladder has a TOP -- rung 3 must be reachable, not just the floor"
+# The first version of this rule was a BINARY: yes -> declared/, no -> the map. It had no
+# instruction that could ever produce a full read, while context-rungs.py was telling small
+# vaults to "read ALL of it (rung 3)". The tool and the rule disagreed at the top of the
+# ladder -- the same drift as floor-vs-rung-1, caught one rung higher. So each copy must
+# state that reading everything is reachable, and WHEN, or a session on a small vault gets
+# advice from the tool that the rule cannot carry out.
+#
+# Match "context itself" and not the full sentence: it wraps mid-phrase in the .sh preamble
+# and mid-array-element in the .ps1, and a long-phrase grep scores zero on text containing it.
+for pair in "CLAUDE.md:$CM" "AGENTS.md:AGENTS.md" "the wrapper:$WR" "the .ps1:$PS1"; do
+  label="${pair%%:*}"; f="${pair#*:}"
+  if grep -qiE "every file in both folders" "$f"; then
+    ok "$label names the full read as a reachable maximum"
+  else
+    no "$label offers no path to a full read" \
+       "the tool tells small vaults to read everything; a rule that cannot say so contradicts it"
+  fi
+  if grep -qi "context itself" "$f"; then
+    ok "$label says WHEN a full read is right at any size"
+  else
+    no "$label makes the full read a function of size alone" \
+       "a task that synthesises across the whole corpus needs it on a large vault too"
+  fi
+done
+
+# The tool must carry the same top rung, or Bucket 31 advises something no rule supports.
+grep -q 'TASK IS THE CONTEXT ITSELF' hooks/context-rungs.py \
+  && ok "context-rungs.py names the rung-3 case for large vaults too" \
+  || no "the tool only offers rung 3 to small vaults" "then a synthesis task on a big vault has no sanctioned read"
+
+# And size, never age -- a long-standing light vault is small; a young heavy one is not.
+for pair in "CLAUDE.md:$CM" "the skill:skills/aios/right-context/SKILL.md"; do
+  label="${pair%%:*}"; f="${pair#*:}"
+  grep -qiE "size decides|size is the variable|never its age|not age" "$f" \
+    && ok "$label keys the decision on size, not vault age" \
+    || no "$label implies age decides" "age only correlates; a quiet five-year vault is small"
+done
+
+echo
 echo " the floor stays UNCONDITIONAL -- the skill may hold judgment, never the floor"
 # The measured failure was workers ignoring an unenforced rule (1 of 28 loaded nothing;
 # 6 loaded one or two files). A floor that lives in a skill you must remember to load

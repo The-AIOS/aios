@@ -3,9 +3,10 @@
 
 Why this ships as code rather than as numbers written into CLAUDE.md:
 
-    "Read everything" was CORRECT when it was written. A fresh clone's entire
+    "Read everything" was CORRECT when it was written. A small vault's entire
     context is a few thousand words -- cheaper than the paragraph telling you
-    to skip it. It silently stopped being correct as the vault grew past a
+    to skip it. (SIZE decides, not age: a long-standing vault whose owner
+    writes little stays small, and a three-month-old heavy one does not.) It silently stopped being correct as the vault grew past a
     hundred thousand words, because nothing ever measured. A constant baked
     into a rule about a quantity that GROWS works, then doesn't, and nobody
     is told.
@@ -83,7 +84,7 @@ def rungs(dec, obs):
         ("2", "+ declared/ read whole", idx + heads + dec_body,
          "when your output will be read as the words of the operator"),
         ("3", "+ observed/ read whole (everything)", idx + heads + dec_body + obs_body,
-         "rarely correct on a mature vault; correct on a small one"),
+         "right when the context is small, or when the TASK is the context itself"),
     ]
 
 
@@ -140,12 +141,16 @@ def main(argv):
     if full * TOK_PER_WORD < 25000:
         print("  VERDICT: this whole context is ~%d tokens. Read ALL of it (rung 3)."
               % int(full * TOK_PER_WORD))
-        print("           The ladder exists for vaults that have grown past this. Yours has not.")
+        print("           The ladder is for vaults larger than this one. Size decides, not age.")
     else:
-        print("  VERDICT: rung 3 is ~%d tokens -- too much to spend before the first question."
+        print("  VERDICT: rung 3 is ~%d tokens -- too much to spend BEFORE the first question."
               % int(full * TOK_PER_WORD))
         print("           Floor at rung 1. Climb to rung 2 when your output speaks as the operator.")
         print("           Open individual observed/ entries by title, on demand, at any time.")
+        print("           Rung 3 is still RIGHT here when the TASK IS THE CONTEXT ITSELF --")
+        print("           synthesising across their history, auditing or compacting the observed")
+        print("           files, deriving a pattern that only shows up across many of them, or")
+        print("           answering AS them. An index cannot serve those; the corpus is the input.")
     print("  (token figures are an estimate at %.1f tok/word; the RATIO between rungs is the signal)"
           % TOK_PER_WORD)
     return 0
