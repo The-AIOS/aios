@@ -327,12 +327,15 @@ _spawn_task_preamble() {
 
 FIRST ACTION, before you answer or plan anything — THE MAP, whatever the task is:
 list both folders, read both `_index.md` (one line per file), then read the `###` ENTRY
-TITLES of observed/antifragile.md, observed/preferences.md, observed/patterns.md
-and observed/growth.md
-(`grep '^### '`). A few hundred lines. This is your floor and your index at once: a title
-like "110. Empty and no-op inputs resolve to something REAL" tells you the lesson exists
-and when to open it. antifragile most of all — it is the file to scan for relevant rules
-before executing commands.
+HEADINGS of EVERY file in BOTH folders — glob them, never a list of filenames:
+  grep -h '^#'   "<vault>/00 - notes/context/declared/"*.md
+  grep -h '^###' "<vault>/00 - notes/context/observed/"*.md
+A few hundred lines. This is your floor and your index at once: a title like "110. Empty
+and no-op inputs resolve to something REAL" tells you the lesson exists and when to open
+it. antifragile most of all — it is the file to scan for relevant rules before executing
+commands. BOTH FOLDERS VARY FROM VAULT TO VAULT: the framework ships five declared files
+and nine observed ones and operators add their own, so a named list silently skips
+whatever it does not mention. The glob costs the same to type and cannot go stale.
 
 THEN one question about your own output — not about the files:
   Will what I produce be read as the operator's own words, or act on their behalf?

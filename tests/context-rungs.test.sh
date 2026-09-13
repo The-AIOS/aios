@@ -106,6 +106,41 @@ printf '%s' "$J" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit
   || no "ratio missing or wrong" "the ratio is what the prose files cite instead of a hardcoded volume"
 
 echo
+echo " arbitrary vault shape -- neither folder has a fixed file list"
+# The framework ships 5 declared and 9 observed files. Operators rename them, add
+# their own, and write them in their own language. A measurement (or a floor) that
+# works from canonical filenames returns ZERO on such a vault and reports it as a
+# healthy number. Measured on synthetic shapes: an enumerated four-file floor found
+# 0 of 6 entry titles in a vault with renamed files, while globbing found all 6.
+SH="$TMP/shape/vault/00 - notes/context"
+mkdir -p "$SH/declared" "$SH/observed"
+printf '# Index\n' > "$SH/declared/_index.md"; printf '# Index\n' > "$SH/observed/_index.md"
+printf '# Quien soy\n## Origen\nunas palabras aqui\n'        > "$SH/declared/quien-soy.md"
+printf '# Mi voz\n## Registro\nunas palabras aqui\n'         > "$SH/declared/mi-voz.md"
+printf '# Aprendizajes\n### Uno\n### Dos\ncuerpo\n'         > "$SH/observed/aprendizajes.md"
+printf '# Patrones\n### Tres\ncuerpo\n'                      > "$SH/observed/patrones.md"
+
+OUT="$(python3 "$H" "$TMP/shape" 2>&1)"; RC=$?
+if [ $RC -eq 0 ] && printf '%s' "$OUT" | grep -q "declared/"; then
+  ok "measures a vault whose files match no canonical name"
+else
+  no "a non-canonically-named vault was not measured (rc=$RC)" \
+     "operators rename these files and write them in their own language"
+fi
+
+SHJ="$(python3 "$H" --json "$TMP/shape")"
+python3 - "$SHJ" <<'PY'
+import json, sys
+d = json.loads(sys.argv[1])
+assert d["declared"]["files"] == 3, "declared files: %s" % d["declared"]["files"]
+assert d["observed"]["files"] == 3, "observed files: %s" % d["observed"]["files"]
+# Rung 1 must include the headings of files nothing enumerates.
+assert d["rungs"][1]["words"] > d["rungs"][0]["words"], "rung 1 added no headings"
+PY
+[ $? -eq 0 ] && ok "every file in both folders counts, whatever it is called" \
+             || no "some files were skipped" "a per-vault file list is the bug this whole change removes"
+
+echo
 echo " no consumer hardcodes a volume the tool is supposed to answer"
 
 # CLAUDE.md and the wrappers may name a MAGNITUDE ("six figures of tokens") -- that is a
