@@ -23,6 +23,20 @@ H="hooks/context-load-audit.py"
 [ -f "$H" ] || { printf '  FAIL  %s missing\n' "$H"; exit 1; }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 HOME_FAKE="$TMP/home"; mkdir -p "$HOME_FAKE/.claude/projects/proj"
+# A fixture VAULT, so the DERIVED filename list has a source. The detector no longer
+# ships a hand-written list (the first one named four files from a single operator's
+# vault -- a canonical leak that also matched nothing anywhere else), so bare-filename
+# reads after a `cd` can only be resolved from the vault in front of it.
+FAKE_VAULT="$TMP/vaultroot"
+mkdir -p "$FAKE_VAULT/vault/00 - notes/context/declared" \
+         "$FAKE_VAULT/vault/00 - notes/context/observed"
+for n in about_me personal_voice working_style; do
+  printf '# %s\n' "$n" > "$FAKE_VAULT/vault/00 - notes/context/declared/$n.md"
+done
+for n in antifragile patterns preferences growth; do
+  printf '# %s\n' "$n" > "$FAKE_VAULT/vault/00 - notes/context/observed/$n.md"
+done
+export AIOS_VAULT="$FAKE_VAULT"
 
 # Build a transcript: agent name + N tool_use events with the given commands.
 mk(){ # $1 name · $2 sid · $3.. commands
@@ -49,7 +63,7 @@ open(sys.argv[1],"a").write(json.dumps(rec)+"\n")
 PY
   done
 }
-run(){ HOME="$HOME_FAKE" python3 "$H" "$@" 2>&1; }
+run(){ HOME="$HOME_FAKE" AIOS_VAULT="$FAKE_VAULT" python3 "$H" "$@" 2>&1; }
 
 echo "── 1. REFUSAL: a cd-relative read must be COUNTED (the original bug) ──"
 mk worker-cd cd000001 \
@@ -104,6 +118,24 @@ printf '%s' "$OUT" | grep -q 'control — primary sessions: 1/1' \
   && ok "primary recognised as the control" || no "primary not detected" "$(printf '%s' "$OUT" | head -2)"
 printf '%s' "$OUT" | grep -q 'worker-zero' \
   && ok "the zero-context worker is named" || no "a worker at zero was not surfaced"
+
+echo "── 6. the detector knows what CORRECT looks like under the rule it audits ──"
+# A worker that runs the one-call floor has loaded the whole floor. Matching only file
+# PATHS scores that worker at zero -- reporting correct behaviour as the WORST possible
+# behaviour, so an after-vs-before comparison would show the new wiring as a regression.
+grep -q 'context-floor' "$H" \
+  && ok "the audit recognises the one-call floor command" \
+  || no "a worker running context-floor.py would score ZERO" \
+        "correct behaviour would be reported as the worst behaviour"
+if grep -qE 'thinker-collaborations|coding-practices|psychometric-profile' "$H"; then
+  no "the audit hardcodes personal context filenames" \
+     "a canonical leak, and a list that matches nothing in another vault"
+else
+  ok "no hardcoded or personal context filenames in the detector"
+fi
+grep -q '_context_names' "$H" \
+  && ok "context filenames are derived from the vault at runtime" \
+  || no "filenames are not derived" "both folders vary per vault; a fixed list goes stale silently"
 
 printf '\n%d passed · %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

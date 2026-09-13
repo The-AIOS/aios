@@ -35,6 +35,16 @@ Recency is not relevance, and this does not pretend otherwise: older entries sta
 indexed by title at the map, and opening one mid-task is expected. What this
 guarantees is that no session starts ignorant of what the system learned last.
 
+INTENT.md IS PART OF THE FLOOR
+-----------------------------
+It is a PERMISSION document, not an identity one: autonomy levels, decision
+boundaries, communication rules, what is parked. "Will my output be read as their
+words" is a question about VOICE and it correctly gates the identity layer. "Am I
+allowed to do this" is a different question, and it applies to every session
+whatever it produces -- most sharply to the mechanical worker that is least likely
+to have read anything and most likely to commit, push, send or delete. A floor that
+omits it hands the largest blast radius to the least-contextualised session.
+
 Every file in both folders is globbed. No filename is ever hardcoded -- operators
 rename these files, add their own, and write them in their own language.
 """
@@ -117,13 +127,26 @@ def main(argv):
         sys.stderr.write("context-floor: both folders exist but hold no .md files\n")
         return 2
 
-    payload = {"root": root, "recent_per_file": recent, "declared": [], "observed": []}
+    payload = {"root": root, "recent_per_file": recent, "declared": [], "observed": [],
+               "intent": None}
     buf = []
     w = buf.append
 
     w("=" * 72)
-    w("CONTEXT FLOOR  --  the map, plus what was learned most recently")
+    w("CONTEXT FLOOR  --  the map, what was learned most recently, and your limits")
     w("=" * 72)
+
+    # ---- INTENT.md: what you are allowed to DO, whatever you produce ---------
+    intent_path = os.path.join(root, "INTENT.md")
+    intent = read(intent_path)
+    w("")
+    w("--- INTENT.md : the trust contract (what you may do without asking) ---")
+    if intent is None:
+        w("  (absent -- no trust contract in this vault; assume nothing is pre-authorised)")
+    else:
+        payload["intent"] = "\n".join(intent)
+        w("")
+        w("\n".join(intent).rstrip())
 
     # ---- the map -----------------------------------------------------------
     for label, files in (("declared", dec), ("observed", obs)):

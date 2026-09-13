@@ -83,7 +83,7 @@ def measure(folder):
     return out
 
 
-def rungs(dec, obs):
+def rungs(dec, obs, root_for_intent):
     """The four rungs, in the order a session climbs them."""
     def s(d, key, only=None):
         if not d:
@@ -96,17 +96,27 @@ def rungs(dec, obs):
     # newest end, while every observed file is append-ordered and dated.
     recent = s(obs, "recent_words")
     dec_body = s(dec, "words") - s(dec, "words", {"_index.md"})
+    # INTENT.md is at the FLOOR, not with the identity layer: it governs what a session
+    # may DO, which is a separate question from whether its output speaks as the operator.
+    intent_p = os.path.join(root_for_intent, "INTENT.md")
+    intent = 0
+    if os.path.isfile(intent_p):
+        try:
+            with open(intent_p, encoding="utf-8", errors="replace") as fh:
+                intent = len(fh.read().split())
+        except OSError:
+            intent = 0
     obs_body = s(obs, "words") - s(obs, "words", {"_index.md"})
     return [
         ("0", "both _index.md only", idx,
          "orientation only -- you know the filenames, nothing else"),
-        ("1", "+ all headings + last %d entries per observed file" % RECENT_PER_FILE,
-         idx + heads + recent,
+        ("1", "+ all headings + last %d entries/observed file + INTENT.md" % RECENT_PER_FILE,
+         idx + heads + recent + intent,
          "THE FLOOR. Always. Exactly what hooks/context-floor.py emits."),
-        ("2", "+ declared/ read whole", idx + heads + recent + dec_body,
+        ("2", "+ declared/ read whole", idx + heads + recent + intent + dec_body,
          "when your output will be read as the words of the operator"),
         ("3", "+ all of observed/ read whole (everything)",
-         idx + heads + dec_body + obs_body,
+         idx + heads + intent + dec_body + obs_body,
          "right when the context is small, or when the TASK is the context itself"),
     ]
 
@@ -133,7 +143,7 @@ def main(argv):
         sys.stderr.write("context-rungs: both folders exist but hold no .md files -- nothing to measure\n")
         return 2
 
-    ladder = rungs(dec, obs)
+    ladder = rungs(dec, obs, root)
     dw = sum(v["words"] for v in dec.values())
     ow = sum(v["words"] for v in obs.values())
     full = ladder[-1][2]
@@ -153,6 +163,8 @@ def main(argv):
         return 0
 
     print("Context ladder for %s" % base)
+    print("  EACH RUNG INCLUDES EVERY RUNG BELOW IT -- rung 2 is the whole floor plus")
+    print("  declared/, never declared/ instead of it. The figures are cumulative totals.")
     print("  declared/  %6d words in %2d files" % (dw, len(dec)))
     print("  observed/  %6d words in %2d files%s" % (
         ow, len(obs), "   (%.1fx declared/)" % (ow / dw) if dw else ""))

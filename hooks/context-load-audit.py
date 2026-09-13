@@ -46,17 +46,43 @@ if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
-CONTEXT_FILES = [
-    "about_me", "personal_voice", "working_style", "about_business",
-    "psychometric-profile", "role-expectations", "coding_style",
-    "coding-practices", "thinker-collaborations",
-    "antifragile", "patterns", "preferences", "growth", "profile",
-    "ecosystem", "business", "session-insights", "vault-routine",
-]
-PATH_RE = re.compile(r"context/(?:declared|observed)/([a-z_\-]+)\.md")
-NAME_RE = re.compile(r"\b(" + "|".join(map(re.escape, CONTEXT_FILES)) + r")(?:\.md)?\b")
+# DERIVED, never hardcoded. The first version of this list named nine files by hand --
+# and four of them were personal files from a single vault, which is both a canonical leak
+# and a list that matches nothing in another operator's vault. Both folders vary: operators
+# rename these, add their own, and write them in their own language.
+def _context_names(root):
+    """Filenames actually present in this vault's context folders."""
+    names = set()
+    base = os.path.join(root, "vault", "00 - notes", "context")
+    for sub in ("declared", "observed"):
+        d = os.path.join(base, sub)
+        if not os.path.isdir(d):
+            continue
+        for fn in os.listdir(d):
+            if fn.endswith(".md") and fn != "_index.md":
+                names.add(fn[:-3])
+    return names
+
+
+VAULT_ROOT = os.environ.get("AIOS_VAULT", os.path.expanduser("~/aios"))
+CONTEXT_FILES = sorted(_context_names(VAULT_ROOT))
+
+PATH_RE = re.compile(r"context/(?:declared|observed)/([A-Za-z0-9_\-]+)\.md")
+# Bare filenames only count after a cd into the context tree; without a derived list we
+# cannot resolve them, so NAME_RE is disabled rather than guessing (an empty alternation
+# would match everywhere).
+NAME_RE = (re.compile(r"\b(" + "|".join(map(re.escape, CONTEXT_FILES)) + r")(?:\.md)?\b")
+           if CONTEXT_FILES else None)
 CD_INTO_CONTEXT = re.compile(r"cd\s+[\"']?[^\"'&|;]*context/(declared|observed)")
 CTX_MENTION = re.compile(r"context/(?:declared|observed)|notes/context")
+
+# THE FLOOR COMMAND. A worker that runs this has loaded the entire floor in one call --
+# the map, the recent entries of every observed file, and INTENT.md. Matching only file
+# paths would score that worker at ZERO, i.e. report the correct behaviour as the worst
+# possible behaviour. Same failure as the cd-relative miss, one layer up: the detector
+# must know what correct looks like under the rule it is auditing.
+FLOOR_CMD = re.compile(r"context-floor\.py")
+
 TITLES_ONLY = re.compile(r"grep\s+[^|]*'?\^#{2,3}\s|head\s+-\d+|--?l\b")
 PRIMARY_HINT = re.compile(r"^(buddai|sarah|aios-|update$|vault-sync)", re.I)
 
@@ -92,16 +118,20 @@ def tool_inputs(path, cap):
 
 def audit(path, cap):
     read_full, read_titles, tools = set(), set(), 0
+    floor = False
     for _name, inp in tool_inputs(path, cap):
         tools += 1
+        if FLOOR_CMD.search(inp):
+            floor = True          # one call = the whole floor
+            continue
         hits = {m.group(1) for m in PATH_RE.finditer(inp)}
         # CD-RESOLUTION: after a cd into the context tree, bare filenames are context files.
-        if CD_INTO_CONTEXT.search(inp) or CTX_MENTION.search(inp):
+        if NAME_RE and (CD_INTO_CONTEXT.search(inp) or CTX_MENTION.search(inp)):
             hits |= {m.group(1) for m in NAME_RE.finditer(inp)}
         if not hits:
             continue
         (read_titles if TITLES_ONLY.search(inp) else read_full).update(hits)
-    return tools, read_full, read_titles - read_full
+    return tools, read_full, read_titles - read_full, floor
 
 
 def agent_name(path):
@@ -133,13 +163,16 @@ def main():
         name = agent_name(f)
         if not name:
             continue
-        tools, full, titles = audit(f, a.cap)
+        tools, full, titles, floor = audit(f, a.cap)
         if tools < a.min_tools and not a.session:
             continue
         rows.append({
             "name": name, "primary": bool(PRIMARY_HINT.match(name)),
             "tools": tools, "full": sorted(full), "titles_only": sorted(titles),
-            "total": len(full) + len(titles),
+            "floor_cmd": floor,
+            # A single context-floor.py call IS the whole floor. Counting only files
+            # would score the worker that did exactly the right thing at zero.
+            "total": len(full) + len(titles) + (1 if floor else 0),
         })
 
     if a.json:
@@ -157,6 +190,11 @@ def main():
     # from the detector seeing nothing. Reporting a zero without a control is the
     # failure this whole hook exists to avoid, one level up.
     scored = sum(1 for r in primaries if r["total"] > 0)
+    if not CONTEXT_FILES:
+        print("note: no context folders found under %s -- bare-filename reads after a cd"
+              % VAULT_ROOT)
+        print("      cannot be resolved, so counts below are a LOWER BOUND, not a total.")
+        print("      Set AIOS_VAULT to the vault root to resolve them.")
     if not primaries:
         print("ABORT: no primary session found, so the detector has no control.")
         print("       A worker reading nothing and a detector seeing nothing are the same")

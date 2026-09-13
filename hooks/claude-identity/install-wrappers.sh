@@ -331,8 +331,11 @@ THE FLOOR, in one command:
 
   python3 ~/aios/hooks/context-floor.py
 
-It emits both _index.md, EVERY HEADING in both folders, and THE LAST 5 ### ENTRIES OF
-EVERY observed/ FILE IN FULL. Absent the hook, glob it by hand — grep -h '^#' on
+It emits both _index.md, EVERY HEADING in both folders, THE LAST 5 ### ENTRIES OF EVERY
+observed/ FILE IN FULL, and INTENT.md -- which is at the floor because it governs what
+you may DO, a different question from whether your output sounds like them, and the one
+that binds a mechanical worker hardest (least contextualised, most able to commit, push,
+send or delete). Absent the hook, glob it by hand — grep -h '^#' on
 declared/*.md, grep -h '^###' on observed/*.md, then the tail of each observed file —
 but prefer the hook: a floor assembled by hand gets done partially or skipped, and
 afterwards nothing can tell the difference.
@@ -355,8 +358,9 @@ language, so a named list silently skips whatever it does not mention. Measured,
 naming four observed files found ZERO entry titles on a vault whose files were renamed —
 and a floor at zero is indistinguishable from one that fired.
 
-THEN judge the read against the task. This is a RANGE, not a switch — you hold the map
-now, so you know what exists. Both bounds are reachable:
+THEN judge the read against the task. This is a RANGE, not a switch, and EACH RUNG
+INCLUDES THE ONE BELOW IT -- climbing adds to the floor, it never replaces it. Both
+bounds are reachable:
 
   MIN -> the map is enough. Code, tests, file operations, data, mechanical sweeps — work
          whose correctness is checkable without knowing the operator. Open an observed/
@@ -371,7 +375,7 @@ now, so you know what exists. Both bounds are reachable:
   The question that settles most of what lies between:
   Will what I produce be read as the operator's own words, or act on their behalf?
 
-  YES -> also read ALL of context/declared/, plus INTENT.md at the repo root. It is the
+  YES -> also read ALL of context/declared/ (INTENT.md you already have). It is the
          SMALL folder, and voice is the one thing whose absence you cannot detect in your
          own output. Under-read observed/ and the gap shows as work visibly missing
          something. Under-read declared/ and the work comes back fluent, correct, and
