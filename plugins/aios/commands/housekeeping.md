@@ -834,6 +834,8 @@ python3 ~/aios/hooks/context-load-audit.py
 
 **It aborts rather than reassures.** Primary sessions are the control — they run the full ritual, so they must score. If none does, the detector prints `ABORT: the detector is broken, not the workers` and reports nothing else. A scan that cannot see a primary's reads cannot be trusted about a worker's.
 
+**It also reports FIT, which is the measure that matters.** Volume is a proxy; the question worth asking is whether what a session read *fits what it was asked to do*. *"Was the answer good"* is subjective and not auditable. *"Did a worker that published in the operator's name ever read the file that says how the operator writes"* is a fact on the transcript — and it is the failure that does **not** announce itself, because the output reads fluent and correct either way. The audit names any worker that took an outward-facing action (wrote to `03 - export/`, sent mail or a message, created a doc or deck) having read **no** `declared/` file. Not automatically wrong — judge each — but that is the shape of work that comes back *not theirs* with nothing in it looking off.
+
 **Propose:** nothing automatic. Report the names and counts; the operator decides whether a given worker's task genuinely needed no context. The value is that the number exists and can be watched — a floor that stops firing shows up here before it shows up as work that quietly stopped sounding like them.
 
 **Why this bucket exists.** Context loading was narrowed from "read everything" to a floor plus a sized read, on the evidence that "read everything" was not happening. A narrowing justified by a measurement has to keep being measured, or the justification expires silently.

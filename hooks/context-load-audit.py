@@ -67,9 +67,17 @@ def _context_names(root):
 # SELF-LOCATE. The framework must not hardcode its install path -- an operator who
 # cloned elsewhere, or a CI checkout, has no ~/aios. This file lives in hooks/, so the
 # repo root is two levels up; AIOS_VAULT overrides for tests and odd layouts.
+def _declared_names(root):
+    d = os.path.join(root, "vault", "00 - notes", "context", "declared")
+    if not os.path.isdir(d):
+        return set()
+    return {f[:-3] for f in os.listdir(d) if f.endswith(".md") and f != "_index.md"}
+
+
 VAULT_ROOT = os.environ.get(
     "AIOS_VAULT", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CONTEXT_FILES = sorted(_context_names(VAULT_ROOT))
+DECLARED_NAMES = _declared_names(VAULT_ROOT)
 
 PATH_RE = re.compile(r"context/(?:declared|observed)/([A-Za-z0-9_\-]+)\.md")
 # Bare filenames only count after a cd into the context tree; without a derived list we
@@ -86,6 +94,17 @@ CTX_MENTION = re.compile(r"context/(?:declared|observed)|notes/context")
 # possible behaviour. Same failure as the cd-relative miss, one layer up: the detector
 # must know what correct looks like under the rule it is auditing.
 FLOOR_CMD = re.compile(r"context-floor\.py")
+
+# OUTWARD-FACING ACTION: the worker produced something that will be read as the operator's
+# words or acts on their behalf. This is what makes FIT measurable instead of subjective.
+# "Was the answer good" is a judgment call; "did a worker that published in the operator's
+# name ever read the file that says how the operator writes" is a fact on the transcript --
+# and it is precisely the failure that does not announce itself, since the output reads
+# fluent and correct either way.
+OUTWARD = re.compile(
+    r"03 - export/|send_gmail_message|draft_gmail_message|slack_send_message|"
+    r"create_presentation|create_doc\b|forum_send_message|gh pr comment|gh issue comment",
+    re.I)
 
 TITLES_ONLY = re.compile(r"grep\s+[^|]*'?\^#{2,3}\s|head\s+-\d+|--?l\b")
 PRIMARY_HINT = re.compile(r"^(buddai|sarah|aios-|update$|vault-sync)", re.I)
@@ -123,8 +142,14 @@ def tool_inputs(path, cap):
 def audit(path, cap):
     read_full, read_titles, tools = set(), set(), 0
     floor = False
+    outward = False
+    ventures = set()
     for _name, inp in tool_inputs(path, cap):
         tools += 1
+        if OUTWARD.search(inp):
+            outward = True
+        for m in re.finditer(r"context/ventures/([A-Za-z0-9_\-]+)", inp):
+            ventures.add(m.group(1))
         if FLOOR_CMD.search(inp):
             floor = True          # one call = the whole floor
             continue
@@ -135,7 +160,7 @@ def audit(path, cap):
         if not hits:
             continue
         (read_titles if TITLES_ONLY.search(inp) else read_full).update(hits)
-    return tools, read_full, read_titles - read_full, floor
+    return tools, read_full, read_titles - read_full, floor, outward, sorted(ventures)
 
 
 def agent_name(path):
@@ -167,13 +192,15 @@ def main():
         name = agent_name(f)
         if not name:
             continue
-        tools, full, titles, floor = audit(f, a.cap)
+        tools, full, titles, floor, outward, vents = audit(f, a.cap)
         if tools < a.min_tools and not a.session:
             continue
         rows.append({
             "name": name, "primary": bool(PRIMARY_HINT.match(name)),
             "tools": tools, "full": sorted(full), "titles_only": sorted(titles),
-            "floor_cmd": floor,
+            "floor_cmd": floor, "outward": outward, "ventures": vents,
+            # Declared reads are what makes an outward-facing deliverable sound like them.
+            "declared": sorted(x for x in (full | titles) if x in DECLARED_NAMES),
             # A single context-floor.py call IS the whole floor. Counting only files
             # would score the worker that did exactly the right thing at zero.
             "total": len(full) + len(titles) + (1 if floor else 0),
@@ -229,6 +256,24 @@ def main():
             print(f"  {r['name'][:32]:32s} {r['tools']:4d} tool calls")
         print("\n  These are the ones to look at. Report only — decide per worker whether the")
         print("  task genuinely needed no operator context.")
+
+    # FIT, not volume. "Was the answer good" is a judgment call. "Did a worker that
+    # published in the operator's name ever read the file that says how they write" is a
+    # fact on the transcript -- and it is the failure that does NOT announce itself,
+    # because the output reads fluent and correct either way. This is the one place the
+    # audit reports on JUDGEMENT rather than quantity.
+    miss = [r for r in workers if r.get("outward") and not r.get("declared")]
+    out_n = sum(1 for r in workers if r.get("outward"))
+    print("\nfit — workers whose output went outward: %d of %d" % (out_n, len(workers)))
+    if miss:
+        print("  %d produced operator-facing work having read NO declared/ file:" % len(miss))
+        for r in sorted(miss, key=lambda r: -r["tools"]):
+            print("    %-30s %3d tool calls" % (r["name"][:30], r["tools"]))
+        print("  Not automatically wrong -- judge each. But this is the shape of work that")
+        print("  comes back fluent, correct, and not theirs, with nothing in it looking off.")
+    else:
+        print("  every outward-facing worker read at least one declared/ file.")
+
     return 0
 
 

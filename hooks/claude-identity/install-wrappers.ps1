@@ -351,6 +351,13 @@ function spawn {
     $taskPreamble = (@(
       '# Before the task -- three corpora, each read differently',
       '',
+      'CONTEXT LOADING IS HOW A SESSION DEMONSTRATES REINFORCED LEARNING. It is the only',
+      'moment where everything this operator and Claude have built together reaches you,',
+      'or does not. Every close-session and close-day writes into observed/; a session',
+      'that starts without reading any of it is one where none of that compounding',
+      'arrives -- and NOTHING ABOUT ITS OUTPUT WILL SAY SO. The measure is not how much',
+      'you read. It is whether what you read FITS what you were asked to do.',
+      '',
       '  vault/00 - notes/context/declared/   WHO THEY ARE -- voice, identity, how they decide,',
       '                                       RESTATED in place. The SMALL one.',
       '  vault/00 - notes/context/observed/   HOW YOU TWO WORK -- preferences, patterns, lessons.',

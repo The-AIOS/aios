@@ -137,5 +137,27 @@ grep -q '_context_names' "$H" \
   && ok "context filenames are derived from the vault at runtime" \
   || no "filenames are not derived" "both folders vary per vault; a fixed list goes stale silently"
 
+echo "── 7. FIT is measured, not just volume ──"
+# "Was the answer good" is subjective. "Did a worker that published in the operator's name
+# ever read the file that says how they write" is a fact on the transcript -- and it is the
+# failure that does NOT announce itself, since the output reads fluent either way. That
+# makes reinforced learning checkable rather than a matter of taste.
+grep -q 'OUTWARD' "$H" \
+  && ok "the audit detects outward-facing actions" \
+  || no "no notion of outward-facing work" "then fit cannot be measured, only volume"
+grep -q 'DECLARED_NAMES' "$H" \
+  && ok "it tracks which declared/ files a worker read" \
+  || no "declared reads are not separated" "the voice-without-voice-context case is invisible"
+if grep -qE 'outward.*declared|declared.*outward' "$H"; then
+  ok "it cross-references the two into a fit finding"
+else
+  no "outward actions and declared reads are never compared" \
+     "each alone is a count; the FINDING is the pair"
+fi
+# And the declared list must be derived, like everything else here.
+grep -q '_declared_names' "$H" \
+  && ok "declared filenames are derived from the vault" \
+  || no "declared names are hardcoded" "that list is empty on any vault that renamed them"
+
 printf '\n%d passed · %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
