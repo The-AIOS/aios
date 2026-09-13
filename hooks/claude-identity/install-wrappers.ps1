@@ -349,12 +349,17 @@ function spawn {
     # line-initial terminator, turning everything after into live code. Caught by the
     # "produces a profile that PARSES" job, which is exactly what that job is for.
     $taskPreamble = (@(
-      '# Before the task -- two folders, read differently',
+      '# Before the task -- three corpora, each read differently',
       '',
       '  vault/00 - notes/context/declared/   WHO THEY ARE -- voice, identity, how they decide,',
-      '                                       their ventures. The SMALL folder.',
-      '  vault/00 - notes/context/observed/   HOW YOU TWO WORK -- preferences, patterns, growth,',
-      '                                       lessons. Three-hash entries. SEVERAL TIMES LARGER.',
+      '                                       RESTATED in place. The SMALL one.',
+      '  vault/00 - notes/context/observed/   HOW YOU TWO WORK -- preferences, patterns, lessons.',
+      '                                       ACCUMULATES: dated, append-ordered entries.',
+      '  vault/00 - notes/context/ventures/   THE VENTURES -- GTM, market, personas, pricing.',
+      '                                       PARTITIONED: often the largest of the three.',
+      '                                       Listed at the floor; open the ONE your task',
+      '                                       touches. about_business.md is a ~1:100 summary',
+      '                                       of it and does NOT substitute.',
       '',
       'FIRST ACTION, before you answer or plan anything -- THE MAP, whatever the task is: list',
       'THE FLOOR, in one command:',

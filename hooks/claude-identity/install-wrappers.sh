@@ -318,12 +318,19 @@ _spawn_task_preamble() {
   # Printed at the top of every spawn task file. Generic on purpose: the paths are the
   # framework's and the rule is the framework's — nothing here names an operator.
   cat <<'PREAMBLE'
-# Before the task — two folders, read differently
+# Before the task — three corpora, each read differently
 
-  vault/00 - notes/context/declared/   WHO THEY ARE — voice, identity, how they decide,
-                                       their ventures. The SMALL folder.
-  vault/00 - notes/context/observed/   HOW YOU TWO WORK — preferences, patterns, growth,
-                                       lessons. ### entries. SEVERAL TIMES LARGER.
+  vault/00 - notes/context/declared/   WHO THEY ARE — voice, identity, how they decide.
+                                       RESTATED in place. The SMALL one. Read WHOLE when
+                                       your output speaks as them.
+  vault/00 - notes/context/observed/   HOW YOU TWO WORK — preferences, patterns, lessons.
+                                       ACCUMULATES: dated, append-ordered ### entries.
+                                       Indexed by title; newest entries read at the floor.
+  vault/00 - notes/context/ventures/   THE VENTURES — GTM, market, personas, positioning,
+                                       pricing. PARTITIONED: often the largest of the
+                                       three. Listed at the floor; open the ONE your task
+                                       touches. about_business.md is a ~1:100 summary of
+                                       it and does NOT substitute.
 
 FIRST ACTION, before you answer or plan anything — THE MAP, whatever the task is:
 list both folders, read both `_index.md` (one line per file), then read the `###` ENTRY
