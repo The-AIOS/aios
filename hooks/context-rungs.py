@@ -83,7 +83,7 @@ def measure(folder):
     return out
 
 
-def rungs(dec, obs, root_for_intent):
+def rungs(dec, obs, root_for_intent, ventures):
     """The four rungs, in the order a session climbs them."""
     def s(d, key, only=None):
         if not d:
@@ -115,8 +115,8 @@ def rungs(dec, obs, root_for_intent):
          "THE FLOOR. Always. Exactly what hooks/context-floor.py emits."),
         ("2", "+ declared/ read whole", idx + heads + recent + intent + dec_body,
          "when your output will be read as the words of the operator"),
-        ("3", "+ all of observed/ read whole (everything)",
-         idx + heads + intent + dec_body + obs_body,
+        ("3", "+ all of observed/ + every venture (EVERYTHING)",
+         idx + heads + intent + dec_body + obs_body + sum(v[1] for v in ventures),
          "right when the context is small, or when the TASK is the context itself"),
     ]
 
@@ -127,6 +127,16 @@ def main(argv):
     root = args[0] if args else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     base = os.path.join(root, "vault", "00 - notes", "context")
     dec, obs = measure(os.path.join(base, "declared")), measure(os.path.join(base, "observed"))
+    # ventures/ is PARTITIONED, not global: mapped at the floor, one venture opened on
+    # demand. Priced separately because folding it into rung 3 silently understated the
+    # true "everything" figure by a third of the vault on a live install.
+    vdir = os.path.join(base, "ventures")
+    ventures = []
+    if os.path.isdir(vdir):
+        for v in sorted(d for d in os.listdir(vdir) if os.path.isdir(os.path.join(vdir, d))):
+            vm = measure(os.path.join(vdir, v)) or {}
+            ventures.append((v, sum(x["words"] for x in vm.values()),
+                             sum(x["heading_words"] for x in vm.values())))
 
     # REFUSE rather than report a total built from one folder. A missing folder does not
     # make the vault small -- it makes the measurement wrong, and a wrong SMALL number is
@@ -143,13 +153,15 @@ def main(argv):
         sys.stderr.write("context-rungs: both folders exist but hold no .md files -- nothing to measure\n")
         return 2
 
-    ladder = rungs(dec, obs, root)
+    ladder = rungs(dec, obs, root, ventures)
     dw = sum(v["words"] for v in dec.values())
     ow = sum(v["words"] for v in obs.values())
     full = ladder[-1][2]
 
     if as_json:
         print(json.dumps({
+            "ventures": [{"venture": v, "words": w_, "heading_words": h}
+                         for v, w_, h in ventures],
             "root": root,
             "tokens_per_word": TOK_PER_WORD,
             "declared": {"files": len(dec), "words": dw, "detail": dec},
@@ -168,6 +180,13 @@ def main(argv):
     print("  declared/  %6d words in %2d files" % (dw, len(dec)))
     print("  observed/  %6d words in %2d files%s" % (
         ow, len(obs), "   (%.1fx declared/)" % (ow / dw) if dw else ""))
+    if ventures:
+        vw = sum(v[1] for v in ventures)
+        print("  ventures/  %6d words in %2d ventures  (mapped at the floor, ONE opened on demand)"
+              % (vw, len(ventures)))
+        for v, w_, h in ventures:
+            print("      %-18s %6d words   ~%5d tok to read this one venture"
+                  % (v, w_, int(w_ * TOK_PER_WORD)))
     print()
     for r, what, n, note in ladder:
         print("  rung %s  %-36s %7d words  ~%6d tok   %s"

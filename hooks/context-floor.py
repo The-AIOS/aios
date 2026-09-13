@@ -35,6 +35,22 @@ Recency is not relevance, and this does not pretend otherwise: older entries sta
 indexed by title at the map, and opening one mid-task is expected. What this
 guarantees is that no session starts ignorant of what the system learned last.
 
+VENTURES ARE MAPPED, NOT READ
+-----------------------------
+context/ventures/ is a THIRD access pattern and it needs its own, because it is
+PARTITIONED where the other two are global. Any observed entry might apply to any
+task, so observed/ is indexed entry-by-entry. But venture context is scoped to one
+venture, and which venture a task touches is usually obvious from the task -- so
+the floor lists the ventures and reads their _index, and the worker opens the one
+that applies. Measured on a live vault that folder is 108,646 words, LARGER than
+observed/ and six times declared/; reading its headings alone costs ~7.8k tokens
+and reading it whole costs ~141k, so neither belongs at a floor every session pays.
+
+about_business.md does NOT substitute for it. On that same vault it is 1,086 words
+summarising 108,646 -- a 1:100 pointer, and CLAUDE.md says so itself: "the detailed
+context lives in each venture's about_venture.md". A worker that reads the summary
+and believes it has venture context has the index mistaken for the territory.
+
 INTENT.md IS PART OF THE FLOOR
 -----------------------------
 It is a PERMISSION document, not an identity one: autonomy levels, decision
@@ -128,7 +144,7 @@ def main(argv):
         return 2
 
     payload = {"root": root, "recent_per_file": recent, "declared": [], "observed": [],
-               "intent": None}
+               "intent": None, "ventures": []}
     buf = []
     w = buf.append
 
@@ -159,6 +175,36 @@ def main(argv):
             w("  %s" % fn)
             for h in heads:
                 w("    %s" % h)
+
+    # ---- ventures: listed and indexed, never read whole at the floor -------
+    vdir = os.path.join(base, "ventures")
+    w("")
+    w("--- ventures/ : scoped context, OPEN THE ONE YOUR TASK TOUCHES ---")
+    if not os.path.isdir(vdir):
+        w("  (no ventures/ folder in this vault)")
+    else:
+        vents = sorted(d for d in os.listdir(vdir)
+                       if os.path.isdir(os.path.join(vdir, d)))
+        vidx = read(os.path.join(vdir, "_index.md"))
+        if vidx:
+            w("")
+            w("\n".join(vidx).rstrip())
+        for v in vents:
+            files = sorted(f for f in os.listdir(os.path.join(vdir, v))
+                           if f.endswith(".md"))
+            words = 0
+            for f in files:
+                ls = read(os.path.join(vdir, v, f))
+                if ls:
+                    words += sum(len(l.split()) for l in ls)
+            payload["ventures"].append({"venture": v, "files": files, "words": words})
+            w("")
+            w("  %s/  (%d files, ~%d words -- read this folder when the task is about it)"
+              % (v, len(files), words))
+            for f in files:
+                w("    %s" % f)
+        if not vents:
+            w("  (ventures/ exists but holds no venture folders)")
 
     # ---- the recency slice, observed only ----------------------------------
     # declared/ is restated rather than appended, so it has no newest end to read.

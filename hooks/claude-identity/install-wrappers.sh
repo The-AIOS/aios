@@ -365,7 +365,7 @@ bounds are reachable:
   MIN -> the map is enough. Code, tests, file operations, data, mechanical sweeps — work
          whose correctness is checkable without knowing the operator. Open an observed/
          entry the moment one of its titles tells you it applies.
-  MAX -> every file in BOTH folders, read whole. Not a failure state. Right when either
+  MAX -> every file in declared/, observed/ AND every venture, read whole. Not a failure state. Right when either
          (i) the whole context is cheap — run `python3 ~/aios/hooks/context-rungs.py`, and
          if its verdict says read all of it, read all of it; or (ii) THE TASK IS THE
          CONTEXT ITSELF: synthesising across their history, auditing or compacting the
@@ -382,6 +382,13 @@ bounds are reachable:
          not theirs, with nothing in it looking wrong — only one of the two failures
          announces itself. Do NOT also preload all of observed/ for this: the map above
          is the way in, and a two-sentence task does not need the whole working history.
+  DOES THE TASK TOUCH A VENTURE? Read that venture's folder from context/ventures/.
+  That folder is PARTITIONED where the other two are global, so the floor lists the
+  ventures and you open the one that applies. about_business.md does NOT substitute --
+  measured, it is ~1,000 words summarising over 100,000, and the detail lives in each
+  venture's own files. Reading the summary and believing you have venture context is
+  mistaking the index for the territory.
+
   Genuinely hard to place? Load the `right-context` skill — that is where this judgment
   lives in full.
 

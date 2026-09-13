@@ -88,6 +88,27 @@ else
 fi
 
 echo
+echo " ventures are LISTED, never read whole, at the floor"
+# Partitioned rather than global: the floor says which ventures exist and what each
+# holds; the worker opens the one its task touches. Reading them all at the floor would
+# more than double it (108,646 words on a live vault).
+VD="$TMP/v/vault/00 - notes/context/ventures"
+mkdir -p "$VD/acme" "$VD/globex"
+printf '# Ventures\n' > "$VD/_index.md"
+printf '# Acme\n' > "$VD/acme/about_venture.md"
+for i in $(seq 1 300); do printf 'secretword '; done >> "$VD/acme/pricing.md"
+printf '# Globex\n' > "$VD/globex/about_venture.md"
+FV="$(python3 "$H" "$TMP/v")"
+printf '%s' "$FV" | grep -q 'acme' && printf '%s' "$FV" | grep -q 'globex' \
+  && ok "every venture is listed at the floor" \
+  || no "a venture was not listed" "a worker cannot open what it does not know exists"
+printf '%s' "$FV" | grep -q 'pricing.md' \
+  && ok "each venture's files are named" || no "venture files not listed" "the listing is the index into the folder"
+printf '%s' "$FV" | grep -q 'secretword' \
+  && no "a venture's BODY was read at the floor" "that more than doubles the floor on a real vault" \
+  || ok "venture bodies are NOT read at the floor"
+
+echo
 echo " arbitrary vault shape"
 printf '%s' "$F" | grep -q 'aprendizajes.md' \
   && ok "globs files matching no canonical name" \

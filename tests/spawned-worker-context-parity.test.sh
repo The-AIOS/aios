@@ -299,6 +299,31 @@ grep -qiE "not need 100k words|do NOT also preload all of observed" "$WR" \
   || no "nothing stops the yes-branch collapsing into read-everything" "that shape spent 38 calls and delivered nothing"
 
 echo
+echo " ventures/ is a THIRD access pattern and must not be forgotten"
+# It was. The rule covered declared/ and observed/ and said nothing about
+# context/ventures/ -- which on a live vault is 108,646 words, LARGER than observed/
+# and six times declared/. Canonical ships it empty, which is exactly why it stayed
+# invisible: the folder that is missing on the machine you develop on is the folder
+# you forget. about_business.md is a ~1:100 summary and does not substitute for it.
+for pair in "CLAUDE.md:$CM" "AGENTS.md:AGENTS.md" "the wrapper:$WR" "the .ps1:$PS1"; do
+  label="${pair%%:*}"; f="${pair#*:}"
+  grep -qi 'ventures' "$f" \
+    && ok "$label accounts for context/ventures/" \
+    || no "$label never mentions ventures/" \
+          "on a mature vault that is a third of the context, silently unread"
+  grep -qi 'about_business' "$f" \
+    && ok "$label says the business summary does not substitute" \
+    || no "$label leaves about_business.md looking like venture context" \
+          "it is a ~1:100 pointer -- mistaking the index for the territory"
+done
+grep -q 'ventures' hooks/context-floor.py \
+  && ok "the floor tool lists the ventures" \
+  || no "the floor omits ventures/" "a map that omits a third of the vault is not a map"
+grep -q 'ventures' hooks/context-rungs.py \
+  && ok "the rungs tool prices ventures into rung 3" \
+  || no "rung 3 excludes ventures/" "then 'everything' understates the true total by a third"
+
+echo
 echo " the floor carries LEARNED CONTENT, in all four copies"
 # A floor of headings alone leaves a session knowing what EXISTS and nothing the system
 # has LEARNED -- so every close-day append changes no later behaviour and the compounding
@@ -334,11 +359,14 @@ echo " the ladder has a TOP -- rung 3 must be reachable, not just the floor"
 # and mid-array-element in the .ps1, and a long-phrase grep scores zero on text containing it.
 for pair in "CLAUDE.md:$CM" "AGENTS.md:AGENTS.md" "the wrapper:$WR" "the .ps1:$PS1"; do
   label="${pair%%:*}"; f="${pair#*:}"
-  if grep -qiE "every file in both folders" "$f"; then
-    ok "$label names the full read as a reachable maximum"
+  # The maximum must name ALL THREE corpora. The first version of this check said "both
+  # folders" -- which passed while ventures/ was entirely absent from the rule, i.e. the
+  # assertion encoded the same blind spot the rule had.
+  if grep -qi "every file in" "$f" && grep -qi "venture" "$f"; then
+    ok "$label names the full read as a reachable maximum, ventures included"
   else
-    no "$label offers no path to a full read" \
-       "the tool tells small vaults to read everything; a rule that cannot say so contradicts it"
+    no "$label offers no complete path to a full read" \
+       "the tool tells small vaults to read everything, and 'everything' includes ventures/"
   fi
   if grep -qi "context itself" "$f"; then
     ok "$label says WHEN a full read is right at any size"
