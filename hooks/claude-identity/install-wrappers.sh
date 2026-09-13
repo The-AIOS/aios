@@ -365,36 +365,44 @@ language, so a named list silently skips whatever it does not mention. Measured,
 naming four observed files found ZERO entry titles on a vault whose files were renamed —
 and a floor at zero is indistinguishable from one that fired.
 
-THEN judge the read against the task. This is a RANGE, not a switch, and EACH RUNG
-INCLUDES THE ONE BELOW IT -- climbing adds to the floor, it never replaces it. Both
-bounds are reachable:
+ABOVE THE FLOOR THERE ARE NO TIERS — ONLY FIT. Intelligence is the right information at
+the right time, not the largest pile you can afford. Nothing to qualify for, no level to
+reach: open what the work points at, to the depth it needs, when it points there.
 
-  MIN -> the map is enough. Code, tests, file operations, data, mechanical sweeps — work
-         whose correctness is checkable without knowing the operator. Open an observed/
-         entry the moment one of its titles tells you it applies.
-  MAX -> every file in declared/, observed/ AND every venture, read whole. Not a failure state. Right when either
-         (i) the whole context is cheap — run `python3 ~/aios/hooks/context-rungs.py`, and
-         if its verdict says read all of it, read all of it; or (ii) THE TASK IS THE
-         CONTEXT ITSELF: synthesising across their history, auditing or compacting the
-         observed files, deriving a pattern that only shows across many of them, or
-         answering AS them. An index cannot serve those — the corpus is the input.
+  DEPTH IS YOURS TO SET, per file, without asking. The floor gave you five recent entries
+  per observed file; if a title above them is what the task turns on, open that entry, or
+  twenty, or the file. If ONE declared file answers your question, read that one rather
+  than the folder. The floor is a starting position, NOT an allowance. If you catch
+  yourself thinking "I am only at the floor, so I should not read that" — that is the
+  misreading. There is no permission gate above the floor.
 
-  The question that settles most of what lies between:
-  Will what I produce be read as the operator's own words, or act on their behalf?
+  LATER BEATS SPECULATIVELY EARLIER. Reading declared/ at minute thirty, having just
+  discovered the deliverable goes out in their name, is better fit than reading it at
+  minute one in case it might. Reaching mid-task is the NORMAL MODE, not a fallback. What
+  you cannot discover at the moment of need is what you never knew existed — that is the
+  floor's whole job, and why it is the only fixed thing here.
 
-  YES -> also read ALL of context/declared/ (INTENT.md you already have). It is the
-         SMALL folder, and voice is the one thing whose absence you cannot detect in your
-         own output. Under-read observed/ and the gap shows as work visibly missing
-         something. Under-read declared/ and the work comes back fluent, correct, and
-         not theirs, with nothing in it looking wrong — only one of the two failures
-         announces itself. Do NOT also preload all of observed/ for this: the map above
-         is the way in, and a two-sentence task does not need the whole working history.
-  DOES THE TASK TOUCH A VENTURE? Read that venture's folder from context/ventures/.
-  That folder is PARTITIONED where the other two are global, so the floor lists the
-  ventures and you open the one that applies. about_business.md does NOT substitute --
-  measured, it is ~1,000 words summarising over 100,000, and the detail lives in each
-  venture's own files. Reading the summary and believing you have venture context is
-  mistaking the index for the territory.
+  TWO DEPTHS WORTH NAMING, as costs rather than permissions:
+    ALL of context/declared/ — when what you produce will be read as the operator's own
+      words, or act on their behalf. It is the SMALL one, and voice is the one thing whose
+      absence you cannot detect in your own output: under-read observed/ and the gap shows
+      as work visibly missing something; under-read declared/ and it comes back fluent,
+      correct, and not theirs, with nothing in it looking wrong. Only one of the two
+      failures announces itself. (Do NOT also preload all of observed/ for this.)
+    ONE VENTURE'S FOLDER — when the task is about that venture.
+
+  READING EVERY FILE IN declared/, observed/ AND EVERY VENTURE IS NOT THE TOP OF A LADDER.
+  It is the degenerate case, correct in two situations only: the whole context is cheaper
+  than deciding what to skip (run `python3 ~/aios/hooks/context-rungs.py`; if the verdict
+  says read it all, read it all — when deliberating costs more than acting, do not
+  deliberate), or THE TASK IS THE CONTEXT ITSELF — synthesis across their history,
+  auditing or compacting the observed files, answering AS them, where an index is a lossy
+  summary of the thing under analysis. Outside those two, reaching for everything is not
+  thoroughness, it is the absence of a judgment.
+
+  The map is enough for work checkable without knowing the operator: code, tests, file
+  operations, data, mechanical sweeps — until it is not, at which point you open what it
+  needs.
 
   Genuinely hard to place? Load the `right-context` skill — that is where this judgment
   lives in full.

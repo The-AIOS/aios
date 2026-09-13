@@ -299,6 +299,31 @@ grep -qiE "not need 100k words|do NOT also preload all of observed" "$WR" \
   || no "nothing stops the yes-branch collapsing into read-everything" "that shape spent 38 calls and delivered nothing"
 
 echo
+echo " above the floor there are no tiers -- only fit"
+# The rungs are a PRICE LIST, not a staircase. Intelligence is the right information at
+# the right time, not the largest pile you can afford -- so a fixed total read is not the
+# ideal you reach when you can afford it, it is the absence of a judgment. Two failure
+# modes this guards, and both are re-introduced by ordinary "tidying":
+#   1. re-tiering -- turning the named depths back into gates a session must qualify for,
+#      which makes a worker at the floor decline to open the one file it needs;
+#   2. framing the full read as the top of a ladder, which makes volume look like rigour.
+for pair in "CLAUDE.md:$CM" "AGENTS.md:AGENTS.md" "the wrapper:$WR" "the .ps1:$PS1"; do
+  label="${pair%%:*}"; f="${pair#*:}"
+  grep -qiE "no tiers|not an allowance|no permission gate|depth is yours" "$f" \
+    && ok "$label says depth above the floor is unconstrained" \
+    || no "$label reads as a staircase you must climb in order" \
+          "a worker then declines to open the one file it needs because it is 'only at the floor'"
+  grep -qiE "degenerate|not the top of a ladder|absence of a judgment" "$f" \
+    && ok "$label frames the full read as degenerate, not as the ideal" \
+    || no "$label presents reading everything as the best affordable option" \
+          "that is a stockpile metric -- volume looking like rigour"
+  grep -qiE "later beats|mid-task is the normal|normal mode" "$f" \
+    && ok "$label prefers loading at the moment of need" \
+    || no "$label treats mid-task reading as a fallback" \
+          "right information at the RIGHT TIME -- the right time is usually not minute one"
+done
+
+echo
 echo " ventures/ is a THIRD access pattern and must not be forgotten"
 # It was. The rule covered declared/ and observed/ and said nothing about
 # context/ventures/ -- which on a live vault is 108,646 words, LARGER than observed/

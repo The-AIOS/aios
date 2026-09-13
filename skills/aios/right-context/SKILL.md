@@ -24,35 +24,44 @@ It prints the four rungs **for the vault in front of you**, in words and estimat
 
 **Never hardcode a number you read out of this tool into a file.** That is the bug the tool exists to end: *"read everything"* was correct when it was written, silently stopped being correct as the vault grew, and nothing reported the change. A constant about a growing quantity works, then doesn't, and no one is told.
 
-## The ladder
+## The rungs are a price list, not a staircase
 
-**Rung 0 — both `_index.md`.** Filenames and a line each. Orientation, not context. Never a resting place; it is what rung 1 is built on.
+**Intelligence is the right information at the right time — not the largest pile you can afford.** That definition does real work here, because it rules out the two obvious designs. A fixed small read is not intelligent (it is cheap). A fixed total read is not intelligent either (it is a stockpile, and it is what a worker does when it has no judgment to apply). What makes a session intelligent is **fit**: what it opened, when, because of what the task turned out to need.
 
-**Rung 1 — the floor. `python3 ~/aios/hooks/context-floor.py`.** One call emits both `_index.md`, every heading in both folders, and **the last 5 `###` entries of every observed file, in full**.
+So the numbers below are **costs you can look up**, not levels you unlock. Only the first is a rule.
 
-Two decisions are packed in here and both are load-bearing.
+**Rung 0 — both `_index.md`.** Filenames and a line each. Orientation, never a resting place.
 
-*Why content, not just titles.* A map of headings tells a session what **exists** and nothing about what the system has **learned**. A session can hold every title in the vault and still behave identically to one that read nothing — which makes the compounding the vault is built on invisible exactly where it should be most visible: the start. Every `/close-session` and `/close-day` appends to `observed/`. If the next session never reads what was appended, the loop does not close, and the operator is paying to maintain files that change no behaviour.
+**Rung 1 — THE FLOOR. `python3 ~/aios/hooks/context-floor.py`.** The only fixed thing in this skill. One call emits both `_index.md`, every heading in `declared/` and `observed/`, **the last 5 `###` entries of every observed file in full**, `INTENT.md`, and a listing of `ventures/`. Everything after this is judgment.
 
-*Why the tail, and why that is safe.* The folders are written differently, and the access pattern follows from that rather than from their size:
+**Rung 2 — all of `declared/`.** A common depth, priced for convenience. Not a level: if one declared file answers your question, read that file.
 
-- **`declared/` is RESTATED.** Operator-authored identity, rewritten in place, no chronology. It has no newest end. You read it whole or you do not read it.
-- **`observed/` ACCUMULATES.** Every shipped file is dated and append-ordered. Its newest end is precisely what the last sessions learned.
+**Rung 3 — everything, all three corpora.** The degenerate case, correct in two situations and no others — see below.
 
-The tail is **bounded**, which is the property that matters: at ten times the entries it reads the same five per file, while the headings still index all of them. **A bounded selector never goes stale; an unbounded volume does** — that is the original bug in one line.
+### Deepening is unconstrained, and that is the point
 
-*What this deliberately does not claim.* Recency is not relevance. An old lesson may be the one today's task needs. That is why every title is still read: the older entry is one open away, and the tells below are what tell you to reach for it. What the floor guarantees is narrower and worth having on its own — **no session starts ignorant of what the system learned last.**
+The floor is a **starting position, not an allowance.** Three rules, and they all say the same thing from different angles:
 
-*Glob, never enumerate.* Both folders vary per vault. A floor naming four observed files by name missed 103 entry titles on one live vault and found **zero** on a vault whose files were renamed — and a floor at zero looks exactly like a floor that fired.
+- **Read past the floor's slice whenever a title says so.** Five recent entries of `preferences.md` is where you *start*, not a quota. If the title of an older entry is what the task turns on, open it — or twenty of them, or the file.
+- **Read a single file, not its folder.** "All of `declared/`" is a shorthand for a common case, not the only way to touch that folder. One file is often the right read and it is always available.
+- **Open a venture the moment the task names one.** You do not need to be "at" any particular depth first.
 
-**Rung 2 — rung 1 plus all of `declared/`, plus `INTENT.md`.** When your output will be read as the operator's own words, or will act on their behalf.
+If you find yourself thinking *"I am only at the floor, so I should not read that"* — that is the misreading this section exists to prevent. There is no permission gate above the floor.
 
-**Rung 3 — everything, both folders read whole.** Two distinct cases, and only one of them is about size.
+### Later beats speculatively earlier
 
-- **The context is small.** Run the tool; if the verdict says read all of it, read all of it. Nothing is being saved by climbing carefully through a ladder whose top rung costs less than a short document.
-- **The task IS the context.** True at any vault size, including the largest. Synthesising across the operator's history, auditing or compacting the observed files, deriving a pattern that only appears across many of them, answering *as* them from everything they have said. An index cannot serve these — the corpus is the input, and entry titles are a lossy summary of exactly the thing being analysed.
+Reading `declared/` at minute thirty because you have just discovered the deliverable goes out in the operator's name is **better fit** than reading it at minute one in case it might. Fit is about the moment, and the moment is usually not the first one.
 
-What rung 3 is *not* is a safe default on a large vault for ordinary work. That is the 38-call failure below: it is not caution, it is a way of not doing the task.
+This is why **reaching mid-task is the normal mode rather than a fallback**, and why the floor is the only thing loaded in advance: what you cannot discover at the moment of need is what you never knew existed. The floor buys exactly that and nothing more.
+
+### When reading everything is right — and when it is just brute force
+
+Two situations, and they are narrow:
+
+- **The whole context is cheaper than deciding what to skip.** Run `python3 ~/aios/hooks/context-rungs.py`; if the verdict says read it all, read it all. This is not thoroughness, it is arithmetic: when deliberating costs more than acting, do not deliberate.
+- **The task IS the context.** Synthesising across the operator's history, auditing or compacting the observed files, deriving a pattern that only appears across many of them, answering *as* them. Here an index is a lossy summary of precisely the thing under analysis.
+
+**Outside those two, reaching for everything is not caution — it is the absence of a judgment.** Measured: a worker told to read all of both folders for a two-sentence task spent 38 tool calls across 18 files and never wrote the two sentences. Volume is the failure mode that looks like diligence.
 
 ## Why rung 2 reads a whole folder when rung 1 only reads titles
 
