@@ -28,7 +28,22 @@ It prints the four rungs **for the vault in front of you**, in words and estimat
 
 **Rung 0 — both `_index.md`.** Filenames and a line each. Orientation, not context. Never a resting place; it is what rung 1 is built on.
 
-**Rung 1 — every heading in both folders. THE FLOOR, whatever the task.** Both `_index.md`, then `grep -h '^#' declared/*.md` and `grep -h '^###' observed/*.md`. **Glob — never a list of filenames.** Both folders vary per vault: the framework ships five declared files and nine observed ones, and operators rename them, add their own, and write them in their own language. Measured on synthetic vault shapes, a floor naming four observed files by name found **zero** entry titles in a vault whose files were renamed — and a floor at zero looks exactly like a floor that fired. This is the floor *and* the index at once: a title like `110. Empty and no-op inputs resolve to something REAL` tells you the lesson exists and exactly when to open it. `antifragile.md` most of all — the Session Start Ritual calls it the file to scan for relevant rules *before executing commands*, and you cannot scan what you have not listed.
+**Rung 1 — the floor. `python3 ~/aios/hooks/context-floor.py`.** One call emits both `_index.md`, every heading in both folders, and **the last 5 `###` entries of every observed file, in full**.
+
+Two decisions are packed in here and both are load-bearing.
+
+*Why content, not just titles.* A map of headings tells a session what **exists** and nothing about what the system has **learned**. A session can hold every title in the vault and still behave identically to one that read nothing — which makes the compounding the vault is built on invisible exactly where it should be most visible: the start. Every `/close-session` and `/close-day` appends to `observed/`. If the next session never reads what was appended, the loop does not close, and the operator is paying to maintain files that change no behaviour.
+
+*Why the tail, and why that is safe.* The folders are written differently, and the access pattern follows from that rather than from their size:
+
+- **`declared/` is RESTATED.** Operator-authored identity, rewritten in place, no chronology. It has no newest end. You read it whole or you do not read it.
+- **`observed/` ACCUMULATES.** Every shipped file is dated and append-ordered. Its newest end is precisely what the last sessions learned.
+
+The tail is **bounded**, which is the property that matters: at ten times the entries it reads the same five per file, while the headings still index all of them. **A bounded selector never goes stale; an unbounded volume does** — that is the original bug in one line.
+
+*What this deliberately does not claim.* Recency is not relevance. An old lesson may be the one today's task needs. That is why every title is still read: the older entry is one open away, and the tells below are what tell you to reach for it. What the floor guarantees is narrower and worth having on its own — **no session starts ignorant of what the system learned last.**
+
+*Glob, never enumerate.* Both folders vary per vault. A floor naming four observed files by name missed 103 entry titles on one live vault and found **zero** on a vault whose files were renamed — and a floor at zero looks exactly like a floor that fired.
 
 **Rung 2 — rung 1 plus all of `declared/`, plus `INTENT.md`.** When your output will be read as the operator's own words, or will act on their behalf.
 

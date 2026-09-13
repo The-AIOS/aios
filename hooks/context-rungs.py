@@ -35,6 +35,13 @@ TOK_PER_WORD = 1.3
 HEADING = re.compile(r"^\#{2,6}\s+\S")
 ENTRY = re.compile(r"^\#{3}\s+\S")
 
+# The floor reads the last N entries of every OBSERVED file, in full -- see
+# hooks/context-floor.py for why (observed/ accumulates and is append-ordered;
+# declared/ is restated and has no newest end). Keep this in step with that
+# tool's DEFAULT_RECENT: rung 1 here must be the same thing the floor emits,
+# or Bucket 31 reports a number that describes nothing any session does.
+RECENT_PER_FILE = 5
+
 # The four observed/ files whose ENTRY TITLES are the floor (CLAUDE.md step 4a).
 FLOOR = ("antifragile.md", "preferences.md", "patterns.md", "growth.md")
 
@@ -55,11 +62,23 @@ def measure(folder):
             continue  # unreadable file: counted as absent, never as empty
         words = sum(len(l.split()) for l in lines)
         heads = [l for l in lines if HEADING.match(l)]
+        # Split into ### entries so the recency slice can be priced.
+        blocks, cur = [], None
+        for l in lines:
+            if ENTRY.match(l):
+                if cur is not None:
+                    blocks.append(cur)
+                cur = [l]
+            elif cur is not None:
+                cur.append(l)
+        if cur is not None:
+            blocks.append(cur)
         out[name] = {
             "words": words,
             "headings": len(heads),
-            "entries": sum(1 for l in lines if ENTRY.match(l)),
+            "entries": len(blocks),
             "heading_words": sum(len(l.split()) for l in heads),
+            "recent_words": sum(len(" ".join(b).split()) for b in blocks[-RECENT_PER_FILE:]),
         }
     return out
 
@@ -72,18 +91,22 @@ def rungs(dec, obs):
         return sum(v[key] for k, v in d.items() if only is None or k in only)
 
     idx = s(dec, "words", {"_index.md"}) + s(obs, "words", {"_index.md"})
-    # Rung 1 adds every heading in both folders -- that IS the index.
     heads = s(dec, "heading_words") + s(obs, "heading_words")
+    # The recency slice is OBSERVED-ONLY: declared/ is restated in place and has no
+    # newest end, while every observed file is append-ordered and dated.
+    recent = s(obs, "recent_words")
     dec_body = s(dec, "words") - s(dec, "words", {"_index.md"})
     obs_body = s(obs, "words") - s(obs, "words", {"_index.md"})
     return [
         ("0", "both _index.md only", idx,
          "orientation only -- you know the filenames, nothing else"),
-        ("1", "+ every heading in both folders", idx + heads,
-         "THE FLOOR. Always, whatever the task."),
-        ("2", "+ declared/ read whole", idx + heads + dec_body,
+        ("1", "+ all headings + last %d entries per observed file" % RECENT_PER_FILE,
+         idx + heads + recent,
+         "THE FLOOR. Always. Exactly what hooks/context-floor.py emits."),
+        ("2", "+ declared/ read whole", idx + heads + recent + dec_body,
          "when your output will be read as the words of the operator"),
-        ("3", "+ observed/ read whole (everything)", idx + heads + dec_body + obs_body,
+        ("3", "+ all of observed/ read whole (everything)",
+         idx + heads + dec_body + obs_body,
          "right when the context is small, or when the TASK is the context itself"),
     ]
 

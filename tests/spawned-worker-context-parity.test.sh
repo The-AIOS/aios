@@ -132,12 +132,32 @@ printf '%s' "$STEP4" | grep -q 'antifragile' \
 # If the tool measures a rung nobody is instructed to read, Bucket 31 reports a
 # number that does not describe what sessions actually do -- which is the same
 # class of defect as the stale constant the tool exists to replace.
-if grep -q 'every heading in both folders' hooks/context-rungs.py; then
-  ok "context-rungs.py rung 1 is the same floor CLAUDE.md prescribes"
+# Two tools now describe one floor: context-floor.py EMITS it, context-rungs.py PRICES
+# it as rung 1. They each carry a recency constant, and if those drift apart the ladder
+# reports a rung nobody reads. A string match on a label is not enough -- that is what
+# was here before, and it passed while the numbers disagreed by 70%. Compare the
+# CONSTANTS, and require each tool to name the other.
+FLOOR_N="$(grep -oE '^DEFAULT_RECENT = [0-9]+' hooks/context-floor.py | grep -oE '[0-9]+')"
+RUNGS_N="$(grep -oE '^RECENT_PER_FILE = [0-9]+' hooks/context-rungs.py | grep -oE '[0-9]+')"
+if [ -z "$FLOOR_N" ] || [ -z "$RUNGS_N" ]; then
+  no "could not read the recency constant from both tools (floor='$FLOOR_N' rungs='$RUNGS_N')" \
+     "if the constant cannot be found it cannot be compared, and this check passes vacuously"
+elif [ "$FLOOR_N" = "$RUNGS_N" ]; then
+  ok "both tools use the same recency slice (last $FLOOR_N per observed file)"
 else
-  no "the tool's rung 1 and the prescribed floor have drifted" \
-     "a measurement that does not measure the rule is worse than none"
+  no "the recency constant differs: floor=$FLOOR_N rungs=$RUNGS_N" \
+     "rung 1 would then price a floor no session actually receives"
 fi
+grep -q 'context-floor.py' hooks/context-rungs.py \
+  && ok "context-rungs.py ties rung 1 to the floor tool by name" \
+  || no "the two tools do not reference each other" "nothing links the price to the thing priced"
+
+# And the floor must actually carry CONTENT, not only headings -- the defect this rung
+# was rebuilt to fix. A floor of titles alone leaves a session knowing what exists and
+# nothing the system has learned, so every close-day append changes no later behaviour.
+grep -qiE 'last .*entries|MOST RECENT' hooks/context-floor.py \
+  && ok "the floor emits recent entry bodies, not just the map" \
+  || no "the floor is titles-only" "then the compounding loop never closes at session start"
 
 printf '\n  %d passed, %d failed\n\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
@@ -277,6 +297,29 @@ done
 grep -qiE "not need 100k words|do NOT also preload all of observed" "$WR" \
   && ok "the wrapper warns against preloading all of observed for voice work" \
   || no "nothing stops the yes-branch collapsing into read-everything" "that shape spent 38 calls and delivered nothing"
+
+echo
+echo " the floor carries LEARNED CONTENT, in all four copies"
+# A floor of headings alone leaves a session knowing what EXISTS and nothing the system
+# has LEARNED -- so every close-day append changes no later behaviour and the compounding
+# is invisible at exactly the moment it should be most visible. Each copy must name the
+# one-call floor and say why it carries entry bodies.
+# Fragments are short on purpose: "the loop does not close" wraps as "the loop" /
+# "does not close" in the .ps1 string array.
+for pair in "CLAUDE.md:$CM" "AGENTS.md:AGENTS.md" "the wrapper:$WR" "the .ps1:$PS1"; do
+  label="${pair%%:*}"; f="${pair#*:}"
+  grep -q 'context-floor.py' "$f" \
+    && ok "$label names the one-call floor" \
+    || no "$label leaves the floor to be assembled by hand" \
+          "a hand-assembled floor gets done partially, and nothing afterwards can tell"
+  grep -qi 'does not close' "$f" \
+    && ok "$label says why the floor carries content (the loop)" \
+    || no "$label gives no reason for reading entry bodies" \
+          "an unexplained content read gets trimmed back to titles on the next edit"
+  grep -qiE 'last 5|last five|tail of each' "$f" \
+    && ok "$label states the recency slice" \
+    || no "$label does not say how much of observed/ is read" "the floor is then unbounded or unspecified"
+done
 
 echo
 echo " the ladder has a TOP -- rung 3 must be reachable, not just the floor"

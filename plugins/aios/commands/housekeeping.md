@@ -849,7 +849,9 @@ python3 ~/aios/hooks/context-load-audit.py
 python3 ~/aios/hooks/context-rungs.py
 ```
 
-**What it reports.** The four rungs of the ladder in this vault — both `_index.md` (rung 0) · every heading in both folders (rung 1, the floor) · all of `declared/` (rung 2) · everything (rung 3) — in words and estimated tokens, plus the `observed/`-to-`declared/` ratio, ending in a verdict.
+**What it reports.** The four rungs of the ladder in this vault — both `_index.md` (rung 0) · **the floor** (rung 1: every heading in both folders *plus the last 5 `###` entries of every observed file*, which is exactly what `hooks/context-floor.py` emits) · all of `declared/` (rung 2) · everything (rung 3) — in words and estimated tokens, plus the `observed/`-to-`declared/` ratio, ending in a verdict.
+
+**Watch the floor's share, not just its size.** The floor is *bounded by design* — five entries per observed file, so it does not grow as the corpus does. That means its **share** of rung 3 falls over time, which is the ladder working. What is worth surfacing is the opposite: an observed file whose newest five entries are a large fraction of the whole floor is usually a file that needs compacting, not a floor that needs widening.
 
 **The verdict is the point, and it flips.** Below roughly 25k tokens total it says **read all of it** — the ladder is not for that vault yet. Above it, it says floor at rung 1 and climb deliberately. **Same rule, opposite advice, both correct.** An operator who is told "your whole context is 7k tokens, read it" is being told something the framework could not tell them before this existed.
 

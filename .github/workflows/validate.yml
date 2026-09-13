@@ -1463,6 +1463,18 @@ jobs:
         # answer that talks a session out of loading any context at all.
         run: bash tests/context-rungs.test.sh
 
+      - name: the context floor carries learned content, bounded
+        # The floor was headings only. A session could then hold every title in the vault
+        # and behave exactly like one that read nothing -- it knew what EXISTED and nothing
+        # the system had LEARNED. Every /close-session and /close-day appends to observed/,
+        # so a titles-only floor means the compounding loop never closes at session start.
+        #
+        # Under test: it emits entry BODIES; the slice is a bounded TAIL (10x the entries
+        # must not multiply the floor -- an unbounded floor is the original bug renamed);
+        # it globs rather than naming files; and it REFUSES rather than printing a short
+        # floor, which is indistinguishable from a complete one once printed.
+        run: bash tests/context-floor.test.sh
+
       - name: the Google connector's API set derives from one manifest
         # The set of Google APIs an operator must enable existed in SIX places before
         # AI-126 -- connector.json's --permissions, SETUP.md's prose, the setup doc's
