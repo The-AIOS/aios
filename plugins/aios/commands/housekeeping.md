@@ -823,7 +823,7 @@ It runs for months without complaining, which is why it needs a periodic sweep r
 **Run the shipped detector — do not re-implement it:**
 
 ```bash
-python3 ~/aios/hooks/context-load-audit.py
+uv run ~/aios/hooks/context-load-audit.py
 ```
 
 **Why a hook and not a spec here.** The obvious implementation is wrong in one specific, reproducible way, and it was written that way once: a worker typically does `cd "<vault>/00 - notes/context/observed" && grep '^### ' antifragile.md …`, so matching only `context/(declared|observed)/<file>.md` misses every such read. That version reported three workers at zero who had in fact read the whole floor. **A check that under-reports is worse than none, because its clean answer gets trusted** — so the instrument is code with its own tests, and this bucket calls it.
@@ -848,7 +848,7 @@ python3 ~/aios/hooks/context-load-audit.py
 **Run the shipped measurement — do not eyeball the folders:**
 
 ```bash
-python3 ~/aios/hooks/context-rungs.py
+uv run ~/aios/hooks/context-rungs.py
 ```
 
 **What it reports.** The four rungs of the ladder in this vault — both `_index.md` (rung 0) · **the floor** (rung 1: every heading in both folders *plus the last 5 `###` entries of every observed file*, which is exactly what `hooks/context-floor.py` emits) · all of `declared/` (rung 2) · everything (rung 3) — in words and estimated tokens, plus the `observed/`-to-`declared/` ratio, ending in a verdict.

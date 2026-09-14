@@ -349,6 +349,27 @@ grep -q 'ventures' hooks/context-rungs.py \
   || no "rung 3 excludes ventures/" "then 'everything' understates the true total by a third"
 
 echo
+echo " the floor is invoked through uv -- python3 does not exist on Windows"
+# The Microsoft Store execution alias intercepts `python3`, prints an installer notice to
+# stderr and runs nothing -- so context-floor.py emits NO output, which is indistinguishable
+# from a floor that ran. That is the exact silent failure this whole step exists to end,
+# reintroduced by an invocation. Found by #129 making the same argument about the bus
+# dead-letter check, one day after this shipped with python3 in nine places.
+for f in "$CM" AGENTS.md "$WR" "$PS1" plugins/aios/commands/housekeeping.md \
+         skills/aios/right-context/SKILL.md hooks/_index.md; do
+  [ -f "$f" ] || continue
+  if grep -q 'python3 ~/aios/hooks/context-' "$f"; then
+    no "$(basename "$f") invokes a context hook with python3" \
+       "on Windows that emits nothing, and nothing is what a working floor also looks like"
+  else
+    ok "$(basename "$f") invokes context hooks through uv"
+  fi
+done
+grep -q 'never .python3.\|Through .uv., never' "$CM" \
+  && ok "CLAUDE.md says WHY it is uv and not python3" \
+  || no "the uv choice is unexplained" "an unexplained runner gets 'simplified' back to python3"
+
+echo
 echo " the floor carries LEARNED CONTENT, in all four copies"
 # A floor of headings alone leaves a session knowing what EXISTS and nothing the system
 # has LEARNED -- so every close-day append changes no later behaviour and the compounding

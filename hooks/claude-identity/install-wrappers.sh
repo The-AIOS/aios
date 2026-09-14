@@ -343,7 +343,7 @@ FIRST ACTION, before you answer or plan anything — THE MAP, whatever the task 
 list both folders, read both `_index.md` (one line per file), then read the `###` ENTRY
 THE FLOOR, in one command:
 
-  python3 ~/aios/hooks/context-floor.py
+  uv run ~/aios/hooks/context-floor.py
 
 It emits both _index.md, EVERY HEADING in both folders, THE LAST 5 ### ENTRIES OF EVERY
 observed/ FILE IN FULL, and INTENT.md -- which is at the floor because it governs what
@@ -407,7 +407,7 @@ reach: open what the work points at, to the depth it needs, when it points there
 
   READING EVERY FILE IN declared/, observed/ AND EVERY VENTURE IS NOT THE TOP OF A LADDER.
   It is the degenerate case, correct in two situations only: the whole context is cheaper
-  than deciding what to skip (run `python3 ~/aios/hooks/context-rungs.py`; if the verdict
+  than deciding what to skip (run `uv run ~/aios/hooks/context-rungs.py`; if the verdict
   says read it all, read it all — when deliberating costs more than acting, do not
   deliberate), or THE TASK IS THE CONTEXT ITSELF — synthesis across their history,
   auditing or compacting the observed files, answering AS them, where an index is a lossy

@@ -371,7 +371,7 @@ function spawn {
       'FIRST ACTION, before you answer or plan anything -- THE MAP, whatever the task is: list',
       'THE FLOOR, in one command:',
       '',
-      '    python3 ~/aios/hooks/context-floor.py',
+      '    uv run ~/aios/hooks/context-floor.py',
       '',
       'It emits both _index.md, EVERY HEADING in both folders, THE LAST 5 three-hash',
       'ENTRIES OF EVERY observed/ FILE IN FULL, and INTENT.md -- which is at the floor',
