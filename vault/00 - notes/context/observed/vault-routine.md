@@ -3,6 +3,7 @@ tags: [context, claude-observed, routine, aios-commands]
 created: 2026-03-02
 updated: 2026-04-30
 type: claude-context
+restated: true
 ---
 # Vault Routine — When to Run What
 
