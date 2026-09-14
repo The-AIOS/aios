@@ -72,7 +72,7 @@
 
 ## 2026-09-14 — § Session End says the same thing in a quarter fewer bytes
 
-`hash: `
+`hash: ` · [#136](https://github.com/The-AIOS/aios/pull/136)
 
 > **What you can now do.** Run every session on a lighter `CLAUDE.md`: § Session End keeps every rule it had and costs about a quarter less to load, on every turn.
 
