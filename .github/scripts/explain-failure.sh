@@ -65,7 +65,7 @@ command_for() {
 # Does a fixer already know how to repair this check? The list lives in the fixer, next to the
 # repairs it performs — asking it is what keeps the two from drifting into disagreement.
 fixable() { # step name
-  local fixer="${AIOS_AUTOFIX:-scripts/autofix.sh}"
+  local fixer="${AIOS_AUTOFIX:-.github/scripts/autofix.sh}"
   [ -f "$fixer" ] || return 1
   bash "$fixer" --covers 2>/dev/null | grep -qxF "$1"
 }
@@ -125,7 +125,7 @@ render() {
       printf '**This one repairs itself. Run:**
 
 ```bash
-bash scripts/autofix.sh
+bash .github/scripts/autofix.sh
 ```
 
 '

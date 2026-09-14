@@ -108,16 +108,16 @@ grep -qiE 'annotation_level|check-run id|::error::' "$OUT" \
 
 # A check the fixer covers must be offered the REPAIR, not the check's own command: reading
 # the failure is not the work.
-FIXSTEP="$(bash "$REPO/scripts/autofix.sh" --covers | head -1)"
+FIXSTEP="$(bash "$REPO/.github/scripts/autofix.sh" --covers | head -1)"
 printf 'Capability counts	%s	
 ' "$FIXSTEP" > "$TSV"
 ( cd "$REPO" && bash "$SCRIPT" --render "$TSV" > "$OUT" )
-grep -q 'bash scripts/autofix.sh' "$OUT" && ok "a self-repairing check offers the repair command"   || no "the summary does not offer autofix for a step the fixer covers"
+grep -q 'bash .github/scripts/autofix.sh' "$OUT" && ok "a self-repairing check offers the repair command"   || no "the summary does not offer autofix for a step the fixer covers"
 # CONTROL: a step the fixer does NOT cover must not be offered it.
 printf 'Commit primitives	%s	
 ' "$STEP" > "$TSV"
 ( cd "$REPO" && bash "$SCRIPT" --render "$TSV" > "$OUT" )
-grep -q 'bash scripts/autofix.sh' "$OUT"   && no "autofix was offered for a check it cannot repair" "that turns a red check into a green lie"   || ok "control: a check the fixer does not cover is not offered it"
+grep -q 'bash .github/scripts/autofix.sh' "$OUT"   && no "autofix was offered for a check it cannot repair" "that turns a red check into a green lie"   || ok "control: a check the fixer does not cover is not offered it"
 
 # An empty run (cancelled, or a job that died before starting) must still say something.
 : > "$TSV"
