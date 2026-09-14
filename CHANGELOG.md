@@ -84,16 +84,19 @@ Nothing about this announced itself. Every hit looks like a valid answer, and ho
 
 **And an alarm that fired when nothing was wrong.** The observed-context staleness check assumes every file in `observed/` accumulates entries, so a file that hasn't changed in 30 days is going stale. `vault-routine.md` doesn't accumulate — it is a cadence spec, rewritten in place, and nothing is appended to it. So the alarm fired **precisely when your rhythm was stable**, which is the file being correct, every month, forever. That is how people learn to ignore alarms. A file can now declare `restated: true` and is skipped by the clock; `vault-routine.md` also gains a real write trigger, so it has a defined condition instead of a countdown.
 
-**Action required — one line, only if you have been running AIOS for a while.** Your `vault-routine.md` is your own file and updates never touch it, so the new flag does not reach it on its own:
+**Action required — add one frontmatter key, by hand or by session. Do NOT overwrite the file.**
 
-```bash
-grep -q '^restated:' "$HOME/aios/vault/00 - notes/context/observed/vault-routine.md" \
-  || sed -i '' '/^type: /a\
-restated: true
-' "$HOME/aios/vault/00 - notes/context/observed/vault-routine.md"
-```
+`vault-routine.md` is **your** file: `/aios:update` never syncs anything under `vault/00 - notes/context/`, so the flag cannot arrive on its own — and for the same reason **nothing should ever replace that file with the framework's copy.** Yours holds your cadence; the shipped one is an empty seed. Replacing it loses your content and gains you nothing.
 
-On Linux use `sed -i` without the `''`. A fresh clone already ships with it. If you renamed that file, add `restated: true` to its frontmatter by hand — and to any other observed file of yours that is a specification rather than a running log.
+**For the session running this update** — check first, act only if needed, and change exactly one key:
+
+1. Find the observed file that *specifies your cadence* rather than logging events. Normally `vault/00 - notes/context/observed/vault-routine.md`, but **match on shape, not the name** — operators rename these files and write them in their own language. The tell: its headings carry no dates, and it reads as a specification of when to run what.
+2. If its frontmatter already has a `restated:` key, **do nothing and say so.** This is idempotent by design; a second update must not act twice.
+3. Otherwise add `restated: true` to that file's frontmatter using the frontmatter tool your setup provides (`update_frontmatter` via the Obsidian MCP, which sets a key without disturbing the body). **Never regex-edit the file in place and never rewrite it** — a stray in-place edit on a note is how a vault loses content that was never backed up.
+4. If no such file exists, or you cannot identify one confidently, **report that and stop.** Do not guess at a file and do not silently pass — an action item that quietly does nothing is worse than one that says it could not run.
+
+Then apply the same judgement to any *other* observed file of yours that is a specification rather than a running log: it wants the flag too. A fresh clone already ships with it set.
+
 
 ## 2026-09-14 — A failed check that explains itself
 
