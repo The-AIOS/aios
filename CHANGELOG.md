@@ -72,15 +72,25 @@
 
 ## 2026-09-14 — A failed check that explains itself
 
-`hash: d4dac86` · [#133](https://github.com/The-AIOS/aios/pull/133)
+`hash: d4dac86 · 625a251` · [#133](https://github.com/The-AIOS/aios/pull/133) · [#134](https://github.com/The-AIOS/aios/pull/134)
 
 > **What you can now do.** If you send a pull request to the framework and CI goes red, the run page now tells you what broke, in words, before you open a log. This is contributor-facing — if you never open a PR, nothing here changes for you.
 
 **What changes.** The notification GitHub sends says only *"PR run failed"*. The run summary now names the failing check, repeats the error it emitted, and gives the command that reproduces it on your own machine — so the log is where you go for detail, not where you go to find out what happened. If the summary still reads as jargon, it ends with a paragraph you can paste straight into an AIOS session, which will read the run and fix the branch with you. And a red check never means your machine or your vault is broken: these run on GitHub's machines, against the diff.
 
-**Some of it repairs itself.** `bash scripts/autofix.sh` fixes the failures that have exactly one correct answer — today, the capability counts in `TOOLS.md`, `README.md` and `agents/_index.md`, each derived from the folders rather than from a stored number. `--check` reports without writing. On `main` CI applies the repair and commits it, so that class never reaches anyone's inbox; on a pull request the check still fails, because CI cannot — and must not — write to a fork's branch.
+**Some of it repairs itself.** `bash .github/scripts/autofix.sh` fixes the failures that have exactly one correct answer — today, the capability counts in `TOOLS.md`, `README.md` and `agents/_index.md`, each derived from the folders rather than from a stored number. `--check` reports without writing. On `main` CI applies the repair and commits it, so that class never reaches anyone's inbox; on a pull request the check still fails, because CI cannot — and must not — write to a fork's branch.
 
-**Action required:** none. `CONTRIBUTING.md` carries both of the above and arrives with your next `/aios:update`.
+**Action required — if a `scripts/` folder appeared at the root of your vault, remove it.** That folder is contributor tooling and was never meant to reach you. `/aios:update` derives which top-level folders it syncs, so for a few hours today a root `scripts/` counted as one and a sync in that window delivered `scripts/autofix.sh` into vaults. It now lives under `.github/`, which never syncs. **If you never saw a `scripts/` folder, nothing happened to you and there is nothing to do.** To check and clean:
+
+```bash
+cd ~/aios
+# Removes ONLY the file that shipped, and only if it is the unmodified one.
+# Never `rm -rf scripts/` — the name is not reserved and yours may hold your own work.
+[ -f scripts/autofix.sh ] && grep -q 'autofix: nothing to repair' scripts/autofix.sh && rm scripts/autofix.sh
+rmdir scripts 2>/dev/null   # succeeds only if the folder is now empty
+```
+
+A build guard now fails the moment canonical grows a top-level folder that has not been classified as either shipping to you or staying in the repo — so this class cannot recur silently. `CONTRIBUTING.md` carries the rule for anyone adding one.
 
 ## 2026-09-13 — Sessions that prove they learned from the last one
 

@@ -2,9 +2,9 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Repair the CI failures that have exactly ONE correct answer.
 #
-#   bash scripts/autofix.sh            # fix them
-#   bash scripts/autofix.sh --check    # say what would change, change nothing (exit 1 if any)
-#   bash scripts/autofix.sh --covers   # the CI step names this repairs
+#   bash .github/scripts/autofix.sh            # fix them
+#   bash .github/scripts/autofix.sh --check    # say what would change, change nothing (exit 1 if any)
+#   bash .github/scripts/autofix.sh --covers   # the CI step names this repairs
 #
 # WHY THIS EXISTS. Some checks fail on a fact the repo can compute for itself: a
 # doc says "30 skills" and the folder holds 31. There is nothing to decide — the
@@ -83,7 +83,7 @@ if [ -z "$CHANGED" ]; then
 fi
 
 if [ "$MODE" = "--check" ]; then
-  echo "autofix: these would be repaired by 'bash scripts/autofix.sh':"
+  echo "autofix: these would be repaired by 'bash .github/scripts/autofix.sh':"
   printf '%s' "$CHANGED" | sed 's/^/  /'
   exit 1
 fi
