@@ -70,19 +70,13 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
-## 2026-09-14 — § Session End says the same thing in a quarter fewer bytes
+## 2026-09-14 — Checks that read the wrong signal, and a `CLAUDE.md` that stops growing
 
-`hash: ` · [#136](https://github.com/The-AIOS/aios/pull/136)
+`hash: d4dac86 · 625a251 · 84ca270` · [#133](https://github.com/The-AIOS/aios/pull/133) · [#134](https://github.com/The-AIOS/aios/pull/134) · [#135](https://github.com/The-AIOS/aios/pull/135) · [#136](https://github.com/The-AIOS/aios/pull/136)
 
-> **What you can now do.** Run every session on a lighter `CLAUDE.md`: § Session End keeps every rule it had and costs about a quarter less to load, on every turn.
+> **What you can now do.** Trust that when a session asks *"is this done?"* it reads the answer off the surface you maintain rather than an archived photograph of it; start every session on a lighter behavioural contract; and know the contract will stay light, because it now has a budget instead of good intentions.
 
-**What changes.** The section still tells a session to archive an observed file with `hooks/aios-snapshot` before editing it and never to copy it by hand, to set `updated:` in the same edit, to respect the `session-insights.md` caps, to ask what was most useful after a substantive session, to commit through `aios-commit --vault`, and to keep observed context private. Each rule keeps the short reason a session needs to apply it. What was removed is the incident history behind the snapshot tool. The race it prevents is still explained next to the test that measures it.
-
-**What you need to do.** Nothing. No action: the rules did not change, so a session that loaded the previous wording follows the same contract.
-
-## 2026-09-14 — Three checks that were reading the wrong signal
-
-`hash: 84ca270` · [#135](https://github.com/The-AIOS/aios/pull/135)
+### Three checks were reading the wrong signal
 
 > **What you can now do.** Trust that when a session asks *"is this item done?"*, it reads the answer off the roadmap you maintain — not off an archived photograph of it. If you use the optional keyed-roadmap layer, your board has probably been showing you work that already shipped.
 
@@ -94,24 +88,18 @@ Nothing about this announced itself. Every hit looks like a valid answer, and ho
 
 **And an alarm that fired when nothing was wrong.** The observed-context staleness check assumes every file in `observed/` accumulates entries, so a file that hasn't changed in 30 days is going stale. `vault-routine.md` doesn't accumulate — it is a cadence spec, rewritten in place, and nothing is appended to it. So the alarm fired **precisely when your rhythm was stable**, which is the file being correct, every month, forever. That is how people learn to ignore alarms. A file can now declare `restated: true` and is skipped by the clock; `vault-routine.md` also gains a real write trigger, so it has a defined condition instead of a countdown.
 
-**Action required — add one frontmatter key, by hand or by session. Do NOT overwrite the file.**
 
-`vault-routine.md` is **your** file: `/aios:update` never syncs anything under `vault/00 - notes/context/`, so the flag cannot arrive on its own — and for the same reason **nothing should ever replace that file with the framework's copy.** Yours holds your cadence; the shipped one is an empty seed. Replacing it loses your content and gains you nothing.
+### `CLAUDE.md` is lighter, and now has a ceiling
 
-**For the session running this update** — check first, act only if needed, and change exactly one key:
+Two sections were condensed rule-for-rule — § Session End and § Observed Context Rules — every rule kept, verified by a task-shaped rubric before and after. Nothing was dropped but narrative: incident stories that belong in a vault's own `antifragile.md`, and one rule stated twice in full.
 
-1. Find the observed file that *specifies your cadence* rather than logging events. Normally `vault/00 - notes/context/observed/vault-routine.md`, but **match on shape, not the name** — operators rename these files and write them in their own language. The tell: its headings carry no dates, and it reads as a specification of when to run what.
-2. If its frontmatter already has a `restated:` key, **do nothing and say so.** This is idempotent by design; a second update must not act twice.
-3. Otherwise add `restated: true` to that file's frontmatter using the frontmatter tool your setup provides (`update_frontmatter` via the Obsidian MCP, which sets a key without disturbing the body). **Never regex-edit the file in place and never rewrite it** — a stray in-place edit on a note is how a vault loses content that was never backed up.
-4. **Then read the frontmatter back and check the date stamps kept their shape.** Measured while dogfooding this very entry: `update_frontmatter` normalised `updated: '2026-08-12'` into `updated: 2026-08-12T00:00:00.000Z`. Nothing was lost and the body was untouched, but **`updated:` is the exact field the staleness alarm reads**, and that file became the only one in the folder carrying a different format. If the stamps changed, set them back to their original `'YYYY-MM-DD'` strings in the same way. A tool that writes one key correctly may still reformat its neighbours.
-5. If no such file exists, or you cannot identify one confidently, **report that and stop.** Do not guess at a file and do not silently pass — an action item that quietly does nothing is worse than one that says it could not run.
+**The part that matters more is the ceiling.** One section was condensed this way a week ago and came back **larger than before it was ever condensed**; across the file that week added ten times what the pass removed. Every one of those commits added a real rule for a real reason — nothing ever showed the running total, so nobody was deciding. A build check now holds the line. It does not block growth — it makes growth a choice between condensing something, relocating the prose to the doc that owns it, or raising the ceiling where a reviewer can see the trade.
 
-Then apply the same judgement to any *other* observed file of yours that is a specification rather than a running log: it wants the flag too. A fresh clone already ships with it set.
+### `antifragile.md`'s size bound was measuring the wrong quantity
 
+Its cap was justified as *"read every session, so it carries a size cap."* That stopped being true when the context floor began emitting a **rule library** as its meta-pattern index plus every title and **none of its bodies**. So the prescribed remedy — *condense the entry bodies, the primary lever* — frees roughly **zero** of what a session pays, and only spends wisdom. `/aios:compact` now bounds what is actually loaded (entry **count** and **title length**), keeps a much larger file-size limit as a disk-and-diff guard, and says plainly that when a bound trips you ask which quantity it measures before you raise it.
 
-## 2026-09-14 — A failed check that explains itself
-
-`hash: d4dac86 · 625a251` · [#133](https://github.com/The-AIOS/aios/pull/133) · [#134](https://github.com/The-AIOS/aios/pull/134)
+### A failed check explains itself
 
 > **What you can now do.** If you send a pull request to the framework and CI goes red, the run page now tells you what broke, in words, before you open a log. This is contributor-facing — if you never open a PR, nothing here changes for you.
 
@@ -119,18 +107,10 @@ Then apply the same judgement to any *other* observed file of yours that is a sp
 
 **Some of it repairs itself.** `bash .github/scripts/autofix.sh` fixes the failures that have exactly one correct answer — today, the capability counts in `TOOLS.md`, `README.md` and `agents/_index.md`, each derived from the folders rather than from a stored number. `--check` reports without writing. On `main` CI applies the repair and commits it, so that class never reaches anyone's inbox; on a pull request the check still fails, because CI cannot — and must not — write to a fork's branch.
 
-**Action required — if a `scripts/` folder appeared at the root of your vault, remove it.** That folder is contributor tooling and was never meant to reach you. `/aios:update` derives which top-level folders it syncs, so for a few hours today a root `scripts/` counted as one and a sync in that window delivered `scripts/autofix.sh` into vaults. It now lives under `.github/`, which never syncs. **If you never saw a `scripts/` folder, nothing happened to you and there is nothing to do.** To check and clean:
 
-```bash
-cd ~/aios
-# Removes ONLY the file that shipped, and only if it is the unmodified one.
-# Never `rm -rf scripts/` — the name is not reserved and yours may hold your own work.
-[ -f scripts/autofix.sh ] && grep -q 'autofix: nothing to repair' scripts/autofix.sh && rm scripts/autofix.sh
-rmdir scripts 2>/dev/null   # succeeds only if the folder is now empty
-```
+**Action required — one frontmatter key, and only if you have been running AIOS for a while.** `vault-routine.md` is **your** file: `/aios:update` never syncs anything under `vault/00 - notes/context/`, so the flag cannot arrive on its own — and nothing should ever replace that file with the framework's copy, which is an empty seed. For the session running this update: find the observed file that *specifies your cadence* rather than logging events (match on **shape**, not name — its headings carry no dates); if its frontmatter already has a `restated:` key, do nothing and say so; otherwise add `restated: true` through the frontmatter tool (`update_frontmatter` via the Obsidian MCP), **never a regex edit and never a rewrite**; then read the frontmatter back and check the date stamps kept their `'YYYY-MM-DD'` shape, because that tool normalises neighbouring values and `updated:` is the field the staleness alarm reads. If no such file exists or you cannot identify one confidently, report that and stop rather than guessing.
 
-A build guard now fails the moment canonical grows a top-level folder that has not been classified as either shipping to you or staying in the repo — so this class cannot recur silently. `CONTRIBUTING.md` carries the rule for anyone adding one.
-
+**Also:** if a `scripts/` folder appeared at your vault root, it was contributor tooling that briefly counted as a shipping layer. It now lives under `.github/`, which never syncs. Remove **only** `scripts/autofix.sh` if it is unmodified, then the folder if it is empty — never `rm -rf` a name that is not reserved.
 ## 2026-09-13 — Sessions that prove they learned from the last one
 
 `hash: 6977721 · caf6141 · f215ee7 · 33d123c · 54aa78c · d9ad92f · 5c9242b · 3360f24 · c07636e` · [#128](https://github.com/The-AIOS/aios/pull/128) · [#129](https://github.com/The-AIOS/aios/pull/129) · [#130](https://github.com/The-AIOS/aios/pull/130) · [#131](https://github.com/The-AIOS/aios/pull/131) · [#132](https://github.com/The-AIOS/aios/pull/132)

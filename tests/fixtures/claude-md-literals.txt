@@ -3,6 +3,7 @@
 "tier":"<rung>"
 ## Remote machines
 $CLAUDE_AGENT_NAME
+(new — date)
 --allowedTools
 --model
 --model <id>
@@ -14,10 +15,11 @@ $CLAUDE_AGENT_NAME
 --tier
 --tier frontier|judgment|scale|fast
 --tier mechanical
--Tier fast
 -p
+-Tier fast
 .mcp.json
 .ps1
+/aios:compact
 /aios:drift
 /aios:housekeeping
 /aios:trace
@@ -26,13 +28,6 @@ $CLAUDE_AGENT_NAME
 /today
 03 - export/{type-or-venture}/
 <name>.json.undelivered
-Bash
-CLAUDE_MODEL
-Get-Command spawn
-MODEL-ROUTING.md
-SETUP.md
-USER.md
-Write
 _
 _claim
 _inbox
@@ -40,41 +35,61 @@ _releases
 _tried
 _undelivered
 aios-commit --vault
+antifragile.md
 audits
+Bash
+behavioural
+business.md
 cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Session {date}: {brief description}"
+class:
 claude
 claude --remote-control
 claude -p
+CLAUDE_MODEL
 collision <dest>
 cp
+ecosystem.md
+exempt-line-check: true
 export CLAUDE_MODEL
 export/
 fast
 frontier
+Get-Command spawn
 git add -A
+growth.md
 hooks/aios-snapshot
 hooks/claude-identity/install-wrappers.sh
 hooks/openrouter.py
+housekeeping.md
 identical <dest>
 judgment
 kill
+method
+MODEL-ROUTING.md
 name
 npx
+observed/
 orchestration-ladder
 patch_note
+patterns.md
 permission_denials: []
 permissions.defaultMode: "auto"
 pgrep
 pid
 plan
+preferences.md
+profile.md
 prompt
 reflections/{subfolder}
 research
+restated: true
+route:
 scale
 send
 session-insights.md
 sessionId
 settings.json
+SETUP.md
 snapshot <dest>
 source ~/.zshrc
 spawn
@@ -88,13 +103,17 @@ spawn-kill {name}
 status
 surface
 surface:pid
+tests/
 tests/aios-snapshot.test.sh
 type spawn
 update_frontmatter
 updated:
+USER.md
 uvx
+vault-routine.md
 vault/00 - notes/reflections/_inbox/
 vscode.createTerminal
+Write
 {"action":"kill","name":"<kebab>"}
 {"action":"send","name":"<kebab>","prompt":"<one line>"}
 {"name":"<kebab>","task":"<first prompt>"}
@@ -103,8 +122,8 @@ vscode.createTerminal
 ~/.aios/spawn-inbox/
 ~/.aios/spawn-inbox/<name>.json
 ~/.aios/spawn-inbox/README.md
-~/.aios/surfaces/<surface>.json
 ~/.aios/surfaces/*.json
+~/.aios/surfaces/<surface>.json
 ~/.claude/projects/*/<sessionId>.jsonl
 ~/.claude/sessions/*.json
 ~/.zshrc
