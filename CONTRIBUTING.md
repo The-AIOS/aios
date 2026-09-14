@@ -250,6 +250,9 @@ Use the `+alternate` form for **any array that can legitimately be empty** — o
 
 Why this earns a section: it fails **mid-operation**, not at startup. `#6` aborted `aios-note-append` *after* the block was written into the note and *before* it was committed — so `/close-session` silently lost its capture on stock-bash Macs, and the natural retry duplicated the block. `tests/aios-commit.test.sh` now covers both empty-array paths, and CI runs that suite under real 3.2 on macOS (`primitives_bash32`).
 
+### When a check fails, read the run summary — not the log
+The notification GitHub sends says only *"PR run failed"* and links to the run. **That page's summary now names the failing check, repeats the error it emitted, and gives the command that reproduces it on your machine** — so the log is where you go for detail, not where you go to find out what happened. If it still reads as jargon, the summary ends with a paragraph you can paste straight into an AIOS session, which will read the run and fix the branch with you. Nothing about a red check means your machine or your vault is broken: these run on GitHub's machines, against the diff.
+
 ### Before-you-open-a-PR checklist
 CI (`.github/workflows/validate.yml`) covers repo structure, manifests, frontmatter, personalization + credential guards, migration drift, capability counts, skill resolution, and the commit-primitives regression suite — on ubuntu **and** under bash 3.2 on macOS. It's a floor, not a substitute: most of what matters here is a spec executed by Claude at runtime, so review stays human and the discipline stays author-run. Before opening a PR, confirm:
 

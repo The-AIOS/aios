@@ -1,4 +1,4 @@
-name: validate
+name: checks — the run summary says what to fix
 
 on:
   pull_request:
@@ -1604,6 +1604,14 @@ jobs:
         # worse. Silent by construction, so it has to be a test.
         run: bash tests/agent-skills-resolve.test.sh
 
+      - name: a failed check explains itself to the person who gets the email
+        # The explainer is a job that runs only when another job failed, so nothing else
+        # exercises it on a green run — and its own failure mode is silence: a job missing
+        # from its `needs:` fails while the summary reports a clean run. The suite derives
+        # the job list from the workflow and renders the summary offline, so both halves
+        # are checked without pushing a deliberately broken branch to see them.
+        run: bash tests/ci-failure-explainer.test.sh
+
       - name: every suite in tests/ is actually invoked by this workflow
         # This job's step list is hand-typed, so a suite can be committed, shipped, and
         # never run — it rots without one red mark. This repo has already been bitten twice
@@ -1949,3 +1957,44 @@ jobs:
             exit 1
           }
           Write-Host "ok: decline recorded, hash= untouched, verdict=declined thereafter"
+
+  explain:
+    name: What to do about a failed check
+    # THE ONLY JOB THAT RUNS WHEN SOMETHING BROKE, and the only one written for the person
+    # reading the notification email rather than for the person who wrote the check.
+    #
+    # GitHub's mail says "PR run failed: <workflow> - <title> (<sha>)" and links to a run page
+    # whose summary is empty. The reason then exists in exactly one place: a log inside one of
+    # thirteen jobs. This job fills that summary with the failing check's own error message and
+    # the command that reproduces it locally — see .github/scripts/explain-failure.sh.
+    #
+    # `needs` must list EVERY other job: a job missing from it can fail while this one reports
+    # a clean run, which is worse than no summary at all. tests/ci-failure-explainer.test.sh
+    # derives the job list from this file and fails the build when the two drift.
+    if: always() && contains(needs.*.result, 'failure')
+    needs:
+      - structure
+      - manifests
+      - frontmatter
+      - personalization
+      - credentials
+      - drift
+      - counts
+      - skill_resolution
+      - identity_backends
+      - primitives
+      - primitives_bash32
+      - primitives_windows
+      - windows_installer
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read    # this run's own jobs and their steps
+      checks: read     # the ::error:: annotations those steps already emit
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write the plain-language summary
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/explain-failure.sh
