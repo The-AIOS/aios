@@ -249,14 +249,20 @@ decline_state; case $? in
   0) finish declined "" "decline on file in .aios-update" ;;
   2) finish unknown  "" "tracker unreadable at $CONFIG_TRACKER — a prior decline would be invisible" ;;
 esac
+# CAPABILITY BEFORE POLICY. Both of these and the tenure gate below return `unknown`,
+# so ordering changes only the REASON -- which is the whole diagnostic value of the
+# verdict. A missing `gh` is a hard blocker that is identical on day 2 and day 20 and is
+# actionable now; insufficient tenure is a wait that resolves itself. Reporting the wait
+# while `gh` is absent sends the operator away to come back to the same silence.
+command -v gh >/dev/null 2>&1      || finish unknown "" "gh not installed"
+gh auth status >/dev/null 2>&1     || finish unknown "" "gh not authenticated"
+
 TENURE=$(tenure_days)
 case "$TENURE" in
   unknown) finish unknown "" "cannot date this vault's first sync — tenure unverifiable" ;;
   *) [ "$TENURE" -lt "$MIN_TENURE_DAYS" ] &&
        finish unknown "" "vault is ${TENURE}d old — the ask waits for ${MIN_TENURE_DAYS}d of use" ;;
 esac
-command -v gh >/dev/null 2>&1      || finish unknown "" "gh not installed"
-gh auth status >/dev/null 2>&1     || finish unknown "" "gh not authenticated"
 
 REPOS=$(candidate_repos)
 UNSTARRED=""
