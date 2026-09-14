@@ -22,12 +22,12 @@ Organized into **7 bundles by purpose**. Install only the bundles you need.
 | **`aios/strategy/`** | Market research, advisory, company analysis, open-source governance | 4 |
 | **`aios/finance-legal/`** | Accounting, legal review, invoicing, compliance | 4 |
 | **`aios/engineering/`** | Code review, documentation, bug triage, security, building, growth, refactoring | 8 |
-| **`aios/communication/`** | Content, decks, emails, meeting prep, reports, design systems, animation | 8 |
+| **`aios/communication/`** | Content, brochures, decks, emails, meeting prep, reports, design systems, animation | 9 |
 | **`aios/personal/`** | Study, journaling, growth, decision-making, onboarding, crisis | 6 |
 | **`aios/commerce/`** | Customer-facing shopping + merchant agents | 1 |
 | **`custom/`** | Your own agents (operator-specific extensions, never synced) | — |
 
-**Total bundled agents: 35.** Each bundle has a `README.md` describing its scope; this file is the master registry.
+**Total bundled agents: 36.** Each bundle has a `README.md` describing its scope; this file is the master registry.
 
 > **Standard:** all agents follow the [Agent Skills open standard](https://github.com/anthropics/skills) (138K⭐ — Anthropic's public canonical repo). Cross-platform compatible with Claude Code, Codex, Gemini CLI, Cursor, Antigravity.
 
@@ -125,6 +125,7 @@ When a fuzzy match is used, the session tells the user which agent was matched a
 | [[content-writer]] | Draft posts for LinkedIn, Twitter/X, Substack in the user's voice | draft post, write article, LinkedIn, tweet, Substack | on-demand |
 | [[content-scheduler]] | Plan and queue content calendar from vault insights | content calendar, schedule posts, publishing plan | weekly (Monday) |
 | [[email-drafter]] | Draft professional emails matching voice + context | email, draft email, follow up, outreach, reply to | on-demand |
+| [[brochure-builder]] | Branded print collateral from content — acquires the brand from guidelines, a URL, or proposes one; never fabricates a fact | brochure, one-pager, leaflet, flyer, collateral, sell sheet, datasheet | on-demand |
 | [[deck-builder]] | Build presentations end-to-end via 6-phase AIOS process | deck, presentation, slides, keynote, pitch, investor | on-demand |
 | [[meeting-prepper]] | Prepare context-rich briefings for upcoming meetings | meeting, prep, briefing, talking points, agenda | on-demand |
 | [[report-drafter]] | Draft status reports and board updates from vault activity | status report, board update, weekly report, progress | on-demand |
