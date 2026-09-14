@@ -1633,6 +1633,14 @@ jobs:
         # worse. Silent by construction, so it has to be a test.
         run: bash tests/agent-skills-resolve.test.sh
 
+      - name: three checks read the right signal (roadmap scoping, restated files)
+        # All three failure modes are silent: a snapshot carries `type: roadmap` +
+        # `status: live`, so an unscoped probe returns archives beside the real file and
+        # every hit looks valid. Writing this suite found a fourth probe site the spec
+        # that commissioned it had missed, and a file-level grep version of its own
+        # assertion that passed against a reverted fix. Both are documented inline.
+        run: bash tests/truth-surface-signals.test.sh
+
       - name: every top-level directory is classified Tier-1 or Tier-0
         # /aios:update DERIVES its layer list, so a new infra layer is never silently
         # missed — and a new top-level folder is silently INCLUDED, because the default

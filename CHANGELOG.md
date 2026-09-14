@@ -70,6 +70,34 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-14 — Three checks that were reading the wrong signal
+
+`hash: 84ca270` · [#135](https://github.com/The-AIOS/aios/pull/135)
+
+> **What you can now do.** Trust that when a session asks *"is this item done?"*, it reads the answer off the roadmap you maintain — not off an archived photograph of it. If you use the optional keyed-roadmap layer, your board has probably been showing you work that already shipped.
+
+**What changes.** A keyed item's status lives in a live roadmap file, and a session finds it by searching for one. **Snapshots are byte-for-byte copies** — so every archived copy of a roadmap carries the same `type: roadmap` and `status: live` in its own frontmatter and answers that search exactly like the real file. The search was returning the archives too, and an archive is always the staler answer: a photograph of a surface that has since moved. Measured on a live vault, one key resolved to **19 files — 18 of them snapshots, and all 18 disagreed with the real roadmap.**
+
+Nothing about this announced itself. Every hit looks like a valid answer, and how many you get is silently whatever your snapshot cadence has produced — so **the more diligently a vault archives, the more wrong answers it gets**, and two operators get different correctness from the same rule with neither one told. Every place that resolves a key now excludes `logs/`, for a reason that outlives roadmaps: **`logs/` holds machine-written records, and a record is never a truth surface.**
+
+**Housekeeping's collision advice was wrong for the case that actually happens.** It said: same key in two roadmap files → rename it in the younger one. Applied to a pile of snapshots that is either editing your own archives or renaming a key in the live file to escape a conflict that only existed because of the bug above. It now reads the shape first — **two files means two roadmaps; many files, all under `logs/`, means the search was unscoped** — and never proposes editing an archive.
+
+**And an alarm that fired when nothing was wrong.** The observed-context staleness check assumes every file in `observed/` accumulates entries, so a file that hasn't changed in 30 days is going stale. `vault-routine.md` doesn't accumulate — it is a cadence spec, rewritten in place, and nothing is appended to it. So the alarm fired **precisely when your rhythm was stable**, which is the file being correct, every month, forever. That is how people learn to ignore alarms. A file can now declare `restated: true` and is skipped by the clock; `vault-routine.md` also gains a real write trigger, so it has a defined condition instead of a countdown.
+
+**Action required — add one frontmatter key, by hand or by session. Do NOT overwrite the file.**
+
+`vault-routine.md` is **your** file: `/aios:update` never syncs anything under `vault/00 - notes/context/`, so the flag cannot arrive on its own — and for the same reason **nothing should ever replace that file with the framework's copy.** Yours holds your cadence; the shipped one is an empty seed. Replacing it loses your content and gains you nothing.
+
+**For the session running this update** — check first, act only if needed, and change exactly one key:
+
+1. Find the observed file that *specifies your cadence* rather than logging events. Normally `vault/00 - notes/context/observed/vault-routine.md`, but **match on shape, not the name** — operators rename these files and write them in their own language. The tell: its headings carry no dates, and it reads as a specification of when to run what.
+2. If its frontmatter already has a `restated:` key, **do nothing and say so.** This is idempotent by design; a second update must not act twice.
+3. Otherwise add `restated: true` to that file's frontmatter using the frontmatter tool your setup provides (`update_frontmatter` via the Obsidian MCP, which sets a key without disturbing the body). **Never regex-edit the file in place and never rewrite it** — a stray in-place edit on a note is how a vault loses content that was never backed up.
+4. If no such file exists, or you cannot identify one confidently, **report that and stop.** Do not guess at a file and do not silently pass — an action item that quietly does nothing is worse than one that says it could not run.
+
+Then apply the same judgement to any *other* observed file of yours that is a specification rather than a running log: it wants the flag too. A fresh clone already ships with it set.
+
+
 ## 2026-09-14 — A failed check that explains itself
 
 `hash: d4dac86 · 625a251` · [#133](https://github.com/The-AIOS/aios/pull/133) · [#134](https://github.com/The-AIOS/aios/pull/134)
