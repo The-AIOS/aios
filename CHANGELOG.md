@@ -70,7 +70,7 @@
 
 ## 2026-09-13 — Sessions that prove they learned from the last one
 
-`hash: 6977721` · [#128](https://github.com/The-AIOS/aios/pull/128)
+`hash: 6977721 · caf6141 · f215ee7 · 33d123c · 54aa78c · d9ad92f` · [#128](https://github.com/The-AIOS/aios/pull/128) · [#129](https://github.com/The-AIOS/aios/pull/129) · [#130](https://github.com/The-AIOS/aios/pull/130) · [#131](https://github.com/The-AIOS/aios/pull/131) · [#132](https://github.com/The-AIOS/aios/pull/132)
 
 > **What you can now do.** Trust that a session you start has actually read your context — and can show it. Until now it very likely had not. The rule said *read every file in `declared/` and `observed/`*, and measured across 26 spawned workers on a live vault they loaded anywhere from **0 files to 18**, one of them doing 120 tool calls having read nothing at all. **14 of the 26 produced outward-facing work** — a message, a note, something under the operator's name — and **2 had read no `declared/` file whatsoever.** Nothing about that output looks wrong; it reads fluent and correct and it is not yours. A rule nobody follows is not a high standard, it is an unmeasured one.
 
@@ -81,6 +81,15 @@
 **What you should expect now.** A worker drafting anything a human will read under your name reaches your voice files first — measured, **0 of 3 → 3 of 3** on tasks that never mention voice or tone. A worker doing mechanical work floors and stops. A worker asked about one venture opens that venture and not the other four. And `/aios:housekeeping` now reports both halves: who did real work having loaded nothing, and who acted outward having read no `declared/` file. **A narrowing justified by a measurement has to keep being measured.**
 
 **Also:** `context/ventures/` is finally accounted for — on a mature vault it is larger than `observed/`, and no version of this rule had ever mentioned it. `about_business.md` is a ~1:100 summary of it and never substituted. And no hand-picked token number survives anywhere: the *"just read it all"* verdict flips on a **ratio of the vault to its own floor**, so it gives opposite, correct answers to a new vault and a heavily-written one.
+
+**Four more fixes shipped alongside, each one a silent failure.**
+
+- **Your daily plan was reading one calendar.** `pipeline-executor` asked for `primary` and stopped, so work on a venture, role or shared calendar was invisible to `/today`. **A missing calendar does not look like an error — it looks like a free afternoon.** Measured on one live account: **eight of nine calendars unread for months**. Every readable calendar is now merged and deduplicated by `iCalUID`, with holiday and contact feeds excluded; name the rest under `Calendars to skip` in `USER.md`.
+- **Retiring a source switched it back on.** Writing *"Google Tasks — removed"* in `USER.md` matched none of the negation markers, so the line scanned as naming an *active* source. **Documenting the removal was what re-enabled it**, surfacing later as a spurious `credentials missing` for a source nobody wanted.
+- **The bus dead-letter check did nothing on Windows.** `python3` is intercepted there by the Microsoft Store alias, which prints an installer notice and runs nothing — so the check emitted no lines, which is byte-for-byte identical to a clean result. A silent false negative inside the one check built to end silent failures. It runs through `uv` now, as do the new context hooks above for the same reason.
+- **The star ask fired on day one**, asking an operator to publicly vouch for software they had had for ten minutes. It now waits for a week of actual use, dated from your first sync.
+
+**Also:** twelve operator-facing messages said *"restart Claude Code"* without saying what that means as a gesture — the app, the terminal, the editor, or the session. Every one of them now says both **what to open** and, the half that was missing everywhere, **what to leave alone**: only the session; the app, terminal and editor stay open, and running sessions keep working.
 
 **Action required:** none for the rule itself — sessions pick it up from `CLAUDE.md`. The `spawn` wrapper carries the same rule on macOS/Linux and Windows, so **re-run the wrapper installer**; `/aios:update` does this automatically when the installer changes, and open terminals keep the old function until `source ~/.zshrc`.
 ## 2026-09-11 — Google connects by asking, a refused login that says so, and Close of Day back at the end
