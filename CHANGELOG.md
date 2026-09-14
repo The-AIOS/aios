@@ -70,6 +70,31 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-14 — Three checks that were reading the wrong signal
+
+`hash: 84ca270` · [#135](https://github.com/The-AIOS/aios/pull/135)
+
+> **What you can now do.** Trust that when a session asks *"is this item done?"*, it reads the answer off the roadmap you maintain — not off an archived photograph of it. If you use the optional keyed-roadmap layer, your board has probably been showing you work that already shipped.
+
+**What changes.** A keyed item's status lives in a live roadmap file, and a session finds it by searching for one. **Snapshots are byte-for-byte copies** — so every archived copy of a roadmap carries the same `type: roadmap` and `status: live` in its own frontmatter and answers that search exactly like the real file. The search was returning the archives too, and an archive is always the staler answer: a photograph of a surface that has since moved. Measured on a live vault, one key resolved to **19 files — 18 of them snapshots, and all 18 disagreed with the real roadmap.**
+
+Nothing about this announced itself. Every hit looks like a valid answer, and how many you get is silently whatever your snapshot cadence has produced — so **the more diligently a vault archives, the more wrong answers it gets**, and two operators get different correctness from the same rule with neither one told. Every place that resolves a key now excludes `logs/`, for a reason that outlives roadmaps: **`logs/` holds machine-written records, and a record is never a truth surface.**
+
+**Housekeeping's collision advice was wrong for the case that actually happens.** It said: same key in two roadmap files → rename it in the younger one. Applied to a pile of snapshots that is either editing your own archives or renaming a key in the live file to escape a conflict that only existed because of the bug above. It now reads the shape first — **two files means two roadmaps; many files, all under `logs/`, means the search was unscoped** — and never proposes editing an archive.
+
+**And an alarm that fired when nothing was wrong.** The observed-context staleness check assumes every file in `observed/` accumulates entries, so a file that hasn't changed in 30 days is going stale. `vault-routine.md` doesn't accumulate — it is a cadence spec, rewritten in place, and nothing is appended to it. So the alarm fired **precisely when your rhythm was stable**, which is the file being correct, every month, forever. That is how people learn to ignore alarms. A file can now declare `restated: true` and is skipped by the clock; `vault-routine.md` also gains a real write trigger, so it has a defined condition instead of a countdown.
+
+**Action required — one line, only if you have been running AIOS for a while.** Your `vault-routine.md` is your own file and updates never touch it, so the new flag does not reach it on its own:
+
+```bash
+grep -q '^restated:' "$HOME/aios/vault/00 - notes/context/observed/vault-routine.md" \
+  || sed -i '' '/^type: /a\
+restated: true
+' "$HOME/aios/vault/00 - notes/context/observed/vault-routine.md"
+```
+
+On Linux use `sed -i` without the `''`. A fresh clone already ships with it. If you renamed that file, add `restated: true` to its frontmatter by hand — and to any other observed file of yours that is a specification rather than a running log.
+
 ## 2026-09-14 — A failed check that explains itself
 
 `hash: d4dac86 · 625a251` · [#133](https://github.com/The-AIOS/aios/pull/133) · [#134](https://github.com/The-AIOS/aios/pull/134)
