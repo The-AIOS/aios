@@ -807,8 +807,37 @@ jobs:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
     if: github.event.repository.fork != true
     runs-on: ubuntu-latest
+    permissions:
+      contents: write    # only the repair step below writes, and only on main
     steps:
       - uses: actions/checkout@v4
+
+      - name: On main, repair count drift instead of reporting it
+        # A stale count has exactly one correct answer — the folders — so a human round trip
+        # buys nothing and costs a red run and an email. On main the token can write and there
+        # is no untrusted code in the tree, so the drift is repaired and committed here, BEFORE
+        # the check below runs: the run stays green and no mail is sent.
+        #
+        # Deliberately NOT done for a pull request. A PR from a fork gets a read-only token by
+        # design, and the workaround — pull_request_target with the fork's code checked out
+        # under a write token — is how a repository gets its secrets stolen. So on a PR the
+        # check still fails, and the run summary names `bash scripts/autofix.sh` as the fix.
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -e
+          bash scripts/autofix.sh
+          if git diff --quiet; then echo "no drift to repair"; exit 0; fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- TOOLS.md README.md agents/_index.md
+          git commit -m "chore(docs): sync capability counts with the bundled folders"                      -m "Derived from the folders themselves; this run found the claims stale and rewrote them. No judgment involved — scripts/autofix.sh lists exactly which claims it may touch."
+          # A concurrent push makes this non-fast-forward. Rebase once, and if it still cannot
+          # land, WARN rather than fail: the repair is already applied in this tree, so the check
+          # below passes and the next push repairs main again. Turning a losing race into a red
+          # run would reintroduce exactly the mail this step exists to remove.
+          git pull --rebase --quiet || true
+          git push || echo "::warning::Counts were repaired in this run but the push did not land (concurrent update). The next push to main will repair them again."
+          echo "::notice::Capability counts were stale and have been repaired on main."
 
       - name: Doc count claims match bundled ground truth
         run: |
@@ -1603,6 +1632,12 @@ jobs:
         # named a skill and received nothing; nothing errored, they just answered
         # worse. Silent by construction, so it has to be a test.
         run: bash tests/agent-skills-resolve.test.sh
+
+      - name: the count fixer repairs what it claims, and nothing else
+        # This one COMMITS ITS OWN OUTPUT on main, so nobody reviews its diff line by line.
+        # The suite's weight is therefore on the negative half: every case ends by comparing
+        # the repaired file against the original byte for byte.
+        run: bash tests/autofix.test.sh
 
       - name: a failed check explains itself to the person who gets the email
         # The explainer is a job that runs only when another job failed, so nothing else

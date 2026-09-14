@@ -62,6 +62,14 @@ command_for() {
   ' "$WORKFLOW"
 }
 
+# Does a fixer already know how to repair this check? The list lives in the fixer, next to the
+# repairs it performs — asking it is what keeps the two from drifting into disagreement.
+fixable() { # step name
+  local fixer="${AIOS_AUTOFIX:-scripts/autofix.sh}"
+  [ -f "$fixer" ] || return 1
+  bash "$fixer" --covers 2>/dev/null | grep -qxF "$1"
+}
+
 # ── collect (the only part that needs the network) ───────────────────────────
 # Emits one TSV line per failed step: job <TAB> step <TAB> message
 # The message is the step's own `::error::` annotation when it emitted one —
@@ -110,6 +118,23 @@ render() {
     printf '### %s — %s\n\n' "$job" "$step"
     if [ -n "${msg:-}" ]; then
       printf '**What it found:** %s\n\n' "$msg"
+    fi
+    # Some checks have exactly one correct answer and a script that writes it. Offer THAT
+    # instead of the check's own command: reading the failure is not the work, repairing it is.
+    if fixable "$step"; then
+      printf '**This one repairs itself. Run:**
+
+```bash
+bash scripts/autofix.sh
+```
+
+'
+      printf 'then commit what it changed. (On `main` it is already applied automatically — this
+'
+      printf 'is only needed on a pull request, where CI cannot write to your branch.)
+
+'
+      continue
     fi
     cmd="$(command_for "$step")"
     if [ -n "$cmd" ]; then
