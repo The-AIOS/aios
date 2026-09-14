@@ -314,6 +314,132 @@ _spawn_adj_animal() {
   echo "${adj}-${animal}"
 }
 
+_spawn_task_preamble() {
+  # Printed at the top of every spawn task file. Generic on purpose: the paths are the
+  # framework's and the rule is the framework's — nothing here names an operator.
+  cat <<'PREAMBLE'
+# Before the task — three corpora, each read differently
+
+CONTEXT LOADING IS HOW A SESSION DEMONSTRATES REINFORCED LEARNING. It is the only moment
+where everything this operator and Claude have built together reaches you, or does not.
+Every close-session and close-day writes into observed/; a session that starts without
+reading any of it is one where none of that compounding arrives — and NOTHING ABOUT ITS
+OUTPUT WILL SAY SO. The measure is not how much you read. It is whether what you read
+FITS what you were asked to do.
+
+  vault/00 - notes/context/declared/   WHO THEY ARE — voice, identity, how they decide.
+                                       RESTATED in place. The SMALL one. Read WHOLE when
+                                       your output speaks as them.
+  vault/00 - notes/context/observed/   HOW YOU TWO WORK — preferences, patterns, lessons.
+                                       ACCUMULATES: dated, append-ordered ### entries.
+                                       Indexed by title; newest entries read at the floor.
+  vault/00 - notes/context/ventures/   THE VENTURES — GTM, market, personas, positioning,
+                                       pricing. PARTITIONED: often the largest of the
+                                       three. Listed at the floor; open the ONE your task
+                                       touches. about_business.md is a ~1:100 summary of
+                                       it and does NOT substitute.
+
+FIRST ACTION, before you answer or plan anything — THE MAP, whatever the task is:
+list both folders, read both `_index.md` (one line per file), then read the `###` ENTRY
+THE FLOOR, in one command:
+
+  python3 ~/aios/hooks/context-floor.py
+
+It emits both _index.md, EVERY HEADING in both folders, THE LAST 5 ### ENTRIES OF EVERY
+observed/ FILE IN FULL, and INTENT.md -- which is at the floor because it governs what
+you may DO, a different question from whether your output sounds like them, and the one
+that binds a mechanical worker hardest (least contextualised, most able to commit, push,
+send or delete). Absent the hook, glob it by hand — grep -h '^#' on
+declared/*.md, grep -h '^###' on observed/*.md, then the tail of each observed file —
+but prefer the hook: a floor assembled by hand gets done partially or skipped, and
+afterwards nothing can tell the difference.
+
+The floor carries LEARNED CONTENT, not only titles. Headings tell you what exists; they
+tell you nothing the system has learned. Every close-session and close-day appends to
+observed/ — if the next session never reads what was appended, the loop does not close.
+
+It reads the TAIL because the folders are written differently: declared/ is RESTATED
+(identity, rewritten in place, no newest end), observed/ ACCUMULATES (dated and
+append-ordered, so its newest end is what the last sessions wrote). The tail is BOUNDED —
+at ten times the entries it reads the same five per file while the headings still index
+all of them. Recency is not relevance: an older entry that matters is one title away, and
+antifragile's titles are all in front of you, which is what "scan for relevant rules
+before executing commands" needs.
+
+BOTH FOLDERS VARY FROM VAULT TO VAULT: the framework ships five declared files and nine
+observed ones and operators rename them, add their own, and write them in their own
+language, so a named list silently skips whatever it does not mention. Measured, a floor
+naming four observed files found ZERO entry titles on a vault whose files were renamed —
+and a floor at zero is indistinguishable from one that fired.
+
+ABOVE THE FLOOR THERE ARE NO TIERS — ONLY FIT. Intelligence is the right information at
+the right time, not the largest pile you can afford. Nothing to qualify for, no level to
+reach: open what the work points at, to the depth it needs, when it points there.
+
+  DEPTH IS YOURS TO SET, per file, without asking. The floor gave you five recent entries
+  per observed file; if a title above them is what the task turns on, open that entry, or
+  twenty, or the file. If ONE declared file answers your question, read that one rather
+  than the folder. The floor is a starting position, NOT an allowance. If you catch
+  yourself thinking "I am only at the floor, so I should not read that" — that is the
+  misreading. There is no permission gate above the floor.
+
+  LATER BEATS SPECULATIVELY EARLIER. Reading declared/ at minute thirty, having just
+  discovered the deliverable goes out in their name, is better fit than reading it at
+  minute one in case it might. Reaching mid-task is the NORMAL MODE, not a fallback. What
+  you cannot discover at the moment of need is what you never knew existed — that is the
+  floor's whole job, and why it is the only fixed thing here.
+
+  TWO DEPTHS WORTH NAMING, as costs rather than permissions:
+    ALL of context/declared/ — when what you produce will be read as the operator's own
+      words, or act on their behalf. OPERATOR-FACING IS FAR BROADER THAN GHOSTWRITING,
+      and this is where the question gets misread. If a human will read your prose and it
+      carries their name or their team's — a message, a post, a note, a release note, a
+      README line, a repo description, an email, a reply, a doc — it lands as THEIRS. The
+      test is NOT "was I asked to imitate them"; it is "WILL A HUMAN READ THIS AS COMING
+      FROM THEM". Measured: workers asked for a Slack message, a release note and a repo
+      description climbed to declared/ once in three. All three were operator-facing and
+      none of them said so. Writing prose a person will read? Assume yes. It is the SMALL one, and voice is the one thing whose
+      absence you cannot detect in your own output: under-read observed/ and the gap shows
+      as work visibly missing something; under-read declared/ and it comes back fluent,
+      correct, and not theirs, with nothing in it looking wrong. Only one of the two
+      failures announces itself. (Do NOT also preload all of observed/ for this.)
+    ONE VENTURE'S FOLDER — when the task is about that venture.
+
+  READING EVERY FILE IN declared/, observed/ AND EVERY VENTURE IS NOT THE TOP OF A LADDER.
+  It is the degenerate case, correct in two situations only: the whole context is cheaper
+  than deciding what to skip (run `python3 ~/aios/hooks/context-rungs.py`; if the verdict
+  says read it all, read it all — when deliberating costs more than acting, do not
+  deliberate), or THE TASK IS THE CONTEXT ITSELF — synthesis across their history,
+  auditing or compacting the observed files, answering AS them, where an index is a lossy
+  summary of the thing under analysis. Outside those two, reaching for everything is not
+  thoroughness, it is the absence of a judgment.
+
+  The map is enough for work checkable without knowing the operator: code, tests, file
+  operations, data, mechanical sweeps — until it is not, at which point you open what it
+  needs.
+
+  Genuinely hard to place? Load the `right-context` skill — that is where this judgment
+  lives in full.
+
+EITHER WAY THE REST STAYS OPEN TO YOU — that is what the map is for. You are not reading
+observed/ up front because it is several times the size of the identity layer and most of
+it will not apply to this task, NOT because it is off limits. Open any of it the moment a title or the work points at it: a task touching
+a person or a venture usually wants ecosystem.md or business.md; unsure how they like
+something done, preferences.md. Reaching mid-task is expected, not exceptional. If you
+catch yourself guessing at how they would phrase something, who someone is, or whether
+they have already decided this — stop guessing and read.
+
+UNSURE IS NOT A THIRD ANSWER — read MORE, not less, for that same asymmetry. Over-reading
+costs tokens once; under-reading costs the operator's voice and fails silently. If the
+call is genuinely hard, load the `right-context` skill — it carries the full ladder and
+measures what each rung costs in THIS vault (hooks/context-rungs.py).
+
+Describing this rule is not doing it: right after CLAUDE.md's identity check, the next
+thing you do is the `ls`.
+
+PREAMBLE
+}
+
 spawn() {
   # --tier frontier|judgment|scale|fast — optional, position-independent (plus the
   # legacy `mechanical`). See the map below for what each rung is for. `mechanical` routes
@@ -356,7 +482,10 @@ spawn() {
   #   about the turn and not about the ritual: passing a bootstrap only starts the ritual
   #   when the bootstrap CONTAINS an instruction. With an explicit task it always did;
   #   with the default it never did, and that is the path a first-time operator takes.
-  local task="${2:-Run the CLAUDE.md Session Start Ritual now: load my declared + observed context, match your session name to your role, and greet me in character before awaiting my task.}"
+  # No task given. The preamble above already carries the context rule, so this must NOT restate
+  # it — an earlier version said "load my declared + observed context" and landed in the same
+  # task file as a preamble saying not to preload, telling the worker both things at once.
+  local task="${2:-Match your session name to your role, greet me in character, then await my task. Load context per the rule above — with no task yet, you cannot size it, so read the full set.}"
 
   # Map tier → model id. Empty spawn_model = no override → _claude_with_respawn
   # uses its frontier default (judgment). Four rungs, named for the SHAPE of the
@@ -470,7 +599,12 @@ spawn() {
   fi
 
   local task_file="/tmp/spawn-task-$name.md"
-  printf '%s\n' "$task" > "$task_file"
+  # The task file opens with the on-demand context preamble (see _spawn_task_preamble): a spawned
+  # worker otherwise boots with NO operator context — CLAUDE.md tells it to load context on demand
+  # and in practice it often skips that step entirely. The preamble hands it the map and the rule.
+  # CLAUDE.md § Identity & Greeting step 4 carries the same rule, so workers spawned by another
+  # surface (which never reads this file) get it too; this is the reinforcement on the wrapper path.
+  { _spawn_task_preamble; printf '%s\n' "$task"; } > "$task_file"
 
   local launcher="/tmp/spawn-launch-$name.sh"
   # Match the launcher's shell + rc to the user's LOGIN shell — the same

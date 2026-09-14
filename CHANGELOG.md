@@ -68,6 +68,21 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-13 — Sessions that prove they learned from the last one
+
+`hash: ` · [#128](https://github.com/The-AIOS/aios/pull/128)
+
+> **What you can now do.** Trust that a session you start has actually read your context — and can show it. Until now it very likely had not. The rule said *read every file in `declared/` and `observed/`*, and measured across 26 spawned workers on a live vault they loaded anywhere from **0 files to 18**, one of them doing 120 tool calls having read nothing at all. **14 of the 26 produced outward-facing work** — a message, a note, something under the operator's name — and **2 had read no `declared/` file whatsoever.** Nothing about that output looks wrong; it reads fluent and correct and it is not yours. A rule nobody follows is not a high standard, it is an unmeasured one.
+
+**What changes.** Every session now begins with a **floor** — one command, `python3 ~/aios/hooks/context-floor.py` — that emits both `_index.md`, every heading in `declared/` and `observed/`, **the last 5 entries of every observed file in full**, `INTENT.md`, and a listing of your ventures. It always runs. Above it there are **no tiers, only fit**: the session opens what the work points at, to the depth it needs, when it points there. Reading everything is the *degenerate* case, correct only when the whole context is cheaper than deciding what to skip, or when the task *is* the context.
+
+**Why it is built this way.** Context loading is how a session demonstrates **reinforced learning**. Every `/close-session` and `/close-day` writes into `observed/`; if the next session never reads what was written, the loop does not close and you are maintaining files that change no behaviour. So the floor carries the *newest* entries, not just titles — bounded, so ten times the entries costs the same. The whole design aims at one thing: **know your vault, get the right information, at the right time, in the optimal token usage.** Those are not four goals. They are one, and cheapness at the wrong information scores zero.
+
+**What you should expect now.** A worker drafting anything a human will read under your name reaches your voice files first — measured, **0 of 3 → 3 of 3** on tasks that never mention voice or tone. A worker doing mechanical work floors and stops. A worker asked about one venture opens that venture and not the other four. And `/aios:housekeeping` now reports both halves: who did real work having loaded nothing, and who acted outward having read no `declared/` file. **A narrowing justified by a measurement has to keep being measured.**
+
+**Also:** `context/ventures/` is finally accounted for — on a mature vault it is larger than `observed/`, and no version of this rule had ever mentioned it. `about_business.md` is a ~1:100 summary of it and never substituted. And no hand-picked token number survives anywhere: the *"just read it all"* verdict flips on a **ratio of the vault to its own floor**, so it gives opposite, correct answers to a new vault and a heavily-written one.
+
+**Action required:** none for the rule itself — sessions pick it up from `CLAUDE.md`. The `spawn` wrapper carries the same rule on macOS/Linux and Windows, so **re-run the wrapper installer**; `/aios:update` does this automatically when the installer changes, and open terminals keep the old function until `source ~/.zshrc`.
 ## 2026-09-11 — Google connects by asking, a refused login that says so, and Close of Day back at the end
 
 `hash: 61e7d9c · 398e526 · 0a2e3db · 236e899 · 921e991 · dbde860 · 83c73ba` · [#122](https://github.com/The-AIOS/aios/pull/122) · [#123](https://github.com/The-AIOS/aios/pull/123)
@@ -95,6 +110,41 @@ Now: one baseline per surface you publish to, scored against the surface the dra
 **And `## Close of Day` goes back to the end.** `/close-day` now appends there, through the same locking helper `/close-session` uses. It never said *where* its block went, so it could be anchored partway up — and every `## Session —` block below that point then sat beneath it. Since `/close-session` inserts *before* that marker, the marker being last is what keeps session blocks above it. `/close-day` also wrote the note directly while every other writer took a lock, so a block landing between its read and its write was silently overwritten.
 
 **Action required:** none — `/aios:update` lands both. **Worth one look at recent notes:** if a section's body appears *below* a session block instead of under its own heading, that was the marker bug — move the stranded lines back up, nothing was lost. And **do not bulk-reorder old notes** on the strength of the Close-of-Day fix: a `## Session —` block below `## Close of Day` is only wrong when it was written *before* the close. A session that genuinely ran after you closed the day belongs below it.
+
+### A spawned worker now loads your context, instead of booting blind
+
+**What you can now do.** Trust that a worker you spawn knows who it is working for. Until now
+`CLAUDE.md` told a spawned worker to run the full Session Start Ritual, and in practice it often ran
+none of it — so a worker could answer a question about your ventures having read nothing you ever
+wrote. Step 4 now states the rule it can actually follow: list the two context folders, read their
+`_index.md`, then read **only the files the task touches** — done as the session's first tool calls,
+not described and skipped.
+
+**The part that is not an optimisation is the floor.** Two observed files — `growth.md` and
+`patterns.md` — are read **every time, regardless of the task**, because they hold what an operator
+tends to avoid or repeat and *no task ever names them*. Without that floor, "read what the task
+touches" hands a fresh worker the relevance call, which is the one judgment it is worst placed to
+make: it cannot know that the file the task never mentions is the file that makes an answer *yours*
+rather than merely correct. That failure is silent — the worker still answers, and still sounds
+right.
+
+**Why this is cheaper and not just different.** A preload writes every context file to the cache on
+the first request. Measured on a live vault, three of three tasks reached the same or better answers
+on demand as with the full preload, at roughly a third of the cost. The interactive **primary**
+session is untouched and keeps the full ritual — the case for preloading is cross-file synthesis
+that no question triggers, and that case is untested.
+
+**It lands on both spawn paths, which is the whole reason it is two files.** A worker born from
+`spawn` in a terminal gets the rule injected at the top of its task file by the wrapper; a worker
+born from a surface fulfilling an inbox request never reads that file and is governed by `CLAUDE.md`
+alone. Two hand-maintained copies of one rule is exactly how a floor goes missing from one side, so
+`tests/spawned-worker-context-parity.test.sh` asserts they agree — deriving the floor from the
+wrapper rather than keeping a third list of its own, and refusing to pass on an empty floor.
+
+**Action required:** none — `/aios:update` lands it. Re-run
+`bash ~/aios/hooks/claude-identity/install-wrappers.sh` if your update did not (it is auto-run when
+the installer changes), and open a new terminal so `spawn` picks it up. Workers already running keep
+the old behaviour until they close.
 
 ### `resume` — reopen a closed session as the same someone
 
