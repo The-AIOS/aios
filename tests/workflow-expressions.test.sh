@@ -73,9 +73,27 @@ done
   || bad "no workflow files found — this suite would pass vacuously"
 
 echo "── 2. the workflows are still valid YAML ──"
+# PICK A PARSER BEFORE JUDGING THE FILE. This read `python3 -c "import yaml..."` and reported
+# "not valid YAML" whenever that command was missing or lacked PyYAML — which on Windows is
+# always: `python3` there is the Microsoft Store alias, which prints an installer notice and
+# runs nothing (the same trap as PR #129). A contributor on Windows was told their workflow was
+# broken by a check that had never parsed it. An absent parser is a missing CHECK, not a failed
+# one, and the two must not render the same.
+# `encoding='utf-8'` below is load-bearing for the same reason: Python on Windows decodes with
+# the local codepage, and this workflow contains em dashes, so an unpinned read raises
+# UnicodeDecodeError and renders as "not valid YAML" — a second false red from the same class.
+YAML_RUNNER=""
+if python3 -c "import yaml" >/dev/null 2>&1; then YAML_RUNNER="python3 -c"
+elif python -c "import yaml" >/dev/null 2>&1; then YAML_RUNNER="python -c"
+elif command -v uv >/dev/null 2>&1 && uv run --quiet --with pyyaml python -c "import yaml" >/dev/null 2>&1; then
+  YAML_RUNNER="uv run --quiet --with pyyaml python -c"
+fi
 for wf in "$REPO"/.github/workflows/*.yml; do
   [ -f "$wf" ] || continue
-  if python3 -c "import yaml,sys; yaml.safe_load(open(sys.argv[1]))" "$wf" 2>/dev/null; then
+  if [ -z "$YAML_RUNNER" ]; then
+    printf '  SKIP  %s — no Python with PyYAML here, so nothing parsed it (CI does)
+' "$(basename "$wf")"
+  elif $YAML_RUNNER "import yaml,sys; yaml.safe_load(open(sys.argv[1], encoding='utf-8'))" "$wf" 2>/dev/null; then
     ok "$(basename "$wf") parses as YAML"
   else
     bad "$(basename "$wf") is not valid YAML"
