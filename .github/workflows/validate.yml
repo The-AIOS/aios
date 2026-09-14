@@ -1475,6 +1475,15 @@ jobs:
         # floor, which is indistinguishable from a complete one once printed.
         run: bash tests/context-floor.test.sh
 
+      - name: context hooks never match on a per-vault filename
+        # A filename in a comment is an example; a filename in code is a matcher, and
+        # matchers go stale -- both context folders vary per vault. This linter tokenizes
+        # rather than greps, because two earlier grep/sed versions of the same guard
+        # could not tell prose from code and failed a correct hook. It immediately found
+        # a dead four-file tuple in context-rungs.py that had survived the very commit
+        # whose purpose was removing that enumeration.
+        run: python3 tests/lint-no-hardcoded-context-names.py
+
       - name: the Google connector's API set derives from one manifest
         # The set of Google APIs an operator must enable existed in SIX places before
         # AI-126 -- connector.json's --permissions, SETUP.md's prose, the setup doc's

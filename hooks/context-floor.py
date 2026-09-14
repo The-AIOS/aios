@@ -83,6 +83,36 @@ def read(path):
         return None
 
 
+ENTRY_DATE = re.compile(r"20\d{2}-\d{2}-\d{2}")
+# A file the operator's ritual treats as a RULE LIBRARY rather than a chronology gets its
+# index read instead of its tail. Matched on the heading text, not a filename, so a vault
+# that renamed the file still gets it right.
+INDEX_HEADING = re.compile(r"^\#{1,3}\s+.*\b(meta-pattern|read these first|index)\b", re.I)
+
+
+def entry_date(block):
+    """The date an entry carries, if any -- from its heading or opening lines."""
+    m = ENTRY_DATE.search("\n".join(block[:4]))
+    return m.group(0) if m else None
+
+
+def newest(blocks, n):
+    """The n newest entries.
+
+    File order is NOT reliably newest-last. Measured across one vault's nine observed
+    files, the tail was the newest entry in only 5 of 8 -- patterns.md's last entry was
+    three weeks older than its newest, and session-insights.md's was three weeks older
+    still. Taking the tail there hands a session stale entries while calling them recent,
+    which is worse than handing it none: it is wrong AND it looks right.
+
+    So sort by the date each entry carries, and fall back to file order only for entries
+    that carry none (undated entries keep their relative position and sort oldest).
+    """
+    dated = [(entry_date(b) or "", i, b) for i, b in enumerate(blocks)]
+    dated.sort(key=lambda x: (x[0], x[1]))
+    return [b for _, _, b in dated[-n:]] if n else []
+
+
 def split_entries(lines):
     """Return (preamble, [entry_blocks]) in file order. Append-ordered: newest last."""
     pre, out, cur = [], [], None
@@ -215,7 +245,25 @@ def main(argv):
     w("=" * 72)
     for fn, lines in obs:
         _, es = split_entries(lines)
-        tail = es[-recent:] if recent else []
+        # A rule library announces itself: it opens with a meta-pattern / index heading
+        # saying to read that first. Recency is the wrong selector there -- an entry from
+        # four months ago binds as hard as one from this week, and the file's job is to
+        # fire BEFORE the mistake. So emit its index instead of its newest bodies; every
+        # title is already in the map above, which is what makes scanning it possible.
+        idx = [l for l in lines if INDEX_HEADING.match(l)]
+        if idx:
+            i = lines.index(idx[0])
+            j = next((k for k in range(i + 1, len(lines)) if ENTRY.match(lines[k])), len(lines))
+            w("")
+            w("### FILE: %s  (%d entries -- RULE LIBRARY, index shown instead of newest)" % (fn, len(es)))
+            w("")
+            w("\n".join(lines[i:j]).rstrip())
+            for d in payload["observed"]:
+                if d["file"] == fn:
+                    d["recent"] = ["\n".join(lines[i:j]).rstrip()]
+                    d["rule_library"] = True
+            continue
+        tail = newest(es, recent)
         rec = ["\n".join(e).rstrip() for e in tail]
         for d in payload["observed"]:
             if d["file"] == fn:

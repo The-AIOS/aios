@@ -42,6 +42,10 @@ ENTRY = re.compile(r"^\#{3}\s+\S")
 # or Bucket 31 reports a number that describes nothing any session does.
 RECENT_PER_FILE = 5
 
+# The floor emits a rule library's INDEX rather than its newest entries, so pricing it as
+# 5 bodies overstates rung 1. Priced as the index instead -- see hooks/context-floor.py.
+RULE_LIBRARY_HEADING = re.compile(r'^\#{1,3}\s+.*\b(meta-pattern|read these first|index)\b', re.I)
+
 # When is "just read everything" the right answer? NOT at some absolute token count --
 # that is a constant about a growing quantity, which is the exact bug this tool exists to
 # end, and it was the last one left in the design. Derive it from the vault's own SHAPE:
@@ -53,10 +57,6 @@ RECENT_PER_FILE = 5
 # written vault is 7.7x (narrow) -- the same verdicts the absolute threshold gave, now
 # with nothing hand-picked in them.
 CHEAP_IF_UNDER = 3.0
-
-# The four observed/ files whose ENTRY TITLES are the floor (CLAUDE.md step 4a).
-FLOOR = ("antifragile.md", "preferences.md", "patterns.md", "growth.md")
-
 
 def measure(folder):
     """Word/heading counts per file. Returns (per_file, total) or None if absent."""

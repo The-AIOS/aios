@@ -345,8 +345,12 @@ THE FLOOR, in one command:
 
   uv run ~/aios/hooks/context-floor.py
 
-It emits both _index.md, EVERY HEADING in both folders, THE LAST 5 ### ENTRIES OF EVERY
-observed/ FILE IN FULL, and INTENT.md -- which is at the floor because it governs what
+It emits both _index.md, EVERY HEADING in both folders, THE NEWEST 5 ### ENTRIES OF
+EVERY observed/ FILE IN FULL -- newest by the DATE each entry carries, not by file
+position, because the tail is the newest in only about 5 of 8 files -- and INTENT.md.
+One exception: a RULE LIBRARY like antifragile.md emits its meta-pattern INDEX instead
+of its newest entries, because an entry from four months ago binds exactly as hard as
+one from this week and the file's job is to fire BEFORE the mistake -- which is at the floor because it governs what
 you may DO, a different question from whether your output sounds like them, and the one
 that binds a mechanical worker hardest (least contextualised, most able to commit, push,
 send or delete). Absent the hook, glob it by hand — grep -h '^#' on

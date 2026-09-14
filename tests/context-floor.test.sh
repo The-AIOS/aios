@@ -113,9 +113,9 @@ echo " arbitrary vault shape"
 printf '%s' "$F" | grep -q 'aprendizajes.md' \
   && ok "globs files matching no canonical name" \
      || no "a non-canonically-named file was skipped" "operators rename these and write them in their own language"
-grep -qE "antifragile|preferences\.md|patterns\.md" "$H" \
-  && no "the hook hardcodes canonical filenames" "that list goes stale silently, per the renamed-vault case" \
-  || ok "no canonical filename is hardcoded in the hook"
+python3 tests/lint-no-hardcoded-context-names.py "$H" >/dev/null 2>&1 \
+  && ok "no canonical filename is matched on in the hook's logic" \
+  || no "the hook hardcodes a canonical filename in CODE" "that matcher goes stale silently, per the renamed-vault case"
 
 echo
 echo " --json carries the same thing the text does"

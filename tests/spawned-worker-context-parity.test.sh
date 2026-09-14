@@ -370,6 +370,48 @@ grep -q 'never .python3.\|Through .uv., never' "$CM" \
   || no "the uv choice is unexplained" "an unexplained runner gets 'simplified' back to python3"
 
 echo
+echo " CLAUDE.md carries exactly ONE context-loading spec"
+# It carried two. The floor + fit model went into § Identity & Greeting step 4; § II
+# Session Start was never touched and went on saying "read every file in declared/" and
+# "read every file in observed/" -- so a session's context budget depended on which
+# section it happened to read, with nothing reporting which rule fired. Found by a
+# primary session reviewing the shipped model, not by any of the 103 assertions written
+# to hold four copies in agreement: they all watched the four copies and none watched
+# for a fifth inside one of them.
+if grep -qE 'Read \*\*every file\*\* in' "$CM"; then
+  no "CLAUDE.md still contains a second, contradictory loading spec" \
+     "a startup file that disagrees with itself makes the budget depend on reading order"
+else
+  ok "no second 'read every file' spec survives in CLAUDE.md"
+fi
+# And the two things that legitimately live in § II must not be lost in the collapse.
+grep -qi 'recalibration' "$CM" \
+  && ok "the capability-recalibration check survived the collapse" \
+  || no "the recalibration check was lost" "it is startup-only and has no home in step 4"
+grep -qi 'before executing commands' "$CM" \
+  && ok "scan-antifragile-before-commands survived the collapse" \
+  || no "the scan-before-commands rule was lost" "it is the reason antifragile titles are in the floor"
+
+echo
+echo " the floor's selectors match how the files are actually written"
+# Two measured facts the first version assumed away:
+#   1. antifragile is a RULE LIBRARY, not a chronology -- an entry from four months ago
+#      binds as hard as one from this week, and it opens with a meta-pattern index the
+#      file itself says to read first. Recency is the wrong selector; the index is right.
+#   2. file order is NOT reliably newest-last. Measured across nine observed files, the
+#      tail was the newest entry in only 5 of 8 dated ones. Taking the tail elsewhere
+#      hands a session stale entries while calling them recent -- wrong AND looks right.
+grep -q 'INDEX_HEADING' hooks/context-floor.py \
+  && ok "the floor detects a rule-library file and emits its index" \
+  || no "every observed file is treated as a chronology" "antifragile's index is the entry point its own text names"
+grep -q 'def newest' hooks/context-floor.py \
+  && ok "recency is computed from entry DATES, not file position" \
+  || no "the floor takes the tail as the newest" "true for only 5 of 8 files measured"
+grep -q 'rule library\|RULE LIBRARY' "$CM" \
+  && ok "CLAUDE.md explains why antifragile is read differently" \
+  || no "the rule-library exception is unexplained" "an unexplained exception gets normalised away"
+
+echo
 echo " the floor carries LEARNED CONTENT, in all four copies"
 # A floor of headings alone leaves a session knowing what EXISTS and nothing the system
 # has LEARNED -- so every close-day append changes no later behaviour and the compounding
@@ -387,7 +429,7 @@ for pair in "CLAUDE.md:$CM" "AGENTS.md:AGENTS.md" "the wrapper:$WR" "the .ps1:$P
     && ok "$label says why the floor carries content (the loop)" \
     || no "$label gives no reason for reading entry bodies" \
           "an unexplained content read gets trimmed back to titles on the next edit"
-  grep -qiE 'last 5|last five|tail of each' "$f" \
+  grep -qiE 'last 5|newest 5|last five|newest five|tail of each' "$f" \
     && ok "$label states the recency slice" \
     || no "$label does not say how much of observed/ is read" "the floor is then unbounded or unspecified"
 done
