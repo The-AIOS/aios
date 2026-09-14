@@ -81,11 +81,14 @@ collect() {
     local steps
     steps="$(gh api "repos/$repo/actions/runs/$run_id/jobs?per_page=100" \
              --jq ".jobs[] | select(.id == $job_id) | .steps[] | select(.conclusion == \"failure\") | .name")"
-
-    # the annotations this job produced, first line each (the ::error:: text)
+    # the annotations this job produced — the check's own ::error:: text.
+    # `Process completed with exit code N` is the RUNNER's
+    # annotation, not the check's: it appears on every failure and says nothing, so it is
+    # dropped rather than printed as if it were a finding.
     local notes
     notes="$(gh api "repos/$repo/check-runs/$job_id/annotations" \
-             --jq '.[] | select(.annotation_level == "failure") | .message' 2>/dev/null | head -3)"
+             --jq '.[] | select(.annotation_level == "failure") | .message' 2>/dev/null \
+             | grep -v '^Process completed with exit code' | head -3)"
 
     if [ -z "$steps" ]; then steps="(the job itself)"; fi
     printf '%s\n' "$steps" | while IFS= read -r step; do
