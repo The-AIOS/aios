@@ -269,7 +269,8 @@ def main(argv):
             if d["file"] == fn:
                 d["recent"] = rec
         w("")
-        w("### FILE: %s  (%d entries total, showing last %d)" % (fn, len(es), len(tail)))
+        w("### FILE: %s  (%d entries total, showing the %d newest by date)"
+          % (fn, len(es), len(tail)))
         if not es:
             w("  (no ### entries -- this file is mapped by its headings above)")
         for block in rec:

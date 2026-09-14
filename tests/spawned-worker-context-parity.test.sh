@@ -429,8 +429,12 @@ for pair in "CLAUDE.md:$CM" "AGENTS.md:AGENTS.md" "the wrapper:$WR" "the .ps1:$P
     && ok "$label says why the floor carries content (the loop)" \
     || no "$label gives no reason for reading entry bodies" \
           "an unexplained content read gets trimmed back to titles on the next edit"
-  grep -qiE 'last 5|newest 5|last five|newest five|tail of each' "$f" \
-    && ok "$label states the recency slice" \
+  # NOT 'last 5'. Widening this to accept either spelling is what let CLAUDE.md keep the
+  # measured-false claim ("append-ordered, so its newest end is what the last sessions
+  # wrote") while three other copies were corrected -- a guard loosened to make a test go
+  # green instead of fixing the file, which is the failure this suite exists to catch.
+  grep -qiE 'newest 5|5 newest|newest five|five newest' "$f" \
+    && ok "$label states the recency slice as NEWEST, not last" \
     || no "$label does not say how much of observed/ is read" "the floor is then unbounded or unspecified"
 done
 
