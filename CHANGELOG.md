@@ -70,6 +70,16 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-14 — § Session End says the same thing in a quarter fewer bytes
+
+`hash: ` · [#136](https://github.com/The-AIOS/aios/pull/136)
+
+> **What you can now do.** Run every session on a lighter `CLAUDE.md`: § Session End keeps every rule it had and costs about a quarter less to load, on every turn.
+
+**What changes.** The section still tells a session to archive an observed file with `hooks/aios-snapshot` before editing it and never to copy it by hand, to set `updated:` in the same edit, to respect the `session-insights.md` caps, to ask what was most useful after a substantive session, to commit through `aios-commit --vault`, and to keep observed context private. Each rule keeps the short reason a session needs to apply it. What was removed is the incident history behind the snapshot tool. The race it prevents is still explained next to the test that measures it.
+
+**What you need to do.** Nothing. No action: the rules did not change, so a session that loaded the previous wording follows the same contract.
+
 ## 2026-09-14 — Three checks that were reading the wrong signal
 
 `hash: 84ca270` · [#135](https://github.com/The-AIOS/aios/pull/135)

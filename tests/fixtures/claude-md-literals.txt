@@ -18,7 +18,9 @@ $CLAUDE_AGENT_NAME
 -p
 .mcp.json
 .ps1
+/aios:drift
 /aios:housekeeping
+/aios:trace
 /close-day
 /mcp
 /today
@@ -37,21 +39,29 @@ _inbox
 _releases
 _tried
 _undelivered
+aios-commit --vault
 audits
+cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Session {date}: {brief description}"
 claude
 claude --remote-control
 claude -p
+collision <dest>
+cp
 export CLAUDE_MODEL
 export/
 fast
 frontier
+git add -A
+hooks/aios-snapshot
 hooks/claude-identity/install-wrappers.sh
 hooks/openrouter.py
+identical <dest>
 judgment
 kill
 name
 npx
 orchestration-ladder
+patch_note
 permission_denials: []
 permissions.defaultMode: "auto"
 pgrep
@@ -62,8 +72,10 @@ reflections/{subfolder}
 research
 scale
 send
+session-insights.md
 sessionId
 settings.json
+snapshot <dest>
 source ~/.zshrc
 spawn
 spawn --model claude-fable-5 {name} "{task}"
@@ -76,7 +88,10 @@ spawn-kill {name}
 status
 surface
 surface:pid
+tests/aios-snapshot.test.sh
 type spawn
+update_frontmatter
+updated:
 uvx
 vault/00 - notes/reflections/_inbox/
 vscode.createTerminal
