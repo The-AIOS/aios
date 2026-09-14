@@ -527,6 +527,30 @@ Some MCPs are AIOS-built, not vendored — `nano-banana-mcp`, `pdf-generator-mcp
 
 **Tier A layer — hard cap enforcement (count check, not just age).** The buffer has explicit caps (CLAUDE.md: **Emerging ≤10, Reinforced ≤5**). The age checks above catch *stale* entries; this catches an *overflowing* buffer regardless of age — a buffer over cap means gardening is falling behind (insights aren't being routed/reinforced fast enough), which silently degrades the compounding. Count the `## Emerging` and `## Reinforced` entries; if either exceeds its cap, flag it (`"Emerging at {N}/10 — route or drop {N-10} before the buffer cannibalizes signal"` / `"Reinforced at {N}/5 — route the oldest to its target file"`). The fix is mechanical (route the routable, drop the resolved), same as the backlog flags above.
 
+**Frontmatter integrity — check this BEFORE trusting any `updated:` date below.**
+
+Scan every file in `context/declared/` and `context/observed/` for a **repeated frontmatter key**:
+
+```bash
+python3 - <<'PY'
+import re, glob, os
+os.chdir(os.path.expanduser("~/aios/vault/00 - notes/context"))
+for f in sorted(glob.glob("*/*.md")):
+    m = re.match(r'^---\n(.*?)\n---\n', open(f, encoding="utf-8", errors="replace").read(), re.S)
+    if not m:
+        print("NO FRONTMATTER: %s" % f); continue
+    keys = re.findall(r'^([A-Za-z_][A-Za-z0-9_-]*):', m.group(1), re.M)
+    dupes = sorted({k for k in keys if keys.count(k) > 1})
+    if dupes: print("DUPLICATE KEY: %s -> %s" % (f, ", ".join(dupes)))
+PY
+```
+
+**Why this is checked and why the obvious check is the wrong one.** The intuition is to assert the frontmatter *parses* or is *non-empty* — and that would catch nothing, because a duplicate key does not break anything loudly. Measured: PyYAML `safe_load` accepts it and silently takes the **last** value, while a line-scanning `grep -m1` takes the **first**. So the file parses, nothing errors, and **two readers of the same file get two different answers** — which is the failure this whole command exists to surface, hiding inside the metadata rather than the prose.
+
+The cost lands on the one alarm CLAUDE.md calls the reliable backstop: the streak-independent staleness check reads `updated:`, so a stale duplicate makes a freshly-written file report as weeks old — or, reversed, a genuinely stale one report as current. Found live on `growth.md` 2026-09-13 (`'2026-09-09'` shadowed by `2026-08-19`), by a worker that had the file open for an unrelated task.
+
+**Propose:** name the file and the key; the operator decides which value is right. **Never auto-pick** — the two values are two different claims about when something happened, and choosing between them is not a formatting decision.
+
 **Tier B layer — observation freshness:**
 1. For each of `growth.md`, `profile.md`, `ecosystem.md`:
    - Read frontmatter `updated:` date.
