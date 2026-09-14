@@ -200,5 +200,61 @@ printf '\nJUNK="The-AIOS/forum"\n' >> "$BROKEN"
 grep -qE "['\"]The-AIOS/forum" "$BROKEN" && ok "control fires: a forbidden repo in the allowlist is detectable" \
   || bad "CONTROL DID NOT FIRE — section 7 cannot see a forbidden repo"
 
+echo "── the tenure gate: the ask waits until AIOS has actually been used ──"
+# The guard this PR exists for shipped with NO test. Every other guard in this file has
+# one, and the file's own standard is a control proving the assertion can fail. tenure_days
+# dates the vault by the FIRST git commit touching the tracker, so a backdated commit is
+# the honest fixture.
+# A STUBBED gh, so these assertions test the tenure gate rather than the runner's GitHub
+# setup. CI has gh installed but NOT authenticated, so the auth guard -- which correctly
+# runs before tenure -- answered first and these failed there while passing locally, where
+# gh happens to be logged in. The "works on my machine" shape, in the tests themselves.
+GHSTUB="$TMP/ghstub"; mkdir -p "$GHSTUB"
+cat > "$GHSTUB/gh" <<'STUBEOF'
+#!/bin/sh
+[ "$1 $2" = "auth status" ] && exit 0
+printf 'HTTP/2 204\n'   # every candidate already starred -> deterministic tail
+exit 0
+STUBEOF
+chmod +x "$GHSTUB/gh"
+
+mk_vault() {  # $1 dir, $2 days-ago (empty = not a git repo at all)
+  mkdir -p "$1" && printf 'repo=git@github.com:The-AIOS/aios.git\nhash=abc\n' > "$1/.aios-update"
+  [ -n "${2:-}" ] || return 0
+  local when; when="@$(( $(date +%s) - $2 * 86400 ))"   # epoch: git rejects "N days ago"
+  git -C "$1" init -q 2>/dev/null
+  git -C "$1" -c user.email=t@t -c user.name=t add .aios-update 2>/dev/null
+  GIT_AUTHOR_DATE="$when" GIT_COMMITTER_DATE="$when" \
+    git -C "$1" -c user.email=t@t -c user.name=t commit -qm init 2>/dev/null
+}
+
+mk_vault "$TMP/young" 1
+OUT=$(PATH="$GHSTUB:$PATH" AIOS_TRACKER="$TMP/young/.aios-update" bash "$SCRIPT" 2>&1)
+case "$OUT" in
+  *"waits for"*) ok "a one-day-old vault is not asked — reason names the wait" ;;
+  *) bad "a one-day-old vault was not held back" "got: $(printf '%s' "$OUT" | tr '\n' ' ' | cut -c1-90)" ;;
+esac
+
+mk_vault "$TMP/aged" 400
+OUT=$(PATH="$GHSTUB:$PATH" AIOS_TRACKER="$TMP/aged/.aios-update" bash "$SCRIPT" 2>&1)
+case "$OUT" in
+  *"waits for"*) bad "an aged vault was still held back by tenure" "the gate never opens, so the ask never fires" ;;
+  *) ok "an aged vault passes the tenure gate" ;;
+esac
+
+mk_vault "$TMP/nogit" ""
+OUT=$(PATH="$GHSTUB:$PATH" AIOS_TRACKER="$TMP/nogit/.aios-update" bash "$SCRIPT" 2>&1)
+case "$OUT" in
+  *"unverifiable"*) ok "an undateable vault says so, rather than guessing a tenure" ;;
+  *) bad "an undateable vault did not report unverifiable" "silently treating unknown as old is how the ask fires on day zero" ;;
+esac
+
+# CONTROL: with the gate raised absurdly high, even the aged vault must be held.
+OUT=$(PATH="$GHSTUB:$PATH" AIOS_STAR_MIN_DAYS=99999 AIOS_TRACKER="$TMP/aged/.aios-update" bash "$SCRIPT" 2>&1)
+case "$OUT" in
+  *"waits for"*) ok "control: the tenure assertion is real (raising the bar holds the aged vault)" ;;
+  *) bad "control FAILED: the tenure gate does not actually gate" "the three assertions above prove nothing" ;;
+esac
+
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
