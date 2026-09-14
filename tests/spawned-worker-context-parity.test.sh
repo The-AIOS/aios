@@ -195,15 +195,27 @@ fi
 #   1. it globs BOTH folders rather than naming files
 #   2. it singles out antifragile.md (scan-before-commands)
 #   3. it says WHY it globs, so the next editor does not tidy it into a list
-sig(){ # $1 = text -> a three-field signature
-  local s="$1" a b c
-  printf '%s' "$s" | grep -qiE '\*\.md|every heading in both folders|EVERY HEADING IN BOTH FOLDERS' && a=glob || a=LIST
-  printf '%s' "$s" | grep -qi 'antifragile' && b=antifragile || b=NONE
-  printf '%s' "$s" | grep -qiE 'vary from vault to vault|never a list of filenames' && c=why || c=UNEXPLAINED
+# Grep FILES, never a piped string. The first version piped a 40KB command substitution
+# through three sequential `printf | grep -q` pipelines -- and `grep -q` exits on its first
+# match, killing printf with SIGPIPE mid-write. That made the assertion NON-DETERMINISTIC:
+# on 2026-09-13 it failed and then passed on a re-run of the SAME COMMIT, same bytes, with
+# only two JSON version fields changed from a green parent. Every other assertion in this
+# suite greps a file directly and none of them has ever flaked.
+#
+# A guard that fails randomly is worse than one that fails: it teaches whoever sees it to
+# re-run rather than look, which is how a real failure gets waved through later.
+sig_file(){ # $1 = path -> a three-field signature
+  local f="$1" a b c
+  grep -qiE '\*\.md|every heading in both folders' "$f" && a=glob || a=LIST
+  grep -qi 'antifragile' "$f" && b=antifragile || b=NONE
+  grep -qiE 'vary from vault to vault|never a list of filenames' "$f" && c=why || c=UNEXPLAINED
   printf '%s/%s/%s' "$a" "$b" "$c"
 }
-sig_sh="$(sig "$PREAMBLE")"
-sig_ps="$(sig "$(cat "$PS1")")"
+# The .sh signature is taken from the WHOLE file rather than the extracted preamble: the
+# preamble is what ships, but both phrases it must agree on live inside it, and reading the
+# file removes the one string-handling step that could differ between shells.
+sig_sh="$(sig_file "$WR")"
+sig_ps="$(sig_file "$PS1")"
 if printf '%s' "$sig_sh" | grep -q 'LIST\|NONE\|UNEXPLAINED'; then
   no "the wrapper preamble's floor is incomplete ($sig_sh)" \
      "expected glob/antifragile/why — a LIST goes stale, NONE loses the scan rule, UNEXPLAINED gets tidied back"
