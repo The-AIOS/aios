@@ -500,7 +500,7 @@ The framework vendors content from upstream repos in two places: **skills** (sou
 
 **For approved pulls (MCPs — extra care vs skills):**
 - MCP code changes often touch `package.json` / `pyproject.toml` — propose dependency updates alongside source updates
-- After applying, **flag restart-required**: the MCP server is a long-running subprocess held in memory by Claude Code (per `feedback_settings_read_semantics.md`); operator must `claude mcp restart <name>` or restart Claude Code entirely for code changes to take effect
+- After applying, **flag restart-required**: the MCP server is a long-running subprocess held in memory by Claude Code (per `feedback_settings_read_semantics.md`); operator must run `claude mcp restart <name>`, or **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working, for code changes to take effect
 - If upstream introduces breaking changes (renamed tools, changed schemas), surface them prominently — these affect every command/agent that calls the MCP
 - Update `mcps/<name>-mcp/.upstream-sync` after successful pull
 
@@ -599,7 +599,7 @@ Show the actual evidence: `ls -la ~/.claude/skills/<name>` per finding — "`acc
 - **Name collisions** → an existing different skill owns the name. `skills/setup.sh` already skips these silently; surface them so the operator can decide (rename the AIOS skill, or accept that the existing one wins). Never overwrite.
 - **Dangling symlinks** → propose removal (the source is gone), but ask — could be a mid-rename state.
 
-**Restart-required:** yes — the skills-dir is read at **session start**, so after registering, the operator must **restart their Claude Code sessions** for the newly-linked skills to load.
+**Restart-required:** yes — the skills-dir is read at **session start**, so after registering, the operator must **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working, for the newly-linked skills to load.
 
 **Why this matters:** a skill that isn't symlinked is invisible — agents that name it in their `## Skills` block silently get nothing, and the operator hits *"I don't have that skill."* This bucket is the periodic floor-check that every AIOS-origin skill is actually loadable, mirroring what Bucket 11 does for commands.
 

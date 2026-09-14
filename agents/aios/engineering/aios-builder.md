@@ -65,7 +65,7 @@ If the kind isn't given, ask (agent / skill / plugin / command / template / hook
 - MCP → `mcps/custom/<name>-mcp/`
 
 ### Step 3 — REGISTER it (the step that's easy to forget — the whole point of this agent)
-- **skill** → run `bash skills/setup.sh` (symlinks the new skill into `~/.claude/skills`), then tell the operator to **restart Claude Code sessions** so it loads. A skill is NOT done until this runs. *(Windows: `pwsh skills/setup.ps1`.)*
+- **skill** → run `bash skills/setup.sh` (symlinks the new skill into `~/.claude/skills`), then tell the operator to **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working — so it loads. A skill is NOT done until this runs. *(Windows: `pwsh skills/setup.ps1`.)*
 - **agent** → no registration needed (glob-matched at spawn) — just ensure `tags: [agent]` and add it to `agents/custom/_index.md`.
 - **plugin** → register in `.claude-plugin/marketplace.json`; `claude plugin install <name>@<marketplace>` if applicable.
 - **command** → ships inside its custom plugin (registers with the plugin; restart to pick up).
@@ -79,7 +79,7 @@ If the kind isn't given, ask (agent / skill / plugin / command / template / hook
 - Update the relevant `_index.md` for the kind.
 
 ### Step 5 — Report
-State plainly: **what** was created, **where**, **how it registered**, and **what the operator must still do** (e.g. "restart your Claude sessions to load the new skill"), plus any follow-up.
+State plainly: **what** was created, **where**, **how it registered**, and **what the operator must still do** (e.g. "start a new Claude session — only the session, not the AIOS app or the terminal window, to load the new skill"), plus any follow-up.
 
 ## Output format
 - A new element under `*/custom/`, registered + index-updated, with a short report: path · registration status · required operator action.

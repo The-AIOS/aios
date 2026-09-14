@@ -341,7 +341,7 @@ None of these should ever be committed — `~/.claude/` is outside the vault by 
 ## Troubleshooting
 
 **`no cache yet — skip (is the Stop hook installed?)`** in quota-watch.log
-→ The Stop hook isn't firing. Verify it's in `~/.claude/settings.json` and restart Claude Code.
+→ The Stop hook isn't firing. Verify it's in `~/.claude/settings.json`, then start a new Claude session — only the session, not the AIOS app or the terminal window.
 
 **`cache stale (Ns) — no active session; skip`**
 → Cache is older than 30 min; no Claude session has fired a Stop hook recently. Expected during long idle periods.
