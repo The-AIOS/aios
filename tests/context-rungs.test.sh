@@ -32,7 +32,23 @@ mkvault(){ # $1 root · $2 declared-words · $3 observed-words
   printf '# Index\nfile list\n' > "$base/declared/_index.md"
   printf '# Index\nfile list\n' > "$base/observed/_index.md"
   { printf '### Entry one\n'; for _ in $(seq 1 "$d"); do printf 'word '; done; printf '\n'; } > "$base/declared/about_me.md"
-  { printf '### Entry one\n'; for _ in $(seq 1 "$o"); do printf 'word '; done; printf '\n'; } > "$base/observed/patterns.md"
+  # MANY entries, not one giant one. The floor reads the last 5 ENTRIES, so a fixture with
+  # a single entry makes the recency slice equal the whole file -- at which point
+  # "everything is barely more than the floor" is TRUE and read-it-all is the correct
+  # verdict. The tool was right; the fixture was unlike any real observed file, which are
+  # dozens to hundreds of dated entries.
+  # Entry COUNT is what distinguishes a young vault from a worked one, and the floor
+  # reads the last 5 entries -- so a fixture must get this right or it tests nothing.
+  # A fresh vault has a handful of entries per file (the floor is then most of the file,
+  # and read-it-all is genuinely correct). A worked vault has dozens (the floor is a
+  # slice). Both shapes below are taken from real vaults.
+  local n="${4:-40}" per=$(( o / ${4:-40} + 1 ))
+  : > "$base/observed/patterns.md"
+  for i in $(seq 1 "$n"); do
+    printf '### Entry %s\n' "$i" >> "$base/observed/patterns.md"
+    for _ in $(seq 1 "$per"); do printf 'word '; done >> "$base/observed/patterns.md"
+    printf '\n' >> "$base/observed/patterns.md"
+  done
 }
 
 echo
@@ -59,7 +75,7 @@ python3 "$H" "$TMP/half" >/dev/null 2>&1
 echo
 echo " the verdict FLIPS with vault size -- the property the tool exists for"
 
-mkvault "$TMP/small" 300 300
+mkvault "$TMP/small" 300 300 4      # young: few entries per file
 S="$(python3 "$H" "$TMP/small")"
 if printf '%s' "$S" | grep -qi "read ALL of it"; then
   ok "small vault is told to read everything"
