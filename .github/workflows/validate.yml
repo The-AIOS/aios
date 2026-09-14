@@ -107,6 +107,7 @@ jobs:
           # rule's literal (a path, a flag, a JSON shape) is dropped in a condensation. Both
           # are greps; the fixture pins the literals so a reviewer can diff intent, not prose.
           bash tests/claude-md-integrity.test.sh
+          bash tests/claude-md-budget.test.sh
           echo "OK: every § reference resolves and every pinned literal is present"
 
       - name: A source is enabled only by a line the OPERATOR wrote
