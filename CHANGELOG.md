@@ -45,7 +45,9 @@
 >
 > Entries here are **date-keyed**. Releases are **tagged in git** with full notes, and published as GitHub Releases. A release contains every entry dated up to and including its tag date, back to the previous release:
 >
-> - **Unreleased** — entries dated after `2026-09-04`
+> - **Unreleased** — entries dated after `2026-09-13`
+> - **[v0.7.1](https://github.com/The-AIOS/aios/releases/tag/v0.7.1)** — tagged `2026-09-13` — patch: `CLAUDE.md` was shipping two contradictory context-loading specs, and the floor read a rule library by recency
+> - **[v0.7.0](https://github.com/The-AIOS/aios/releases/tag/v0.7.0)** — tagged `2026-09-13` — covers `2026-09-05` → `2026-09-13`
 > - **[v0.6.2](https://github.com/The-AIOS/aios/releases/tag/v0.6.2)** — tagged `2026-09-04` — patch: the day's action list rewritten as checks a receiving session executes, plus the two fixes that shipped undocumented
 > - **[v0.6.1](https://github.com/The-AIOS/aios/releases/tag/v0.6.1)** — tagged `2026-09-04` — patch: two defects found by dogfooding `/aios:update`, one of which blocked every operator's sync commit
 > - **[v0.6.0](https://github.com/The-AIOS/aios/releases/tag/v0.6.0)** — tagged `2026-09-04` — covers `2026-08-13` → `2026-09-04`
@@ -68,13 +70,25 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-14 — A failed check that explains itself
+
+`hash: d4dac86` · [#133](https://github.com/The-AIOS/aios/pull/133)
+
+> **What you can now do.** If you send a pull request to the framework and CI goes red, the run page now tells you what broke, in words, before you open a log. This is contributor-facing — if you never open a PR, nothing here changes for you.
+
+**What changes.** The notification GitHub sends says only *"PR run failed"*. The run summary now names the failing check, repeats the error it emitted, and gives the command that reproduces it on your own machine — so the log is where you go for detail, not where you go to find out what happened. If the summary still reads as jargon, it ends with a paragraph you can paste straight into an AIOS session, which will read the run and fix the branch with you. And a red check never means your machine or your vault is broken: these run on GitHub's machines, against the diff.
+
+**Some of it repairs itself.** `bash scripts/autofix.sh` fixes the failures that have exactly one correct answer — today, the capability counts in `TOOLS.md`, `README.md` and `agents/_index.md`, each derived from the folders rather than from a stored number. `--check` reports without writing. On `main` CI applies the repair and commits it, so that class never reaches anyone's inbox; on a pull request the check still fails, because CI cannot — and must not — write to a fork's branch.
+
+**Action required:** none. `CONTRIBUTING.md` carries both of the above and arrives with your next `/aios:update`.
+
 ## 2026-09-13 — Sessions that prove they learned from the last one
 
 `hash: 6977721 · caf6141 · f215ee7 · 33d123c · 54aa78c · d9ad92f · 5c9242b · 3360f24 · c07636e` · [#128](https://github.com/The-AIOS/aios/pull/128) · [#129](https://github.com/The-AIOS/aios/pull/129) · [#130](https://github.com/The-AIOS/aios/pull/130) · [#131](https://github.com/The-AIOS/aios/pull/131) · [#132](https://github.com/The-AIOS/aios/pull/132)
 
 > **What you can now do.** Trust that a session you start has actually read your context — and can show it. Until now it very likely had not. The rule said *read every file in `declared/` and `observed/`*, and measured across 26 spawned workers on a live vault they loaded anywhere from **0 files to 18**, one of them doing 120 tool calls having read nothing at all. **14 of the 26 produced outward-facing work** — a message, a note, something under the operator's name — and **2 had read no `declared/` file whatsoever.** Nothing about that output looks wrong; it reads fluent and correct and it is not yours. A rule nobody follows is not a high standard, it is an unmeasured one.
 
-**What changes.** Every session now begins with a **floor** — one command, `python3 ~/aios/hooks/context-floor.py` — that emits both `_index.md`, every heading in `declared/` and `observed/`, **the last 5 entries of every observed file in full**, `INTENT.md`, and a listing of your ventures. It always runs. Above it there are **no tiers, only fit**: the session opens what the work points at, to the depth it needs, when it points there. Reading everything is the *degenerate* case, correct only when the whole context is cheaper than deciding what to skip, or when the task *is* the context.
+**What changes.** Every session now begins with a **floor** — one command, `uv run ~/aios/hooks/context-floor.py` — that emits both `_index.md`, every heading in `declared/` and `observed/`, **the last 5 entries of every observed file in full**, `INTENT.md`, and a listing of your ventures. It always runs. Above it there are **no tiers, only fit**: the session opens what the work points at, to the depth it needs, when it points there. Reading everything is the *degenerate* case, correct only when the whole context is cheaper than deciding what to skip, or when the task *is* the context.
 
 **Why it is built this way.** Context loading is how a session demonstrates **reinforced learning**. Every `/close-session` and `/close-day` writes into `observed/`; if the next session never reads what was written, the loop does not close and you are maintaining files that change no behaviour. So the floor carries the *newest* entries, not just titles — bounded, so ten times the entries costs the same. The whole design aims at one thing: **know your vault, get the right information, at the right time, in the optimal token usage.** Those are not four goals. They are one, and cheapness at the wrong information scores zero.
 
