@@ -391,7 +391,14 @@ reach: open what the work points at, to the depth it needs, when it points there
 
   TWO DEPTHS WORTH NAMING, as costs rather than permissions:
     ALL of context/declared/ — when what you produce will be read as the operator's own
-      words, or act on their behalf. It is the SMALL one, and voice is the one thing whose
+      words, or act on their behalf. OPERATOR-FACING IS FAR BROADER THAN GHOSTWRITING,
+      and this is where the question gets misread. If a human will read your prose and it
+      carries their name or their team's — a message, a post, a note, a release note, a
+      README line, a repo description, an email, a reply, a doc — it lands as THEIRS. The
+      test is NOT "was I asked to imitate them"; it is "WILL A HUMAN READ THIS AS COMING
+      FROM THEM". Measured: workers asked for a Slack message, a release note and a repo
+      description climbed to declared/ once in three. All three were operator-facing and
+      none of them said so. Writing prose a person will read? Assume yes. It is the SMALL one, and voice is the one thing whose
       absence you cannot detect in your own output: under-read observed/ and the gap shows
       as work visibly missing something; under-read declared/ and it comes back fluent,
       correct, and not theirs, with nothing in it looking wrong. Only one of the two
