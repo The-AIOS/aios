@@ -70,7 +70,7 @@
 
 ## 2026-09-13 — Sessions that prove they learned from the last one
 
-`hash: ` · [#128](https://github.com/The-AIOS/aios/pull/128)
+`hash: 6977721` · [#128](https://github.com/The-AIOS/aios/pull/128)
 
 > **What you can now do.** Trust that a session you start has actually read your context — and can show it. Until now it very likely had not. The rule said *read every file in `declared/` and `observed/`*, and measured across 26 spawned workers on a live vault they loaded anywhere from **0 files to 18**, one of them doing 120 tool calls having read nothing at all. **14 of the 26 produced outward-facing work** — a message, a note, something under the operator's name — and **2 had read no `declared/` file whatsoever.** Nothing about that output looks wrong; it reads fluent and correct and it is not yours. A rule nobody follows is not a high standard, it is an unmeasured one.
 
