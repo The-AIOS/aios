@@ -1,5 +1,7 @@
 # Setup Guide — AI-OS Vault
 
+> **Before you grant anything:** [`SECURITY.md`](./SECURITY.md) states what each surface reaches and whose identity it acts as; [`GLOSSARY.md`](./GLOSSARY.md) defines the vocabulary it uses. Automatic updates are on by default and every session asks before running anything that writes outside your vault — `SECURITY.md` § *The update model* has the one line that turns them off.
+
 Get the full system running in under 10 minutes (after the prereqs install).
 
 <details>
