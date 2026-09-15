@@ -214,9 +214,13 @@ Aggregate the cleanup report: *"Cleaned N duplicates across {layer1, layer2, ...
 
 ```
 repo={framework upstream URL}
-hash={last synced commit hash}
-synced={date of last sync}
+hash={last APPLIED commit hash}
+synced={date this vault was last VERIFIED against canonical}
 ```
+
+**The two fields answer different questions and advance on different conditions.** `hash=` is *what you have* — it moves only on a run that fully applied, because an over-advanced hash orphans content (§ Step 7). `synced=` is *when we last checked* — it moves on **any** run that verified the vault against canonical and found it clean, including a run that applied nothing.
+
+**Stamping `synced=` on a clean no-op is the whole point, not bookkeeping.** A successful check is real information: it says *this vault matched canonical today*. Advancing the date only when canonical happens to ship makes `synced=` a **last-applied** date while every reader — the operator, a surface, any status UI — reads it as **last-checked**. On every day upstream ships nothing, the date goes one day staler with no action available to clear it, and nothing about that is visible as a defect. *(Measured 2026-09-15: a clean run reported "current", exited before the tracker write, and left the date reading the previous day.)*
 
 If the file doesn't exist, create it with `repo=git@github.com:The-AIOS/aios.git` and ask the operator once to confirm. Set `hash=initial` (forces full comparison on first run).
 
@@ -245,7 +249,7 @@ esac
 rm -rf /tmp/aios-update-check && git clone --single-branch "$clone_url" /tmp/aios-update-check 2>&1
 ```
 
-If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git@github.com:org/repo` → `https://github.com/org/repo`). Get current HEAD: `git -C /tmp/aios-update-check rev-parse HEAD`. If HEAD matches stored hash → run the **completeness reconcile** (§ Step 6.5 — catches drift even when the tracker says "current") → if also clean, "Your vault infrastructure is current (synced {date})." → clean up → done.
+If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git@github.com:org/repo` → `https://github.com/org/repo`). Get current HEAD: `git -C /tmp/aios-update-check rev-parse HEAD`. If HEAD matches stored hash → run the **completeness reconcile** (§ Step 6.5 — catches drift even when the tracker says "current") → if also clean, **stamp `synced={today}` (leave `hash=` alone — it is already correct) and commit just the tracker**, then report "Your vault infrastructure is current (synced {date})." → clean up → done. **Write the tracker only if the date is not already today**, so repeated runs in one day produce one commit, not one per run. If the reconcile finds drift, this path does not apply: recover it per § Step 6.5 and advance nothing until it is clean.
 
 ### 1.5. Show changelog context
 
@@ -707,7 +711,7 @@ On the answer:
 
 ### 7. Advance tracker (only on a clean, fully-applied run) and clean up
 
-**Only write `.aios-update` to the new HEAD hash if BOTH are true:** (a) every Step-3 apply + Step-4 auto-exec succeeded, and (b) the Step-6.5 reconcile came back clean (no remaining framework drift). If either failed, leave the tracker at its current value and report what's incomplete — a stale tracker is recoverable (next run re-pulls); an over-advanced tracker orphans content (the failure we're guarding against). Set `hash={HEAD}` + `synced={today}`.
+**Only write `hash=` to the new HEAD if BOTH are true:** (a) every Step-3 apply + Step-4 auto-exec succeeded, and (b) the Step-6.5 reconcile came back clean (no remaining framework drift). If either failed, leave `hash=` at its current value and report what's incomplete — a stale hash is recoverable (next run re-pulls); an over-advanced one orphans content (the failure we're guarding against). **`synced={today}` is stamped on any run whose reconcile came back clean, applied or not** (§ Tracker file) — it records that the vault was verified, which is true whether or not upstream had moved. So a failed apply advances neither; a clean no-op advances only `synced=`; a clean applied run advances both.
 
 **Then commit the framework-sync to the vault repo — the atomic apply→advance→commit that leaves the vault clean and pushable.** Without this, the vault sits *applied-but-uncommitted* after every update: un-pushable, and drifting from canonical for anyone who pulls the vault (e.g. a teammate on plain `git pull`). Commit **exactly the Tier-1 paths this run applied** (from Steps 3 + 6.5) plus `.aios-update`, via `aios-commit` — scoped, so the operator's in-flight vault *content* is untouched, and `aios-commit`'s plumbing bypasses the pre-commit guard by design:
 ```bash
@@ -715,12 +719,12 @@ cd ~/aios && ~/aios/hooks/aios-commit -m "sync: framework → {short-HEAD} (via 
 ```
 If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update`. **Framework-sync commits stay DISTINCT from operator session-work commits** (clean attribution), and `aios-commit --vault` at session-end / `/close-day` stays scoped to vault *content* — never framework infra, which is THIS command's domain. Finally `rm -rf /tmp/aios-update-check`.
 
-> **`hash=` is written ONLY by this command, as its final step, after a clean fully-applied run. NEVER hand-edit it** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65). The rule is about *that field*, and saying so precisely matters now that the file is no longer single-writer: `hooks/aios-star-check --decline` appends `star-ask=` to the same file, deliberately, because a decline must be per-operator rather than per-machine and `.aios-update` is what travels with the vault. It touches nothing else and never reads `hash=`. A rule stated as *"never write this file"* would have been read as forbidding that, or quietly ignored — neither of which protects `hash=`.
+> **`hash=` is written ONLY by this command, after a clean fully-applied run. NEVER hand-edit it** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65). The rule is about *that field*, and saying so precisely matters now that the file is no longer single-writer: `hooks/aios-star-check --decline` appends `star-ask=` to the same file, deliberately, because a decline must be per-operator rather than per-machine and `.aios-update` is what travels with the vault. It touches nothing else and never reads `hash=`. A rule stated as *"never write this file"* would have been read as forbidding that, or quietly ignored — neither of which protects `hash=`.
 
 ## Output format
 
 **If current (tracker matches AND reconcile clean):**
-> Your vault infrastructure is current (synced {date}, hash {hash}). Completeness reconcile: clean.
+> Your vault infrastructure is current (verified {today}, hash {hash}). Completeness reconcile: clean.
 
 **If the tracker said current but the reconcile recovered drift (the self-heal case):**
 > Tracker claimed current, but the completeness reconcile found + recovered {N} framework file(s) the tracker-diff missed: {brief list}. Tracker was over-claiming; now reconciled to HEAD. (See antifragile #65 — this is the orphan-recovery backstop working.)
