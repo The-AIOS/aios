@@ -57,7 +57,12 @@ grep -qiE 'fresh install is not affected' "$U" && ok "scopes it to the recovery 
   || no "does not distinguish fresh install from lost tracker" "SETUP records the real HEAD on purpose"
 
 echo "-- 4. entries are delivered in the operator's language --"
-grep -qiE "How to read this TO the operator" "$C" && ok "CHANGELOG states the language rule" \
+# Aimed at the RULE, not a heading's wording — the header was restructured 2026-09-15 and
+# this grep pinned the old section title while the rule itself survived intact. Re-aimed
+# rather than widened: it still requires the substance (render in the operator's language,
+# English is source not delivery) and is mutation-verified to fail when that paragraph goes.
+grep -qiE "render(s|ed)? them in the operator's language|in the operator's language" "$C" \
+  && ok "CHANGELOG states the language rule" \
   || no "no language rule in the changelog header" "an operator who cannot read the entry cannot verify the sync"
 grep -qiE 'source text, not the delivery' "$C" && ok "names English as source, not delivery" \
   || no "does not separate source language from delivery"
@@ -67,7 +72,8 @@ grep -qiE "operator's language" "$U" && ok "/aios:update carries the instruction
 if grep -qiE 'declared context.*writing to you in|surface.s own language setting' "$U"; then
   no "update.md restates the signal list" "one bound, one home -- it must reference CHANGELOG.md's header instead"
 else ok "update.md references the rule rather than duplicating it"; fi
-grep -qiE 'Leave unchanged|Keep unchanged' "$C" && ok "names what must NOT be translated (paths, commands, hashes)" \
+grep -qiE 'leave (command names|unchanged)|keep unchanged|exactly as written' "$C" \
+  && ok "names what must NOT be translated (paths, commands, hashes)" \
   || no "no do-not-translate list" "a translated command name is an instruction that fails"
 
 echo

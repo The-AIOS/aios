@@ -5,70 +5,63 @@
 >
 > **This is the canonical CHANGELOG for The AIOS.** The framework lives at [The-AIOS/aios](https://github.com/The-AIOS/aios).
 
-> ## Reading order
+> # Reading this as a Claude session? This section is addressed to you.
 >
-> Newest entries appear first. Read top-down — `/aios:update` surfaces only what is new since your stored hash, so you never need to hunt for your starting point.
+> You are almost certainly here because `/aios:update` is running. **You are the one who reads this file; the operator generally does not.** Your job is to turn what follows into something they can act on, and to obtain their consent for anything that executes. Four rules, in the order you need them.
 >
-> **Retired 2026-07-27:** the 1,002-line `2026-05-23 — Migration playbook` entry (moving off the pre-extraction `{user}/aios` / `{org}/internal-vault` lineage) was removed. It could only ever apply to operators who migrated in May 2026, and it was 45% of this file's lines — read in full by every `/aios:update` on every sync, forever, by everyone it could never apply to. Full text remains in git: `git show b98e84c:CHANGELOG.md`.
-
-> ## How to read this TO the operator — in their language, not this file's
+> ## 1 · How to read it, and in whose language
 >
-> **These entries are written in English. That is the source text, not the delivery.** A session presenting them — `/aios:update` shows every new entry — **renders them in the operator's language**, translating as it reads. Reported by an operator: they clicked *Update* in a Spanish-language surface, received an English wall, and could not follow what had changed. An update an operator cannot read is an update that did not land.
+> Newest first. `/aios:update` surfaces only what is new since the stored hash, so there is no starting point to hunt for.
 >
-> Take the language from the strongest signal available: the **surface's own language setting** (the AIOS App ships English and Spanish) · the operator's **declared context** (`vault/00 - notes/context/declared/`) · the language they are **writing to you in right now**. Never default to English merely because the file is.
+> **These entries are written in English. That is the source text, not the delivery — render them in the operator's language**, translating as you read. Reported by an operator who clicked *Update* on a Spanish surface and received an English wall: an update an operator cannot read is an update that did not land. Take the language from the strongest signal available — the surface's own setting, their `declared/` context, or the language they are writing to you in right now. Never default to English merely because this file is. Translate the **capability and the action**; leave command names, file paths, `hash:` values, code blocks and anything they must type exactly as written.
 >
-> Translate the **capability and the action**. Leave unchanged: command names, file paths, `hash:` values, code blocks, and anything the operator has to type.
-
-> ## What belongs in an entry — and what does not
+> ## 2 · Before you run anything, disclose it — from the script, not from the entry
 >
-> **Every entry is read by every operator's session on every `/aios:update`.** That is the whole economics of this file: a sentence written once here is re-read by every operator forever. So an entry answers exactly **two** questions and stops.
+> **Some updates execute code that writes outside the vault** — installers that touch `~/.zshrc`, `~/.claude/`, `~/Library/LaunchAgents/`. You have the downloaded copy in the temp clone, so you can describe the thing itself rather than repeat a claim about it:
 >
-> 1. **What can I now do?** — the capability, in plain language.
-> 2. **What must I do?** — the action, or an explicit *nothing*.
+> > *"This update changes one installer: `hooks/claude-identity/install-wrappers.sh`. It writes to `~/.zshrc`. It's the same script that ran on your last 11 updates; 3 lines changed — here they are. Run it? [y / n / show me the whole file]"*
 >
-> **The test for any sentence: could the operator do something differently because they read it?** If no, it belongs in the pull request, where it is read once by the person deciding whether to merge.
+> Every word there is evidence rather than assertion, and **specificity is what makes it calm.** *"This is safe"* is also calm, and unfounded — it spends trust the framework has not earned, which is worse than silence. **A diff the operator can see is a diff an attacker has to survive. A reassurance is not a control.**
 >
-> **Out of scope here, with its real home:**
+> **Three rules, and the third is the one that binds you:**
 >
-> - *How it was proven* — test names, check counts, mutation runs, controls, parity verification → **the PR body**. Post-merge, the operator inherits the guarantee, not the argument for it.
-> - *What we deliberately did NOT change*, and why → **the PR body**. An operator cannot act on a non-change.
-> - *Development archaeology* — how many attempts it took, what the first version got wrong → **the commit message**, and `antifragile.md` when the lesson generalises.
-> - *Naming and design deliberation* — the word we rejected and why → the spec or skill that owns the concept.
-> - *Vendored-license and boundary reasoning* → **`LICENSE-AUDIT.md`**, which is where the boundary is drawn.
-> - *Internal hygiene with no operator-visible effect* → one line, or nothing.
+> - **A NEW installer always asks.** Never seen before means never consented to, whatever the entry says about it.
+> - **A MODIFIED installer they have run before may default to yes — with the diff shown unasked** — *unless the change expands its blast radius.* A new write path, a new network call, a new credential read: that is the same script asking for a new capability, so it asks again regardless of history. This is deliberate: a repo compromise modifies an *existing* installer precisely because that is the default-yes path.
+> - **Never render this file's safety claim as your own verdict.** The entry supplies *what* and *why*. **The diff supplies *whether*.** If you have not read the script, you have no verdict to give.
 >
-> A fix's **mechanism** is in scope exactly as far as the operator needs it to recognise the symptom or trust the fix — usually a sentence. Its **proof** is not.
+> **Nobody present?** `/today` and `/close-day` fire updates from scheduled runs. **Silence is not consent.** Apply the files, skip execution that would need an answer, and leave it as work still owed — surfaced at the next `/today`. A modified installer with an unchanged blast radius may proceed; log what ran.
 >
-> Keep the whole entry under ~1,500 words including subsections. `tests/changelog-entry-shape.test.sh` enforces the phrase-level bans and the budget, because this file has drifted to 5,000-word entries twice while every individual paragraph looked worth keeping.
+> **Authoring side:** an entry that requires execution **names the file, the paths it writes, and whether it is new or modified.** Without those three, it is incomplete — you are asking a session to obtain consent it cannot describe.
+>
+> ## 3 · How to read (and write) "Action required"
+>
+> Every **Action required** is **CHECK-THEN-ACT and idempotent** — verify the operator's *own* current state first, act **only if needed**, and say so when it is already in place. The same entry reaches you, a teammate who synced independently, a fresh install, and a machine that already self-healed, so a blind *"run this"* is unsafe where a self-check is not. **Authors:** make the action carry its own check (*"run X; act only if Y"*), put any restart step **last**, and never assume a starting state.
+>
+> ## 4 · What belongs in an entry
+>
+> **Every entry is read by every operator's session on every sync** — a sentence written once here is re-read forever. So an entry answers exactly two questions and stops: **what can I now do**, and **what must I do** (or an explicit *nothing*). Lead with the capability in plain language with a concrete example, phrased as something the operator can *do* — not a component inventory. That section is what you read back to them after applying, so **a change you cannot state as a capability was shipped to the repo, not to them.**
+>
+> **The test for any sentence: could the operator do something differently because they read it?** If not, it belongs in the pull request, read once by whoever merges.
+>
+> Out of scope, with its real home: *how it was proven* (test names, counts, mutation runs) → the PR body · *what we deliberately did not change* → the PR body · *development archaeology* → the commit message, and `antifragile.md` if the lesson generalises · *naming deliberation* → the spec that owns the concept · *license reasoning* → `LICENSE-AUDIT.md` · *internal hygiene with no operator-visible effect* → one line, or nothing.
+>
+> A fix's **mechanism** is in scope as far as the operator needs it to recognise the symptom or trust the fix — usually a sentence. Its **proof** is not. Keep an entry under ~1,500 words; `tests/changelog-entry-shape.test.sh` enforces that and the phrase-level bans, because this file drifted to 5,000-word entries twice while every paragraph looked worth keeping.
 
 > ## Releases → entries
 >
-> Entries here are **date-keyed**. Releases are **tagged in git** with full notes, and published as GitHub Releases. A release contains every entry dated up to and including its tag date, back to the previous release:
+> Entries are **date-keyed**; releases are **tagged in git**. A release contains every entry dated up to its tag, back to the previous release. **What you actually have is the hash in `.aios-update`** — a vault normally sits *between* releases, and `/aios:update` works off that hash, never off a version number.
 >
-> - **Unreleased** — entries dated after `2026-09-13`
-> - **[v0.7.1](https://github.com/The-AIOS/aios/releases/tag/v0.7.1)** — tagged `2026-09-13` — patch: `CLAUDE.md` was shipping two contradictory context-loading specs, and the floor read a rule library by recency
-> - **[v0.7.0](https://github.com/The-AIOS/aios/releases/tag/v0.7.0)** — tagged `2026-09-13` — covers `2026-09-05` → `2026-09-13`
-> - **[v0.6.2](https://github.com/The-AIOS/aios/releases/tag/v0.6.2)** — tagged `2026-09-04` — patch: the day's action list rewritten as checks a receiving session executes, plus the two fixes that shipped undocumented
-> - **[v0.6.1](https://github.com/The-AIOS/aios/releases/tag/v0.6.1)** — tagged `2026-09-04` — patch: two defects found by dogfooding `/aios:update`, one of which blocked every operator's sync commit
-> - **[v0.6.0](https://github.com/The-AIOS/aios/releases/tag/v0.6.0)** — tagged `2026-09-04` — covers `2026-08-13` → `2026-09-04`
-> - **[v0.5.0](https://github.com/The-AIOS/aios/releases/tag/v0.5.0)** — tagged `2026-08-12` — covers `2026-07-26` → `2026-08-12`
-> - **[v0.4.0](https://github.com/The-AIOS/aios/releases/tag/v0.4.0)** — tagged `2026-07-25` — covers `2026-05-26` → `2026-07-25`
-> - **[v0.2.0](https://github.com/The-AIOS/aios/releases/tag/v0.2.0)** — tagged `2026-05-25` — covers `2026-05-24` → `2026-05-25`
-> - **[v0.1.0](https://github.com/The-AIOS/aios/releases/tag/v0.1.0)** — tagged `2026-05-21` — first tagged shape; predates every entry still in this file
+> - **Unreleased** — entries after `2026-09-13`
+> - **[v0.7.1](https://github.com/The-AIOS/aios/releases/tag/v0.7.1)** · `2026-09-13` — patch
+> - **[v0.7.0](https://github.com/The-AIOS/aios/releases/tag/v0.7.0)** · `2026-09-13` — covers `2026-09-05` → `2026-09-13`
+> - **[v0.6.2](https://github.com/The-AIOS/aios/releases/tag/v0.6.2)** · `2026-09-04` — patch
+> - **[v0.6.1](https://github.com/The-AIOS/aios/releases/tag/v0.6.1)** · `2026-09-04` — patch
+> - **[v0.6.0](https://github.com/The-AIOS/aios/releases/tag/v0.6.0)** · `2026-09-04` — covers `2026-08-13` → `2026-09-04`
+> - **[v0.5.0](https://github.com/The-AIOS/aios/releases/tag/v0.5.0)** · `2026-08-12` — covers `2026-07-26` → `2026-08-12`
+> - **[v0.4.0](https://github.com/The-AIOS/aios/releases/tag/v0.4.0)** · `2026-07-25` — covers `2026-05-26` → `2026-07-25`
+> - **[v0.2.0](https://github.com/The-AIOS/aios/releases/tag/v0.2.0)** · `2026-05-25` · **[v0.1.0](https://github.com/The-AIOS/aios/releases/tag/v0.1.0)** · `2026-05-21`
 >
-> **`0.3.0` was never cut** (`0.2.0` → `0.4.0` directly), so a missing 0.3.0 is not a gap in your history.
->
-> Three version numbers exist and they are **not** the same thing: the **framework** version in `plugins/aios/.claude-plugin/plugin.json`, **AIOS Glass** (the editor extension, versioned independently on Open VSX), and the **AIOS App** (the Mac desktop app, versioned independently again). Where an entry says "Glass" or "App", it means that surface — not the framework. *Deliberately not stating their current numbers here: they advance on their own schedules, and a version written into prose is a fact that goes stale silently. Read each from its own manifest or Releases page.*
->
-> The release number is a milestone marker for humans. **What you actually have is the hash in `.aios-update`**, which is finer-grained — a vault normally sits *between* releases, and `/aios:update` works off that hash, never off the version.
-
-> ## How to read (+ author) "Action required"
->
-> Every **Action required** is written as **CHECK-THEN-ACT, idempotent** — your session verifies its *own* current state first and acts **only if needed**, no-op-ing (and saying so) when the fix is already in place. The same entry may reach you, a teammate who synced independently, a fresh install, or a machine that already self-healed — so a blind "run this" would be unsafe; a self-check is not. **Authors:** write actions that carry their own check (state the precondition + the test, e.g. *"run X; act only if Y"*), put any restart/reload step LAST, and never assume the reader's starting state.
-
-> ## Author every entry with a "What you can now do" section
->
-> A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
+> Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
 ## 2026-09-15 — A successful check now counts as a check
 

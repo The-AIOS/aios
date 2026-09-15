@@ -128,7 +128,7 @@ This makes the "Backed up (your customizations preserved)" report **meaningful**
 
 ## Post-replace auto-execution (scripts must RUN, not just copy)
 
-After Tier 1 replace lands, automatically execute any updated script that **produces operator-environment state**, so the update is COMPLETE, not just file-deep. The principle:
+After Tier 1 replace lands, execute any updated script that **produces operator-environment state**, so the update is COMPLETE, not just file-deep — **subject to the execution-disclosure protocol in `CHANGELOG.md`'s header, which is the single home for how a session obtains consent before running downloaded code.** This step decides *what* runs; that protocol decides *whether it runs without asking*. Do not restate its rules here — two surfaces disagreeing about consent is resolved by whichever a session read last. The principle:
 
 | Class | What it is | Action when updated |
 |---|---|---|
@@ -140,7 +140,7 @@ After Tier 1 replace lands, automatically execute any updated script that **prod
 Concrete rules for what's currently in the framework (the operator-environment-state class):
 
 - **Platform guard — auto-run ONLY the installer matching the operator's OS, never the other platform's.** Detect once: `case "$OSTYPE" in msys*|cygwin*|win*) IS_WIN=1 ;; *) IS_WIN=0 ;; esac` (or `uname -s`: `Darwin`/`Linux` = non-Windows). On macOS/Linux run only the `.sh`; on Windows run only the `.ps1`. This prevents a Mac/Linux session from attempting the `.ps1` (a stray `powershell: command not found` in the report, or a pointless write into an unused `pwsh` profile) — and a Windows session from attempting the `.sh`. The file still gets *copied* on every OS (Tier-1); only its *execution* is platform-gated.
-- **`hooks/claude-identity/install-wrappers.sh` updated** → **macOS / Linux only** (`IS_WIN=0`; skip on Windows) → `bash $HOME/aios/hooks/claude-identity/install-wrappers.sh`. Don't ask. Idempotent (timestamped backup → strip prior banner → append fresh). Report: *"Wrappers re-installed. Open a new terminal to pick up changes."*
+- **`hooks/claude-identity/install-wrappers.sh` updated** → **macOS / Linux only** (`IS_WIN=0`; skip on Windows) → `bash $HOME/aios/hooks/claude-identity/install-wrappers.sh`. **Disclose before running it** — this writes to `~/.zshrc`, so it goes through the execution-disclosure protocol in `CHANGELOG.md`'s header (name the file, name the paths, new-vs-modified, show the diff; a modified installer the operator has run before may default to yes unless the change expands its blast radius). Idempotent (timestamped backup → strip prior banner → append fresh). Report: *"Wrappers re-installed. Open a new terminal to pick up changes."*
 - **`hooks/claude-identity/install-wrappers.ps1` updated** → **Windows only** (`IS_WIN=1`; skip on macOS / Linux) → run with whichever PowerShell exists. `pwsh` (PowerShell 7) is **not** installed by default on Windows — a stock Win11 ships only Windows PowerShell 5.1 (`powershell`), which runs the `.ps1` fine. Try `pwsh`, fall back to `powershell`:
   ```bash
   if command -v pwsh >/dev/null 2>&1; then
