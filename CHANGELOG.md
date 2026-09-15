@@ -72,7 +72,7 @@
 
 ## 2026-09-15 — A successful check now counts as a check
 
-`hash: PLACEHOLDER` · [#139](https://github.com/The-AIOS/aios/pull/139)
+`hash: a5050aa` · [#139](https://github.com/The-AIOS/aios/pull/139)
 
 > **What you can now do.** Trust the date in `.aios-update` to mean *when your vault was last verified against canonical* — including the days canonical shipped nothing. Until now it only moved when there was something to apply, so it drifted one day staler every quiet day, and **nothing you could do would clear it.**
 
