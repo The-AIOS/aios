@@ -1,7 +1,12 @@
+" resume "
+"fallback":"spawn"
 "model":"<id>"
+"resmue"
+"Resume"
 "surface"
 "tier":"<rung>"
 ## Remote machines
+###
 $CLAUDE_AGENT_NAME
 (new — date)
 --allowedTools
@@ -19,22 +24,36 @@ $CLAUDE_AGENT_NAME
 -Tier fast
 .mcp.json
 .ps1
+.undelivered
 /aios:compact
 /aios:drift
 /aios:housekeeping
 /aios:trace
 /close-day
+/close-session
 /mcp
 /today
 03 - export/{type-or-venture}/
 <name>.json.undelivered
+[name]
 _
 _claim
 _inbox
+_index.md
 _releases
 _tried
 _undelivered
+about_business.md
+about_me.md
+accountant
+action
+agent-name
+agents/**/{name}.md
+agents/_index.md
+agents/custom/_index.md
+agents/custom/{name}.md
 aios-commit --vault
+aios-spawn-inbox: contract N
 antifragile.md
 audits
 Bash
@@ -46,24 +65,35 @@ claude
 claude --remote-control
 claude -p
 CLAUDE_MODEL
+code-review
 collision <dest>
+context/ventures/
 cp
+declared/
 ecosystem.md
 exempt-line-check: true
 export CLAUDE_MODEL
 export/
 fast
+find agents -ipath "*/{name}.md" -print -quit 2>/dev/null
 frontier
 Get-Command spawn
 git add -A
+grep -h '^###' "…/observed/"*.md
+grep -h '^#' "…/declared/"*.md
 growth.md
 hooks/aios-snapshot
 hooks/claude-identity/install-wrappers.sh
+hooks/context-rungs.py
 hooks/openrouter.py
 housekeeping.md
 identical <dest>
+INBOX_CONTRACT
+INTENT.md
 judgment
 kill
+lawyer
+ls agents/**/{name}.md
 method
 MODEL-ROUTING.md
 name
@@ -76,13 +106,17 @@ permission_denials: []
 permissions.defaultMode: "auto"
 pgrep
 pid
+pipeline-executor.py
 plan
 preferences.md
 profile.md
 prompt
+python3
 reflections/{subfolder}
 research
 restated: true
+resume
+right-context
 route:
 scale
 send
@@ -111,11 +145,17 @@ updated:
 USER.md
 uvx
 vault-routine.md
+vault/00 - notes/context/declared/
 vault/00 - notes/reflections/_inbox/
+ventures/
 vscode.createTerminal
 Write
+writing
 {"action":"kill","name":"<kebab>"}
+{"action":"resume","name":"<kebab>","prompt":"<first prompt>"}
 {"action":"send","name":"<kebab>","prompt":"<one line>"}
+{"action":"spawn", …}
+{"name","task"}
 {"name":"<kebab>","task":"<first prompt>"}
 ~/.aios/bus-payloads/<name>-<ts>.md
 ~/.aios/mcp-profiles/{name}.json
@@ -124,6 +164,7 @@ Write
 ~/.aios/spawn-inbox/README.md
 ~/.aios/surfaces/*.json
 ~/.aios/surfaces/<surface>.json
+~/.claude/projects/*/*.jsonl
 ~/.claude/projects/*/<sessionId>.jsonl
 ~/.claude/sessions/*.json
 ~/.zshrc

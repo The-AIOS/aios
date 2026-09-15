@@ -72,7 +72,7 @@
 
 ## 2026-09-14 — Checks that read the wrong signal, and a `CLAUDE.md` that stops growing
 
-`hash: d4dac86 · 625a251 · 84ca270` · [#133](https://github.com/The-AIOS/aios/pull/133) · [#134](https://github.com/The-AIOS/aios/pull/134) · [#135](https://github.com/The-AIOS/aios/pull/135) · [#136](https://github.com/The-AIOS/aios/pull/136)
+`hash: d4dac86 · 625a251 · 84ca270 · 0deb979` · [#133](https://github.com/The-AIOS/aios/pull/133) · [#134](https://github.com/The-AIOS/aios/pull/134) · [#135](https://github.com/The-AIOS/aios/pull/135) · [#136](https://github.com/The-AIOS/aios/pull/136) · [#137](https://github.com/The-AIOS/aios/pull/137) · [#138](https://github.com/The-AIOS/aios/pull/138)
 
 > **What you can now do.** Trust that when a session asks *"is this done?"* it reads the answer off the surface you maintain rather than an archived photograph of it; start every session on a lighter behavioural contract; and know the contract will stay light, because it now has a budget instead of good intentions.
 
@@ -107,6 +107,14 @@ Its cap was justified as *"read every session, so it carries a size cap."* That 
 
 **Some of it repairs itself.** `bash .github/scripts/autofix.sh` fixes the failures that have exactly one correct answer — today, the capability counts in `TOOLS.md`, `README.md` and `agents/_index.md`, each derived from the folders rather than from a stored number. `--check` reports without writing. On `main` CI applies the repair and commits it, so that class never reaches anyone's inbox; on a pull request the check still fails, because CI cannot — and must not — write to a fork's branch.
 
+
+### A lighter contract, and the license to answer what you forgot to ask
+
+**Sessions may now answer the unasked — bounded.** A request usually names an **input**, not the output it is for; *"read this transcript"* is not a request to have read something. A session that has loaded your context is now told to make the thing it is for. Three bounds keep it from becoming noise: **make what is small, propose what is large** (a draft, a note, an artifact — never a codebase); **never send** (it stages, you sign); **no accumulated context, no license**. This is deliberately the one rule in the file that a fresh vault does not grant: it is earned as the vault learns you.
+
+**`CLAUDE.md` got smaller while gaining that rule.** Two more sections condensed rule-for-rule — § Spawning Sessions and § Identity & Greeting — every rule kept, verified by rubric. What came out was argument, not instruction: paragraphs that named another document as the owner of their reasoning and then restated it anyway.
+
+**And one thing that should never have shipped:** the file told every session to offer a one-word go-ahead using a **Spanish** phrase — one operator's habit encoded as everyone's infrastructure. It now says to ask in *your* language, as a rule, so the next idiom does not slip in the same way.
 
 **Action required — one frontmatter key, and only if you have been running AIOS for a while.** `vault-routine.md` is **your** file: `/aios:update` never syncs anything under `vault/00 - notes/context/`, so the flag cannot arrive on its own — and nothing should ever replace that file with the framework's copy, which is an empty seed. For the session running this update: find the observed file that *specifies your cadence* rather than logging events (match on **shape**, not name — its headings carry no dates); if its frontmatter already has a `restated:` key, do nothing and say so; otherwise add `restated: true` through the frontmatter tool (`update_frontmatter` via the Obsidian MCP), **never a regex edit and never a rewrite**; then read the frontmatter back and check the date stamps kept their `'YYYY-MM-DD'` shape, because that tool normalises neighbouring values and `updated:` is the field the staleness alarm reads. If no such file exists or you cannot identify one confidently, report that and stop rather than guessing.
 
