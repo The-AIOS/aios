@@ -21,6 +21,26 @@ This is the **canonical list** referenced by `CLAUDE.md` → MCP Policy. When yo
 
 ¹ **Playwright is setup-only — not a registered MCP server.** It's a *capability layer* (saved browser auth via Chrome cookie extraction in `cookie_import.py`) that Python scripts consume on demand. There is no `server.py`, no `claude mcp add` step. Listed in this table for bundling completeness, but consumption is `Bash(python script.py)`, not MCP tools. See [`playwright-mcp/README.md`](playwright-mcp/README.md) and [`plugins/aios/commands/mcps-setup.md`](../plugins/aios/commands/mcps-setup.md) Playwright section.
 
+## MCP pinning policy
+
+**Every third-party package that runs on an operator's machine carries an explicit version.** `npx pkg@1.2.3`, never `npx pkg@latest`; `uvx pkg==1.2.3`, never a bare `uvx pkg`; `requirements.txt` with `==`, never a bare name. Enforced by `tests/lint-mcp-pinning.py`, which fails the build on any new unpinned invocation.
+
+**What pinning buys, stated narrowly so it is not over-read: reproducibility, never safety.** The code you ran yesterday is the code that runs tomorrow. A pinned malicious version stays malicious — pinning removes *silent substitution*, which is the mechanism behind every published npm supply-chain incident (a maintainer ships a payload in a patch release and every floating consumer ingests it). It needs no judgment to work, which is exactly why it is the control worth having. Judgment about *content* is a separate question, answered per server in that server's `AUDIT.md` and summarised in root `SECURITY.md`.
+
+**A pin nobody installs is not a control.** Measured 2026-09-15: three manifests here pinned `mcp==1.28.1` on 2026-07-29 while the live venvs — built 2026-03-30 and 2026-04-21 — ran `mcp-1.27.0`. `setup.sh` is idempotent and **skips an existing venv**, so that pin had never once been installed. A fresh clone would take the pinned version and an existing vault would keep the older one: *the same repo running two different runtimes, with nothing reporting the divergence.* So the pin is only half — `setup.sh` must also detect an installed version that disagrees with the manifest and say so. A manifest the installer silently ignores is a decoration.
+
+**Who bumps, and when.** A pin nobody bumps becomes a stale-CVE problem, so the duty is named rather than assumed: **whoever touches a server bumps its pins in that same PR**, and a pin is re-vetted at bump time — which is the moment a review is worth doing, and the reason pinning does not create an audit treadmill. It creates a *schedule*. Bumping is a deliberate edit with the new version in the diff, never a range that moves on its own.
+
+**`unpinned` is a legitimate row, and it must appear where true.** Four invocations are currently unpinned because their versions could not be resolved when this rule was written, and **a guessed pin is worse than a recorded gap** — it reads as a verified version and is not one. They sit in `KNOWN_UNPINNED` in the lint and as `unpinned` rows in `SECURITY.md`. That is a ratchet, not an amnesty: an entry leaves the list by being pinned, never by being deleted, and any *new* unpinned invocation fails the build.
+
+### Connecting a server whose code AIOS does not ship
+
+Four servers resolve their code from a registry at invocation time, so AIOS never sees it. When a session connects one of these, it **discloses what is about to run and claims nothing about it**:
+
+> *"This connects code AIOS does not ship. Resolved version: `X`. It declares these scopes, reaches these endpoints, and runs these install scripts. **AIOS has not reviewed this version.**"*
+
+**Report facts, never a verdict.** Resolved version, declared scopes, network endpoints in the manifest, and whether install scripts are present (the classic payload vector) are all things a session can establish and an operator can act on. *"Is this safe"* is not, and a session must not answer it — an LLM reading a package quickly will call almost anything safe, because well-formed code reads as fine and obfuscated payloads are built to survive exactly that read. **A reassurance the framework has not earned spends trust it does not have**, which is worse than silence. Same rule as the installer-execution protocol in `CHANGELOG.md`: describe the artifact from the artifact, and never render a safety claim as your own verdict.
+
 ## Source attribution
 
 MCPs come from two places: **vendored** from an upstream open-source repo (we track upstream HEAD via `.upstream-sync`) or **AIOS-built** in this framework. `/aios:housekeeping` Bucket 18 checks each vendored MCP's upstream for new commits since last sync.

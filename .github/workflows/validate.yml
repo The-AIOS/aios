@@ -1514,6 +1514,14 @@ jobs:
         # whose purpose was removing that enumeration.
         run: python3 tests/lint-no-hardcoded-context-names.py
 
+      - name: third-party code that runs on an operator's machine is pinned
+        # npx @latest / bare uvx resolve whatever the registry publishes at invocation time,
+        # so the code audited yesterday is not the code run tomorrow. Pinning needs no
+        # judgment to work, which is why it is the control worth having. Known gaps sit in
+        # the lint's KNOWN_UNPINNED ratchet and as `unpinned` rows in SECURITY.md; any NEW
+        # unpinned invocation fails here.
+        run: python3 tests/lint-mcp-pinning.py
+
       - name: the Google connector's API set derives from one manifest
         # The set of Google APIs an operator must enable existed in SIX places before
         # AI-126 -- connector.json's --permissions, SETUP.md's prose, the setup doc's
