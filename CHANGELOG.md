@@ -72,7 +72,7 @@
 
 ## 2026-09-15 — A lighter contract, and the licence to answer what you forgot to ask
 
-`hash: PLACEHOLDER` · [#138](https://github.com/The-AIOS/aios/pull/138)
+`hash: 0deb979` · [#138](https://github.com/The-AIOS/aios/pull/138)
 
 > **What you can now do.** Get work you did not ask for and are glad to have — the artifact a request was *for*, made because the vault taught the session enough about you to know. And pay less for the contract that governs it: `CLAUDE.md` is smaller than it has been since early September, with every rule intact.
 
