@@ -31,7 +31,7 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 # The ratchet. Raise it DELIBERATELY, in the PR that needs the room, never to get green.
-CEILING=95000
+CEILING=94500
 
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }

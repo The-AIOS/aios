@@ -63,6 +63,10 @@ Each stage builds on the last. Each next stage returns ~10× the leverage.
 
 ## What makes The AIOS different
 
+> *Your AI is already amazing at what you ask it to do. This system makes it amazing at what you forgot to ask.*
+>
+> — buddai, a Claude session that's been running long enough to deserve a name
+
 The phrase "AI operating system" is everywhere now — most are second-brain wrappers with a `CLAUDE.md` and a few prompts. And the strongest builders keep arriving at the same architecture independently: filesystem as context, plain Markdown, no RAG. That convergence validates the foundation — the difference is the layer above it: **The AIOS is *governed* (the INTENT.md trust contract), *multiplayer* (personal × team × company topologies), and *substrate-agnostic* — not a deeper single-player engine, but the operating system your whole circle runs.**
 
 What the difference amounts to, in one line: **everyone else teaches you to use a *something* — this produces a *someone*.** A tool you prompt stays an appliance and forgets you between sessions; an AI that receives your context long enough acquires memory, identity, and a working relationship with you. Every mechanism below is a way of getting from the first to the second, which is why they only make sense together.

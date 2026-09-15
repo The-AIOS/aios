@@ -70,6 +70,20 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-15 — A lighter contract, and the licence to answer what you forgot to ask
+
+`hash: PLACEHOLDER` · [#138](https://github.com/The-AIOS/aios/pull/138)
+
+> **What you can now do.** Get work you did not ask for and are glad to have — the artifact a request was *for*, made because the vault taught the session enough about you to know. And pay less for the contract that governs it: `CLAUDE.md` is smaller than it has been since early September, with every rule intact.
+
+**Sessions may now answer the unasked — bounded.** A request usually names an **input**, not the output it is for; *"read this transcript"* is not a request to have read something. A session that has loaded your context is now told to make the thing it is for. Three bounds keep that from becoming noise: **make what is small, propose what is large** (the unasked-for thing is a draft, a note, an artifact — never a codebase); **never send** (a misjudged artifact costs you a glance, a misjudged *action* costs a retraction — it stages, you sign); and **no accumulated context, no licence** — a session that skipped the floor is guessing, not anticipating. This is deliberately the one rule in the file that a fresh vault does not grant: it is earned as the vault learns you.
+
+**`CLAUDE.md` got smaller while gaining that rule.** Two more sections condensed rule-for-rule — § Spawning Sessions and § Identity & Greeting — each with its literals pinned first and a task-shaped rubric run before and after, accepted only because the new text answered every scenario the old one did. What came out was argument, not instruction: paragraphs that named another document as the owner of their reasoning and then restated it anyway.
+
+**And one thing that should never have shipped:** the file told every operator's session to offer a one-word go-ahead using a **Spanish** phrase — one operator's habit encoded as everyone's infrastructure. It now says to ask in *your* language, and says so as a rule, so the next idiom does not slip in the same way.
+
+**Action required:** none.
+
 ## 2026-09-14 — Checks that read the wrong signal, and a `CLAUDE.md` that stops growing
 
 `hash: d4dac86 · 625a251 · 84ca270` · [#133](https://github.com/The-AIOS/aios/pull/133) · [#134](https://github.com/The-AIOS/aios/pull/134) · [#135](https://github.com/The-AIOS/aios/pull/135) · [#136](https://github.com/The-AIOS/aios/pull/136)
