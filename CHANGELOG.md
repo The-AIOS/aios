@@ -70,6 +70,18 @@
 >
 > A changelog that only lists *what changed* pushes comprehension-debt onto the operator — they'd have to read a skill's source to know what it does for their day. So every entry leads with a **"What you can now do"** section: the new capabilities in **plain language, with a concrete example**, phrased as things the operator can *do* now — not a component inventory. Keep the full component list too (for the record), but lead with the practical read, and flag the load-bearing behavioral changes worth an actual read. `/aios:update` surfaces this section to the operator after applying an entry, so their own Claude session tells them what the new version unlocks. **The rule:** *translate every shipped change into a capability the operator can use — or it isn't really shipped to them, just to the repo.*
 
+## 2026-09-15 — A successful check now counts as a check
+
+`hash: PLACEHOLDER` · [#139](https://github.com/The-AIOS/aios/pull/139)
+
+> **What you can now do.** Trust the date in `.aios-update` to mean *when your vault was last verified against canonical* — including the days canonical shipped nothing. Until now it only moved when there was something to apply, so it drifted one day staler every quiet day, and **nothing you could do would clear it.**
+
+**What changes.** `/aios:update` returns early when your vault already matches upstream: it reports *"current"* and exits before the step that writes the tracker. So `synced=` was a **last-applied** date while every reader — you, a status panel, anything watching freshness — takes it as **last-checked**. The two fields now advance separately: **`hash=` still moves only on a fully-applied run** (an over-advanced hash orphans content, and that guard is untouched), while **`synced=` moves on any run whose completeness reconcile came back clean**, applied or not. A failed apply advances neither.
+
+The tracker is written at most once a day, so running the command repeatedly does not produce a commit each time — and a reconcile that finds drift still advances nothing until it is recovered.
+
+**Action required:** none. Your next `/aios:update` stamps the date whether or not there is anything to pull.
+
 ## 2026-09-14 — Checks that read the wrong signal, and a `CLAUDE.md` that stops growing
 
 `hash: d4dac86 · 625a251 · 84ca270 · 0deb979` · [#133](https://github.com/The-AIOS/aios/pull/133) · [#134](https://github.com/The-AIOS/aios/pull/134) · [#135](https://github.com/The-AIOS/aios/pull/135) · [#136](https://github.com/The-AIOS/aios/pull/136) · [#137](https://github.com/The-AIOS/aios/pull/137) · [#138](https://github.com/The-AIOS/aios/pull/138)
