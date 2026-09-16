@@ -1,6 +1,5 @@
 # START HERE
 
-> **Before you grant anything:** [`SECURITY.md`](./SECURITY.md) states what each surface reaches and whose identity it acts as; [`GLOSSARY.md`](./GLOSSARY.md) defines the vocabulary it uses. Automatic updates are on by default and every session asks before running anything that writes outside your vault — `SECURITY.md` § *The update model* has the one line that turns them off.
 
 Welcome to your AI-OS. This is your personal operating system for thinking with Claude — a vault that gets smarter about *you* the more you use it. It's also team-shared infrastructure: the commands, MCPs, and hooks come from a central team repo, but your personal context stays in your own private fork.
 

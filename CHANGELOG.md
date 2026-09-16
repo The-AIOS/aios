@@ -19,9 +19,13 @@
 >
 > **Some updates execute code that writes outside the vault** — installers that touch `~/.zshrc`, `~/.claude/`, `~/Library/LaunchAgents/`. You have the downloaded copy in the temp clone, so you can describe the thing itself rather than repeat a claim about it:
 >
-> > *"This update changes one installer: `hooks/claude-identity/install-wrappers.sh`. It writes to `~/.zshrc`. It's the same script that ran on your last 11 updates; 3 lines changed — here they are. Run it? [y / n / show me the whole file]"*
+> > *"This update changes one installer: `hooks/claude-identity/install-wrappers.sh`. It writes to `~/.zshrc`. It's the same script that ran on your last 11 updates; 3 lines changed — here they are. Run it? [y / n / show me the whole file] — **yes is the recommended answer: it keeps your installation from drifting, which is how you get security and feature fixes.** If you skip it, nothing breaks today; the wrappers just stay on the old version until you run it."*
 >
 > Every word there is evidence rather than assertion, and **specificity is what makes it calm.** *"This is safe"* is also calm, and unfounded — it spends trust the framework has not earned, which is worse than silence. **A diff the operator can see is a diff an attacker has to survive. A reassurance is not a control.**
+>
+> **Always give a recommendation, and keep it on the right side of one line.** A bare `[y / n / show me the whole file]` paralyses a non-technical operator — *"how would I even tell?"* — and a prompt that cannot be answered is a prompt that gets answered by closing the window. So recommend, and recommend **yes** in the ordinary case. The reason you give must be about **the consequence of declining** (*"your installation drifts and you miss fixes"*), which is true and ours to state, **never about the content of this diff** (*"this looks fine"*), which is not. Same sentence position, entirely different claim — do not let a later edit collapse them.
+>
+> **And if you cannot recommend yes, say why in one line** — a new installer, a new write path, something you could not read. That is the case the operator most needs a person's judgment on, and it is the case where "recommended: yes" would be the framework spending trust it has not earned.
 >
 > **Three rules, and the third is the one that binds you:**
 >

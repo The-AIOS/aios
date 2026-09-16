@@ -30,9 +30,21 @@
 
 **AI / model** — the program that reads text and produces text. Claude is a model; so is GPT; so is Gemini.
 
-⚠️ **Which model runs is not fixed, and it is part of your security posture.** AIOS is built around Claude Code, and a **spawned worker** is always a Claude model — `spawn` passes its model argument straight to the `claude` binary, which runs Claude models only. But the repo also ships [`AGENTS.md`](./AGENTS.md), a portable contract for other tools that read that convention (Codex, Cursor, Aider), and the desktop app **opens terminals** — whatever CLI you run inside one is what is actually running, whoever made it.
+⚠️ **Which model runs is not fixed, and it is part of your security posture.** AIOS is built around Claude Code, and a **spawned worker** is always a Claude model — `spawn` passes its model argument straight to the `claude` binary, which runs Claude models only. But the repo also ships [`AGENTS.md`](./AGENTS.md), a portable contract for other tools that read that convention (Codex, Cursor, Gemini CLI), and the desktop app **opens terminals** — whatever CLI you run inside one is what is actually running, whoever made it.
 
 Why that matters here rather than in a footnote: **a model's own refusal behaviour is one of the controls.** A model that declines to exfiltrate a credential when a malicious document asks it to is doing real security work that no permission setting replaces. That behaviour differs between models and is not something AIOS can supply on their behalf — so *choosing* the model is a decision, not a default.
+
+**Fine-tuning / training** — changing a model's own weights by feeding it data. ⚠️ **The misconception worth clearing up first: your vault never trains the model.** AIOS works by *reading* your files into a session as text, every time. Nothing about you is absorbed into Claude, and nothing persists inside the model after the session ends. "The AI learns about me over time" describes **files on your disk that get re-read**, not a model being retrained on you.
+
+**RAG (retrieval-augmented generation)** — the common pattern of chopping documents into a database and fetching fragments. **AIOS deliberately does not use it** — plain Markdown files, read whole or by heading. No vector database, nothing to re-index, and you can read every byte of your own context in a text editor.
+
+**System prompt** — instructions given to the model before your message. `CLAUDE.md` is effectively one: a contract loaded every session.
+
+**Guardrail** — a rule expressed *in text* asking the model to behave a certain way. ⚠️ **Text is not a wall.** A guardrail shapes behaviour and cannot compel it, which is why a permission setting outranks any instruction file.
+
+**Jailbreak** vs **prompt injection** — constantly confused. A **jailbreak** is *you* talking the model out of its own rules. **Prompt injection** is *someone else* hiding instructions in content the model reads. The first is a party trick; the second is the security problem, because you never see it happen.
+
+**Sycophancy** — ⚠️ the model agreeing with you because agreement is the likeliest-sounding reply, not because you are right. It flatters, softens bad news, and confirms plans it should question. **It needs no attacker** — it is the failure mode that arrives on its own, and the only one on this list you can see happening if you look. AIOS's anti-values name it directly: *"sycophancy kills trust"* and *"performative agreement is lying."* The counter is asking for the disagreement explicitly, and treating a confident answer with no evidence attached as unfinished.
 
 **LLM (large language model)** — the technical name for that kind of model. It predicts likely continuations of text. It does not "look things up" unless given a tool that does.
 
@@ -100,7 +112,39 @@ Why that matters here rather than in a footnote: **a model's own refusal behavio
 
 ---
 
-## 4 · The plumbing a consent decision needs
+## 4 · Five ways to lose the machine, and five walls
+
+The vocabulary for *why* any of this matters. Each risk is real, each has a counter, and the counters are not all the same kind of thing.
+
+**The five risks:**
+
+1. **Prompt injection** — an agent becomes whatever the text says, and **the loudest line wins**. Covered above; it is first because everything else compounds it.
+2. **Source poisoning** — poison what an agent reads and you poison every answer it gives. The corruption is upstream of the model, so the model cannot detect it.
+3. **Impersonation** — two agents look **identical until you demand proof**. Anything can claim to be your assistant; without verification, a claim and a fact read the same.
+4. **Scope creep** — **no wall breaks; the scope just quietly grows.** Permissions granted once for one task stay granted. Nothing fails, which is why nobody notices.
+5. **Sycophancy** — **the risk that needs no attacker**, and the only one visible from the outside.
+
+And a structural one underneath all five: **automation probes faster than you can patch.** Offence got agents first.
+
+**The five walls — and they are not equivalent:**
+
+| Rung | What it is | What it holds against |
+|---|---|---|
+| **0 · none** | it does whatever it is told | nothing |
+| **1 · guardrails** | a wall made of *text* — "please don't" | casual misuse; **not a determined instruction** |
+| **2 · permission mode** | the wall the model **cannot talk past** — a dial you hold | the model deciding to act; this is the first real one |
+| **3 · architecture** | hard walls — separate machine, separate account, a permission box | blast radius |
+| **4 · proof** | a boundary you can **verify** rather than trust | the question "what authority did it have?" |
+
+**A prompt is not a boundary. Security is architecture.** That is why `INTENT.md` (rung 1) is explicitly not enforcement and `--permission-mode` (rung 2) is.
+
+**Verification, not creation, is the bottleneck.** An agent can produce more in an hour than you can check in a day, so *"it finished — would you sign it?"* is the real question. The way out is not checking every draft; it is **proving the process once**. A policy is a promise; a **mandate** is a proof. Mandate in, receipt out.
+
+**Accountability** — ⚠️ **"the AI did it" is not a defence.** Every approval asks *who* acted; the second question, usually missing, is *what authority did they have, and can you show it?* Not smarter agents — **accountable** ones.
+
+**Read · Write · Own · Prove** — the four stages of handing work to an agent. Most tools stop at *write*. The last two are where trust stops being a feeling.
+
+## 5 · The plumbing a consent decision needs
 
 **Repo (repository)** — a folder of code with its full history. AIOS is a public one on GitHub.
 

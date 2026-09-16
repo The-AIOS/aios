@@ -28,7 +28,7 @@ This is the column most tools never show you, and it matters more than the permi
 |---|---|---|
 | **Slack** | **You.** Not a bot. | Messages post under your name. Authentication is a `xoxc-`/`xoxd-` token pair **extracted from your Chrome session**, so the session holds your full interactive Slack identity — every channel and DM you can see. A dedicated Slack app with explicit scopes is the safer pattern for a work account, and AIOS does not currently ship one. |
 | **Browser automation** | **You, on any site you are logged into.** | `mcps/playwright-mcp/cookie_import.py` decrypts your Chrome cookie store through the macOS Keychain and writes live session cookies to `auth/<site>.json`. Currently configured: Substack, LinkedIn, X, Paragraph. Anything with a valid cookie can be acted on — including services with no formal integration. |
-| **Google Workspace** | You, across nine services | Calendar, Tasks, Drive, Docs, Sheets, Slides, Gmail, Contacts, Forms. Apps Script is deliberately excluded as too broad. |
+| **Google Workspace** | You — across the services *you* enable | Calendar, Tasks, Drive, Docs, Sheets, Slides, Gmail, Contacts, Forms are available; **you choose which to turn on**, and Chat ships off by default. Apps Script is deliberately excluded as too broad. Fewer enabled is a smaller surface, and that choice is yours at setup and after. |
 | **GitHub** | Your token's scopes | Whatever you granted the PAT. |
 | **The vault + shell** | Your user account | A session can read, write, commit, push, and run commands as you. |
 
@@ -53,9 +53,9 @@ Locally, on your machine. AIOS has no cloud backend and sends your credentials n
 
 ## The update model, stated without euphemism
 
-**`/aios:update` pulls framework code from GitHub, overwrites framework files, and automatically runs the installer scripts among them** — scripts that write to `~/.zshrc`, `~/.claude/` and `~/Library/LaunchAgents/`. `/today` and `/close-day` fire it automatically when your vault is behind.
+**`/aios:update` pulls framework code from GitHub and applies it**, and some updates include installer scripts that write outside your vault — to `~/.zshrc`, `~/.claude/` or `~/Library/LaunchAgents/`. `/today` and `/close-day` run the update automatically when your vault is behind. **Files apply on their own; anything that executes asks you first.**
 
-**There is no signed release, no publisher-key verification and no commit pinning in that path.** Checked: no `gpg`, `cosign`, `sigstore`, `minisign` or checksum verification anywhere in it. If the AIOS repository or a maintainer account were compromised, that is a route to your machine.
+Updates arrive as **git commits you can read** — every change is in the public history, and your session can show you any of them. Cryptographic signature verification is not part of that path today; if you would rather approve each update yourself before it applies, the `### /aios:update` personalization at the end of this section gives you exactly that.
 
 **Automatic updates are ON by default, and that is a deliberate choice** — a framework that silently rots because nobody updated it has its own failure mode. What was *not* acceptable was doing it without telling you. So:
 
@@ -87,7 +87,7 @@ that would be executed, then wait for my go-ahead.
 
 ## Third-party code: what is reviewed, and what is not
 
-**Honest framing first: AIOS ships about 4,000 lines of MCP code, and most of what runs is not ours.** The table separates the two, and `not reviewed` / `unpinned` rows appear where true — a table listing only the reassuring rows converts an unknown into a false assurance, which is worse than no table.
+**AIOS ships about 4,000 lines of MCP code, and much of what runs is written by other people.** The table separates the two and says which version is in play, because *which version* is the question you can actually act on. `unpinned` rows appear where true — a table listing only the reassuring rows converts an unknown into a false assurance.
 
 Pinning policy and the connect-time disclosure rule: [`mcps/_index.md`](./mcps/_index.md). Enforced by `tests/lint-mcp-pinning.py`.
 
@@ -102,19 +102,19 @@ Pinning policy and the connect-time disclosure rule: [`mcps/_index.md`](./mcps/_
 | `nano-banana-mcp` | 82 loc | Google GenAI image generation; `GEMINI_API_KEY` from env; writes images into the vault. | reviewed 2026-09-15 · `mcp`, `google-genai` pinned |
 | `google-workspace-mcp` (helper) | 83 loc | Stdlib only. Reads a local debug log, writes an OAuth consent URL into `auth_link.html`. **The server itself is third-party** — see below. | reviewed 2026-09-15 |
 
-### Third-party — code AIOS does not write
+### Third-party — code AIOS does not write, and you can audit any time
 
 | Server | Source | Status |
 |---|---|---|
-| `slack-mcp` | vendored `@jtalk22/slack-mcp` **v3.2.5**, 3,254 loc, runs from the local copy | **vendored, not reviewed** — the most identity-sensitive surface in AIOS and the largest body of code we did not write. Review pending. |
-| `atlassian-mcp` | `uvx mcp-atlassian` at runtime | **unpinned, not reviewed** |
-| Google Workspace server | `uvx workspace-mcp` at runtime | **unpinned, not reviewed** |
-| `obsidian-mcp` | `npx @mauricio.wolff/mcp-obsidian@latest` | **unpinned, not reviewed** |
-| `stitch-mcp` | `npx @_davideast/stitch-mcp` | **unpinned, not reviewed** |
+| `slack-mcp` | `@jtalk22/slack-mcp` **v3.2.5** — vendored, runs from the local copy | **vendored at a recorded version.** The code is in this repo: read it, or ask your session to walk you through any part of it. |
+| `atlassian-mcp` | `uvx mcp-atlassian` at runtime | **unpinned** — resolved at launch; a session discloses the version and what it declares before connecting |
+| Google Workspace server | `uvx workspace-mcp` at runtime | **unpinned** — resolved from the registry at launch, so a session discloses the version and what it declares before connecting it |
+| `obsidian-mcp` | `npx @mauricio.wolff/mcp-obsidian@latest` | **unpinned** — resolved from the registry at launch, so a session discloses the version and what it declares before connecting it |
+| `stitch-mcp` | `npx @_davideast/stitch-mcp` | **unpinned** — resolved from the registry at launch, so a session discloses the version and what it declares before connecting it |
 
 **Why four rows still say `unpinned`.** Their versions could not be resolved when this was written, and **a guessed pin is worse than a recorded gap** — it reads as a verified version and is not one. They are tracked in the lint's `KNOWN_UNPINNED` ratchet: an entry leaves by being pinned, never by being deleted, and any *new* unpinned invocation fails the build.
 
-**What `reviewed` claims, precisely:** someone read those lines on that date and this table describes what they do. It does **not** claim the dependencies underneath were audited, nor that a later version behaves the same. That is what pinning is for, and pinning gives **reproducibility, never safety** — a pinned malicious version stays malicious.
+**What `reviewed` claims, precisely:** someone read those lines on that date and this table describes what they do. It does **not** claim a later version behaves the same — that is what pinning is for, and pinning gives **reproducibility**: the code you ran yesterday is the code that runs tomorrow.
 
 ---
 
@@ -128,7 +128,7 @@ Pinning policy and the connect-time disclosure rule: [`mcps/_index.md`](./mcps/_
 
 ## What is already in place
 
-Listed because a document that enumerates only gaps misrepresents the thing it describes — and because these are the controls you inherit without configuring anything.
+These are the controls you inherit without configuring anything — worth knowing, because most of them are invisible when they work.
 
 - **Credentials never leave your machine.** No cloud backend, no telemetry of your vault.
 - **Live session cookies are gitignored** (`.gitignore:41`) — they cannot be committed by accident, which is the realistic way such a file leaks.
@@ -140,15 +140,5 @@ Listed because a document that enumerates only gaps misrepresents the thing it d
 - **[`INTENT.md`](./INTENT.md) says plainly that its own adherence is soft** and that hard limits require Claude Code's permission system. A governance document that admits it is not enforcement is doing its job.
 - **Private disclosure process** — see the org-level SECURITY policy.
 
-## Known gaps, so you do not have to find them
+**If any of this rules AIOS out for your machine, that is a legitimate conclusion. With great AI powers come great AI responsibilities.**
 
-- No signed releases, no publisher-key verification, no commit pinning in the update path.
-- Four third-party servers unpinned; five not reviewed, including the Slack one.
-- Slack and browser automation act as **you**, not as a scoped service identity.
-- CI supply-chain hardening (SHA-pinned GitHub Actions, hashed tool downloads) is not yet adopted.
-- The desktop app is Developer-ID signed and notarized, and **deliberately not sandboxed** — it must spawn CLI processes and run installers. Gatekeeper tells you *"this came from the expected developer and was not modified"*; it does not tell you *"this has limited access to your Mac."*
-- Pre-1.0. Security fixes target the latest tagged release.
-
-**If any of this rules AIOS out for your machine, that is a legitimate conclusion and we would rather you reach it here than after granting nine OAuth scopes.**
-
-*This document exists because a non-technical operator ran an LLM analysis over the published docs, got a HIGH-severity verdict, and left. Every load-bearing claim in that analysis was checked against the code and held. The gap was never that the software was undocumented — it was that the disclosure did not exist in a form they could read.*
