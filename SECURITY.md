@@ -126,6 +126,20 @@ Pinning policy and the connect-time disclosure rule: [`mcps/_index.md`](./mcps/_
 
 ---
 
+## What is already in place
+
+Listed because a document that enumerates only gaps misrepresents the thing it describes — and because these are the controls you inherit without configuring anything.
+
+- **Credentials never leave your machine.** No cloud backend, no telemetry of your vault.
+- **Live session cookies are gitignored** (`.gitignore:41`) — they cannot be committed by accident, which is the realistic way such a file leaks.
+- **32 credential-leak checks run in CI** on every change, plus a personalization guard that fails the build if operator-specific content reaches canonical.
+- **Vendored MCPs record their upstream** in a `.upstream-sync` file (repo, commit, date), so what was taken and when is auditable.
+- **Dependency pins exist and are now enforced** — `tests/lint-mcp-pinning.py` fails the build on any new unpinned invocation.
+- **The desktop app is Developer-ID signed and Apple-notarized**, with signature verification in its updater and signed-build verification in CI before publishing.
+- **[`FORTRESS.md`](./FORTRESS.md) documents a six-layer containment architecture** for running autonomous agents — network isolation, ecosystem lockdown, SSH hardening, permission gates, one-way data flow, recovery. It also states the thing most such documents omit: *a second machine does nothing about badly scoped credentials.* Isolation limits blast radius; it does not fix authorization.
+- **[`INTENT.md`](./INTENT.md) says plainly that its own adherence is soft** and that hard limits require Claude Code's permission system. A governance document that admits it is not enforcement is doing its job.
+- **Private disclosure process** — see the org-level SECURITY policy.
+
 ## Known gaps, so you do not have to find them
 
 - No signed releases, no publisher-key verification, no commit pinning in the update path.

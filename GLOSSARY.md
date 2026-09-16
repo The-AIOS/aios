@@ -28,7 +28,11 @@
 
 ## 1 · The AI itself
 
-**AI / model** — the program that reads text and produces text. Claude is a model; so is GPT. AIOS runs Claude models only.
+**AI / model** — the program that reads text and produces text. Claude is a model; so is GPT; so is Gemini.
+
+⚠️ **Which model runs is not fixed, and it is part of your security posture.** AIOS is built around Claude Code, and a **spawned worker** is always a Claude model — `spawn` passes its model argument straight to the `claude` binary, which runs Claude models only. But the repo also ships [`AGENTS.md`](./AGENTS.md), a portable contract for other tools that read that convention (Codex, Cursor, Aider), and the desktop app **opens terminals** — whatever CLI you run inside one is what is actually running, whoever made it.
+
+Why that matters here rather than in a footnote: **a model's own refusal behaviour is one of the controls.** A model that declines to exfiltrate a credential when a malicious document asks it to is doing real security work that no permission setting replaces. That behaviour differs between models and is not something AIOS can supply on their behalf — so *choosing* the model is a decision, not a default.
 
 **LLM (large language model)** — the technical name for that kind of model. It predicts likely continuations of text. It does not "look things up" unless given a tool that does.
 
