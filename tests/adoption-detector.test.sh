@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # adoption-detector.test.sh — catch a rotation the live session never picked up.
 #
 # This guards the one premise the autopilot cannot enforce. Rotating the
@@ -30,7 +47,7 @@ trap 'rm -rf "$WORK"' EXIT
 
 # swap_at <secs_ago> <pct_before>   — seed a successful rotation in the log
 swap_at(){
-  python3 - "$WORK/swap-log.jsonl" "$1" "$2" <<'PYEOF'
+  $PYBIN - "$WORK/swap-log.jsonl" "$1" "$2" <<'PYEOF'
 import json, sys, time
 json_row = {"ts": int(time.time()) - int(sys.argv[2]), "action": "rotate", "rc": 0,
             "from": "old@example.com", "five_hour_pct": float(sys.argv[3])}
@@ -101,7 +118,7 @@ if ! alert_exists; then ok "clears a previous alert once a rotation lands"; else
   no "clears a previous alert once a rotation lands" "stale alert survives recovery"; fi
 
 # 7. A `declined` row is not a rotation and must never be judged for adoption.
-python3 - "$WORK/swap-log.jsonl" <<'PYEOF'
+$PYBIN - "$WORK/swap-log.jsonl" <<'PYEOF'
 import json, sys, time
 open(sys.argv[1], "w").write(json.dumps(
     {"ts": int(time.time()) - 300, "action": "declined", "rc": None,

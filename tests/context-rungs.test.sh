@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # hooks/context-rungs.py — the measurement behind /aios:housekeeping Bucket 31
 # and the `right-context` skill.
@@ -54,12 +71,12 @@ mkvault(){ # $1 root · $2 declared-words · $3 observed-words
 echo
 echo " refusal cases -- a measurement that cannot fail reports 'fine' when broken"
 
-python3 "$H" "$TMP/nothing-here" >/dev/null 2>&1
+$PYBIN "$H" "$TMP/nothing-here" >/dev/null 2>&1
 [ $? -eq 2 ] && ok "absent vault exits 2, does not print a ladder" \
              || no "absent vault did not exit 2" "a zero-word ladder reads as 'cheap, read it all'"
 
 mkdir -p "$TMP/half/vault/00 - notes/context/declared"
-OUT="$(python3 "$H" "$TMP/half" 2>&1 >/dev/null)"; RC=$?
+OUT="$($PYBIN "$H" "$TMP/half" 2>&1 >/dev/null)"; RC=$?
 if [ $RC -eq 2 ] && printf '%s' "$OUT" | grep -q "observed"; then
   ok "one folder present -> refuses AND names the missing folder"
 else
@@ -68,7 +85,7 @@ else
 fi
 
 mkdir -p "$TMP/half/vault/00 - notes/context/observed"
-python3 "$H" "$TMP/half" >/dev/null 2>&1
+$PYBIN "$H" "$TMP/half" >/dev/null 2>&1
 [ $? -eq 2 ] && ok "both folders present but empty exits 2" \
              || no "an empty context measured as a real ladder" "empty must resolve to a refusal, not to zero"
 
@@ -76,7 +93,7 @@ echo
 echo " the verdict FLIPS with vault size -- the property the tool exists for"
 
 mkvault "$TMP/small" 300 300 4      # young: few entries per file
-S="$(python3 "$H" "$TMP/small")"
+S="$($PYBIN "$H" "$TMP/small")"
 if printf '%s' "$S" | grep -qi "read ALL of it"; then
   ok "small vault is told to read everything"
 else
@@ -85,7 +102,7 @@ else
 fi
 
 mkvault "$TMP/big" 4000 60000
-B="$(python3 "$H" "$TMP/big")"
+B="$($PYBIN "$H" "$TMP/big")"
 if printf '%s' "$B" | grep -qi "too much to spend"; then
   ok "grown vault is told to floor at rung 1"
 else
@@ -104,8 +121,8 @@ fi
 echo
 echo " the ladder is monotonic and complete"
 
-J="$(python3 "$H" --json "$TMP/big")"
-python3 - "$J" <<'PY'
+J="$($PYBIN "$H" --json "$TMP/big")"
+$PYBIN - "$J" <<'PY'
 import json, sys
 d = json.loads(sys.argv[1]); r = d["rungs"]
 assert len(r) == 4, "expected 4 rungs, got %d" % len(r)
@@ -117,7 +134,7 @@ PY
 [ $? -eq 0 ] && ok "--json: 4 rungs, strictly non-decreasing, none zero" \
              || no "--json ladder is malformed or non-monotonic" "a rung that shrinks as you climb is a counting bug"
 
-printf '%s' "$J" | python3 -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d['ratio_observed_to_declared']>1 else 1)" \
+printf '%s' "$J" | $PYBIN -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d['ratio_observed_to_declared']>1 else 1)" \
   && ok "--json reports the observed/declared ratio" \
   || no "ratio missing or wrong" "the ratio is what the prose files cite instead of a hardcoded volume"
 
@@ -136,7 +153,7 @@ printf '# Mi voz\n## Registro\nunas palabras aqui\n'         > "$SH/declared/mi-
 printf '# Aprendizajes\n### Uno\n### Dos\ncuerpo\n'         > "$SH/observed/aprendizajes.md"
 printf '# Patrones\n### Tres\ncuerpo\n'                      > "$SH/observed/patrones.md"
 
-OUT="$(python3 "$H" "$TMP/shape" 2>&1)"; RC=$?
+OUT="$($PYBIN "$H" "$TMP/shape" 2>&1)"; RC=$?
 if [ $RC -eq 0 ] && printf '%s' "$OUT" | grep -q "declared/"; then
   ok "measures a vault whose files match no canonical name"
 else
@@ -144,8 +161,8 @@ else
      "operators rename these files and write them in their own language"
 fi
 
-SHJ="$(python3 "$H" --json "$TMP/shape")"
-python3 - "$SHJ" <<'PY'
+SHJ="$($PYBIN "$H" --json "$TMP/shape")"
+$PYBIN - "$SHJ" <<'PY'
 import json, sys
 d = json.loads(sys.argv[1])
 assert d["declared"]["files"] == 3, "declared files: %s" % d["declared"]["files"]

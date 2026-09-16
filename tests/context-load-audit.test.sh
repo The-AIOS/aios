@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # hooks/context-load-audit.py — the instrument behind /aios:housekeeping's
 # Bucket 30, tested against synthetic transcripts with known answers
@@ -46,7 +63,7 @@ mk(){ # $1 name · $2 sid · $3.. commands
   local i=0
   for cmd in "$@"; do
     i=$((i+1))
-    python3 - "$f" "$cmd" <<'PY'
+    $PYBIN - "$f" "$cmd" <<'PY'
 import json, sys
 f, cmd = sys.argv[1], sys.argv[2]
 rec = {"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":cmd}}]}}
@@ -56,23 +73,29 @@ PY
   # pad to clear the --min-tools threshold
   while [ "$i" -lt 25 ]; do
     i=$((i+1))
-    python3 - "$f" <<'PY'
+    $PYBIN - "$f" <<'PY'
 import json, sys
 rec={"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"echo filler"}}]}}
 open(sys.argv[1],"a").write(json.dumps(rec)+"\n")
 PY
   done
 }
-run(){ HOME="$HOME_FAKE" AIOS_VAULT="$FAKE_VAULT" python3 "$H" "$@" 2>&1; }
+# NOTE: USERPROFILE is set alongside HOME on purpose. On Windows, Python's
+# `Path.home()` / `expanduser('~')` read USERPROFILE and IGNORE HOME, so a test
+# that isolates a Python hook with HOME alone does not isolate it at all — it
+# silently reads the operator's REAL ~/.claude. That is worse than a failing
+# test: it can pass or fail for reasons having nothing to do with the fixture.
+# Harmless on macOS/Linux, where USERPROFILE is unused.
+run(){ HOME="$HOME_FAKE" USERPROFILE="$HOME_FAKE" AIOS_VAULT="$FAKE_VAULT" $PYBIN "$H" "$@" 2>&1; }
 
 echo "── 1. REFUSAL: a cd-relative read must be COUNTED (the original bug) ──"
 mk worker-cd cd000001 \
   'cd "/Users/x/aios/vault/00 - notes/context/observed" && for f in antifragile preferences patterns growth; do grep "^### " "$f.md"; done'
 OUT="$(run --session cd000001 --min-tools 0 --json)"
-N=$(printf '%s' "$OUT" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["total"])' 2>/dev/null || echo -1)
+N=$(printf '%s' "$OUT" | $PYBIN -c 'import json,sys; print(json.load(sys.stdin)[0]["total"])' 2>/dev/null || echo -1)
 [ "$N" = 4 ] && ok "cd-then-bare-filename counts all 4 floor files" \
   || no "cd-relative read scored $N, expected 4" "this is the exact miss that reported live workers as zero"
-T=$(printf '%s' "$OUT" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)[0]["titles_only"]))' 2>/dev/null || echo -1)
+T=$(printf '%s' "$OUT" | $PYBIN -c 'import json,sys; print(len(json.load(sys.stdin)[0]["titles_only"]))' 2>/dev/null || echo -1)
 [ "$T" = 4 ] && ok "and is classified titles-only, not a full read" \
   || no "depth misclassified: titles_only=$T" "a floor degrading to nothing must not look like a full load"
 
@@ -81,14 +104,14 @@ mk worker-path fu000002 \
   'cat "/Users/x/aios/vault/00 - notes/context/declared/personal_voice.md"' \
   'cat "/Users/x/aios/vault/00 - notes/context/observed/patterns.md"'
 OUT="$(run --session fu000002 --min-tools 0 --json)"
-F=$(printf '%s' "$OUT" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)[0]["full"]))' 2>/dev/null || echo -1)
+F=$(printf '%s' "$OUT" | $PYBIN -c 'import json,sys; print(len(json.load(sys.stdin)[0]["full"]))' 2>/dev/null || echo -1)
 [ "$F" = 2 ] && ok "full-path reads counted as full (2)" || no "full-path read scored $F, expected 2"
 
 echo "── 3. REFUSAL: prose mentioning a path is NOT a read ──"
 # A transcript quotes context paths constantly. Only a tool call is evidence.
 f="$HOME_FAKE/.claude/projects/proj/pr000003.jsonl"
 printf '{"type":"agent-name","agentName":"worker-prose","sessionId":"pr000003"}\n' > "$f"
-python3 - "$f" <<'PY'
+$PYBIN - "$f" <<'PY'
 import json, sys
 p = sys.argv[1]
 # assistant TEXT and a tool_result both mention the path; neither is a tool_use
@@ -98,7 +121,7 @@ for _ in range(25):
     open(p,"a").write(json.dumps({"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"echo filler"}}]}})+"\n")
 PY
 OUT="$(run --session pr000003 --min-tools 0 --json)"
-N=$(printf '%s' "$OUT" | python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["total"])' 2>/dev/null || echo -1)
+N=$(printf '%s' "$OUT" | $PYBIN -c 'import json,sys; print(json.load(sys.stdin)[0]["total"])' 2>/dev/null || echo -1)
 [ "$N" = 0 ] && ok "prose and tool_result do not count as reads" \
   || no "scored $N from text alone" "mentioning a path is not opening it"
 

@@ -15,6 +15,22 @@
 # It fails against the pre-fix code, which is what makes the rest of this suite meaningful.
 
 set -u
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n' "$1"; }
@@ -29,7 +45,7 @@ printf 'USER.md source detector\n'
 # Load the two functions straight out of the executor, so the test exercises the SHIPPED
 # code rather than a copy that can drift away from it.
 probe(){ # $1 = USER.md content, $2 = keyword  →  prints ON | off
-python3 - "$EXEC" "$1" "$2" <<'PY'
+$PYBIN - "$EXEC" "$1" "$2" <<'PY'
 import re, sys
 src = open(sys.argv[1], encoding='utf-8').read()   # explicit: the executor is UTF-8; the Windows default codec is not
 ns = {}

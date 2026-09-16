@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # tests/cold-start-interview.test.sh
 #
 # Guards AI-122's acceptance criteria for /aios:cold-start-interview.
@@ -40,7 +57,7 @@ for step in '### Pre-step' '### Step 0' '### Step 1' '### Step 2' '### Step 3' '
 done
 
 echo "── 2. A1 · connector vocabulary — spoken copy is clean before Step 11 ──"
-python3 - "$F" <<'PY'
+$PYBIN - "$F" <<'PY'
 import re, sys
 L=open(sys.argv[1],encoding='utf-8').read().split('\n')
 i11=next(i for i,l in enumerate(L) if l.startswith('### Step 11'))
@@ -52,7 +69,7 @@ for n,l in enumerate(L):
         else:        prose  += len(pat.findall(l))
 print(f"SPOKEN={fenced} PROSE={prose}")
 PY
-read -r counts < <(python3 - "$F" <<'PY'
+read -r counts < <($PYBIN - "$F" <<'PY'
 import re, sys
 L=open(sys.argv[1],encoding='utf-8').read().split('\n')
 i11=next(i for i,l in enumerate(L) if l.startswith('### Step 11'))
@@ -109,7 +126,7 @@ grep -q 'Never mention SETUP.md to an App-path operator\|never send them to it' 
 
 echo "── 7. CONTROL — the criterion must be able to fail ──"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/csi.XXXXXX"); trap 'rm -rf "$TMP"' EXIT
-python3 - "$F" "$TMP/broken.md" <<'PY'
+$PYBIN - "$F" "$TMP/broken.md" <<'PY'
 import sys
 L=open(sys.argv[1],encoding='utf-8').read().split('\n')
 i11=next(i for i,l in enumerate(L) if l.startswith('### Step 11'))
@@ -119,7 +136,7 @@ for i,l in enumerate(L[:i11]):
         L.insert(i+1, "  MCPs set up for your daily tools"); break
 open(sys.argv[2],'w',encoding='utf-8').write('\n'.join(L))
 PY
-bad=$(python3 - "$TMP/broken.md" <<'PY'
+bad=$($PYBIN - "$TMP/broken.md" <<'PY'
 import re, sys
 L=open(sys.argv[1],encoding='utf-8').read().split('\n')
 i11=next(i for i,l in enumerate(L) if l.startswith('### Step 11'))

@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # route-insight.test.sh — entry excision across BOTH supported styles.
 #
 # Regression origin: `hooks/route-insight.py` matched only `### ` headings, but a
@@ -41,7 +58,7 @@ EOF
 
 # ── 1. bullet excision carries its indented facets, leaves neighbours intact ──
 f=$(tmp); fixture_bullets "$f"
-out=$(python3 "$TOOL" "$f" --match "Bravo entry" --marker "<!-- ROUTED: bravo -->" 2>&1); rc=$?
+out=$($PYBIN "$TOOL" "$f" --match "Bravo entry" --marker "<!-- ROUTED: bravo -->" 2>&1); rc=$?
 if [ $rc -ne 0 ]; then no "1 bullet excision" "exit $rc — $out"
 elif grep -q "bravo facet" "$f"; then no "1 bullet excision" "orphaned facet left behind"
 elif ! grep -q "Alpha entry" "$f" || ! grep -q "Charlie entry" "$f"; then no "1 bullet excision" "collateral loss"
@@ -51,7 +68,7 @@ else ok "1 bullet excision carries facets, neighbours intact"; fi
 # ── 2. the file-level comment between entries must survive ──
 f=$(tmp); fixture_bullets "$f"
 before=$(grep -c '<!--' "$f")
-python3 "$TOOL" "$f" --match "Bravo entry" --marker "<!-- ROUTED: bravo -->" >/dev/null 2>&1
+$PYBIN "$TOOL" "$f" --match "Bravo entry" --marker "<!-- ROUTED: bravo -->" >/dev/null 2>&1
 after=$(grep -c '<!--' "$f")
 [ "$after" -eq $((before+1)) ] \
   && ok "2 file-level <!-- --> trail line preserved (marker adds exactly 1)" \
@@ -59,7 +76,7 @@ after=$(grep -c '<!--' "$f")
 
 # ── 3. last bullet before a section heading stops at the heading ──
 f=$(tmp); fixture_bullets "$f"
-out=$(python3 "$TOOL" "$f" --match "Charlie entry" --marker "<!-- ROUTED: charlie -->" 2>&1); rc=$?
+out=$($PYBIN "$TOOL" "$f" --match "Charlie entry" --marker "<!-- ROUTED: charlie -->" 2>&1); rc=$?
 if [ $rc -ne 0 ]; then no "3 last-bullet-before-heading" "exit $rc — $out"
 elif ! grep -q "^## Emerging" "$f"; then no "3 last-bullet-before-heading" "ate the section heading"
 elif grep -q "charlie facet" "$f"; then no "3 last-bullet-before-heading" "orphaned facet"
@@ -78,7 +95,7 @@ Closing prose of delta.
 ### Echo heading entry — kept (new — 2026-08-04)
 Echo body.
 EOF
-out=$(python3 "$TOOL" "$f" --match "Delta heading" --marker "<!-- ROUTED: delta -->" 2>&1); rc=$?
+out=$($PYBIN "$TOOL" "$f" --match "Delta heading" --marker "<!-- ROUTED: delta -->" 2>&1); rc=$?
 if [ $rc -ne 0 ]; then no "4 ### back-compat" "exit $rc — $out"
 elif grep -q "body bullet" "$f" || grep -q "Closing prose of delta" "$f"; then
   no "4 ### back-compat" "a body bullet truncated the entry — back half orphaned"
@@ -87,8 +104,8 @@ else ok "4 ### entry keeps bullet-containing body (no orphan)"; fi
 
 # ── 5. refusal paths still refuse ──
 f=$(tmp); fixture_bullets "$f"; cp "$f" "$f.orig"
-python3 "$TOOL" "$f" --match "nonexistent zzz" >/dev/null 2>&1; rc_none=$?
-python3 "$TOOL" "$f" --match "entry" >/dev/null 2>&1; rc_many=$?
+$PYBIN "$TOOL" "$f" --match "nonexistent zzz" >/dev/null 2>&1; rc_none=$?
+$PYBIN "$TOOL" "$f" --match "entry" >/dev/null 2>&1; rc_many=$?
 if [ $rc_none -eq 2 ] && [ $rc_many -eq 2 ] && cmp -s "$f" "$f.orig"; then
   ok "5 refuses on 0 and on >1 match, file untouched"
 else no "5 refusal paths" "no-match rc=$rc_none ambiguous rc=$rc_many (both must be 2), file changed=$(cmp -s "$f" "$f.orig" && echo no || echo YES)"; fi
@@ -124,7 +141,7 @@ _Caps: Emerging ≤10 (today 2), Reinforced ≤5 (today 0)._
 **See also:** [[a]] · [[b]] · [[c]]
 EOF
 cp "$t/last.md" "$t/last.before"
-out=$(python3 "$TOOL" "$t/last.md" --match "Second entry" --marker "<!-- routed: test -->" 2>&1); rc=$?
+out=$($PYBIN "$TOOL" "$t/last.md" --match "Second entry" --marker "<!-- routed: test -->" 2>&1); rc=$?
 if [ "$rc" -ne 0 ] && diff -q "$t/last.before" "$t/last.md" >/dev/null 2>&1; then
   ok "last-in-section entry: REFUSES and leaves the file byte-identical"
 else
@@ -137,7 +154,7 @@ esac
 
 # the ordinary path must be untouched by the fix
 cp "$t/last.before" "$t/last.md"
-python3 "$TOOL" "$t/last.md" --match "First entry" --marker "<!-- routed: test -->" >/dev/null 2>&1
+$PYBIN "$TOOL" "$t/last.md" --match "First entry" --marker "<!-- routed: test -->" >/dev/null 2>&1
 if grep -q '^\*\*See also:' "$t/last.md" && grep -q '^_Caps:' "$t/last.md" && ! grep -q 'First entry' "$t/last.md"; then
   ok "a NON-last entry still excises cleanly, footer intact"
 else
@@ -155,7 +172,7 @@ cat > "$t/h4.md" <<'EOF'
 
 - Belongs to the deeper heading
 EOF
-python3 "$TOOL" "$t/h4.md" --match "Only entry here" --marker "<!-- routed: test -->" >/dev/null 2>&1
+$PYBIN "$TOOL" "$t/h4.md" --match "Only entry here" --marker "<!-- routed: test -->" >/dev/null 2>&1
 if grep -q '^#### A deeper heading' "$t/h4.md" && grep -q 'Belongs to the deeper' "$t/h4.md"; then
   ok "an h4 heading terminates a bullet entry (the gap found while fixing the edge case)"
 else
