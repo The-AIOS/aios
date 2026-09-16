@@ -87,7 +87,7 @@ that would be executed, then wait for my go-ahead.
 
 ## Third-party code: what is reviewed, and what is not
 
-**AIOS ships about 4,000 lines of MCP code, and much of what runs is written by other people.** The table separates the two and says which version is in play, because *which version* is the question you can actually act on. `unpinned` rows appear where true — a table listing only the reassuring rows converts an unknown into a false assurance.
+**AIOS ships with bundled MCPs, and many of them are written by other people.** The table separates ours from theirs and says which version is in play, because *which version* is the question you can actually act on. `unpinned` rows appear where true — a table listing only the reassuring rows converts an unknown into a false assurance.
 
 Pinning policy and the connect-time disclosure rule: [`mcps/_index.md`](./mcps/_index.md). Enforced by `tests/lint-mcp-pinning.py`.
 
@@ -140,5 +140,5 @@ These are the controls you inherit without configuring anything — worth knowin
 - **[`INTENT.md`](./INTENT.md) says plainly that its own adherence is soft** and that hard limits require Claude Code's permission system. A governance document that admits it is not enforcement is doing its job.
 - **Private disclosure process** — see the org-level SECURITY policy.
 
-**If any of this rules AIOS out for your machine, that is a legitimate conclusion. With great AI powers come great AI responsibilities.**
+**If any of this rules AIOS out for your machine, that is a legitimate conclusion. With great AI powers come great AI responsibilities. This is why AIOS is designed to be *yours* — so you can always decide what to connect, and what to leave out of reach of your AI.**
 

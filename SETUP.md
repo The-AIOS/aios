@@ -1,7 +1,5 @@
 # Setup Guide — AI-OS Vault
 
-> **Reference, any time:** [`SECURITY.md`](./SECURITY.md) describes what each surface can reach and whose identity it acts as, and [`GLOSSARY.md`](./GLOSSARY.md) defines the vocabulary in plain language. Neither changes a step below — they are there whenever you want a fuller picture of your own system.
-
 Get the full system running in under 10 minutes (after the prereqs install).
 
 <details>

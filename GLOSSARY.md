@@ -44,8 +44,6 @@ Why that matters here rather than in a footnote: **a model's own refusal behavio
 
 **Jailbreak** vs **prompt injection** — constantly confused. A **jailbreak** is *you* talking the model out of its own rules. **Prompt injection** is *someone else* hiding instructions in content the model reads. The first is a party trick; the second is the security problem, because you never see it happen.
 
-**Sycophancy** — ⚠️ the model agreeing with you because agreement is the likeliest-sounding reply, not because you are right. It flatters, softens bad news, and confirms plans it should question. **It needs no attacker** — it is the failure mode that arrives on its own, and the only one on this list you can see happening if you look. AIOS's anti-values name it directly: *"sycophancy kills trust"* and *"performative agreement is lying."* The counter is asking for the disagreement explicitly, and treating a confident answer with no evidence attached as unfinished.
-
 **LLM (large language model)** — the technical name for that kind of model. It predicts likely continuations of text. It does not "look things up" unless given a tool that does.
 
 **Prompt** — what you send the model. Your message, plus instruction files it was given, plus anything it has read.
@@ -112,37 +110,17 @@ Why that matters here rather than in a footnote: **a model's own refusal behavio
 
 ---
 
-## 4 · Five ways to lose the machine, and five walls
+## 4 · Five ways to lose the machine
 
-The vocabulary for *why* any of this matters. Each risk is real, each has a counter, and the counters are not all the same kind of thing.
-
-**The five risks:**
+Five named risks, because a risk you cannot name is one you cannot discuss. How to contain them is a separate subject with its own document — [`FORTRESS.md`](./FORTRESS.md).
 
 1. **Prompt injection** — an agent becomes whatever the text says, and **the loudest line wins**. Covered above; it is first because everything else compounds it.
 2. **Source poisoning** — poison what an agent reads and you poison every answer it gives. The corruption is upstream of the model, so the model cannot detect it.
 3. **Impersonation** — two agents look **identical until you demand proof**. Anything can claim to be your assistant; without verification, a claim and a fact read the same.
 4. **Scope creep** — **no wall breaks; the scope just quietly grows.** Permissions granted once for one task stay granted. Nothing fails, which is why nobody notices.
-5. **Sycophancy** — **the risk that needs no attacker**, and the only one visible from the outside.
+5. **Sycophancy** — the model agreeing because agreement is the likeliest-sounding reply, not because you are right. It flatters, softens bad news, and confirms plans it should question. **The risk that needs no attacker**, and the only one on this list visible from the outside if you look for it. AIOS names it in its own anti-values: *"sycophancy kills trust"*, *"performative agreement is lying."*
 
 And a structural one underneath all five: **automation probes faster than you can patch.** Offence got agents first.
-
-**The five walls — and they are not equivalent:**
-
-| Rung | What it is | What it holds against |
-|---|---|---|
-| **0 · none** | it does whatever it is told | nothing |
-| **1 · guardrails** | a wall made of *text* — "please don't" | casual misuse; **not a determined instruction** |
-| **2 · permission mode** | the wall the model **cannot talk past** — a dial you hold | the model deciding to act; this is the first real one |
-| **3 · architecture** | hard walls — separate machine, separate account, a permission box | blast radius |
-| **4 · proof** | a boundary you can **verify** rather than trust | the question "what authority did it have?" |
-
-**A prompt is not a boundary. Security is architecture.** That is why `INTENT.md` (rung 1) is explicitly not enforcement and `--permission-mode` (rung 2) is.
-
-**Verification, not creation, is the bottleneck.** An agent can produce more in an hour than you can check in a day, so *"it finished — would you sign it?"* is the real question. The way out is not checking every draft; it is **proving the process once**. A policy is a promise; a **mandate** is a proof. Mandate in, receipt out.
-
-**Accountability** — ⚠️ **"the AI did it" is not a defence.** Every approval asks *who* acted; the second question, usually missing, is *what authority did they have, and can you show it?* Not smarter agents — **accountable** ones.
-
-**Read · Write · Own · Prove** — the four stages of handing work to an agent. Most tools stop at *write*. The last two are where trust stops being a feeling.
 
 ## 5 · The plumbing a consent decision needs
 
