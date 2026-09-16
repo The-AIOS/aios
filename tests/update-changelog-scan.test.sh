@@ -17,6 +17,21 @@
 # broken code — that is precisely why this survived weeks of green CI.
 
 set -u
+
+# Resolve a python that RUNS. On Windows `python3` is a Microsoft Store App
+# Execution Alias: it exists on PATH, satisfies every existence probe, exits 49
+# and produces nothing — so three assertions below (including a CONTROL that
+# announces "assertion 14 proves nothing") failed for reasons that had nothing
+# to do with the changelog. Same probe as hooks/claude-identity/claude-identity.sh
+# and mcps/setup.sh. $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
 PASS=0; FAIL=0; SKIP=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n' "$1"; }
@@ -114,7 +129,7 @@ fi
 # entry's body onto another entry's header, displacing that entry's hash line.
 # Nothing failed, nothing looked wrong, and the entry became untestable. There
 # was no check for this — the guard is the fix.
-NOHASH=$(python3 - <<'PY'
+NOHASH=$($PYBIN - <<'PY'
 import re
 t = open('CHANGELOG.md', encoding='utf-8').read()
 bad = [m.group(1) for m in re.finditer(r'^## (\d{4}-\d{2}-\d{2}) — .+$', t, re.M)
@@ -136,7 +151,7 @@ fi
 # relative filename in the wrong directory, which printed a traceback while the
 # assertion still passed. A test that emits a traceback reads as broken.
 CTRL_DIR=$(mktemp -d); printf '## 2026-01-01 — no hash here\n\nbody\n' > "$CTRL_DIR/CHANGELOG.md"
-CTRL=$(python3 - "$CTRL_DIR/CHANGELOG.md" <<'PY'
+CTRL=$($PYBIN - "$CTRL_DIR/CHANGELOG.md" <<'PY'
 import re, sys
 t = open(sys.argv[1], encoding='utf-8').read()
 bad = [m.group(1) for m in re.finditer(r'^## (\d{4}-\d{2}-\d{2}) — .+$', t, re.M)
@@ -165,7 +180,7 @@ fi
 # $ROOT, not a bare filename: this suite runs from a temp workdir (cd "$WORK"
 # at the top), so a relative CHANGELOG.md resolves to nothing. Same lesson the
 # control below already learned — pass the path, never rely on cwd.
-NEWEST=$(python3 - "$ROOT/CHANGELOG.md" <<'PY'
+NEWEST=$($PYBIN - "$ROOT/CHANGELOG.md" <<'PY'
 import re, sys
 t = open(sys.argv[1], encoding='utf-8').read()
 m = re.search(r'^## (\d{4}-\d{2}-\d{2}) — .+$', t, re.M)
@@ -186,7 +201,7 @@ esac
 
 # Control: the check must be able to SEE an entry that lacks guidance.
 CTRL_DIR=$(mktemp -d); printf '## 2026-01-01 — silent ship\n\n`hash: abc1234`\n\nbody with no guidance\n' > "$CTRL_DIR/CHANGELOG.md"
-CTRL=$(cd "$CTRL_DIR" && python3 - <<'PY'
+CTRL=$(cd "$CTRL_DIR" && $PYBIN - <<'PY'
 import re
 t = open('CHANGELOG.md', encoding='utf-8').read()
 m = re.search(r'^## (\d{4}-\d{2}-\d{2}) — .+$', t, re.M)
