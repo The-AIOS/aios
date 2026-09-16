@@ -69,6 +69,25 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-16 — Two more probes that answered the wrong question, both Windows-only
+
+`hash: `
+
+> **What you can now do.** On Windows, run `/aios:update` and trust the drift list it shows you. Until now its completeness reconcile compared file *contents* with `diff -rq` and never normalized line endings — so with `core.autocrlf` checking your vault out as CRLF against an LF clone, **every framework file read as drift**. Measured on a live Windows vault: **267 `differ` lines, 266 of them false.** Step 6.5 instructs a session to apply each such line like a Tier-1 file, and Step 7 gates the tracker on that reconcile coming back clean — which on Windows it never could. Also: `mcps/google-workspace-mcp/connect.sh` now runs on Windows at all.
+
+**The class is #141's, not a new one.** That fix established the rule — *assert the outcome, never the code* — after `ls` was asked "what are these directories called" and answered with the caller's classify flags applied. Two instances survived the sweep, both silent, both Windows-only.
+
+**`command -v python3` is not a check that python3 works.** Windows installs a Microsoft Store App Execution Alias at exactly that name. It is a real file on PATH, so every existence probe succeeds; invoking it exits 49, prints a localized "install from the Store" notice and produces no stdout. `connect.sh` therefore **passed its own precondition** and then read empty JSON from every heredoc — surfacing to the operator as a `connector.json` problem it is not. In `/aios:update`'s cache-parity check the same call carries `2>/dev/null`, so the failure is completely invisible: `MANIFEST` comes back **empty** and the parity test compares every cached version against `""`, reporting a mismatch and prescribing a re-resolve that realigns nothing — on every Windows sync that touches a command file. An unresolved manifest is now treated as a measurement that did not complete, not as a mismatch, which is this command's own stated rule about failed measurements.
+
+**The repo already had the fix; it just never reached these sites.** `hooks/claude-identity/claude-identity.sh` and `mcps/setup.sh` both probe `python3 · python · py -3` and require one to actually run. That same probe now guards `connect.sh`, the cache-parity read, and `tests/update-changelog-scan.test.sh` — which had been failing three assertions on Windows for reasons unrelated to changelogs, **including a control that announces `assertion 14 proves nothing`**. A control that fails for an environmental reason is worse than a missing one: the suite reports a real problem and points at the wrong thing.
+
+**`--strip-trailing-cr` is probed, never assumed.** § Backup-on-divergence already stated the invariant that every content comparison in the command strips `\r` first. That was half-true: the hash helpers honoured it, the four `diff` sites never did — and *hashing* was the only mechanism the sentence named, which is how it survived two months of correct-looking prose. The flag is not universal, and this repo has already traded a Windows bug for a macOS one by trusting a GNU-only flag (#143, `find -printf`), so the reconcile now builds a known CRLF/LF pair and requires the flag to actually equate them before using it. A diff without the flag predates CRLF checkouts being a concern, so on that platform the un-normalized compare is the correct one and the run proceeds; the one combination that cannot be true — Windows and no flag — says so instead of emitting a drift list nobody should act on.
+
+**The test cannot pass vacuously.** `tests/update-windows-probes.test.sh` reproduces both conditions rather than grepping for reassuring strings: it builds a stub that satisfies `command -v` and exits 49, asserts the old guard passes on it (the control that fails loudly if the condition stops reproducing), and requires the resolver to skip it. It does the same for CRLF. Against the unfixed tree it fails four assertions; against the fixed tree it passes nine.
+
+**Action required:** none — it lands with the sync. If you are on Windows and a previous `/aios:update` reported a large number of framework files as drift, that report was this bug; nothing was lost, and the next run will show you the real list.
+
+
 ## 2026-09-15 — What AIOS can reach, written down
 
 `hash: a5050aa · cb6ed39 · ef2e7de · ad82aa9` · [#139](https://github.com/The-AIOS/aios/pull/139) · [#140](https://github.com/The-AIOS/aios/pull/140) · [#143](https://github.com/The-AIOS/aios/pull/143) · [#144](https://github.com/The-AIOS/aios/pull/144) · [#145](https://github.com/The-AIOS/aios/pull/145)
