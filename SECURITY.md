@@ -30,7 +30,7 @@ With these connectors, the answer is yes. That is not a defect being hidden from
 
 AIOS is built around Claude Code, and a **spawned worker** is always a Claude model: `spawn` passes its model argument straight to the `claude` binary. But the repo also ships [`AGENTS.md`](./AGENTS.md) for other tools that read that convention, and the desktop app **opens terminals** — whatever CLI you run inside one is what is actually running, whoever made it. So which model holds your credentials is a live choice, not a default.
 
-One case is worth naming because it looks like a cost saving and is not: **do not route Claude Code through a proxy that makes it believe it is talking to Anthropic while sending requests elsewhere.** That puts third-party code in the request path of every session holding live Gmail, Drive and Slack credentials plus your private vault. When you genuinely need another model family, call it as a *tool* — text in, text out, no credentials, no vault writes. [`MODEL-ROUTING.md`](./MODEL-ROUTING.md) draws that boundary and explains the privacy trade.
+When you genuinely need another model family, call it as a *tool* — text in, text out, no credentials, no vault writes. [`MODEL-ROUTING.md`](./MODEL-ROUTING.md) draws that boundary and explains the privacy trade.
 
 ---
 
