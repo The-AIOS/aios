@@ -168,7 +168,18 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   **Then check cache/manifest version parity — and understand that the sync above is what CAUSES the drift.** The loop copies `commands/*.md` and nothing else, so `.claude-plugin/plugin.json` inside the cache is **never** updated. The cache **directory is named for the version in that manifest**, so a manifest that never advances means a directory name that never advances: every version bump reproduces the mismatch, and it does not heal on its own. Measured 2026-08-13 on a live install — 25 of 26 cache files identical to their vault source, the 26th being that manifest, cache reading `0.4.0` while the vault read `0.5.0`. This was first reported as a harmless artifact of a missed re-resolve; it is the opposite — a recurring consequence of an incomplete sync.
 
   ```bash
-  MANIFEST=$(python3 -c "import json;print(json.load(open('$HOME/aios/plugins/aios/.claude-plugin/plugin.json'))['version'])" 2>/dev/null)
+  # Resolve a python that RUNS — `command -v python3` is not that check on Windows,
+  # where a Microsoft Store App Execution Alias sits on PATH at exactly that name,
+  # satisfies every existence probe, exits 49 and produces nothing. With the
+  # `2>/dev/null` below that failure is completely silent, so MANIFEST comes back
+  # EMPTY and the parity test then compares every cached version against "" —
+  # reporting a mismatch on every Windows sync that touches a command file.
+  # Measured on Git Bash 2026-09-16. Assert the behaviour, never the name (#141).
+  PY=""; for _cand in python3 python "py -3"; do
+    if $_cand -c 'import json' >/dev/null 2>&1; then PY="$_cand"; break; fi
+  done
+  MANIFEST=""
+  [ -n "$PY" ] && MANIFEST=$($PY -c "import json;print(json.load(open('$HOME/aios/plugins/aios/.claude-plugin/plugin.json'))['version'])" 2>/dev/null)
   CACHED=$(for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/; do [ -d "$d" ] && basename "$d"; done | tr '\n' ' ')
   # Report + prescribe the re-resolve. Do NOT copy the manifest and do NOT delete a directory.
   ```
@@ -180,6 +191,10 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   > - **Do not prune the old directory.** The running client may hold references, and a wrong deletion costs the operator their working commands to save a few kilobytes.
   >
   > If `$CACHED` is empty, say nothing — a directory-source install may legitimately have no cache yet.
+  > **If `$MANIFEST` is empty, say nothing either** — that is a measurement that did not complete, not a
+  > mismatch, and this command's own rule is that a failed measurement is never read as a substantive
+  > result. Reporting *"the manifest declares "* names no version and prescribes a re-resolve that
+  > realigns nothing.
   >
   > **And if `$MANIFEST` is already among `$CACHED` while an OLDER directory also sits there, the re-resolve is a no-op — say so plainly and stop.** Measured 2026-08-27: manifest `0.5.0`, cache holding both `0.4.0` and `0.5.0`, all 25 command files identical in *both*, and `claude plugin update aios@the-aios` answering *"already at the latest version (0.5.0)"*. Nothing was realigned because nothing was misaligned; the old directory is simply residue from a prior version, and `grep -rl` across the plugin tree found **no file referencing it** outside its own path. So the correct report is *"your commands are current, and the extra directory is inert"* — **not** a prescription the operator will run and watch do nothing. The pruning ban above still holds and holds hardest here: a directory this provably unreferenced is worth kilobytes, while a wrong deletion costs the operator their working commands. The prescription belongs to the case it was written for — `$CACHED` naming **only** versions other than `$MANIFEST` — and this paragraph exists because following it in the other case makes the command look broken to the person running it.
 - **`mcps/setup.sh` or any other dep-installer updated** → surface in the report as a recommended manual step, with the exact command. Don't auto-run.
@@ -536,13 +551,19 @@ For each changed Tier 1 file:
 
    ```bash
    CLONE="/tmp/aios-update-check"; V="$HOME/aios"; F="mcps/_index.md"
+   # CRLF-normalize, or a Windows checkout reports "diverged" on a file the
+   # operator never touched — and the branch below then tells them to fold in a
+   # diff that is entirely line endings. Probe the flag, never the platform (#143).
+   SCR=(); printf 'x\r\n' > "$CLONE/.scr-a"; printf 'x\n' > "$CLONE/.scr-b"
+   diff -q --strip-trailing-cr "$CLONE/.scr-a" "$CLONE/.scr-b" >/dev/null 2>&1 && SCR=(--strip-trailing-cr)
+   rm -f "$CLONE/.scr-a" "$CLONE/.scr-b"
    if [ ! -f "$V/$F" ]; then cp "$CLONE/$F" "$V/$F"                      # first sync — just take it
-   elif diff -q "$V/$F" "$CLONE/$F" >/dev/null 2>&1; then :              # identical — nothing to do
+   elif diff -q "${SCR[@]}" "$V/$F" "$CLONE/$F" >/dev/null 2>&1; then :  # identical — nothing to do
    else
      # DIVERGED. Never overwrite: this file is where CLAUDE.md § MCP Policy tells sessions to
      # record bundling candidates, so the local copy holds operator content by design.
      echo "mcps/_index.md diverged — KEPT YOUR VERSION. Canonical's changes, for you to fold in by hand:"
-     diff "$V/$F" "$CLONE/$F" | sed 's/^/    /'
+     diff "${SCR[@]}" "$V/$F" "$CLONE/$F" | sed 's/^/    /'
    fi
    ```
 
@@ -627,6 +648,37 @@ The tracker-diff (`stored..HEAD`, Step 2) is an optimization that assumes the st
 # would read any `.` in a username as a wildcard. Reported with #141.
 VAULT="$HOME/aios"; CLONE="/tmp/aios-update-check"
 
+# ── CRLF: probe the flag, never assume the platform ──────────────────────────
+# `diff -rq` returns a CONTENT verdict, and § Backup-on-divergence already
+# states the invariant that every content comparison in this command strips
+# `\r` first. The hash helpers honour it; these diff sites never did. On Git
+# for Windows `core.autocrlf` checks the vault out as CRLF while the clone is
+# LF, so EVERY framework file reads as drift. Measured on a live Windows vault
+# 2026-09-16: 267 `Files … differ` lines of which 266 were false; normalized,
+# 1 — and that one was real (a genuinely AHEAD file). The apply instruction
+# below says to treat each such line like a Tier-1 file, so the false ones
+# become 266 pointless overwrites plus a report telling the operator their
+# tracker was over-claiming. The reconcile is also what Step 7 gates the
+# tracker on, so on Windows it could never come back clean.
+#
+# `--strip-trailing-cr` is not universal and this repo has already traded a
+# Windows bug for a macOS one by assuming a GNU-only flag (#143, `find
+# -printf`). So PROBE it — build a known CRLF/LF pair and require the flag to
+# actually equate them — rather than test the platform. An ARRAY, because an
+# unquoted `$SCR` is the word-splitting shape Step 3 warns about.
+SCR=()
+printf 'x\r\n' > "$CLONE/.scr-crlf"; printf 'x\n' > "$CLONE/.scr-lf"
+diff -q --strip-trailing-cr "$CLONE/.scr-crlf" "$CLONE/.scr-lf" >/dev/null 2>&1 \
+  && SCR=(--strip-trailing-cr)
+rm -f "$CLONE/.scr-crlf" "$CLONE/.scr-lf"
+# A diff without the flag predates CRLF checkouts being a concern, so on such a
+# platform the unnormalized compare IS the correct one and the run proceeds.
+# The one combination that cannot be true is Windows AND no flag — say so
+# rather than emitting a drift list nobody should act on.
+case "$OSTYPE" in msys*|cygwin*|win*)
+  [ ${#SCR[@]} -gt 0 ] || echo "WARNING: diff has no --strip-trailing-cr on Windows — every line below may be a CRLF artifact. Do NOT mass-apply; re-verify by content hash first." >&2 ;;
+esac
+
 # ── PRECONDITION, NOT OPTIONAL: a missing clone must never read as "clean" ──
 # `diff -rq` on a nonexistent directory writes to stderr, which the `2>/dev/null`
 # below swallows — so every comparison silently produces NOTHING, the filter chain
@@ -673,7 +725,7 @@ fi
   for p in $(find "$CLONE" -maxdepth 1 -type f -name '*.md' -exec basename {} \; 2>/dev/null \
              | grep -vE '^(HISTORY-PRE-.*|USER\.md|INTENT\.md)$') LICENSE NOTICE; do
     if [ ! -e "$VAULT/$p" ]; then echo "Only in $CLONE: $p"
-    else diff -q "$VAULT/$p" "$CLONE/$p" 2>/dev/null; fi
+    else diff -q "${SCR[@]}" "$VAULT/$p" "$CLONE/$p" 2>/dev/null; fi
   done
   # Layer dirs — DERIVED from the clone, minus the same Tier-0 denylist Step 2 uses.
   # Hardcoding this list is what let a whole bundled folder go missing with nothing to
@@ -696,7 +748,7 @@ fi
     p="${path##*/}"
     case " $TIER0_DENY " in *" $p "*) EXCLUDED="$EXCLUDED $p"; continue ;; esac
     RDIRS=$((RDIRS+1))
-    diff -rq "$VAULT/$p" "$CLONE/$p" 2>/dev/null
+    diff -rq "${SCR[@]}" "$VAULT/$p" "$CLONE/$p" 2>/dev/null
   done <<EOF
 $(find "$CLONE" -maxdepth 1 -mindepth 1 -type d)
 EOF
@@ -711,7 +763,7 @@ EOF
   done
   [ "$RDIRS" -ge 3 ] || { echo "FATAL: reconciled only $RDIRS layer dir(s) — an empty reconcile proves nothing." >&2; exit 1; }
   # vault/.obsidian is the one Tier-1 path under the otherwise Tier-2 vault/ tree.
-  diff -rq "$VAULT/vault/.obsidian" "$CLONE/vault/.obsidian" 2>/dev/null
+  diff -rq "${SCR[@]}" "$VAULT/vault/.obsidian" "$CLONE/vault/.obsidian" 2>/dev/null
 } \
   | grep -vF "Only in $VAULT" \
   | grep -vF "Only in '$VAULT" \

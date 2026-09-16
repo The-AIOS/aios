@@ -108,14 +108,30 @@ gcloud_install_hint(){
   esac
 }
 
+# Resolve a python that actually RUNS. The name existing is not the same fact.
+#
+# Windows ships a Microsoft Store App Execution Alias at exactly `python3`. It is
+# a real file on PATH, so `command -v python3` exits 0 and this guard PASSED —
+# then every `python3 - <<PY` below exited 49, printing an install notice and no
+# stdout. The script ran past its own precondition and read empty JSON forever,
+# which surfaces to the operator as a connector.json problem it is not.
+#
+# This is the SAME probe `hooks/claude-identity/claude-identity.sh` and
+# `mcps/setup.sh` already use for the identical stub — it simply never reached
+# here. $PYTHON is used UNQUOTED at the call sites so `py -3` word-splits.
+PYTHON=""
 need_python(){
-  command -v python3 >/dev/null 2>&1 \
-    || die "python3 not found." "It reads connector.json. On macOS: xcode-select --install"
+  [ -n "$PYTHON" ] && return 0
+  for _cand in python3 python "py -3"; do
+    if $_cand -c 'import json,sys' >/dev/null 2>&1; then PYTHON="$_cand"; break; fi
+  done
+  [ -n "$PYTHON" ] || die "no working Python found (tried python3, python, py -3)."     "It reads connector.json. On macOS: xcode-select --install"     "On Windows, disable the Store aliases: Settings > Apps > Advanced app settings > App execution aliases > turn OFF python.exe and python3.exe."
 }
 
 # Permission GROUPS, in manifest order: `drive:full` → `drive`.
 permission_groups(){
-  python3 - "$MANIFEST" <<'PY'
+  need_python
+  $PYTHON - "$MANIFEST" <<'PY'
 import json, sys
 try:
     d = json.load(open(sys.argv[1]))
@@ -244,7 +260,8 @@ if [ "$MODE" = finish ]; then
   # Two traps that ARE readable, so they stop the run instead of surfacing later
   # as `redirect_uri_mismatch` and `403 org_internal` — neither of which names
   # its own cause.
-  CHECK="$(python3 - "$CLIENT_JSON" "$PROJECT_ID" <<'PY'
+  need_python
+  CHECK="$($PYTHON - "$CLIENT_JSON" "$PROJECT_ID" <<'PY'
 import json, sys
 try:
     d = json.load(open(sys.argv[1]))
@@ -281,7 +298,8 @@ PY
   b "Register the connector"
   say "Run /aios:mcps-setup and pick Google Workspace, or register it directly:"
   say ""
-  python3 - "$MANIFEST" "$CRED_DIR" <<'PY'
+  need_python
+  $PYTHON - "$MANIFEST" "$CRED_DIR" <<'PY'
 import json, sys, shlex
 d = json.load(open(sys.argv[1]))
 reg = d.get("register", {})
