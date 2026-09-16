@@ -71,7 +71,7 @@
 
 ## 2026-09-15 — What AIOS can reach, written down
 
-`hash: a5050aa` · [#139](https://github.com/The-AIOS/aios/pull/139) · [#140](https://github.com/The-AIOS/aios/pull/140)
+`hash: a5050aa · cb6ed39` · [#139](https://github.com/The-AIOS/aios/pull/139) · [#140](https://github.com/The-AIOS/aios/pull/140)
 
 > **What you can now do.** Decide what to connect to AIOS from a written account instead of a guess. Two new files at the repo root: [`SECURITY.md`](./SECURITY.md) — which identity each surface acts **as**, where your credentials live, how updates reach you, and which third-party code runs on your machine — and [`GLOSSARY.md`](./GLOSSARY.md), the vocabulary it assumes, because **you cannot consent to something described in words you do not have.** Also, as of [#139](https://github.com/The-AIOS/aios/pull/139): trust the date in `.aios-update` to mean *when your vault was last verified against canonical*, including the days canonical shipped nothing.
 
