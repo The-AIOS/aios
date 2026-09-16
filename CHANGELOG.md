@@ -69,17 +69,25 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
-## 2026-09-15 — A successful check now counts as a check
+## 2026-09-15 — What AIOS can reach, written down
 
-`hash: a5050aa` · [#139](https://github.com/The-AIOS/aios/pull/139)
+`hash: a5050aa` · [#139](https://github.com/The-AIOS/aios/pull/139) · [#140](https://github.com/The-AIOS/aios/pull/140)
 
-> **What you can now do.** Trust the date in `.aios-update` to mean *when your vault was last verified against canonical* — including the days canonical shipped nothing. Until now it only moved when there was something to apply, so it drifted one day staler every quiet day, and **nothing you could do would clear it.**
+> **What you can now do.** Decide what to connect to AIOS from a written account instead of a guess. Two new files at the repo root: [`SECURITY.md`](./SECURITY.md) — which identity each surface acts **as**, where your credentials live, how updates reach you, and which third-party code runs on your machine — and [`GLOSSARY.md`](./GLOSSARY.md), the vocabulary it assumes, because **you cannot consent to something described in words you do not have.** Also, as of [#139](https://github.com/The-AIOS/aios/pull/139): trust the date in `.aios-update` to mean *when your vault was last verified against canonical*, including the days canonical shipped nothing.
 
-**What changes.** `/aios:update` returns early when your vault already matches upstream: it reports *"current"* and exits before the step that writes the tracker. So `synced=` was a **last-applied** date while every reader — you, a status panel, anything watching freshness — takes it as **last-checked**. The two fields now advance separately: **`hash=` still moves only on a fully-applied run** (an over-advanced hash orphans content, and that guard is untouched), while **`synced=` moves on any run whose completeness reconcile came back clean**, applied or not. A failed apply advances neither.
+**Where the third-party code lives.** `SECURITY.md` splits the eleven bundled MCP servers on one axis — code that lives **inside this repo**, readable right now, versus code **resolved when it launches** from npm or PyPI. Four of the second group are unpinned, and the file says so rather than implying coverage it does not have. `mcps/_index.md` now carries the pinning policy those manifests had been citing while it did not exist, and names who bumps a pin: whoever touches a server, in the same pull request. Two servers that imported packages they never declared now declare them — `playwright-mcp`, whose cookie importer reads your Chrome cookie store, and `notebooklm-mcp`.
+
+**Pinning gives reproducibility, never safety.** A pinned bad version stays bad. What pinning removes is *silent substitution* — the code you read yesterday being swapped before it runs tomorrow, which is the shape of most real supply-chain incidents. `SECURITY.md` also records what is already in place: credential scanning on every change, gitignored cookie stores, and a signed, notarized desktop app.
+
+**An update now discloses what it executes, from the script itself.** When `/aios:update` is about to run an installer that writes outside your vault — your shell profile, `~/.claude/`, login items — the session shows you that file and the lines that changed, then asks. It will **recommend yes**, and tell you what declining costs: your installation drifts, and later fixes arrive onto a base that no longer matches. What it may not tell you is that the change *looks fine* — that is a verdict on code it skimmed. If it cannot recommend yes, it says why in one line.
+
+**Fixed — Windows only.** The Google Workspace connector's setup script compared permission groups against values Python had written with Windows line endings, so every group it *could* map was reported as unmapped and the setup stopped ([#142](https://github.com/The-AIOS/aios/issues/142), reported by an operator on Git Bash). A stray carriage return is invisible in terminal output — it only returns the cursor — which is why the error named rows the script plainly has.
+
+**And the freshness date.** Until [#139](https://github.com/The-AIOS/aios/pull/139), `synced=` only moved when there was something to apply, so it drifted one day staler every quiet day and **nothing you could do would clear it.** `/aios:update` returns early when your vault already matches upstream: it reports *"current"* and exits before the step that writes the tracker. So `synced=` was a **last-applied** date while every reader — you, a status panel, anything watching freshness — takes it as **last-checked**. The two fields now advance separately: **`hash=` still moves only on a fully-applied run** (an over-advanced hash orphans content, and that guard is untouched), while **`synced=` moves on any run whose completeness reconcile came back clean**, applied or not. A failed apply advances neither.
 
 The tracker is written at most once a day, so running the command repeatedly does not produce a commit each time — and a reconcile that finds drift still advances nothing until it is recovered.
 
-**Action required:** none. Your next `/aios:update` stamps the date whether or not there is anything to pull.
+**Action required:** none. Both new files arrive on your next `/aios:update`, which also stamps the date whether or not there is anything to pull. If you connect MCP servers beyond the bundled set, `mcps/_index.md` § *Connecting a server whose code AIOS does not ship* is the section worth reading first.
 
 ## 2026-09-14 — Checks that read the wrong signal, and a `CLAUDE.md` that stops growing
 
