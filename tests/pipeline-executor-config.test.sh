@@ -15,6 +15,22 @@
 # missing" while the primary account's OAuth token was valid throughout.
 
 set -u
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n' "$1"; }
@@ -33,7 +49,7 @@ printf 'USER.md config-value parsing\n'
 # real parse_sources() rather than a copy that can drift away from it.
 field(){ # $1 = USER.md content, $2 = config key  →  prints the parsed value
   printf '%s' "$1" > "$TMP/USER.md"
-  python3 - "$EXEC" "$TMP/USER.md" "$2" <<'PY'
+  $PYBIN - "$EXEC" "$TMP/USER.md" "$2" <<'PY'
 import importlib.util, sys
 from pathlib import Path
 spec = importlib.util.spec_from_file_location("pipeline_executor", sys.argv[1])
@@ -129,7 +145,7 @@ have "$(field "$TEMPLATE" google_email_primary)" "None" \
 # ---------------------------------------------------------------------------
 # TEST 6 — a missing USER.md still returns defaults rather than raising.
 # ---------------------------------------------------------------------------
-MISSING="$(python3 - "$EXEC" "$TMP/absent-USER.md" 2>/dev/null <<'PY'
+MISSING="$($PYBIN - "$EXEC" "$TMP/absent-USER.md" 2>/dev/null <<'PY'
 import importlib.util, sys
 from pathlib import Path
 spec = importlib.util.spec_from_file_location("pipeline_executor", sys.argv[1])

@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The operator pause marker must suspend rotation, and must NEVER be able to
 # disable the autopilot permanently by accident.
@@ -46,14 +63,14 @@ PY
 }
 
 echo "-- 1. a FUTURE marker pauses, and is kept --"
-r=$(probe "$(python3 -c 'import time;print(int(time.time())+3600)')")
+r=$(probe "$($PYBIN -c 'import time;print(int(time.time())+3600)')")
 [ "$r" = "1 1" ] && ok "future epoch pauses and the marker survives" || no "future epoch → '$r' (want '1 1')" "a live pause must hold and not delete itself"
-r=$(probe "$(python3 -c 'import datetime,time;print((datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(hours=1)).isoformat())')")
+r=$(probe "$($PYBIN -c 'import datetime,time;print((datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(hours=1)).isoformat())')")
 [ "$r" = "1 1" ] && ok "future ISO-8601 pauses too (documented as accepted)" || no "future ISO → '$r' (want '1 1')" "the README documents both forms"
 
 echo "-- 2. anything that is NOT a future timestamp fails toward RUNNING, and self-clears --"
 # Each of these is a way an operator can leave a marker that must not disable the autopilot.
-for label in "past epoch:$(python3 -c 'import time;print(int(time.time())-60)')" "garbage:not-a-date" "empty:" "whitespace: "; do
+for label in "past epoch:$($PYBIN -c 'import time;print(int(time.time())-60)')" "garbage:not-a-date" "empty:" "whitespace: "; do
   name=${label%%:*}; body=${label#*:}
   r=$(probe "$body")
   [ "$r" = "0 1" ] && ok "$name → not paused, marker left alone" \
