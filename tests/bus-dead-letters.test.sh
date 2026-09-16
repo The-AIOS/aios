@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # bus-dead-letters.py reports the TWO ways a bus request fails, and never fires
 # on the two ways it legitimately waits.
@@ -26,10 +43,10 @@ ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 S=hooks/bus-dead-letters.py
 [ -f "$S" ] || { echo "::error::$S missing"; exit 1; }
-command -v python3 >/dev/null 2>&1 || { echo "SKIP: no python3 (the commands that call this require it too). NOT a pass."; exit 0; }
+[ -n "$PYBIN" ] || { echo "SKIP: no working python (the commands that call this require it too). NOT a pass."; exit 0; }
 
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
-run(){ python3 "$S" "$1" 2>&1; }
+run(){ $PYBIN "$S" "$1" 2>&1; }
 old(){ touch -t 202001010900 "$1"; }   # comfortably past the grace period
 
 echo "-- an empty inbox is silent, at exit 0 --"

@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The model-routing ladder, the non-Claude rail, and the boundary between them
 #
@@ -40,7 +57,7 @@ RAIL=hooks/openrouter.py
 DOC=MODEL-ROUTING.md
 
 echo "── the two wrappers implement the SAME ladder ──"
-maps=$(python3 - "$SH" "$PS" <<'PY'
+maps=$($PYBIN - "$SH" "$PS" <<'PY'
 import re, sys
 sh, ps = open(sys.argv[1], encoding='utf-8').read(), open(sys.argv[2], encoding='utf-8').read()
 
@@ -103,7 +120,13 @@ grep -qF '"MODEL-ROUTING.md"' plugins/aios/commands/update.md \
 
 echo "── the rail refuses rather than guessing (env + HOME scrubbed) ──"
 TMPH=$(mktemp -d)
-run_clean(){ env -u OPENROUTER_API_KEY -u GEMINI_API_KEY HOME="$TMPH" python3 "$RAIL" "$@" 2>&1; }
+# NOTE: USERPROFILE is set alongside HOME on purpose. On Windows, Python's
+# `Path.home()` / `expanduser('~')` read USERPROFILE and IGNORE HOME, so a test
+# that isolates a Python hook with HOME alone does not isolate it at all — it
+# silently reads the operator's REAL ~/.claude. That is worse than a failing
+# test: it can pass or fail for reasons having nothing to do with the fixture.
+# Harmless on macOS/Linux, where USERPROFILE is unused.
+run_clean(){ env -u OPENROUTER_API_KEY -u GEMINI_API_KEY HOME="$TMPH" USERPROFILE="$TMPH" $PYBIN "$RAIL" "$@" 2>&1; }
 out=$(run_clean --prompt hi); rc=$?
 if [ "$rc" = "3" ]; then ok "no key → exit 3 (a distinct code, not a generic 1)"
 else no "no key → exit $rc, expected 3" "$(printf '%s' "$out" | head -2)"; fi
@@ -131,7 +154,7 @@ printf '%s\n' "$asg" | grep -qF 'GEMINI_DEFAULT = "gemini-pro-latest"' \
   && ok "Gemini default is the verified floating alias" || no "Gemini default is not the verified alias" "$asg"
 
 echo "── the rail is stdlib-only (must run from a routine on a fresh machine) ──"
-nonstd=$(python3 - "$RAIL" <<'PY'
+nonstd=$($PYBIN - "$RAIL" <<'PY'
 import ast, sys
 stdlib = {"argparse","json","os","sys","urllib","pathlib","re","subprocess","typing"}
 bad = []
@@ -147,7 +170,7 @@ PY
 [ -z "$nonstd" ] && ok "no third-party imports" || no "third-party imports present: $nonstd" "breaks 'no pip install' on a fresh machine"
 
 echo "── --check never makes a network call ──"
-grep -q 'if a.check:' "$RAIL" && python3 - "$RAIL" <<'PY' && ok "--check returns before any request" || no "--check may reach the network"
+grep -q 'if a.check:' "$RAIL" && $PYBIN - "$RAIL" <<'PY' && ok "--check returns before any request" || no "--check may reach the network"
 import ast, sys, re
 src = open(sys.argv[1], encoding="utf-8").read()
 tree = ast.parse(src)

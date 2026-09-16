@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The documented "did the registration land?" check must read BOTH scopes
 #
@@ -32,7 +49,7 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
 echo "── 1. the snippet is extractable from the doc ──"
 # Pull the python heredoc body that follows the read-back instruction.
-python3 - "$DOC" "$TMP/snippet.py" <<'PY'
+$PYBIN - "$DOC" "$TMP/snippet.py" <<'PY'
 import re, sys
 text = open(sys.argv[1], encoding="utf-8").read()
 # the fenced bash block containing a `python3 - <<'PY'` heredoc
@@ -50,7 +67,13 @@ else
 fi
 
 # Run the extracted snippet against a fixture HOME.
-runsnip(){ HOME="$1" python3 "$TMP/snippet.py" "${2:-google-workspace}" 2>&1; }
+# NOTE: USERPROFILE is set alongside HOME on purpose. On Windows, Python's
+# `Path.home()` / `expanduser('~')` read USERPROFILE and IGNORE HOME, so a test
+# that isolates a Python hook with HOME alone does not isolate it at all — it
+# silently reads the operator's REAL ~/.claude. That is worse than a failing
+# test: it can pass or fail for reasons having nothing to do with the fixture.
+# Harmless on macOS/Linux, where USERPROFILE is unused.
+runsnip(){ HOME="$1" USERPROFILE="$1" $PYBIN "$TMP/snippet.py" "${2:-google-workspace}" 2>&1; }
 
 mkfix(){ # $1 = dir · stdin = the .claude.json content
   mkdir -p "$1"; cat > "$1/.claude.json"
@@ -109,7 +132,7 @@ cat > "$TMP/broken.py" <<'PY'
 import json, os, sys
 print('google-workspace' in json.load(open(os.path.expanduser('~/.claude.json'))).get('mcpServers', {}))
 PY
-OUT="$(HOME="$TMP/proj" python3 "$TMP/broken.py" 2>&1)"
+OUT="$(HOME="$TMP/proj" USERPROFILE="$TMP/proj" $PYBIN "$TMP/broken.py" 2>&1)"
 if [ "$OUT" = "False" ]; then
   ok "control: the original check answers False on a working project-scoped install"
 else

@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # quota-rotation-target.test.sh — rotate only to an account that actually has capacity.
 #
 # Regression origin: rotation was a bare `switch`, which advances one position in
@@ -36,7 +53,7 @@ EOF
 # Drive the module directly: these are pure decision functions, so exercising
 # them beats trying to fake a whole live rotation.
 probe() {  # probe <python-body>
-  HOME="$WORK" USER_MD_PATH="$WORK/USER.md" python3 - "$WATCH" <<PYEOF
+  HOME="$WORK" USERPROFILE="$WORK" USER_MD_PATH="$WORK/USER.md" $PYBIN - "$WATCH" <<PYEOF
 import importlib.util, sys, json, os, time
 spec = importlib.util.spec_from_file_location("w", sys.argv[1])
 w = importlib.util.module_from_spec(spec); spec.loader.exec_module(w)
@@ -46,7 +63,7 @@ PYEOF
 
 seed_state() {  # seed_state <email> <pct5> <resets_at_offset_secs>
   mkdir -p "$WORK/.claude/identities/$1"
-  python3 - "$WORK/.claude/identities/$1/last-limits.json" "$2" "$3" <<'PYEOF'
+  $PYBIN - "$WORK/.claude/identities/$1/last-limits.json" "$2" "$3" <<'PYEOF'
 import json, sys, time
 json.dump({"email":"x","recorded_at":int(time.time()),
            "five_hour_pct":float(sys.argv[2]),
@@ -83,7 +100,7 @@ else
 
 # 4. THE ONE THAT BITES: a `declined` row must not arm the cooldown.
 mkdir -p "$WORK/.claude"
-python3 - "$WORK/.claude/swap-log.jsonl" <<'PYEOF'
+$PYBIN - "$WORK/.claude/swap-log.jsonl" <<'PYEOF'
 import json, time, sys
 now = int(time.time())
 rows = [
@@ -99,7 +116,7 @@ else
   no "a 'declined' row does not arm the cooldown" "got: $out (a decline changed nothing)"; fi
 
 # 5. A real recent swap still does arm it — the guard must not be gutted.
-python3 - "$WORK/.claude/swap-log.jsonl" <<'PYEOF'
+$PYBIN - "$WORK/.claude/swap-log.jsonl" <<'PYEOF'
 import json, time, sys
 now = int(time.time())
 open(sys.argv[1], "w").write(json.dumps({"ts": now - 10, "action": "rotate", "rc": 0}) + "\n")
@@ -111,7 +128,7 @@ else
   no "a real recent swap still arms the cooldown" "got: $out"; fi
 
 # 6. A FAILED swap (rc != 0) is not a swap either.
-python3 - "$WORK/.claude/swap-log.jsonl" <<'PYEOF'
+$PYBIN - "$WORK/.claude/swap-log.jsonl" <<'PYEOF'
 import json, time, sys
 now = int(time.time())
 open(sys.argv[1], "w").write(json.dumps({"ts": now - 10, "action": "rotate", "rc": 1}) + "\n")
@@ -123,7 +140,7 @@ else
   no "a failed swap does not arm the cooldown" "got: $out"; fi
 
 # 7. Corrupt lines must not abort the scan — the good row behind them still wins.
-python3 - "$WORK/.claude/swap-log.jsonl" <<'PYEOF'
+$PYBIN - "$WORK/.claude/swap-log.jsonl" <<'PYEOF'
 import json, time, sys
 now = int(time.time())
 lines = ["{not json at all", json.dumps({"ts": now - 10, "action": "rotate", "rc": 0}), "]["]

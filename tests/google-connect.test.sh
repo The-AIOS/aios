@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # connect.sh — the Google connector's one-command setup (AI-126)
 #
@@ -56,7 +73,7 @@ run(){ # run connect.sh with a controlled PATH; echoes output, sets RC
 }
 
 echo "── 1. the API set derives from connector.json, and covers every group ──"
-PERM_GROUPS="$(python3 -c '
+PERM_GROUPS="$($PYBIN -c '
 import json,sys
 a=json.load(open(sys.argv[1]))["register"]["args"]
 print("\n".join(x.split(":")[0] for x in a[a.index("--permissions")+1:] if not x.startswith("-")))' "$MANIFEST")"
@@ -85,7 +102,7 @@ echo "── 2. CONTROL — an unmapped permission group must STOP the script �
 # buys nothing. Inject a bogus group and require a hard failure that NAMES it.
 FIXDIR="$TMP/fixture"; mkdir -p "$FIXDIR"
 cp "$SCRIPT" "$FIXDIR/connect.sh"
-python3 - "$MANIFEST" "$FIXDIR/connector.json" <<'PY'
+$PYBIN - "$MANIFEST" "$FIXDIR/connector.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
 args = d["register"]["args"]
@@ -145,7 +162,7 @@ grep -q -- '--print-apis' mcps/google-workspace-mcp/personal-account-setup.md \
 # A line that names the services WITHOUT saying "API" is a value statement ("enables
 # Calendar, Tasks, Drive ...") and is fine -- it tells an operator what they get, it
 # does not send them to go and enable things.
-ENUM="$(python3 tests/fixtures/google-connect-enum-scan.py)"
+ENUM="$($PYBIN tests/fixtures/google-connect-enum-scan.py)"
 [ -z "$ENUM" ] \
   && ok "no doc enumerates the APIs to enable in prose either" \
   || no "a doc re-enumerates the API list:" "$ENUM"
@@ -161,7 +178,7 @@ CTL="$TMP/enumctl"; mkdir -p "$CTL"
 cp tests/fixtures/google-connect-enum-scan.py "$CTL/scan.py"
 ctl(){ # $1 label · $2 expect(catch|silent) · stdin = the fixture
   rm -f "$CTL/SETUP.md"; cat > "$CTL/SETUP.md"
-  R="$(cd "$CTL" && python3 scan.py)"
+  R="$(cd "$CTL" && $PYBIN scan.py)"
   if [ "$2" = catch ]; then
     [ -n "$R" ] && ok "scanner control: $1 → caught" || no "scanner control: $1 → MISSED" "the detector cannot see a copy it is supposed to catch"
   else
@@ -564,15 +581,15 @@ bash -n "$SCRIPT" && ok "parses cleanly" || no "syntax error"
 echo "── 12. the oauth template carries no scope list to drift ──"
 TPL="mcps/google-workspace-mcp/oauth.json.template"
 if [ -f "$TPL" ]; then
-  python3 - "$TPL" <<'PY' && ok "template has no frozen \`scopes\` array" || no "the template still ships a scope list — it is a fourth copy, and nothing reads it"
+  $PYBIN - "$TPL" <<'PY' && ok "template has no frozen \`scopes\` array" || no "the template still ships a scope list — it is a fourth copy, and nothing reads it"
 import json, sys
 d = json.load(open(sys.argv[1]))
 sys.exit(1 if "scopes" in d else 0)
 PY
-  python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$TPL" \
+  $PYBIN -c 'import json,sys; json.load(open(sys.argv[1]))' "$TPL" \
     && ok "template is valid JSON" || no "template is not valid JSON"
   for k in client_id client_secret; do
-    python3 -c '
+    $PYBIN -c '
 import json,sys
 sys.exit(0 if sys.argv[2] in json.load(open(sys.argv[1])) else 1)' "$TPL" "$k" \
       && ok "template keeps \`$k\` (SETUP.md reads it)" || no "template lost \`$k\` — SETUP.md reads it"
