@@ -228,7 +228,12 @@ if [ "$MODE" = finish ]; then
     # Newest client_secret_*.json in ~/Downloads. Safe to guess precisely BECAUSE
     # the checks below reject a client of the wrong type or from another project,
     # so a wrong guess fails loudly instead of installing quietly.
-    CLIENT_JSON="$(ls -t "$HOME"/Downloads/client_secret_*.json 2>/dev/null | head -1)"
+    # `command ls`, not `ls` — bypasses any alias. Git for Windows aliases `ls` to
+    # `ls -F --color=auto --show-control-chars`, and a name that reaches a variable
+    # must not depend on the caller's display preferences (#141). A regular file
+    # gets no classify suffix, so this survived by luck; the fix costs one word and
+    # removes the dependency.
+    CLIENT_JSON="$(command ls -t "$HOME"/Downloads/client_secret_*.json 2>/dev/null | head -1)"
     [ -n "$CLIENT_JSON" ] || die \
       "no client_secret_*.json found in ~/Downloads." \
       "Download it from the Clients page, or pass --client <path>."
