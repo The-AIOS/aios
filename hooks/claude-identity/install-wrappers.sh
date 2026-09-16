@@ -547,9 +547,18 @@ spawn() {
   if [ -n "$profile" ]; then
     if [ ! -f "$HOME/.aios/mcp-profiles/${profile}.json" ]; then
       echo "⚠️  spawn: unknown --profile '$profile'." >&2
-      # `command ls` bypasses the alias. This text is APPENDED to the operator's
-      # ~/.zshrc, so it runs in their interactive shell — the one place an `ls`
-      # alias is guaranteed to be in effect (#141).
+      # `command ls` bypasses any alias. This text is APPENDED to the operator's
+      # rc file, so it runs in their INTERACTIVE shell, which is where `ls` is most
+      # often aliased -- Ubuntu ships `alias ls='ls --color=auto'` by default,
+      # `ls -G` is common on macOS, and plenty of people alias `ls` to eza. Any of
+      # those and this profile list prints wrong.
+      #
+      # Deliberately NOT justified by #141: that was Git for Windows' `ls -F`, and
+      # /aios:update platform-gates this installer to macOS/Linux (Windows runs the
+      # .ps1). The Windows path is reachable only by running this script by hand in
+      # Git Bash, where the rc derivation at the top resolves to .bashrc. A comment
+      # citing the wrong platform's cause is how the next contributor aims a Windows
+      # fix at the wrong installer.
       echo "    Available: $(command ls "$HOME/.aios/mcp-profiles"/*.json 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/\.json$//' | tr '\n' ' ')" >&2
       echo "    A profile is a JSON file with an \"mcpServers\" object, same shape as ~/.claude.json." >&2
       return 1
