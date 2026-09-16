@@ -347,7 +347,7 @@ When the operator asks *"where is X documented?"* — route by role, don't read 
 | [`TOOLS.md`](./TOOLS.md) | Full menu — commands + agents + skills + MCPs | *"Is there a tool for X?"* |
 | [`FORTRESS.md`](./FORTRESS.md) | **Containment ladder (6 rungs)** · the agent bus · two-machine architecture | *"How contained am I?"* / *"How do I run agents 24/7?"* |
 | [`MODEL-ROUTING.md`](./MODEL-ROUTING.md) | Which model for which task · the non-Claude boundary · judge independence | *"Which model should do this?"* / *"Can I use Gemini/DeepSeek?"* |
-| [`SECURITY.md`](./SECURITY.md) | What each surface reaches · **whose identity it acts as** · the update model · what is reviewed and what isn't | *"Is this safe to connect?"* / *"What will this update run?"* / any consent question |
+| [`SECURITY.md`](./SECURITY.md) | What each surface reaches · **whose identity it acts as** · the update model · what is reviewed and what isn't · **the levers an operator actually holds**, model choice first | *"Is this safe to connect?"* / *"What will this update run?"* / *"does it matter which model I run?"* / any consent question |
 | [`GLOSSARY.md`](./GLOSSARY.md) | Plain-language vocabulary for a non-technical operator; flags the `token` / `agent` / `context` collisions | The operator uses a term loosely, or needs to consent to something |
 
 **Plus 2 operator-owned files** Claude reads every session: [`USER.md`](./USER.md) (identity, sources, command overrides) + [`INTENT.md`](./INTENT.md) (trust contract — autonomy per domain).

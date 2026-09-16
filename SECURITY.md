@@ -16,7 +16,21 @@ That last clause is the part with no clean fix. If a session reads an email, a w
 
 With these connectors, the answer is yes. That is not a defect being hidden from you; it is the shape of every agentic system, and the reason the rest of this document exists.
 
-**Concretely, what reduces it:** connect fewer things; keep the identity that *reads untrusted content* separate from the identity that *holds credentials*; use a scoped bot rather than your own account where a bot will do; and read [`FORTRESS.md`](./FORTRESS.md), whose whole subject is limiting blast radius.
+**Concretely, what reduces it.** Not one of these is something AIOS switches on for you. They are the levers *you* hold, which is the point — and they are in the order that matters most.
+
+- **Be wise in the models you use.** A model's own refusal behaviour **is one of the controls**, and no permission setting substitutes for it. See below.
+- **Scope your connectors to what you actually need.** A server that was never connected cannot be talked into anything. You choose which Google services to enable (the table below), and a worker can be started holding only the servers it needs — `spawn --profile <name>` loads just those, which is about blast radius rather than saving tokens.
+- **Define your autonomy levels deliberately** in [`INTENT.md`](./INTENT.md) — and read § *Governance is not enforcement* below before trusting them, because that file shapes behaviour while Claude Code's permission system is what compels it.
+- **If you are going to leave it genuinely autonomous, point it only at places you trust.** Autonomy is fine. Untrusted input is survivable. **The combination is the problem** — an unattended run has nobody present to answer a prompt, and silence must never count as yes. Poisoned sources are worse than they sound: the corruption sits *upstream* of the model, so the model cannot detect it.
+- **Keep the identity that *reads untrusted content* separate from the identity that *holds credentials*.** This is the structural fix for the paragraph above, rather than a mitigation of it.
+- **Use a scoped bot rather than your own account wherever a bot can do the job on its own.** A bot misbehaving is a contained incident; *you* misbehaving is a message your colleagues believe came from you.
+- **Read [`FORTRESS.md`](./FORTRESS.md)**, whose whole subject is limiting blast radius.
+
+**Why the model you run belongs on a security page at all.** When a malicious document instructs a session to paste a credential somewhere, the thing that declines is **the model** — not a setting, not a permission prompt, and certainly not this document. That behaviour differs between models, and AIOS cannot supply it on their behalf.
+
+AIOS is built around Claude Code, and a **spawned worker** is always a Claude model: `spawn` passes its model argument straight to the `claude` binary. But the repo also ships [`AGENTS.md`](./AGENTS.md) for other tools that read that convention, and the desktop app **opens terminals** — whatever CLI you run inside one is what is actually running, whoever made it. So which model holds your credentials is a live choice, not a default.
+
+One case is worth naming because it looks like a cost saving and is not: **do not route Claude Code through a proxy that makes it believe it is talking to Anthropic while sending requests elsewhere.** That puts third-party code in the request path of every session holding live Gmail, Drive and Slack credentials plus your private vault. When you genuinely need another model family, call it as a *tool* — text in, text out, no credentials, no vault writes. [`MODEL-ROUTING.md`](./MODEL-ROUTING.md) draws that boundary and explains the privacy trade.
 
 ---
 
