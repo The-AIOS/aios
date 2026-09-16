@@ -547,7 +547,10 @@ spawn() {
   if [ -n "$profile" ]; then
     if [ ! -f "$HOME/.aios/mcp-profiles/${profile}.json" ]; then
       echo "⚠️  spawn: unknown --profile '$profile'." >&2
-      echo "    Available: $(ls "$HOME/.aios/mcp-profiles"/*.json 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/\.json$//' | tr '\n' ' ')" >&2
+      # `command ls` bypasses the alias. This text is APPENDED to the operator's
+      # ~/.zshrc, so it runs in their interactive shell — the one place an `ls`
+      # alias is guaranteed to be in effect (#141).
+      echo "    Available: $(command ls "$HOME/.aios/mcp-profiles"/*.json 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/\.json$//' | tr '\n' ' ')" >&2
       echo "    A profile is a JSON file with an \"mcpServers\" object, same shape as ~/.claude.json." >&2
       return 1
     fi

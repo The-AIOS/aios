@@ -19,10 +19,18 @@
 # and become a named denylist, and that denylist needs a test that CANNOT pass
 # vacuously.
 #
-# Hence the shape: this does not grep update.md for reassuring strings. It EXTRACTS
+# Hence the shape: this does not grep update.md for reassuring strings. It MIRRORS
 # the real derivation logic, RUNS it against a fixture tree, and asserts the output.
 # Then it re-runs the same logic with the denylist emptied and asserts the opposite —
-# so a version of this file that could never fail would itself fail scenario 3.
+# so a version of this file that could never fail would itself fail scenario 4.
+#
+# MIRRORS, not extracts — and that word is the whole reason for #141. The mirror
+# below was hand-copied from the spec, so it copied the spec's `ls -A` too, and a
+# mirror carrying the same fault as the original cannot see it: this suite was green
+# for the entire life of the bug. Two sections now bind the mirror to reality
+# instead of trusting it — § 7 reproduces the Windows condition and requires the
+# `ls` form to FAIL under it, and § 8 forbids `ls` in the spec's command positions
+# at all. A mirror is only evidence to the extent something forces it to match.
 #
 # Run:  bash tests/update-tier0-denylist.test.sh
 set -u
@@ -64,7 +72,23 @@ fi
 #    Extracted from the spec rather than reimplemented, so this cannot drift
 #    into testing a copy of the logic that update.md no longer uses.
 # ---------------------------------------------------------------------------
+# `find`, exactly as update.md now derives it — NOT `find -printf '%f\n'`, which is
+# GNU-only and answers `find: -printf: unknown primary or operator` on a stock macOS.
 derive(){ # $1 = denylist to use
+  local deny="$1" out="" d path
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    d="${path##*/}"
+    case " $deny " in *" $d "*) continue ;; esac
+    out="$out $d"
+  done <<EOF
+$(find "$CLONE" -maxdepth 1 -mindepth 1 -type d)
+EOF
+  printf '%s' "$out"
+}
+
+# The form update.md USED to carry, kept solely so § 7 can require it to break.
+derive_via_ls(){ # $1 = denylist
   local deny="$1" out="" d
   for d in $(cd "$CLONE" && ls -A); do
     [ -d "$CLONE/$d" ] || continue
@@ -132,6 +156,176 @@ sites="$(grep -c 'case " \$TIER0_DENY " in' "$U" 2>/dev/null)" || sites=0
 # ---------------------------------------------------------------------------
 grep -q '^### Tier 0' "$U" && ok "update.md still documents § Tier 0" \
                            || no "update.md still documents § Tier 0"
+
+# ---------------------------------------------------------------------------
+# 7. THE WINDOWS CONDITION, REPRODUCED (#141).
+#    Git for Windows ships `ls` aliased to `ls -F --color=auto
+#    --show-control-chars` in /etc/profile.d/aliases.sh. `-F` appends a type
+#    suffix, so `$d` is `vault/` and every denylist entry misses. The reconcile
+#    then described the operator's own declared + observed context as framework
+#    drift to pull, and its apply instruction says to overwrite. Exit 0, nothing
+#    on stderr, lines shaped exactly like real drift.
+#
+#    There is no Windows here, so the alias is INJECTED: an `ls` earlier on PATH
+#    that classifies. An alias would not survive into a function called from this
+#    script, and a shim does the same job at the same place in the lookup.
+# ---------------------------------------------------------------------------
+SHIM="$TMP/bin"; mkdir -p "$SHIM"
+REAL_LS="$(command -v ls)"
+cat > "$SHIM/ls" <<STUB
+#!/usr/bin/env bash
+# Stands in for Git for Windows' \`ls -F\`: append / to directories, @ to symlinks.
+cd "\${!#}" 2>/dev/null || true
+"$REAL_LS" "\$@" | while IFS= read -r n; do
+  if [ -d "\$n" ]; then printf '%s/\n' "\$n"
+  elif [ -L "\$n" ]; then printf '%s@\n' "\$n"
+  else printf '%s\n' "\$n"; fi
+done
+STUB
+chmod +x "$SHIM/ls"
+
+# HARNESS ASSERTION. A shim that does not classify would make both checks below
+# pass while reproducing nothing — the same vacuity this suite exists to avoid.
+PROBE="$(cd "$CLONE" && PATH="$SHIM:$PATH" ls -A | grep -c '/$' || true)"
+[ "${PROBE:-0}" -ge 3 ] \
+  && ok "harness: the ls shim really classifies ($PROBE dirs carry a suffix)" \
+  || no "harness: the ls shim does not classify" "§ 7 would reproduce nothing"
+
+# a. the OLD form must LEAK under it. If it does not, the condition is not
+#    reproduced and everything below this line is decoration.
+LEAK_LS="$(PATH="$SHIM:$PATH" derive_via_ls "$REAL_DENY")"
+# Match BOTH spellings. The leaked token is `vault/`, with the classify suffix
+# still attached — looking only for a bare `vault` finds nothing and reads as
+# "no leak", which is the bug wearing the disguise of a passing test. The suffix
+# does not soften the harm: `LAYERS+=("$d/")` yields `vault//`, git normalises
+# the double slash, and Step 6.5's `diff -rq "$VAULT/vault/"` walks the
+# operator's own tree either way.
+n=0
+for d in tests .github vault; do
+  case " $LEAK_LS " in *" $d "*|*" $d/ "*) n=$((n+1)) ;; esac
+done
+[ "$n" -eq 3 ] \
+  && ok "control: under \`ls -F\`, the ls-derived form leaks all three Tier-0/2 folders" \
+  || no "control: the ls-derived form leaked only $n of 3 under \`ls -F\`" \
+        "the #141 condition is not being reproduced, so 7b proves nothing"
+
+# b. and the form update.md now uses must be immune to the same condition.
+SAFE_LS="$(PATH="$SHIM:$PATH" derive "$REAL_DENY")"
+n=0
+for d in tests .github vault; do
+  case " $SAFE_LS " in *" $d "*|*" $d/ "*) n=$((n+1)) ;; esac
+done
+[ "$n" -eq 0 ] \
+  && ok "the find-derived form excludes all three even under \`ls -F\`" \
+  || no "the find-derived form leaked $n folder(s) under \`ls -F\`" "LAYERS:$SAFE_LS"
+# and it must still find the new layer — immunity that drops everything is not immunity
+case " $SAFE_LS " in
+  *" brandnewlayer "*) ok "and still enumerates a layer no hardcoded list names" ;;
+  *)                   no "the find-derived form found no new layer under \`ls -F\`" "$SAFE_LS" ;;
+esac
+
+# ---------------------------------------------------------------------------
+# 8. THE SPEC MUST NOT DERIVE A NAME FROM `ls` AT ALL.
+#    § 7 proves `find` is immune; this is what stops the habit coming back at a
+#    fourth site. `ls` is a presentation tool — it honours the caller's aliases,
+#    colours and classify flags — so it has no business producing values a script
+#    then matches on. Comments and echoed prose are exempt: the rule is about
+#    command position, and the spec has to be able to explain itself.
+# ---------------------------------------------------------------------------
+LSUSE="$(grep -nE '(^|[|;&(]|\$\()[[:space:]]*ls[[:space:]]' "$U" \
+         | grep -vE '^[0-9]+:[[:space:]]*#' | grep . || true)"
+[ -z "$LSUSE" ] \
+  && ok "update.md invokes \`ls\` in no command position" \
+  || no "update.md still derives from \`ls\`:" "$LSUSE
+       use: find \"\$DIR\" -maxdepth 1 -mindepth 1 -type d   (never -printf, it is GNU-only)"
+
+# CONTROL for that grep — a detector with no control reports clean just as
+# convincingly when it is broken, and this one is a regex over a 700-line file.
+CTL="$TMP/lsctl.md"
+printf '%s\n' 'for d in $(cd "$CLONE" && ls -A); do' > "$CTL"
+R="$(grep -nE '(^|[|;&(]|\$\()[[:space:]]*ls[[:space:]]' "$CTL" | grep -vE '^[0-9]+:[[:space:]]*#' || true)"
+[ -n "$R" ] && ok "control: the ls detector catches the exact line that shipped" \
+            || no "control: the ls detector MISSED the line that shipped" "it cannot see what it is for"
+printf '%s\n' '# never derive a name from `ls` — see #141' > "$CTL"
+R="$(grep -nE '(^|[|;&(]|\$\()[[:space:]]*ls[[:space:]]' "$CTL" | grep -vE '^[0-9]+:[[:space:]]*#' || true)"
+[ -z "$R" ] && ok "control: a comment explaining the rule does not fire it" \
+            || no "control: the ls detector fires on its own documentation" "$R"
+
+# ---------------------------------------------------------------------------
+# 9. EACH SITE ASSERTS THE EXCLUSION HAPPENED, not merely that it was coded.
+#    #141's `case` was syntactically perfect and matched nothing, so no linter
+#    could have caught it. Only the effect is checkable: canonical always ships
+#    tests/, .github/ and vault/, so a run that excluded none of them is broken.
+# ---------------------------------------------------------------------------
+eff="$(grep -c 'EXCLUDED="\$EXCLUDED' "$U" 2>/dev/null)" || eff=0
+[ "${eff:-0}" -ge 2 ] \
+  && ok "both derivations record what they excluded ($eff sites)" \
+  || no "only ${eff:-0} derivation(s) record their exclusions" \
+        "a denylist that silently matches nothing is the #141 failure; assert the outcome"
+guards="$(grep -c 'for guard in tests .github vault' "$U" 2>/dev/null)" || guards=0
+[ "${guards:-0}" -ge 2 ] \
+  && ok "both derivations fail loudly when nothing was excluded ($guards sites)" \
+  || no "only ${guards:-0} site(s) assert the exclusion happened" \
+        "Step 6.5 is Step 2's backstop; an unasserted backstop shares the primary's blind spot"
+grep -q "never excluded '\$guard'" "$U" \
+  && ok "and the failure names the folder that was not excluded" \
+  || no "the failure message does not name the folder" "an operator cannot act on 'derivation broken'"
+
+# ---------------------------------------------------------------------------
+# 10. RUN THE SPEC'S OWN ASSERTION, don't just confirm it is written down.
+#     § 9 proves the words are present, which is the weaker claim — a guard can
+#     be present and inert (this command shipped an inert one before: a compare
+#     whose equal branch was unsatisfiable by construction, so it could never
+#     once fire). So extract Step 2's real block and execute it twice: healthy,
+#     where it must stay silent, and under the `ls` shim, where it must abort.
+#
+#     The extraction is EXPLICIT about failing. If the boundaries move, this
+#     reports that it could not run rather than passing on an empty script —
+#     a check that silently measures nothing is the shape of the bug it guards.
+# ---------------------------------------------------------------------------
+BLK="$TMP/step2.sh"
+awk '/^LAYERS=\(\)$/{f=1} f{print} f && /^fi$/{exit}' "$U" > "$BLK.body"
+if [ "$(grep -c . "$BLK.body")" -lt 10 ] || ! grep -q 'FATAL' "$BLK.body"; then
+  no "harness: could not extract Step 2's derivation from update.md" \
+     "the block boundaries moved — re-aim the awk, do not delete this section"
+else
+  ok "harness: extracted Step 2's derivation ($(grep -c . "$BLK.body") lines, carries a FATAL)"
+  { printf 'CLONE=%s\nTIER0_DENY=%s\n' "$(printf '%q' "$CLONE")" "$(printf '%q' "$REAL_DENY")"
+    cat "$BLK.body"
+    printf 'printf "LAYERS=%%s\\n" "${LAYERS[*]}"\n'; } > "$BLK"
+
+  OUT_OK="$(bash "$BLK" 2>&1)"; RC_OK=$?
+  { [ "$RC_OK" -eq 0 ] && ! printf '%s' "$OUT_OK" | grep -q FATAL; } \
+    && ok "the spec's own block runs clean on a healthy clone" \
+    || no "the spec's block aborted on a HEALTHY clone" "$OUT_OK"
+
+  OUT_BAD="$(PATH="$SHIM:$PATH" bash "$BLK" 2>&1)"; RC_BAD=$?
+  # Under the shim the derivation is `find`-based, so it must STILL be clean --
+  # that is the fix working. The assertion's own teeth are proven by 10c below,
+  # which breaks the derivation rather than the environment.
+  { [ "$RC_BAD" -eq 0 ] && ! printf '%s' "$OUT_BAD" | grep -q FATAL; } \
+    && ok "and stays clean with a classifying \`ls\` on PATH" \
+    || no "the spec's block aborted merely because \`ls\` classifies" "$OUT_BAD"
+
+  # 10c. THE ASSERTION MUST HAVE TEETH. Swap the extracted derivation back to the
+  #      `ls` form and require the spec's own FATAL to fire. Without this, 10a/10b
+  #      are satisfied by an assertion that can never trigger.
+  sed -e 's|^\$(find "\$CLONE" -maxdepth 1 -mindepth 1 -type d)$|$(cd "$CLONE" \&\& ls -A)|' \
+      "$BLK.body" > "$BLK.mut.body"
+  if grep -q 'ls -A' "$BLK.mut.body"; then
+    { printf 'CLONE=%s\nTIER0_DENY=%s\n' "$(printf '%q' "$CLONE")" "$(printf '%q' "$REAL_DENY")"
+      cat "$BLK.mut.body"; } > "$BLK.mut"
+    OUT_MUT="$(PATH="$SHIM:$PATH" bash "$BLK.mut" 2>&1)"; RC_MUT=$?
+    if [ "$RC_MUT" -ne 0 ] && printf '%s' "$OUT_MUT" | grep -q "never excluded 'tests'"; then
+      ok "control: ls-derived + classifying \`ls\` → the spec's FATAL fires and names 'tests'"
+    else
+      no "control: the spec's effect assertion did NOT fire on a broken derivation" \
+         "rc=$RC_MUT — the assertion is inert, which is worse than absent: $OUT_MUT"
+    fi
+  else
+    no "control: could not mutate the extracted derivation" "the heredoc line moved; re-aim the sed"
+  fi
+fi
 
 echo
 echo "  $PASS passed, $FAIL failed"

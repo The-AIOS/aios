@@ -317,14 +317,55 @@ CLONE="/tmp/aios-update-check"
 TIER0_DENY="tests .github vault .git .gitattributes"
 
 # Every top-level directory canonical actually has, minus the denylist.
-# MUST be an ARRAY. A space-joined string here is the bug documented under the
-# `git diff` call below — it reaches git as ONE pathspec and matches nothing.
+#
+# ⚠️ NEVER DERIVE A NAME FROM `ls`. Git for Windows ships `ls` aliased to
+# `ls -F --color=auto --show-control-chars` in /etc/profile.d/aliases.sh, and
+# `-F` appends a type suffix — so `$d` arrived as `vault/`, never `vault`, and
+# EVERY denylist entry missed. Step 6.5 then compared the operator's own vault/
+# against canonical's empty seed files and reported their entire declared +
+# observed context as framework drift to pull, which its own apply instruction
+# says to treat like a Tier-1 file. Exit 0, nothing on stderr, and the lines
+# have the exact shape of real drift (#141, reported from Git Bash). `ls` is a
+# presentation tool: it honours the caller's aliases, colours and classify
+# flags. `find` reads no alias and classifies nothing.
+#
+# NOT `find -printf '%f\n'`. That is GNU-only — a stock macOS answers
+# `find: -printf: unknown primary or operator`, which would trade a Windows bug
+# for a macOS one. Full paths out, basename taken in the shell.
 LAYERS=()
-for d in $(cd "$CLONE" && ls -A); do
-  [ -d "$CLONE/$d" ] || continue
-  case " $TIER0_DENY " in *" $d "*) continue ;; esac
+EXCLUDED=""
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
+  d="${path##*/}"
+  case " $TIER0_DENY " in *" $d "*) EXCLUDED="$EXCLUDED $d"; continue ;; esac
   LAYERS+=("$d/")          # ARRAY, not a space-joined string — see the note below
+done <<EOF
+$(find "$CLONE" -maxdepth 1 -mindepth 1 -type d)
+EOF
+
+# ── EFFECT ASSERTION: assert the OUTCOME, never the code ─────────────────────
+# A denylist can be syntactically perfect and match nothing, which is precisely
+# what #141 was — so no linter can catch it: the `case` is valid and the bug is
+# a contract with the environment. What catches it is checking that the
+# exclusion HAPPENED. Canonical always ships tests/, .github/ and vault/, so a
+# run where one of them was never excluded has a broken derivation — and this
+# cannot go vacuous, because a clone missing those directories is not a clone
+# of canonical.
+for guard in tests .github vault; do
+  case " $EXCLUDED " in
+    *" $guard "*) : ;;
+    *) echo "FATAL: the Tier-0 denylist never excluded '$guard'." >&2
+       echo "  excluded:$EXCLUDED" >&2
+       echo "  Acting on this list would overwrite operator content with canonical seeds." >&2
+       echo "  The cause is almost always a name derived from \`ls\` — see #141." >&2
+       exit 1 ;;
+  esac
 done
+if [ "${#LAYERS[@]}" -lt 3 ]; then
+  echo "FATAL: only ${#LAYERS[@]} layer(s) derived from $CLONE — too few to be canonical." >&2
+  echo "  An empty layer list makes this sync a silent no-op that reports success." >&2
+  exit 1
+fi
 
 # Root docs stay ENUMERATED here on purpose — do not "finish the job" by deriving them
 # too. `.github/workflows/validate.yml` asserts every root *.md appears literally quoted
@@ -576,6 +617,14 @@ The tracker-diff (`stored..HEAD`, Step 2) is an optimization that assumes the st
 # with a COLON after the dir, so a `custom/` (slash) exclusion does NOT match
 # "…/custom: name". Anchoring the drop on "^Only in $HOME/aios" sidesteps the
 # whole slash-vs-colon problem — it filters by SIDE, not by token.
+#
+# ⚠️ AND IT TAKES TWO PATTERNS, not one. GNU diffutils quotes a path containing a
+# space — `Only in '/…/vault/00 - notes': name` — and every vault path contains
+# one by design (`00 - notes`, `01 - calendar`). BSD diff on macOS does not quote,
+# so a single unquoted pattern works on the authoring machine and drops nothing on
+# Git for Windows, which ships GNU diffutils. Two `grep -vF` passes cover both
+# forms; fixed-string, because `$VAULT` is an interpolated path and a `-E` pattern
+# would read any `.` in a username as a wildcard. Reported with #141.
 VAULT="$HOME/aios"; CLONE="/tmp/aios-update-check"
 
 # ── PRECONDITION, NOT OPTIONAL: a missing clone must never read as "clean" ──
@@ -617,7 +666,12 @@ fi
   # NOTE: .gitignore is DUAL-OWNED (merged in Step 2.7, not reconciled here) — else the operator's
   # below-marker lines would flag as perpetual "drift" every run. marketplace.json (dual-owned too)
   # is filtered out below. Both are handled by the merge rule, never a reconcile overwrite.
-  for p in $(cd "$CLONE" && ls *.md 2>/dev/null | grep -vE '^(HISTORY-PRE-.*|USER\.md|INTENT\.md)$') LICENSE NOTICE; do
+  # `find`, not `ls` — same reason as Step 2. A root *.md gets no classify suffix
+  # from `ls -F`, so this particular loop survived Windows; deriving names from a
+  # presentation tool is still the habit that produced #141, and one surviving
+  # instance is how the habit comes back.
+  for p in $(find "$CLONE" -maxdepth 1 -type f -name '*.md' -exec basename {} \; 2>/dev/null \
+             | grep -vE '^(HISTORY-PRE-.*|USER\.md|INTENT\.md)$') LICENSE NOTICE; do
     if [ ! -e "$VAULT/$p" ]; then echo "Only in $CLONE: $p"
     else diff -q "$VAULT/$p" "$CLONE/$p" 2>/dev/null; fi
   done
@@ -628,16 +682,39 @@ fi
   # vault does not is invisible to `git diff` (nothing DIFFERS — it is simply absent), so
   # the reconcile is the ONLY thing that can catch it, and only if it enumerates reality.
   # diff -rq surfaces both "Files … differ" and dir-side "Only in …" (missing) lines.
+  # ⚠️ `find`, never `ls` — and the same effect assertion Step 2 carries. This is
+  # the site where #141 did its damage: with `ls` aliased to `ls -F` on Git for
+  # Windows, `$p` was `vault/` and the denylist matched nothing, so this loop
+  # diffed the operator's own context against canonical's empty seeds. Reporting
+  # that as framework drift is worse than failing, because the apply instruction
+  # below says to overwrite.
   TIER0_DENY="tests .github vault .git .gitattributes"
-  for p in $(cd "$CLONE" && ls -A); do
-    [ -d "$CLONE/$p" ] || continue
-    case " $TIER0_DENY " in *" $p "*) continue ;; esac
+  EXCLUDED=""
+  RDIRS=0
+  while IFS= read -r path; do
+    [ -n "$path" ] || continue
+    p="${path##*/}"
+    case " $TIER0_DENY " in *" $p "*) EXCLUDED="$EXCLUDED $p"; continue ;; esac
+    RDIRS=$((RDIRS+1))
     diff -rq "$VAULT/$p" "$CLONE/$p" 2>/dev/null
+  done <<EOF
+$(find "$CLONE" -maxdepth 1 -mindepth 1 -type d)
+EOF
+  for guard in tests .github vault; do
+    case " $EXCLUDED " in
+      *" $guard "*) : ;;
+      *) echo "FATAL: the reconcile's Tier-0 denylist never excluded '$guard' —" >&2
+         echo "  its output describes operator content as framework drift. Do NOT apply it," >&2
+         echo "  and do NOT advance the tracker. See #141." >&2
+         exit 1 ;;
+    esac
   done
+  [ "$RDIRS" -ge 3 ] || { echo "FATAL: reconciled only $RDIRS layer dir(s) — an empty reconcile proves nothing." >&2; exit 1; }
   # vault/.obsidian is the one Tier-1 path under the otherwise Tier-2 vault/ tree.
   diff -rq "$VAULT/vault/.obsidian" "$CLONE/vault/.obsidian" 2>/dev/null
 } \
   | grep -vF "Only in $VAULT" \
+  | grep -vF "Only in '$VAULT" \
   | grep -vE "/custom(/|: )" \
   | grep -vE "(/|: )(\.venv|__pycache__|node_modules|auth|\.DS_Store)(/|$)" \
   | grep -vE "\.(log|pyc)$|oauth|egg-info|\.session$" \
