@@ -93,7 +93,7 @@ Pinning policy and the connect-time disclosure rule: [`mcps/_index.md`](./mcps/_
 
 ### Code that lives inside AIOS — readable in this repo right now
 
-Four of these are AIOS-built (`nano-banana`, `pdf-generator`, `spotify-dj`, `playwright`); the others are vendored whole from an open-source upstream, with the exact commit recorded in a `.upstream-sync` file beside them. Either way **the code is here**: read it, or ask your session to walk you through any part of it.
+Five of these are AIOS-built (`playwright`, `pdf-generator`, `spotify-dj`, `nano-banana`, and the Google Workspace helper); `notebooklm-mcp` is vendored whole from an open-source upstream, with the exact commit recorded in a `.upstream-sync` file beside it. Either way **the code is here**: read it, or ask your session to walk you through any part of it.
 
 | Server | Code in this repo | What it reaches · stores | Status |
 |---|---|---|---|
@@ -102,12 +102,13 @@ Four of these are AIOS-built (`nano-banana`, `pdf-generator`, `spotify-dj`, `pla
 | `pdf-generator-mcp` | 163 loc | Local only — runs headless Chrome over a temp file to render PDFs. No credentials, no network. | reviewed 2026-09-15 · `mcp` pinned |
 | `spotify-dj-mcp` | 141 loc | Spotify via `spotipy`, OAuth to `127.0.0.1:8888`, keys from env. | reviewed 2026-09-15 · `mcp`, `spotipy` pinned |
 | `nano-banana-mcp` | 82 loc | Google GenAI image generation; `GEMINI_API_KEY` from env; writes images into the vault. | reviewed 2026-09-15 · `mcp`, `google-genai` pinned |
-| `slack-mcp` | 3,254 loc · **vendored** `@jtalk22/slack-mcp` v3.2.5 | Posts and reads Slack **as you** — see the identity table above. Runs from the local copy, not from npm. | **vendored at a recorded version** |
 | `google-workspace-mcp` (helper) | 83 loc | Stdlib only. Reads a local debug log, writes an OAuth consent URL into `auth_link.html`. **The server itself is third-party** — see below. | reviewed 2026-09-15 |
 
 ### Code that lives outside AIOS — resolved when it launches
 
-These folders hold configuration and documentation; **the program itself is fetched from npm or PyPI at launch**, so this repo never contains it. A session discloses the resolved version and what the package declares before connecting one.
+These folders hold configuration and documentation; **the program that actually runs is fetched from npm or PyPI at launch.** A session discloses the resolved version and what the package declares before connecting one.
+
+⚠️ **A vendored copy is not a running copy, and `slack-mcp` is the case to understand.** Its full 3,254 lines *are* in this repo, with the upstream commit recorded — and its registration is `npx -y @jtalk22/slack-mcp`, so what executes is whatever npm publishes at launch. **Reading the copy in this repo tells you nothing about what ran**, and it is the surface that posts to Slack *as you*. You can register it against the local entry point (`mcps/slack-mcp/src/server.js`) instead of `npx` — that ships no lockfile, so an `npm install` there resolves two caret-ranged dependencies. It narrows the unpinned surface from the whole server to those two; it does not remove it.
 
 | Server | Source | Status |
 |---|---|---|
@@ -116,8 +117,11 @@ These folders hold configuration and documentation; **the program itself is fetc
 | Google Workspace server | `uvx workspace-mcp` at runtime | **unpinned** — resolved from the registry at launch, so a session discloses the version and what it declares before connecting it |
 | `obsidian-mcp` | `npx @mauricio.wolff/mcp-obsidian@latest` | **unpinned** — resolved from the registry at launch, so a session discloses the version and what it declares before connecting it |
 | `stitch-mcp` | `npx @_davideast/stitch-mcp` | **unpinned** — resolved from the registry at launch, so a session discloses the version and what it declares before connecting it |
+| `slack-mcp` | `npx -y @jtalk22/slack-mcp` at runtime — **a vendored copy sits in this repo and is not what runs** (upstream commit recorded) | **unpinned** — and this is the one that acts as you in Slack |
 
-**Why four rows still say `unpinned`.** Their versions could not be resolved when this was written, and **a guessed pin is worse than a recorded gap** — it reads as a verified version and is not one. They are tracked in the lint's `KNOWN_UNPINNED` ratchet: an entry leaves by being pinned, never by being deleted, and any *new* unpinned invocation fails the build.
+**Why all six rows say `unpinned`.** Their versions could not be resolved when this was written, and **a guessed pin is worse than a recorded gap** — it reads as a verified version and is not one. All six are tracked in the lint's `KNOWN_UNPINNED` ratchet: an entry leaves by being pinned, never by being deleted, and any *new* unpinned invocation fails the build.
+
+Two of the six were invisible to that lint until this was written. `mcps/setup.sh` probes reachability with `npx -y <pkg> --help` and `uvx <pkg> --help`, and the lint skipped any line containing `--help` as documentation — but a `--help` probe downloads and executes whatever the registry publishes, exactly like a real launch. **An escape hatch wide enough to hide a real invocation is not a false-positive fix; it is a blind spot.**
 
 **What `reviewed` claims, precisely:** someone read those lines on that date and this table describes what they do. It does **not** claim a later version behaves the same — that is what pinning is for, and pinning gives **reproducibility**: the code you ran yesterday is the code that runs tomorrow.
 

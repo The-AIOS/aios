@@ -66,18 +66,31 @@ STDLIB = {
 # unpinned invocation fails the build. Entries leave this list by being pinned, never by
 # being deleted.
 #
-# Why these four are still here: the versions could not be resolved when the rule was
-# written (no registry access in that session), and a guessed pin is worse than a recorded
-# gap — it reads as a verified version and is not one.
+# Why these are still here: the versions could not be resolved when the rule was written
+# (no registry access in that session), and a guessed pin is worse than a recorded gap — it
+# reads as a verified version and is not one.
+#
+# The last two joined when the `--help` escape came out of PROSE below. They were always
+# there; the lint simply could not see them.
 KNOWN_UNPINNED = {
     "@mauricio.wolff/mcp-obsidian",
     "@jtalk22/slack-mcp",
     "@_davideast/stitch-mcp",
     "workspace-mcp",
+    "mcp-atlassian",
+    "@modelcontextprotocol/server-github",
 }
 
 # Prose mentions the word without invoking anything — "npx-based MCPs need it".
-PROSE = re.compile(r"npx-based|neither uvx|nor uvx|pkg_hint|--help|uvx resolves|via uvx|uvx,|npx at runtime")
+#
+# `--help` USED TO BE ON THIS LIST, and it was the wrong call: `npx -y pkg --help` and
+# `uvx pkg --help` are not documentation, they are a fetch-and-execute of whatever the
+# registry publishes right now, used as a reachability probe. Two invocations hid behind it
+# in `mcps/setup.sh` — `mcp-atlassian` and `@modelcontextprotocol/server-github` — so the
+# lint reported clean while SECURITY.md described five unpinned rows, and the ratchet held
+# three of them. An escape hatch wide enough to hide a real invocation is not a false-positive
+# fix, it is a blind spot. Removing it surfaced exactly those two and nothing else.
+PROSE = re.compile(r"npx-based|neither uvx|nor uvx|pkg_hint|uvx resolves|via uvx|uvx,|npx at runtime")
 
 
 def scan_invocations() -> None:
@@ -107,9 +120,15 @@ def scan_invocations() -> None:
                 if not pinned.search(line):
                     bare = pkg.split("@latest")[0].rstrip("@")
                     if bare in KNOWN_UNPINNED:
+                        # Advisory, and it says so. The correspondence between this
+                        # allowlist and SECURITY.md's table is NOT checked — writing
+                        # "must appear as an unpinned row" here would be this file's own
+                        # lesson #3 turned on itself: a citation is not a policy. Where
+                        # the gap is recorded is SECURITY.md § Third-party code; whether
+                        # it is recorded there is a reader's job today.
                         NOTE.append(
-                            f"{rel}:{n} — {bare} is known-unpinned (allowlisted; must appear "
-                            f"as an `unpinned` row in SECURITY.md). Pin it to retire the entry."
+                            f"{rel}:{n} — {bare} is known-unpinned (allowlisted). Record the "
+                            f"gap in SECURITY.md § Third-party code; pin it to retire the entry."
                         )
                         continue
                     FAIL.append(

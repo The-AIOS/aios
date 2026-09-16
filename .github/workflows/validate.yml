@@ -2112,6 +2112,7 @@ jobs:
       - primitives
       - primitives_bash32
       - primitives_windows
+      - connector_windows
       - windows_installer
     runs-on: ubuntu-latest
     permissions:
