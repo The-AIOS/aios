@@ -87,26 +87,31 @@ that would be executed, then wait for my go-ahead.
 
 ## Third-party code: what is reviewed, and what is not
 
-**AIOS ships with bundled MCPs, and many of them are written by other people.** The table separates ours from theirs and says which version is in play, because *which version* is the question you can actually act on. `unpinned` rows appear where true — a table listing only the reassuring rows converts an unknown into a false assurance.
+**AIOS ships with bundled MCPs, some written by other people.** The split below is not who wrote them — it is **where the code lives**: fully inside this repo, where you can read it now, or resolved from a registry when it launches, where you cannot. That distinction cuts across authorship, and it is the one you can act on. `unpinned` rows appear where true — a table listing only the reassuring rows converts an unknown into a false assurance.
 
 Pinning policy and the connect-time disclosure rule: [`mcps/_index.md`](./mcps/_index.md). Enforced by `tests/lint-mcp-pinning.py`.
 
-### AIOS-built — our code, read for this document (2026-09-15)
+### Code that lives inside AIOS — readable in this repo right now
 
-| Server | Ours | What it reaches · stores | Status |
+Four of these are AIOS-built (`nano-banana`, `pdf-generator`, `spotify-dj`, `playwright`); the others are vendored whole from an open-source upstream, with the exact commit recorded in a `.upstream-sync` file beside them. Either way **the code is here**: read it, or ask your session to walk you through any part of it.
+
+| Server | Code in this repo | What it reaches · stores | Status |
 |---|---|---|---|
 | `playwright-mcp` | 136 loc | **Decrypts the Chrome cookie store via Keychain**; writes live cookies to `auth/*.json` (gitignored). No network of its own. | **reviewed 2026-09-15** · `browser-cookie3==0.20.1` pinned (was undeclared) |
-| `notebooklm-mcp` | 94 loc | Drives a real browser against `notebooklm.google.com` using your Google session; saves `~/.notebooklm/storage_state.json`. | reviewed 2026-09-15 · `playwright==1.58.0` |
+| `notebooklm-mcp` | 94 loc · **vendored** from `teng-lin/notebooklm-py` | Drives a real browser against `notebooklm.google.com` using your Google session; saves `~/.notebooklm/storage_state.json`. | reviewed 2026-09-15 · `playwright==1.58.0` |
 | `pdf-generator-mcp` | 163 loc | Local only — runs headless Chrome over a temp file to render PDFs. No credentials, no network. | reviewed 2026-09-15 · `mcp` pinned |
 | `spotify-dj-mcp` | 141 loc | Spotify via `spotipy`, OAuth to `127.0.0.1:8888`, keys from env. | reviewed 2026-09-15 · `mcp`, `spotipy` pinned |
 | `nano-banana-mcp` | 82 loc | Google GenAI image generation; `GEMINI_API_KEY` from env; writes images into the vault. | reviewed 2026-09-15 · `mcp`, `google-genai` pinned |
+| `slack-mcp` | 3,254 loc · **vendored** `@jtalk22/slack-mcp` v3.2.5 | Posts and reads Slack **as you** — see the identity table above. Runs from the local copy, not from npm. | **vendored at a recorded version** |
 | `google-workspace-mcp` (helper) | 83 loc | Stdlib only. Reads a local debug log, writes an OAuth consent URL into `auth_link.html`. **The server itself is third-party** — see below. | reviewed 2026-09-15 |
 
-### Third-party — code AIOS does not write, and you can audit any time
+### Code that lives outside AIOS — resolved when it launches
+
+These folders hold configuration and documentation; **the program itself is fetched from npm or PyPI at launch**, so this repo never contains it. A session discloses the resolved version and what the package declares before connecting one.
 
 | Server | Source | Status |
 |---|---|---|
-| `slack-mcp` | `@jtalk22/slack-mcp` **v3.2.5** — vendored, runs from the local copy | **vendored at a recorded version.** The code is in this repo: read it, or ask your session to walk you through any part of it. |
+| `github-mcp` | `npx @modelcontextprotocol/server-github` at runtime (Anthropic's own server, upstream commit recorded) | **unpinned** — resolved at launch; a session discloses the version and what it declares before connecting |
 | `atlassian-mcp` | `uvx mcp-atlassian` at runtime | **unpinned** — resolved at launch; a session discloses the version and what it declares before connecting |
 | Google Workspace server | `uvx workspace-mcp` at runtime | **unpinned** — resolved from the registry at launch, so a session discloses the version and what it declares before connecting it |
 | `obsidian-mcp` | `npx @mauricio.wolff/mcp-obsidian@latest` | **unpinned** — resolved from the registry at launch, so a session discloses the version and what it declares before connecting it |
