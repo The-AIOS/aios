@@ -456,6 +456,87 @@ printf '%s' "$OUTPUT" | grep -qi 'cannot be read back' \
   && ok "verify states what it CANNOT check rather than implying full coverage" \
   || no "verify implies it checked the consent screen, which no API exposes"
 
+echo "── 10b. CRLF from python3 must not break the case match (#142) ──"
+# On Windows, python3's stdout is TEXT mode: every \n it writes becomes \r\n. So
+# permission_groups() hands derive_apis() `drive<CR>`, api_for()'s `case`
+# compares that against a bare `drive)`, and nothing matches. The failure is
+# maximally misleading rather than merely broken: EVERY group falls into
+# `unmapped`, and the error then names rows api_for() plainly has — because a CR
+# is invisible in terminal output, it only returns the cursor. An operator reads
+# a correct mapping being reported as missing. Reported from Git Bash (#142).
+#
+# There is no Windows in CI, so the condition is INJECTED: a python3 shim that
+# runs the real interpreter and re-terminates each output line with CRLF, which
+# is exactly what text-mode translation does. It forwards the exit status,
+# because permission_groups()'s whole error path rides on that status — a shim
+# that swallowed it would make the control below pass for the wrong reason.
+CRLF="$TMP/crlfbin"; mkdir -p "$CRLF"
+REAL_PY3="$(type -P python3)"
+cat > "$CRLF/python3" <<STUB
+#!/usr/bin/env bash
+# awk, not sed: BSD sed does not interpret \\r in a replacement, so the same line
+# would inject a literal 'r' on macOS and a real CR on Linux — a harness testing
+# two different things depending on the runner.
+"$REAL_PY3" "\$@" | awk '{ printf "%s\\r\\n", \$0 }'
+exit \${PIPESTATUS[0]}
+STUB
+chmod +x "$CRLF/python3"
+
+# HARNESS ASSERTIONS. Both of them exist because a broken injector reports the
+# hoped-for answer just as convincingly as a fixed script.
+if PATH="$CRLF:$PATH" python3 -c 'print("drive")' 2>/dev/null | grep -q $'\r'; then
+  ok "harness: the shim really emits CRLF"
+else
+  no "harness: the shim emits no CR" "this entire section would prove nothing"
+fi
+PATH="$CRLF:$PATH" python3 -c 'import sys; sys.exit("boom")' >/dev/null 2>&1
+[ $? -ne 0 ] \
+  && ok "harness: the shim forwards a non-zero exit status" \
+  || no "harness: the shim swallows python's exit status" "permission_groups() error path would be untested"
+
+OUT_CRLF="$(PATH="$CRLF:$PATH" bash "$SCRIPT" --print-apis 2>&1)"; RC=$?
+if [ "$RC" -ne 0 ]; then
+  no "--print-apis failed under a CRLF python3" "$OUT_CRLF"
+elif [ "$OUT_CRLF" = "$APIS" ]; then
+  ok "CRLF python3 → byte-identical to the $NAPIS APIs clean python3 derives"
+else
+  no "CRLF python3 derived a different list" "$OUT_CRLF"
+fi
+case "$OUT_CRLF" in
+  *$'\r'*) no "a CR survived into the derived API list" "gcloud would be handed \`drive.googleapis.com<CR>\`" ;;
+  *)       ok "no CR reaches the derived list" ;;
+esac
+
+# CONTROL — remove the strip and the same run must BREAK. Without this the two
+# assertions above are satisfied by a script that never needed the fix, which is
+# the vacuous-check shape: passing while the guarded thing is absent.
+MUT="$TMP/nocrlf"; mkdir -p "$MUT"
+cp "$MANIFEST" "$MUT/connector.json"
+STRIP_LINE="g=\"\${g%\$'\r'}\""
+grep -vF -- "$STRIP_LINE" "$SCRIPT" > "$MUT/connect.sh"
+if grep -qF -- "$STRIP_LINE" "$MUT/connect.sh"; then
+  no "mutation control did not take — the strip is still in the copy" "the control proves nothing"
+elif [ "$(grep -c . "$MUT/connect.sh")" = "$(grep -c . "$SCRIPT")" ]; then
+  no "mutation control removed no line" "STRIP_LINE no longer matches the script; re-aim it"
+else
+  ok "mutation control: the strip is gone from the copy"
+  # First prove the copy is otherwise healthy — otherwise "it failed" could mean
+  # the mutation broke parsing, and the section would credit CRLF for a syntax error.
+  OUT_CLEAN="$(bash "$MUT/connect.sh" --print-apis 2>&1)"
+  [ "$OUT_CLEAN" = "$APIS" ] \
+    && ok "control: the stripped copy is still correct under a CLEAN python3" \
+    || no "control: the stripped copy is broken regardless of CRLF" "$OUT_CLEAN"
+  OUT_MUT="$(PATH="$CRLF:$PATH" bash "$MUT/connect.sh" --print-apis 2>&1)"; RCM=$?
+  if [ "$RCM" -ne 0 ]; then
+    ok "control: without the strip, CRLF python3 breaks the derivation"
+    printf '%s' "$OUT_MUT" | grep -q 'no Google API is mapped' \
+      && ok "control: and it fails exactly as #142 describes — mapped groups called unmapped" \
+      || no "control: it failed, but not through the unmapped path" "$OUT_MUT"
+  else
+    no "control: the derivation survived CRLF WITHOUT the strip" "then 10b is vacuous: $OUT_MUT"
+  fi
+fi
+
 echo "── 11. portable to the bash 3.2 that ships on macOS ──"
 B32=""
 grep -qE '^\s*declare -A|^\s*local -A' "$SCRIPT" && B32="$B32 associative-array"

@@ -1,0 +1,12 @@
+# Pinned per the MCP pinning policy (mcps/_index.md). Bump deliberately; vet before bumping.
+#
+# browser-cookie3 is the most privilege-sensitive dependency in this repo: cookie_import.py
+# uses it to DECRYPT the operator's Chrome cookie store via Keychain and write live session
+# cookies to auth/<site>.json. It was previously undeclared — imported inside a try/except
+# whose error message told the operator to `pip install browser-cookie3`, which resolves
+# whatever is current. An unpinned decryptor of a live credential store is the one dependency
+# that must never float.
+#
+# Pinned to the versions verified running on a live install, 2026-09-15.
+browser-cookie3==0.20.1
+playwright==1.58.0

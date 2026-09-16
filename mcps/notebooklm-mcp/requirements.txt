@@ -1,0 +1,6 @@
+# Pinned per the MCP pinning policy (mcps/_index.md). Bump deliberately; vet before bumping.
+#
+# playwright drives a real browser against notebooklm.google.com using the operator's own
+# Google session, so a version change alters what executes against a logged-in account.
+# Pinned to the version verified running on a live install, 2026-09-15.
+playwright==1.58.0

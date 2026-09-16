@@ -142,6 +142,15 @@ derive_apis(){
   local groups g a apis="" unmapped=""
   groups="$(permission_groups)" || return 1
   while IFS= read -r g; do
+    # Windows python3 writes CRLF, so `g` arrives as `drive<CR>` and api_for()'s
+    # `case` compares it against a bare `drive)` — which never matches. The
+    # failure is maximally misleading: EVERY group lands in `unmapped`, and the
+    # error then names rows api_for() plainly has, because a CR is invisible in
+    # terminal output (it only returns the cursor). Reported from Git Bash (#142).
+    # Stripped BEFORE the emptiness test on purpose: a line holding only a CR is
+    # non-empty, and would otherwise be reported as an unmapped group named "".
+    # Inert on macOS/Linux, where there is no CR to strip.
+    g="${g%$'\r'}"
     [ -n "$g" ] || continue
     if a="$(api_for "$g")"; then
       has_line "$a" "$apis" || apis="${apis:+$apis

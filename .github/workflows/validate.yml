@@ -1514,6 +1514,14 @@ jobs:
         # whose purpose was removing that enumeration.
         run: python3 tests/lint-no-hardcoded-context-names.py
 
+      - name: third-party code that runs on an operator's machine is pinned
+        # npx @latest / bare uvx resolve whatever the registry publishes at invocation time,
+        # so the code audited yesterday is not the code run tomorrow. Pinning needs no
+        # judgment to work, which is why it is the control worth having. Known gaps sit in
+        # the lint's KNOWN_UNPINNED ratchet and as `unpinned` rows in SECURITY.md; any NEW
+        # unpinned invocation fails here.
+        run: python3 tests/lint-mcp-pinning.py
+
       - name: the Google connector's API set derives from one manifest
         # The set of Google APIs an operator must enable existed in SIX places before
         # AI-126 -- connector.json's --permissions, SETUP.md's prose, the setup doc's
@@ -1787,6 +1795,73 @@ jobs:
         shell: bash
         run: bash tests/aios-commit.test.sh
 
+  connector_windows:
+    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true
+    # The Google connector's API derivation, on the platform whose fault it was. On Windows
+    # python3's stdout is TEXT mode, so `connect.sh`'s permission_groups() emits CRLF, and
+    # api_for()'s `case` compared `drive<CR>` against a bare `drive)` and matched nothing —
+    # every mappable group reported as unmapped, in an error naming rows the script plainly
+    # has, because a CR is invisible in terminal output (#142, reported from Git Bash).
+    #
+    # `tests/google-connect.test.sh` simulates that with a CRLF shim and proves the shim
+    # really fires. This lane needs no simulation: the platform supplies the condition.
+    # It runs ONLY the derivation, not that whole suite — the rest of it asserts POSIX file
+    # modes (`-rw-------` after chmod 600) and stages a bin dir of symlinks, neither of
+    # which means anything on NTFS, so the suite would go red for reasons unrelated to
+    # anything an operator would hit.
+    name: Google connector derivation (Windows / Git Bash)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Confirm the lane really is Git Bash (else it proves nothing)
+        shell: bash
+        run: |
+          set -e
+          echo "uname -s → $(uname -s)"
+          case "$(uname -s)" in
+            MINGW*|MSYS*) : ;;
+            *) echo "::error::Expected MINGW/MSYS (Git Bash) on windows-latest — got '$(uname -s)'. This lane would be vacuous."; exit 1 ;;
+          esac
+
+      - name: Confirm python3 writes CRLF here (the fault this lane exists for)
+        # Without this, a runner whose python3 happened to emit LF would make the step below
+        # pass while never once exercising the condition it names — green, and vacuous. The
+        # measurement is also the interesting one: it is what makes the fix necessary.
+        shell: bash
+        run: |
+          set -e
+          command -v python3 >/dev/null || { echo "::error::no python3 on PATH — this lane cannot run"; exit 1; }
+          if python3 -c "print('drive')" | grep -qU $'\r'; then
+            echo "  confirmed: python3 stdout is text mode here (CRLF)"
+          else
+            echo "::warning::python3 emitted LF on this runner — the CRLF condition is absent, so the step below is a smoke test only. The simulated coverage in tests/google-connect.test.sh is what holds."
+          fi
+
+      - name: The derivation survives it
+        shell: bash
+        run: |
+          set -e
+          APIS="$(bash mcps/google-workspace-mcp/connect.sh --print-apis)"
+          printf '%s\n' "$APIS" | sed 's/^/  /'
+          N="$(printf '%s\n' "$APIS" | grep -c . || true)"
+          [ "$N" -ge 5 ] || { echo "::error::only $N APIs derived under Git Bash — see #142"; exit 1; }
+          if printf '%s' "$APIS" | grep -qU $'\r'; then
+            echo "::error::a CR reached the derived API list — gcloud would be handed 'drive.googleapis.com<CR>'"; exit 1
+          fi
+          BAD="$(printf '%s\n' "$APIS" | grep -vE '^[a-z0-9-]+\.googleapis\.com$' | grep . || true)"
+          [ -z "$BAD" ] || { echo "::error::not API service names: $BAD"; exit 1; }
+          echo "OK: $N APIs derived under Git Bash, every one a clean service name"
+
   windows_installer:
     # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
@@ -2037,6 +2112,7 @@ jobs:
       - primitives
       - primitives_bash32
       - primitives_windows
+      - connector_windows
       - windows_installer
     runs-on: ubuntu-latest
     permissions:
