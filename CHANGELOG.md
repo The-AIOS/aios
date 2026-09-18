@@ -71,7 +71,7 @@
 
 ## 2026-09-17 — Sessions on another account stay out of the seat's rotation
 
-`hash: `
+`hash: ` · [#148](https://github.com/The-AIOS/aios/pull/148)
 
 > **What you can now do.** Run a session on a second Anthropic account through `CLAUDE_CODE_OAUTH_TOKEN`, next to your usual ones, without it confusing quota rotation. Name the account in `AIOS_ACCOUNT_EMAIL` next to the token and that session's usage is tracked under its own account, the statusline shows which account it is really consuming, and the account logged in to your machine rotates only on its own numbers.
 
