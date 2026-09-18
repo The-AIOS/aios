@@ -108,7 +108,7 @@ Confirm what was written: *"Added {N} accounts to USER.md → ## Anthropic accou
 
 ### 2. Capture each account's identity (semi-manual — Keychain requires graphical context)
 
-**State to detect:** for each email in USER.md, check whether `~/.claude/identities/{email}/` exists. Run `ls ~/.claude/identities/ 2>/dev/null` and compare.
+**State to detect:** for each email in USER.md, check whether `~/.claude/identities/{email}/keychain.json`, `oauthAccount.json` and `userID.txt` all exist — `claude-identity.sh list` marks an account `✓ saved` only then. **The directory alone is not evidence:** the watcher creates it for every account it has merely observed, so an account that has it but lacks those files still needs capturing.
 
 **For each account already captured:** report *"✓ {email} already captured — skipping."*
 
@@ -317,11 +317,46 @@ echo '2026-09-09T18:00:00-06:00' > ~/.claude/quota-watch.paused
 
 While it holds a future timestamp the watcher logs `PAUSED by operator until …` and returns immediately — **no rotation and no adoption check.** Resume early by deleting the file.
 
-**It cannot be forgotten into permanence, and that is the point.** An expired *or malformed* marker is ignored **and removed**, with the reason logged — so a typo, a stale pause from last week, or an empty file all fail toward the autopilot running rather than toward it silently staying off. A capability that can quietly disable your quota protection forever is worse than not having it.
+**It cannot be forgotten into permanence, and that is the point.** An expired *or malformed* marker is **ignored** — so a typo, a stale pause from last week, or an empty file all fail toward the autopilot running rather than toward it silently staying off. A capability that can quietly disable your quota protection forever is worse than not having it. The watcher never deletes the file: it is yours, and a read-then-delete could remove a new pause you wrote in between. An *empty* marker a few seconds old is a pause still being written (`date +%s > file` truncates first), so that tick is skipped.
 
 **Why a file rather than an environment variable:** the hot path runs from the statusLine pipe, whose environment the operator does not control. A file under the config dir is the one channel both the launchd agent and the statusLine kick can read.
 
 **Cross-machine coordination is not solved here.** If two machines share an account pool, both can end up on the same account and compete for its caps. Future work: a shared state file over git / iCloud that both watchers read to coordinate. Until then, the manual escape hatch is the only lever.
+
+### Sessions launched with a token
+
+A session started with `CLAUDE_CODE_OAUTH_TOKEN` runs on **that token's account**, not on the one logged in to this machine (the *seat* — what `~/.claude.json` names and what rotation swaps). Its usage numbers therefore describe a different account, and treating them as the seat's would either rotate the seat for a cap it does not have or hide the one it does.
+
+So a token session is kept out of the seat's machinery entirely:
+
+- **It never writes `rate-limit-cache.json` and never triggers the watcher.** That file is the seat's telemetry and every session on the machine overwrites it.
+- **Its numbers go to its own account's `identities/{email}/last-limits.json`** — which is exactly what the watcher reads when it judges that account as a rotation target. For that it needs to know the account: **export `AIOS_ACCOUNT_EMAIL` next to the token** when you launch the session. Without it the numbers are dropped, never guessed onto the seat.
+- **The statusline chip shows the token's account** (or `👤 token?` when `AIOS_ACCOUNT_EMAIL` is missing), and the seat-swap banner is not shown there, since that session did not change account.
+
+```bash
+CLAUDE_CODE_OAUTH_TOKEN="$(cat ~/.config/secrets/other-account.token)" \
+AIOS_ACCOUNT_EMAIL=other@example.com \
+  claude
+```
+
+Usage reaches AIOS only through the statusline, so this covers sessions that render one. A run that renders no statusline reports nothing, for the token's account or the seat's.
+
+`AIOS_ACCOUNT_EMAIL` without a token is ignored: the session is on the seat, and it is the seat that must rotate.
+
+The watcher also only ever rotates to an account it can **restore** (all three captured files present), so an account seen only through a token session is never picked as a target until you capture it.
+
+### One switch at a time, and only on current numbers
+
+Several things can ask for a swap at once: every open session's statusLine kicks the watcher, the fallback agent runs on its own schedule, and you can run `claude-switch` by hand. Without coordination, two overlapping switches both read the outgoing account, and the later one saves the credential the earlier one just installed **under the outgoing account's name**. That account's own credential is then gone from disk, and nothing reports it.
+
+- **`switch` and `--capture` hold an exclusive lock** for the whole capture-and-swap. A second one exits **75** at once and changes nothing. It is an OS file lock (`flock`), released when the last process holding it exits — the switch itself or a helper it started — so a crash never leaves a stale lock. On macOS it is `~/.claude/.switch-<keychain item>.lock` (one Keychain item per user, whatever `CLAUDE_CONFIG_DIR` says); on the file backend, `$CLAUDE_CONFIG_DIR/.switch.lock`. On a Python without `fcntl` (native Windows) the switch warns and runs unlocked, as it did before.
+- **Every completed swap bumps a seat generation** (`.switch-*.gen` / `.switch.gen`, beside the lock). The watcher passes the generation its decision was made on; if the seat changed since — even back to the same account — the switch is refused with 75. A 75 or an `already on` is not a swap: no swap-log row, no notification, no cooldown.
+- **A swap validates everything before touching the seat**, and restores the previous credential if the account metadata cannot be written. If it dies between the two writes, a pending marker (`.switch-*.pending`) makes the next switch finish the job **without capturing the half-written seat** as the outgoing account, and `--capture` refuses until then.
+- **The watcher only acts on a sample of the current seat.** A sample written under another generation, naming another account, older than the last logged swap, or taken when `.claude.json` was unreadable is skipped with a logged reason. Inside the cooldown nothing is recorded.
+- **Manual `claude-switch` runs are logged to `swap-log.jsonl`** (`"reason": "manual"`), so the cooldown sees them too.
+- **The cache, per-account limits, the rotation alert and the swap banner marker are written whole or not at all**, each writer through its own temp file (`_fs.py`).
+
+**What this cannot establish.** The statusLine payload does not say which account served the request its numbers came from. The generation catches every swap that lands while a sample is being written; it cannot tell whether a session is still showing numbers from its last reply *before* a swap. The cooldown is what covers that window — nothing is recorded or acted on inside it.
 
 ## Files written
 
@@ -330,10 +365,12 @@ While it holds a future timestamp the watcher logs `PAUSED by operator until …
 | `~/.claude/identities/{email}/keychain.json` | Full `Claude Code-credentials` blob | 600 |
 | `~/.claude/identities/{email}/oauthAccount.json` | Account metadata | 600 |
 | `~/.claude/identities/{email}/userID.txt` | 64-char user ID | 600 |
+| `~/.claude/identities/{email}/last-limits.json` | Last observed limits for that account — from the watcher, or from a token session | 600 |
 | `~/.claude/rate-limit-cache.json` | Latest quota snapshot from Stop hook | 600 |
 | `~/.claude/quota-watch.log` | Watcher's per-tick decision log | 644 |
-| `~/.claude/swap-log.jsonl` | Append-only log of every auto-swap | 644 |
-| `~/.claude/quota-watch.paused` | **Operator-written** — future expiry that suspends rotation; auto-removed once past | 644 |
+| `~/.claude/swap-log.jsonl` | Append-only log of every swap, automatic or manual | 644 |
+| `.switch-*.{lock,gen,pending}` (in `~/.claude/` on macOS, `$CLAUDE_CONFIG_DIR/.switch.*` elsewhere) | Switch lock, seat generation, interrupted-swap marker | 644 |
+| `~/.claude/quota-watch.paused` | **Operator-written** — future expiry that suspends rotation; ignored once past, never deleted by the watcher | 644 |
 | `~/.claude.json.bak-claude-switch` | Rollback snapshot of last swap | 644 |
 
 None of these should ever be committed — `~/.claude/` is outside the vault by design.

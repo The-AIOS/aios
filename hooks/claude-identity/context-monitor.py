@@ -573,9 +573,18 @@ def get_account_display():
     Cheap — reads ~/.claude.json once per statusline refresh; USER.md once
     per process."""
     try:
-        with open(os.path.expanduser("~/.claude.json")) as f:
-            d = json.load(f)
-        email = d.get("oauthAccount", {}).get("emailAddress", "")
+        # A token-launched session (CLAUDE_CODE_OAUTH_TOKEN) is not on the seat
+        # .claude.json names. Whoever launches it names the account in
+        # AIOS_ACCOUNT_EMAIL; without that, say "token" rather than show the
+        # seat -- the one answer that is certainly wrong for this session.
+        if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+            email = os.environ.get("AIOS_ACCOUNT_EMAIL", "").strip()
+            if not email:
+                return " \033[90m|\033[0m \033[33m👤 token?\033[0m"
+        else:
+            with open(os.path.expanduser("~/.claude.json")) as f:
+                d = json.load(f)
+            email = d.get("oauthAccount", {}).get("emailAddress", "")
         if not email:
             return ""
         label = _account_label(email)
@@ -598,6 +607,10 @@ def get_swap_banner():
     its next API turn (Keychain re-read), so there's nothing for the operator
     to do. The marker is written by _watch.py after a successful swap; this
     renderer reads it on every statusLine refresh."""
+    # The banner announces a SEAT swap. A token session did not change
+    # account, so showing it there would report something that did not happen.
+    if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        return ""
     try:
         p = os.path.expanduser("~/.claude/swap-notification.json")
         if not os.path.exists(p):
