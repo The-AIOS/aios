@@ -372,18 +372,24 @@ if not open(os.path.join(d, "userID.txt")).read().strip():
     sys.exit(1)
 PYEOF
 
-  local prev_blob
-  prev_blob=$(cred_read) || prev_blob=""
+  # Finishing an interrupted swap? Then the live credential is not the
+  # outgoing account's, so it is no rollback target, and the pending marker
+  # must survive any failure here -- it is the only thing still saying the
+  # seat is a mix.
+  local recovering=""
+  [ -e "$SEAT_STATE.pending" ] && recovering=1
+  local prev_blob=""
+  [ -n "$recovering" ] || prev_blob=$(cred_read) || prev_blob=""
   cp "$CLAUDE_JSON" "$CLAUDE_JSON.bak-claude-switch"
 
   # From here until the metadata is published the seat is inconsistent. If this
   # process dies in between (SIGKILL, power), the marker is what tells the next
   # switch not to capture the outgoing "account": it is a mix of two.
-  printf '%s %s\n' "$(current_email)" "$email" > "$SEAT_STATE.pending"
+  [ -n "$recovering" ] || printf '%s %s\n' "$(current_email)" "$email" > "$SEAT_STATE.pending"
 
   local blob
   blob=$(cat "$dir/keychain.json")
-  cred_write "$blob" || { rm -f "$SEAT_STATE.pending"; die "credential write failed ($CRED_BACKEND: $(cred_source))"; }
+  cred_write "$blob" || { [ -n "$recovering" ] || rm -f "$SEAT_STATE.pending"; die "credential write failed ($CRED_BACKEND: $(cred_source))"; }
   [ -z "${AIOS_TEST_CRASH_AFTER_CRED:-}" ] || kill -9 $$   # test hook: die between the two writes
 
   # Own temp (mkstemp) + os.replace, keeping the file's mode: a fixed temp name
@@ -402,6 +408,8 @@ fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(cj)), prefix=".cl
 try:
     with os.fdopen(fd, "w") as f:
         json.dump(data, f, indent=2)
+    if os.environ.get("AIOS_TEST_FAIL_BEFORE_PUBLISH"):   # test hook: fail before the write lands
+        raise SystemExit(1)
     os.chmod(tmp, mode)
     os.replace(tmp, cj)
     if os.environ.get("AIOS_TEST_FAIL_AFTER_PUBLISH"):   # test hook: fail after the write landed
@@ -419,6 +427,8 @@ PYEOF
     # published metadata would create the very mix this code exists to prevent.
     if [ "$(current_email | tr '[:upper:]' '[:lower:]')" = "$(printf '%s' "$email" | tr '[:upper:]' '[:lower:]')" ]; then
       echo "${YELLOW}note: metadata update reported an error but was published; keeping the swap${RESET}" >&2
+    elif [ -n "$recovering" ]; then
+      die "could not update $CLAUDE_JSON while finishing an interrupted switch — the seat is still inconsistent and still marked pending. Run 'claude-switch $email' again, or /login."
     elif [ -n "$prev_blob" ] && cred_write "$prev_blob"; then
       rm -f "$SEAT_STATE.pending"
       die "could not update $CLAUDE_JSON — credential rolled back; still on the previous account"
@@ -624,7 +634,10 @@ USAGE
     fi
   fi
 
-  [ "$target" != "$cur" ] || { echo "${YELLOW}already on $target${RESET}"; return 0; }
+  # "Already on" is only true of a consistent seat. With a swap pending, the
+  # metadata may name $cur while the credential is another account's: install
+  # the target anyway, which is what makes the two agree again.
+  [ "$target" != "$cur" ] || [ -e "$SEAT_STATE.pending" ] || { echo "${YELLOW}already on $target${RESET}"; return 0; }
 
   if [ -e "$SEAT_STATE.pending" ]; then
     # The last swap died between its two writes: what reads as "$cur" is a mix
