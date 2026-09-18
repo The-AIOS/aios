@@ -101,12 +101,12 @@ stub_tick() {  # $1 = stub stdout, $2 = stub exit code
   printf '## Anthropic accounts\n\n1. `%s`\n2. `%s`\n' "$A" "$B" > "$TMP/USER.md"
   python3 -c 'import json,sys,time;json.dump({"email":sys.argv[2],"captured_at":int(time.time()),"five_hour_pct":99,"seven_day_pct":1},open(sys.argv[1],"w"))' \
     "$TMP/cfg/rate-limit-cache.json" "$A"
-  printf '#!/bin/sh\necho "$AIOS_SWITCH_EXPECT_FROM $*" >> "%s/calls"\necho "%s"\nexit %s\n' "$TMP" "$1" "$2" > "$TMP/stub.sh"
+  printf '#!/bin/sh\necho "$AIOS_SWITCH_EXPECT_FROM $AIOS_SWITCH_EXPECT_GEN $*" >> "%s/calls"\necho "%s"\nexit %s\n' "$TMP" "$1" "$2" > "$TMP/stub.sh"
   chmod +x "$TMP/stub.sh"; rm -f "$TMP/calls"
   HOME="$TMP" CLAUDE_CONFIG_DIR="$TMP/cfg" USER_MD_PATH="$TMP/USER.md" python3 "$W" "$TMP/stub.sh"
 }
 stub_tick "✓ switched to $B" 0
-grep -q "^$A switch $B$" "$TMP/calls" 2>/dev/null && ok "the watcher tells switch which seat its decision was about" \
+grep -q "^$A 0 switch $B$" "$TMP/calls" 2>/dev/null && ok "the watcher tells switch which seat and generation its decision was about" \
   || no "switch called as '$(cat "$TMP/calls" 2>/dev/null)'" "without AIOS_SWITCH_EXPECT_FROM a late switch rotates a seat that already moved"
 stub_tick "another account switch is in progress — nothing changed" 75
 [ ! -s "$TMP/cfg/swap-log.jsonl" ] && logged "another switch is in progress" && ok "a busy/moved seat (75) writes no swap row" \
@@ -211,6 +211,27 @@ deadline 20 sw "$B" > "$S/fin.out" 2>&1; rc=$?
   && ok "the next switch finishes the job without capturing the half-written seat as A" \
   || no "finishing the interrupted swap → exit $rc" "$(cat "$S/fin.out")"
 
+echo "-- 8b. finishing an interrupted swap never loses the protection --"
+fixture
+AIOS_TEST_CRASH_AFTER_CRED=1 deadline 20 sw "$B" > /dev/null 2>&1
+AIOS_TEST_FAIL_BEFORE_PUBLISH=1 deadline 20 sw "$B" > "$S/rec.out" 2>&1; rc=$?
+[ "$rc" != 0 ] && [ -e "$S/cfg/.switch.pending" ] && ok "a failed recovery keeps the pending marker" \
+  || no "failed recovery → exit $rc, marker $( [ -e "$S/cfg/.switch.pending" ] && echo kept || echo GONE )" "without the marker the next capture saves B's credential as A's"
+deadline 20 sw --capture > /dev/null 2>&1
+grep -q tok-a "$S/cfg/identities/$A/keychain.json" && ok "…so the next capture still refuses" \
+  || no "a capture after a failed recovery overwrote A's saved credential"
+fixture
+AIOS_TEST_CRASH_AFTER_CRED=1 deadline 20 sw "$B" > /dev/null 2>&1   # credential B, metadata still A
+deadline 20 sw "$A" > "$S/back.out" 2>&1; rc=$?
+[ "$rc" = 0 ] && grep -q tok-a "$S/cfg/.credentials.json" && [ ! -e "$S/cfg/.switch.pending" ] \
+  && ok "'switch A' on a half-swapped seat reinstalls A instead of answering 'already on'" \
+  || no "switch back during a pending swap → exit $rc" "$(cat "$S/back.out")"
+fixture
+deadline 20 sw "$B" > /dev/null 2>&1; echo "$A $B" > "$S/cfg/.switch.pending"   # died after publishing, before clearing
+deadline 20 sw "$B" > /dev/null 2>&1; rc=$?
+[ "$rc" = 0 ] && [ ! -e "$S/cfg/.switch.pending" ] && ok "a leftover marker on a finished swap is cleared by repeating it" \
+  || no "repeating a finished swap → exit $rc, marker still there" "--capture would stay blocked forever"
+
 echo "-- 9. a metadata write that fails AFTER landing keeps the swap --"
 fixture
 AIOS_TEST_FAIL_AFTER_PUBLISH=1 deadline 20 sw "$B" > "$S/pub.out" 2>&1
@@ -224,11 +245,21 @@ printf '{"oauthAccount":{"emailAddress":"%s"}}' "$A" > "$TMP/gen/cfg/.claude.jso
 date +%s > "$TMP/gen/cfg/watch-tick"
 GENFILE=$(HOME="$TMP/gen" CLAUDE_CONFIG_DIR="$TMP/gen/cfg" python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import _fs; print(_fs.seat_state_base() + ".gen")' "$(dirname "$W")")
 mkdir -p "$(dirname "$GENFILE")"; echo 7 > "$GENFILE"
-printf '%s' '{"rate_limits":{"five_hour":{"used_percentage":5},"seven_day":{"used_percentage":1}}}' \
-  | env -u CLAUDE_CODE_OAUTH_TOKEN HOME="$TMP/gen" CLAUDE_CONFIG_DIR="$TMP/gen/cfg" python3 "$(dirname "$W")/_cache.py"
+# A swap lands WHILE the payload is being read: stdin's read() bumps the
+# generation before returning. The sample must carry the generation from before.
+env -u CLAUDE_CODE_OAUTH_TOKEN HOME="$TMP/gen" CLAUDE_CONFIG_DIR="$TMP/gen/cfg" python3 -c '
+import runpy, sys
+genfile = sys.argv[2]
+class SwapDuringRead:
+    def read(self):
+        open(genfile, "w").write("8\n")
+        return "{\"rate_limits\":{\"five_hour\":{\"used_percentage\":5},\"seven_day\":{\"used_percentage\":1}}}"
+sys.stdin = SwapDuringRead()
+path = sys.argv[1]; sys.argv = [path]
+runpy.run_path(path, run_name="__main__")' "$(dirname "$W")/_cache.py" "$GENFILE"
 g=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get("seat_gen"))' "$TMP/gen/cfg/rate-limit-cache.json" 2>/dev/null)
 [ "$g" = 7 ] && ok "the sample records the generation it was taken under" \
-  || no "sample seat_gen = '$g' (want 7)" "without it the watcher cannot tell a sample that straddled a swap"
+  || no "sample seat_gen = '$g' (want 7, the generation before the swap)" "read after the payload, a sample that straddled a swap passes as current"
 case "$GENFILE" in "$TMP"/*) ;; *) no "the generation file resolved outside the fixture: $GENFILE" ;; esac
 
 echo "-- 11. the watcher discards a sample from another seat generation, or when the seat is unreadable --"

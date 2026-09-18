@@ -370,7 +370,7 @@ Several things can ask for a swap at once: every open session's statusLine kicks
 | `~/.claude/quota-watch.log` | Watcher's per-tick decision log | 644 |
 | `~/.claude/swap-log.jsonl` | Append-only log of every swap, automatic or manual | 644 |
 | `.switch-*.{lock,gen,pending}` (in `~/.claude/` on macOS, `$CLAUDE_CONFIG_DIR/.switch.*` elsewhere) | Switch lock, seat generation, interrupted-swap marker | 644 |
-| `~/.claude/quota-watch.paused` | **Operator-written** — future expiry that suspends rotation; auto-removed once past | 644 |
+| `~/.claude/quota-watch.paused` | **Operator-written** — future expiry that suspends rotation; ignored once past, never deleted by the watcher | 644 |
 | `~/.claude.json.bak-claude-switch` | Rollback snapshot of last swap | 644 |
 
 None of these should ever be committed — `~/.claude/` is outside the vault by design.
