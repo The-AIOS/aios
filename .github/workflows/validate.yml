@@ -1333,6 +1333,13 @@ jobs:
         # silent. Runs the shipped scripts against a scratch config dir.
         run: bash tests/token-session-account.test.sh
 
+      - name: two account switches can never overlap on the seat
+        # Overlapping switches saved one account's credential under another's
+        # name, silently. Forces the interleaving with FIFOs (no sleeps) on the
+        # file backend, and checks the watcher only acts on current-seat samples
+        # and never publishes a torn shared file.
+        run: bash tests/multi-account-consistency.test.sh
+
       - name: the compass layer ships the method, not one operator's answer
         # This feature was derived from a live vault — a named student's AI session, a
         # biography, corpus percentages, a purpose statement. Every one of those is the

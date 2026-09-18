@@ -69,9 +69,13 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
-## 2026-09-17 — Sessions on another account stay out of the seat's rotation
+## 2026-09-17 — Multi-account rotation you can leave running
 
 `hash: ` · [#148](https://github.com/The-AIOS/aios/pull/148)
+
+> **What you can now do.** Leave rotation running across several accounts and several open sessions without it losing a saved login, rotating on stale numbers, or confusing a session that runs on another account's token.
+
+### Sessions on another account stay out of the seat's rotation
 
 > **What you can now do.** Run a session on a second Anthropic account through `CLAUDE_CODE_OAUTH_TOKEN`, next to your usual ones, without it confusing quota rotation. Name the account in `AIOS_ACCOUNT_EMAIL` next to the token and that session's usage is tracked under its own account, the statusline shows which account it is really consuming, and the account logged in to your machine rotates only on its own numbers.
 
@@ -86,6 +90,21 @@
 - `claude-identity.sh list` marks an account `✓ saved` only when all three files exist, and the setup guide checks for those files instead of the folder, which the watcher creates for any account it has seen.
 
 Details and a launch example: [`hooks/claude-identity/README.md`](./hooks/claude-identity/README.md) § *Sessions launched with a token*.
+
+### Rotation that cannot lose a credential
+
+> **What you can now do.** Leave several sessions open on a multi-account setup and let rotation run, knowing two swaps can no longer collide and cost you an account's saved login.
+
+**What was wrong.** Every open session can wake the watcher, and so can the fallback agent and a manual `claude-switch`. Two swaps that overlapped both read the outgoing account, and the later one saved the credential the earlier one had just installed **under the outgoing account's name** — that account's own login was then gone from disk, and nothing reported it. Related gaps: a swap that failed halfway could leave one account's credential under another's name; a sample taken before a swap could, once the cooldown ended, trigger a second rotation away from an account with plenty of room; and files every session writes could be read half-written.
+
+**What changes.**
+- Only one switch runs at a time; a second one stops immediately with exit code 75 and changes nothing. The lock goes away with the processes holding it, so it can never get stuck. (On a Python without file locking, such as native Windows, switches run unlocked as before.)
+- Every completed swap bumps a counter. The watcher only swaps if the seat is still the one its decision was about — even if it has since gone to another account and back — and only acts on numbers taken on the current seat.
+- A swap checks everything it will install before touching anything, and restores the previous credential if it cannot finish. If it is killed halfway, the next switch finishes the job without saving the half-written seat as your outgoing account.
+- Manual swaps are logged, so the watcher's cooldown sees them.
+- The watcher no longer deletes your pause file. An expired or unreadable one is simply ignored, and one being written right now pauses that check.
+
+Details: [`hooks/claude-identity/README.md`](./hooks/claude-identity/README.md) § *One switch at a time, and only on current numbers*.
 
 **Action required:** none if you never launch sessions with `CLAUDE_CODE_OAUTH_TOKEN`. If you do, export `AIOS_ACCOUNT_EMAIL=<that account's email>` alongside it wherever you launch them. Tracking comes from the statusline, so it covers sessions that render one. And if `claude-identity.sh list` now shows `(not saved)` for an account you thought was captured, capture it again while logged in to it.
 

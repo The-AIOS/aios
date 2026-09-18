@@ -32,6 +32,9 @@ import subprocess
 import sys
 import time
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _fs import seat_generation, write_json_atomic  # noqa: E402
+
 
 HOME = os.path.expanduser("~")
 # Claude Code relocates its whole config tree when CLAUDE_CONFIG_DIR is set, and
@@ -48,6 +51,7 @@ IDENTITIES = os.path.join(CONFIG_DIR, "identities")
 USER_MD = os.environ.get("USER_MD_PATH") or os.path.join(HOME, "aios", "USER.md")
 STALE_AFTER_SECS = 1800  # 30 min
 COOLDOWN_SECS = 900  # 15 min — prevent thrashing after a swap
+SEAT_BUSY = 75  # claude-identity.sh: another switch holds the seat lock, or the seat moved
 
 # ── rotation thresholds ─────────────────────────────────────────────────────
 # This module is the SINGLE owner of the default. claude-identity.sh used to
@@ -226,6 +230,10 @@ def check_adoption(cache: dict) -> None:
     # sovra's own 5h sat at 21-35% because the operator was using it — eleven
     # "adoption failed" alerts in six minutes while the 7d had gone 98% -> 17%.
     reason = last.get("reason") or ""
+    # A manual swap carries no trigger metric to compare against, so there is
+    # no "did it fall?" question to ask of it.
+    if reason == "manual":
+        return
     if reason.startswith("7d"):
         key, label = "seven_day_pct", "7d"
     else:
@@ -263,8 +271,7 @@ def check_adoption(cache: dict) -> None:
     if not already_notified:
         notify(msg)
     try:
-        with open(ALERT_FILE, "w") as f:
-            json.dump({
+        write_json_atomic(ALERT_FILE, {
                 "ts": int(now),
                 "swap_ts": swap_ts,
                 "kind": "adoption_failed",
@@ -272,7 +279,7 @@ def check_adoption(cache: dict) -> None:
                 "message": msg,
                 "pct_before": before,
                 "pct_now": current,
-            }, f)
+            })
     except Exception as e:
         log(f"alert write failed: {type(e).__name__}: {e}")
 
@@ -343,20 +350,14 @@ def record_state(email: str, cache: dict) -> None:
     if not email:
         return
     try:
-        os.makedirs(os.path.join(IDENTITIES, email), exist_ok=True)
-        dst = state_path(email)
-        tmp = dst + ".tmp"
-        with open(tmp, "w") as f:
-            json.dump({
-                "email": email,
-                "recorded_at": int(time.time()),
-                "five_hour_pct": cache.get("five_hour_pct") or 0,
-                "five_hour_resets_at": cache.get("five_hour_resets_at"),
-                "seven_day_pct": cache.get("seven_day_pct") or 0,
-                "seven_day_resets_at": cache.get("seven_day_resets_at"),
-            }, f, indent=2)
-        os.replace(tmp, dst)
-        os.chmod(dst, 0o600)
+        write_json_atomic(state_path(email), {
+            "email": email,
+            "recorded_at": int(time.time()),
+            "five_hour_pct": cache.get("five_hour_pct") or 0,
+            "five_hour_resets_at": cache.get("five_hour_resets_at"),
+            "seven_day_pct": cache.get("seven_day_pct") or 0,
+            "seven_day_resets_at": cache.get("seven_day_resets_at"),
+        })
     except Exception as e:
         log(f"record_state({email}) failed: {type(e).__name__}: {e}")
 
@@ -423,13 +424,20 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
 
 
 PAUSE_FILE = os.path.join(CONFIG_DIR, "quota-watch.paused")
+PAUSE_WRITE_GRACE_SECS = 5
 
 
 def paused_until() -> float:
     """Operator pause: rotation is suspended while PAUSE_FILE holds a future
-    epoch (or ISO-8601 with offset). An expired or malformed marker is ignored
-    and removed, so a forgotten pause cannot silently disable the autopilot
-    forever. 0 means not paused.
+    epoch (or ISO-8601 with offset). An expired or malformed marker is IGNORED,
+    so a forgotten pause cannot disable the autopilot. 0 means not paused.
+
+    The watcher never deletes the marker. It used to remove expired ones, and
+    any read-then-delete races the operator: a new pause written between the
+    two is deleted unread, and rotation resumes against their intent. An inert
+    file costs nothing; deleting the operator's file is the one thing here that
+    can go wrong. And `date +%s > file` truncates before it writes, so an EMPTY
+    marker seconds old is a pause being written: that tick is skipped.
 
     Why a file and not an env var: the hot path runs from the statusLine pipe,
     whose environment the operator does not control; a file under CONFIG_DIR is
@@ -437,10 +445,13 @@ def paused_until() -> float:
     try:
         with open(PAUSE_FILE) as f:
             raw = f.read().strip()
+        age = time.time() - os.path.getmtime(PAUSE_FILE)
     except FileNotFoundError:
         return 0
     except Exception:
         return 0
+    if raw == "" and age < PAUSE_WRITE_GRACE_SECS:
+        return time.time() + PAUSE_WRITE_GRACE_SECS
     until = 0.0
     try:
         until = float(raw)
@@ -451,11 +462,6 @@ def paused_until() -> float:
         except Exception:
             until = 0.0
     if until <= time.time():
-        try:
-            os.remove(PAUSE_FILE)
-            log(f"pause marker expired or unreadable ({raw!r}) — removed, autopilot resumes")
-        except OSError:
-            pass
         return 0
     return until
 
@@ -488,11 +494,33 @@ def main(self_path: str) -> None:
         pct7 = cache.get("seven_day_pct") or 0
         email = cache.get("email", "")
 
-        # Persist BEFORE deciding. This tick is the only moment we can observe
-        # the active account's numbers; once we rotate away it goes dark until
-        # we come back. The rotation decision below is only ever as good as this
-        # record, so it must not sit behind any of the early returns.
-        record_state(email, cache)
+        # A sample only speaks for the seat it was taken on. Staleness alone
+        # does not establish that: the cache outlives the cooldown, so a sample
+        # of A at 99% taken before an A->B swap is still "fresh" when the
+        # cooldown ends, and would drive a second rotation -- off B, for A's cap.
+        # Two checks, because a swap can be manual (no swap-log row) or return
+        # to the same account (A->B->A leaves the email matching).
+        if not email:
+            # .claude.json was unreadable when the sample was written: whose
+            # numbers these are is unknown, and pick_target("") could even
+            # choose the seat itself.
+            log("cache sample carries no account — skip")
+            return
+        seat = _read_active_email()
+        if not seat:
+            log("seat unreadable (.claude.json) — cannot tell whose numbers these are; skip")
+            return
+        gen = seat_generation()
+        if cache.get("seat_gen") is not None and cache.get("seat_gen") != gen:
+            log(f"cache sample is from seat generation {cache.get('seat_gen')}, seat is at {gen} — skip")
+            return
+        if email.lower() != seat.lower():
+            log(f"cache names {email} but the seat is {seat} — sample predates the last switch; skip")
+            return
+        last = last_actual_swap()
+        if last and (cache.get("captured_at") or 0) <= (last.get("ts") or 0):
+            log(f"cache sample predates the last swap ({email}) — skip")
+            return
 
         # Deliberately BEFORE the cooldown check. The cooldown returns early,
         # and the cooldown window is exactly when a failed adoption is visible —
@@ -509,6 +537,14 @@ def main(self_path: str) -> None:
                 f"cache says {email} at 5h:{pct5}% 7d:{pct7}%) — skip"
             )
             return
+
+        # Persist before deciding: this tick is the only moment the active
+        # account's numbers are observable, and headroom() judges it from this
+        # record once we have rotated away. After the cooldown on purpose: a
+        # sample inside it may still carry the previous account's numbers under
+        # the new email, and recording it would file one account's usage under
+        # the other.
+        record_state(email, cache)
 
         reason, action = None, None
         if pct5 >= t5:
@@ -544,13 +580,27 @@ def main(self_path: str) -> None:
             return
 
         log(f"target: {target} ({why})")
+        # AIOS_SWITCH_LOGGED: this process writes the swap-log row itself (with
+        # the reason and numbers), so `switch` must not add a second one.
+        # AIOS_SWITCH_EXPECT_FROM: `switch` re-checks the seat under its lock
+        # and refuses (exit 75) if it moved since this sample was taken.
         r = subprocess.run(
-            [self_path, "switch", target], capture_output=True, text=True
+            [self_path, "switch", target], capture_output=True, text=True,
+            env={**os.environ, "AIOS_SWITCH_LOGGED": "1", "AIOS_SWITCH_EXPECT_FROM": email,
+                 "AIOS_SWITCH_EXPECT_GEN": str(gen)},
         )
         log(
             f"swap result: rc={r.returncode} "
             f"stdout={r.stdout.strip()} stderr={r.stderr.strip()}"
         )
+        if r.returncode == SEAT_BUSY:
+            # Another switch holds the seat, or already moved it. Not a failure
+            # and not a swap: no row (it must not arm or reset the cooldown).
+            log("another switch is in progress or already moved the seat — nothing to do")
+            return
+        if r.returncode == 0 and "already on" in r.stdout:
+            log(f"already on {target} — no swap happened")
+            return
 
         append_swap_log({
             "ts": int(time.time()),
@@ -601,13 +651,12 @@ def main(self_path: str) -> None:
 
         try:
             marker = os.path.join(HOME, ".claude", "swap-notification.json")
-            with open(marker, "w") as f:
-                json.dump({
-                    "from": email,
-                    "to": _read_active_email(),
-                    "ts": int(time.time()),
-                    "reason": reason,
-                }, f)
+            write_json_atomic(marker, {
+                "from": email,
+                "to": _read_active_email(),
+                "ts": int(time.time()),
+                "reason": reason,
+            })
         except Exception as e:
             log(f"swap-notification marker write failed: {type(e).__name__}: {e}")
 
