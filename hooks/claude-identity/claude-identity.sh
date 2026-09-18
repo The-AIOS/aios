@@ -357,29 +357,144 @@ restore_identity() {
   [ -f "$dir/oauthAccount.json" ] || die "$dir/oauthAccount.json missing"
   [ -f "$dir/userID.txt" ] || die "$dir/userID.txt missing"
 
+  # Validate EVERYTHING this swap installs before touching the seat. The
+  # credential goes in first and the account metadata second, so a metadata
+  # file that fails to parse used to leave B's credential under A's name --
+  # and the next rotation then captured that mix as A's identity.
+  $PY - "$dir" "$email" <<'PYEOF' || die "saved identity for $email is malformed or incomplete — capture it again ('claude-switch --capture' while logged in as $email). Nothing was changed."
+import json, os, sys
+d, email = sys.argv[1], sys.argv[2]
+json.load(open(os.path.join(d, "keychain.json")))
+acct = json.load(open(os.path.join(d, "oauthAccount.json")))
+if not isinstance(acct, dict) or str(acct.get("emailAddress", "")).lower() != email.lower():
+    sys.exit(1)
+if not open(os.path.join(d, "userID.txt")).read().strip():
+    sys.exit(1)
+PYEOF
+
+  local prev_blob
+  prev_blob=$(cred_read) || prev_blob=""
   cp "$CLAUDE_JSON" "$CLAUDE_JSON.bak-claude-switch"
+
+  # From here until the metadata is published the seat is inconsistent. If this
+  # process dies in between (SIGKILL, power), the marker is what tells the next
+  # switch not to capture the outgoing "account": it is a mix of two.
+  printf '%s %s\n' "$(current_email)" "$email" > "$SEAT_STATE.pending"
 
   local blob
   blob=$(cat "$dir/keychain.json")
-  cred_write "$blob" || die "credential write failed ($CRED_BACKEND: $(cred_source))"
+  cred_write "$blob" || { rm -f "$SEAT_STATE.pending"; die "credential write failed ($CRED_BACKEND: $(cred_source))"; }
+  [ -z "${AIOS_TEST_CRASH_AFTER_CRED:-}" ] || kill -9 $$   # test hook: die between the two writes
 
-  $PY - <<PY
-import json, shutil
-with open('$CLAUDE_JSON') as f:
-    d = json.load(f)
-with open('$dir/oauthAccount.json') as f:
-    d['oauthAccount'] = json.load(f)
-with open('$dir/userID.txt') as f:
-    d['userID'] = f.read().strip()
-tmp = '$CLAUDE_JSON.tmp'
-with open(tmp, 'w') as f:
-    json.dump(d, f, indent=2)
-shutil.move(tmp, '$CLAUDE_JSON')
-PY
+  # Own temp (mkstemp) + os.replace, keeping the file's mode: a fixed temp name
+  # is shared by any concurrent writer, and a torn .claude.json logs a session out.
+  if ! $PY - "$CLAUDE_JSON" "$dir" <<'PYEOF'
+import json, os, sys, tempfile
+cj, d = sys.argv[1], sys.argv[2]
+with open(cj) as f:
+    data = json.load(f)
+with open(os.path.join(d, "oauthAccount.json")) as f:
+    data["oauthAccount"] = json.load(f)
+with open(os.path.join(d, "userID.txt")) as f:
+    data["userID"] = f.read().strip()
+mode = os.stat(cj).st_mode & 0o777
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(cj)), prefix=".claude.json.", suffix=".tmp")
+try:
+    with os.fdopen(fd, "w") as f:
+        json.dump(data, f, indent=2)
+    os.chmod(tmp, mode)
+    os.replace(tmp, cj)
+    if os.environ.get("AIOS_TEST_FAIL_AFTER_PUBLISH"):   # test hook: fail after the write landed
+        raise SystemExit(1)
+except BaseException:
+    try:
+        os.unlink(tmp)
+    except OSError:
+        pass
+    raise
+PYEOF
+  then
+    # The child failed -- but maybe AFTER its replace landed. Judge by what is
+    # on disk, never by the exit code alone: rolling the credential back under
+    # published metadata would create the very mix this code exists to prevent.
+    if [ "$(current_email | tr '[:upper:]' '[:lower:]')" = "$(printf '%s' "$email" | tr '[:upper:]' '[:lower:]')" ]; then
+      echo "${YELLOW}note: metadata update reported an error but was published; keeping the swap${RESET}" >&2
+    elif [ -n "$prev_blob" ] && cred_write "$prev_blob"; then
+      rm -f "$SEAT_STATE.pending"
+      die "could not update $CLAUDE_JSON — credential rolled back; still on the previous account"
+    else
+      die "could not update $CLAUDE_JSON AND could not restore the previous credential — the seat is inconsistent. Run 'claude-switch $email' to finish (a pending marker makes that safe), or /login."
+    fi
+  fi
+  bump_generation
+  rm -f "$SEAT_STATE.pending"
 
   echo "${GREEN}✓${RESET} switched to ${BOLD}$email${RESET}"
   echo "${DIM}backup: $CLAUDE_JSON.bak-claude-switch${RESET}"
   echo "${YELLOW}note:${RESET} any running Claude Code session still holds the previous token in memory. Restart it (or open a new terminal) to use the new identity."
+}
+
+# ---- seat lock ----
+# One seat, one writer. Two `switch` runs that overlap -- two watcher ticks, the
+# fallback agent and a statusLine kick, a human switch during a rotation -- both
+# read the outgoing account from .claude.json, and the later one then captures
+# the credential the earlier one just installed and saves it under the OUTGOING
+# account's name. That account's own credential is then gone from disk, and
+# nothing errors. So capture + swap run under an exclusive lock.
+#
+# flock() locks the open file description: bash opens fd 9, a short Python child
+# locks that inherited descriptor and exits, and the lock stays held by bash's
+# fd 9 until this script exits -- crash included, so there is no stale lock to
+# clean up (a stale lock would silently switch rotation off). Non-blocking: a
+# contender exits 75 (EX_TEMPFAIL) at once and changes nothing.
+#
+# On macOS the credential is ONE Keychain item per user whatever
+# CLAUDE_CONFIG_DIR says, so the lock lives in the default config dir there; on
+# the file backend the credential is per config dir, and so is the lock. The
+# Keychain lock is named after the item it guards.
+SEAT_BUSY=75
+# Lock, generation and pending marker share one base path. _fs.seat_state_base()
+# computes the same path for the Python side.
+if [ "$CRED_BACKEND" = keychain ]; then
+  SEAT_STATE="$HOME/.claude/.switch-$KEYCHAIN_SERVICE"   # one Keychain item, one lock
+else
+  SEAT_STATE="$CONFIG_DIR/.switch"
+fi
+
+# Seat generation: +1 on every completed swap, written under the lock. A
+# decision (the watcher's) or a sample (the cache's) records the generation it
+# saw; if it differs when acted on, the seat moved in between -- including
+# A->B->A, where the email alone would still match.
+seat_generation() { local g; g=$(cat "$SEAT_STATE.gen" 2>/dev/null) || g=0; case "$g" in ''|*[!0-9]*) g=0 ;; esac; echo "$g"; }
+bump_generation() {
+  local next=$(( $(seat_generation) + 1 ))
+  printf '%s\n' "$next" > "$SEAT_STATE.gen.$$" && mv -f "$SEAT_STATE.gen.$$" "$SEAT_STATE.gen"
+}
+
+seat_lock() {
+  mkdir -p "$(dirname "$SEAT_STATE")"
+  exec 9>>"$SEAT_STATE.lock"
+  local rc=0
+  $PY - <<'PYEOF' || rc=$?
+import sys
+try:
+    import fcntl
+except ImportError:
+    sys.exit(2)          # no flock on this Python: proceed unlocked, as before
+try:
+    fcntl.flock(9, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except OSError:
+    sys.exit(75)
+PYEOF
+  case "$rc" in
+    0) ;;
+    75) echo "${YELLOW}another account switch is in progress — nothing changed${RESET}" >&2; exit "$SEAT_BUSY" ;;
+    # Only a Python WITHOUT fcntl (native Windows) runs unlocked, as before this
+    # lock existed. Any other failure -- the child killed before it locked --
+    # is "could not establish protection", and proceeding would be a guess.
+    2) echo "${YELLOW}warning: no file locking on this platform; switching unlocked${RESET}" >&2 ;;
+    *) die "could not take the seat lock (rc $rc) — nothing changed" ;;
+  esac
 }
 
 # ---- subcommands ----
@@ -402,6 +517,11 @@ cmd_whoami() {
   fi
 
   echo "${BOLD}Currently:${RESET} ${GREEN}$cur${RESET}"
+  # "Currently" is the SEAT -- what this tool swaps. A session started with a
+  # token runs on another account, and would otherwise read the seat as its own.
+  if [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+    echo "${YELLOW}this session runs on a token, not on the seat: ${AIOS_ACCOUNT_EMAIL:-account unknown (set AIOS_ACCOUNT_EMAIL)}${RESET}"
+  fi
   if [ -n "$idx" ]; then
     echo "${DIM}($idx of $total in USER.md rotation)${RESET}"
   else
@@ -463,6 +583,8 @@ USAGE
   fi
 
   if [ "${1:-}" = "--capture" ]; then
+    seat_lock
+    [ ! -e "$SEAT_STATE.pending" ] || die "a previous switch was interrupted, so the live credential may not match $CLAUDE_JSON. Finish it with 'claude-switch <email>' (or /login), then capture."
     local cur; cur=$(current_email)
     [ -n "$cur" ] || die "could not detect current account from $CLAUDE_JSON"
     capture_current "$cur"
@@ -475,7 +597,19 @@ USAGE
   fi
 
   local target="${1:-}"
+  seat_lock
   local cur; cur=$(current_email)
+  # The watcher decides from a sample of one seat and then asks for a swap. If
+  # the seat moved in between (another switch won the lock first), that decision
+  # is about an account we are no longer on: refuse it rather than rotate twice.
+  if [ -n "${AIOS_SWITCH_EXPECT_FROM:-}" ] && [ "$cur" != "$AIOS_SWITCH_EXPECT_FROM" ]; then
+    echo "${YELLOW}seat is $cur, not $AIOS_SWITCH_EXPECT_FROM as expected — nothing changed${RESET}" >&2
+    exit "$SEAT_BUSY"
+  fi
+  if [ -n "${AIOS_SWITCH_EXPECT_GEN:-}" ] && [ "$(seat_generation)" != "$AIOS_SWITCH_EXPECT_GEN" ]; then
+    echo "${YELLOW}the seat changed since this decision (generation $AIOS_SWITCH_EXPECT_GEN → $(seat_generation)) — nothing changed${RESET}" >&2
+    exit "$SEAT_BUSY"
+  fi
 
   if [ -z "$target" ]; then
     local accts; accts=$(parse_accounts)
@@ -492,10 +626,29 @@ USAGE
 
   [ "$target" != "$cur" ] || { echo "${YELLOW}already on $target${RESET}"; return 0; }
 
-  echo "${DIM}capturing outgoing identity ($cur) before swap...${RESET}"
-  capture_current "$cur"
+  if [ -e "$SEAT_STATE.pending" ]; then
+    # The last swap died between its two writes: what reads as "$cur" is a mix
+    # of two accounts, and capturing it would overwrite $cur's good copy.
+    echo "${YELLOW}finishing an interrupted switch ($(cat "$SEAT_STATE.pending")) — not capturing the outgoing seat${RESET}" >&2
+  else
+    echo "${DIM}capturing outgoing identity ($cur) before swap...${RESET}"
+    capture_current "$cur"
+  fi
 
   restore_identity "$target"
+
+  # A manual swap is still a swap: the watcher's cooldown and its "is this
+  # sample from before the last swap?" check both read swap-log.jsonl, and a
+  # swap they cannot see lets a pre-swap sample decide about the new seat.
+  # The watcher logs its own swaps (with reason and numbers) and says so.
+  if [ -z "${AIOS_SWITCH_LOGGED:-}" ]; then
+    $PY - "$CONFIG_DIR/swap-log.jsonl" "$cur" "$target" <<'PYEOF' || true
+import json, sys, time
+with open(sys.argv[1], "a") as f:
+    f.write(json.dumps({"ts": int(time.time()), "from": sys.argv[2], "to": sys.argv[3],
+                        "action": "rotate", "reason": "manual", "rc": 0}) + "\n")
+PYEOF
+  fi
 }
 
 # The cache + watch logic lives in sibling .py files (stdin flows naturally

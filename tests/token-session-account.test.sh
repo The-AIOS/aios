@@ -132,6 +132,10 @@ out=$(lst)
 printf '%s\n' "$out" | grep -F "$SPARE" | grep -q "saved" && ! printf '%s\n' "$out" | grep -F "$SPARE" | grep -q "not saved" \
   && ok "full capture reads 'saved'" || no "full capture not shown as saved" "$out"
 
+echo "-- 6b. whoami separates the seat from a token session --"
+w=$(env -u AIOS_ACCOUNT_EMAIL HOME="$TMP" CLAUDE_CONFIG_DIR="$TMP/cfg" USER_MD_PATH="$TMP/USER.md" CLAUDE_CODE_OAUTH_TOKEN=x AIOS_ACCOUNT_EMAIL="$TOK" bash "$D/claude-identity.sh" whoami 2>&1)
+printf "%s" "$w" | grep -q "runs on a token.*$TOK" && ok "whoami names the token account next to the seat" || no "whoami in a token session reads the seat as its own" "$w"
+
 echo "-- 7. the statusline names the account actually consumed; only seat sessions see seat swaps --"
 cp "$TMP/cfg/.claude.json" "$TMP/.claude.json"
 chip() { probe HOME="$TMP" "$@" "$D/context-monitor.py" 'm.get_account_display()'; }

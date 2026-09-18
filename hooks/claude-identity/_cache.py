@@ -56,6 +56,14 @@ def main():
     if not os.path.exists(claude_json):
         claude_json = os.path.join(home, ".claude.json")
 
+    # The seat generation BEFORE the payload is read: if a swap lands while
+    # this process holds a payload, the sample carries the older generation and
+    # the watcher discards it, instead of it being published under the new
+    # account's email with a fresh timestamp.
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from _fs import seat_generation, write_json_atomic
+    gen = seat_generation()
+
     try:
         payload = sys.stdin.read()
     except Exception:
@@ -96,6 +104,7 @@ def main():
 
     out = {
         "email": email,
+        "seat_gen": gen,
         "captured_at": int(time.time()),
         "five_hour_pct": rate_limits.get("five_hour", {}).get("used_percentage", 0),
         "five_hour_resets_at": rate_limits.get("five_hour", {}).get("resets_at"),
@@ -103,13 +112,8 @@ def main():
         "seven_day_resets_at": rate_limits.get("seven_day", {}).get("resets_at"),
     }
 
-    tmp = cache_path + ".tmp"
     try:
-        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-        with open(tmp, "w") as f:
-            json.dump(out, f, indent=2)
-        os.replace(tmp, cache_path)
-        os.chmod(cache_path, 0o600)
+        write_json_atomic(cache_path, out)
     except Exception as e:
         sys.stderr.write(f"claude-identity cache: write failed: {e}\n")
         return
@@ -125,18 +129,24 @@ def main():
         sys.stderr.write(f"claude-identity cache: watch kick skipped: {e}\n")
 
 
+def load_watch():
+    """The watcher module, loaded from beside this file. Its writers are the
+    single implementation for every file both scripts publish."""
+    import importlib.util
+    here = os.path.dirname(os.path.abspath(__file__))
+    spec = importlib.util.spec_from_file_location("aios_watch", os.path.join(here, "_watch.py"))
+    watch = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(watch)
+    return watch
+
+
 def record_token_session(email: str, rate_limits: dict) -> None:
     """Persist a token session's limits under its own account, through the
     watcher's record_state so both writers share one format. No email: nothing
     is written -- an unattributed sample is worse than a missing one."""
     if not email:
         return
-    import importlib.util
-    here = os.path.dirname(os.path.abspath(__file__))
-    spec = importlib.util.spec_from_file_location("aios_watch", os.path.join(here, "_watch.py"))
-    watch = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(watch)
-    watch.record_state(email, {
+    load_watch().record_state(email, {
         "five_hour_pct": rate_limits.get("five_hour", {}).get("used_percentage", 0),
         "five_hour_resets_at": rate_limits.get("five_hour", {}).get("resets_at"),
         "seven_day_pct": rate_limits.get("seven_day", {}).get("used_percentage", 0),

@@ -55,6 +55,7 @@ esac
 
 cleanup() {
   rm -rf "$FIX"
+  rm -f "$HOME/.claude/.switch-$AIOS_KEYCHAIN_SERVICE".*
   # Remove the throwaway keychain item too. Folded into the ONE cleanup function on
   # purpose: a second `trap ... EXIT` silently REPLACES the first, so adding a separate
   # trap for this would have leaked the item on every run.
@@ -176,6 +177,60 @@ out=$(run switch "$A" 2>&1); rc=$?
 exp_exit "switch fails closed" 1 $rc
 has "says why" "malformed" "$out"
 has "live credential intact" "tok-$B" "$(cred_now)"
+# Put A's saved identity back for the cases below.
+printf '{"claudeAiOauth":{"accessToken":"tok-%s","refreshToken":"ref-%s"}}' "$A" "$A" > "$FIX/cfg/identities/$A/keychain.json"
+
+# The credential goes in FIRST and the account metadata second, so anything
+# wrong with the metadata must be caught before the credential moves -- or the
+# seat ends up holding one account's credential under another's name, and the
+# next rotation captures that mix as if it were an identity.
+echo "== 8. unreadable target metadata is refused BEFORE the credential moves =="
+cp "$FIX/cfg/identities/$A/oauthAccount.json" "$FIX/oauth-A.json"
+printf '{ not json' > "$FIX/cfg/identities/$A/oauthAccount.json"
+out=$(run switch "$A" 2>&1); rc=$?
+exp_exit "switch fails closed" 1 $rc
+has "live credential intact" "tok-$B" "$(cred_now)"
+has ".claude.json still names B" "$B" "$(cat "$FIX/cfg/.claude.json")"
+
+echo "== 9. metadata naming ANOTHER account is refused =="
+printf '{"emailAddress":"%s"}' "$B" > "$FIX/cfg/identities/$A/oauthAccount.json"
+out=$(run switch "$A" 2>&1); rc=$?
+exp_exit "switch fails closed" 1 $rc
+has "live credential intact" "tok-$B" "$(cred_now)"
+cp "$FIX/oauth-A.json" "$FIX/cfg/identities/$A/oauthAccount.json"
+
+echo "== 10. a manual swap is logged, so the watcher's cooldown and freshness checks see it =="
+rm -f "$FIX/cfg/swap-log.jsonl"
+out=$(run switch "$A" 2>&1); rc=$?
+exp_exit "switch to A exits 0" 0 $rc
+has "swap-log row written" '"reason": "manual"' "$(cat "$FIX/cfg/swap-log.jsonl" 2>/dev/null)"
+rm -f "$FIX/cfg/swap-log.jsonl"
+out=$(AIOS_SWITCH_LOGGED=1 run switch "$B" 2>&1); rc=$?
+exp_exit "watcher-driven switch exits 0" 0 $rc
+[ ! -s "$FIX/cfg/swap-log.jsonl" ] && ok "watcher-driven switch leaves the row to the watcher" \
+  || bad "watcher-driven switch logged a second row"
+
+echo "== 11. .claude.json cannot be written -> the credential is rolled back =="
+case "$(uname -s)" in
+  Darwin)
+    # Keychain backend: the credential lives outside the config dir, so a
+    # read-only config dir fails ONLY the .claude.json write.
+    chmod 555 "$FIX/cfg"
+    out=$(run switch "$A" 2>&1); rc=$?
+    chmod 755 "$FIX/cfg"
+    exp_exit "switch fails" 1 $rc
+    has "says it rolled back" "rolled back" "$out"
+    has "credential back on B" "tok-$B" "$(cred_now)"
+    has ".claude.json still names B" "$B" "$(cat "$FIX/cfg/.claude.json")"
+    ;;
+  *) echo "  SKIP  (file backend keeps the credential in the same dir, so this failure cannot be isolated here)" ;;
+esac
+
+echo "== 12. the shell and the watcher agree on the seat generation =="
+g_sh=$(cat "$( [ "$(uname -s)" = Darwin ] && echo "$HOME/.claude/.switch-$AIOS_KEYCHAIN_SERVICE" || echo "$FIX/cfg/.switch").gen" 2>/dev/null)
+g_py=$(CLAUDE_CONFIG_DIR="$FIX/cfg" python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import _fs; print(_fs.seat_generation())' "$SELF_DIR")
+[ -n "$g_sh" ] && [ "$g_sh" = "$g_py" ] && ok "same generation from both sides ($g_sh)" \
+  || bad "shell wrote '$g_sh', the watcher reads '$g_py' -- they disagree on the path, so every sample would be discarded or none"
 
 echo
 echo "RESULT: $pass passed, $fail failed"

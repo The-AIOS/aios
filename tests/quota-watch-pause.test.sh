@@ -7,7 +7,9 @@
 # silence: if a stale, empty or mistyped marker were honoured, quota rotation
 # would stay off and nothing would say so -- the operator would simply start
 # hitting caps with an autopilot they believe is running. So the contract is
-# fail-toward-running: anything not a FUTURE timestamp is ignored AND removed.
+# fail-toward-running: anything not a FUTURE timestamp is ignored. It is NOT
+# deleted: the file is the operator's, and a read-then-delete can remove a new
+# pause written in between -- rotating against their intent.
 #
 # These call the SHIPPED paused_until() by importing _watch.py, rather than
 # re-implementing its parsing here. A test that restates the logic it checks
@@ -30,7 +32,10 @@ trap 'rm -rf "$TMP"' EXIT
 probe() { # $1 = file contents ("" = no file); prints "<until> <file_exists>"
   local body="$1"
   rm -f "$TMP/quota-watch.paused"
-  [ "$body" = "__none__" ] || printf '%s' "$body" > "$TMP/quota-watch.paused"
+  [ "$body" = "__none__" ] || { printf '%s' "$body" > "$TMP/quota-watch.paused"
+    # A settled marker: written well before this tick. (A marker seconds old may
+    # still be mid-write -- see section 2b.)
+    [ "${FRESH:-0}" = 1 ] || touch -t 200001010000 "$TMP/quota-watch.paused"; }
   CLAUDE_CONFIG_DIR="$TMP" python3 - "$W" <<'PY'
 import importlib.util, os, sys
 spec = importlib.util.spec_from_file_location("w", sys.argv[1])
@@ -51,11 +56,42 @@ echo "-- 2. anything that is NOT a future timestamp fails toward RUNNING, and se
 for label in "past epoch:$(python3 -c 'import time;print(int(time.time())-60)')" "garbage:not-a-date" "empty:" "whitespace: "; do
   name=${label%%:*}; body=${label#*:}
   r=$(probe "$body")
-  [ "$r" = "0 0" ] && ok "$name → not paused, marker removed" \
-    || no "$name → '$r' (want '0 0')" "a marker that is not a future timestamp must be ignored AND removed, or a typo disables quota protection silently"
+  [ "$r" = "0 1" ] && ok "$name → not paused, marker left alone" \
+    || no "$name → '$r' (want '0 1')" "a marker that is not a future timestamp must be ignored (or a typo disables quota protection silently) and never deleted (the file is the operator's)"
 done
 r=$(probe "__none__")
 [ "$r" = "0 0" ] && ok "no marker → not paused" || no "no marker → '$r' (want '0 0')"
+
+echo "-- 2b. the watcher never deletes a pause it did not judge --"
+# `date +%s > file` truncates, THEN writes: a tick landing in between reads an
+# empty file. That is a pause being written, not a malformed one.
+r=$(FRESH=1 probe "")
+[ "$r" = "1 1" ] && ok "an empty marker seconds old skips this tick and is left for its writer" \
+  || no "fresh empty marker → '$r' (want '1 1')" "it is a pause being written: rotating now, or deleting it, overrides the operator"
+# The operator writes a NEW pause right after the watcher read an expired one.
+past=$(python3 -c 'import time;print(int(time.time())-60)')
+future=$(python3 -c 'import time;print(int(time.time())+3600)')
+printf '%s' "$past" > "$TMP/quota-watch.paused"; touch -t 200001010000 "$TMP/quota-watch.paused"
+RACE='
+import builtins, importlib.util, io, os, sys
+spec = importlib.util.spec_from_file_location("w", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+first = [True]
+def racing_open(path, *a, **k):
+    f = builtins.open(path, *a, **k)
+    if path == m.PAUSE_FILE and first[0]:
+        first[0] = False
+        data = f.read(); f.close()
+        with builtins.open(path, "w") as g:
+            g.write(sys.argv[2])
+        return io.StringIO(data)
+    return f
+m.open = racing_open
+m.paused_until()
+print(builtins.open(m.PAUSE_FILE).read().strip() if os.path.exists(m.PAUSE_FILE) else "GONE")'
+r=$(CLAUDE_CONFIG_DIR="$TMP" python3 -c "$RACE" "$W" "$future")
+[ "$r" = "$future" ] && ok "a pause written after the read survives" \
+  || no "new pause → '$r' (want $future)" "the watcher deleted a pause it never read, and rotation resumes against the operator's intent"
 
 echo "-- 3. the pause is reachable from the docs, with the real path --"
 grep -qF 'quota-watch.paused' "$R" && ok "README names the marker file" \
