@@ -108,7 +108,7 @@ Confirm what was written: *"Added {N} accounts to USER.md → ## Anthropic accou
 
 ### 2. Capture each account's identity (semi-manual — Keychain requires graphical context)
 
-**State to detect:** for each email in USER.md, check whether `~/.claude/identities/{email}/` exists. Run `ls ~/.claude/identities/ 2>/dev/null` and compare.
+**State to detect:** for each email in USER.md, check whether `~/.claude/identities/{email}/keychain.json`, `oauthAccount.json` and `userID.txt` all exist — `claude-identity.sh list` marks an account `✓ saved` only then. **The directory alone is not evidence:** the watcher creates it for every account it has merely observed, so an account that has it but lacks those files still needs capturing.
 
 **For each account already captured:** report *"✓ {email} already captured — skipping."*
 
@@ -323,6 +323,28 @@ While it holds a future timestamp the watcher logs `PAUSED by operator until …
 
 **Cross-machine coordination is not solved here.** If two machines share an account pool, both can end up on the same account and compete for its caps. Future work: a shared state file over git / iCloud that both watchers read to coordinate. Until then, the manual escape hatch is the only lever.
 
+### Sessions launched with a token
+
+A session started with `CLAUDE_CODE_OAUTH_TOKEN` runs on **that token's account**, not on the one logged in to this machine (the *seat* — what `~/.claude.json` names and what rotation swaps). Its usage numbers therefore describe a different account, and treating them as the seat's would either rotate the seat for a cap it does not have or hide the one it does.
+
+So a token session is kept out of the seat's machinery entirely:
+
+- **It never writes `rate-limit-cache.json` and never triggers the watcher.** That file is the seat's telemetry and every session on the machine overwrites it.
+- **Its numbers go to its own account's `identities/{email}/last-limits.json`** — which is exactly what the watcher reads when it judges that account as a rotation target. For that it needs to know the account: **export `AIOS_ACCOUNT_EMAIL` next to the token** when you launch the session. Without it the numbers are dropped, never guessed onto the seat.
+- **The statusline chip shows the token's account** (or `👤 token?` when `AIOS_ACCOUNT_EMAIL` is missing), and the seat-swap banner is not shown there, since that session did not change account.
+
+```bash
+CLAUDE_CODE_OAUTH_TOKEN="$(cat ~/.config/secrets/other-account.token)" \
+AIOS_ACCOUNT_EMAIL=other@example.com \
+  claude
+```
+
+Usage reaches AIOS only through the statusline, so this covers sessions that render one. A run that renders no statusline reports nothing, for the token's account or the seat's.
+
+`AIOS_ACCOUNT_EMAIL` without a token is ignored: the session is on the seat, and it is the seat that must rotate.
+
+The watcher also only ever rotates to an account it can **restore** (all three captured files present), so an account seen only through a token session is never picked as a target until you capture it.
+
 ## Files written
 
 | Path | Purpose | Perms |
@@ -330,6 +352,7 @@ While it holds a future timestamp the watcher logs `PAUSED by operator until …
 | `~/.claude/identities/{email}/keychain.json` | Full `Claude Code-credentials` blob | 600 |
 | `~/.claude/identities/{email}/oauthAccount.json` | Account metadata | 600 |
 | `~/.claude/identities/{email}/userID.txt` | 64-char user ID | 600 |
+| `~/.claude/identities/{email}/last-limits.json` | Last observed limits for that account — from the watcher, or from a token session | 600 |
 | `~/.claude/rate-limit-cache.json` | Latest quota snapshot from Stop hook | 600 |
 | `~/.claude/quota-watch.log` | Watcher's per-tick decision log | 644 |
 | `~/.claude/swap-log.jsonl` | Append-only log of every auto-swap | 644 |

@@ -423,7 +423,12 @@ cmd_list() {
     local marker=" "
     [ "$email" = "$cur" ] && marker="●"
     local saved="${DIM}(not saved)${RESET}"
-    [ -d "$IDENTITIES_DIR/$email" ] && saved="${GREEN}✓ saved${RESET}"
+    # The dir alone proves nothing: the watcher's record_state creates it to
+    # hold last-limits.json for accounts it has only ever SEEN. Saved means
+    # restorable, and restore dies without all three files — so test for those.
+    local d="$IDENTITIES_DIR/$email"
+    [ -f "$d/keychain.json" ] && [ -f "$d/oauthAccount.json" ] && [ -f "$d/userID.txt" ] \
+      && saved="${GREEN}✓ saved${RESET}"
     printf "  %s %d. %-30s %s\n" "$marker" "$i" "$email" "$saved"
     i=$(( i + 1 ))
   done <<< "$accts"

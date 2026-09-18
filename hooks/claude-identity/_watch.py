@@ -323,6 +323,20 @@ def state_path(email: str) -> str:
     return os.path.join(IDENTITIES, email, "last-limits.json")
 
 
+# What `claude-identity.sh restore` refuses to run without. An identity dir by
+# itself proves nothing: record_state() creates one for every account it has
+# merely OBSERVED -- including accounts only ever used through a token session.
+RESTORE_FILES = ("keychain.json", "oauthAccount.json", "userID.txt")
+
+
+NOT_CAPTURED = "no alternative account is captured yet"
+
+
+def restorable(email: str) -> bool:
+    d = os.path.join(IDENTITIES, email)
+    return all(os.path.isfile(os.path.join(d, f)) for f in RESTORE_FILES)
+
+
 def record_state(email: str, cache: dict) -> None:
     """Persist the active account's limits so that, once we have rotated away
     from it, we can still reason about when its window frees up."""
@@ -385,14 +399,25 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
     if len(accts) < 2:
         return None, f"need >= 2 accounts in USER.md (found {len(accts)})"
     blocked = []
+    uncaptured = 0
     for email in accts:
         if email == current:
+            continue
+        # A target we cannot restore makes `switch` fail on every tick while a
+        # capturable alternative further down the list is never tried.
+        if not restorable(email):
+            blocked.append(f"{email} (not captured)")
+            uncaptured += 1
             continue
         ok, why = headroom(email, t5, t7)
         if ok:
             return email, why
         blocked.append(f"{email} ({why})")
-    return None, "all alternatives still capped: " + "; ".join(blocked)
+    if uncaptured == len(blocked):
+        # Nothing to rotate to until the operator captures an account. Not a
+        # capacity verdict, and not worth a notification on every tick.
+        return None, NOT_CAPTURED + ": " + "; ".join(blocked)
+    return None, "no usable alternative: " + "; ".join(blocked)
 
 
 PAUSE_FILE = os.path.join(CONFIG_DIR, "quota-watch.paused")
@@ -499,6 +524,9 @@ def main(self_path: str) -> None:
         # outcome and a better one than landing on an account that is still
         # capped, so it is logged as its own action rather than as a failure.
         target, why = pick_target(email, t5, t7)
+        if not target and why.startswith(NOT_CAPTURED):
+            log(f"NO ROTATION — {why}. Capture one with `claude-identity.sh capture` while logged in to it.")
+            return
         if not target:
             log(f"NO ROTATION — {why}. Staying on {email}; its window rolls on its own.")
             append_swap_log({

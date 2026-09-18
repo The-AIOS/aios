@@ -69,6 +69,26 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-17 — Sessions on another account stay out of the seat's rotation
+
+`hash: `
+
+> **What you can now do.** Run a session on a second Anthropic account through `CLAUDE_CODE_OAUTH_TOKEN`, next to your usual ones, without it confusing quota rotation. Name the account in `AIOS_ACCOUNT_EMAIL` next to the token and that session's usage is tracked under its own account, the statusline shows which account it is really consuming, and the account logged in to your machine rotates only on its own numbers.
+
+**What was wrong.** Rotation watches one shared file of usage numbers and assumes they belong to the account logged in to the machine (the *seat*). A token session reports a *different* account's numbers into that same file. Depending on timing, that could hide the seat's cap from the watcher right when it needed to rotate, or file another account's usage under the seat's name — and nothing reported either.
+
+**What changes.**
+- A token session never writes the shared file and never triggers the watcher. Its numbers go straight to `~/.claude/identities/{email}/last-limits.json` for the account `AIOS_ACCOUNT_EMAIL` names — the file the watcher already reads when judging that account as a rotation target. Without `AIOS_ACCOUNT_EMAIL` they are dropped rather than guessed onto the seat.
+- `AIOS_ACCOUNT_EMAIL` without a token is ignored: that session is on the seat.
+- The statusline chip shows the token's account, or `👤 token?` when it is not named; the seat-swap banner no longer appears in token sessions, which did not change account.
+- The watcher only rotates to an account it can **restore** — all three captured files present. An account merely *observed* (which now includes accounts used only through tokens) used to be a valid target, and the swap then failed on every tick while a usable account further down the list was never tried.
+- If none of your other accounts is captured yet, a capped seat now logs that and waits quietly, instead of reporting "no capacity".
+- `claude-identity.sh list` marks an account `✓ saved` only when all three files exist, and the setup guide checks for those files instead of the folder, which the watcher creates for any account it has seen.
+
+Details and a launch example: [`hooks/claude-identity/README.md`](./hooks/claude-identity/README.md) § *Sessions launched with a token*.
+
+**Action required:** none if you never launch sessions with `CLAUDE_CODE_OAUTH_TOKEN`. If you do, export `AIOS_ACCOUNT_EMAIL=<that account's email>` alongside it wherever you launch them. Tracking comes from the statusline, so it covers sessions that render one. And if `claude-identity.sh list` now shows `(not saved)` for an account you thought was captured, capture it again while logged in to it.
+
 ## 2026-09-15 — What AIOS can reach, written down
 
 `hash: a5050aa · cb6ed39 · ef2e7de · ad82aa9` · [#139](https://github.com/The-AIOS/aios/pull/139) · [#140](https://github.com/The-AIOS/aios/pull/140) · [#143](https://github.com/The-AIOS/aios/pull/143) · [#144](https://github.com/The-AIOS/aios/pull/144) · [#145](https://github.com/The-AIOS/aios/pull/145)
