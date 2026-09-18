@@ -417,7 +417,9 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
         # Nothing to rotate to until the operator captures an account. Not a
         # capacity verdict, and not worth a notification on every tick.
         return None, NOT_CAPTURED + ": " + "; ".join(blocked)
-    return None, "no usable alternative: " + "; ".join(blocked)
+    if uncaptured:
+        return None, "no usable alternative: " + "; ".join(blocked)
+    return None, "all alternatives still capped: " + "; ".join(blocked)
 
 
 PAUSE_FILE = os.path.join(CONFIG_DIR, "quota-watch.paused")
