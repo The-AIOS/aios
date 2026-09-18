@@ -1325,6 +1325,14 @@ jobs:
         # its parsing, so the checks cannot pass while the real function drifts.
         run: bash tests/quota-watch-pause.test.sh
 
+      - name: a token-launched session never drives the seat's rotation
+        # A session started with CLAUDE_CODE_OAUTH_TOKEN runs on another account.
+        # Its numbers in the shared seat cache could hide the seat's cap or rotate
+        # it for one it does not have, and an account only ever observed through
+        # it could be picked as a rotation target that cannot be restored. All
+        # silent. Runs the shipped scripts against a scratch config dir.
+        run: bash tests/token-session-account.test.sh
+
       - name: the compass layer ships the method, not one operator's answer
         # This feature was derived from a live vault — a named student's AI session, a
         # biography, corpus percentages, a purpose statement. Every one of those is the

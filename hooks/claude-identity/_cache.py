@@ -72,6 +72,21 @@ def main():
     if not rate_limits:
         return
 
+    # A session launched with CLAUDE_CODE_OAUTH_TOKEN signs its requests with a
+    # different account than the one .claude.json names (the "seat"), so the
+    # rate limits in this payload are the TOKEN account's. They must not reach
+    # rate-limit-cache.json: that file is the seat's telemetry, every session on
+    # the machine overwrites it, and the watcher rotates the seat on whatever it
+    # finds there -- a token tick landing between a seat tick at 99% and the
+    # watcher's read would hide the seat's cap. So a token session records its
+    # numbers straight into its own account's last-limits.json (which is how
+    # the watcher later judges that account as a rotation target) and stops.
+    # AIOS_ACCOUNT_EMAIL names that account; without it the numbers belong to
+    # nobody we can name, and are dropped rather than guessed onto the seat.
+    if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
+        record_token_session(os.environ.get("AIOS_ACCOUNT_EMAIL", "").strip(), rate_limits)
+        return
+
     email = ""
     try:
         with open(claude_json) as f:
@@ -108,6 +123,25 @@ def main():
         )
     except Exception as e:
         sys.stderr.write(f"claude-identity cache: watch kick skipped: {e}\n")
+
+
+def record_token_session(email: str, rate_limits: dict) -> None:
+    """Persist a token session's limits under its own account, through the
+    watcher's record_state so both writers share one format. No email: nothing
+    is written -- an unattributed sample is worse than a missing one."""
+    if not email:
+        return
+    import importlib.util
+    here = os.path.dirname(os.path.abspath(__file__))
+    spec = importlib.util.spec_from_file_location("aios_watch", os.path.join(here, "_watch.py"))
+    watch = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(watch)
+    watch.record_state(email, {
+        "five_hour_pct": rate_limits.get("five_hour", {}).get("used_percentage", 0),
+        "five_hour_resets_at": rate_limits.get("five_hour", {}).get("resets_at"),
+        "seven_day_pct": rate_limits.get("seven_day", {}).get("used_percentage", 0),
+        "seven_day_resets_at": rate_limits.get("seven_day", {}).get("resets_at"),
+    })
 
 
 def tick_interval(worst_pct: float) -> int:
