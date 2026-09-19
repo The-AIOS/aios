@@ -69,6 +69,22 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-19 — Calendar times that match your calendar
+
+`hash: ` · [#149](https://github.com/The-AIOS/aios/pull/149)
+
+> **What you can now do.** Trust the times in your daily plan when some of your calendars are mirrored in from Outlook / Microsoft 365. Until now those events rendered shifted by your own UTC offset — an hour in winter, two in summer across most of Europe — while the calendars Google itself owns sat correctly beside them.
+
+**What changes.** Google hands back an event's start time in two different shapes. A calendar it owns reports the local time directly. A calendar you *subscribed* to from a feed — which is what an Outlook / Microsoft 365 mirror is — is stored in UTC, because a subscribed feed is not the account's to place. Both are the same correct moment, written two ways. The daily plan was reading the second one as though it were already local, so every mirrored meeting moved by the account's own offset.
+
+It failed quietly and selectively, which is what made it expensive. The calendars Google owns stayed correct on the same page, so the plan looked internally consistent and nothing in it said otherwise. Measured on a live vault: an entire working week of mirrored meetings rendered two hours early — a 09:30 call read 07:30, and a 17:00 leadership meeting read 15:00.
+
+Times are now taken from the moment itself and converted to the timezone already declared in `USER.md`. Ordering had the same defect and is fixed with it: an event just after midnight local is stored as the previous evening in UTC, and used to be filed under the wrong day.
+
+**Action required: none.** The correction applies on your next `/aios:today` or `/aios:close-day`. If you mirror Outlook or Microsoft 365 into Google and your plan has felt off by an hour or two, this was why.
+
+**If times still look wrong afterwards**, the timezone line is what to check — the fix reads it from `USER.md` → `## Sources` → `### General`, and falls back to UTC when it is absent. It expects the shape ``- Timezone: `Europe/London` ``.
+
 ## 2026-09-15 — What AIOS can reach, written down
 
 `hash: a5050aa · cb6ed39 · ef2e7de · ad82aa9` · [#139](https://github.com/The-AIOS/aios/pull/139) · [#140](https://github.com/The-AIOS/aios/pull/140) · [#143](https://github.com/The-AIOS/aios/pull/143) · [#144](https://github.com/The-AIOS/aios/pull/144) · [#145](https://github.com/The-AIOS/aios/pull/145)
