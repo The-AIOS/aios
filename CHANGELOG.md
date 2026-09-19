@@ -71,7 +71,7 @@
 
 ## 2026-09-19 — Calendar times that match your calendar
 
-`hash: `
+`hash: ` · [#149](https://github.com/The-AIOS/aios/pull/149)
 
 > **What you can now do.** Trust the times in your daily plan when some of your calendars are mirrored in from Outlook / Microsoft 365. Until now those events rendered shifted by your own UTC offset — an hour in winter, two in summer across most of Europe — while the calendars Google itself owns sat correctly beside them.
 
