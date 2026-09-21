@@ -87,7 +87,7 @@
 
 **What changes.** Trailing slashes are stripped before parsing, and the printed URL redacts anything before `@`. Behaviour for every other URL shape is unchanged.
 
-**Nothing for you to do.** `/aios:update` brings both; no settings change.
+**Action required:** none. `/aios:update` brings both; no settings change.
 
 ## 2026-09-15 — What AIOS can reach, written down
 
