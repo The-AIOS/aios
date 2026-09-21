@@ -71,7 +71,7 @@
 
 ## 2026-09-21 — Two commit-time guards that could be walked around
 
-`hash: `
+`hash: ` · [#157](https://github.com/The-AIOS/aios/pull/157)
 
 > **What you can now do.** Trust `aios-commit`'s secret scan when you hand it a directory, and trust the off-limits-owner guard against a remote URL with a trailing slash. Nothing to configure: both are the guards you already have, closing gaps they had.
 
