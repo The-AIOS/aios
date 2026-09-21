@@ -25,11 +25,17 @@ remote_url="${2:-}"
 blocked="$(git config --get aios.blockedRemoteOwners 2>/dev/null || true)"
 [ -z "$blocked" ] && exit 0
 
-# owner = the segment right before the repo name, for either URL shape
+# owner = the segment right before the repo name, for either URL shape.
+# Trailing slashes are stripped FIRST: `…/AcmeCorp/repo.git/` otherwise parses the repo
+# as the owner (`repo.git`), which matches nothing -- a one-character bypass of the guard.
 owner="$(printf '%s' "$remote_url" \
+  | sed -E 's#/+$##' \
   | sed -E 's#^[a-z+]+://[^/]+/#/#; s#^[^@]+@[^:]+:#/#' \
   | sed -E 's#^/##; s#/[^/]*$##; s#.*/##')"
 [ -z "$owner" ] && exit 0
+# What gets PRINTED never carries credentials: an https remote can embed user:token@host,
+# and the block message goes to stderr, which is logged by routines and pasted into issues.
+shown_url="$(printf '%s' "$remote_url" | sed -E 's#^([a-z+]+://)[^@/]+@#\1<redacted>@#')"
 
 lc() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 owner_lc="$(lc "$owner")"
@@ -45,7 +51,7 @@ for b in $blocked; do
  BLOCKED: push to '$owner' — an owner declared off-limits on this machine.
 
    remote : $remote_name
-   url    : $remote_url
+   url    : $shown_url
    owner  : $owner   (listed in git config aios.blockedRemoteOwners)
 
  Having access is not having authorization. If this push is genuinely intended,

@@ -69,6 +69,26 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-21 — Two commit-time guards that could be walked around
+
+`hash: `
+
+> **What you can now do.** Trust `aios-commit`'s secret scan when you hand it a directory, and trust the off-limits-owner guard against a remote URL with a trailing slash. Nothing to configure: both are the guards you already have, closing gaps they had.
+
+### The secret scan now looks inside directories, and knows `gho_` tokens
+
+**What was wrong.** `aios-commit` stages whatever paths it is given with `git add --all`, and a directory stages its whole subtree — but `secret-scan.sh` only scanned arguments that were plain files, so a directory argument entered the commit unscanned while the same file passed by name was blocked. Separately, the pattern list knew classic and fine-grained GitHub PATs but not the `gho_` token that `gh auth login` mints (nor `ghu_`, `ghs_`, `ghr_`).
+
+**What changes.** A directory argument is expanded to what a commit of it would carry — inside a repo, `git ls-files` (tracked + untracked, ignored files excluded), otherwise a tree walk — NUL-delimited so odd filenames survive, failing closed if the enumeration errors. A symlink is scanned as its link text, which is what git actually commits. A blocked run always names the offending file. The four GitHub OAuth-family prefixes are in the list. Passing a clean directory still passes.
+
+### `pre-push` no longer lets a trailing slash through, and never prints a credential
+
+**What was wrong.** The owner was parsed from the URL's second-to-last segment, so `…/AcmeCorp/repo.git/` read `repo.git` as the owner and matched nothing — a one-character bypass. And the block message printed the remote URL verbatim, including any `user:token@` an https remote may carry, onto stderr that routines log.
+
+**What changes.** Trailing slashes are stripped before parsing, and the printed URL redacts anything before `@`. Behaviour for every other URL shape is unchanged.
+
+**Nothing for you to do.** `/aios:update` brings both; no settings change.
+
 ## 2026-09-15 — What AIOS can reach, written down
 
 `hash: a5050aa · cb6ed39 · ef2e7de · ad82aa9` · [#139](https://github.com/The-AIOS/aios/pull/139) · [#140](https://github.com/The-AIOS/aios/pull/140) · [#143](https://github.com/The-AIOS/aios/pull/143) · [#144](https://github.com/The-AIOS/aios/pull/144) · [#145](https://github.com/The-AIOS/aios/pull/145)
