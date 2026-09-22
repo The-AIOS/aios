@@ -55,8 +55,14 @@ TMP="$(mktemp -d)"; trap 'chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT
 FAKE="$TMP/home"; mkdir -p "$FAKE/.cache"; chmod 500 "$FAKE/.cache"
 
 # The condition must REPRODUCE, or the assertion after it is decoration.
+# `env -u` is load-bearing: GitHub's setup-uv action exports UV_CACHE_DIR for the
+# whole job, so a "bare" control inheriting it is not bare and passes for the wrong
+# reason. Measured: this control failed in CI on its first run and said so, which is
+# what a control is for. XDG_CACHE_HOME is cleared too — uv honours it as well, so
+# leaving it set would relocate the cache out of the unwritable HOME and silently
+# un-reproduce the condition.
 out_ctl="$TMP/ctl.out"
-HOME="$FAKE" uv run hooks/context-floor.py >"$out_ctl" 2>/dev/null
+env -u UV_CACHE_DIR -u XDG_CACHE_HOME HOME="$FAKE" uv run hooks/context-floor.py >"$out_ctl" 2>/dev/null
 if [ -s "$out_ctl" ]; then
   no "CONTROL: bare 'uv run' should fail against an unwritable cache" \
      "it produced output, so this environment does not reproduce the condition — the check below proves nothing"
@@ -65,7 +71,7 @@ else
 fi
 
 out_fix="$TMP/fix.out"
-HOME="$FAKE" UV_CACHE_DIR="$TMP/uv-cache" uv run hooks/context-floor.py >"$out_fix" 2>"$TMP/fix.err"
+env -u XDG_CACHE_HOME HOME="$FAKE" UV_CACHE_DIR="$TMP/uv-cache" uv run hooks/context-floor.py >"$out_fix" 2>"$TMP/fix.err"
 if [ ! -s "$out_fix" ]; then
   no "the prescribed command runs against an unwritable cache" "$(head -2 "$TMP/fix.err" 2>/dev/null)"
 else
