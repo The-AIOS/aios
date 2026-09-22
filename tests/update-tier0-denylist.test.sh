@@ -327,6 +327,77 @@ else
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# 11. RUN STEP 6.5 TOO. § 10 executes Step 2's block; this suite only GREPPED for
+#     Step 6.5's assertion (§ 9) — and that assertion was inert. It sat inside a
+#     `{ … } | grep …` pipeline, so its `exit 1` ended only a subshell, it ran after
+#     the diff loop had already printed, and the pipeline's status was the last
+#     grep's. Simulating the #141 condition there gave exit 0, 63 drift lines and 25
+#     of the operator's own context paths, with the FATAL on stderr only. The
+#     presence check passed throughout. So: extract the block, run it three ways.
+# ---------------------------------------------------------------------------
+S65="$TMP/step65"; mkdir -p "$S65"
+awk '/^### 6\.5\./{f=1} f&&/^```bash$/{g=1; next} g&&/^```$/{exit} g{print}' "$U" > "$S65/body.sh"
+FXC="$S65/clone"; FXV="$S65/vault"
+mkdir -p "$FXC"/{plugins/aios,agents,hooks,tests,.github,vault/.obsidian}
+echo x > "$FXC/plugins/aios/a.md"; echo y > "$FXC/hooks/h.sh"; echo z > "$FXC/agents/g.md"
+echo '{}' > "$FXC/vault/.obsidian/app.json"
+for f in README.md LICENSE NOTICE; do echo "$f" > "$FXC/$f"; done
+cp -R "$FXC" "$FXV"
+# The fixture vault MUST hold operator content that differs from canonical's seed, the way
+# every real vault does — or the leaked directories diff as identical, print nothing, and a
+# broken assertion looks like a working one. The first version of this section copied the
+# clone verbatim and passed against the old, inert code for exactly that reason.
+mkdir -p "$FXC/vault/00 - notes/context/declared" "$FXV/vault/00 - notes/context/declared"
+echo "seed" > "$FXC/vault/00 - notes/context/declared/about_me.md"
+echo "the operator's own words, accumulated over months" > "$FXV/vault/00 - notes/context/declared/about_me.md"
+# The gate keys on text EVERY version of this block carries, never on the new code's own
+# shape — otherwise the suite fails on older code for a technicality and never reaches the
+# assertion it exists for, which proves nothing about the bug.
+if [ "$(grep -c . "$S65/body.sh")" -lt 40 ] || ! grep -qF "never excluded '\$guard'" "$S65/body.sh"; then
+  no "harness: could not extract Step 6.5's block" "boundaries moved — re-aim the awk, never delete this section"
+else
+  ok "harness: extracted Step 6.5's block ($(grep -c . "$S65/body.sh") lines)"
+  # point the block at the fixture instead of $HOME/aios and /tmp
+  sed "s|^VAULT=\"\$HOME/aios\"; CLONE=\"/tmp/aios-update-check\"$|VAULT=\"$FXV\"; CLONE=\"$FXC\"|" "$S65/body.sh" > "$S65/run.sh"
+  grep -qF "VAULT=\"$FXV\"" "$S65/run.sh" \
+    && ok "harness: the block now targets the fixture, not a real vault" \
+    || no "harness: could not retarget the block" "the VAULT=/CLONE= line changed shape — refusing to run it against a real vault"
+
+  if grep -qF "VAULT=\"$FXV\"" "$S65/run.sh"; then
+    bash "$S65/run.sh" > "$S65/o" 2>"$S65/e"; rc=$?
+    { [ "$rc" -eq 0 ] && [ "$(grep -c . "$S65/o")" -eq 0 ]; } \
+      && ok "11a. healthy vault → exit 0, empty drift list" \
+      || no "11a. healthy vault did not reconcile clean" "exit=$rc stdout=$(head -2 "$S65/o")"
+
+    echo changed > "$FXV/hooks/h.sh"
+    bash "$S65/run.sh" > "$S65/o" 2>"$S65/e"; rc=$?
+    { [ "$rc" -eq 0 ] && grep -q 'h.sh' "$S65/o"; } \
+      && ok "11b. real drift → exit 0, and the file is named" \
+      || no "11b. real drift was not reported" "exit=$rc stdout=$(head -2 "$S65/o")"
+    echo y > "$FXV/hooks/h.sh"
+
+    # the #141 condition: every derived name arrives with a classify suffix
+    # Indentation-tolerant: the line sat four spaces deep inside the old piped group and
+    # two at top level now; a pattern tied to either would silently skip the other.
+    sed 's|^\([[:space:]]*\)p="${path##\*/}"$|\1p="${path##*/}/"|' "$S65/run.sh" > "$S65/broken.sh"
+    if ! grep -qF 'p="${path##*/}/"' "$S65/broken.sh"; then
+      no "11c. harness: could not mutate the derivation" "the derivation line moved — re-aim the sed"
+    else
+      bash "$S65/broken.sh" > "$S65/o" 2>"$S65/e"; rc=$?
+      if grep -q 'context/declared' "$S65/o"; then
+        no "11c. a broken derivation PRINTED the operator's own context as drift" \
+           "exit=$rc — $(grep -c . "$S65/o") line(s) on stdout; the apply instruction says to overwrite these"
+      elif [ "$rc" -ne 0 ] && [ "$(grep -c . "$S65/o")" -eq 0 ] && grep -q "never excluded 'tests'" "$S65/e"; then
+        ok "11c. broken derivation → REFUSED: non-zero exit, NOTHING on stdout, FATAL names 'tests'"
+      else
+        no "11c. the Step 6.5 assertion does not stop a broken derivation" \
+           "exit=$rc stdout_lines=$(grep -c . "$S65/o") — it can refuse without stopping anything"
+      fi
+    fi
+  fi
+fi
+
 echo
 echo "  $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ] || exit 1
