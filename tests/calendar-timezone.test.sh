@@ -86,6 +86,38 @@ checks.append(("google_calendar_events accepts timezone_name",
                "def google_calendar_events(" in src and "timezone_name" in src,
                "timezone never reaches the calendar renderer"))
 
+# 8. NO TIMEZONE CONFIGURED must be no worse than before this converter existed.
+#    Converting to the "UTC" default shifted every meeting on a calendar the operator
+#    OWNS (which reports a local offset) by that offset. None = the event's own offset.
+eq("unconfigured: an owned event renders in its own offset",
+   pe._local_hhmm("2026-09-22T14:00:00-05:00", None), "14:00")
+eq("unconfigured: a subscribed (UTC) event is no worse than before",
+   pe._local_hhmm("2026-09-22T19:00:00Z", None), "19:00")
+# CONTROL — the old behaviour (the "UTC" default) must give a DIFFERENT answer, or
+# check 8 cannot tell the fallback from the regression it replaces.
+eq("control: the UTC default would shift that owned event to 19:00",
+   pe._local_hhmm("2026-09-22T14:00:00-05:00", "UTC"), "19:00")
+
+# 9. parse_sources records whether the timezone was actually set.
+import tempfile, pathlib
+def parsed(text):
+    d = pathlib.Path(tempfile.mkdtemp()); f = d / "USER.md"; f.write_text(text, encoding="utf-8")
+    pe.SOURCES_PATH = f
+    return pe.parse_sources()
+cfg = parsed("## Sources\n### General\n- Timezone: `America/Chicago`\n")
+eq("a real Timezone line is configured", (cfg["timezone"], cfg.get("timezone_configured")), ("America/Chicago", True))
+cfg = parsed("## Sources\n### General\n")
+eq("an absent line is NOT configured (and queries keep UTC)", (cfg["timezone"], cfg.get("timezone_configured")), ("UTC", False))
+cfg = parsed("## Sources\n### General\n- *Timezone: `America/Your_Timezone`*\n")
+eq("the template's italic placeholder is NOT read as configured", cfg.get("timezone_configured"), False)
+
+# 10. The three calendar RENDER calls use the configured-or-None value; the Slack recap
+#     and the query window keep the raw value. (Source-level: the wiring, not behaviour —
+#     behaviour is checks 8-9.)
+checks.append(("calendar render calls use render_tz, not the raw default",
+               src.count("timezone_name=render_tz") == 3 and 'timezone_name=sources["timezone"]' not in src,
+               "a render call still passes the UTC default straight through"))
+
 for label, good, detail in checks:
     print(("OK\t" if good else "NO\t") + label + ("" if good else "\t" + detail))
 PYEOF
