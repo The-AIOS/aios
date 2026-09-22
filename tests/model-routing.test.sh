@@ -185,6 +185,39 @@ for node in ast.walk(fn):
 sys.exit(1)
 PY
 
+echo "── the judgment PIN: both wrappers and the doc name the same model ──"
+# `judgment` is documented as "inherit the binary's default", but the launcher passes --model
+# explicitly, so the rung is really a literal in each wrapper. That literal fell behind once:
+# Opus 5.5 shipped while every AIOS session still launched on Opus 5, overriding even a model
+# the operator had saved with /model, and nothing reported it. No test can know Anthropic
+# released a model; what one CAN catch is the half-update — one platform bumped and the other
+# not, or the doc naming a model the launcher does not run. Both are silent in production.
+SH_DEF=$(sed -nE 's/.*model_to_use="\$\{CLAUDE_MODEL:-([^}]+)\}".*/\1/p' hooks/claude-identity/install-wrappers.sh | head -1)
+PS_DEF=$(sed -nE "s/.*\\\$modelToUse = if .* else \{ '([^']+)' \}.*/\1/p" hooks/claude-identity/install-wrappers.ps1 | head -1)
+if [ -z "$SH_DEF" ] || [ -z "$PS_DEF" ]; then
+  no "could not read the judgment pin from both wrappers" "sh='$SH_DEF' ps1='$PS_DEF' — the extraction broke, so this check proves nothing"
+elif [ "$SH_DEF" = "$PS_DEF" ]; then
+  ok "install-wrappers.sh and .ps1 pin the same judgment model ($SH_DEF)"
+else
+  no "the two wrappers pin DIFFERENT judgment models" "sh=$SH_DEF ps1=$PS_DEF — macOS/Linux and Windows operators are silently on different models"
+fi
+# The doc row names a display name ("Claude Opus 5.5"); the id carries the same version
+# with dots as dashes ("claude-opus-5-5"). Compare the version, not the spelling.
+DOC_VER=$(sed -nE 's/^\| `judgment`[^|]*\| Claude Opus ([0-9.]+) \|.*/\1/p' MODEL-ROUTING.md | head -1)
+PIN_VER=$(printf '%s' "$SH_DEF" | sed -nE 's/^claude-opus-([0-9]+(-[0-9]+)?).*/\1/p' | tr '-' '.')
+if [ -z "$DOC_VER" ] || [ -z "$PIN_VER" ]; then
+  no "could not read a version from the doc row or the pin" "doc='$DOC_VER' pin='$PIN_VER' — this check proves nothing until it can"
+elif [ "$DOC_VER" = "$PIN_VER" ]; then
+  ok "MODEL-ROUTING.md's judgment row names the model the launcher runs (Opus $DOC_VER)"
+else
+  no "MODEL-ROUTING.md says Opus $DOC_VER, the launcher runs Opus $PIN_VER" "a reader choosing a rung is told about a model nothing starts"
+fi
+# CONTROL — the comparison must be able to fail, or the two oks above are decoration.
+CTL=$(printf '%s' 'claude-opus-5[1m]' | sed -nE 's/^claude-opus-([0-9]+(-[0-9]+)?).*/\1/p' | tr '-' '.')
+[ "$CTL" = "5" ] && [ "$CTL" != "5.5" ] \
+  && ok "control: a stale pin (claude-opus-5[1m]) parses as 5 and would NOT match a 5.5 row" \
+  || no "control: the version parser cannot tell 5 from 5.5" "got '$CTL' — the doc/pin comparison is vacuous"
+
 echo
 echo "── $PASS passed, $FAIL failed ──"
 [ "$FAIL" -eq 0 ]

@@ -189,7 +189,9 @@ function Invoke-ClaudeWithRespawn {
     elseif ($InitialSessionId) { $resumeArgs = @('--resume', $InitialSessionId) }
     # Model selection -- AIOS default is 1M-context Opus (see install-wrappers.sh
     # comment for the why). Override via $env:CLAUDE_MODEL (Sonnet, 3P, etc.).
-    $modelToUse = if ($env:CLAUDE_MODEL) { $env:CLAUDE_MODEL } else { 'claude-opus-5[1m]' }
+    # The judgment-rung pin — same literal as install-wrappers.sh, which explains why it is a
+    # pin rather than an inherit. tests/model-routing.test.sh fails if the two disagree.
+    $modelToUse = if ($env:CLAUDE_MODEL) { $env:CLAUDE_MODEL } else { 'claude-opus-5-5[1m]' }
     $modelArgs = @('--model', $modelToUse)
     # Resolve the claude EXECUTABLE explicitly (not via function lookup) to
     # avoid recursion if the operator NAMES their session "claude" in USER.md --
