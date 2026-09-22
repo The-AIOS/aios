@@ -46,6 +46,8 @@ PYEOF
 
 seed_state() {  # seed_state <email> <pct5> <resets_at_offset_secs>
   mkdir -p "$WORK/.claude/identities/$1"
+  # A rotation target must be restorable, so the fixture is a CAPTURED account.
+  for f in keychain.json oauthAccount.json userID.txt; do echo '{}' > "$WORK/.claude/identities/$1/$f"; done
   python3 - "$WORK/.claude/identities/$1/last-limits.json" "$2" "$3" <<'PYEOF'
 import json, sys, time
 json.dump({"email":"x","recorded_at":int(time.time()),
@@ -76,7 +78,7 @@ else
 # 3. Same account, window already rolled -> it becomes a candidate again.
 seed_state overflow@example.com 99 -60
 out="$(probe 'print(w.pick_target("home@example.com", 98, 98))')"
-if printf '%s' "$out" | grep -q "overflow@example.com"; then
+if printf '%s' "$out" | grep -q "^('overflow@example.com'"; then
   ok "accepts a capped account once its window has rolled over"
 else
   no "accepts a capped account once its window has rolled over" "got: $out"; fi
