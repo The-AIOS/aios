@@ -1084,6 +1084,18 @@ jobs:
         # produces the downgrade on the same inputs.
         run: bash tests/update-local-ahead.test.sh
 
+      - name: two Windows probes that answered an adjacent question
+        # `command -v python3` succeeds on the Microsoft Store App Execution Alias — a real file
+        # on PATH that exits 49 and prints an install notice — so connect.sh passed its own
+        # precondition and then read empty JSON, and /aios:update's cache-parity check compared
+        # every cached version against an empty MANIFEST behind `2>/dev/null`. Separately the four
+        # `diff -rq` sites never stripped CR, so a CRLF checkout read every framework file as
+        # drift: 267 `differ` lines on a live Windows vault, 266 of them false. The suite builds a
+        # stub satisfying `command -v` that exits 49, asserts the OLD guard passes on it (the
+        # control that fails loudly if the condition ever stops reproducing), and requires the
+        # resolver to skip it. Same for CRLF. Reported in #146.
+        run: bash tests/update-windows-probes.test.sh
+
       - name: a refused login is reported as access-denied, never as "offline"
         # /today and /close-day ran `git ls-remote … 2>/dev/null` and mapped any empty result
         # to `unreachable`, which both render as "offline — fine for now". Throwing away stderr
