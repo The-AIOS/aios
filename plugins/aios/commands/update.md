@@ -703,6 +703,52 @@ if [ ! -d "$CLONE/plugins" ] || [ ! -d "$CLONE/agents" ]; then
   echo "Do NOT advance the tracker: an empty drift list here proves nothing." >&2
   exit 1
 fi
+
+# ── Layer dirs: DERIVE and ASSERT at top level, BEFORE anything is printed ──────
+# ⚠️ This block used to live INSIDE the `{ … } | grep …` group below, and there it could
+# refuse but not stop. A pipeline stage is a SUBSHELL, so the assertion's `exit 1`
+# ended only that subshell; it also ran AFTER the diff loop, so the lines it existed
+# to suppress had already gone down the pipe; and the pipeline's status is the last
+# `grep`'s. Measured 2026-09-22 by simulating the #141 condition (every derived name
+# with a trailing `/`): exit 0, 63 drift lines, 25 of them the operator's own
+# declared/observed context — plus `.git/config` — with the FATAL on stderr only, so
+# with stderr discarded it read as ordinary drift to apply. Step 2 never had this
+# flaw because its assertion runs at top level, before its `git diff`. Same shape here.
+#
+# Derived from the clone, minus the same Tier-0 denylist Step 2 uses. Hardcoding this
+# list is what let a whole bundled folder go missing with nothing to notice: a
+# directory canonical has and the vault does not is invisible to `git diff` (nothing
+# DIFFERS — it is simply absent), so this reconcile is the ONLY thing that can catch
+# it, and only if it enumerates reality. `find`, never `ls` — see Step 2 and #141.
+TIER0_DENY="tests .github vault .git .gitattributes"
+EXCLUDED=""
+RDIRS=()
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
+  p="${path##*/}"
+  case " $TIER0_DENY " in *" $p "*) EXCLUDED="$EXCLUDED $p"; continue ;; esac
+  RDIRS+=("$p")
+done <<EOF
+$(find "$CLONE" -maxdepth 1 -mindepth 1 -type d)
+EOF
+for guard in tests .github vault; do
+  case " $EXCLUDED " in
+    *" $guard "*) : ;;
+    *) echo "FATAL: the reconcile's Tier-0 denylist never excluded '$guard' —" >&2
+       echo "  its output would describe operator content as framework drift. Nothing was" >&2
+       echo "  compared, nothing is to be applied, and the tracker must NOT advance. See #141." >&2
+       exit 1 ;;
+  esac
+done
+if [ "${#RDIRS[@]}" -lt 3 ]; then
+  echo "FATAL: reconciled only ${#RDIRS[@]} layer dir(s) — an empty reconcile proves nothing." >&2
+  exit 1
+fi
+
+# EXIT STATUS, which now means something: 1 = the reconcile REFUSED (FATAL on stderr,
+# nothing on stdout); 0 = it RAN, and stdout is the drift list — empty when clean. The
+# `|| true` below exists because the final `grep -v` exits 1 whenever it has nothing to
+# print, which used to make a clean reconcile and a refused one exit identically.
 {
   # Root docs — GENERIC: every *.md at the canonical root (+ the non-md root infra files), so a
   # newly-added root doc can NEVER be silently missed by a stale hardcoded list. (This is the fix
@@ -727,41 +773,11 @@ fi
     if [ ! -e "$VAULT/$p" ]; then echo "Only in $CLONE: $p"
     else diff -q "${SCR[@]}" "$VAULT/$p" "$CLONE/$p" 2>/dev/null; fi
   done
-  # Layer dirs — DERIVED from the clone, minus the same Tier-0 denylist Step 2 uses.
-  # Hardcoding this list is what let a whole bundled folder go missing with nothing to
-  # notice: the reconcile is the backstop for Step 2, and a backstop that reads from the
-  # same hardcoded list shares its blind spot exactly. A directory canonical has and the
-  # vault does not is invisible to `git diff` (nothing DIFFERS — it is simply absent), so
-  # the reconcile is the ONLY thing that can catch it, and only if it enumerates reality.
-  # diff -rq surfaces both "Files … differ" and dir-side "Only in …" (missing) lines.
-  # ⚠️ `find`, never `ls` — and the same effect assertion Step 2 carries. This is
-  # the site where #141 did its damage: with `ls` aliased to `ls -F` on Git for
-  # Windows, `$p` was `vault/` and the denylist matched nothing, so this loop
-  # diffed the operator's own context against canonical's empty seeds. Reporting
-  # that as framework drift is worse than failing, because the apply instruction
-  # below says to overwrite.
-  TIER0_DENY="tests .github vault .git .gitattributes"
-  EXCLUDED=""
-  RDIRS=0
-  while IFS= read -r path; do
-    [ -n "$path" ] || continue
-    p="${path##*/}"
-    case " $TIER0_DENY " in *" $p "*) EXCLUDED="$EXCLUDED $p"; continue ;; esac
-    RDIRS=$((RDIRS+1))
+  # Layer dirs — derived and asserted ABOVE this group (see the note there); here they are
+  # only compared. diff -rq surfaces both "Files … differ" and dir-side "Only in …" lines.
+  for p in "${RDIRS[@]}"; do
     diff -rq "${SCR[@]}" "$VAULT/$p" "$CLONE/$p" 2>/dev/null
-  done <<EOF
-$(find "$CLONE" -maxdepth 1 -mindepth 1 -type d)
-EOF
-  for guard in tests .github vault; do
-    case " $EXCLUDED " in
-      *" $guard "*) : ;;
-      *) echo "FATAL: the reconcile's Tier-0 denylist never excluded '$guard' —" >&2
-         echo "  its output describes operator content as framework drift. Do NOT apply it," >&2
-         echo "  and do NOT advance the tracker. See #141." >&2
-         exit 1 ;;
-    esac
   done
-  [ "$RDIRS" -ge 3 ] || { echo "FATAL: reconciled only $RDIRS layer dir(s) — an empty reconcile proves nothing." >&2; exit 1; }
   # vault/.obsidian is the one Tier-1 path under the otherwise Tier-2 vault/ tree.
   diff -rq "${SCR[@]}" "$VAULT/vault/.obsidian" "$CLONE/vault/.obsidian" 2>/dev/null
 } \
@@ -770,7 +786,7 @@ EOF
   | grep -vE "/custom(/|: )" \
   | grep -vE "(/|: )(\.venv|__pycache__|node_modules|auth|\.DS_Store)(/|$)" \
   | grep -vE "\.(log|pyc)$|oauth|egg-info|\.session$" \
-  | grep -vE "(\.gitignore|marketplace\.json|mcps/_index\.md)"   # dual-owned — merged in Step 2.7, never plain-reconciled
+  | grep -vE "(\.gitignore|marketplace\.json|mcps/_index\.md)" || true   # dual-owned — merged in Step 2.7, never plain-reconciled
 # `/custom(/|: )` drops the operator namespace in BOTH line shapes — a
 # `Files …/custom/_index.md … differ` (framework ships a custom/_index.md SEED;
 # the operator's customized copy is Tier-2 denylist, never overwritten) AND any
