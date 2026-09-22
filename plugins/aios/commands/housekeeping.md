@@ -879,7 +879,7 @@ uv run ~/aios/hooks/context-rungs.py
 
 **Watch the floor's share, not just its size.** The floor is *bounded by design* — five entries per observed file, so it does not grow as the corpus does. That means its **share** of rung 3 falls over time, which is the ladder working. What is worth surfacing is the opposite: an observed file whose newest five entries are a large fraction of the whole floor is usually a file that needs compacting, not a floor that needs widening.
 
-**The verdict is the point, and it flips.** Below roughly 25k tokens total it says **read all of it** — the ladder is not for that vault yet. Above it, it says floor at rung 1 and climb deliberately. **Same rule, opposite advice, both correct.** An operator who is told "your whole context is 7k tokens, read it" is being told something the framework could not tell them before this existed.
+**The verdict is the point, and it flips.** When everything is only a small multiple of the floor it says **read all of it** — the cut-off is a ratio, not a size, and `hooks/context-rungs.py` (`CHEAP_IF_UNDER`) is its one home, so read it there rather than restating it here. The ladder is not for that vault yet. Above it, it says floor at rung 1 and climb deliberately. **Same rule, opposite advice, both correct.** An operator who is told "your whole context is 7k tokens, read it" is being told something the framework could not tell them before this existed.
 
 **It refuses rather than under-reporting.** A missing folder exits `2` naming what it could not measure, instead of totalling the folder that *is* there — because a total built from one folder reads as *small*, and small is precisely the answer that talks a session out of loading anything.
 

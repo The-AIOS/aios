@@ -142,7 +142,7 @@
 |---------|--------|
 | *Carry reaches ×6* | *Force decision: do today / schedule specific date / park explicitly* |
 | *Growth routine misses twice consecutively* | *🔴 "One miss is human, two is a system alert. What's blocking it?"* |
-| *Project note exceeds 300 lines* | *Hygiene nudge: "dashboard, not history book"* |
+| *Project note crosses `/close-day`'s line-count threshold* | *Hygiene nudge: "dashboard, not history book"* |
 | *Calendar >80% full for the week* | *"You're overcommitting. What are you saying no to?"* |
 | *Active project count >15* | *"What are you saying no to?" gate* |
 
