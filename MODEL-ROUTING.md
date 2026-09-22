@@ -22,13 +22,22 @@ work, not by importance** — "important" is what tempts you to the top rung for
 | `spawn --tier` | Model | Use it for |
 |---|---|---|
 | `frontier` | Claude Fable 5.1 | Your hardest problems: long-running agents in production, code migration, multi-step reasoning, and tasks needing creative thinking and full autonomy |
-| `judgment` **(default)** | Claude Opus 5 | Reasoning-intensive work — legal, financial analysis, research, other complex domains — and production coding |
+| `judgment` **(default)** | Claude Opus 5.5 | Reasoning-intensive work — legal, financial analysis, research, other complex domains — and production coding |
 | `scale` | Claude Sonnet 5 | General-purpose workloads at scale, across coding and knowledge work |
 | `fast` | Claude Haiku 4.5 | High-frequency, latency-sensitive tasks; sub-agents inside an orchestration |
 
 Omitting `--tier` gives you `judgment`. That is deliberate: the default should be the rung that is
 right when nobody thought about it, and under-powering a reasoning task fails silently — you get an
 answer, it is just worse, and nothing tells you.
+
+**`judgment` is a pin, not an inherit — so it has a maintenance duty.** `hooks/resolve-tier`
+answers it with an empty `--model` (the binary's default), but the launcher every AIOS session
+starts through passes `--model` explicitly, at 1M context, because `settings.json` and `/model` are
+not reliable carriers of that choice to spawned children. In practice the rung **is** the literal in
+`install-wrappers.sh` / `.ps1`, and it outranks a model the operator saved with `/model`. When
+Anthropic ships a new Opus, that literal moves in the same PR as this row — `tests/model-routing.test.sh`
+fails the build if the table and the two wrappers stop naming the same model. (It went stale once:
+Opus 5.5 shipped while every AIOS session was still launched on Opus 5, and nothing reported it.)
 
 **`--tier mechanical` still works and still resolves to Claude Sonnet 4.6.** It predates this
 ladder and is kept byte-identical, because changing what an existing flag resolves to would change

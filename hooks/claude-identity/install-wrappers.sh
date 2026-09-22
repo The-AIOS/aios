@@ -173,7 +173,7 @@ _claude_with_respawn() {
   # is the right default). Override via $CLAUDE_MODEL env var for cheaper
   # Sonnet sessions, 3P providers (Bedrock/Vertex), or non-1M Opus.
   # Examples:
-  #   (default — no setup needed)                 # claude-opus-5[1m] — 1M context Opus
+  #   (default — no setup needed)                 # claude-opus-5-5[1m] — 1M context Opus
   #   export CLAUDE_MODEL='claude-sonnet-4-6'     # cheaper Sonnet sessions
   #   export CLAUDE_MODEL='opus'                  # alias for latest base Opus (no [1m])
   #   export CLAUDE_MODEL='sonnet'                # alias for latest Sonnet
@@ -182,7 +182,14 @@ _claude_with_respawn() {
   # propagate to spawned children. Without an explicit --model flag, every
   # spawn falls back to whatever ~/.claude/settings.json `model` key says,
   # which is often base Opus even when the operator wants 1M.
-  local model_to_use="${CLAUDE_MODEL:-claude-opus-5[1m]}"
+  # ⚠️ THIS PIN IS THE `judgment` RUNG, and it must move when Anthropic ships a new Opus.
+  # resolve-tier documents judgment as "inherit the binary's default" (empty --model), but
+  # every session this launcher starts passes --model explicitly, so the rung is really this
+  # literal — which outranks both settings.json and a `/model` choice the operator saved.
+  # Opus 5.5 shipped while this still read claude-opus-5[1m]; nothing reported the gap.
+  # install-wrappers.ps1 carries the same literal — tests/model-routing.test.sh fails the
+  # build if the two ever disagree, or if MODEL-ROUTING.md's judgment row names another model.
+  local model_to_use="${CLAUDE_MODEL:-claude-opus-5-5[1m]}"
   local -a model_args=(--model "$model_to_use")
 
   # MCP profile (optional). $CLAUDE_MCP_PROFILE names a file in ~/.aios/mcp-profiles/;
