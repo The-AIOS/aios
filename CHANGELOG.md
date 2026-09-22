@@ -71,7 +71,7 @@
 
 ## 2026-09-22 — Fixes for failures that never raised an error, and Opus 5.5 by default
 
-`hash: 7e2c22e · b953c59 · 801ae9b · c84c091 · fa29308 · 4524743 · 4c50813 · 3dc301a · 66ff712` · [#146](https://github.com/The-AIOS/aios/pull/146) · [#147](https://github.com/The-AIOS/aios/pull/147) · [#148](https://github.com/The-AIOS/aios/pull/148) · [#149](https://github.com/The-AIOS/aios/pull/149) · [#157](https://github.com/The-AIOS/aios/pull/157) · [#159](https://github.com/The-AIOS/aios/pull/159) · [#160](https://github.com/The-AIOS/aios/pull/160) · [#161](https://github.com/The-AIOS/aios/pull/161) · [#162](https://github.com/The-AIOS/aios/pull/162)
+`hash: 7e2c22e · b953c59 · 801ae9b · c84c091 · fa29308 · 4524743 · 4c50813 · 3dc301a · 66ff712 · 756d282` · [#146](https://github.com/The-AIOS/aios/pull/146) · [#147](https://github.com/The-AIOS/aios/pull/147) · [#148](https://github.com/The-AIOS/aios/pull/148) · [#149](https://github.com/The-AIOS/aios/pull/149) · [#157](https://github.com/The-AIOS/aios/pull/157) · [#159](https://github.com/The-AIOS/aios/pull/159) · [#160](https://github.com/The-AIOS/aios/pull/160) · [#161](https://github.com/The-AIOS/aios/pull/161) · [#162](https://github.com/The-AIOS/aios/pull/162)
 
 > **What you can now do.** Trust the times in your daily plan if any of your calendars are mirrored in from Outlook or Microsoft 365. Trust `/aios:update`'s drift list on Windows. Trust `aios-commit`'s secret scan when you hand it a folder rather than a file. And every session AIOS starts now runs on **Claude Opus 5.5**. Nothing to configure for any of it.
 >
