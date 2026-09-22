@@ -210,6 +210,9 @@ def parse_sources():
         "google_email_personal": None,
         "google_tasks_list": None,
         "timezone": "UTC",  # Universal default — each user sets their timezone in USER.md
+        # Whether that value came from USER.md or is the default above. Calendar QUERIES keep
+        # using "UTC" either way (unchanged); only RENDERING reads this — see render_tz.
+        "timezone_configured": False,
         "slack_channels_monitor": [],
         "slack_channels_skip": [],
         "slack_recap_enabled": False,
@@ -304,6 +307,11 @@ def parse_sources():
         if m:
             config["calendars_skip"] = [c.strip() for c in m.group(1).split(",") if c.strip()]
 
+    # NOT widened to accept the template's italic form (`- *Timezone: …*`). The italics are
+    # the placeholder marker on all four scalar lines, and a source may only be switched on
+    # by something the operator typed: reading `- *Google email: `you@company.com`*` as
+    # configured would send /today looking for credentials of an account that does not exist.
+    config["timezone_configured"] = "timezone" in _scalar_parsed
     return config
 
 
@@ -449,6 +457,14 @@ def _event_instant(value, timezone_name):
         return None
     if parsed.tzinfo is None:
         return None
+    # No timezone configured → the event's OWN offset, which is exactly how events rendered
+    # before this converter existed. Converting to the "UTC" default instead made things
+    # WORSE for that operator: a calendar they own reports a local offset, which the old
+    # string-slicing happened to render correctly, and converting it to UTC shifted every
+    # one of those meetings by their offset. Subscribed (UTC) feeds stay as they were — no
+    # better, but no worse — until the operator sets the line.
+    if timezone_name is None:
+        return parsed
     try:
         return parsed.astimezone(ZoneInfo(timezone_name))
     except Exception:
@@ -753,6 +769,10 @@ def run_pipeline(command_name):
     start_time = datetime.now()
     sources = parse_sources()
     tz_off = _tz_offset(sources["timezone"])
+    # Rendering uses the operator's timezone only when they set one; otherwise None, which
+    # renders each event in its own offset (see _event_instant). The query window above
+    # deliberately keeps using sources["timezone"], so what is FETCHED does not change.
+    render_tz = sources["timezone"] if sources.get("timezone_configured") else None
     log(f"Running pipeline for '{command_name}' | tz={sources['timezone']} ({tz_off})")
 
     today_str = start_time.strftime("%Y-%m-%d")
@@ -778,7 +798,7 @@ def run_pipeline(command_name):
                 google_calendar_events, creds_primary,
                 sources["google_email_primary"], time_min, time_max,
                 detailed=is_close_day, skip=sources["calendars_skip"],
-                timezone_name=sources["timezone"]
+                timezone_name=render_tz
             )
             # close-day also needs next 7 days for calendar cross-check
             if is_close_day:
@@ -786,14 +806,14 @@ def run_pipeline(command_name):
                     google_calendar_events, creds_primary,
                     sources["google_email_primary"], time_min, time_max_week,
                     skip=sources["calendars_skip"],
-                    timezone_name=sources["timezone"]
+                    timezone_name=render_tz
                 )
         if "calendar-personal" in sources["configured"] and creds_personal and creds_personal.exists():
             futures["calendar_personal"] = pool.submit(
                 google_calendar_events, creds_personal,
                 sources["google_email_personal"], time_min, time_max,
                 skip=sources["calendars_skip"],
-                timezone_name=sources["timezone"]
+                timezone_name=render_tz
             )
         if "tasks" in sources["configured"] and sources["google_tasks_list"] and creds_primary and creds_primary.exists():
             futures["tasks"] = pool.submit(
