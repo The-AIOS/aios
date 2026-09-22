@@ -149,5 +149,55 @@ assert 'w40' in o['recent'][-1], 'bodies missing from json'
   || no "--json shape is wrong" "the machine-readable path must match the human one"
 
 echo
+echo " rule-library detection (#150) -- the index is the SECTION, marked by a section heading"
+# One fixture per failure the audit named. Each builds only what it needs, so a failure
+# names exactly one cause.
+lib(){ # $1 root · stdin = the observed file's body → prints the hook's antifragile block
+  local base="$1/vault/00 - notes/context"; mkdir -p "$base/declared" "$base/observed"
+  printf '# Index\n' > "$base/declared/_index.md"; printf '# Index\n' > "$base/observed/_index.md"
+  printf '# Quien soy\n' > "$base/declared/quien-soy.md"
+  cat > "$base/observed/antifragile.md"
+  $PYBIN "$H" "$1" 2>&1 | awk '/^### FILE: antifragile\.md/{f=1} f&&/^### FILE: /&&!/antifragile/{exit} f'
+}
+
+# (a) the canonical seed's own heading, plural, and nothing else that could match
+OUT=$(printf '# Antifragile\n## Patterns of fragility (what breaks and why)\n### N. Short description (date)\nbody\n## Meta-patterns (what the failures have in common)\n### A. First pattern\nprose A\n' | lib "$TMP/lib-a")
+printf '%s' "$OUT" | grep -q 'RULE LIBRARY' \
+  && ok "(a) the seed's plural '## Meta-patterns' marks a rule library" \
+  || no "(a) '## Meta-patterns' is not detected" "a vault running the seed as shipped gets its newest bodies instead of its index"
+
+# (b) an ENTRY whose title says "index" must never classify the file
+OUT=$(printf '# Aprendizajes\n### 1. First lesson (2026-01-01)\nbody one\n### 12. Index updated without updating project note (2026-02-01)\nbody twelve\n' | lib "$TMP/lib-b")
+printf '%s' "$OUT" | grep -q 'RULE LIBRARY' \
+  && no "(b) a ### entry titled 'Index …' classified the file as a rule library" "an entry title is not a section marker -- the first hit won" \
+  || ok "(b) a ### entry titled 'Index …' does not make a file a rule library"
+
+# (c) the section includes its ### children and stops at the next ## -- and control
+OUT=$(printf '# Antifragile\n## Meta-patterns (read these first)\nintro\n### A. Pattern alpha\nalpha body\n### B. Pattern beta\nbeta body\n## Patterns of fragility (numbered entries)\n### 1. Not part of the index\nentry body\n' | lib "$TMP/lib-c")
+if printf '%s' "$OUT" | grep -q 'alpha body' && printf '%s' "$OUT" | grep -q 'beta body'; then
+  ok "(c) the index carries its ### patterns, not just the heading and one sentence"
+else
+  no "(c) the index stopped at the first ###" "sessions get the heading and none of the patterns -- 0 of 23 on a live vault"
+fi
+printf '%s' "$OUT" | grep -q 'Not part of the index' \
+  && no "(c) control: the index ran past the next ## section" "the section boundary is not being honoured" \
+  || ok "(c) control: the index stops at the next ## -- a numbered entry is not swept in"
+
+# (d) an unreadable observed file must refuse, like a missing folder does
+D="$TMP/lib-d/vault/00 - notes/context"; mkdir -p "$D/declared" "$D/observed"
+printf '# Index\n' > "$D/declared/_index.md"; printf '# Index\n' > "$D/observed/_index.md"
+printf '# Quien soy\n' > "$D/declared/quien-soy.md"; printf '# Readable\n### One\nbody\n' > "$D/observed/fine.md"
+printf '# Hidden\n### Two\nbody\n' > "$D/observed/locked.md"; chmod 000 "$D/observed/locked.md"
+if [ -r "$D/observed/locked.md" ]; then
+  printf '  SKIP  (d) running as a user who can read a mode-000 file (root?) -- cannot reproduce\n'
+else
+  $PYBIN "$H" "$TMP/lib-d" >/dev/null 2>"$TMP/lib-d.err"; rc=$?
+  { [ "$rc" -eq 2 ] && grep -q 'locked.md' "$TMP/lib-d.err"; } \
+    && ok "(d) an unreadable observed file refuses (exit 2) and names the file" \
+    || no "(d) an unreadable file dropped out silently" "exit=$rc -- the floor printed as complete with a file missing"
+fi
+chmod 644 "$D/observed/locked.md" 2>/dev/null
+
+echo
 printf -- '-- %d passed, %d failed --\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

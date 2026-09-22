@@ -87,7 +87,18 @@ ENTRY_DATE = re.compile(r"20\d{2}-\d{2}-\d{2}")
 # A file the operator's ritual treats as a RULE LIBRARY rather than a chronology gets its
 # index read instead of its tail. Matched on the heading text, not a filename, so a vault
 # that renamed the file still gets it right.
-INDEX_HEADING = re.compile(r"^\#{1,3}\s+.*\b(meta-pattern|read these first|index)\b", re.I)
+#
+# Two constraints, each earned (#150):
+#   · `meta-patterns?` -- the canonical seed heads the section `## Meta-patterns`, and with
+#     `\bmeta-pattern\b` the trailing `s` defeated the word boundary, so a vault running the
+#     seed as shipped was never treated as a rule library at all.
+#   · `#{1,2}` -- a SECTION heading marks a rule library; an ENTRY (`###`) never does. With
+#     `#{1,3}` any numbered entry whose title contained "index" qualified and the first hit
+#     won -- a live vault carries `### 12. Index updated without updating project note`, and
+#     was classified correctly only because its `##` heading happened to come first. Not a
+#     position rule ("the file opens with it"): the seed puts its meta-pattern section AFTER
+#     an example entry, so "before the first `###`" would reject the seed itself.
+INDEX_HEADING = re.compile(r"^\#{1,2}\s+.*\b(meta-patterns?|read these first|index)\b", re.I)
 
 
 def entry_date(block):
@@ -130,6 +141,9 @@ def split_entries(lines):
     return pre, out
 
 
+UNREADABLE = []   # files a listing returned but open() could not read -- see main()
+
+
 def folder(base, name):
     d = os.path.join(base, name)
     if not os.path.isdir(d):
@@ -140,6 +154,7 @@ def folder(base, name):
             continue
         lines = read(os.path.join(d, fn))
         if lines is None:
+            UNREADABLE.append(os.path.join(name, fn))
             continue
         out.append((fn, lines))
     return out
@@ -171,6 +186,16 @@ def main(argv):
         return 2
     if not dec and not obs:
         sys.stderr.write("context-floor: both folders exist but hold no .md files\n")
+        return 2
+    # A file the listing returned but that could not be READ used to drop out of the map in
+    # silence (#150d), while a missing FOLDER refuses above. Same class, same answer: with one
+    # file gone the floor prints as complete, and a session cannot tell from the output.
+    if UNREADABLE:
+        sys.stderr.write(
+            "context-floor: cannot emit a floor -- could not read: %s\n"
+            "  Refusing to print a partial floor: a short one looks like a complete one.\n"
+            "  Check the file's permissions, or re-run if it was being moved.\n"
+            % ", ".join(UNREADABLE))
         return 2
 
     payload = {"root": root, "recent_per_file": recent, "declared": [], "observed": [],
@@ -253,7 +278,15 @@ def main(argv):
         idx = [l for l in lines if INDEX_HEADING.match(l)]
         if idx:
             i = lines.index(idx[0])
-            j = next((k for k in range(i + 1, len(lines)) if ENTRY.match(lines[k])), len(lines))
+            # The index is the SECTION the heading opens: everything up to the next heading at
+            # the same or a higher level. It used to stop at the next `###`, which for a
+            # `## Meta-patterns` section whose patterns are `###` children meant emitting the
+            # heading and one sentence and NONE of the patterns -- measured on a live vault,
+            # 234 bytes emitted of a 13.4 KB index, 0 of 23 meta-patterns (#150c).
+            lvl = len(lines[i]) - len(lines[i].lstrip("#"))
+            j = next((k for k in range(i + 1, len(lines))
+                      if HEADING.match(lines[k]) and len(lines[k]) - len(lines[k].lstrip("#")) <= lvl),
+                     len(lines))
             w("")
             w("### FILE: %s  (%d entries -- RULE LIBRARY, index shown instead of newest)" % (fn, len(es)))
             w("")

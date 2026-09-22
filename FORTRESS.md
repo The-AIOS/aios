@@ -50,7 +50,9 @@ test -f ~/aios/hooks/openrouter.py \
 # ── rung 2 · what an agent can touch ────────────────────────────────────────
 test -f ~/aios/.claude/settings.json && echo "settings:present" || echo "settings:absent"
 find ~/.config/aios-secrets -name '*.env' -maxdepth 1 2>/dev/null | wc -l
-test -x ~/aios/.git/hooks/pre-commit && echo "githook:installed" || echo "githook:ABSENT"
+# the hooks dir git actually uses -- honours core.hooksPath, which the installer sets; a fixed
+# .git/hooks/pre-commit path reported ABSENT on every correctly installed vault (#151)
+( cd ~/aios && test -x "$(git rev-parse --git-path hooks)/pre-commit" ) && echo "githook:installed" || echo "githook:ABSENT"
 grep -lE '^[[:space:]]*export[[:space:]]+[A-Z0-9_]*(API_KEY|TOKEN|SECRET)' \
   ~/.zshrc ~/.zshenv ~/.bashrc ~/.bash_profile 2>/dev/null   # empty output = good
 
