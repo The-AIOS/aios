@@ -422,7 +422,49 @@ def _event_key(event):
     return ("uid", uid, when) if uid else ("fallback", event.get("summary", ""), when)
 
 
-def google_calendar_events(creds_path, email, time_min, time_max, detailed=False, skip=()):
+def _event_instant(value, timezone_name):
+    """The absolute instant of a Google `dateTime`, in the operator's timezone.
+
+    Google does not return one consistent shape. A calendar that carries a
+    timezone yields a local offset (`2026-09-22T15:00:00+02:00`); a calendar
+    SUBSCRIBED from an ICS feed (`…@import.calendar.google.com` — an Outlook /
+    M365 mirror is the common case) is normalised to UTC and yields
+    `2026-09-21T10:10:00Z`, because a subscribed feed is not the account's to
+    place. The stored instant is correct in both; only the rendering differs.
+
+    Slicing the string (`dateTime[:16]`) therefore reads a UTC instant as if it
+    were already local, and every mirrored event silently renders shifted by the
+    account's own offset — two hours in Europe/Madrid in summer. It fails
+    *quietly*: the times look plausible and the native calendars beside them are
+    right, so nothing about the output says it is wrong.
+
+    Returns None when the value cannot be parsed, so a single malformed event
+    degrades to the old behaviour instead of taking the whole day's plan down.
+    """
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    try:
+        return parsed.astimezone(ZoneInfo(timezone_name))
+    except Exception:
+        return parsed
+
+
+def _local_hhmm(value, timezone_name):
+    """HH:MM in the operator's timezone, whatever shape the API returned."""
+    instant = _event_instant(value, timezone_name)
+    if instant is not None:
+        return instant.strftime("%H:%M")
+    parts = (value or "")[:16].split("T")
+    return parts[1] if len(parts) > 1 else ""
+
+
+def google_calendar_events(creds_path, email, time_min, time_max, detailed=False, skip=(), timezone_name="UTC"):
     """Fetch events from EVERY calendar on the account, merged and de-duplicated."""
     from googleapiclient.discovery import build
 
@@ -468,7 +510,14 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
         if "date" in start:
             return (start["date"], 0, "")
         when = start.get("dateTime", "")
-        return (when[:10], 1, when)
+        # Sort on the LOCAL instant, not the raw string: mixing `…Z` and
+        # `…+02:00` sorts by wall-clock digits, which puts a mirrored event on
+        # the wrong side of the day boundary (01:00 local on the 22nd is stored
+        # as 23:00Z on the 21st).
+        instant = _event_instant(when, timezone_name)
+        if instant is None:
+            return (when[:10], 1, when)
+        return (instant.strftime("%Y-%m-%d"), 1, instant.isoformat())
 
     for cal_id, cal_name, e in sorted(rendered, key=_sort_key):
         start = e.get("start", {})
@@ -480,10 +529,8 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
         if "date" in start:
             lines.append(f"- All day — {summary}{origin}")
         else:
-            s = start.get("dateTime", "")[:16].split("T")
-            en = end.get("dateTime", "")[:16].split("T")
-            s_time = s[1] if len(s) > 1 else ""
-            e_time = en[1] if len(en) > 1 else ""
+            s_time = _local_hhmm(start.get("dateTime", ""), timezone_name)
+            e_time = _local_hhmm(end.get("dateTime", ""), timezone_name)
             lines.append(f"- {s_time} – {e_time} — {summary}{origin}")
 
         if detailed:
@@ -730,20 +777,23 @@ def run_pipeline(command_name):
             futures["calendar_primary"] = pool.submit(
                 google_calendar_events, creds_primary,
                 sources["google_email_primary"], time_min, time_max,
-                detailed=is_close_day, skip=sources["calendars_skip"]
+                detailed=is_close_day, skip=sources["calendars_skip"],
+                timezone_name=sources["timezone"]
             )
             # close-day also needs next 7 days for calendar cross-check
             if is_close_day:
                 futures["calendar_next_week"] = pool.submit(
                     google_calendar_events, creds_primary,
                     sources["google_email_primary"], time_min, time_max_week,
-                    skip=sources["calendars_skip"]
+                    skip=sources["calendars_skip"],
+                    timezone_name=sources["timezone"]
                 )
         if "calendar-personal" in sources["configured"] and creds_personal and creds_personal.exists():
             futures["calendar_personal"] = pool.submit(
                 google_calendar_events, creds_personal,
                 sources["google_email_personal"], time_min, time_max,
-                skip=sources["calendars_skip"]
+                skip=sources["calendars_skip"],
+                timezone_name=sources["timezone"]
             )
         if "tasks" in sources["configured"] and sources["google_tasks_list"] and creds_primary and creds_primary.exists():
             futures["tasks"] = pool.submit(
