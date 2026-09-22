@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The observation buffer's state must be MEASURED, not judged
 #
@@ -52,29 +69,29 @@ mk(){ # mk <file> <n-emerging-method> <n-emerging-behavioural> [extra]
 
 echo "── counts are counts ──"
 mk "$T/a.md" 3 2
-out=$(python3 "$B" "$T/a.md" --json); rc=$?
-e=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
-m=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)["method_awaiting_disposition"])')
+out=$($PYBIN "$B" "$T/a.md" --json); rc=$?
+e=$(printf '%s' "$out" | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
+m=$(printf '%s' "$out" | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["method_awaiting_disposition"])')
 [ "$e" = "5" ] && ok "counted 5 Emerging" || no "counted $e Emerging, expected 5"
 [ "$m" = "3" ] && ok "counted 3 method awaiting disposition" || no "counted $m method, expected 3"
 [ "$rc" = "1" ] && ok "parked method entries → exit 1 (action needed)" || no "exit $rc, expected 1"
 
 echo "── a clean buffer is exit 0, and CAN be reached ──"
 mk "$T/clean.md" 0 2
-out=$(python3 "$B" "$T/clean.md"); rc=$?
+out=$($PYBIN "$B" "$T/clean.md"); rc=$?
 [ "$rc" = "0" ] && ok "within contract → exit 0" || no "exit $rc on a clean buffer" "$out"
 case "$out" in *"Within contract"*) ok "says so in words" ;; *) no "clean buffer did not report 'Within contract'" ;; esac
 
 echo "── over cap is detected, and names the RIGHT cause ──"
 mk "$T/over.md" 12 0
-out=$(python3 "$B" "$T/over.md")
+out=$($PYBIN "$B" "$T/over.md")
 case "$out" in *"over by 2"*) ok "over-cap delta is correct (12/10)" ;; *) no "over-cap delta wrong" "$out" ;; esac
 case "$out" in *"class:method"*|*"method"*) ok "names method entries as the cause" ;; *) no "over-cap message never mentions method entries" ;; esac
 
 echo "── REGRESSION: the wrong-cause message ──"
 # Nothing classified: the tool must NOT claim there are no method entries.
 { echo "## Emerging"; i=0; while [ "$i" -lt 12 ]; do i=$((i+1)); echo "### old entry $i"; echo "body"; echo; done; } > "$T/uncl.md"
-out=$(python3 "$B" "$T/uncl.md")
+out=$($PYBIN "$B" "$T/uncl.md")
 case "$out" in
   *"no method entries"*) no "asserts 'no method entries' while NOTHING is classified" "a cause it never measured" ;;
   *"NOTHING is classified"*) ok "unclassified buffer is reported as unclassified, not as behavioural" ;;
@@ -90,7 +107,7 @@ echo "── REGRESSION: a MIXED buffer does not claim everything is classified 
 { echo "## Emerging"
   i=0; while [ "$i" -lt 11 ]; do i=$((i+1)); echo "### old $i"; echo "body"; echo; done
   echo "### classified one"; echo '`class: behavioural` · `route: patterns.md`'; echo "body"; } > "$T/mixed.md"
-out=$(python3 "$B" "$T/mixed.md")
+out=$($PYBIN "$B" "$T/mixed.md")
 case "$out" in
   *"Every entry is classified"*) no "claims every entry is classified while some are not" "self-contradicting report" ;;
   *"still unclassified — the cause cannot be attributed"*) ok "mixed buffer refuses to attribute the cause" ;;
@@ -100,34 +117,34 @@ esac
 # just made one message unreachable instead of correct.
 { echo "## Emerging"
   i=0; while [ "$i" -lt 12 ]; do i=$((i+1)); echo "### b $i"; echo '`class: behavioural` · `route: patterns.md`'; echo "body"; echo; done; } > "$T/allb.md"
-case "$(python3 "$B" "$T/allb.md")" in
+case "$($PYBIN "$B" "$T/allb.md")" in
   *"Every entry is classified"*) ok "control: the all-classified branch is still reachable" ;;
   *) no "CONTROL FAILED — the all-classified message is now unreachable" ;;
 esac
 
 echo "── REGRESSION: the pre-contract **Route to:** form counts as a route ──"
 { echo "## Emerging"; echo "### legacy entry"; echo "body"; echo '**Route to:** [[patterns]] (some reason)'; } > "$T/legacy.md"
-out=$(python3 "$B" "$T/legacy.md" --json)
-mr=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)["missing_route"])')
+out=$($PYBIN "$B" "$T/legacy.md" --json)
+mr=$(printf '%s' "$out" | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["missing_route"])')
 [ "$mr" = "0" ] && ok "**Route to:** counts — 0 missing" || no "legacy route form reported as missing ($mr)" "the 19-of-19 false positive"
 # Control: a genuinely route-less entry must still be caught, or the check above is vacuous.
 { echo "## Emerging"; echo "### no destination"; echo "body with no target at all"; } > "$T/noroute.md"
-mr2=$(python3 "$B" "$T/noroute.md" --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["missing_route"])')
+mr2=$($PYBIN "$B" "$T/noroute.md" --json | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["missing_route"])')
 [ "$mr2" = "1" ] && ok "control: a truly route-less entry IS still caught" || no "CONTROL FAILED — missing_route=$mr2; the check above proved nothing"
 
 echo "── an unmeasurable file is LOUD, never a healthy zero ──"
 printf 'just some prose with no sections at all\n' > "$T/bad.md"
-out=$(python3 "$B" "$T/bad.md" 2>&1); rc=$?
+out=$($PYBIN "$B" "$T/bad.md" 2>&1); rc=$?
 [ "$rc" = "2" ] && ok "unparseable → exit 2" || no "unparseable → exit $rc, expected 2" "$out"
 case "$out" in *"cannot measure"*) ok "says it cannot measure" ;; *) no "no 'cannot measure' in the error" "$out" ;; esac
 : > "$T/empty.md"
-rc2=$(python3 "$B" "$T/empty.md" >/dev/null 2>&1; echo $?)
+rc2=$($PYBIN "$B" "$T/empty.md" >/dev/null 2>&1; echo $?)
 [ "$rc2" = "2" ] && ok "empty file → exit 2, not 'zero entries, healthy'" || no "empty file → exit $rc2"
-rc3=$(python3 "$B" "$T/does-not-exist.md" >/dev/null 2>&1; echo $?)
+rc3=$($PYBIN "$B" "$T/does-not-exist.md" >/dev/null 2>&1; echo $?)
 [ "$rc3" = "2" ] && ok "missing file → exit 2" || no "missing file → exit $rc3"
 # Control: a file with sections but no Emerging/Reinforced must ALSO fail loudly.
 printf '## Something Else\n\n### x\nbody\n' > "$T/wrongsec.md"
-rc4=$(python3 "$B" "$T/wrongsec.md" >/dev/null 2>&1; echo $?)
+rc4=$($PYBIN "$B" "$T/wrongsec.md" >/dev/null 2>&1; echo $?)
 [ "$rc4" = "2" ] && ok "sections present but neither stage named → exit 2" || no "wrong-section file → exit $rc4, expected 2"
 
 echo '-- entries may be BULLETS, not only ### headings --'
@@ -152,11 +169,11 @@ echo '-- entries may be BULLETS, not only ### headings --'
   echo "- **An anchor.** Body."
   echo '  `class: behavioural` · `first-seen: 2026-06-12` · `route: patterns.md`'
 } > "$T/bul.md"
-out=$(python3 "$B" "$T/bul.md" --json); rc=$?
-be=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
-br=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)["reinforced"])')
-bm=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)["method_awaiting_disposition"])')
-bu=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)["unclassified"])')
+out=$($PYBIN "$B" "$T/bul.md" --json); rc=$?
+be=$(printf '%s' "$out" | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
+br=$(printf '%s' "$out" | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["reinforced"])')
+bm=$(printf '%s' "$out" | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["method_awaiting_disposition"])')
+bu=$(printf '%s' "$out" | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["unclassified"])')
 [ "$be" = "2" ] && ok "counted 2 bullet Emerging entries" || no "counted $be bullet Emerging, expected 2" "indented facets or the tombstone were counted as entries"
 [ "$br" = "1" ] && ok "counted 1 bullet Reinforced entry" || no "counted $br bullet Reinforced, expected 1"
 [ "$bm" = "1" ] && ok "class: fields parse inside a bullet entry" || no "method count $bm, expected 1" "the class line sits on the bullet's indented continuation"
@@ -164,23 +181,23 @@ bu=$(printf '%s' "$out" | python3 -c 'import sys,json;print(json.load(sys.stdin)
 # Control: the heading style must still work, or the change above just swapped one
 # blind spot for another.
 mk "$T/hd.md" 2 1
-he=$(python3 "$B" "$T/hd.md" --json | python3 -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
+he=$($PYBIN "$B" "$T/hd.md" --json | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
 [ "$he" = "3" ] && ok "control: heading-style entries still counted" || no "CONTROL FAILED — heading style now counts $he, expected 3"
 # Control: a stage holding ONLY tombstones is legitimately empty, not a parse failure.
 { echo "## Reinforced"; echo; echo "## Emerging"; echo
   echo "<!-- ROUTED 2026-08-24: graduated to patterns.md; removed from buffer. -->"
 } > "$T/tomb.md"
-rct=$(python3 "$B" "$T/tomb.md" >/dev/null 2>&1; echo $?)
+rct=$($PYBIN "$B" "$T/tomb.md" >/dev/null 2>&1; echo $?)
 [ "$rct" = "0" ] && ok "control: a genuinely empty buffer still measures clean" || no "CONTROL FAILED — empty-but-valid buffer → exit $rct, expected 0"
 # A shape matching NEITHER style must refuse, not report zero.
 { echo "## Emerging"; echo; echo "some prose that is neither a heading nor a top-level bullet,"
   echo "long enough to be unmistakably substantive content in this stage."; } > "$T/neither.md"
-rcn=$(python3 "$B" "$T/neither.md" >/dev/null 2>&1; echo $?)
+rcn=$($PYBIN "$B" "$T/neither.md" >/dev/null 2>&1; echo $?)
 [ "$rcn" = "2" ] && ok "an unknown entry shape refuses (exit 2), never reports 0" || no "unknown shape → exit $rcn, expected 2"
 
 echo "── an unrecognised class is surfaced ──"
 { echo "## Emerging"; echo "### weird"; echo '`class: sytem` · `route: x.md`'; echo body; } > "$T/badclass.md"
-case "$(python3 "$B" "$T/badclass.md")" in
+case "$($PYBIN "$B" "$T/badclass.md")" in
   *"unrecognised class"*) ok "typo'd class is flagged (not silently ignored)" ;;
   *) no "an unrecognised class passed silently" "a typo would make an entry invisible to disposition" ;;
 esac
@@ -191,25 +208,25 @@ mk "$T/furn.md" 2 2
 i=0; while [ "$i" -lt 40 ]; do i=$((i+1))
   echo "<!-- ROUTED 2026-01-01 → [[x]]: «tombstone $i — a routed entry whose body already lives in its target file, kept here only as a receipt» -->" >> "$T/furn.md"
 done
-out=$(python3 "$B" "$T/furn.md" --json)
-gt=$(printf '%s' "$out" | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["approx_tokens_file"] > d["approx_tokens_entries"])')
+out=$($PYBIN "$B" "$T/furn.md" --json)
+gt=$(printf '%s' "$out" | $PYBIN -c 'import sys,json;d=json.load(sys.stdin);print(d["approx_tokens_file"] > d["approx_tokens_entries"])')
 [ "$gt" = "True" ] && ok "file cost is reported above entry cost when furniture is present" || no "file cost not above entry cost" "$out"
-case "$(python3 "$B" "$T/furn.md")" in
+case "$($PYBIN "$B" "$T/furn.md")" in
   *"NOT entries"*) ok "the report names the share that is not entries" ;;
   *) no "furniture-heavy buffer printed no warning" "the caps read fine while most of the file was tombstones" ;;
 esac
 mk "$T/lean.md" 2 2
-case "$(python3 "$B" "$T/lean.md")" in
+case "$($PYBIN "$B" "$T/lean.md")" in
   *"NOT entries"*) no "CONTROL FAILED — a lean buffer triggered the furniture warning" ;;
   *) ok "control: a lean buffer prints no furniture warning" ;;
 esac
-old=$(printf '%s' "$out" | python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["approx_tokens_to_read_in_full"] == d["approx_tokens_entries"])')
+old=$(printf '%s' "$out" | $PYBIN -c 'import sys,json;d=json.load(sys.stdin);print(d["approx_tokens_to_read_in_full"] == d["approx_tokens_entries"])')
 [ "$old" = "True" ] && ok "the original JSON key keeps its meaning (entries)" || no "approx_tokens_to_read_in_full changed meaning" "a consumer reading the old key would silently get a different number"
 
 echo "── it never writes ──"
 mk "$T/ro.md" 4 1
 before=$(shasum -a 256 < "$T/ro.md")
-python3 "$B" "$T/ro.md" >/dev/null 2>&1
+$PYBIN "$B" "$T/ro.md" >/dev/null 2>&1
 [ "$(shasum -a 256 < "$T/ro.md")" = "$before" ] && ok "the buffer is byte-identical after a run" || no "buffer-status MODIFIED the file"
 
 echo "── the doctrine it enforces is actually written down ──"

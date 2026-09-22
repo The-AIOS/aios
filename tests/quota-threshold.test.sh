@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # quota-threshold.test.sh — the rotation threshold reaches the process that enforces it.
 #
 # Regression origin: `claude-identity.sh` defined THRESHOLD_5H/THRESHOLD_7D, and
@@ -30,7 +47,7 @@ no(){ printf '  FAIL %s\n     %s\n' "$1" "$2"; FAIL=$((FAIL+1)); }
 run_threshold(){
   local dir; dir="$(mktemp -d "${TMPDIR:-/tmp}/qt-XXXXXX")"
   env -u CLAUDE_QUOTA_5H -u CLAUDE_QUOTA_7D CLAUDE_CONFIG_DIR="$dir" "$@" \
-    python3 "$WATCH" --threshold 2>/dev/null
+    $PYBIN "$WATCH" --threshold 2>/dev/null
   local rc=$?
   rm -rf "$dir"
   return $rc

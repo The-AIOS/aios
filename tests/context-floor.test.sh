@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # hooks/context-floor.py — the one-call context floor
 #
@@ -41,20 +58,20 @@ mkvault(){
 
 echo
 echo " refusal -- a short floor looks exactly like a complete one"
-python3 "$H" "$TMP/absent" >/dev/null 2>&1
+$PYBIN "$H" "$TMP/absent" >/dev/null 2>&1
 [ $? -eq 2 ] && ok "absent vault exits 2" || no "absent vault printed a floor" "a session cannot tell an empty floor from a full one"
 mkdir -p "$TMP/half/vault/00 - notes/context/declared"
-OUT="$(python3 "$H" "$TMP/half" 2>&1 >/dev/null)"; RC=$?
+OUT="$($PYBIN "$H" "$TMP/half" 2>&1 >/dev/null)"; RC=$?
 { [ $RC -eq 2 ] && printf '%s' "$OUT" | grep -q observed; } \
   && ok "one folder present -> refuses and names the missing one" \
   || no "a half floor was emitted (rc=$RC)" "partial floors are indistinguishable from complete ones"
-python3 "$H" --recent notanumber >/dev/null 2>&1
+$PYBIN "$H" --recent notanumber >/dev/null 2>&1
 [ $? -eq 2 ] && ok "a non-numeric --recent exits 2" || no "--recent accepted garbage" "it would silently fall back to a default"
 
 echo
 echo " the floor emits BODIES, not only headings"
 mkvault "$TMP/v" 12 40
-F="$(python3 "$H" "$TMP/v")"
+F="$($PYBIN "$H" "$TMP/v")"
 printf '%s' "$F" | grep -q 'Entry 12' \
   && ok "the newest entry is present" || no "newest entry missing" "the last close-day's write never reaches the next session"
 printf '%s' "$F" | grep -q 'w40' \
@@ -76,8 +93,8 @@ echo
 echo " the slice is BOUNDED -- this is what makes it safe where a volume was not"
 mkvault "$TMP/small" 10 40
 mkvault "$TMP/big"  100 40
-WS=$(python3 "$H" "$TMP/small" | wc -w | tr -d ' ')
-WB=$(python3 "$H" "$TMP/big"   | wc -w | tr -d ' ')
+WS=$($PYBIN "$H" "$TMP/small" | wc -w | tr -d ' ')
+WB=$($PYBIN "$H" "$TMP/big"   | wc -w | tr -d ' ')
 # 10x the entries adds 90 more TITLES to the map but the same 5 bodies. Growth must be
 # roughly linear in titles, never in bodies -- a doubling here would mean it is unbounded.
 if [ "$WB" -lt $(( WS * 3 )) ]; then
@@ -98,7 +115,7 @@ printf '# Ventures\n' > "$VD/_index.md"
 printf '# Acme\n' > "$VD/acme/about_venture.md"
 for i in $(seq 1 300); do printf 'secretword '; done >> "$VD/acme/pricing.md"
 printf '# Globex\n' > "$VD/globex/about_venture.md"
-FV="$(python3 "$H" "$TMP/v")"
+FV="$($PYBIN "$H" "$TMP/v")"
 printf '%s' "$FV" | grep -q 'acme' && printf '%s' "$FV" | grep -q 'globex' \
   && ok "every venture is listed at the floor" \
   || no "a venture was not listed" "a worker cannot open what it does not know exists"
@@ -113,13 +130,13 @@ echo " arbitrary vault shape"
 printf '%s' "$F" | grep -q 'aprendizajes.md' \
   && ok "globs files matching no canonical name" \
      || no "a non-canonically-named file was skipped" "operators rename these and write them in their own language"
-python3 tests/lint-no-hardcoded-context-names.py "$H" >/dev/null 2>&1 \
+$PYBIN tests/lint-no-hardcoded-context-names.py "$H" >/dev/null 2>&1 \
   && ok "no canonical filename is matched on in the hook's logic" \
   || no "the hook hardcodes a canonical filename in CODE" "that matcher goes stale silently, per the renamed-vault case"
 
 echo
 echo " --json carries the same thing the text does"
-python3 "$H" --json "$TMP/v" | python3 -c "
+$PYBIN "$H" --json "$TMP/v" | $PYBIN -c "
 import json,sys
 d=json.load(sys.stdin)
 assert d['recent_per_file']==5, d['recent_per_file']

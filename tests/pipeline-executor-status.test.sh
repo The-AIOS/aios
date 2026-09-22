@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # The Pipeline Status line must name the precondition that actually failed
 #
@@ -50,7 +67,7 @@ fi
 
 echo "── the canary the reporter specified ──"
 # Credentials present + list ID absent must mention the list ID and NOT credentials.
-OUT=$(python3 - <<'PY'
+OUT=$($PYBIN - <<'PY'
 sources = {"configured": ["tasks"], "google_tasks_list": None}
 futures = {}
 class C:

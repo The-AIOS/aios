@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
+
+# ── Resolve a python that RUNS (Windows) ─────────────────────────────────────
+# On Windows `python3` is a Microsoft Store App Execution Alias: a real file on
+# PATH that satisfies every existence probe, exits 49 and produces nothing. A
+# test that shells out to it does not fail for its own reason — it fails, or
+# worse reports a CONTROL as inconclusive, for an environmental one. Same probe
+# hooks/claude-identity/claude-identity.sh and mcps/setup.sh already use.
+# $PYBIN is used UNQUOTED so `py -3` word-splits.
+PYBIN=""
+for _cand in python3 python "py -3"; do
+  if $_cand -c 'import sys' >/dev/null 2>&1; then PYBIN="$_cand"; break; fi
+done
+if [ -z "$PYBIN" ]; then
+  echo "SKIP: no working Python found (tried python3, python, py -3)" >&2
+  exit 0
+fi
+
 # ─────────────────────────────────────────────────────────────────────────────
 # connector.json — the manifest contract (AI-122, Front A · C1-C5)
 #
@@ -35,7 +52,7 @@ done
   || no "folders without a manifest:$missing" "the App does not list a connector whose manifest is absent — it vanishes silently"
 
 echo "── 2. the contract's own acceptance criteria ──"
-python3 - <<'PY'
+$PYBIN - <<'PY'
 import json, glob, os, re, sys
 bad = []
 for f in sorted(glob.glob("mcps/*-mcp/connector.json")):
@@ -68,7 +85,7 @@ for f in sorted(glob.glob("mcps/*-mcp/connector.json")):
 for b in bad: print("  FAIL  " + b)
 pass
 PY
-n=$(python3 - <<'PY'
+n=$($PYBIN - <<'PY'
 import json,glob,os,re
 c=0
 for f in sorted(glob.glob("mcps/*-mcp/connector.json")):
@@ -116,7 +133,7 @@ cat > "$T/mcps/broken-mcp/connector.json" <<'J'
 { "id": "wrong", "service": "Broken MCP", "value": "v", "connect": "sometimes",
   "requires": ["~/aios/mcps/broken-mcp/x"], "register": {}, "docs": "NOPE.md" }
 J
-hits=$(cd "$T" && python3 - <<'PY'
+hits=$(cd "$T" && $PYBIN - <<'PY'
 import json,glob,os,re
 c=0
 for f in sorted(glob.glob("mcps/*-mcp/connector.json")):
@@ -158,7 +175,7 @@ CUSTOM_MANIFESTS=$(ls mcps/custom/*/connector.json 2>/dev/null | wc -l | tr -d '
 if [ "${CUSTOM:-0}" -eq 0 ]; then
   ok "no custom MCP folders in canonical — nothing to validate (expected)"
 else
-  bad_custom=$(python3 - <<'PY'
+  bad_custom=$($PYBIN - <<'PY'
 import json,glob,os,re
 c=0
 for f in sorted(glob.glob("mcps/custom/*/connector.json")):
