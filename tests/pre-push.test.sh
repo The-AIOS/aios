@@ -35,6 +35,13 @@ echo "── blocked owners, both URL shapes, case-insensitive ──"
 [ "$(run https://github.com/AcmeCorp/repo.git)" = "1" ] && ok "https URL to a blocked owner → exit 1" || no "https URL to blocked owner passed"
 [ "$(run git@github.com:anotherorg/repo.git)" = "1" ]  && ok "ssh URL to a blocked owner → exit 1"   || no "ssh URL to blocked owner passed"
 [ "$(run https://github.com/ACMECORP/repo.git)" = "1" ] && ok "owner match is case-insensitive"     || no "ACMECORP (uppercase) passed" "the segment compare must lowercase both sides"
+[ "$(run https://github.com/AcmeCorp/repo.git/)" = "1" ] && ok "trailing slash does not bypass the block" || no "URL with a trailing slash passed" "the owner parsed as the repo name"
+[ "$(run git@github.com:AcmeCorp/repo.git/)" = "1" ]   && ok "ssh URL with a trailing slash is still blocked" || no "ssh URL with trailing slash passed"
+
+echo "── the block message never echoes credentials embedded in the URL ──"
+msg=$("$H" origin "https://user:FAKETOKEN0000@github.com/AcmeCorp/repo.git" 2>&1 >/dev/null)
+printf '%s' "$msg" | grep -q 'FAKETOKEN0000' && no "block message printed the token from the URL" "stderr is logged by routines and pasted into issues" || ok "credentials in the URL are redacted in the message"
+printf '%s' "$msg" | grep -q '<redacted>@github.com' && ok "redaction marker present" || no "redaction marker missing" "the URL should still be recognisable"
 
 echo "── allowed owners, including one that merely CONTAINS a blocked name ──"
 [ "$(run https://github.com/someone/aios.git)" = "0" ]        && ok "unrelated owner → exit 0"          || no "unrelated owner blocked"
