@@ -52,10 +52,10 @@ If `USER.md` exists, read it. It contains:
    **a. The floor, always, whatever the task — one command.**
 
    ```bash
-   uv run ~/aios/hooks/context-floor.py          # --recent N to widen
+   UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/context-floor.py   # --recent N to widen
    ```
 
-   **Through `uv`, never `python3`.** On Windows that name does not exist — the Microsoft Store alias intercepts it, prints an installer notice, and runs nothing — so the floor would emit **no output**, which is indistinguishable from a floor that ran. The one failure this whole step exists to end, reintroduced by an invocation. `uv` is already what `/today` runs `pipeline-executor.py` with, so it is not a new dependency ([#129](https://github.com/The-AIOS/aios/pull/129)).
+   **Through `uv`, never `python3`.** On Windows that name does not exist — the Microsoft Store alias intercepts it, prints an installer notice, and runs nothing — so the floor would emit **no output**, which is indistinguishable from a floor that ran. The one failure this whole step exists to end, reintroduced by an invocation. `uv` is already what `/today` runs `pipeline-executor.py` with, so it is not a new dependency ([#129](https://github.com/The-AIOS/aios/pull/129)). **And `UV_CACHE_DIR`, or the same silence returns from the other side:** a sandboxed Bash tool may write to the vault and `$TMPDIR` only, while `uv` insists on `~/.cache/uv` — so it dies before running anything and the floor emits nothing again, by a second route. Every sandboxed session hits it and the primary unsandboxed one never does, which is why it survived. The hook is stdlib-only, so a throwaway cache costs nothing.
 
    It emits, in one call: both `_index.md`, **every heading in `declared/` and `observed/`**, **the 5 newest `###` entries of every `observed/` file, in full**, **`INTENT.md`**, and **a listing of `context/ventures/`** — which ventures exist and what files each holds. Absent the hook, glob it by hand — `grep -h '^#' "…/declared/"*.md`, `grep -h '^###' "…/observed/"*.md`, then the tail of each observed file — but prefer the hook, because a floor assembled by hand is done partially or skipped and the difference is invisible afterwards.
 

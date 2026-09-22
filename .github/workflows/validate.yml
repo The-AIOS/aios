@@ -1017,6 +1017,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install uv
+        # CLAUDE.md mandates `uv` as THE command every session runs for its context floor, and
+        # until now the framework's own CI did not have it — so any suite exercising that
+        # invocation could only skip. A tool the contract mandates belongs in the contract's CI.
+        uses: astral-sh/setup-uv@v5
+
       - name: aios-commit / aios-note-append / secret-scan regression test
         run: bash tests/aios-commit.test.sh
 
@@ -1531,6 +1537,20 @@ jobs:
         # it globs rather than naming files; and it REFUSES rather than printing a short
         # floor, which is indistinguishable from a complete one once printed.
         run: bash tests/context-floor.test.sh
+
+      - name: the floor's PRESCRIBED INVOCATION runs where sessions actually run
+        # CLAUDE.md names one command as the mandatory first context load, and its whole
+        # justification is that a floor emitting nothing is indistinguishable from one that
+        # fired. That failure has now arrived twice by two routes: `python3` is a Store alias
+        # on Windows (answered by mandating uv, #129), and `uv` insists on ~/.cache/uv which a
+        # SANDBOXED Bash tool may not write, so it dies before running anything. Every sandboxed
+        # session hit it; the unsandboxed primary never did, which is why it survived.
+        #
+        # This EXTRACTS the prescribed command and runs it against a HOME whose cache cannot be
+        # written, with a control that strips UV_CACHE_DIR and requires no output — so it cannot
+        # pass vacuously. It needs uv on PATH, installed above, or the execution half skips and
+        # guards nothing.
+        run: bash tests/context-floor-invocation.test.sh
 
       - name: context hooks never match on a per-vault filename
         # A filename in a comment is an example; a filename in code is a matcher, and
