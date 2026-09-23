@@ -380,8 +380,11 @@ else
     # the #141 condition: every derived name arrives with a classify suffix
     # Indentation-tolerant: the line sat four spaces deep inside the old piped group and
     # two at top level now; a pattern tied to either would silently skip the other.
-    sed 's|^\([[:space:]]*\)p="${path##\*/}"$|\1p="${path##*/}/"|' "$S65/run.sh" > "$S65/broken.sh"
-    if ! grep -qF 'p="${path##*/}/"' "$S65/broken.sh"; then
+    # Name-agnostic: the loop variable was renamed `path` → `pth` (zsh ties `path` to
+    # $PATH — see tests/update-zsh-path.test.sh); a mutation keyed on either name alone
+    # would fail on the other version for a technicality and prove nothing.
+    sed 's|^\([[:space:]]*\)p="${\([a-z]*\)##\*/}"$|\1p="${\2##*/}/"|' "$S65/run.sh" > "$S65/broken.sh"
+    if ! grep -qE 'p="\$\{[a-z]+##\*/\}/"' "$S65/broken.sh"; then
       no "11c. harness: could not mutate the derivation" "the derivation line moved — re-aim the sed"
     else
       bash "$S65/broken.sh" > "$S65/o" 2>"$S65/e"; rc=$?

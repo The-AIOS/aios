@@ -88,6 +88,15 @@ jobs:
           bash tests/update-tier0-denylist.test.sh
           echo "OK: tests/ + .github/ remain canonical-only, and Tier 0 is documented"
 
+      - name: /aios:update's shell blocks run correctly under zsh (the macOS session shell)
+        # zsh ties `path` to $PATH. Steps 2 and 6.5 looped with `read -r path`, so under zsh
+        # git and diff stopped resolving and the empty output read as "nothing changed" /
+        # "0 drift" — a sync that compared nothing and reported success. Every other suite
+        # runs these blocks with bash, which has no such tie. zsh is required here.
+        run: |
+          command -v zsh >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq zsh; }
+          bash tests/update-zsh-path.test.sh
+
       - name: close-session idempotency gate stays falsifiable
         run: |
           set -e
