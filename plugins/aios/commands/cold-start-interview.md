@@ -338,10 +338,10 @@ bash ~/aios/hooks/claude-identity/install-wrappers.sh
 
 ```powershell
 # Windows (PowerShell)
-pwsh -File ~\aios\hooks\claude-identity\install-wrappers.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File ~\aios\hooks\claude-identity\install-wrappers.ps1
 ```
 
-Both installers are idempotent (timestamped backup → strip prior banner → append fresh banner with the new name → verify). Output confirms the detected name: *"✓ Primary session name: {name} (from USER.md)"*. Then tell the operator: *"Wrapper refreshed. Open a new terminal and type `{name}` — that's your shorthand now."* The shell function activates on next shell start; existing terminals can `source ~/.zshrc` (or restart pwsh) to pick it up immediately.
+Both installers are idempotent (timestamped backup → strip prior banner → append fresh banner with the new name → verify). Output confirms the detected name: *"✓ Primary session name: {name} (from USER.md)"*. Then tell the operator: *"Wrapper refreshed. Open a new terminal and type `{name}` — that's your shorthand now."* The shell function activates on next shell start; existing terminals can `source ~/.zshrc` (or open a new PowerShell) to pick it up immediately.
 
 **Rule for this whole step:** one question at a time. The operator should feel walked by the hand, not interrogated. Use sensible defaults. Defer any action that involves cycling Claude's auth (the multi-account capture is the canonical example — always deferred to `/today`).
 
