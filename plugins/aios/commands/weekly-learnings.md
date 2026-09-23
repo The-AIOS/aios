@@ -4,7 +4,7 @@ tags:
   - command
   - weekly
 description: Compile the week's insights from daily notes into a single writing-ready summary
-allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/aios && git:*), Bash(ls:*), Bash(cat:*), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*)
+allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/aios && git:*), Bash(ls:*), Bash(cat:*), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*), Bash(uv run ~/aios/hooks/page-fit.py:*)
 ---
 
 # /weekly-learnings — Weekly Summary
@@ -418,6 +418,14 @@ cp /tmp/weekly-stats-W{N}.html "$HOME/aios/vault/03 - export/reports/weekly/Week
 
 For monthly / quarterly / semester / yearly reports, swap `weekly` for `monthly` in the `mkdir` + `cp` paths (per § Output paths below).
 
+3b. **Measure the fit — every run, PDF or not.** HTML has no page, so an overflowing `.page` reads fine on screen and only splits across extra sheets when printed; *"fit exactly 3 pages"* is a measurement, not a judgment about item counts:
+```bash
+uv run ~/aios/hooks/page-fit.py --expect 3 "$HOME/aios/vault/03 - export/reports/weekly/Week{N}-AI-OS.html"
+```
+   - **Exit 0** → every page fits. Proceed.
+   - **Exit 1** → it names each overflowing page and by how many px (*"page 3: OVER by 90 px"*). Trim **that page** by about that much — shorten or drop its lowest-value items — re-save, and measure again until it fits. Never trim a page that fits.
+   - **Exit 2** → it could not measure (no Chrome/Chromium, or it found no `.page`). Say so in the report to the operator — *"page fit not measured"* — never *"fits"*.
+
 4. **Ask: "Want the PDF version too?"** If yes:
 ```bash
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
@@ -439,7 +447,7 @@ HTML is mandatory for all. PDF is optional for all.
 ### PDF rules
 - The HTML must be **fully self-contained** — inline CSS, Google Fonts import, no external files.
 - Use the **exact CSS from the design system** embedded in this command. Do not simplify or modify.
-- Content must **fit exactly 3 pages**. Adjust item counts in lists if needed to avoid overflow (6-8 items per quadrant is the sweet spot).
+- Content must **fit exactly 3 pages**, as measured by step 3b — not as estimated. 6-8 items per quadrant is a starting point, not a guarantee: a vault whose bullets run longer overflows at six.
 - Numbers must be **real** — counted from daily notes, not estimated. If a metric can't be determined, use `~{N}` with a tilde to signal approximation.
 - The closing quote should be **original and specific** to the period — not generic motivation.
 - Always include the author block (from `about_me.md`) and footer on page 3. Check `USER.md` → `### /weekly-learnings` for any author/footer overrides.

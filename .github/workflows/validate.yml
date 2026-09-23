@@ -1681,6 +1681,11 @@ jobs:
         # CLAUDE.md's dual-write rule contradicting its own channeling rule, and two thresholds
         # restated outside the command/hook that owns them. Each check fails on the old text.
         run: bash tests/restated-rules.test.sh
+      - name: a report's page fit is measured, and an unmeasured fit is never a pass
+        # /weekly-learnings said "fit exactly 3 pages" and nothing measured a page (#156); a real
+        # report had two of three pages over and printed six sheets. The render cases are the
+        # positive control and are REQUIRED here — ubuntu runners ship google-chrome.
+        run: bash tests/page-fit.test.sh
 
       - name: every bundled connector carries a manifest the App can read
         # AI-122 Front A. The AIOS App builds its Connectors card from
