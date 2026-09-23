@@ -349,9 +349,17 @@ TIER0_DENY="tests .github vault .git .gitattributes"
 # for a macOS one. Full paths out, basename taken in the shell.
 LAYERS=()
 EXCLUDED=""
-while IFS= read -r path; do
-  [ -n "$path" ] || continue
-  d="${path##*/}"
+# ⚠️ `pth`, NEVER `path`. The session's shell is zsh, where `path` is an ARRAY TIED
+# to $PATH: every `read -r path` replaces the command search path with a filename.
+# The loop body is all builtins, so it still works — then `git` / `diff` / `find`
+# are simply not found, their empty output reads as "nothing changed" / "0 drift",
+# and the run reports success having compared nothing. Bash has no such tie, which
+# is why every bash-run test passed. The same goes for zsh's other special names:
+# fpath, cdpath, manpath, module_path, status, argv. `tests/update-zsh-path.test.sh`
+# runs these blocks under zsh and lints the names.
+while IFS= read -r pth; do
+  [ -n "$pth" ] || continue
+  d="${pth##*/}"
   case " $TIER0_DENY " in *" $d "*) EXCLUDED="$EXCLUDED $d"; continue ;; esac
   LAYERS+=("$d/")          # ARRAY, not a space-joined string — see the note below
 done <<EOF
@@ -381,6 +389,17 @@ if [ "${#LAYERS[@]}" -lt 3 ]; then
   echo "  An empty layer list makes this sync a silent no-op that reports success." >&2
   exit 1
 fi
+
+# ── The tools this step runs must still RESOLVE ─────────────────────────────────
+# An empty result from a command that was never found is indistinguishable from a
+# clean one — and the reconcile below discards diff's stderr. So a lost PATH (above)
+# or a missing tool REFUSES here instead of reporting success.
+for tool in git; do
+  command -v "$tool" >/dev/null 2>&1 || {
+    echo "FATAL: '$tool' is not on PATH (PATH='$PATH') — nothing was compared." >&2
+    echo "  An empty result here would look like 'no changes'. Do NOT advance the tracker." >&2
+    exit 1; }
+done
 
 # Root docs stay ENUMERATED here on purpose — do not "finish the job" by deriving them
 # too. `.github/workflows/validate.yml` asserts every root *.md appears literally quoted
@@ -723,9 +742,17 @@ fi
 TIER0_DENY="tests .github vault .git .gitattributes"
 EXCLUDED=""
 RDIRS=()
-while IFS= read -r path; do
-  [ -n "$path" ] || continue
-  p="${path##*/}"
+# ⚠️ `pth`, NEVER `path`. The session's shell is zsh, where `path` is an ARRAY TIED
+# to $PATH: every `read -r path` replaces the command search path with a filename.
+# The loop body is all builtins, so it still works — then `git` / `diff` / `find`
+# are simply not found, their empty output reads as "nothing changed" / "0 drift",
+# and the run reports success having compared nothing. Bash has no such tie, which
+# is why every bash-run test passed. The same goes for zsh's other special names:
+# fpath, cdpath, manpath, module_path, status, argv. `tests/update-zsh-path.test.sh`
+# runs these blocks under zsh and lints the names.
+while IFS= read -r pth; do
+  [ -n "$pth" ] || continue
+  p="${pth##*/}"
   case " $TIER0_DENY " in *" $p "*) EXCLUDED="$EXCLUDED $p"; continue ;; esac
   RDIRS+=("$p")
 done <<EOF
@@ -744,6 +771,17 @@ if [ "${#RDIRS[@]}" -lt 3 ]; then
   echo "FATAL: reconciled only ${#RDIRS[@]} layer dir(s) — an empty reconcile proves nothing." >&2
   exit 1
 fi
+
+# ── The tools this step runs must still RESOLVE ─────────────────────────────────
+# An empty result from a command that was never found is indistinguishable from a
+# clean one — and the reconcile below discards diff's stderr. So a lost PATH (above)
+# or a missing tool REFUSES here instead of reporting success.
+for tool in diff find grep basename; do
+  command -v "$tool" >/dev/null 2>&1 || {
+    echo "FATAL: '$tool' is not on PATH (PATH='$PATH') — nothing was compared." >&2
+    echo "  An empty result here would look like 'no changes'. Do NOT advance the tracker." >&2
+    exit 1; }
+done
 
 # EXIT STATUS, which now means something: 1 = the reconcile REFUSED (FATAL on stderr,
 # nothing on stdout); 0 = it RAN, and stdout is the drift list — empty when clean. The
