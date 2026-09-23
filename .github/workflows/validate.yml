@@ -1173,6 +1173,12 @@ jobs:
         # a mutation that must make it fail.
         run: bash tests/setup-operator-gates.test.sh
 
+      - name: vendored sources match the pin they record, file by file
+        # skills/superpowers recorded v5.1.0 while every file matched v5.0.7 — a record
+        # written once and never re-read. Offline check; the network proof against the
+        # upstream repo is a maintainer mode (--upstream), never CI.
+        run: bash tests/vendored-pins.test.sh
+
       - name: the secret scanner rejects what it is supposed to reject
         # Found by the derived-list guard below on its first run: this suite had been
         # committed and never invoked by any workflow. It is the scanner that stands between

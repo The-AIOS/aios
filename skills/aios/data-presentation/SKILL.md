@@ -21,4 +21,4 @@ Two complementary skills for taking raw data to the audience: storytelling for t
 
 Don't confuse the two. A dashboard is not a story; a story is not a dashboard. Pick the mode that matches the audience's need.
 
-For visual execution (typography, color, layout), see [anthropic/canvas-design](../../anthropic/canvas-design/SKILL.md) and [anthropic/frontend-design](../../anthropic/frontend-design/SKILL.md).
+For visual execution (typography, color, layout), see [anthropic/frontend-design](../../anthropic/frontend-design/SKILL.md).
