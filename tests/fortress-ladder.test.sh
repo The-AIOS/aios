@@ -103,6 +103,32 @@ truth=$(ls plugins/aios/commands/*.md 2>/dev/null | grep -v _index | wc -l | tr 
 grep -qF "**$truth commands" README.md && ok "README command count matches disk ($truth)" \
   || no "README command count disagrees with disk" "expected $truth"
 
+echo "── the git-hook probe answers for the hooks dir git actually uses (#151) ──"
+# The installer sets `core.hooksPath` (hooks/install-git-hooks.sh); the probe used to test a
+# fixed `.git/hooks/pre-commit`, so it printed ABSENT on every correctly installed vault and
+# "installed" on one whose only hook was a stale file git no longer runs. Run the probe line
+# FORTRESS.md actually ships, against two fixture repos, rather than grep it for a string.
+PROBE=$(grep -E 'githook:installed' FORTRESS.md | grep -vE '^[[:space:]]*#' | head -1)
+if [ -z "$PROBE" ]; then
+  no "could not find the git-hook probe line in FORTRESS.md" "the check cannot run"
+else
+  FX="$(mktemp -d)"; mkdir -p "$FX/home"
+  git init -q "$FX/home/aios"
+  # A: installed the way the installer does it -- core.hooksPath + an executable hook there
+  mkdir -p "$FX/home/aios/hooks/git"; printf '#!/bin/sh\nexit 0\n' > "$FX/home/aios/hooks/git/pre-commit"
+  chmod +x "$FX/home/aios/hooks/git/pre-commit"; git -C "$FX/home/aios" config core.hooksPath hooks/git
+  R=$(HOME="$FX/home" bash -c "$PROBE" 2>/dev/null)
+  [ "$R" = "githook:installed" ] && ok "installed via core.hooksPath -> probe says installed" \
+    || no "installed via core.hooksPath -> probe says '$R'" "the probe is not reading the hooks dir git uses"
+  # B: a stale .git/hooks/pre-commit that git will NOT run, because hooksPath points elsewhere
+  rm "$FX/home/aios/hooks/git/pre-commit"
+  printf '#!/bin/sh\nexit 0\n' > "$FX/home/aios/.git/hooks/pre-commit"; chmod +x "$FX/home/aios/.git/hooks/pre-commit"
+  R=$(HOME="$FX/home" bash -c "$PROBE" 2>/dev/null)
+  [ "$R" = "githook:ABSENT" ] && ok "control: a stale .git/hooks file git ignores -> probe says ABSENT" \
+    || no "a stale .git/hooks file git ignores -> probe says '$R'" "it reports protection that is not running"
+  rm -rf "$FX"
+fi
+
 echo
 echo "── $PASS passed, $FAIL failed ──"
 [ "$FAIL" -eq 0 ]
