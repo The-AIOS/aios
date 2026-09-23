@@ -1166,6 +1166,13 @@ jobs:
         # them, in two copies twenty lines apart in one file.
         run: bash tests/cold-start-interview.test.sh
 
+      - name: setup asks for the operator's hands once, and names commands Windows has
+        # A Windows install through the App stopped twice for operator-only actions (GitHub
+        # login, /add-dir ~/.claude), cloned into a sibling it could not read, and rewired
+        # hooks by trial because SETUP.md named pwsh and python3. Each check is paired with
+        # a mutation that must make it fail.
+        run: bash tests/setup-operator-gates.test.sh
+
       - name: the secret scanner rejects what it is supposed to reject
         # Found by the derived-list guard below on its first run: this suite had been
         # committed and never invoked by any workflow. It is the scanner that stands between
