@@ -28,15 +28,19 @@ TMP="${TMPDIR:-/tmp}/aios-setup-gates.$$"; mkdir -p "$TMP"; trap 'rm -rf "$TMP"'
 # The Claude-facing block is an HTML <details>, not a blockquote (see cold-start-interview.test.sh 4b).
 block(){ awk '/<summary>.*Reading this as Claude/,/<\/details>/' "$1"; }
 # Everything before the numbered clone step.
-before_clone(){ block "$1" | awk '/^2\. Clone/{exit} {print}'; }
-step2(){ block "$1" | awk '/^2\. Clone/{f=1;print;next} f&&/^[0-9]+\. /{exit} f{print}'; }
+# No early `exit` in these awks and no `grep -q` downstream: under `set -o pipefail` a reader
+# that stops early SIGPIPEs its writer, the pipeline reports 141, and the check fails on Linux
+# while passing on Windows (which does not deliver SIGPIPE the same way). Read to the end.
+before_clone(){ block "$1" | awk '/^2\. Clone/{d=1} !d{print}'; }
+step2(){ block "$1" | awk '/^2\. Clone/{f=1;print;next} f&&/^[0-9]+\. /{f=0;d=1} f&&!d{print}'; }
+has(){ grep -F -- "$1" >/dev/null; }
 
-gates_up_front(){ before_clone "$1" | grep -qF 'gh auth status' && before_clone "$1" | grep -qF '/add-dir'; }
-clone_in_place(){ step2 "$1" | grep -qF 'git clone https://github.com/The-AIOS/aios.git .'; }
+gates_up_front(){ before_clone "$1" | has 'gh auth status' && before_clone "$1" | has '/add-dir'; }
+clone_in_place(){ step2 "$1" | has 'git clone https://github.com/The-AIOS/aios.git .'; }
 no_pwsh(){ ! grep -qE 'pwsh (-File|skills/)' "$1"; }
 # No GitHub must not stop setup: step 2 names the fallback, and the fallback drops
 # the framework origin so a vault commit can never target the public repo.
-github_optional(){ step2 "$1" | grep -qF 'No GitHub → continue' && step2 "$1" | grep -qF 'remote remove origin'; }
+github_optional(){ step2 "$1" | has 'No GitHub → continue' && step2 "$1" | has 'remote remove origin'; }
 # ...and the warning is re-derived from the remote every morning, not left to a marker.
 backup_probe(){ grep -qF 'remote get-url origin' "$1" && grep -qF 'backup: none' "$1" && grep -qF 'Backup warning rendering' "$1"; }
 win_block_runs(){
