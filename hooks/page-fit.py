@@ -26,6 +26,10 @@ import subprocess
 import sys
 import tempfile
 
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 A4_PX = 297 / 25.4 * 96          # 1122.52 px — one sheet's height at CSS 96 dpi
 TOLERANCE = 1.0                  # sub-pixel rounding, never content
 
