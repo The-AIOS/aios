@@ -1171,7 +1171,10 @@ jobs:
         # login, /add-dir ~/.claude), cloned into a sibling it could not read, and rewired
         # hooks by trial because SETUP.md named pwsh and python3. Each check is paired with
         # a mutation that must make it fail.
-        run: bash tests/setup-operator-gates.test.sh
+        # Section 3 runs the /today backup probe under bash AND zsh (the macOS session shell).
+        run: |
+          command -v zsh >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq zsh; }
+          bash tests/setup-operator-gates.test.sh
 
       - name: vendored sources match the pin they record, file by file
         # skills/superpowers recorded v5.1.0 while every file matched v5.0.7 — a record
