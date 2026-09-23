@@ -4,7 +4,7 @@ tags:
   - command
   - on-demand
 description: Distill the period's learnings into a reflective report with optional branded PDF — from observed context, daily notes, and growth edges
-allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/aios && git:*), Bash(ls *), Bash(cat *), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*)
+allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/aios && git:*), Bash(ls *), Bash(cat *), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*), Bash(uv run ~/aios/hooks/page-fit.py:*)
 argument-hint: "period (e.g. 'month', 'March', 'Q1 2026', 'this week', '2026-03-01 to 2026-03-28')"
 ---
 
@@ -283,6 +283,12 @@ Write the HTML to `/tmp/learned-{period}.html`, then:
 mkdir -p ~/aios/vault/03\ -\ export/reports/learned
 cp /tmp/learned-{period}.html "$HOME/aios/vault/03 - export/reports/learned/{period}-learned.html"
 ```
+
+   **Then measure the fit** — each `.page` is one A4 sheet, and one that overflows splits across extra sheets at print time while reading fine as HTML:
+```bash
+uv run ~/aios/hooks/page-fit.py "$HOME/aios/vault/03 - export/reports/learned/{period}-learned.html"
+```
+   Exit `1` names the overflowing page and its excess in px. **Do not trim insights to fit** (see § Rules — never cap artificially): split the overflow into a new `<div class="page">` instead. Exit `2` means not measured — say so, never *"fits"*.
 
 2. **Ask: "Want the PDF version too?"** If yes:
 ```bash
