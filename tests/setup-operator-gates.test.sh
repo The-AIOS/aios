@@ -34,6 +34,11 @@ step2(){ block "$1" | awk '/^2\. Clone/{f=1;print;next} f&&/^[0-9]+\. /{exit} f{
 gates_up_front(){ before_clone "$1" | grep -qF 'gh auth status' && before_clone "$1" | grep -qF '/add-dir'; }
 clone_in_place(){ step2 "$1" | grep -qF 'git clone https://github.com/The-AIOS/aios.git .'; }
 no_pwsh(){ ! grep -qE 'pwsh (-File|skills/)' "$1"; }
+# No GitHub must not stop setup: step 2 names the fallback, and the fallback drops
+# the framework origin so a vault commit can never target the public repo.
+github_optional(){ step2 "$1" | grep -qF 'No GitHub → continue' && step2 "$1" | grep -qF 'remote remove origin'; }
+# ...and the warning is re-derived from the remote every morning, not left to a marker.
+backup_probe(){ grep -qF 'remote get-url origin' "$1" && grep -qF 'backup: none' "$1" && grep -qF 'Backup warning rendering' "$1"; }
 win_block_runs(){
   "$PY" - "$1" <<'PY'
 import io, json, sys
@@ -58,6 +63,12 @@ gates_up_front SETUP.md \
 clone_in_place SETUP.md \
   && ok "step 2 clones INTO an empty ~/aios, not beside it" \
   || no "step 2 has no clone-in-place instruction" "the App starts the session inside ~/aios; a sibling clone is unreadable"
+github_optional SETUP.md \
+  && ok "no GitHub → setup continues, with the framework origin removed" \
+  || no "step 2 has no no-GitHub fallback" "a failed login must warn, not block"
+backup_probe plugins/aios/commands/today.md \
+  && ok "/today re-derives the not-backed-up warning from the remote" \
+  || no "/today has no backup probe" "a vault left local-only by setup would be silent forever"
 for f in SETUP.md plugins/aios/commands/cold-start-interview.md; do
   no_pwsh "$f" && ok "$f invokes no pwsh" \
     || no "$f still invokes pwsh" "the Windows prerequisites never install PowerShell 7"
@@ -76,6 +87,11 @@ sed 's#(Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File skills/set
 no_pwsh "$M" && no "pwsh check passed with pwsh reintroduced" "" || ok "pwsh check fires when pwsh is reintroduced"
 sed 's#| python \$HOME/aios/hooks/claude-identity/context-monitor.py#| python3 $HOME/aios/hooks/claude-identity/context-monitor.py#' SETUP.md > "$M"
 win_block_runs "$M" && no "Windows block check passed with python3 reintroduced" "" || ok "Windows block check fires on python3"
+
+sed '/remote remove origin/d' SETUP.md > "$M"
+github_optional "$M" && no "GitHub fallback check passed with the fallback removed" "" || ok "GitHub fallback check fires without the fallback"
+sed '/remote get-url origin/d' plugins/aios/commands/today.md > "$TMP/today.md"
+backup_probe "$TMP/today.md" && no "backup probe check passed with the probe removed" "" || ok "backup probe check fires without the probe"
 
 echo; echo "-- $PASS passed, $FAIL failed --"
 [ "$FAIL" -eq 0 ]
