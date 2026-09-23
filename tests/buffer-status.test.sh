@@ -189,11 +189,23 @@ he=$($PYBIN "$B" "$T/hd.md" --json | $PYBIN -c 'import sys,json;print(json.load(
 } > "$T/tomb.md"
 rct=$($PYBIN "$B" "$T/tomb.md" >/dev/null 2>&1; echo $?)
 [ "$rct" = "0" ] && ok "control: a genuinely empty buffer still measures clean" || no "CONTROL FAILED — empty-but-valid buffer → exit $rct, expected 0"
-# A shape matching NEITHER style must refuse, not report zero.
-{ echo "## Emerging"; echo; echo "some prose that is neither a heading nor a top-level bullet,"
-  echo "long enough to be unmistakably substantive content in this stage."; } > "$T/neither.md"
-rcn=$($PYBIN "$B" "$T/neither.md" >/dev/null 2>&1; echo $?)
-[ "$rcn" = "2" ] && ok "an unknown entry shape refuses (exit 2), never reports 0" || no "unknown shape → exit $rcn, expected 2"
+# THREE states. A section with no parsed entries is EMPTY when all it holds is prose,
+# blank lines and HTML comments — the state the routing flow prescribes (a note that it
+# is empty + the ROUTED tombstones). Refusing there was a daily false alarm on a healthy
+# buffer (reported by an operator: seven straight days). It is UNPARSEABLE when a line
+# is shaped like an entry in a style this parser does not know — that must still refuse.
+{ echo "## Reinforced"; echo
+  echo "Nothing is reinforced right now — every entry that earned a second sighting has been routed to its target file."
+  echo "<!-- ROUTED 2026-09-10: x → patterns.md -->"; echo "## Emerging"; echo; } > "$T/annotated.md"
+rca=$($PYBIN "$B" "$T/annotated.md" >/dev/null 2>&1; echo $?)
+[ "$rca" = "0" ] && ok "an annotated empty section (long prose note + tombstone) measures clean" || no "annotated empty section → exit $rca, expected 0" "a healthy empty stage must not refuse"
+for shape in "  - a nested bullet entry" "* a star bullet entry" "1. a numbered entry" "#### a deeper heading entry" \
+             "**A titled paragraph entry** — the body of it" "An untyped entry with \`route: patterns.md\` in prose"; do
+  { echo "## Emerging"; echo; echo "$shape"; } > "$T/neither.md"
+  rcn=$($PYBIN "$B" "$T/neither.md" >/dev/null 2>"$T/neither.err"; echo $?)
+  { [ "$rcn" = "2" ] && grep -q 'First lines:' "$T/neither.err"; } && ok "unknown shape refuses (exit 2) and shows the lines: ${shape:0:28}…" \
+    || no "unknown shape → exit $rcn, expected 2 with the section's first lines" "$shape"
+done
 
 echo "── an unrecognised class is surfaced ──"
 { echo "## Emerging"; echo "### weird"; echo '`class: sytem` · `route: x.md`'; echo body; } > "$T/badclass.md"
