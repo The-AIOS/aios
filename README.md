@@ -156,7 +156,7 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 │   ├── custom/              ← your personal extensions (survive /aios:update)
 │   └── <company>/<plugin>/  ← company-distributed (via /aios:company --sync)
 ├── agents/                  ← Task agents
-│   ├── aios-*/              ← framework: 7 bundles (sales · strategy · finance-legal · engineering · communication · personal · commerce)
+│   ├── aios/                ← framework: 7 bundles (sales · strategy · finance-legal · engineering · communication · personal · commerce)
 │   ├── custom/              ← your personal extensions
 │   └── <company>/           ← company-distributed
 ├── skills/                  ← Skills (auto-loaded by Claude Code)
@@ -171,11 +171,11 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 │   ├── custom/              ← your personal extensions
 │   └── <company>/           ← company-distributed
 ├── mcps/                    ← Vendored MCP servers
-│   ├── *-mcp/               ← framework: 10 bundled (see mcps/_index.md for the canonical list)
+│   ├── *-mcp/               ← framework: bundled servers (mcps/_index.md is the canonical list)
 │   ├── custom/              ← your personal extensions
 │   └── <company>/           ← company-distributed
 ├── templates/               ← Starting templates for context, projects, agents, ventures
-│   ├── *.md                 ← framework-bundled templates
+│   ├── aios/                ← framework-bundled templates
 │   ├── custom/              ← your personal templates
 │   └── <company>/           ← company-distributed
 ├── START-HERE.md            ← First-time orientation (what is this, what to do post-clone)
@@ -188,6 +188,9 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 ├── TOOLS.md                 ← Full menu of every command, agent, skill, MCP, and standalone tool
 ├── FORTRESS.md              ← Advanced: two-machine architecture for 24/7 autonomous agents
 ├── MODEL-ROUTING.md         ← Which model for which task · the non-Claude boundary
+├── SECURITY.md              ← What each surface reaches, whose identity it acts as, the update model
+├── GLOSSARY.md              ← Plain-language vocabulary for a non-technical operator
+├── CONTRIBUTING.md          ← How to give work back: signal via Issue, or a PR (custom/-first)
 ├── CHANGELOG.md             ← What changed in shared infra, when, and what to do (read by /aios:update)
 ├── AGENTS.md                ← Portable operating contract for non-Claude tools (Codex/Cursor/Aider)
 ├── EXTENSION-MAP.md         ← How to extend AIOS: bundled/custom/company model per infra type + how to add each

@@ -8,8 +8,11 @@
 # copy of itself it reported "207 entries" instead of "damaged" -- the inflated
 # count CONCEALED the duplication a measurement exists to expose. The doubled
 # file had survived 11 days and 8 commits because every consumer read a number
-# that looked plausible. The fix is an invariant (entries == highest AND zero
-# duplicate numbers) computed OUTSIDE the `## Meta-patterns` section.
+# that looked plausible. The fix is an invariant (zero duplicate numbers, and
+# entries <= highest) computed OUTSIDE the `## Meta-patterns` section. It once
+# read `entries == highest`, which also flagged GAPS -- but removal leaves a gap
+# and the command calls that correct (entry numbers are identity), so every
+# legitimate removal read as damage (#152). Duplicates are what doubling leaves.
 #
 # These checks run THE DOCUMENT'S OWN probe (extract-never-restate -- a guard
 # that restates the command it checks goes green when the doc drifts) against
@@ -25,8 +28,10 @@ C=plugins/aios/commands/compact.md
 [ -f "$C" ] || { echo "::error::$C missing"; exit 1; }
 
 echo "-- 1. the prose carries the invariant, not a bare count --"
-grep -qF 'entries == highest' "$C" && ok "states the count==highest invariant" \
-  || no "invariant 'entries == highest' missing" "a count alone cannot see a doubled file"
+grep -qF 'entries ≤ highest' "$C" && ok "states the entries<=highest bound (gaps legal)" \
+  || no "invariant 'entries ≤ highest' missing" "a count alone cannot see a doubled file"
+grep -qF 'entries == highest` AND' "$C" && no "invariant still demands entries == highest" "a gap is legal; only duplicates are damage (#152)" \
+  || ok "does not treat a gap as damage"
 grep -qF 'duplicated == 0' "$C" && ok "states the zero-duplicates invariant" \
   || no "invariant 'duplicated == 0' missing" "duplicate entry numbers are the silent-duplication tell"
 grep -qF 'MUST stop and diff' "$C" && ok "mismatch stops the pass before compaction" \

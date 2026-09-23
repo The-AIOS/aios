@@ -185,7 +185,7 @@ This vault has two persistence layers. They must compound, not compete.
 
 **The test before saving to memory:** "Does a vault file already track this?" If yes, don't save — update the vault file instead.
 
-**The dual-write rule for behavioral patterns:** working-style observations and observed preferences belong in BOTH memory (bootstrap cache) AND vault (source of truth) — the memory entry AND the matching section in `context/declared/` (operator's own statement — `working_style.md`, `about_me.md`) and/or `context/observed/` (derived rule — `preferences.md`, `patterns.md`). The test: *would a fresh session with full vault access but no memory still learn this?* If no, the vault is incomplete and memory is doing too much. Memory bootstraps; the vault is self-contained.
+**The pointer rule for behavioral patterns:** the substance of a working-style observation or preference lives in the vault — `context/declared/` (operator's own statement — `working_style.md`, `about_me.md`) and/or `context/observed/` (derived rule — `preferences.md`, `patterns.md`). Memory may hold at most a one-line pointer to it, never a second copy — the channeling rule below drains any copy that accrues. The test: *would a fresh session with full vault access but no memory still learn this?* If no, the vault is incomplete and memory is doing too much. Memory bootstraps; the vault is self-contained.
 
 Tool quirks (e.g. *"Obsidian `patch_note` uses `oldString`/`newString`"*) stay in memory only. Anything about the operator's behavior, preferences, working style, or tool-interpretation conventions MUST surface in vault context too.
 

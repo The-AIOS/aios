@@ -1670,6 +1670,18 @@ jobs:
         # Reported in #149.
         run: bash tests/calendar-timezone.test.sh
 
+      - name: README's architecture tree names every root doc and restates no counts
+        # The tree fell behind three root docs (CONTRIBUTING, GLOSSARY, SECURITY) that every
+        # other surface already listed, and carried a bundled-MCP count a later server made
+        # false. Both directions are checked, with a control that the extractor found the tree.
+        run: bash tests/readme-tree.test.sh
+
+      - name: owned numbers are pointed at, not restated; memory holds a pointer, not a copy
+        # #152-#155: a hand-rolled snapshot cp and a gap-illegal invariant in /aios:compact,
+        # CLAUDE.md's dual-write rule contradicting its own channeling rule, and two thresholds
+        # restated outside the command/hook that owns them. Each check fails on the old text.
+        run: bash tests/restated-rules.test.sh
+
       - name: every bundled connector carries a manifest the App can read
         # AI-122 Front A. The AIOS App builds its Connectors card from
         # mcps/*/connector.json and ships NO copy of any register command, so a
