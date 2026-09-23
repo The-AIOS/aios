@@ -388,7 +388,10 @@ def read_vlm_headless(frames, segments, verbose):
     manifest = [{"index": i, "path": f["path"], "time": f["time"]} for i, f in enumerate(frames)]
     prompt = build_caption_prompt(manifest, segments)
     log(f"captioning {len(frames)} frames via claude -p (headless)", verbose=verbose)
-    r = run([claude, "-p", prompt, "--allowedTools", "Read"], timeout=1200)
+    # --tools: Read is the only tool that EXISTS. --allowedTools alone is additive to
+    # every "allow always" rule in the vault's settings.local.json; --setting-sources
+    # drops that layer. Read stays pre-approved so the frames can be opened.
+    r = run([claude, "-p", prompt, "--tools", "Read", "--allowedTools", "Read", "--setting-sources", "user,project", "--strict-mcp-config"], timeout=1200)  # noqa: E501 — one line so tests/lint-claude-p.py can see every flag
     if r.returncode != 0:
         log(f"claude -p failed: {r.stderr.strip()[-400:]}", verbose=verbose)
         return {}

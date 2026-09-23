@@ -44,7 +44,10 @@ import re
 import subprocess
 import sys
 
-SKIP_PREFIXES = ("skills/anthropic/", "skills/superpowers/", "tests/lint-claude-p.py")
+# tests/headless-allowlist.test.sh runs the OLD, uncontained recipe on purpose, as the
+# control that proves the risk exists on the machine; flagging it would delete the proof.
+SKIP_PREFIXES = ("skills/anthropic/", "skills/superpowers/", "tests/lint-claude-p.py",
+                 "tests/headless-allowlist.test.sh")
 
 
 def statements(text, is_python):
@@ -96,16 +99,22 @@ def main():
                 py_call = None
             if not (shell_call or py_call):
                 continue
-            if "allowedTools" in st:
+            # `--tools` decides which tools EXIST; `--allowedTools` only pre-approves and
+            # is additive to every "allow always" rule in the vault's settings.local.json,
+            # so an allowlist alone inherits broad Read/Bash on a vault used daily
+            # (reported privately 2026-09-21, reproduced with a canary). Require both
+            # halves of the containment: the tool set, and dropping the local layer.
+            if re.search(r"--tools\b", st) and "setting-sources" in st:
                 continue
             bad.append(f"{f}:{lineno}: {st[:110]}")
     if bad:
-        print("::error::A shipped `claude -p` invocation does not name its tools:")
+        print("::error::A shipped `claude -p` invocation is not contained:")
         for b in bad:
             print("  " + b)
-        print("Add --allowedTools sized to the job (a nonexistent tool name when it needs none),")
-        print("plus --strict-mcp-config and an explicit --permission-mode.")
-        print("Prompt FIRST: --allowedTools is variadic and swallows a prompt that follows it.")
+        print("Pass --tools sized to the job (--tools \"\" when it needs none) and")
+        print("--setting-sources user,project, plus --strict-mcp-config (and an explicit")
+        print("--permission-mode unless no write-capable tool exists). --allowedTools alone")
+        print("inherits every accumulated 'allow always' rule. Prompt FIRST: the flags are variadic.")
         return 1
     print(f"OK: every shipped claude -p invocation names its tools ({len(files)} executable files scanned)")
     return 0

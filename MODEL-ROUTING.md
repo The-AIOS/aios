@@ -61,16 +61,24 @@ Model ids churn. An id AIOS does not recognise **does not fail loudly** — Clau
 means *"the spawn worked"* is worthless as evidence on its own. The check that can actually fail:
 
 ```bash
-# Prompt FIRST, then flags — `--allowedTools` is variadic and will swallow a
-# prompt that follows it. Both guard flags are required, and so is the explicit
-# permission mode: see the note below.
+# Prompt FIRST, then flags — `--tools` is variadic and will swallow a prompt that
+# follows it. `--tools ""` means no tool exists at all; `--setting-sources`,
+# `--strict-mcp-config` and the explicit permission mode are each required: see below.
 claude -p 'ok' --model "$ID" --output-format json \
-  --allowedTools NoSuchTool --strict-mcp-config --permission-mode default 2>&1 | head -c 200
+  --tools "" --setting-sources user,project --strict-mcp-config \
+  --permission-mode default 2>&1 | head -c 200
 # real id  → JSON with non-zero total_cost_usd and non-zero input tokens
 # bad id   → the literal string  [claude-code:unrecognized_model]
 ```
 
-> **Why a probe that only says `ok` carries an allowlist.** Reported by an operator, 2026-08-31, after auditing their own fleet. Any shipped `claude -p` invocation should name the tools it actually needs — this one needs none — because the cost of adding it is a flag and the cost of retrofitting it across a fleet is a weekend. Three of the four obvious ways to do this **do not work**: `--allowedTools ""` is swallowed by the variadic flag · `--permission-mode manual` does **not** block (Bash still runs) · `--disallowedTools Bash` is a denylist, so `Write`, `Edit` and `Agent` survive it. The allowlist naming a tool that does not exist, plus `--strict-mcp-config`, is the form that holds.
+> **An allowlist is not containment — the tools that exist are.** Reported privately by an operator, 2026-09-21, and reproduced on Claude Code 2.1.281 with a canary: `--allowedTools` only *pre-approves*, and it is **additive** to every allow rule in the settings that load. `.claude/settings.local.json` is where each interactive *"allow always"* click accumulates — one daily-used vault had 98 rules, including a home-wide `Read` and `Bash(python3 *)` — so the previous recipe (`--allowedTools NoSuchTool --strict-mcp-config --permission-mode default`) **read a file outside the project**. Measured: that recipe plus one inherited `Read` rule → leaked · adding `--setting-sources user,project` → held · `--tools ""` → held · the same recipe with no local rule → held (the control: the inherited rule is the whole cause). So:
+>
+> - **`--tools "<list>"`** sets which tools exist (`""` = none). Size it to the job; it is the part an inherited rule cannot widen.
+> - **`--setting-sources user,project`** drops the local layer where *"allow always"* accumulates.
+> - **Keep `ToolSearch` in `--tools` whenever MCP servers are loaded** — without it every MCP schema is inlined and the run dies with *"Prompt is too long"*.
+> - **A job that must run `Bash` needs the OS sandbox too**, denying reads of your secrets folder: a settings deny rule stops the `Read` tool and `cat`, not `python3 -c "open(...)"`. And read-only commands inside the working directory are auto-approved, so run such a job from a directory holding only what it needs.
+>
+> **Why a probe that only says `ok` carries these flags.** Reported by an operator, 2026-08-31, after auditing their own fleet. Any shipped `claude -p` invocation should name the tools it actually needs — this one needs none — because the cost of adding it is a flag and the cost of retrofitting it across a fleet is a weekend. Three of the four obvious ways to do this **do not work**: `--allowedTools ""` is swallowed by the variadic flag · `--permission-mode manual` does **not** block (Bash still runs) · `--disallowedTools Bash` is a denylist, so `Write`, `Edit` and `Agent` survive it. (These were written when the allowlist was the recommended form; the note above supersedes it with `--tools`.)
 >
 > **And it holds only if you also pass `--permission-mode` explicitly.** Measured 2026-09-04 on a machine whose `~/.claude/settings.json` sets `permissions.defaultMode: "auto"`: the allowlist form alone **created a file**, with `permission_denials: []`. Adding `--permission-mode default` (or `plan`) blocked it. A machine-level auto mode silently outranks the flag — which is consistent with the vendor's own position that auto mode is a convenience feature backed by a best-effort classifier, **not a security boundary**.
 >
