@@ -37,12 +37,14 @@ Operator said *"set up my AI-OS from this repo"* or similar. You're the executor
    **Before leaving step 1, ask for everything only the operator can do — in ONE message, now.** Two things in this sequence are out of your hands, and on a real Windows install through the App they surfaced as two separate stops: GitHub login halfway through step 2, and file access at step 8, after work had already been done around the block. Each stop is a moment the operator is handed a command they did not expect, mid-flow. Find both up front, ask for them together, and keep working while they do it:
 
    ```bash
-   gh auth status >/dev/null 2>&1 || echo "needs: gh-login"
+   if ! command -v gh >/dev/null 2>&1; then echo "github: gh not installed — continue local-only"
+   elif ! gh auth status >/dev/null 2>&1; then echo "needs: gh-login"; fi
    [ "$(pwd -P)" = "$(cd ~ && pwd -P)" ] || echo "needs: add-dir $(cd ~/.claude 2>/dev/null && pwd -W 2>/dev/null || echo ~/.claude)"
    ```
 
    - **`needs: gh-login`** → *"If you have a GitHub account, type `! gh auth login --hostname github.com --git-protocol https --web` — it backs your vault up to a private repo. No account, or it doesn't work? Say so and we carry on; you can connect it any day."* The flags answer the three questions a newcomer cannot (which host, which protocol, which method). App operators have usually done this in the App's own GitHub step, so this is normally silent on that path.
      > **GitHub is never a gate.** It buys one thing — an off-machine backup of the vault — and nothing in setup, the interview or the daily rituals needs it. A login that fails, an account the operator doesn't have, or a `gh repo create` that errors: all of them take the fallback in step 2 and setup **continues**. Do not retry a failed login more than once, and do not stop the flow to troubleshoot it.
+   - **`github: gh not installed`** → say nothing now; treat it exactly like a declined login. Step 2 takes the no-GitHub fallback and setup carries on local-only. Offer the GitHub CLI later, alongside the backup warning — never as a blocker.
    - **`needs: add-dir <path>`** → *"Type `/add-dir <path>` so I can write your Claude settings."* Steps 3, 5 and 8 all write under `~/.claude` (skills, plugin, hooks), and your file tools are scoped to the directory the session started in — which on the App path is always `~/aios`. Give the **resolved absolute path** the probe printed (`C:/Users/<name>/.claude` on Windows), never `~`. Do **not** work around a refused read with a shell command: that reaches a file the operator's settings kept you out of, and you then have to confess it.
    - **Neither is needed until later**, so do not wait on them. The clone (step 2) needs no login, and the private repo is created at the end of step 2 only if `gh auth status` passes by then.
 2. Clone to `~/aios` (default) and create private GitHub repo `{username}/aios` (or whatever the operator names it) — see "The Setup" §1 below
@@ -470,9 +472,9 @@ bash ~/aios/hooks/claude-identity/install-wrappers.sh
 source ~/.zshrc   # or ~/.bashrc
 ```
 
-**Windows (PowerShell):**
+**Windows (PowerShell):** run it from the PowerShell you actually use — the installer writes *that* shell's profile, so this line re-launches whichever edition you are in (PowerShell 7 or the built-in 5.1):
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File ~\aios\hooks\claude-identity\install-wrappers.ps1
+& (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File "$HOME\aios\hooks\claude-identity\install-wrappers.ps1"
 . $PROFILE
 ```
 
@@ -540,8 +542,12 @@ Merge `PreToolUse` alongside your existing `UserPromptSubmit` array — don't re
 
 **On Windows — the same three hooks, in the form that actually runs there.** Two names in the blocks above do not exist on a stock Windows install, and a setup session will otherwise find that out by trial:
 
-- **`pwsh`** is PowerShell 7, which the Windows prerequisites above never install. Use **`powershell`** (Windows PowerShell 5.1, present on every Windows 10/11). `inject-datetime.ps1`, `skills/setup.ps1` and `install-wrappers.ps1` all parse and run under 5.1.
-- **`python3`** is, on most Windows machines, the Microsoft Store placeholder: it prints an install notice and runs nothing, so a hook wired to it fails silently. Use **`python`**, the interpreter the prerequisites installed.
+- **`pwsh`** is PowerShell 7, which the Windows prerequisites above never install. Use **`powershell`** (Windows PowerShell 5.1, present on every Windows 10/11) for these hooks — `inject-datetime.ps1`, `skills/setup.ps1` and `install-wrappers.ps1` all parse and run under 5.1. *(The spawn-wrapper installer is the one exception to "always `powershell`": it writes the profile of the PowerShell that runs it, so on a machine that has PowerShell 7 it runs under `pwsh` — see §9.)*
+- **Python: use whichever interpreter actually runs on THIS machine, never a fixed name.** `python3` is often the Microsoft Store placeholder (it prints an install notice and runs nothing, so a hook wired to it fails silently), but on other machines `python3` is real and `python` is absent, or only the `py` launcher exists. Probe once and write the winner into every command below:
+  ```bash
+  if python3 -c '' 2>/dev/null; then echo python3; elif python -c '' 2>/dev/null; then echo python; elif py -3 -c '' 2>/dev/null; then echo "py -3"; else echo "none: install Python (Prerequisites)"; fi
+  ```
+  The block below shows `python`, the usual winner; substitute what the probe printed.
 
 Write **absolute paths with forward slashes** (resolve them once with `cygpath -m ~/aios` in Git Bash), so the command does not depend on which shell Claude Code hands it to:
 

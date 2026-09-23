@@ -42,7 +42,7 @@ no_pwsh(){ ! grep -qE 'pwsh (-File|skills/)' "$1"; }
 # the framework origin so a vault commit can never target the public repo.
 github_optional(){ step2 "$1" | has 'No GitHub → continue' && step2 "$1" | has 'remote remove origin'; }
 # ...and the warning is re-derived from the remote every morning, not left to a marker.
-backup_probe(){ grep -qF 'remote get-url origin' "$1" && grep -qF 'backup: none' "$1" && grep -qF 'Backup warning rendering' "$1"; }
+backup_probe(){ grep -qF 'remote get-url --push' "$1" && grep -qF 'backup: none' "$1" && grep -qF 'Backup warning rendering' "$1"; }
 win_block_runs(){
   "$PY" - "$1" <<'PY'
 import io, json, sys
@@ -94,8 +94,36 @@ win_block_runs "$M" && no "Windows block check passed with python3 reintroduced"
 
 sed '/remote remove origin/d' SETUP.md > "$M"
 github_optional "$M" && no "GitHub fallback check passed with the fallback removed" "" || ok "GitHub fallback check fires without the fallback"
-sed '/remote get-url origin/d' plugins/aios/commands/today.md > "$TMP/today.md"
+sed '/remote get-url --push/d' plugins/aios/commands/today.md > "$TMP/today.md"
 backup_probe "$TMP/today.md" && no "backup probe check passed with the probe removed" "" || ok "backup probe check fires without the probe"
+
+echo "-- 3. the /today backup probe answers right for every remote setup (bash + zsh) --"
+# It runs for EVERY existing operator every morning, so a false "not backed up" is a
+# daily wrong alarm on a setup that works. Seven real shapes, each with its expected answer.
+PROBE="$TMP/probe.sh"
+grep -o '`Bash(g(){[^`]*`' plugins/aios/commands/today.md | sed 's/^`Bash(//; s/)`$//' > "$PROBE"
+if [ ! -s "$PROBE" ]; then no "cannot extract the backup probe from today.md" "the probe line changed shape — re-aim the grep"
+else
+  R="$TMP/remotes"
+  mk(){ mkdir -p "$R/$1/aios"; git -C "$R/$1/aios" init -q; git -C "$R/$1/aios" -c user.email=t@t -c user.name=t commit -q --allow-empty -m x; }
+  mk none
+  mk private;   git -C "$R/private/aios"   remote add origin git@github.com:someone/aios.git
+  mk renamed;   git -C "$R/renamed/aios"   remote add vault  git@github.com:someone/my-vault.git
+                for br in main master; do git -C "$R/renamed/aios" config "branch.$br.remote" vault; done
+  mk upstream;  git -C "$R/upstream/aios"  remote add origin https://github.com/someone/aios.git
+                git -C "$R/upstream/aios"  remote add upstream https://github.com/The-AIOS/aios.git
+  mk fresh;     git -C "$R/fresh/aios"     remote add origin https://github.com/The-AIOS/aios.git
+  mk ssh;       git -C "$R/ssh/aios"       remote add origin git@github.com:The-AIOS/aios.git
+  mk app;       git -C "$R/app/aios"       remote add origin https://github.com/The-AIOS/aios-app.git
+  for sh in bash zsh; do
+    command -v "$sh" >/dev/null 2>&1 || { [ -n "${CI:-}" ] && [ "$sh" = zsh ] && no "zsh available under CI" "install zsh"; continue; }
+    for pair in none:none private:ok renamed:ok upstream:ok fresh:framework-origin ssh:framework-origin app:ok; do
+      c="${pair%%:*}"; want="backup: ${pair#*:}"
+      got="$(HOME="$R/$c" "$sh" "$PROBE" 2>&1)"
+      [ "$got" = "$want" ] && ok "$sh · $c → $want" || no "$sh · $c gave '$got'" "expected '$want'"
+    done
+  done
+fi
 
 echo; echo "-- $PASS passed, $FAIL failed --"
 [ "$FAIL" -eq 0 ]
