@@ -80,6 +80,12 @@ for pat in '"autoAllowBashIfSandboxed": false' '"denyRead"' '"denyWrite"' '~/.go
   grep -qF -- "$pat" MODEL-ROUTING.md && ok "MODEL-ROUTING.md sandbox recipe carries $pat" \
     || no "MODEL-ROUTING.md sandbox recipe lost $pat" "a sandboxed headless job is not contained without it"
 done
+grep -qF 'never in your interactive `~/.claude/settings.json`' MODEL-ROUTING.md \
+  && ok "the recipe is scoped to a file only the job loads" \
+  || no "the recipe lost its scope" "applied to interactive settings it breaks sessions and tools that read token folders"
+grep -qF "Never report the operator's interactive settings" plugins/aios/commands/housekeeping.md \
+  && ok "housekeeping never steers operators to their global sandbox" \
+  || no "housekeeping may flag interactive settings" "the natural fix would break the operator's own sessions"
 grep -qF 'denying reads of your secrets folder' MODEL-ROUTING.md CLAUDE.md \
   && no "the old wording is back" "it points at a Read() deny rule, which does not stop sandboxed cat" \
   || ok "the old 'denying reads of your secrets folder' wording is gone"

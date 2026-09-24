@@ -96,7 +96,9 @@ claude -p 'ok' --model "$ID" --output-format json \
 >                       "denyWrite": ["~/.config/aios-secrets", "~/.google_workspace_mcp"] } } }
 >   ```
 >
->   And read-only commands inside the working directory are auto-approved, so run such a job from a directory holding only what it needs.
+>   **Put it in a file only the job loads — `claude -p … --settings ~/.config/aios-routine-sandbox.json` — never in your interactive `~/.claude/settings.json`.** Measured that way, alongside the operator's normal settings, it held: the off-allowlist command was denied and the outside read blocked. In your interactive settings it would cost you: auto-approve is what keeps a sandboxed session from prompting on every command, and denying a token folder breaks whatever reads it from sandboxed Bash, AIOS's own `/today` pipeline included. The interactive session is not the exposure; a headless job fed outside text is.
+>
+>   **A Bash job still inherits your user-level allow rules.** `--setting-sources user,project` drops the local layer only: one operator's user settings allowed `Bash(touch *)`, and that alone let an off-allowlist `touch` run with auto-approve off. For a job that needs Bash, keep `--allowedTools` to what it runs and read your user allow list with the same eye. And read-only commands inside the working directory are auto-approved, so run such a job from a directory holding only what it needs.
 >
 > **Why a probe that only says `ok` carries these flags.** Reported by an operator, 2026-08-31, after auditing their own fleet. Any shipped `claude -p` invocation should name the tools it actually needs — this one needs none — because the cost of adding it is a flag and the cost of retrofitting it across a fleet is a weekend. Three of the four obvious ways to do this **do not work**: `--allowedTools ""` is swallowed by the variadic flag · `--permission-mode manual` does **not** block (Bash still runs) · `--disallowedTools Bash` is a denylist, so `Write`, `Edit` and `Agent` survive it. (These were written when the allowlist was the recommended form; the note above supersedes it with `--tools`.)
 >
