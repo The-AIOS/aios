@@ -62,7 +62,10 @@ for _stream in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError, OSError):
         pass  # a redirected or wrapped stream that cannot be reconfigured
 
-DEFAULT_DIR = os.path.expanduser("~/aios/vault/00 - notes/context/observed")
+# Self-locate from this file (hooks/ -> framework root) rather than assuming the ~/aios symlink.
+DEFAULT_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "vault", "00 - notes", "context", "observed")
 
 # Aggregate/derived files decay faster: a relationship map or an identity
 # synthesis looks fine right up until you rely on it (CLAUDE.md § Aggregate vs
