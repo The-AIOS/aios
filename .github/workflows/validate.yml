@@ -1194,6 +1194,11 @@ jobs:
         # nothing (#172). PYTHONIOENCODING=cp1252 reproduces that console on any runner.
         run: bash tests/windows-utf8-output.test.sh
 
+      - name: the account watcher finds a real Python under launchd's bare PATH
+        # launchd's PATH puts the Command Line Tools stub first; the probe must fall through
+        # to absolute install locations. Skips where no fallback interpreter exists.
+        run: bash tests/claude-identity-python-probe.test.sh
+
       - name: the secret scanner rejects what it is supposed to reject
         # Found by the derived-list guard below on its first run: this suite had been
         # committed and never invoked by any workflow. It is the scanner that stands between
