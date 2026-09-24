@@ -103,5 +103,34 @@ else
   echo y > "$FXV/hooks/h.sh"
 fi
 
+echo "-- 5. Step 3.4: canonical's deletions — untouched files go, edited files stay and are asked about once --"
+# The old rule asked about every deleted path with default KEEP, which left a stale
+# file beside its replacement whenever upstream reorganised a folder (measured: five
+# claude-api guides kept beside their new per-SDK folders). Run the real block.
+D="$TMP/del"; mkdir -p "$D"
+awk 'index($0,"4. **Files deleted upstream")==1{f=1} f&&/^[[:space:]]*```bash[[:space:]]*$/{g=1; next} g&&/^[[:space:]]*```[[:space:]]*$/{exit} g{sub(/^   /,""); print}' "$U" > "$D/body.sh"
+if [ "$(grep -c . "$D/body.sh")" -lt 8 ] || ! grep -q 'echo "removed' "$D/body.sh"; then
+  no "harness: could not extract Step 3.4's block" "the heading or fence moved — re-aim the awk, never delete this section"
+else
+  for sh in bash "$ZSH"; do
+    F="$D/$(basename "$sh")"; rm -rf "$F"; mkdir -p "$F/clone/skills/x" "$F/home/aios/skills/x"
+    ( cd "$F/clone" && git init -q && printf 'old guide\n' > skills/x/untouched.md && printf 'orig\n' > skills/x/edited.md && printf 'keep\n' > skills/x/stays.md \
+      && git -c user.email=t@t -c user.name=t add -A && git -c user.email=t@t -c user.name=t commit -qm A ) >/dev/null
+    BASE="$(git -C "$F/clone" rev-parse HEAD)"
+    cp "$F/clone/skills/x/"*.md "$F/home/aios/skills/x/"; printf 'orig\nmy own note\n' > "$F/home/aios/skills/x/edited.md"
+    ( cd "$F/clone" && git rm -q skills/x/untouched.md skills/x/edited.md && git -c user.email=t@t -c user.name=t commit -qm B ) >/dev/null
+    { printf 'FILES=(skills/x/untouched.md skills/x/edited.md skills/x/stays.md)\n'
+      sed -e "s|^CLONE=\"/tmp/aios-update-check\"; V=\"\$HOME/aios\"; S=\"{stored_hash}\"$|CLONE=\"$F/clone\"; V=\"$F/home/aios\"; S=\"$BASE\"|" "$D/body.sh"; } > "$F/run.sh"
+    if ! grep -qF "CLONE=\"$F/clone\"" "$F/run.sh"; then no "harness: could not retarget Step 3.4" "the CLONE=/V=/S= line changed shape"; continue; fi
+    out="$(HOME="$F/home" "$sh" "$F/run.sh" 2>&1)"
+    n="$(basename "$sh")"
+    { [ ! -e "$F/home/aios/skills/x/untouched.md" ] && printf '%s' "$out" | grep -q 'removed	skills/x/untouched.md'; } \
+      && ok "$n · a deleted file you never edited is removed and reported" || no "$n · untouched deletion not removed" "$out"
+    { [ -e "$F/home/aios/skills/x/edited.md" ] && printf '%s' "$out" | grep -q 'yours	skills/x/edited.md'; } \
+      && ok "$n · a deleted file you edited is KEPT and listed for one question" || no "$n · edited deletion was not kept" "$out"
+    [ -e "$F/home/aios/skills/x/stays.md" ] && ok "$n · a file canonical still has is untouched" || no "$n · a live file was removed"
+  done
+fi
+
 printf '\n  %s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

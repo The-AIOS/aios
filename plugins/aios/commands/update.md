@@ -595,7 +595,30 @@ For each changed Tier 1 file:
    - All other extensions (`.json`, `.css`, `.py`, `.sh`, `.plist`, `.yml`) → `Bash cp` (preserves file mode — load-bearing for executable scripts under `hooks/`)
    - New subdirectories that don't exist locally → `mkdir -p` first, then `cp`
    - New files in `agents/aios/{bundle}/` or other bundled subfolders → `cp` to the matching local path
-4. **Files deleted upstream:** flag with a question, don't auto-delete. *"Upstream removed `{path}`. Delete your local copy too? [yes/keep]."* Default: keep (operator may have reasons to retain locally).
+4. **Files deleted upstream — remove what the operator never touched; ask, once, only about what they edited.** A path in Step 2's list that no longer exists in the clone was deleted by canonical. The old rule asked about each one with a default of *keep*, and keeping an untouched framework file is not neutral: when upstream **reorganises** a folder (a single `go/claude-api.md` split into a `go/claude-api/` directory, say), the kept file is the *stale* version sitting beside its replacement, where a session reading "look in `go/`" can pick up either — and Step 6.5 deliberately ignores vault-only files, so nothing ever cleans it up. Measured 2026-09-23: one refresh deleted five such files, so every operator was asked five questions whose default answer left outdated guidance in their skill. So the same three-way test as everywhere else decides:
+
+   ```bash
+   # Portable across bash and zsh. Paths come from Step 2's list (Tier-1 only, custom/ excluded).
+   CLONE="/tmp/aios-update-check"; V="$HOME/aios"; S="{stored_hash}"
+   h_file(){ [ -f "$1" ] || return 1; tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1; }
+   h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1
+            git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | shasum -a 256 | cut -d' ' -f1; }
+   printf '%s\n' "${FILES[@]}" | while IFS= read -r f; do
+     [ -n "$f" ] || continue
+     [ -e "$CLONE/$f" ] && continue            # still in canonical — not a deletion
+     [ -e "$V/$f" ] || continue                # already gone locally
+     LOCAL=$(h_file "$V/$f") || LOCAL=""; BASE=$(h_git "$S:$f") || BASE=""
+     if [ -n "$BASE" ] && [ "$LOCAL" = "$BASE" ]; then
+       rm -f "$V/$f" && echo "removed	$f"      # canonical's own file, never edited — take the deletion
+     else
+       echo "yours	$f"                        # edited, or no baseline to prove otherwise — keep, ask once
+     fi
+   done
+   ```
+
+   - **`removed`** lines → report them in one line (*"Removed {N} files canonical deleted — you had never edited them"*), and add each to the commit's path list in Step 7 (`aios-commit` records a deletion when given the path).
+   - **`yours`** lines → keep every one, and ask **once**, listing them: *"Canonical removed these, but your copy differs from the last version you synced (or there is no baseline to compare): {list}. Delete them too? [yes/keep]"* Default keep — this is the case the old rule was right about.
+   - Do not remove directories, only files; an emptied directory is harmless and `git` does not track it.
 
 ### 3.9. Sweep for split-residue directories — the prose rule needs a check behind it
 
@@ -848,7 +871,7 @@ For each genuine framework drift surfaced (a Tier-1 file that **differs**, or a 
 - Sync any recovered command file to the plugin pipeline (marketplace + cache).
 - **Report it loudly** — this drift means the tracker was lying; name the files recovered so the operator knows a gap self-healed.
 
-CRLF-normalize when comparing file *contents* (`tr -d '\r'`) per the § Backup-on-divergence CRLF note. **Vault-side `Only in` lines are dropped wholesale** — operator extensions (`custom/`), company namespaces (`<company>/`), and runtime (`.venv/`, `__pycache__/`, `*.log`, OAuth/auth caches, `.session`) live only in the vault, are never in canonical, and are never framework-drift-to-pull. (An upstream *deletion* — a file the vault has that canonical removed — is handled by Step 3.4's flag-don't-delete rule, not here.) Filtering by **side** (`^Only in $VAULT`), not by token, is what makes this robust — `diff` writes `Only in DIR: name` with a colon, so token patterns like `custom/` silently miss `…/custom: name`.
+CRLF-normalize when comparing file *contents* (`tr -d '\r'`) per the § Backup-on-divergence CRLF note. **Vault-side `Only in` lines are dropped wholesale** — operator extensions (`custom/`), company namespaces (`<company>/`), and runtime (`.venv/`, `__pycache__/`, `*.log`, OAuth/auth caches, `.session`) live only in the vault, are never in canonical, and are never framework-drift-to-pull. (An upstream *deletion* — a file the vault has that canonical removed — is handled by Step 3.4 — removed when you never edited it, asked about once when you did — not here.) Filtering by **side** (`^Only in $VAULT`), not by token, is what makes this robust — `diff` writes `Only in DIR: name` with a colon, so token patterns like `custom/` silently miss `…/custom: name`.
 
 ### 6.9. The star ask — applied runs only, asked once, never again either way
 
