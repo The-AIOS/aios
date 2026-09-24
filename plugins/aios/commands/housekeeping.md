@@ -836,7 +836,13 @@ It runs for months without complaining, which is why it needs a periodic sweep r
 
 **Carry the three traps into the report**, because an operator who reaches for the obvious fix will pick a broken one: `--allowedTools ""` is swallowed (the flag is variadic and eats a following prompt) · `--permission-mode manual` does **not** block · `--disallowedTools` is a denylist, so `Write`, `Edit` and `Agent` survive it. The form that holds: `claude -p '<prompt>' --tools "<only what it needs>" --setting-sources user,project --strict-mcp-config --permission-mode default` (`--tools ""` when it needs none) — `--tools` because an allowlist inherits every accumulated *"allow always"* rule, `--setting-sources` to drop that local layer, and the explicit mode because a machine-level `permissions.defaultMode: "auto"` silently outranks it. A job that runs `Bash` also needs the OS sandbox denying the secrets folder.
 
-**State COVERAGE, every run:** *"Headless calls: **{N}** invocations found across **{F}** operator files · **{G}** already name their tools · **{R}** reported."*
+**Then check the sandbox those jobs run under.** For every settings file that sets `sandbox.enabled: true` (`~/.claude/settings.json`, the vault's `.claude/settings.json`, and any settings a routine passes with `--settings`), report each of these that is missing:
+- `autoAllowBashIfSandboxed: false` — while it is `true` (the default) the sandbox approves every Bash command, so `--allowedTools` and `--permission-mode default` stop nothing.
+- `filesystem.denyRead` naming the secrets folder and every MCP token folder that exists on this machine (at least `~/.config/aios-secrets` and `~/.google_workspace_mcp`). A `permissions.deny` `Read(...)` rule does not count: it does not stop sandboxed `cat`.
+
+Report as: *"`{settings file}` enables the sandbox but {leaves Bash auto-approved / does not deny reads of `{folder}`}. The three settings are in `MODEL-ROUTING.md` § Verify an id before you trust it."* Never edit the file.
+
+**State COVERAGE, every run:** *"Headless calls: **{N}** invocations found across **{F}** operator files · **{G}** already name their tools · **{R}** reported. Sandbox settings: **{S}** files enable it · **{K}** configured as documented."*
 
 **Don't propose:** editing a hook (read-only) · flagging a call whose prompt is entirely vault-local and fixed · flagging prose or log lines that mention `claude -p` · verifying a fix by asking the agent what tools it has — under a restrictive allowlist it still lists `Bash` and `Write`, because it is describing its **schema**, not its permissions. **Only an absent side effect is evidence.**
 

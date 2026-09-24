@@ -85,7 +85,18 @@ claude -p 'ok' --model "$ID" --output-format json \
 > - **`--tools "<list>"`** sets which tools exist (`""` = none). Size it to the job; it is the part an inherited rule cannot widen.
 > - **`--setting-sources user,project`** drops the local layer where *"allow always"* accumulates.
 > - **Keep `ToolSearch` in `--tools` whenever MCP servers are loaded** — without it every MCP schema is inlined and the run dies with *"Prompt is too long"*.
-> - **A job that must run `Bash` needs the OS sandbox too**, denying reads of your secrets folder: a settings deny rule stops the `Read` tool and `cat`, not `python3 -c "open(...)"`. And read-only commands inside the working directory are auto-approved, so run such a job from a directory holding only what it needs.
+> - **A job that must run `Bash` needs the OS sandbox too, configured three ways, because its defaults do not contain a headless run.** Reported privately by an operator, 2026-09-24, and reproduced on 2.1.281 with canaries:
+>   - **`"autoAllowBashIfSandboxed": false`.** It defaults to `true`, and then the sandbox approves *every* Bash command: a command that was not on `--allowedTools` ran under `--permission-mode default` with `permission_denials: []`. Set to `false`, the same command was denied, as it is with no sandbox.
+>   - **`"filesystem": {"denyRead": [...]}` naming every credential folder.** Sandboxed Bash reads outside the project by default. A `permissions.deny` rule of `Read(<folder>/**)` did **not** stop `cat` there; only `denyRead` did. Name your secrets folder **and every MCP token folder** — `~/.config/aios-secrets` and `~/.google_workspace_mcp` at least (§ Where credentials live in [`SECURITY.md`](./SECURITY.md) lists the rest). A token folder matters as much as a key: the network allowlist lets the job reach that token's own API, so a read is also a way out.
+>   - **The same folders in `"denyWrite"`.** Writes outside the project are already denied by default; this keeps them denied if someone later widens `allowWrite`.
+>
+>   ```json
+>   { "sandbox": { "enabled": true, "autoAllowBashIfSandboxed": false,
+>       "filesystem": { "denyRead":  ["~/.config/aios-secrets", "~/.google_workspace_mcp"],
+>                       "denyWrite": ["~/.config/aios-secrets", "~/.google_workspace_mcp"] } } }
+>   ```
+>
+>   And read-only commands inside the working directory are auto-approved, so run such a job from a directory holding only what it needs.
 >
 > **Why a probe that only says `ok` carries these flags.** Reported by an operator, 2026-08-31, after auditing their own fleet. Any shipped `claude -p` invocation should name the tools it actually needs — this one needs none — because the cost of adding it is a flag and the cost of retrofitting it across a fleet is a weekend. Three of the four obvious ways to do this **do not work**: `--allowedTools ""` is swallowed by the variadic flag · `--permission-mode manual` does **not** block (Bash still runs) · `--disallowedTools Bash` is a denylist, so `Write`, `Edit` and `Agent` survive it. (These were written when the allowlist was the recommended form; the note above supersedes it with `--tools`.)
 >
