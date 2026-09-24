@@ -69,6 +69,20 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-24 — A morning plan that checks your calendar two weeks out, and two alarms that stop miscounting
+
+`hash: ` · [#170](https://github.com/The-AIOS/aios/pull/170)
+
+> **What you can now do.** Trust the dates in your morning plan. `/today` now reads the next 14 days of your calendar every morning, not just today, and when a date in your notes disagrees with the calendar it says so at the top of the plan and corrects the note. Nothing to configure.
+
+**If a meeting moved, your notes used to keep the old date.** `/today` only saw today's calendar and took every later date from your notes — project notes, weekly plans, yesterday's plan — which only restate what someone wrote once. When the invite moved, every one of those copies kept the old date and nothing flagged it. The lookahead that only `/close-day` fetched now runs for `/today` too, stretched from 7 days to 14 and grouped under one dated header per day (`**2026-09-26 (Saturday)**`). The plan reads it every morning. The calendar wins, the note is corrected in the same session, and the plan names the meeting, both dates and what the move breaks downstream. It also flags a meeting booked inside another one, and a carried task that claims a meeting no calendar has. The Calendar section always ends with one line naming your next 2-3 dated commitments.
+
+**The observed-context staleness alarm stops flagging files that are frozen by design.** The alarm lives in `/today` and `/close-day` and warns when a file in `observed/` has not been updated for 21 or 30 days. Sessions used to work it out by hand, and they knew only one kind of file with no clock (`restated: true`). A closed historical record was flagged every morning, re-excused every morning, and one session eventually proposed backfilling it. The check is now a hook, `hooks/observed-staleness.py`. It also exempts `status: historical-snapshot`, prints every exempt file so nothing is muted invisibly, and exits `2` instead of reporting "all fresh" when a file has no readable `updated:` date. To mark a file as a frozen record, give it `status: historical-snapshot`.
+
+**The observation-buffer check counts mixed sections correctly.** If a section of `session-insights.md` held both `### ` entries and `- ` bullet entries, the check counted only one style, so a section at 10 of 10 could read 1 of 10, "within contract". It now counts both. A bullet list attached to a `### ` entry still counts as part of that entry, and `/close-day` now runs the check through `uv`, like its other hooks.
+
+**Action required:** none. Everything takes effect on the next `/aios:today` after you update. If you have your own routines that parse the pre-loaded calendar output, the lookahead header now reads `## Google Calendar — Next 14 days (AUTHORITATIVE — reconcile vault dates against this)`. Update any match on the old `Next 7 days` text, but only if you have such a routine. Start a new Claude session after updating so the revised commands load.
+
 ## 2026-09-23 — Sessions that keep going, a first install that works on every machine, and headless runs that can't borrow your permissions
 
 `hash: 4c74804 · fe28fbf · 9d34c48 · 55bdf7d · de88a2d · cd8e764 · c7dc65d · c301280 · 6c19ea2 · 6e1c290 · b9961bb` · [#167](https://github.com/The-AIOS/aios/pull/167)

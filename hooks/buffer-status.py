@@ -94,31 +94,49 @@ ANY_HEADING = re.compile(r"^#{1,6} ")
 
 
 def _entry_chunks(body):
-    """Entry text blocks of ONE style, heading first then bullet.
+    """Entry text blocks of BOTH styles — `### ` headings and top-level `- ` bullets.
 
-    Boundaries are style-dependent, exactly as in `route-insight.py`: a bullet
-    entry ends at the next top-level bullet, ANY heading level, or an HTML
-    comment (the `<!-- ROUTED ... -->` tombstones are file furniture, never
-    entries), so its indented facets travel with it.
+    Both styles are counted, and a MIXED section counts both. The previous
+    version picked one style — headings if any existed, bullets otherwise — so
+    a single `### ` entry dropped into a section of bullets made every bullet
+    entry invisible: the count read 1/10 while the section sat at 10/10. A
+    measuring tool that silently undercounts is worse than no tool, because the
+    cap it enforces blows past while it reports "within contract".
+
+    Boundaries, consistent with `route-insight.py`:
+      * a bullet entry ends at the next top-level bullet, ANY heading level, or
+        an HTML comment (the `<!-- ROUTED ... -->` tombstones are file
+        furniture, never entries), so its indented facets travel with it;
+      * a heading entry ends at the next heading, or at a top-level bullet that
+        opens a new paragraph (a blank line above it) — in a mixed section that
+        bullet is the next entry. A bullet list ATTACHED to the heading entry's
+        text (no blank line above it) is that entry's facets, as it always was,
+        so a heading entry with `- evidence` lines under it is still one entry.
     """
     lines = body.split('\n')
-    starts = [i for i, l in enumerate(lines) if l.startswith("### ")]
-    style = "heading"
-    if not starts:
-        style = "bullet"
-        starts = [i for i, l in enumerate(lines) if TOP_BULLET.match(l)]
     chunks = []
-    for start in starts:
-        end = len(lines)
-        for j in range(start + 1, len(lines)):
-            ln = lines[j]
-            if ANY_HEADING.match(ln):
-                end = j
-                break
-            if style == "bullet" and (TOP_BULLET.match(ln) or ln.lstrip().startswith("<!--")):
-                end = j
-                break
-        chunks.append('\n'.join(lines[start:end]))
+    start = None       # index where the open entry began
+    kind = None        # "heading" | "bullet" for the open entry
+
+    for i, ln in enumerate(lines):
+        if ln.startswith("### "):
+            boundary, nxt = True, (i, "heading")
+        elif ANY_HEADING.match(ln):
+            boundary, nxt = True, (None, None)
+        elif TOP_BULLET.match(ln):
+            if kind == "heading" and i > 0 and lines[i - 1].strip() != "":
+                continue  # attached list: a facet of the heading entry above it
+            boundary, nxt = True, (i, "bullet")
+        elif kind == "bullet" and ln.lstrip().startswith("<!--"):
+            boundary, nxt = True, (None, None)
+        else:
+            boundary = False
+        if boundary:
+            if start is not None:
+                chunks.append('\n'.join(lines[start:i]))
+            start, kind = nxt
+    if start is not None:
+        chunks.append('\n'.join(lines[start:]))
     return chunks
 
 
