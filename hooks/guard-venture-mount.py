@@ -21,6 +21,16 @@ Design guarantees (why this is safe to ship to operators):
 """
 import json, os, sys, glob
 
+# Text read from files (vault headings, request payloads, names) carries "→", "—" and
+# accents. On a Windows console stdout/stderr default to cp1252, so print() raises
+# UnicodeEncodeError on the first one and the tool emits nothing. Force UTF-8 on both.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            pass  # a wrapped or redirected stream that cannot be reconfigured
+
 GUARDED_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 MOUNT_SEGMENT = "/context/ventures/"
 

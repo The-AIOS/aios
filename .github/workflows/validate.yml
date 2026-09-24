@@ -1189,6 +1189,11 @@ jobs:
         # a control proves notify() is still live for operators.
         run: bash tests/watch-notify-isolation.test.sh
 
+      - name: hooks that print text read from files survive a Windows console
+        # cp1252 consoles made the context floor crash on the first "→" in a heading and emit
+        # nothing (#172). PYTHONIOENCODING=cp1252 reproduces that console on any runner.
+        run: bash tests/windows-utf8-output.test.sh
+
       - name: the secret scanner rejects what it is supposed to reject
         # Found by the derived-list guard below on its first run: this suite had been
         # committed and never invoked by any workflow. It is the scanner that stands between

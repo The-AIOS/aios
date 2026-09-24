@@ -23,6 +23,16 @@ import subprocess
 import sys
 import time
 
+# Text read from files (vault headings, request payloads, names) carries "→", "—" and
+# accents. On a Windows console stdout/stderr default to cp1252, so print() raises
+# UnicodeEncodeError on the first one and the tool emits nothing. Force UTF-8 on both.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            pass  # a wrapped or redirected stream that cannot be reconfigured
+
 # Fire _watch.py at most once per tick to avoid spawning a subprocess on every
 # statusLine render (~4-6/turn).
 #

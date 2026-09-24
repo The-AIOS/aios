@@ -40,6 +40,13 @@ def prints_non_ascii(src):
     return hits
 
 
+def reads_and_prints(src):
+    """A hook that reads file contents or names AND prints — its output is file-derived."""
+    reads = re.search(r"\bopen\(|\.read_text\(|os\.listdir\(|\.iterdir\(|glob\(", src)
+    prints = re.search(r"^\s*print\(|sys\.std(?:out|err)\.write\(", src, re.M)
+    return bool(reads and prints)
+
+
 def main():
     bad = []
     for dirpath, dirnames, filenames in os.walk(os.path.join(ROOT, "hooks")):
@@ -50,6 +57,12 @@ def main():
             p = os.path.join(dirpath, fn)
             src = io.open(p, encoding="utf-8").read()
             hits = prints_non_ascii(src)
+            # The runtime half of the class: a hook whose OWN source is pure ASCII still
+            # prints non-ASCII when it prints what it READ — vault headings, file names,
+            # request payloads. context-floor.py was exactly that: ASCII source, and on a
+            # cp1252 console it crashed on the first "→" in a heading and emitted nothing.
+            if not hits and reads_and_prints(src):
+                hits = [(0, "prints text read from files (non-ASCII arrives at runtime)")]
             if not hits:
                 continue
             if "reconfigure(encoding=" in src:
