@@ -104,6 +104,9 @@ Before filing, present a brief summary:
 **Contradictions flagged:**
 - {existing claim} vs {new claim from source} — needs resolution
 
+**Couldn't confirm:**
+- {a claim from the source you could not verify} — looked in {where}; or "nothing — every claim above was checked"
+
 **Where I'd file this:**
 - Summary → `00 - notes/reflections/ingests/{slug}.md`
 - Action items → [[project-name]] to-dos
@@ -124,6 +127,7 @@ After confirmation:
 - Alternative: directly into a project note's session notes (for project-specific sources)
 - Include frontmatter: `title`, `type: ingest`, `source`, `source-date`, `ingested-by`, `created`, `tags`
 - Include a `## Source` section with link/path to the raw source
+- End with a `## Couldn't confirm` section — each claim you could not verify and where you looked (the same list you showed in step 3). A source's own claims are not verified by being in the source; this is what separates what the vault now *knows* from what it was *told*.
 - Use `[[wiki-links]]` for all vault connections
 
 **b. Update related project notes**

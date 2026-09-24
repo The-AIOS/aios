@@ -281,6 +281,12 @@ date: {YYYY-MM-DD}
 duration: {estimated hours}
 ---
 
+## Blocked on me
+<!-- FIRST, always: only what the OPERATOR must do for this work to continue — a decision,
+     a login, an approval, a review. Not what someone else owes, not your own open questions.
+     Write "Nothing — carry on." when there is nothing. The reader acts on this section first,
+     so it is never buried under what shipped. -->
+
 ## What shipped
 - {completed items — be specific}
 

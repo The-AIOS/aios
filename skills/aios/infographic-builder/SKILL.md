@@ -63,7 +63,7 @@ In priority order — and **always tell the user which theme you picked and why,
 
 ### 4. Render
 
-One self-contained HTML file. Tailwind (CDN) + Google Fonts. Apply the chosen design system's **actual tokens** — color palette + roles, typography hierarchy, component stylings, depth/elevation. Write the markup **directly** (do not fill a JS template-string — that leaks `${placeholders}` under pressure). Responsive (mobile → desktop). Light, purposeful interactivity only (a tabbed cascade for a timeline is good; gratuitous motion is not). For visual craft follow `anthropic/frontend-design` + `anthropic/canvas-design`; for which-viz-for-which-data follow `aios/data-presentation`.
+One self-contained HTML file. Tailwind (CDN) + Google Fonts. Apply the chosen design system's **actual tokens** — color palette + roles, typography hierarchy, component stylings, depth/elevation. Write the markup **directly** (do not fill a JS template-string — that leaks `${placeholders}` under pressure). Responsive (mobile → desktop). Light, purposeful interactivity only (a tabbed cascade for a timeline is good; gratuitous motion is not). For visual craft follow `anthropic/frontend-design`; for which-viz-for-which-data follow `aios/data-presentation`.
 
 **Render checklist:**
 
@@ -101,7 +101,7 @@ Then surface the file to the user (e.g. `SendUserFile` for the raster, or the HT
 ## Composition
 
 This skill orchestrates existing ones — it doesn't reinvent them:
-- `anthropic/frontend-design` + `anthropic/canvas-design` — visual execution quality.
+- `anthropic/frontend-design` — visual execution quality.
 - `aios/data-presentation` — choosing the right viz for the key contrast.
 - `anthropic/theme-factory` — local theme option (alternative to the awesome-design-md fetch).
 
@@ -109,7 +109,7 @@ This skill orchestrates existing ones — it doesn't reinvent them:
 
 - ❌ Fabricating data to fill panels. ← the cardinal sin.
 - ❌ A wall of text. An infographic is a *visual hierarchy*; if a panel needs a paragraph, cut it to a stat + a clause.
-- ❌ Generic AI-gradient soup. Commit to one design system's real tokens.
+- ❌ The generic default look. "Avoid generic" just swaps one default for another, so name them. With no brand `design.md` to follow, do NOT reach for: purple-to-blue gradients · a cream or off-white page background · an italic accent word inside a heading · `01 / 02 / 03` section labels · pill-shaped buttons and tags · glassmorphism cards · emoji as icons. Commit to one design system's real tokens instead.
 - ❌ Hand-picking fonts/colors when a brand `design.md` exists. Read it first.
 - ❌ Template-string fills that leak `${...}`. Generate markup directly.
 - ❌ Forcing a Key Contrast viz when the source has no single pivot. Cut the section.

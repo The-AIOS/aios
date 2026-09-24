@@ -236,6 +236,7 @@ If yes → write the pages (with `[[wiki-links]]`, proper frontmatter, source at
 If `USER.md` → `## Sources` has a `### Dev projects` table, also read **all** `.claude/session-report-{YYYY-MM-DD}-*.md` (today's date — the `-*` globs **every session's** report) from each project's local directory. `ls` them first, then `Read` each — one project can have several. Use absolute paths (expand `~`, e.g., `/Users/{username}/code/{project}/.claude/session-report-2026-03-16-{project}-{session}.md`).
 
 For each file that exists:
+- **"Blocked on me"** (if present, and not "Nothing") → surface each item **first** in the close-day summary, as the operator's own carry — the one section of a report that is theirs to act on. A report without it predates the section; read it as before.
 - **"What shipped"** → include in Close of Day > Shipped section
 - **"Decisions"** → route to the matching project's Session Notes (same routing rules as meeting notes)
 - **"Pendientes"** → include in Carries forward

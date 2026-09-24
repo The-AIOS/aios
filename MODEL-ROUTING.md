@@ -19,12 +19,21 @@ boundary costs credentials.
 Anthropic's own guidance, expressed as the four rungs AIOS exposes. **Pick by the shape of the
 work, not by importance** — "important" is what tempts you to the top rung for a file sweep.
 
-| `spawn --tier` | Model | Use it for |
-|---|---|---|
-| `frontier` | Claude Fable 5.1 | Your hardest problems: long-running agents in production, code migration, multi-step reasoning, and tasks needing creative thinking and full autonomy |
-| `judgment` **(default)** | Claude Opus 5.5 | Reasoning-intensive work — legal, financial analysis, research, other complex domains — and production coding |
-| `scale` | Claude Sonnet 5 | General-purpose workloads at scale, across coding and knowledge work |
-| `fast` | Claude Haiku 4.5 | High-frequency, latency-sensitive tasks; sub-agents inside an orchestration |
+| `spawn --tier` | Model | Use it for | Effort to start from |
+|---|---|---|---|
+| `frontier` | Claude Fable 5.1 | Your hardest problems: long-running agents in production, code migration, multi-step reasoning, and tasks needing creative thinking and full autonomy | `high` (`xhigh`/`max` for the hardest runs) |
+| `judgment` **(default)** | Claude Opus 5.5 | Reasoning-intensive work — legal, financial analysis, research, other complex domains — and production coding | `high` |
+| `scale` | Claude Sonnet 5 | General-purpose workloads at scale, across coding and knowledge work | `medium` |
+| `fast` | Claude Haiku 4.5 | High-frequency, latency-sensitive tasks; sub-agents inside an orchestration | `low` |
+
+**Effort is the second knob, and for current models it is the one to turn first.** Claude 5-generation models always reason before replying, so *"think carefully"* in a prompt only adds latency; to get more or less thinking, change effort: `claude --effort low|medium|high|xhigh|max` (checked against the installed binary, not assumed). The column above is where to start, not a rule. `spawn` does not pass `--effort` yet, so a spawned worker runs at the binary's default; set it inside the session with `/effort`, or run `claude --effort …` directly.
+
+**Fast mode is not a rung.** It is the same model, answering faster, at a higher price per token — worth it for back-and-forth work where you read every reply, wasted on an unattended worker. Toggle it with `/fast`.
+
+**A flagged message can move a session to an older model — silently, and for the rest of the session.** Opus 5.5 carries stricter safety classifiers, and the check covers the whole conversation, files and search results included, so a turn from much earlier can trigger it. When it fires, Claude Code switches the session to an older model and **stays there**. A `judgment` worker can therefore finish its job on a lower rung, and nothing in its launch arguments will say so. Two consequences:
+
+- **Check what actually ran, not what you asked for:** `/model` shows the session's current model, and each reply's model is recorded in the session transcript. Launch arguments only prove what was *requested*.
+- **Decide the behaviour for unattended work deliberately.** The setting is `/config` → *"Switch models when a message is flagged"*. Interactively, switching keeps you working; for a routine or worker whose output you will trust without watching it, you may prefer it to stop instead of finishing on a model you did not choose.
 
 Omitting `--tier` gives you `judgment`. That is deliberate: the default should be the rung that is
 right when nobody thought about it, and under-powering a reasoning task fails silently — you get an
