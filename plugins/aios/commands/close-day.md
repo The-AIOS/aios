@@ -18,7 +18,7 @@ Every evening at the end of the working day. Captures what shipped, routes sessi
 
 ## Pre-loaded API data
 
-Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which pre-loads Google Calendar events **with attachments** (today + next 7 days for cross-check), Google Tasks (open), and Slack unreads + daily recap.
+Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which pre-loads Google Calendar events **with attachments** (today + a dated 14-day lookahead for cross-check), Google Tasks (open), and Slack unreads + daily recap.
 
 **DO NOT call Google Calendar `get_events`, `list_tasks`, or Slack APIs.** The data is in the executor output.
 
@@ -29,7 +29,7 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
 ## Steps
 
 1. **Run executor + read vault** — fire these in **one parallel batch**:
-   - `Bash(uv run ~/aios/hooks/pipeline-executor.py --command close-day)` — pre-loads Calendar (detailed, with attachments), Calendar next 7 days, Tasks, Slack
+   - `Bash(uv run ~/aios/hooks/pipeline-executor.py --command close-day)` — pre-loads Calendar (detailed, with attachments), Calendar next 14 days, Tasks, Slack
    - `Bash(bash ~/aios/hooks/freshness-probe.sh --aios-update)` — **infrastructure freshness check** (the same script `/today` runs — one implementation, so the two surfaces can't drift; SSH `ls-remote` falls back to public HTTPS, and git's error output is kept so a refused credential reads `access-denied`, never `unreachable`). Render per § Aios-update freshness rendering below — at end-of-day, the framing shifts from "before working today" to "before the secondary machine's overnight queue (or first thing tomorrow)".
    - `Bash(uv run ~/aios/hooks/bus-dead-letters.py)` — **bus dead-letter + unclaimed-request check** (same script `/today` runs — one implementation, so the two surfaces can't drift; through `uv` for the reason spelled out in `/today`). It reports two distinct shapes: a retired `.undelivered` request, and a plain `*.json` **nobody ever claimed** — the second is invisible everywhere else, because retirement needs a surface to perform it and a surface that quit performs nothing. Retirement to `.undelivered` stops a request *blocking another surface*; it does not deliver it, and nothing reads that directory. At close-day this matters more than in the morning: an undelivered handoff means a worker was never told to start, so whatever it was meant to produce **will not exist overnight** — and the sender still believes it landed. Render per § Bus dead-letter rendering below.
    - `Read` → `USER.md` (for dev project paths, growth routines, session cascade, organization, and `### /close-day` command personalizations)
@@ -52,7 +52,7 @@ Step 1 runs `uv run ~/aios/hooks/pipeline-executor.py --command close-day` which
    These fetched docs become the richest source for meeting routing.
 5. **Read dev session reports** (see Dev Session Reports below)
 6. **Route meeting notes** (see Meeting Notes Routing below)
-7. **Cross-check calendar vs planned tasks** — use pre-loaded "Calendar next 7 days" data (see Calendar Cross-Check below)
+7. **Cross-check calendar vs planned tasks** — use pre-loaded "Calendar next 14 days" data (see Calendar Cross-Check below)
 8. **Slack daily recap** — if the pre-loaded data includes "## Slack Daily Recap", summarize the day's Slack activity (see Slack Recap below)
 9. **Resolve handoff items** (see Handoff Resolution below)
 10. Ask the user: "What happened today that isn't in the notes? Anything on your mind?"
@@ -331,7 +331,7 @@ If no session cascade is configured or nothing applies, skip silently.
 
 ## Calendar cross-check
 
-Use the pre-loaded calendar data: "Google Calendar — Primary" (today's events) and "Google Calendar — Next 7 days" (for upcoming matches). If a personal calendar is configured, its data appears as "Google Calendar — Personal". **Do not call `get_events` — the data is already loaded.**
+Use the pre-loaded calendar data: "Google Calendar — Primary" (today's events) and "Google Calendar — Next 14 days (AUTHORITATIVE — reconcile vault dates against this)" (for upcoming matches, grouped under one `**YYYY-MM-DD (Weekday)**` header per day). If a personal calendar is configured, its data appears as "Google Calendar — Personal". **Do not call `get_events` — the data is already loaded.**
 
 Compare against the planned tasks in the daily note (Rhythm section + Parking lot + Carries forward).
 
@@ -339,7 +339,7 @@ Compare against the planned tasks in the daily note (Rhythm section + Parking lo
 
 **Today's events:** flag meetings that may have resolved or advanced a planned task. The user may have completed a task without reporting it.
 
-**Next 7 days:** flag upcoming meetings that will likely resolve a pending task. This helps identify carries that don't need active follow-up because a meeting is already scheduled.
+**Next 14 days:** flag upcoming meetings that will likely resolve a pending task. This helps identify carries that don't need active follow-up because a meeting is already scheduled.
 
 Present only confident matches (skip weak or ambiguous ones):
 
@@ -584,7 +584,7 @@ Candidates:
   **Measure it rather than reading it.** The buffer costs ~13-22k tokens to read in full, which is why its cap and clock drifted while they were enforced by impression. Get the state for a couple of hundred instead:
 
   ```bash
-  python3 ~/aios/hooks/buffer-status.py
+  uv run ~/aios/hooks/buffer-status.py
   ```
 
   It reports counts by class, what is over cap, what carries no route target, and what is past the 30-day clock — and it **reads only, never edits**. Exit `0` = within contract · `1` = action needed · `2` = could not measure (a shape it cannot parse is reported loudly, never as a healthy zero). Entries with no `class:` line predate the contract: classify them as you pass. **See Tier A routing enforcement below — Reinforced entries with `Route to:` tags must be routed inline, not deferred.**
@@ -680,7 +680,7 @@ For each Tier B file (`growth.md`, `profile.md`, `ecosystem.md`):
 
    This is the trail data — operator sees the digest fired AND its outcome, so silent drift can't hide.
 
-   **Staleness alarm (streak-independent — replaces the old ">30d AND 3-in-a-row" escalation).** Read the `updated:` frontmatter of every `observed/*.md` file and compute days-since. Flag any file past its threshold — **21 days for aggregate Tier B files (`ecosystem.md`; `profile.md` insofar as it's an identity synthesis), 30 days for all other observed files, and no clock at all for any file carrying `restated: true`** — *regardless of any digest streak*: *"⚠️ ecosystem.md is {N}d stale (threshold 21d) — run the aggregate re-derivation now (redraw the map wholesale per step 4b), or add an explicit 'map current, verified {date}' digest line if it's genuinely unchanged."* This alarm depends only on the file's own `updated:` stamp — **not** on the digest trail existing. The retired rule required un-persisted streak state (a count of consecutive "nothing passed" digests that lives only in the trail lines); when the pass silently stopped emitting the trail, the streak could never reach 3, so the alarm structurally never fired. The dumb `updated:`-based check is the reliable-over-clever backstop. The same alarm also surfaces at `/today` (see `today.md`), so a stale aggregate is caught at both ends of the day.
+   **Staleness alarm (streak-independent — replaces the old ">30d AND 3-in-a-row" escalation).** **Run the hook — `uv run ~/aios/hooks/observed-staleness.py` — rather than reading the stamps by hand** (through `uv`, never `python3`: on Windows that name runs nothing and its silence reads like a clean result). It reports days-since for every `observed/*.md` file and flags what is past its threshold — **21 days for aggregate Tier B files (`ecosystem.md`; `profile.md` insofar as it's an identity synthesis), 30 days for all other observed files, and no clock at all for the two shapes that have none: `restated: true` (a spec rewritten in place) and `status: historical-snapshot` (a closed historical record with no write trigger)** — *regardless of any digest streak*. Exempt files are printed too, so the exemption is auditable instead of assumed; exit `2` means a file could not be measured and the run is incomplete, not clean. Surface a crossing as: *"⚠️ ecosystem.md is {N}d stale (threshold 21d) — run the aggregate re-derivation now (redraw the map wholesale per step 4b), or add an explicit 'map current, verified {date}' digest line if it's genuinely unchanged."* This alarm depends only on the file's own `updated:` stamp — **not** on the digest trail existing. The retired rule required un-persisted streak state (a count of consecutive "nothing passed" digests that lives only in the trail lines); when the pass silently stopped emitting the trail, the streak could never reach 3, so the alarm structurally never fired. The dumb `updated:`-based check is the reliable-over-clever backstop. The same alarm also surfaces at `/today` (see `today.md`), so a stale aggregate is caught at both ends of the day.
 
 **What this step does NOT do:**
 - Doesn't gate writes on operator approval (that's Ruinous Empathy disguised as care; CLAUDE.md → Anti-values catches this)
@@ -737,7 +737,7 @@ Before commit, walk the CLAUDE.md Session End rules to confirm the observed-cont
 - [ ] Snapshotted observed-context files I modified **AND set each one's `updated:` frontmatter to today** (per CLAUDE.md → "Session End → Snapshot before editing, stamp after"). The staleness alarm below reads *only* these stamps — a body edit without a stamp bump feeds the backstop a lie.
 - [ ] Updated `session-insights.md` per CLAUDE.md → "Self-Update → Observed Context Rules" — Emerging / Reinforced / Routed lifecycle; ≤10 Emerging, ≤5 Reinforced
 - [ ] **Emitted the `### Tier B digest` block (HARD GATE — the close does not complete without it).** One line per Tier B file (`growth` / `profile` / `ecosystem`), each stating last-touched-days + outcome. If the close-of-day lacks this block, self-reject and run the Tier B observation pass before commit. This is load-bearing parity with the Tier A routing step — not a "when warranted" nicety.
-- [ ] **Checked the observed-context staleness alarm** — read every `observed/*.md` `updated:` frontmatter; flagged any past its threshold (21d aggregate Tier B, 30d others, `restated: true` skipped entirely), *independent of any digest streak*. For a stale aggregate file, ran the full-map re-derivation (step 4b) or logged an explicit "map current, verified {date}" line.
+- [ ] **Checked the observed-context staleness alarm** — ran `uv run ~/aios/hooks/observed-staleness.py`; flagged any file past its threshold (21d aggregate Tier B, 30d others; `restated: true` and `status: historical-snapshot` have no clock and are skipped by the hook), *independent of any digest streak*. For a stale aggregate file, ran the full-map re-derivation (step 4b) or logged an explicit "map current, verified {date}" line.
 - [ ] Updated other observed files when warranted (per CLAUDE.md → "Observed Context Rules" — patterns / preferences / business / ecosystem / growth / profile)
 - [ ] Wrote to `antifragile.md` if the user corrected me OR I caught my own system-level mistake (per CLAUDE.md mandatory triggers)
 - [ ] Asked "What was most useful?" if the day was substantive (per CLAUDE.md Session End step 4); verbatim answer captured in the close-of-day `### Most useful` field

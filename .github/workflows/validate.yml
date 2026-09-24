@@ -1702,6 +1702,23 @@ jobs:
         # Reported in #149.
         run: bash tests/calendar-timezone.test.sh
 
+      - name: /today gets the dated 14-day calendar lookahead, and the docs quote its header
+        # The lookahead was fetched only for /close-day, so /today saw one day of live
+        # calendar and took every later date from the vault; a moved meeting kept its old
+        # date on every vault surface and nothing errored. It now runs for every command,
+        # grouped under one dated header per day, and the header the executor prints must be
+        # the one today.md and close-day.md quote — a renamed header silently detaches the
+        # rule that reads it.
+        run: bash tests/calendar-lookahead.test.sh
+
+      - name: the observed-context staleness alarm exempts only what has no clock, visibly
+        # The threshold half of the alarm was reliable; the exemption half (which files have
+        # no clock) lived in prose, was re-derived by hand every morning and eventually
+        # disbelieved. Pins: past-threshold flags, `restated: true` and `status:
+        # historical-snapshot` are exempt AND printed, a missing stamp is exit 2 and never a
+        # green line, and the report survives a cp1252 console.
+        run: bash tests/observed-staleness.test.sh
+
       - name: README's architecture tree names every root doc and restates no counts
         # The tree fell behind three root docs (CONTRIBUTING, GLOSSARY, SECURITY) that every
         # other surface already listed, and carried a bundled-MCP count a later server made

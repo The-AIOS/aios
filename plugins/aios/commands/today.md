@@ -18,9 +18,17 @@ Every morning as the foundational ritual. Reads vault context + Calendar + Tasks
 
 ## Pre-loaded API data
 
-Message 1a runs `uv run ~/aios/hooks/pipeline-executor.py --command today` which pre-loads Google Calendar events (all configured accounts), Google Tasks (open), and Slack unreads. The output starts with `# Pre-loaded API Data`.
+Message 1a runs `uv run ~/aios/hooks/pipeline-executor.py --command today` which pre-loads Google Calendar events (all configured accounts — today, plus a dated 14-day lookahead), Google Tasks (open), and Slack unreads. The output starts with `# Pre-loaded API Data`.
 
 **DO NOT call Google Calendar, Google Tasks, or Slack APIs.** The data is in the executor output. Use it directly for the Calendar section, task merging, Horizon, and Slack triage.
+
+**The executor returns TWO calendar blocks, and the second one is load-bearing.** `## Google Calendar — Primary (…)` is today. `## Google Calendar — Next 14 days (AUTHORITATIVE — reconcile vault dates against this)` is the lookahead, grouped under one `**YYYY-MM-DD (Weekday)**` header per day. **Read it every run and reconcile the vault against it** — it is not optional colour for the Horizon line:
+
+- **Any date the vault states about a future meeting is a COPY.** Project notes, `_index.md` snapshots, weekly plans and yesterday's Horizon all restate dates that someone wrote once. The invite is the authoritative source; they are not. When they disagree, **the calendar wins and the vault gets corrected in the same session** — a date that has rotted reads exactly like one that has not, so nothing else will catch it.
+- **Surface the mismatch at the TOP of the plan**, not in the Radar: name the meeting, both dates, and what the move breaks downstream (prep reminders that now fire late, prep blocks that now land after the meeting, a travel booking, an email already sent with the old date).
+- **Also scan the lookahead for what only a merged multi-calendar view can show:** a meeting nested inside another (a 1h call inside a 4h session is a real clash and looks fine in a project note), a prep reminder whose own title carries a stale date, and a carry that claims a commitment with **no matching event in any calendar**.
+
+> **Why this is written down.** Until this change the executor fetched the lookahead only for `/close-day`, so `/today` had **one day** of live calendar and took every later date from the vault. When a meeting moved, every vault surface kept the old date for days, and a correct date found elsewhere was overruled by a stale draft. Nothing errored — the plan was internally consistent and wrong. A date the vault restates is a derived surface; the invite is the truth surface.
 
 **If the executor output shows `❌ FAILED` for a specific source:** tell the user what failed and how to fix it (the error message includes the fix). Use the data that did load. Do not call failed APIs yourself.
 
@@ -158,7 +166,17 @@ Fire ALL of these as direct parallel tool calls in **one single message**:
 **Observed context — all in the same parallel batch, but use `limit:50` per file:**
 - `growth.md`, `profile.md`, `patterns.md`, `session-insights.md`, `ecosystem.md`, `business.md`, `vault-routine.md`
 - /today only needs the latest observations, not full history. If a file's key content is truncated, do a second targeted read for the missing section.
-- **Observed-context staleness check (streak-independent backstop).** The `limit:50` reads already surface each file's `updated:` frontmatter — from it, compute days-since-update per `observed/*.md` and flag any file past its threshold: **21 days for aggregate Tier B files (`ecosystem.md`, `profile.md`), 30 days for the rest** — **except any file whose frontmatter carries `restated: true`, which has no clock and is skipped** (a restated file is a spec rewritten in place; unchanged means correct, so a clock on it alarms on success — CLAUDE.md § III). This is the dumb, reliable alarm: it depends only on the `updated:` stamp, *not* on any close-day digest trail existing (the old ">30d AND 3-in-a-row digest" rule silently never fired once the trail stopped being written). Carry any flags into Message 2 to surface.
+- **Observed-context staleness check (streak-independent backstop) — run the hook, do not compute it by hand:**
+
+  ```bash
+  uv run ~/aios/hooks/observed-staleness.py
+  ```
+
+  It reads every `observed/*.md` file's own `updated:` stamp and prints what crossed its threshold — **21 days for aggregate Tier B files (`ecosystem.md`, `profile.md`), 30 days for the rest** — plus one line per file that has **no clock at all**, so the exemption is visible rather than assumed. Exit `0` nothing stale · `1` something crossed · `2` a file could not be measured (a missing or unparseable `updated:` is an error, never a healthy zero). Carry any flags into Message 2 to surface.
+
+  **Through `uv`, never `python3`** — on Windows that name resolves to the Microsoft Store alias, which prints an installer notice and runs nothing, so the check emits no output and reads exactly like a clean result.
+
+  > **The exemption is in the hook because prose could not hold it.** The alarm depends only on the `updated:` stamp, *not* on any close-day digest trail (the old ">30d AND 3-in-a-row digest" rule silently never fired once the trail stopped being written) — that half was already reliable. The half that failed was *which files have no clock*. Two shapes have none: `restated: true` (a spec rewritten in place; unchanged means correct — CLAUDE.md § III) and `status: historical-snapshot` (a **frozen** record — closed, superseded by live surfaces, with no write trigger at all). The commands knew only the first, so a frozen file was re-derived as exempt from its own body every morning. Measured on a live vault, nine mornings in a row each recomputed the same exclusion by hand, four of them wrote *"excluded from here on"*, the next session flagged it again anyway — and one session finally believed the alarm and proposed backfilling a file that is frozen by design. A permanent false positive is how an operator learns to ignore the real one. Both shapes now live in `hooks/observed-staleness.py` § THE TWO SHAPES THAT HAVE NO CLOCK.
 
 **Daily notes:**
 - **Most recent daily note** (NOT hardcoded to yesterday's date): list files in `01 - calendar/{YYYY-MM}/` and pick the latest file that matches the `YYYY-MM-DD.md` pattern (exactly 10-char date prefix) and is before today. **Exclude** weekly plans (`W{N}-plan.md`, `W{N}-summary.md`) and any other non-daily files. If no daily note exists in the current month, check the previous month. This handles weekends, holidays, and any gap. **Critical — this is where carry-forwards come from. If this file isn't found, carried items are silently dropped.**
@@ -299,7 +317,7 @@ Structure:
 > 🔍 **Nudge:** {task name} — {pattern-aware insight with [[wiki-links]] to observed files like [[patterns]], [[growth]], or [[session-insights]]. The reader can click through to see what Claude has observed about them.}
 
 ## Calendar
-{Today's meetings and time-bound events from all configured Google Calendars, merged chronologically. If multiple accounts are configured, tag personal events with [personal] to distinguish from work events. Skip all-day non-task events. Skip calendars marked as "Skip" in USER.md Sources. Format: HH:MM – HH:MM — Event name. If no events, write "No events today."}
+{Today's meetings and time-bound events from all configured Google Calendars, merged chronologically. **Then one line, always, from the lookahead block:** the next 2-3 dated commitments, so the day after tomorrow is never a surprise. If multiple accounts are configured, tag personal events with [personal] to distinguish from work events. Skip all-day non-task events. Skip calendars marked as "Skip" in USER.md Sources. Format: HH:MM – HH:MM — Event name. If no events, write "No events today."}
 
 ## Slack triage
 {**OMIT THIS ENTIRE SECTION — heading included — when Slack is not a configured source.** The executor reports each source as configured or not; if Slack is absent from it, or `USER.md` has no Slack source, write nothing at all here. Do not render the heading, do not render an empty state, and above all do not render the clean line: **"✅ Sin unreads ni action items pendientes en Slack" is a green checkmark asserting a measured clean state, and for an operator who declined Slack it asserts a state that was never measured.** That is worse than noise — it is a confident report about nothing, and it lands in the FIRST daily note the operator ever reads, exactly while they are deciding whether this system is actually looking at them. Hit live by both new operators on day one (2026-08-15); neither uses Slack, both declined the connection, and both got the tick. The same source-configuration signal is already read further up this command — use it here too rather than assuming presence.
