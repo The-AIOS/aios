@@ -71,7 +71,7 @@
 
 ## 2026-09-23 — Sessions that keep going, a first install that works on every machine, and headless runs that can't borrow your permissions
 
-`hash: 4c74804 · fe28fbf · 9d34c48 · 55bdf7d · de88a2d · cd8e764 · c7dc65d · c301280 · 6c19ea2` · [#167](https://github.com/The-AIOS/aios/pull/167)
+`hash: 4c74804 · fe28fbf · 9d34c48 · 55bdf7d · de88a2d · cd8e764 · c7dc65d · c301280 · 6c19ea2 · 6e1c290` · [#167](https://github.com/The-AIOS/aios/pull/167)
 
 > **What you can now do.** Let a session carry work through instead of stopping to ask whether it should. Hand a routine outside text — an email, a web page, a transcript — without it inheriting the permissions you have clicked "allow always" on. Set AIOS up on Windows without being stopped twice mid-way, and without a GitHub account. Nothing to configure for any of it.
 
@@ -86,6 +86,8 @@
 **The observation-buffer check stops raising a false alarm on a healthy, empty section.** A section that correctly held nothing but a note saying so reported "cannot measure" every morning — one operator saw it seven days running on a component that worked. Empty now reads as empty; a section holding something that looks like an entry in an unknown style still refuses, and now shows you the lines it could not read. Reported by an operator.
 
 **The bundled Claude API skill is current again.** Its model and SDK guidance had fallen months behind the upstream skill it comes from; it is refreshed, along with the frontend-design skill. The record of which version of the bundled engineering skills you have was also wrong, and is corrected — their content does not change in this update.
+
+**And for anyone who runs the test suite:** a *"Claude quota watch: swapped from a@example.com"* banner that appeared from time to time was the suite itself — one test drives real account-watcher ticks with fixture accounts, and the watcher's notification was real. Tests now silence it with `AIOS_QUOTA_NOTIFY=0`, and a guard fails if any test reaches the desktop notifier again. Real swap alerts are unchanged.
 
 **Action required:** none for most operators — but notice the change in how sessions behave (above), and set a confirm-first rule in `INTENT.md` if you want the old behaviour back. **If you run your own headless `claude -p` routines** (under `hooks/custom/`, `skills/custom/` or elsewhere), `/aios:housekeeping` now reports any that rely on an allowlist — switch them to the form above, especially any that pass along text from outside your vault. Last: **start a new Claude session** after updating, so the refreshed skills load.
 
