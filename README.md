@@ -163,6 +163,7 @@ Equally true for [`/aios:collaborate`](./plugins/aios/commands/collaborate.md) �
 │   ├── aios/                ← framework: AIOS-built
 │   ├── anthropic/           ← framework: vendored from anthropics/skills (Apache-2.0)
 │   ├── superpowers/         ← framework: vendored from obra/superpowers (MIT)
+│   ├── cloudflare/          ← framework: vendored from cloudflare/security-audit-skill (MIT)
 │   ├── custom/              ← your personal extensions
 │   └── <company>/           ← company-distributed
 ├── hooks/                   ← Pipeline scripts + statusLine + UserPromptSubmit

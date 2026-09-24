@@ -35,6 +35,16 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _fs import seat_generation, write_json_atomic  # noqa: E402
 
+# Text read from files (vault headings, request payloads, names) carries "→", "—" and
+# accents. On a Windows console stdout/stderr default to cp1252, so print() raises
+# UnicodeEncodeError on the first one and the tool emits nothing. Force UTF-8 on both.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError):
+            pass  # a wrapped or redirected stream that cannot be reconfigured
+
 
 HOME = os.path.expanduser("~")
 # Claude Code relocates its whole config tree when CLAUDE_CONFIG_DIR is set, and

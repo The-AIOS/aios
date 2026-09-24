@@ -211,7 +211,13 @@ die() { echo "${RED}error:${RESET} $*" >&2; exit 1; }
 # Probe for a REAL interpreter -- same pattern mcps/setup.sh already uses for the
 # identical stub (see its $PY block). $PY is used UNQUOTED so `py -3` word-splits.
 PY=""
-for _cand in python3 python "py -3"; do
+# launchd (the account watcher's safety net) starts us with PATH=/usr/bin:/bin:/usr/sbin:/sbin,
+# so `python3` there is /usr/bin/python3 -- the Command Line Tools stub, which fails while the
+# tools are missing or mid-update. The watcher then died every tick with "no working Python"
+# although Homebrew's interpreter sat one directory away. Bare names first (the operator's own
+# PATH wins), then the usual install locations by absolute path: appending them to PATH would
+# not help, because the broken stub would still resolve first.
+for _cand in python3 python "py -3" /opt/homebrew/bin/python3 /usr/local/bin/python3 "$HOME/.local/bin/python3"; do
   if $_cand -c 'import sys' >/dev/null 2>&1; then PY="$_cand"; break; fi
 done
 [ -n "$PY" ] || die "no working Python found (tried python3, python, py -3). On Windows, disable the Store aliases: Settings > Apps > Advanced app settings > App execution aliases > turn OFF python.exe and python3.exe."

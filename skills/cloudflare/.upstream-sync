@@ -1,0 +1,5 @@
+repo=https://github.com/cloudflare/security-audit-skill
+hash=c1c8a8c
+date=2026-09-24
+root=skills
+note=Vendored the security-audit skill unmodified (upstream commit of 2026-09-14). LICENSE is the repo-root MIT notice. Wired to agents/aios/engineering/security-engineer.md.

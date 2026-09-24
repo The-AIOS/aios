@@ -93,32 +93,73 @@ TOP_BULLET = re.compile(r"^- \S")
 ANY_HEADING = re.compile(r"^#{1,6} ")
 
 
-def _entry_chunks(body):
-    """Entry text blocks of ONE style, heading first then bullet.
+# An entry declares its class on the line under its title (CLAUDE.md § Observed Context Rules),
+# so a top-level bullet that carries its OWN `class:` / `first-seen:` / `route:` field is
+# the next entry, while an evidence list under a heading entry carries none. Blank lines do
+# not decide it: operators write evidence lists after a blank line as often as without one.
+# route-insight.py and buffer-status.py share this rule so they can never disagree about
+# where an entry ends — when they did, routing a heading entry in a mixed section removed
+# every bullet entry after it.
+_ENTRY_FIELD = re.compile(r"\b(?:class|first-seen|route)\s*:", re.I)
 
-    Boundaries are style-dependent, exactly as in `route-insight.py`: a bullet
-    entry ends at the next top-level bullet, ANY heading level, or an HTML
-    comment (the `<!-- ROUTED ... -->` tombstones are file furniture, never
-    entries), so its indented facets travel with it.
+
+def bullet_starts_entry(lines, i):
+    """True if the top-level bullet at lines[i] (plus its indented continuation) carries an
+    entry field, i.e. it is a bullet ENTRY rather than a facet of the entry above it."""
+    if _ENTRY_FIELD.search(lines[i]):
+        return True
+    for ln in lines[i + 1:]:
+        if not ln.strip() or not ln[:1].isspace():
+            break
+        if _ENTRY_FIELD.search(ln):
+            return True
+    return False
+
+
+def _entry_chunks(body):
+    """Entry text blocks of BOTH styles — `### ` headings and top-level `- ` bullets.
+
+    Both styles are counted, and a MIXED section counts both. The previous
+    version picked one style — headings if any existed, bullets otherwise — so
+    a single `### ` entry dropped into a section of bullets made every bullet
+    entry invisible: the count read 1/10 while the section sat at 10/10. A
+    measuring tool that silently undercounts is worse than no tool, because the
+    cap it enforces blows past while it reports "within contract".
+
+    Boundaries, consistent with `route-insight.py`:
+      * a bullet entry ends at the next top-level bullet, ANY heading level, or
+        an HTML comment (the `<!-- ROUTED ... -->` tombstones are file
+        furniture, never entries), so its indented facets travel with it;
+      * a heading entry ends at the next heading, or at a top-level bullet that
+        opens a new paragraph (a blank line above it) — in a mixed section that
+        bullet is the next entry. A bullet list ATTACHED to the heading entry's
+        text (no blank line above it) is that entry's facets, as it always was,
+        so a heading entry with `- evidence` lines under it is still one entry.
     """
     lines = body.split('\n')
-    starts = [i for i, l in enumerate(lines) if l.startswith("### ")]
-    style = "heading"
-    if not starts:
-        style = "bullet"
-        starts = [i for i, l in enumerate(lines) if TOP_BULLET.match(l)]
     chunks = []
-    for start in starts:
-        end = len(lines)
-        for j in range(start + 1, len(lines)):
-            ln = lines[j]
-            if ANY_HEADING.match(ln):
-                end = j
-                break
-            if style == "bullet" and (TOP_BULLET.match(ln) or ln.lstrip().startswith("<!--")):
-                end = j
-                break
-        chunks.append('\n'.join(lines[start:end]))
+    start = None       # index where the open entry began
+    kind = None        # "heading" | "bullet" for the open entry
+
+    for i, ln in enumerate(lines):
+        if ln.startswith("### "):
+            boundary, nxt = True, (i, "heading")
+        elif ANY_HEADING.match(ln):
+            boundary, nxt = True, (None, None)
+        elif TOP_BULLET.match(ln):
+            if kind == "heading" and not bullet_starts_entry(lines, i):
+                continue  # a facet of the heading entry above it (no entry field of its own)
+            boundary, nxt = True, (i, "bullet")
+        elif kind == "bullet" and ln.lstrip().startswith("<!--"):
+            boundary, nxt = True, (None, None)
+        else:
+            boundary = False
+        if boundary:
+            if start is not None:
+                chunks.append('\n'.join(lines[start:i]))
+            start, kind = nxt
+    if start is not None:
+        chunks.append('\n'.join(lines[start:]))
     return chunks
 
 

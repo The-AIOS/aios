@@ -207,6 +207,42 @@ for shape in "  - a nested bullet entry" "* a star bullet entry" "1. a numbered 
     || no "unknown shape → exit $rcn, expected 2 with the section's first lines" "$shape"
 done
 
+echo "── a MIXED section counts BOTH styles ──"
+# The first bullet-aware version picked ONE style per section — headings if any
+# existed — so a single `### ` entry dropped into a section of bullets made every
+# bullet invisible: 1/10 reported while the section sat at 10/10, "within contract".
+{ echo "## Emerging"; echo
+  echo "### a heading entry"
+  echo '`class: behavioural` · `first-seen: 2026-09-01` · `route: patterns.md`'
+  echo "body"; echo
+  i=0; while [ "$i" -lt 9 ]; do i=$((i+1))
+    echo "- **(2026-09-0$i)** bullet entry $i"
+    echo '  `class: behavioural` · `first-seen: 2026-09-01` · `route: patterns.md`'; echo; done
+  echo "## Reinforced"; echo
+} > "$T/mix.md"
+me=$($PYBIN "$B" "$T/mix.md" --json | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
+[ "$me" = "10" ] && ok "mixed section: 1 heading + 9 bullets counts 10" || no "mixed section counted $me, expected 10" "one style was dropped"
+# Control: a heading entry whose bullet list is ATTACHED to its text is still ONE
+# entry — counting both styles must not turn every heading entry's facets into entries.
+{ echo "## Emerging"; echo
+  echo "### heading entry with facets"
+  echo '`class: behavioural` · `first-seen: 2026-09-01` · `route: patterns.md`'
+  echo "- evidence one"
+  echo "- evidence two"; echo
+  echo "### second heading entry"
+  echo '`class: behavioural` · `first-seen: 2026-09-02` · `route: patterns.md`'
+  echo "- evidence"
+  echo "## Reinforced"; echo
+} > "$T/facets.md"
+fe=$($PYBIN "$B" "$T/facets.md" --json | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
+[ "$fe" = "2" ] && ok "control: attached bullet facets stay inside their heading entry" || no "heading facets counted as entries: $fe, expected 2"
+# Evidence written after a BLANK line is still a facet: blank lines do not decide it, an
+# entry field does (the shared rule with route-insight.py).
+{ echo "## Emerging"; echo; echo "### entry"; echo '`class: behavioural` · `route: patterns.md`'; echo "body"; echo
+  echo "- evidence one"; echo "- evidence two"; echo "## Reinforced"; echo; } > "$T/blankev.md"
+be=$($PYBIN "$B" "$T/blankev.md" --json | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
+[ "$be" = "1" ] && ok "an evidence list after a blank line stays one entry" || no "blank-line evidence counted $be entries, expected 1" "operators write evidence that way"
+
 echo "── an unrecognised class is surfaced ──"
 { echo "## Emerging"; echo "### weird"; echo '`class: sytem` · `route: x.md`'; echo body; } > "$T/badclass.md"
 case "$($PYBIN "$B" "$T/badclass.md")" in

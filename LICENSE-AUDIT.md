@@ -48,6 +48,7 @@ Vendored open-source work ships under **its own** upstream license, preserved in
 | `skills/aios/` | This framework | GPL-2.0-or-later | — |
 | `skills/anthropic/` | [anthropics/skills](https://github.com/anthropics/skills) | **Apache-2.0** | Per-skill `LICENSE.txt` in each folder; `.upstream-sync` records HEAD |
 | `skills/superpowers/` | [obra/superpowers](https://github.com/obra/superpowers) | **MIT** | `.upstream-sync` records HEAD |
+| `skills/cloudflare/` | [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) | **MIT** | Upstream `LICENSE` at `skills/cloudflare/LICENSE`; `.upstream-sync` + `.upstream-manifest` pin every file |
 | `skills/custom/` | Operator | Operator's choice | Survives `/aios:update`; operator owns |
 
 > **Anthropic skills not vendored** (per `skills/anthropic/.upstream-sync`): `docx`, `pdf`, `pptx`, `xlsx` are **proprietary** (redistribution prohibited) — operators get them via the `document-skills@anthropic-agent-skills` plugin, not from this repo. `brand-guidelines` (Anthropic-specific) and `canvas-design` (Apache-2.0 but 5.5 MB of fonts) are likewise plugin-only, not vendored. **The proprietary skills are the one place "don't redistribute" bites — never copy them into this tree.**

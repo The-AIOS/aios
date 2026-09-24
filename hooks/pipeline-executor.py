@@ -480,13 +480,65 @@ def _local_hhmm(value, timezone_name):
     return parts[1] if len(parts) > 1 else ""
 
 
-def google_calendar_events(creds_path, email, time_min, time_max, detailed=False, skip=(), timezone_name="UTC"):
-    """Fetch events from EVERY calendar on the account, merged and de-duplicated."""
+def _date_only(rfc3339):
+    """The date part of an RFC3339 stamp (or a bare YYYY-MM-DD), as a date.
+
+    Offset-agnostic on purpose: the window bounds this measures are built from
+    the same local day string, so the offset carries no information here."""
+    from datetime import date
+    return date(int(rfc3339[0:4]), int(rfc3339[5:7]), int(rfc3339[8:10]))
+
+
+# English on purpose, and hardcoded rather than `%A`: strftime's weekday name
+# follows the process locale, so the same vault would print different headers on
+# different machines — and the command docs quote this header's shape.
+_WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+
+
+def _weekday_name(day_str):
+    """Weekday for a YYYY-MM-DD string — the label a reader actually scans.
+    A bare date makes you count; 'Tuesday' does not."""
+    try:
+        return _WEEKDAYS[_date_only(day_str).weekday()]
+    except Exception:
+        return "?"
+
+
+def _day_header(day_str):
+    """The per-day header of a multi-day calendar block: `**YYYY-MM-DD (Weekday)**`."""
+    return f"**{day_str} ({_weekday_name(day_str)})**"
+
+
+def _per_calendar_cap(time_min, time_max):
+    """How many events to request per calendar for a window.
+
+    50 was sized for one day. A 14-day window on a busy calendar blows past it,
+    and a silently truncated calendar is exactly the failure a lookahead exists
+    to end — so the cap scales with the window (25 per day, at most 250, the
+    API's own page ceiling)."""
+    try:
+        span_days = max(1, (_date_only(time_max) - _date_only(time_min)).days + 1)
+    except Exception:
+        return 50
+    return 50 if span_days <= 1 else min(250, 25 * span_days)
+
+
+def google_calendar_events(creds_path, email, time_min, time_max, detailed=False, skip=(), timezone_name="UTC", dated=False):
+    """Fetch events from EVERY calendar on the account, merged and de-duplicated.
+
+    `dated` prefixes each day with a `**YYYY-MM-DD (Weekday)**` header. It is off
+    for a single-day window, where every line is trivially today, and ON for the
+    multi-day lookahead — where a flat list of bare `14:00 – 18:00` lines cannot
+    say WHICH day, which is the one thing a lookahead exists to answer. A reader
+    counting all-day rows to infer the date is one missing all-day event away
+    from attributing a meeting to the wrong morning.
+    """
     from googleapiclient.discovery import build
 
     creds = _load_google_creds(creds_path)
     service = build("calendar", "v3", credentials=creds, cache_discovery=False)
 
+    per_cal_cap = _per_calendar_cap(time_min, time_max)
     seen = {}
     order = []
     for cal_id, cal_name in _calendar_ids(service, skip):
@@ -497,7 +549,7 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
                 timeMax=time_max,
                 singleEvents=True,
                 orderBy="startTime",
-                maxResults=50,
+                maxResults=per_cal_cap,
             ).execute()
         except Exception as exc:
             # One unreadable calendar must not take the whole day's plan with it.
@@ -511,6 +563,17 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
             seen[key] = True
             order.append((key, (cal_id, cal_name, event)))
 
+    return _render_calendar(order, email, timezone_name, detailed=detailed, dated=dated)
+
+
+def _render_calendar(order, email, timezone_name, detailed=False, dated=False):
+    """Render fetched events (and per-calendar read errors) as markdown lines.
+
+    Pure — no network — so the ordering, timezone and day-grouping rules can be
+    tested without a Google account. `order` is a list of `(key, payload)`,
+    where payload is `(cal_id, cal_name, event)`, or an error line when
+    `key[0] == "~error"`.
+    """
     lines = []
     rendered = []
     for key, payload in order:
@@ -535,9 +598,24 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
             return (when[:10], 1, when)
         return (instant.strftime("%Y-%m-%d"), 1, instant.isoformat())
 
+    current_day = None
     for cal_id, cal_name, e in sorted(rendered, key=_sort_key):
         start = e.get("start", {})
         end = e.get("end", {})
+
+        if dated:
+            # The same local-instant rule the sort uses, so a header can never
+            # disagree with the order of the lines beneath it.
+            day = start.get("date")
+            if not day:
+                inst = _event_instant(start.get("dateTime", ""), timezone_name)
+                day = inst.strftime("%Y-%m-%d") if inst else start.get("dateTime", "")[:10]
+            if day and day != current_day:
+                current_day = day
+                if lines:
+                    lines.append("")
+                lines.append(_day_header(day))
+
         summary = e.get("summary", "(no title)")
         # Name the calendar for anything off the primary, so a Bloom commitment
         # is not mistaken for a personal block (and vice versa).
@@ -779,10 +857,22 @@ def run_pipeline(command_name):
     time_min = f"{today_str}T00:00:00{tz_off}"
     time_max = f"{today_str}T23:59:59{tz_off}"
 
-    # close-day needs detailed calendar (attachments) + next 7 days for cross-check
+    # close-day needs the detailed calendar (attachments). The LOOKAHEAD is not
+    # close-day-only: /today needs it as much.
+    #
+    # Until this change the lookahead was fetched only for close-day, so /today
+    # saw exactly one day of live calendar and took every later date from the
+    # vault — a derived surface. For a meeting with invitees the authoritative
+    # source is the invite, never a note that restates it. When a meeting moves,
+    # every vault copy of its date keeps the old one, and nothing errors: a date
+    # that has rotted reads exactly like one that has not.
+    #
+    # 14 days, not 7: a meeting that slides INTO the coming week needs to be seen
+    # before it is inside it, while there is still time to move the prep.
     is_close_day = command_name == "close-day"
     from datetime import timedelta
-    next_week_str = (start_time + timedelta(days=7)).strftime("%Y-%m-%d")
+    LOOKAHEAD_DAYS = 14
+    next_week_str = (start_time + timedelta(days=LOOKAHEAD_DAYS)).strftime("%Y-%m-%d")
     time_max_week = f"{next_week_str}T23:59:59{tz_off}"
 
     results = {}
@@ -800,14 +890,13 @@ def run_pipeline(command_name):
                 detailed=is_close_day, skip=sources["calendars_skip"],
                 timezone_name=render_tz
             )
-            # close-day also needs next 7 days for calendar cross-check
-            if is_close_day:
-                futures["calendar_next_week"] = pool.submit(
-                    google_calendar_events, creds_primary,
-                    sources["google_email_primary"], time_min, time_max_week,
-                    skip=sources["calendars_skip"],
-                    timezone_name=render_tz
-                )
+            # Lookahead — every command, not just close-day. See LOOKAHEAD_DAYS above.
+            futures["calendar_next_week"] = pool.submit(
+                google_calendar_events, creds_primary,
+                sources["google_email_primary"], time_min, time_max_week,
+                skip=sources["calendars_skip"], dated=True,
+                timezone_name=render_tz
+            )
         if "calendar-personal" in sources["configured"] and creds_personal and creds_personal.exists():
             futures["calendar_personal"] = pool.submit(
                 google_calendar_events, creds_personal,
@@ -894,11 +983,13 @@ def run_pipeline(command_name):
                        f"❌ FAILED: {errors['calendar_primary']}",
                        "Fix: re-authenticate Google Workspace MCP — open a new session and call any `mcp__google-workspace__*` tool to trigger OAuth refresh.", ""])
 
-    # Calendar next 7 days (close-day only)
+    # Calendar lookahead — every command. This block is the authoritative answer to
+    # "when is that meeting?"; a date in a vault note is a copy and may have rotted.
     if "calendar_next_week" in results:
-        lines.extend(["## Google Calendar — Next 7 days (for cross-check)", results["calendar_next_week"], ""])
+        lines.extend([f"## Google Calendar — Next {LOOKAHEAD_DAYS} days (AUTHORITATIVE — reconcile vault dates against this)",
+                       results["calendar_next_week"], ""])
     elif "calendar_next_week" in errors:
-        lines.extend(["## Google Calendar — Next 7 days",
+        lines.extend([f"## Google Calendar — Next {LOOKAHEAD_DAYS} days",
                        f"❌ FAILED: {errors['calendar_next_week']}",
                        "Fix: same as Calendar Primary.", ""])
 

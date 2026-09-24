@@ -181,5 +181,26 @@ fi
 rm -rf "$t"
 
 
+echo "── a MIXED section: routing a heading entry must not take the bullet entries after it ──"
+# route-insight ended a heading entry only at the next heading, so in a section holding a
+# `### ` entry followed by bullet entries, routing the heading entry excised every bullet
+# entry with it — data loss that reported "ok". The shared rule (buffer-status.py agrees):
+# a top-level bullet carrying its OWN class:/first-seen:/route: field is the next entry; an
+# evidence list without fields stays part of the heading entry, blank line or not.
+m="$(mktemp -d)"
+{ echo "## Emerging"; echo; echo "### the heading entry"; echo '`class: behavioural` · `route: patterns.md`'; echo "body"; echo
+  for i in 1 2 3; do echo "- **(2026-09-0$i)** bullet entry $i"; echo '  `class: behavioural` · `route: patterns.md`'; echo; done
+  echo "## Reinforced"; echo; } > "$m/mix.md"
+$PYBIN "$TOOL" --match "the heading entry" "$m/mix.md" >/dev/null 2>&1
+n=$(grep -c 'bullet entry' "$m/mix.md")
+{ ! grep -q 'the heading entry' "$m/mix.md" && [ "$n" -eq 3 ]; } && ok "routing the heading entry kept all 3 bullet entries" \
+  || no "routing a heading entry in a mixed section removed bullet entries" "bullet entries left: $n of 3"
+{ echo "## Emerging"; echo; echo "### entry with evidence"; echo '`class: behavioural` · `route: patterns.md`'; echo "body"; echo
+  echo "- evidence one"; echo "- evidence two"; echo; echo "### the next entry"; echo '`class: method` · `route: antifragile.md`'; echo "## Reinforced"; echo; } > "$m/ev.md"
+$PYBIN "$TOOL" --match "entry with evidence" "$m/ev.md" >/dev/null 2>&1
+{ ! grep -q 'evidence one' "$m/ev.md" && grep -q 'the next entry' "$m/ev.md"; } && ok "control: an entry's own evidence list (after a blank line) is removed with it" \
+  || no "control: evidence list handling wrong" "$(grep -c evidence "$m/ev.md") evidence lines left"
+rm -rf "$m"
+
 printf '\n  %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

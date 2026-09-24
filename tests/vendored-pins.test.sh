@@ -92,8 +92,14 @@ def upstream(d):
     subprocess.run(["git", "clone", "-q", md["repo"], tmp], check=True)
     subprocess.run(["git", "-C", tmp, "checkout", "-q", md["hash"]], check=True)
     root = md.get("root", md.get("subdir", ""))
+    def src(rel):
+        # a source-level LICENSE/NOTICE sits at the upstream repo root, not under root=
+        p = os.path.join(tmp, root, rel)
+        if not os.path.isfile(p) and "/" not in rel and rel.split(".")[0] in ("LICENSE", "NOTICE"):
+            p = os.path.join(tmp, rel)
+        return p
     bad = [rel for rel, dg in load_manifest(d).items()
-           if not os.path.isfile(os.path.join(tmp, root, rel)) or h(os.path.join(tmp, root, rel)) != dg]
+           if not os.path.isfile(src(rel)) or h(src(rel)) != dg]
     shutil.rmtree(tmp, ignore_errors=True)
     n = len(load_manifest(d))
     print(f"{d}: {n - len(bad)}/{n} files match {md['repo']}@{md['hash']}" + ("" if not bad else f" — first mismatch: {bad[0]}"))

@@ -63,6 +63,8 @@ Locally, on your machine. AIOS has no cloud backend and sends your credentials n
 
 **What "local" does and does not mean.** It means no third party receives them. It does **not** mean hardware-isolated: **any process running as your user can read these files.** That is true of most developer tooling and worth knowing rather than discovering.
 
+**Claude Code's sandbox does not change that by default.** Sandboxed Bash can read these folders unless each one is named in the sandbox's `filesystem.denyRead`, and a `Read(...)` deny rule in `permissions` does not stop it. If a headless job runs `Bash` under the sandbox, list every folder above in a settings file only that job loads, not in your interactive settings: [`MODEL-ROUTING.md`](./MODEL-ROUTING.md) § Verify an id before you trust it has the settings and why.
+
 ---
 
 ## The update model, stated without euphemism

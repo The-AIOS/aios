@@ -318,4 +318,12 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    # Windows consoles default stdout to cp1252, and vault headings carry "→", "—", accents:
+    # print() then raises UnicodeEncodeError and the floor emits NOTHING -- the one failure
+    # this hook exists to end. Force UTF-8 here instead of relying on PYTHONIOENCODING.
+    # stderr too: the floor's own refusal names files it could not read, and a file
+    # name can carry the same characters as a heading.
+    for _stream in (sys.stdout, sys.stderr):
+        if hasattr(_stream, "reconfigure"):
+            _stream.reconfigure(encoding="utf-8", errors="replace")
     sys.exit(main(sys.argv[1:]))

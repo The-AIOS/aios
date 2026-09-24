@@ -32,6 +32,8 @@ hooks/git/pre-push      text eol=lf
 
 # Node entrypoints with shebangs — same shebang breakage, lower blast radius.
 *.js            text eol=lf
+*.cjs           text eol=lf
+*.mjs           text eol=lf
 
 # Python hooks: CRLF is survivable for the interpreter but breaks `#!` shebang invocation the
 # same way, and these are invoked directly by settings.json and by other scripts.

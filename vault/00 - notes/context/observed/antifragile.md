@@ -5,7 +5,7 @@ tags:
   - antifragile
   - self-correcting
 created: '2026-03-31'
-updated: '2026-03-31'
+updated: ""
 type: claude-context
 ---
 # Antifragile — What the System Learns From Breaking
