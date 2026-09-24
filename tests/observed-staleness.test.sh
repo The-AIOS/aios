@@ -123,5 +123,19 @@ grep -q 'uv run ~/aios/hooks/observed-staleness.py' plugins/aios/commands/close-
 grep -q 'python3 ~/aios/hooks/observed-staleness.py' plugins/aios/commands/*.md \
   && no "a command runs the hook through python3" "on Windows that name runs nothing, silently" || ok "no command calls it through python3"
 
+echo "── a fresh install is not an error: an explicitly empty stamp has no clock yet ──"
+# The framework ships its observed files as seeds with `updated: ""`. Reporting those as
+# "cannot measure" put a wall of red on every new operator's first /today. An empty stamp
+# is "not started"; a MISSING key is still an error (the control below).
+fr="$(mktemp -d)"
+printf -- '---\nupdated: ""\n---\n# seed\n' > "$fr/patterns.md"
+printf -- '---\nupdated: "2026-09-20"\n---\n# real\n' > "$fr/growth.md"
+$PYBIN hooks/observed-staleness.py "$fr" --today 2026-09-24 >/dev/null 2>&1; rc=$?
+[ "$rc" -eq 0 ] && ok "a seed with updated: \"\" reads as not started (exit 0)" || no "a fresh-install seed was reported as an error" "exit $rc"
+printf -- '---\ntype: claude-context\n---\n# no stamp at all\n' > "$fr/profile.md"
+$PYBIN hooks/observed-staleness.py "$fr" --today 2026-09-24 >/dev/null 2>&1; rc=$?
+[ "$rc" -eq 2 ] && ok "control: a file with NO updated: key still cannot be measured (exit 2)" || no "control: a missing stamp stopped being an error" "exit $rc"
+rm -rf "$fr"
+
 printf '\n── %s passed, %s failed ──\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

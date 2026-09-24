@@ -93,6 +93,29 @@ TOP_BULLET = re.compile(r"^- \S")
 ANY_HEADING = re.compile(r"^#{1,6} ")
 
 
+# An entry declares its class on the line under its title (CLAUDE.md § Observed Context Rules),
+# so a top-level bullet that carries its OWN `class:` / `first-seen:` / `route:` field is
+# the next entry, while an evidence list under a heading entry carries none. Blank lines do
+# not decide it: operators write evidence lists after a blank line as often as without one.
+# route-insight.py and buffer-status.py share this rule so they can never disagree about
+# where an entry ends — when they did, routing a heading entry in a mixed section removed
+# every bullet entry after it.
+_ENTRY_FIELD = re.compile(r"\b(?:class|first-seen|route)\s*:", re.I)
+
+
+def bullet_starts_entry(lines, i):
+    """True if the top-level bullet at lines[i] (plus its indented continuation) carries an
+    entry field, i.e. it is a bullet ENTRY rather than a facet of the entry above it."""
+    if _ENTRY_FIELD.search(lines[i]):
+        return True
+    for ln in lines[i + 1:]:
+        if not ln.strip() or not ln[:1].isspace():
+            break
+        if _ENTRY_FIELD.search(ln):
+            return True
+    return False
+
+
 def _entry_chunks(body):
     """Entry text blocks of BOTH styles — `### ` headings and top-level `- ` bullets.
 
@@ -124,8 +147,8 @@ def _entry_chunks(body):
         elif ANY_HEADING.match(ln):
             boundary, nxt = True, (None, None)
         elif TOP_BULLET.match(ln):
-            if kind == "heading" and i > 0 and lines[i - 1].strip() != "":
-                continue  # attached list: a facet of the heading entry above it
+            if kind == "heading" and not bullet_starts_entry(lines, i):
+                continue  # a facet of the heading entry above it (no entry field of its own)
             boundary, nxt = True, (i, "bullet")
         elif kind == "bullet" and ln.lstrip().startswith("<!--"):
             boundary, nxt = True, (None, None)

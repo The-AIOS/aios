@@ -127,6 +127,15 @@ def measure(directory, today):
             continue
 
         raw = fm.get("updated")
+        # An EXPLICITLY empty stamp (`updated: ""`) is a file nobody has written yet — the
+        # framework ships its observed files as seeds that way. It has no clock until its
+        # first write, so it is reported as not started, never as an error: otherwise every
+        # fresh install's first /today opens on a wall of "cannot measure". A MISSING key is
+        # still an error — that is a file whose shape the alarm cannot trust.
+        if "updated" in fm and raw == "":
+            rows.append({"file": name, "exempt": "not-started", "updated": None,
+                         "age_days": None, "threshold": None, "stale": False})
+            continue
         if not raw:
             errors.append(f"{name}: no `updated:` in frontmatter — cannot measure")
             continue

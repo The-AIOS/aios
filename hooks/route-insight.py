@@ -47,6 +47,29 @@ def entry_lines(text, style):
     src = text.split("\n") if isinstance(text, str) else text
     return [l for l in src if (l.startswith("### ") if style == "heading" else is_top_bullet(l))]
 
+# An entry declares its class on the line under its title (CLAUDE.md § Observed Context Rules),
+# so a top-level bullet that carries its OWN `class:` / `first-seen:` / `route:` field is
+# the next entry, while an evidence list under a heading entry carries none. Blank lines do
+# not decide it: operators write evidence lists after a blank line as often as without one.
+# route-insight.py and buffer-status.py share this rule so they can never disagree about
+# where an entry ends — when they did, routing a heading entry in a mixed section removed
+# every bullet entry after it.
+_ENTRY_FIELD = re.compile(r"\b(?:class|first-seen|route)\s*:", re.I)
+
+
+def bullet_starts_entry(lines, i):
+    """True if the top-level bullet at lines[i] (plus its indented continuation) carries an
+    entry field, i.e. it is a bullet ENTRY rather than a facet of the entry above it."""
+    if _ENTRY_FIELD.search(lines[i]):
+        return True
+    for ln in lines[i + 1:]:
+        if not ln.strip() or not ln[:1].isspace():
+            break
+        if _ENTRY_FIELD.search(ln):
+            return True
+    return False
+
+
 def find_entry(lines, match):
     """Return ((start, end), n, style) for the single entry whose first line contains `match`.
 
@@ -96,6 +119,8 @@ def find_entry(lines, match):
             end = j; hit_terminator = True; break
         if style == "bullet" and (is_top_bullet(ln) or ln.lstrip().startswith("<!--")):
             end = j; hit_terminator = True; break
+        if style == "heading" and is_top_bullet(ln) and bullet_starts_entry(lines, j):
+            end = j; hit_terminator = True; break     # the next entry in a MIXED section
     return (start, end), 1, style, hit_terminator
 
 

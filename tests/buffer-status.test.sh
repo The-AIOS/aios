@@ -236,6 +236,12 @@ me=$($PYBIN "$B" "$T/mix.md" --json | $PYBIN -c 'import sys,json;print(json.load
 } > "$T/facets.md"
 fe=$($PYBIN "$B" "$T/facets.md" --json | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
 [ "$fe" = "2" ] && ok "control: attached bullet facets stay inside their heading entry" || no "heading facets counted as entries: $fe, expected 2"
+# Evidence written after a BLANK line is still a facet: blank lines do not decide it, an
+# entry field does (the shared rule with route-insight.py).
+{ echo "## Emerging"; echo; echo "### entry"; echo '`class: behavioural` · `route: patterns.md`'; echo "body"; echo
+  echo "- evidence one"; echo "- evidence two"; echo "## Reinforced"; echo; } > "$T/blankev.md"
+be=$($PYBIN "$B" "$T/blankev.md" --json | $PYBIN -c 'import sys,json;print(json.load(sys.stdin)["emerging"])')
+[ "$be" = "1" ] && ok "an evidence list after a blank line stays one entry" || no "blank-line evidence counted $be entries, expected 1" "operators write evidence that way"
 
 echo "── an unrecognised class is surfaced ──"
 { echo "## Emerging"; echo "### weird"; echo '`class: sytem` · `route: x.md`'; echo body; } > "$T/badclass.md"
