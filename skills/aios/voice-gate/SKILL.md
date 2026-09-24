@@ -36,6 +36,8 @@ Do not carry a number in from outside. Establish what *this* writer's prose actu
 3. Sample their **published** work — the pieces they stand behind. Five to ten thousand words gives a stable number.
 4. Compute tells per 1,000 words, and record the count of paragraph bursts separately.
 
+**Below 5,000 published words for the surface being scored, there is no baseline — refuse the density score and say so.** That is the lower end of step 3, and it is a floor, not a suggestion. A fresh install has no published corpus at all, and every way around that gap is worse than admitting it: a density figure over too few words is noise that reads as a measurement, and a number carried in from elsewhere is the outside baseline this step forbids. So the report says, in its first line, *"no baseline yet for {surface}: {N} words published, 5,000 needed"* — and then **still reports everything that does not need a baseline**: every exposed-zone instance, quoted, and every burst. The positional bar and the burst rule are absolute, so a draft can fail them on day one. What it cannot do on day one is be called *above* or *below* a norm that does not exist yet.
+
 **Build one baseline per surface class the operator publishes to — not one number for everything.** Short-form renderings (a post, a thread) compress a long piece down to its quotable lines, so by construction they run **several times the density of long-form** while being the same writer at their best. A single blended figure is therefore wrong in both directions at once: it false-alarms on every rendering, and it false-cleans every essay. Worse, the incident that motivates this skill — someone flagging a *published short post* as AI-written — happens precisely on the surface a blended baseline is silent about.
 
 So: long-form gets its own budget, each short-form surface gets its own, and a draft is scored against the baseline **for the surface it is going to**.
@@ -54,7 +56,7 @@ If the operator has supplied a writing sample, it overrides every default in thi
 
 Walk the draft and mark each instance with its **pattern**, **position zone**, and **paragraph**. Then report:
 
-- Density per 1,000 words, next to the baseline **for this surface** — name which surface baseline was used, and when it was last derived.
+- Density per 1,000 words, next to the baseline **for this surface** — name which surface baseline was used, and when it was last derived. **No baseline for this surface (Step 1's floor) → print the refusal line in place of the density and the drift, never a zero.**
 - Every paragraph containing two or more (the burst list).
 - Every instance in an exposed zone, quoted in full — this is the section the operator actually reads.
 - Drift: is this draft above or below their own norm, and by how much.
