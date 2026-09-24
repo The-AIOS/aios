@@ -36,7 +36,7 @@ updated: '2026-09-11'
 
 - `custom/` — your own hooks (survive `/aios:update`). Documented in `custom/_index.md` with the registry table format.
 
-**Wiring:** event hooks are wired in `.claude/settings.json` (project-level) or `~/.claude/settings.json` (user-level). The vault ships a project-level `.claude/settings.json` that wires `inject-datetime.sh` to `UserPromptSubmit`. On Windows, replace `bash` with `pwsh -File` in the command path. **`PreToolUse` hooks** (e.g. `guard-venture-mount.py`) wire the same way with a `matcher` — see SETUP §10 Hook C.
+**Wiring:** event hooks are wired in `.claude/settings.json` (project-level) or `~/.claude/settings.json` (user-level). The vault ships a project-level `.claude/settings.json` that wires `inject-datetime.sh` to `UserPromptSubmit`. On Windows, use `powershell -NoProfile -ExecutionPolicy Bypass -File` (not `pwsh`, which a stock install lacks) and `python` (not `python3`, the Store placeholder) — SETUP §10 → *On Windows* has the exact block. **`PreToolUse` hooks** (e.g. `guard-venture-mount.py`) wire the same way with a `matcher` — see SETUP §10 Hook C.
 
 ## Adding a hook
 

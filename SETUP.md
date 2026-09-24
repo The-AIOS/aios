@@ -33,8 +33,24 @@ Operator said *"set up my AI-OS from this repo"* or similar. You're the executor
      || echo "missing: obsidian-app"
    ```
    > A blank result means it is installed and **nothing should be said about it**. Only `missing: obsidian-app` earns a sentence: *"One thing I can't install for you — Obsidian itself, the app you'll read your vault in. It's a normal download from obsidian.md; grab it whenever, nothing here waits on it."* Note the framing: the vault is plain Markdown on their disk and every ritual works without the GUI, so this is genuinely not a blocker, and saying so prevents a first-timer stalling on it.
+
+   **Before leaving step 1, ask for everything only the operator can do — in ONE message, now.** Two things in this sequence are out of your hands, and on a real Windows install through the App they surfaced as two separate stops: GitHub login halfway through step 2, and file access at step 8, after work had already been done around the block. Each stop is a moment the operator is handed a command they did not expect, mid-flow. Find both up front, ask for them together, and keep working while they do it:
+
+   ```bash
+   if ! command -v gh >/dev/null 2>&1; then echo "github: gh not installed — continue local-only"
+   elif ! gh auth status >/dev/null 2>&1; then echo "needs: gh-login"; fi
+   [ "$(pwd -P)" = "$(cd ~ && pwd -P)" ] || echo "needs: add-dir $(cd ~/.claude 2>/dev/null && pwd -W 2>/dev/null || echo ~/.claude)"
+   ```
+
+   - **`needs: gh-login`** → *"If you have a GitHub account, type `! gh auth login --hostname github.com --git-protocol https --web` — it backs your vault up to a private repo. No account, or it doesn't work? Say so and we carry on; you can connect it any day."* The flags answer the three questions a newcomer cannot (which host, which protocol, which method). App operators have usually done this in the App's own GitHub step, so this is normally silent on that path.
+     > **GitHub is never a gate.** It buys one thing — an off-machine backup of the vault — and nothing in setup, the interview or the daily rituals needs it. A login that fails, an account the operator doesn't have, or a `gh repo create` that errors: all of them take the fallback in step 2 and setup **continues**. Do not retry a failed login more than once, and do not stop the flow to troubleshoot it.
+   - **`github: gh not installed`** → say nothing now; treat it exactly like a declined login. Step 2 takes the no-GitHub fallback and setup carries on local-only. Offer the GitHub CLI later, alongside the backup warning — never as a blocker.
+   - **`needs: add-dir <path>`** → *"Type `/add-dir <path>` so I can write your Claude settings."* Steps 3, 5 and 8 all write under `~/.claude` (skills, plugin, hooks), and your file tools are scoped to the directory the session started in — which on the App path is always `~/aios`. Give the **resolved absolute path** the probe printed (`C:/Users/<name>/.claude` on Windows), never `~`. Do **not** work around a refused read with a shell command: that reaches a file the operator's settings kept you out of, and you then have to confess it.
+   - **Neither is needed until later**, so do not wait on them. The clone (step 2) needs no login, and the private repo is created at the end of step 2 only if `gh auth status` passes by then.
 2. Clone to `~/aios` (default) and create private GitHub repo `{username}/aios` (or whatever the operator names it) — see "The Setup" §1 below
-3. Register bundled skills: `bash skills/setup.sh` (Windows: `pwsh skills/setup.ps1`) — symlinks AIOS skills into `~/.claude/skills` so Claude Code loads them (start a new Claude session — only the session, not the AIOS app or the terminal window, afterwards) · **Do not register the Obsidian MCP here.** `/aios:cold-start-interview`'s Pre-step registers it silently, and it has to: an operator who arrived through the **AIOS App** reaches the interview without ever passing through this list, so the interview is the only place that covers both doors. Registering it here as well gave the command two owners with two different arguments (this copy hardcoded `~/aios/vault`; the interview uses the resolved install path) — and because the interview's registration is guarded by *"skip if already registered"*, whichever copy ran first won permanently, including when it was the wrong one.
+   > **If your session is already IN `~/aios`, clone into it — never beside it.** The AIOS App creates an empty `~/aios` and starts this session there, so `git clone … ~/aios` from inside it looks impossible and the tempting move is a sibling like `~/aios-src`. That sibling is outside your file scope: you cannot read what you just cloned, and the operator is left with a duplicate to delete. Check `ls -A` first — **empty** → `git clone https://github.com/The-AIOS/aios.git .` · **already an AIOS checkout** (`CLAUDE.md` + `plugins/aios/`) → use it, do not re-clone · **anything else** → stop and ask; do not clone over or beside someone's files.
+   > **No GitHub → continue, with the vault local-only.** If `gh auth status` still fails when you reach the private repo (or `gh repo create` errors), do **not** wait and do **not** leave the clone as it is. Run `git -C ~/aios remote remove origin`: the clone's `origin` is the PUBLIC framework repo, and a vault commit must never have that as a push target. With no remote, `aios-commit` commits locally and skips the push by design, and `/aios:update` does not use `origin` at all — so everything keeps working. Tell the operator once, plainly: *"⚠️ Your vault is only on this computer for now — nothing is backed up yet. Everything works; whenever you're ready, sign in to GitHub and say **connect my vault to GitHub**."* That warning does not depend on anyone remembering it: `/aios:today` re-derives it every morning from the remote itself (see §8) and drops it the day a private remote exists.
+3. Register bundled skills: `bash skills/setup.sh` (Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File skills/setup.ps1`) — symlinks AIOS skills into `~/.claude/skills` so Claude Code loads them (start a new Claude session — only the session, not the AIOS app or the terminal window, afterwards) · **Do not register the Obsidian MCP here.** `/aios:cold-start-interview`'s Pre-step registers it silently, and it has to: an operator who arrived through the **AIOS App** reaches the interview without ever passing through this list, so the interview is the only place that covers both doors. Registering it here as well gave the command two owners with two different arguments (this copy hardcoded `~/aios/vault`; the interview uses the resolved install path) — and because the interview's registration is guarded by *"skip if already registered"*, whichever copy ran first won permanently, including when it was the wrong one.
    > **Do NOT run `bash mcps/setup.sh` here.** With no arguments it installs all ten bundled MCPs — multiple Chrome-for-Testing downloads, several venvs, minutes of output in which a long download is indistinguishable from a hang and one failure reads as a crash. None of it is needed to use the vault. Slack, Atlassian, Google, image generation and the rest are convenience, installed WHEN the operator says they want one — which is what the interview's Step 11 asks, after the first `/today`. `bash mcps/setup.sh <name>` installs just that one, `--list` shows what exists.
 4. **Write the update tracker** — one command, and setup must not end without it:
    ```bash
@@ -68,7 +84,7 @@ Operator said *"set up my AI-OS from this repo"* or similar. You're the executor
    service at a time, only the ones they want. Nothing is lost by waiting; the offer is stronger.
 7. Install the **spawn wrapper** — `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (or `.ps1` on Windows), then re-source the shell rc
    > **The interview runs this a second time, on purpose — do not "deduplicate" it.** The installer reads `USER.md` to detect which session names are primary, and `USER.md` does not exist yet at this point in the sequence; the interview writes it at its Step 1 and re-runs the installer immediately after. This run gives the operator a working `spawn` during setup; that run makes it identity-aware. The script is idempotent (timestamped backup → strip prior banner → append fresh), so running it twice is free — and unlike the Obsidian registration above, neither run is redundant.
-8. Wire the **universal hooks** to `~/.claude/settings.json`: `UserPromptSubmit` → `inject-datetime` (real clock in every prompt) + `statusLine` → `claude-identity.sh cache | context-monitor.py` (rate-limit cache writer + context display). See §10 below for exact JSON.
+8. Wire the **universal hooks** to `~/.claude/settings.json`: `UserPromptSubmit` → `inject-datetime` (real clock in every prompt) + `statusLine` → `claude-identity.sh cache | context-monitor.py` (rate-limit cache writer + context display). See §10 below for exact JSON — **on Windows, use §10's Windows block as written**, not the macOS commands with words swapped: the Windows prerequisites install neither `pwsh` nor a working `python3`, so both names fail there.
 9. **Do NOT ask the multi-account question here.** It used to live at this step (*"Do you use more than
    one Anthropic account?"*, plus a launchd install). On day one the operator has not hit a 5h/7d cap, so
    the question has no meaning yet and cannot be answered — it is the most expert-coded moment in the
@@ -268,6 +284,11 @@ Set up my AI-OS from https://github.com/The-AIOS/aios
 
 Claude reads this file and walks you through the full onboarding — clone → install → personalize → orient → optional company + collaboration → first daily plan. Each step is interactive; you confirm decisions, Claude executes.
 
+**Two things only you can do, asked once, at the start.** Claude will tell you up front if it needs either — together, in one message — and carries on with the rest while you do them:
+
+- **Sign in to GitHub (optional)** — type `! gh auth login --hostname github.com --git-protocol https --web` and approve in the browser. It backs your vault up to a private repo. **No account, or it fails? Setup carries on anyway** — your vault stays on this computer, and each morning's plan reminds you it isn't backed up until you connect. (If you came through the AIOS App and did its GitHub step, you'll skip this.)
+- **Let Claude write your Claude settings** — type `/add-dir` followed by the path Claude gives you (your `.claude` folder). Setup installs skills, the plugin and three hooks there, and a session only writes outside its own folder when you say so.
+
 **The end-to-end flow:**
 
 1. **Clone** the repo to `~/aios` and create your private vault repo (`gh repo create {your-username}/aios --private` — matches the local path; renameable later) — your personal content never goes back to the shared framework. **If you cloned elsewhere**, Claude creates a `~/aios` symlink to the actual install path (see § Path portability below) so every framework reference resolves cleanly.
@@ -437,7 +458,9 @@ gh repo create {your-username}/aios --private --source=. --push
 
 > **Naming:** `{username}/aios` matches the local path `~/aios/` and the framework brand. Alternatives if you prefer: `{username}/vault`, `{username}/my-aios`, or anything else — Claude defaults to `{username}/aios` unless you say otherwise.
 
-This creates a private GitHub repo, sets it as your remote, and pushes. From here on, your content never goes back to the AIOS framework. `/aios:update` pulls AIOS framework updates from `The-AIOS/aios`; `/company` pulls company venture-context from each mounted company's repo — but you push only to your private personal vault.
+This creates a private GitHub repo, sets it as your remote, and pushes. From here on, your content never goes back to the AIOS framework.
+
+> **No GitHub yet? Setup does not wait for it.** Without a login, setup removes the framework `origin` (so your vault can never be pushed to the public repo) and carries on with the vault on this computer only. `/aios:today` shows a one-line **⚠️ not backed up** warning every morning until a private remote exists — it reads the remote itself, so it clears on its own. To connect later: `gh auth login`, then the command above (or just say *"connect my vault to GitHub"*). `/aios:update` pulls AIOS framework updates from `The-AIOS/aios`; `/company` pulls company venture-context from each mounted company's repo — but you push only to your private personal vault.
 
 ### 9. Spawn wrapper (cross-platform — recommended)
 
@@ -449,9 +472,9 @@ bash ~/aios/hooks/claude-identity/install-wrappers.sh
 source ~/.zshrc   # or ~/.bashrc
 ```
 
-**Windows (PowerShell):**
+**Windows (PowerShell):** run it from the PowerShell you actually use — the installer writes *that* shell's profile, so this line re-launches whichever edition you are in (PowerShell 7 or the built-in 5.1):
 ```powershell
-pwsh -File ~\aios\hooks\claude-identity\install-wrappers.ps1
+& (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File "$HOME\aios\hooks\claude-identity\install-wrappers.ps1"
 . $PROFILE
 ```
 
@@ -485,7 +508,7 @@ Add to `~/.claude/settings.json`:
 }
 ```
 
-Windows operators use `pwsh -File "$HOME\aios\hooks\inject-datetime.ps1"` instead.
+Windows operators: see **On Windows** at the end of this section.
 
 **Hook B — `claude-identity` statusLine** (writes the rate-limit cache on every Claude turn — feeds the fast-path quota detector used by the autopilot in §11, and powers the context-monitor status display). Add to `~/.claude/settings.json`:
 
@@ -515,7 +538,40 @@ Windows operators use `pwsh -File "$HOME\aios\hooks\inject-datetime.ps1"` instea
 }
 ```
 
-Merge `PreToolUse` alongside your existing `UserPromptSubmit` array — don't replace the `hooks` object. Windows operators use `python` (not `python3`). Design: **fail-open** (any error, or a `ventures/` folder with no `.{v}-sync` marker, → allows — it can never brick editing), **deterministic**, and reversible via `AIOS_ALLOW_MOUNT_EDIT=1` to intentionally edit a mount. Only operators with company mounts (`/aios:company`) will ever see it fire; for everyone else it's a silent no-op.
+Merge `PreToolUse` alongside your existing `UserPromptSubmit` array — don't replace the `hooks` object. Windows operators: see **On Windows** below. Design: **fail-open** (any error, or a `ventures/` folder with no `.{v}-sync` marker, → allows — it can never brick editing), **deterministic**, and reversible via `AIOS_ALLOW_MOUNT_EDIT=1` to intentionally edit a mount. Only operators with company mounts (`/aios:company`) will ever see it fire; for everyone else it's a silent no-op.
+
+**On Windows — the same three hooks, in the form that actually runs there.** Two names in the blocks above do not exist on a stock Windows install, and a setup session will otherwise find that out by trial:
+
+- **`pwsh`** is PowerShell 7, which the Windows prerequisites above never install. Use **`powershell`** (Windows PowerShell 5.1, present on every Windows 10/11) for these hooks — `inject-datetime.ps1`, `skills/setup.ps1` and `install-wrappers.ps1` all parse and run under 5.1. *(The spawn-wrapper installer is the one exception to "always `powershell`": it writes the profile of the PowerShell that runs it, so on a machine that has PowerShell 7 it runs under `pwsh` — see §9.)*
+- **Python: use whichever interpreter actually runs on THIS machine, never a fixed name.** `python3` is often the Microsoft Store placeholder (it prints an install notice and runs nothing, so a hook wired to it fails silently), but on other machines `python3` is real and `python` is absent, or only the `py` launcher exists. Probe once and write the winner into every command below:
+  ```bash
+  if python3 -c '' 2>/dev/null; then echo python3; elif python -c '' 2>/dev/null; then echo python; elif py -3 -c '' 2>/dev/null; then echo "py -3"; else echo "none: install Python (Prerequisites)"; fi
+  ```
+  The block below shows `python`, the usual winner; substitute what the probe printed.
+
+Write **absolute paths with forward slashes** (resolve them once with `cygpath -m ~/aios` in Git Bash), so the command does not depend on which shell Claude Code hands it to:
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:/Users/<you>/aios/hooks/inject-datetime.ps1\"" } ] }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [ { "type": "command", "command": "python \"C:/Users/<you>/aios/hooks/guard-venture-mount.py\"", "timeout": 10 } ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash -c 'tee >($HOME/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | python $HOME/aios/hooks/claude-identity/context-monitor.py'"
+  }
+}
+```
+
+The `statusLine` keeps its `bash -c` form (Claude Code on Windows runs commands through Git Bash, so `$HOME` resolves); the only change is `python3` → `python`.
 
 **Verify hooks A + B fired:** open a fresh Claude Code session, type *"what's today's date?"* — Claude should reply with the actual current date (proves the UserPromptSubmit hook ran). Check the statusLine at the bottom of the terminal — it should show context usage + quota state (proves the statusLine command ran).
 
@@ -560,7 +616,7 @@ If either hook silently failed: re-read the settings.json and confirm the `hooks
 **The full capture walkthrough** is at `hooks/claude-identity/README.md` → `## Setup` — 7 interactive steps: configure accounts in USER.md, capture identities, verify cache writes, run a swap dry-run. That walkthrough is what fires from `/today` when the marker is present.
 
 Hard preconditions:
-- **macOS, Linux and Windows.** The credential store and the scheduler are both platform-detected: Keychain + launchd on macOS; on Linux, the plaintext credentials file Claude Code itself writes (mode 600) + a systemd **user** timer; on Windows, that same credentials file + a **Task Scheduler** task registered by `pwsh -File hooks/claude-identity/install-quota-watch.ps1` (no elevation required). The spawn wrapper + universal hooks work on all three regardless.
+- **macOS, Linux and Windows.** The credential store and the scheduler are both platform-detected: Keychain + launchd on macOS; on Linux, the plaintext credentials file Claude Code itself writes (mode 600) + a systemd **user** timer; on Windows, that same credentials file + a **Task Scheduler** task registered by `powershell -NoProfile -ExecutionPolicy Bypass -File hooks/claude-identity/install-quota-watch.ps1` (no elevation required). The spawn wrapper + universal hooks work on all three regardless.
   > **Windows caveats, both real:** `chmod 600` is a no-op on NTFS, so the credential blob is protected by your user profile's ACL and nothing more — which is also exactly how Claude Code stores it, so this changes nothing, but do not assume file-mode protection. And while `test-identity-cycle.sh` exercises the full capture/switch/rotate cycle against a fabricated config dir on every platform, a live two-account swap on Windows has not been run against real Anthropic credentials. Treat the first real rotation as a verification step, and note `claude-switch` always writes `.claude.json.bak-claude-switch` before touching anything.
 - **≥ 2 Anthropic accounts.** A single-account setup gets no value — skip this section entirely.
 
@@ -690,6 +746,8 @@ OS-specific debugging fixes documented as the team hit them. Cross-reference if 
 | `npm --version` says "running scripts is disabled on this system" | Default PowerShell execution policy blocks `.ps1` scripts | One-time: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` (type Y) |
 | `claude` not found in `cmd` | Node.js installer doesn't add Claude to cmd's PATH | Use VS Code's integrated PowerShell terminal, Antigravity's terminal, or Git Bash — never plain `cmd` |
 | Pipeline crashes with emojis | Windows uses `cp1252` encoding | Already fixed — `pipeline-executor.py` reconfigures to UTF-8 on Windows |
+| A hook or setup script says `pwsh` is not recognized | `pwsh` is PowerShell 7; the prerequisites above don't install it | Use `powershell` (5.1, built in) — every AIOS `.ps1` runs under it. See §10 → *On Windows* |
+| `python3` prints a Microsoft Store message, or a hook silently does nothing | `python3` is the Store placeholder, not the Python you installed | Use `python`. See §10 → *On Windows* |
 | Slack recap fails with timezone | Python on Windows lacks timezone DB | Already fixed — `tzdata>=2024.1` in pipeline dependencies |
 | Terminal in Obsidian doesn't work | polyipseity plugin incompatible | Use VS Code or Antigravity terminal instead. Uninstall the plugin. |
 | Atlassian auth doesn't open popup | VS Code OAuth popup blocked | Authenticate at claude.ai → Settings → Connectors → Atlassian. VS Code detects it after. *(Skip if you don't use Jira/Confluence.)* |

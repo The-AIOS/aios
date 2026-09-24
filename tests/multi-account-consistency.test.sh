@@ -25,6 +25,9 @@ W="$(cd hooks/claude-identity && pwd)/_watch.py"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 A=a@example.com; B=b@example.com
+# These are REAL watcher ticks with fixture accounts: without this, every local run
+# fires a genuine desktop banner ("swapped from a@example.com …") on the machine.
+export AIOS_QUOTA_NOTIFY=0
 
 # Seat = $1; cache = sample of $2 at 50% captured $3 seconds ago; optional
 # swap-log row $4 seconds ago. Then run one watcher tick.

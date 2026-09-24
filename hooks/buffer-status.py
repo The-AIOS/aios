@@ -122,10 +122,31 @@ def _entry_chunks(body):
     return chunks
 
 
-# A section body is "substantive" if it carries prose outside HTML comments — a
-# stage holding only routed-entry tombstones is legitimately empty.
-def _has_substance(body):
-    return len(re.sub(r"<!--.*?-->", "", body, flags=re.S).strip()) >= 80
+# Three states, not two. A section with no parsed entries is either EMPTY (only
+# prose, blank lines and HTML comments — the state the routing flow prescribes:
+# a line saying it is empty plus the `<!-- ROUTED ... -->` tombstones) or
+# UNPARSEABLE (something shaped like an entry that matches neither style: a
+# nested or `*`/`+` bullet, a numbered item, another heading level). The first
+# version measured prose LENGTH (>= 80 chars) instead of shape, so a healthy
+# empty section whose note ran long refused every morning — measured on a live
+# vault as seven straight days of "cannot measure" on a component that worked.
+# Entry-shaped: any list item, heading, a bold-led line (an entry written as a titled
+# paragraph), or a field line (`class:` / `first-seen:` / `route:`) — so a vault that
+# writes entries in a style this parser does not know still REFUSES instead of reading 0.
+ENTRY_SHAPED = re.compile(
+    r"^\s*(?:[-*+]\s+\S|\d+[.)]\s+\S|#{1,6}\s|\*\*[^*]+\*\*)"
+    r"|`?\b(?:class|first-seen|route)\s*:", re.I)
+
+
+def _entry_shaped_lines(body):
+    """Lines outside HTML comments that look like an entry attempt."""
+    visible = re.sub(r"<!--.*?-->", "", body, flags=re.S)
+    return [l for l in visible.split("\n") if ENTRY_SHAPED.search(l)]
+
+
+def _first_lines(body, n=3):
+    visible = re.sub(r"<!--.*?-->", "", body, flags=re.S)
+    return [l.strip() for l in visible.split("\n") if l.strip()][:n]
 
 
 def parse(text):
@@ -168,11 +189,13 @@ def parse(text):
         # Neither style matched a section that plainly holds content: the shape
         # is one this parser does not know. Reporting 0 there is the false-clean
         # zero `main()` promises never to print, so refuse loudly instead.
-        if not entries and _has_substance(body):
+        if not entries and _entry_shaped_lines(body):
+            shown = " | ".join(_first_lines(body)) or "(nothing visible)"
             raise ValueError(
-                f"section `## {name}` holds content but yielded no entries in "
-                "either supported style (`### ` heading or top-level `- ` "
-                "bullet) — cannot measure; not reporting an empty buffer"
+                f"section `## {name}` has entry-shaped lines that match neither "
+                "supported style (`### ` heading or top-level `- ` bullet) — "
+                "cannot measure; not reporting an empty buffer. First lines: "
+                + shown
             )
     if not sections:
         raise ValueError(

@@ -31,6 +31,7 @@ fi
 # migration is worse than none, and is invisible without a test like this.
 
 set -uo pipefail
+export AIOS_QUOTA_NOTIFY=0   # drives real watcher code: never put a quota banner on this machine's desktop
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 D="$ROOT/hooks/claude-identity"
 PASS=0; FAIL=0

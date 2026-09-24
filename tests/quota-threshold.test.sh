@@ -35,6 +35,7 @@ fi
 # "environment" — mislabelling that is the same class of bug this fix exists for.
 
 set -uo pipefail
+export AIOS_QUOTA_NOTIFY=0   # drives real watcher code: never put a quota banner on this machine's desktop
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WATCH="$ROOT/hooks/claude-identity/_watch.py"
 SHELL_ENTRY="$ROOT/hooks/claude-identity/claude-identity.sh"

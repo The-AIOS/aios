@@ -19,12 +19,21 @@ boundary costs credentials.
 Anthropic's own guidance, expressed as the four rungs AIOS exposes. **Pick by the shape of the
 work, not by importance** — "important" is what tempts you to the top rung for a file sweep.
 
-| `spawn --tier` | Model | Use it for |
-|---|---|---|
-| `frontier` | Claude Fable 5.1 | Your hardest problems: long-running agents in production, code migration, multi-step reasoning, and tasks needing creative thinking and full autonomy |
-| `judgment` **(default)** | Claude Opus 5.5 | Reasoning-intensive work — legal, financial analysis, research, other complex domains — and production coding |
-| `scale` | Claude Sonnet 5 | General-purpose workloads at scale, across coding and knowledge work |
-| `fast` | Claude Haiku 4.5 | High-frequency, latency-sensitive tasks; sub-agents inside an orchestration |
+| `spawn --tier` | Model | Use it for | Effort to start from |
+|---|---|---|---|
+| `frontier` | Claude Fable 5.1 | Your hardest problems: long-running agents in production, code migration, multi-step reasoning, and tasks needing creative thinking and full autonomy | `high` (`xhigh`/`max` for the hardest runs) |
+| `judgment` **(default)** | Claude Opus 5.5 | Reasoning-intensive work — legal, financial analysis, research, other complex domains — and production coding | `high` |
+| `scale` | Claude Sonnet 5 | General-purpose workloads at scale, across coding and knowledge work | `medium` |
+| `fast` | Claude Haiku 4.5 | High-frequency, latency-sensitive tasks; sub-agents inside an orchestration | `low` |
+
+**Effort is the second knob, and for current models it is the one to turn first.** Claude 5-generation models always reason before replying, so *"think carefully"* in a prompt only adds latency; to get more or less thinking, change effort: `claude --effort low|medium|high|xhigh|max` (checked against the installed binary, not assumed). The column above is where to start, not a rule. `spawn` does not pass `--effort` yet, so a spawned worker runs at the binary's default; set it inside the session with `/effort`, or run `claude --effort …` directly.
+
+**Fast mode is not a rung.** It is the same model, answering faster, at a higher price per token — worth it for back-and-forth work where you read every reply, wasted on an unattended worker. Toggle it with `/fast`.
+
+**A flagged message can move a session to an older model — silently, and for the rest of the session.** Opus 5.5 carries stricter safety classifiers, and the check covers the whole conversation, files and search results included, so a turn from much earlier can trigger it. When it fires, Claude Code switches the session to an older model and **stays there**. A `judgment` worker can therefore finish its job on a lower rung, and nothing in its launch arguments will say so. Two consequences:
+
+- **Check what actually ran, not what you asked for:** `/model` shows the session's current model, and each reply's model is recorded in the session transcript. Launch arguments only prove what was *requested*.
+- **Decide the behaviour for unattended work deliberately.** The setting is `/config` → *"Switch models when a message is flagged"*. Interactively, switching keeps you working; for a routine or worker whose output you will trust without watching it, you may prefer it to stop instead of finishing on a model you did not choose.
 
 Omitting `--tier` gives you `judgment`. That is deliberate: the default should be the rung that is
 right when nobody thought about it, and under-powering a reasoning task fails silently — you get an
@@ -61,16 +70,24 @@ Model ids churn. An id AIOS does not recognise **does not fail loudly** — Clau
 means *"the spawn worked"* is worthless as evidence on its own. The check that can actually fail:
 
 ```bash
-# Prompt FIRST, then flags — `--allowedTools` is variadic and will swallow a
-# prompt that follows it. Both guard flags are required, and so is the explicit
-# permission mode: see the note below.
+# Prompt FIRST, then flags — `--tools` is variadic and will swallow a prompt that
+# follows it. `--tools ""` means no tool exists at all; `--setting-sources`,
+# `--strict-mcp-config` and the explicit permission mode are each required: see below.
 claude -p 'ok' --model "$ID" --output-format json \
-  --allowedTools NoSuchTool --strict-mcp-config --permission-mode default 2>&1 | head -c 200
+  --tools "" --setting-sources user,project --strict-mcp-config \
+  --permission-mode default 2>&1 | head -c 200
 # real id  → JSON with non-zero total_cost_usd and non-zero input tokens
 # bad id   → the literal string  [claude-code:unrecognized_model]
 ```
 
-> **Why a probe that only says `ok` carries an allowlist.** Reported by an operator, 2026-08-31, after auditing their own fleet. Any shipped `claude -p` invocation should name the tools it actually needs — this one needs none — because the cost of adding it is a flag and the cost of retrofitting it across a fleet is a weekend. Three of the four obvious ways to do this **do not work**: `--allowedTools ""` is swallowed by the variadic flag · `--permission-mode manual` does **not** block (Bash still runs) · `--disallowedTools Bash` is a denylist, so `Write`, `Edit` and `Agent` survive it. The allowlist naming a tool that does not exist, plus `--strict-mcp-config`, is the form that holds.
+> **An allowlist is not containment — the tools that exist are.** Reported privately by an operator, 2026-09-21, and reproduced on Claude Code 2.1.281 with a canary: `--allowedTools` only *pre-approves*, and it is **additive** to every allow rule in the settings that load. `.claude/settings.local.json` is where each interactive *"allow always"* click accumulates — one daily-used vault had 98 rules, including a home-wide `Read` and `Bash(python3 *)` — so the previous recipe (`--allowedTools NoSuchTool --strict-mcp-config --permission-mode default`) **read a file outside the project**. Measured: that recipe plus one inherited `Read` rule → leaked · adding `--setting-sources user,project` → held · `--tools ""` → held · the same recipe with no local rule → held (the control: the inherited rule is the whole cause). So:
+>
+> - **`--tools "<list>"`** sets which tools exist (`""` = none). Size it to the job; it is the part an inherited rule cannot widen.
+> - **`--setting-sources user,project`** drops the local layer where *"allow always"* accumulates.
+> - **Keep `ToolSearch` in `--tools` whenever MCP servers are loaded** — without it every MCP schema is inlined and the run dies with *"Prompt is too long"*.
+> - **A job that must run `Bash` needs the OS sandbox too**, denying reads of your secrets folder: a settings deny rule stops the `Read` tool and `cat`, not `python3 -c "open(...)"`. And read-only commands inside the working directory are auto-approved, so run such a job from a directory holding only what it needs.
+>
+> **Why a probe that only says `ok` carries these flags.** Reported by an operator, 2026-08-31, after auditing their own fleet. Any shipped `claude -p` invocation should name the tools it actually needs — this one needs none — because the cost of adding it is a flag and the cost of retrofitting it across a fleet is a weekend. Three of the four obvious ways to do this **do not work**: `--allowedTools ""` is swallowed by the variadic flag · `--permission-mode manual` does **not** block (Bash still runs) · `--disallowedTools Bash` is a denylist, so `Write`, `Edit` and `Agent` survive it. (These were written when the allowlist was the recommended form; the note above supersedes it with `--tools`.)
 >
 > **And it holds only if you also pass `--permission-mode` explicitly.** Measured 2026-09-04 on a machine whose `~/.claude/settings.json` sets `permissions.defaultMode: "auto"`: the allowlist form alone **created a file**, with `permission_denials: []`. Adding `--permission-mode default` (or `plan`) blocked it. A machine-level auto mode silently outranks the flag — which is consistent with the vendor's own position that auto mode is a convenience feature backed by a best-effort classifier, **not a security boundary**.
 >

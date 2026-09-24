@@ -1,4 +1,5 @@
 repo=https://github.com/anthropics/skills
-hash=690f15c
-date=2026-05-21
-note=Vendored Apache-2.0 licensed skills only (12 of 17). Skipped: docx, pdf, pptx, xlsx (proprietary — available via document-skills@anthropic-agent-skills plugin); brand-guidelines (Anthropic-specific brand).
+hash=34040c9
+date=2026-09-23
+root=skills
+note=Vendored Apache-2.0 licensed skills only. Skipped: docx, pdf, pptx, xlsx (proprietary — available via document-skills@anthropic-agent-skills plugin); brand-guidelines (Anthropic-specific brand); canvas-design (Apache, but ~5.5 MB of bundled fonts). Refreshed 2026-09-23: claude-api and frontend-design; the other skills were unchanged upstream.

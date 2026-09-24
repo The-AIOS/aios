@@ -1166,6 +1166,29 @@ jobs:
         # them, in two copies twenty lines apart in one file.
         run: bash tests/cold-start-interview.test.sh
 
+      - name: setup asks for the operator's hands once, and names commands Windows has
+        # A Windows install through the App stopped twice for operator-only actions (GitHub
+        # login, /add-dir ~/.claude), cloned into a sibling it could not read, and rewired
+        # hooks by trial because SETUP.md named pwsh and python3. Each check is paired with
+        # a mutation that must make it fail.
+        # Section 3 runs the /today backup probe under bash AND zsh (the macOS session shell).
+        run: |
+          command -v zsh >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq zsh; }
+          bash tests/setup-operator-gates.test.sh
+
+      - name: vendored sources match the pin they record, file by file
+        # skills/superpowers recorded v5.1.0 while every file matched v5.0.7 — a record
+        # written once and never re-read. Offline check; the network proof against the
+        # upstream repo is a maintainer mode (--upstream), never CI.
+        run: bash tests/vendored-pins.test.sh
+
+      - name: the test suite never puts a quota banner on the machine running it
+        # multi-account-consistency drives real watcher ticks with fixture accounts, and
+        # notify() called osascript for real — every local run showed a genuine
+        # "swapped from a@example.com" banner. AIOS_QUOTA_NOTIFY=0 silences it in tests;
+        # a control proves notify() is still live for operators.
+        run: bash tests/watch-notify-isolation.test.sh
+
       - name: the secret scanner rejects what it is supposed to reject
         # Found by the derived-list guard below on its first run: this suite had been
         # committed and never invoked by any workflow. It is the scanner that stands between

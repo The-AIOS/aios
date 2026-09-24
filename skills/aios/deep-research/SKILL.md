@@ -84,6 +84,15 @@ Deliver **3–5 ranked proposals** — a decision aid, not a link dump:
 
 Lead with one line: **"If you do one thing: {top pick} — because {reason}."** If step 4 reframed the intent, lead with the reframe instead — that IS the finding.
 
+**End with what you could not confirm, and where you looked:**
+
+```markdown
+### Couldn't confirm
+- {claim} — looked in {sources / queries, with dates}; {what would settle it}
+```
+
+Write *"Nothing unconfirmed — every claim above is sourced"* only when that is true. A verification-minded reader reads this block first: it is where a ranked list is most likely to be wrong, and a claim with no stated gap reads as a claim with no gap.
+
 ## Rules
 - **Never a single search.** Multi-angle sweep or it isn't deep research.
 - **Corpus first.** You can't find white space without knowing what already exists.
@@ -92,4 +101,5 @@ Lead with one line: **"If you do one thing: {top pick} — because {reason}."** 
 - **Timely > timeless** when both are real — and name the decay date.
 - **Cite dates.** A "trend" from eight months ago isn't a window.
 - **Rank, don't dump.** 3–5 proposals + a lead recommendation. A list of links means you're not done.
+- **Name the negative space.** Every run ends with *Couldn't confirm* — the claims you could not verify and where you looked.
 - **Stop at the proposal.** This skill chooses the aim; producing the deliverable (draft, code, memo) is the caller's or another skill's job.

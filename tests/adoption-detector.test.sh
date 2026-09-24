@@ -36,6 +36,7 @@ fi
 # before the first post-swap reading even exists.
 
 set -uo pipefail
+export AIOS_QUOTA_NOTIFY=0   # drives real watcher code: never put a quota banner on this machine's desktop
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WATCH="$ROOT/hooks/claude-identity/_watch.py"
 PASS=0; FAIL=0

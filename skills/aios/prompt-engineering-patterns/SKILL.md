@@ -11,7 +11,7 @@ Master advanced prompt engineering techniques to maximize LLM performance, relia
 
 - Designing complex prompts for production LLM applications
 - Optimizing prompt performance and consistency
-- Implementing structured reasoning patterns (chain-of-thought, tree-of-thought)
+- Getting better reasoning from current models (effort, not incantations) — and chain-of-thought for models that do not reason on their own
 - Building few-shot learning systems with dynamic example selection
 - Creating reusable prompt templates with variable interpolation
 - Debugging and refining prompts that produce inconsistent outputs
@@ -28,13 +28,13 @@ Master advanced prompt engineering techniques to maximize LLM performance, relia
 - Dynamic example retrieval from knowledge bases
 - Handling edge cases through strategic example selection
 
-### 2. Chain-of-Thought Prompting
+### 2. Reasoning — current Claude models think already; steer effort, not wording
 
-- Step-by-step reasoning elicitation
-- Zero-shot CoT with "Let's think step by step"
-- Few-shot CoT with reasoning traces
-- Self-consistency techniques (sampling multiple reasoning paths)
-- Verification and validation steps
+- **Claude 5-generation models always reason before replying.** "Let's think step by step" and "think carefully" add nothing but latency — delete them.
+- **Want more (or less) thinking? Change effort, not the prompt:** `claude --effort low|medium|high|xhigh|max`, or the API's effort setting. Lower effort on a current model often beats the old model at high effort for review work.
+- **Don't ask the model to reproduce its internal reasoning in the reply** — that request can be declined. Ask for the justification you need instead: *"Explain why in three sentences."*
+- **Keep verification steps** — "check the answer against the original problem" still pays.
+- **Chain-of-thought still applies to models that do not reason on their own** (small or older non-reasoning models): zero-shot "think step by step", few-shot reasoning traces, self-consistency. Know which kind of model you are prompting before you reach for it.
 
 ### 3. Structured Outputs
 
@@ -145,25 +145,26 @@ Respond with JSON matching this schema:
     return SentimentAnalysis(**json.loads(message.content[0].text))
 ```
 
-### Pattern 2: Chain-of-Thought with Self-Verification
+### Pattern 2: Structured Answer with Self-Verification
+
+For a current reasoning model this asks for a *justification*, not a transcript of its thinking — that part it already does, and a request to reproduce it can be declined.
 
 ```python
 from langchain_core.prompts import ChatPromptTemplate
 
 cot_prompt = ChatPromptTemplate.from_template("""
-Solve this problem step by step.
+Solve this problem.
 
 Problem: {problem}
 
 Instructions:
-1. Break down the problem into clear steps
-2. Work through each step showing your reasoning
-3. State your final answer
-4. Verify your answer by checking it against the original problem
+1. State your final answer
+2. Explain why it is right in at most three sentences
+3. Verify your answer by checking it against the original problem
 
 Format your response as:
-## Steps
-[Your step-by-step reasoning]
+## Why
+[At most three sentences]
 
 ## Answer
 [Your final answer]
