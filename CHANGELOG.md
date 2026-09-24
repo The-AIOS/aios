@@ -71,7 +71,7 @@
 
 ## 2026-09-24 — A morning plan that checks your calendar two weeks out, and two alarms that stop miscounting
 
-`hash: ` · [#PR](https://github.com/The-AIOS/aios/pull/PR)
+`hash: ` · [#170](https://github.com/The-AIOS/aios/pull/170)
 
 > **What you can now do.** Trust the dates in your morning plan. `/today` now reads the next 14 days of your calendar every morning, not just today, and when a date in your notes disagrees with the calendar it says so at the top of the plan and corrects the note. Nothing to configure.
 
