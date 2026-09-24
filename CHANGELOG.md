@@ -69,11 +69,15 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
-## 2026-09-23 — A first install that works on every machine, and headless runs that can't borrow your permissions
+## 2026-09-23 — Sessions that keep going, a first install that works on every machine, and headless runs that can't borrow your permissions
 
-`hash: 4c74804 · fe28fbf · 9d34c48 · 55bdf7d · de88a2d · cd8e764 · c7dc65d` · [#167](https://github.com/The-AIOS/aios/pull/167)
+`hash: 4c74804 · fe28fbf · 9d34c48 · 55bdf7d · de88a2d · cd8e764 · c7dc65d · c301280 · 6c19ea2` · [#167](https://github.com/The-AIOS/aios/pull/167)
 
-> **What you can now do.** Hand a routine outside text — an email, a web page, a transcript — without it inheriting the permissions you have clicked "allow always" on. Set AIOS up on Windows without being stopped twice mid-way, and without a GitHub account. Nothing to configure for any of it.
+> **What you can now do.** Let a session carry work through instead of stopping to ask whether it should. Hand a routine outside text — an email, a web page, a transcript — without it inheriting the permissions you have clicked "allow always" on. Set AIOS up on Windows without being stopped twice mid-way, and without a GitHub account. Nothing to configure for any of it.
+
+**Sessions now say what they are about to do, then do it — instead of stopping to ask.** AIOS's instructions told every session to announce significant initiative and then wait: *"Confirm or redirect."* Opus 5.5 is built to work longer on its own, and Anthropic's own guidance is to tell it which stops you want rather than let it stop to offer. So the default is now: one line of intent, then the work, with the report alongside the next step. A session still **stops** before anything irreversible or outward-facing, before a decision that is yours, and when it genuinely cannot continue — and your `INTENT.md` autonomy levels still decide what it may do at all. If you prefer the old confirm-first behaviour, say so in `INTENT.md` and it wins.
+
+**Smaller changes in how sessions work, from the same guidance.** Long sessions keep their checklist in a file, so compaction cannot erase it. A worker's report now opens with what is **blocked on you**, and `/close-day` shows that first. Research and `/aios:ingest` end by naming what they **could not confirm, and where they looked**. `MODEL-ROUTING.md` now covers **effort** (`claude --effort low…max` — the knob that replaces "think carefully" in a prompt) and fast mode, and it warns about one new behaviour: if a message trips Opus 5.5's stricter safety checks, Claude Code can move the session to an **older model for the rest of the session**. `/model` shows what a session is really on.
 
 **A headless `claude -p` run could use permissions you never gave it.** The recipe AIOS taught for running Claude with no tools — an allowlist naming a tool that does not exist — only *pre-approves*, and Claude Code adds it to every allow rule in the settings it loads. That includes `.claude/settings.local.json`, where each interactive "allow always" click accumulates, so on a vault used daily a "no tools" run could read files well outside the project. Measured with a planted test file: the old recipe read it; the new one could not. The recipe is now `claude -p '<prompt>' --tools "<only what it needs>" --setting-sources user,project --strict-mcp-config --permission-mode default` — `--tools` decides which tools exist at all, and `--setting-sources` leaves the accumulated local rules out. It is rewritten everywhere AIOS teaches it, the one shipped call that uses it (`video-watch.py`) is contained, and the framework's own check now fails on the old form. Reported privately by an operator, who also offered the patch and tests.
 
@@ -83,7 +87,7 @@
 
 **The bundled Claude API skill is current again.** Its model and SDK guidance had fallen months behind the upstream skill it comes from; it is refreshed, along with the frontend-design skill. The record of which version of the bundled engineering skills you have was also wrong, and is corrected — their content does not change in this update.
 
-**Action required:** none for most operators. **If you run your own headless `claude -p` routines** (under `hooks/custom/`, `skills/custom/` or elsewhere), `/aios:housekeeping` now reports any that rely on an allowlist — switch them to the form above, especially any that pass along text from outside your vault. Last: **start a new Claude session** after updating, so the refreshed skills load.
+**Action required:** none for most operators — but notice the change in how sessions behave (above), and set a confirm-first rule in `INTENT.md` if you want the old behaviour back. **If you run your own headless `claude -p` routines** (under `hooks/custom/`, `skills/custom/` or elsewhere), `/aios:housekeeping` now reports any that rely on an allowlist — switch them to the form above, especially any that pass along text from outside your vault. Last: **start a new Claude session** after updating, so the refreshed skills load.
 
 ## 2026-09-22 — Fixes for failures that never raised an error, and Opus 5.5 by default
 
