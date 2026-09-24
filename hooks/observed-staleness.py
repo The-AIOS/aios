@@ -68,8 +68,9 @@ DEFAULT_DIR = os.path.join(
     "vault", "00 - notes", "context", "observed")
 
 # Aggregate/derived files decay faster: a relationship map or an identity
-# synthesis looks fine right up until you rely on it (CLAUDE.md § Aggregate vs
-# atomic). Everything else gets the ordinary accumulation threshold.
+# synthesis looks fine right up until you rely on it.
+# See CLAUDE.md § Observed Context Rules ("Aggregate vs atomic").
+# Everything else gets the ordinary accumulation threshold.
 AGGREGATE_DAYS = 21
 DEFAULT_DAYS = 30
 AGGREGATES = {"ecosystem.md", "profile.md"}
