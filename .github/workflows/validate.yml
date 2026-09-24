@@ -1182,6 +1182,13 @@ jobs:
         # upstream repo is a maintainer mode (--upstream), never CI.
         run: bash tests/vendored-pins.test.sh
 
+      - name: the test suite never puts a quota banner on the machine running it
+        # multi-account-consistency drives real watcher ticks with fixture accounts, and
+        # notify() called osascript for real — every local run showed a genuine
+        # "swapped from a@example.com" banner. AIOS_QUOTA_NOTIFY=0 silences it in tests;
+        # a control proves notify() is still live for operators.
+        run: bash tests/watch-notify-isolation.test.sh
+
       - name: the secret scanner rejects what it is supposed to reject
         # Found by the derived-list guard below on its first run: this suite had been
         # committed and never invoked by any workflow. It is the scanner that stands between

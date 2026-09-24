@@ -161,7 +161,14 @@ def notify(msg: str) -> None:
     off macOS, and the except below swallows that — so on Linux every
     notification this module sends was silently dropped, including the two that
     matter most (no account has capacity; a rotation was not adopted). A missing
-    notifier is still a no-op, but now it is the RIGHT notifier that is missing."""
+    notifier is still a no-op, but now it is the RIGHT notifier that is missing.
+
+    AIOS_QUOTA_NOTIFY=0 silences it (the swap log is still written). The test
+    suite drives real watcher ticks with fixture accounts, and without this every
+    local run put a genuine "swapped from a@example.com" banner on the
+    maintainer's desktop — indistinguishable from a real swap. Default: on."""
+    if os.environ.get("AIOS_QUOTA_NOTIFY", "1") == "0":
+        return
     if sys.platform == "darwin":
         cmd = ["osascript", "-e",
                f'display notification "{msg}" with title "Claude quota watch"']

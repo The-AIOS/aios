@@ -15,6 +15,7 @@
 # the operator's own ~/.claude or Keychain.
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
+export AIOS_QUOTA_NOTIFY=0   # drives real watcher code: never put a quota banner on this machine's desktop
 cd "$(dirname "$0")/.." || exit 1
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
