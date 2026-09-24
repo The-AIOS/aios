@@ -21,17 +21,17 @@ Every infra type has up to three provenance layers. They **compose**, never coll
 | Infra type | Bundled | Custom (operator) | Company (synced target) | Add via |
 |---|---|---|---|---|
 | **Agents** | `agents/aios/{sales,strategy,finance-legal,engineering,communication,personal}/` | `agents/custom/` | `agents/{company}/` | Copy `templates/aios/agent-template.md` → `{name}.md` into the bundle or `custom/`; update `agents/_index.md` |
-| **Skills** | `skills/aios/` (+ vendored `skills/anthropic/`, `skills/superpowers/`) | `skills/custom/` | `skills/{company}/` | Folder with `SKILL.md`; register into `~/.claude/skills` via `skills/setup.sh`/`.ps1`; update `skills/_index.md` |
+| **Skills** | `skills/aios/` (+ vendored `skills/anthropic/`, `skills/superpowers/`, `skills/cloudflare/`) | `skills/custom/` | `skills/{company}/` | Folder with `SKILL.md`; register into `~/.claude/skills` via `skills/setup.sh`/`.ps1`; update `skills/_index.md` |
 | **Hooks** | `hooks/` (flat: `claude-identity/`, pipeline `.py`, `markitdown-convert.py`, …) | `hooks/custom/` | `hooks/{company}/` | Add `.py`, document in `hooks/_index.md`, reference the path in `settings.json` |
 | **MCPs** | `mcps/*-mcp/` (flat, `-mcp` suffix namespaces) | `mcps/custom/` | `mcps/{company}/` | Vendor in `mcps/{name}-mcp/` (README + auth), add block to `mcps/setup.sh`, register with `claude mcp add`, update `mcps/_index.md` |
 | **Plugins** | `plugins/aios/` | `plugins/custom/<name>/` | `plugins/{company}/<plugin>/` | `plugins/custom/<name>/` with `.claude-plugin/plugin.json` + `commands/`; register in `.claude-plugin/marketplace.json` |
 | **Templates** | `templates/aios/` | `templates/custom/` | `templates/{company}/` | Add `{name}-template.md`; update `templates/_index.md` |
 
-**Layer folders confirmed present:** `agents/{aios,custom}`, `skills/{aios,anthropic,custom,superpowers}`, `hooks/{claude-identity,custom, …}`, `mcps/{*-mcp,custom}`, `plugins/{aios,custom}`, `templates/{aios,custom}`.
+**Layer folders confirmed present:** `agents/{aios,custom}`, `skills/{aios,anthropic,cloudflare,custom,superpowers}`, `hooks/{claude-identity,custom, …}`, `mcps/{*-mcp,custom}`, `plugins/{aios,custom}`, `templates/{aios,custom}`.
 
 ### Notes per type
 
-- **Skills** carry a **source** dimension on top of the layer model: bundled skills are grouped by upstream origin (`aios/` = this framework, `anthropic/` = Apache-2.0 examples, `superpowers/` = MIT) so `/aios:housekeeping` Bucket 18 can check each source for updates. `custom/` and `{company}/` are still the operator/company layers.
+- **Skills** carry a **source** dimension on top of the layer model: bundled skills are grouped by upstream origin (`aios/` = this framework, `anthropic/` = Apache-2.0 examples, `superpowers/` = MIT, `cloudflare/` = MIT) so `/aios:housekeeping` Bucket 18 can check each source for updates. `custom/` and `{company}/` are still the operator/company layers.
 - **Hooks** and **MCPs** are **flat** (no `aios/` subfolder) — the framework hooks/MCPs sit at the top level, and `custom/` (+ synced `{company}/`) are the only nested layers. `settings.json` / `~/.claude.json` reference hook and MCP paths directly.
 - **Plugins** are the one type where the operator's own slash commands belong. To add `/my-stuff:my-command`, build `plugins/custom/my-stuff/` — **never** add a command inside `plugins/aios/`. Company plugins land at `plugins/{company}/<plugin>/`, each a self-contained bundle invoked as `/<plugin>:<name>`.
 - **Commands** are not a separate top-level type — they live *inside* plugins. Editing a bundled `aios` command has a 3-location sync (source → marketplace → cache); see `CLAUDE.md` § Personalization. Operator command **behavior** is personalized in `USER.md` (never by editing command files).

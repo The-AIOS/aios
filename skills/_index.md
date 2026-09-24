@@ -20,6 +20,7 @@ updated: '2026-09-04'
 | [`skills/aios/`](./aios/) | AIOS-bundled skills (26) — high-signal coding/Obsidian/meta/systems after the 2026-05-21 audit. See "What got pruned" below for what was removed. | This framework | GPL-2.0-or-later |
 | [`skills/anthropic/`](./anthropic/) | Anthropic's example skills (11) — skill-creator, claude-api, mcp-builder, frontend-design, theme-factory, doc-coauthoring, internal-comms, web-artifacts-builder, webapp-testing, algorithmic-art, slack-gif-creator | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
 | [`skills/superpowers/`](./superpowers/) | Core software-engineering workflows (14) — TDD, debugging, code review, plans, brainstorming, worktrees, subagent dispatching | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
+| [`skills/cloudflare/`](./cloudflare/) | Source-code security audit (1) — `security-audit`: reconnaissance, attack-class playbooks, an evidence bar, a coverage ledger, and validators for its findings. Wired to the `security-engineer` agent; guidance by default, a full audit only when asked | [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) | MIT |
 | [`skills/custom/`](./custom/) | Your own skill extensions — survive `/aios:update` | Operator | Operator's choice |
 
 > **Note on skills available via Anthropic's plugin route** — operators get these via Claude Code's plugin marketplace: `claude plugin install document-skills@anthropic-agent-skills` (already enabled in this framework's default `~/.claude/settings.json`):

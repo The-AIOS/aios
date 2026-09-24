@@ -295,19 +295,19 @@ jobs:
             esac
           done
 
-          # skills/ — source-grouped. Allowed: aios/, superpowers/, df-claude-skills/, custom/
+          # skills/ — source-grouped. Allowed: aios/, anthropic/, superpowers/, cloudflare/, custom/
           # Anything else at depth 1 is either a new upstream source (update this allowlist + skills/_index.md)
           # or a company namespace that shouldn't be in the framework.
           for name in $(tracked_dirs skills); do
             case "$name" in
-              aios|anthropic|superpowers|custom) ;;
-              *) FOUND+=$'\n  - skills/'"$name"'/  (expected: aios/, anthropic/, superpowers/, or custom/ — vendoring a new upstream? add it to the allowlist in this workflow + document in skills/_index.md)' ;;
+              aios|anthropic|superpowers|cloudflare|custom) ;;
+              *) FOUND+=$'\n  - skills/'"$name"'/  (expected: aios/, anthropic/, superpowers/, cloudflare/, or custom/ — vendoring a new upstream? add it to the allowlist in this workflow + document in skills/_index.md)' ;;
             esac
           done
 
           # skills/ at depth 2 — block known company prefixes that might sneak in under a source folder
           shopt -s nullglob
-          for source_folder in skills/aios skills/anthropic skills/superpowers; do
+          for source_folder in skills/aios skills/anthropic skills/superpowers skills/cloudflare; do
             for company_prefix in sovra acme chuycepeda chuy zineb sarah; do
               for dir in "$source_folder/$company_prefix"/ "$source_folder/$company_prefix-"*/; do
                 [ -d "$dir" ] && FOUND+=$'\n  - '"$dir"'  (company-namespaced skill — relocate to operator vault under skills/'"$company_prefix"'/)'
@@ -854,7 +854,7 @@ jobs:
           set -e
           # Ground truth = framework-BUNDLED counts, EXCLUDING custom/ and {company}/
           # namespaces (sovra/, acme/, …). Layered folders count their bundled
-          # source-peers (skills = aios + anthropic + superpowers); flat folders count
+          # source-peers (skills = aios + anthropic + superpowers + cloudflare); flat folders count
           # root entries by convention (mcps = *-mcp/). This mirrors the operating rule:
           # "AIOS numbers, not sovra, not custom." Counts are hand-maintained in several
           # docs (TOOLS.md source-folders line, README.md) + the site repo (separate, not
@@ -864,9 +864,10 @@ jobs:
           S_AIOS=$(ls -d skills/aios/*/ 2>/dev/null | wc -l | tr -d ' ')
           S_ANTH=$(ls -d skills/anthropic/*/ 2>/dev/null | wc -l | tr -d ' ')
           S_SUP=$(ls -d skills/superpowers/*/ 2>/dev/null | wc -l | tr -d ' ')
-          S_TOTAL=$((S_AIOS + S_ANTH + S_SUP))
+          S_CF=$(ls -d skills/cloudflare/*/ 2>/dev/null | wc -l | tr -d ' ')
+          S_TOTAL=$((S_AIOS + S_ANTH + S_SUP + S_CF))
           MCPS=$(ls -d mcps/*-mcp/ 2>/dev/null | wc -l | tr -d ' ')
-          echo "Ground truth: commands=$CMD agents=$AGENTS skills=${S_AIOS}+${S_ANTH}+${S_SUP}=${S_TOTAL} mcps=$MCPS"
+          echo "Ground truth: commands=$CMD agents=$AGENTS skills=${S_AIOS}+${S_ANTH}+${S_SUP}+${S_CF}=${S_TOTAL} mcps=$MCPS"
 
           FAIL=0
           check() { # $1=label $2=expected(truth) $3=claimed $4=where
@@ -881,6 +882,7 @@ jobs:
           check "aios skills"        "$S_AIOS"  "$(grep -oE 'AIOS-built[^0-9]+[0-9]+ skills' TOOLS.md | grep -oE '[0-9]+' | head -1)"        "TOOLS.md"
           check "anthropic skills"   "$S_ANTH"  "$(grep -oE 'anthropics/skills[^0-9]+[0-9]+ skills' TOOLS.md | grep -oE '[0-9]+' | head -1)" "TOOLS.md"
           check "superpowers skills" "$S_SUP"   "$(grep -oE 'obra/superpowers[^0-9]+[0-9]+ skills' TOOLS.md | grep -oE '[0-9]+' | head -1)"  "TOOLS.md"
+          check "cloudflare skills"  "$S_CF"    "$(grep -oE 'cloudflare/security-audit-skill[^0-9]+[0-9]+ skill' TOOLS.md | grep -oE '[0-9]+' | head -1)" "TOOLS.md"
           check "total bundled"      "$S_TOTAL" "$(grep -oE 'Total bundled: [0-9]+' TOOLS.md | grep -oE '[0-9]+' | head -1)"                  "TOOLS.md"
 
           # README.md — command count
@@ -917,7 +919,7 @@ jobs:
           import sys, glob, os, re
 
           # Ground truth: a skill "resolves" if skills/<source>/<name>/SKILL.md exists.
-          # Source ∈ aios | anthropic | superpowers | custom (the source-grouped layout).
+          # Source ∈ aios | anthropic | superpowers | cloudflare | custom (the source-grouped layout).
           valid = set()
           for skill_md in glob.glob("skills/*/*/SKILL.md"):
               valid.add(os.path.basename(os.path.dirname(skill_md)))
@@ -965,7 +967,7 @@ jobs:
                   print(f"  - {path} -> `{name}`  (no skills/*/{name}/SKILL.md)")
               print("")
               print("A shipped agent must not point at a missing skill. Fix by authoring the skill under")
-              print("skills/<source>/<name>/ (source in aios|anthropic|superpowers|custom), or correct/remove")
+              print("skills/<source>/<name>/ (source in aios|anthropic|superpowers|cloudflare|custom), or correct/remove")
               print("the stale reference. Plugin-namespaced refs like `document-skills:xlsx` are intentionally")
               print("skipped (resolved by the plugin marketplace, not this bundle).")
               sys.exit(1)

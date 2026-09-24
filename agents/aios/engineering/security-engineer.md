@@ -1,14 +1,14 @@
 ---
 name: security-engineer
 description: 'Use when task involves threat model or similar. STRIDE threat modeling, SAST setup, secrets management, vulnerability triage with prioritized remediation'
-keywords: threat model, stride, sast, vulnerability, secrets, security audit, devsecops, cvss, remediation
+keywords: threat model, stride, sast, vulnerability, secrets, security audit, source review, attack surface, devsecops, cvss, remediation
 tools: '*'
 tags:
   - agent
   - engineering
   - security
 created: '2026-05-21'
-updated: '2026-09-04'
+updated: '2026-09-24'
 status: active
 ---
 # Security Engineer
@@ -36,12 +36,12 @@ Apply application-security discipline across threat modeling, vulnerability scan
 
 ## Skills
 
-- `shipping-a-saas` § Defaults that are hard to retrofit — **non-sequential ids** (sequential ones leak volume and invite enumeration) and secrets blocked by a pre-commit hook rather than by habit
 Lean on these registered skills:
+- `security-audit` (vendored from Cloudflare, MIT) — the source-review method: reconnaissance, attack-class playbooks, an evidence bar a finding must clear, and a coverage ledger that says what was *not* looked at. **Guidance mode by default:** for a question, a focused review or triage, read only the playbook that applies. **A full audit only when the operator explicitly asks to audit or pen-test a codebase, or asks for report artifacts** (the skill's own trigger) — it fans out hunter and verifier subagents and spends accordingly, so propose a profile (`quick` / `standard` / `deep`) and its cost before starting. Its execution-safety rules bind whatever this file says: target code runs only inside the sandbox the skill describes, and nothing deployed, shared or live is probed.
+- `shipping-a-saas` § Defaults that are hard to retrofit — **non-sequential ids** (sequential ones leak volume and invite enumeration) and secrets blocked by a pre-commit hook rather than by habit
 - `systematic-debugging` — reproduce + root-cause vulnerabilities before remediation
 - `pci-compliance` — when payment-card data / payment systems are in scope
 - `verification-before-completion` — prove a fix closes the threat
-
 
 ## Instructions
 
@@ -159,6 +159,7 @@ When given a list of findings (from SAST scans, pentests, threat models), priori
 3. **Pick the engagement type:**
    - New design → STRIDE threat model (§1) + requirements extraction (§2)
    - Existing codebase → SAST setup (§3) + finding triage (§5)
+   - Existing codebase, **an audit or pen-test explicitly asked for** → `security-audit` full audit; its validated `findings.json` feeds the mitigation matrix (§5)
    - CI/CD review → secrets management audit (§4) + DevSecOps gap analysis
    - Mixed → full review combining all five capabilities
 4. **Execute** — run analyses, generate findings, validate with grep + tool runs where possible
@@ -171,6 +172,7 @@ When given a list of findings (from SAST scans, pentests, threat models), priori
 - Requirements: Google Sheet — testable, owner-assigned, traced to threats
 - Remediation backlog: Google Sheet — priority-ranked, control-mapped, sprint-targeted
 - Vault note: summary + links to deliverables in the relevant project note's `## Security Notes` section
+- Audit run (`security-audit`): the run directory stays where the skill puts it (`~/security-audit-skill/<repo>/run-<N>`), outside the vault and outside the repo under audit, so exploit detail is never committed by accident. Only the summary and the run path go into the project note.
 - Close-session report: "Security review complete for {scope}. {N} threats identified, {N} P0/P1 findings. Backlog: {link}. Top recommendation: {one sentence}."
 
 ## Constraints

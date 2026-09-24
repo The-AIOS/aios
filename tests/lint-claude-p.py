@@ -46,7 +46,7 @@ import sys
 
 # tests/headless-allowlist.test.sh runs the OLD, uncontained recipe on purpose, as the
 # control that proves the risk exists on the machine; flagging it would delete the proof.
-SKIP_PREFIXES = ("skills/anthropic/", "skills/superpowers/", "tests/lint-claude-p.py",
+SKIP_PREFIXES = ("skills/anthropic/", "skills/superpowers/", "skills/cloudflare/", "tests/lint-claude-p.py",
                  "tests/headless-allowlist.test.sh")
 
 

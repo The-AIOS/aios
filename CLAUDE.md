@@ -378,7 +378,7 @@ vault/
 .claude-plugin/marketplace.json
 plugins/   ← aios/ (bundled) · custom/ · <company>/
 agents/    ← aios/{sales,strategy,finance-legal,engineering,communication,personal,commerce}/ · custom/ · <company>/
-skills/    ← aios/ · anthropic/ · superpowers/ · custom/
+skills/    ← aios/ · <vendor>/ (upstreams) · custom/
 hooks/     ← claude-identity + pipeline + markitdown · custom/ (flat — settings.json references hook paths directly)
 mcps/      ← *-mcp/ servers · custom/ (flat — ~/.claude.json registers absolute paths; -mcp suffix namespaces)
 templates/ ← aios/ (bundled) · custom/ · <company>/

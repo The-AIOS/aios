@@ -59,12 +59,14 @@ AGENTS=$(find agents/aios -name '*.md' ! -name '_index.md' ! -name 'README.md' 2
 S_AIOS=$(ls -d skills/aios/*/ 2>/dev/null | wc -l | tr -d ' ')
 S_ANTH=$(ls -d skills/anthropic/*/ 2>/dev/null | wc -l | tr -d ' ')
 S_SUP=$(ls -d skills/superpowers/*/ 2>/dev/null | wc -l | tr -d ' ')
-S_TOTAL=$((S_AIOS + S_ANTH + S_SUP))
+S_CF=$(ls -d skills/cloudflare/*/ 2>/dev/null | wc -l | tr -d ' ')
+S_TOTAL=$((S_AIOS + S_ANTH + S_SUP + S_CF))
 
 # ── the repairs ──────────────────────────────────────────────────────────────
 fix_num TOOLS.md          '(AIOS-built[^0-9]*)[0-9]+( skills)'        "$S_AIOS"  "AIOS-built skills count"
 fix_num TOOLS.md          '(anthropics/skills[^0-9]*)[0-9]+( skills)' "$S_ANTH"  "vendored anthropic skills count"
 fix_num TOOLS.md          '(obra/superpowers[^0-9]*)[0-9]+( skills)'  "$S_SUP"   "vendored superpowers skills count"
+fix_num TOOLS.md          '(cloudflare/security-audit-skill[^0-9]*)[0-9]+( skill)'  "$S_CF"    "vendored cloudflare skills count"
 fix_num TOOLS.md          '(Total bundled: )[0-9]+()'                 "$S_TOTAL" "total bundled skills"
 fix_num README.md         '(\*\*)[0-9]+( commands)'                   "$CMD"     "command count"
 fix_num agents/_index.md  '(Total bundled agents: )[0-9]+()'          "$AGENTS"  "total bundled agents"
