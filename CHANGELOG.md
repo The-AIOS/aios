@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — Three housekeeping checks that could not tell true from false
 
-`hash: `
+`hash: ` · [#178](https://github.com/The-AIOS/aios/pull/178)
 
 > **What you can now do.** Trust the upstream-freshness table, the duplicate-frontmatter scan, and the "already graduated" skip in `/aios:housekeeping` — each used to answer the same thing regardless of what it was looking at.
 
