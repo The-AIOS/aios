@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — Framework updates stop guessing when a check could not run
 
-`hash: `
+`hash: ` · [#176](https://github.com/The-AIOS/aios/pull/176)
 
 > **What you can now do.** Run `/aios:update` on a machine without `shasum`, with a home folder that has a space in its name, or with a bundled folder missing from your vault, and get a backup, a copy, or a drift line instead of silence.
 
