@@ -22,6 +22,7 @@ no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n' "$1"; }
 sk(){ SKIP=$((SKIP+1)); printf '  skip %s\n' "$1"; }
 have(){ [ "$1" = "$2" ] && ok "$3" || { no "$3"; printf '       expected %s, got %s\n' "$2" "$1"; }; }
 
+SPEC="$(cd "$(dirname "$0")/.." && pwd)/plugins/aios/commands/close-session.md"   # resolved before the cd below
 WORK=$(mktemp -d) || { echo "cannot mktemp"; exit 1; }
 trap 'rm -rf "$WORK"' EXIT
 cd "$WORK" || exit 1
@@ -128,9 +129,12 @@ AIOS-Session: $1"
   else git commit -q -m "$2"; fi
 }
 
-# the v3 gate, transcribed from close-session.md Step 4.5
+# the v3 gate, transcribed from close-session.md Step 4.5. The optional second argument
+# (`0`) runs it WITHOUT the `unknown` guard — i.e. exactly the condition that shipped
+# before tests 17-18 — so the regression case compares against the real predecessor,
+# not against a neighbouring variant.
 gate3(){
-  local sid="$1" prior stamped range mine=0 anytag=0 b
+  local sid="$1" guard="${2:-1}" prior stamped range mine=0 anytag=0 b
   prior=$(grep -o "<!-- close-session: ${sid} @ [0-9a-f]* -->" "$NOTE" 2>/dev/null | tail -1)
   [ -z "$prior" ] && { echo APPEND; return; }
   stamped=$(printf '%s' "$prior" | sed -E 's/.* @ ([0-9a-f]*) -->/\1/')
@@ -145,7 +149,7 @@ gate3(){
     printf '%s' "$b" | head -1 | grep -qE '^session: ' && continue
     mine=$((mine+1))
   done
-  if [ "$anytag" -ge 1 ]; then
+  if { [ "$guard" = 0 ] || [ "$sid" != unknown ]; } && [ "$anytag" -ge 1 ]; then
     [ "$mine" -eq 0 ] && echo SKIP || echo APPEND
   else
     local w
@@ -245,6 +249,30 @@ commit_as "$SID2" "feat: peer one ships"
 commit_as "$SID3" "feat: peer two ships"
 have "$(gate3 "$SID")" "SKIP"   "15. 2+ tagged commits, none mine → SKIP (precise path still taken)"
 have "$(gate3_eq "$SID")" "APPEND" "16. the -eq 1 variant APPENDs on that same state (the defect, reproduced)"
+
+# ---------------------------------------------------------------------------
+# TESTS 17-18 — `unknown` IS NOT AN IDENTITY.
+# aios-commit omits the AIOS-Session trailer when CLAUDE_CODE_SESSION_ID is empty, so a
+# session running without one can never match a trailer whose value is `unknown`. On the
+# precise path MINE is 0 by construction: once such a session had stamped a block, any
+# tagged peer commit made every later close of it SKIP. Test 8 covers `unknown` with NO
+# prior stamp — the one case that cannot fail. Provenance is unknowable here, so the gate
+# must take the coarse rule, exactly as it does for a range with no trailers at all.
+# ---------------------------------------------------------------------------
+printf '# note4\n' > "$NOTE"
+echo z >> f; git add f; git commit -q -m "base4"
+printf '## Session — 13:00 | w\n<!-- close-session: unknown @ %s -->\nb\n' "$(git rev-parse HEAD)" >> "$NOTE"
+git add "$NOTE"; commit_as "" "session: 13:00 w"
+commit_as "" "feat: work by the session that has no id"
+commit_as "$SID2" "feat: a tagged peer ships"
+# the fixture must hold exactly the shape the defect needs: tagged peers present, none mine
+tagged=$(git log --format=%B -3 | grep -c '^AIOS-Session: ')
+have "$tagged" "1" "17a. fixture: exactly one tagged commit in range, so ANYTAG >= 1 and MINE = 0"
+have "$(gate3 "unknown")" "APPEND" "17b. prior 'unknown' stamp + own untagged work + one tagged peer → APPEND (coarse rule)"
+have "$(gate3 "unknown" 0)" "SKIP" "18. the pre-guard condition (-ge 1, no identity check) SKIPs that same state (the defect, reproduced)"
+grep -q '"\$SID" != unknown' "$SPEC" \
+  && ok "19. the shipped gate carries the guard (reverting it alone fails here)" \
+  || no "19. the shipped gate lost the unknown guard — Step 4.5 must test \$SID != unknown before the precise path"
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1

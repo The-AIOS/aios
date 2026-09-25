@@ -69,6 +69,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-25 — A session without an id no longer loses its second close
+
+`hash: ` · [#175](https://github.com/The-AIOS/aios/pull/175)
+
+> **What you can now do.** Close a session that runs without a session id — a script, an older headless run — more than once in a day and keep every block it writes.
+
+**A session closing without a session id could lose every close after its first.** `/close-session` stamps each block it writes with the session id, and `aios-commit` tags the session's commits with the same id. When Claude runs without `CLAUDE_CODE_SESSION_ID` — a script, an older headless run — the stamp reads `unknown` while the commits carry no tag at all. Once such a session had closed once, any commit tagged by another session made its next close count as a duplicate and skip everything: the block, the observed-context routing, the commit. Nothing reported it. The gate now treats `unknown` as what it is — no identity — and uses the rule it already uses for vaults that predate tagging, which errs toward writing a block. Sessions that have an id are unaffected.
+
+**Action required:** none.
+
 ## 2026-09-24 — A security audit for your code, routines that stay inside the sandbox, and a morning plan that checks two weeks out
 
 `hash: 65227d0 · e8bad7a · c1396c3 · 6401d87 · ea99bbd · 6292b09 · a8ed263 · ba0751f · 24d7c51 · 5fe7850 · 409cc22 · 15a1291 · 27ea3a1 · 000f325 · 346bbc4 · 6907b7f · 871ee23` · [#170](https://github.com/The-AIOS/aios/pull/170) · [#172](https://github.com/The-AIOS/aios/pull/172) · [#173](https://github.com/The-AIOS/aios/pull/173) · [#174](https://github.com/The-AIOS/aios/pull/174)

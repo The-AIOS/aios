@@ -96,7 +96,14 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
      # active vault — fell through to the coarse rule and counted a PEER session's commit as
      # work of mine, which is the exact bug the trailer was introduced to kill. Measured
      # 2026-09-05: ANYTAG=4, MINE=0 (a true duplicate) and the fallback answered WORK=1 → append.
-     if [ "$ANYTAG" -ge 1 ]; then
+     # `unknown` is not a session identity. aios-commit omits the trailer when
+     # CLAUDE_CODE_SESSION_ID is empty, so a session running without one can never
+     # match a trailer whose value is `unknown`: on the precise path MINE is 0 by construction,
+     # and once such a session had stamped once, any tagged peer commit made every
+     # later close of it SKIP — the one outcome this gate must never produce. Its
+     # provenance is unknowable, so it takes the coarse rule, exactly like a range
+     # with no trailers at all. `tests/close-session-idempotency.test.sh` (17-18).
+     if [ "$SID" != unknown ] && [ "$ANYTAG" -ge 1 ]; then
        WORK=$MINE                                                        # precise path
      else
        # No commit in range carries a trailer → this vault predates the stamping,
