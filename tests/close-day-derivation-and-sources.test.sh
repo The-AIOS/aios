@@ -24,11 +24,11 @@ TMP=$(mktemp -d "${TMPDIR:-/tmp}/cdds.XXXXXX"); trap 'rm -rf "$TMP"' EXIT
 printf '/close-day — the redraw clock, the Tier B feed-in, the report date, the snapshot read\n'
 
 p_redraw_scope(){ grep -q '\*\*`ecosystem.md`\*\* gets a \*\*full-map re-derivation\*\*' "$1" && grep -q "this clock is \`ecosystem.md\`'s alone" "$1"; }
-p_redraw_clock(){ grep -q 'whenever its own \*\*`rederived:`\*\* frontmatter date is older than \*\*21 days\*\* or absent' "$1" && grep -q '— \*\*not\*\* `updated:`. Every atomic append in step 3 sets `updated:` to today' "$1"; }
+p_redraw_clock(){ grep -q 'whenever its own \*\*`rederived:`\*\* frontmatter date is older than the aggregate threshold `hooks/observed-staleness.py` applies (`AGGREGATE_DAYS`), or absent' "$1" && grep -q '— \*\*not\*\* `updated:`. Every atomic append in step 3 sets `updated:` to today' "$1"; }
 p_redraw_sets_both(){ grep -q 'After a redraw, set \*\*both\*\* `rederived:` and `updated:` to today' "$1"; }
 p_old_trigger_gone(){ ! grep -q 'whenever the staleness alarm (below) marks it past its aggregate threshold' "$1"; }
 p_tierb_reads_routed(){ grep -q "both those still in \`session-insights.md\` and those the Tier A pass above routed out of it today" "$1"; }
-p_tierb_reads_markers(){ grep -q 'read those where they landed, via today.s `<!-- ROUTED {date} (Tier A): {title} → \[\[{target}\]\] -->` markers' "$1"; }
+p_tierb_reads_markers(){ grep -q 'read those where they landed, via today.s markers in the buffer beginning `<!-- ROUTED {date} (Tier A)` — follow each marker.s `\[\[target\]\]` link' "$1"; }
 p_dev_report_date(){ grep -q "session-report-{YYYY-MM-DD}-\*.md\` (\*\*the date being closed\*\*" "$1"; }
 p_agent_report_date(){ grep -q '`{YYYY-MM-DD}` is \*\*the date being closed\*\*, not the clock.s date' "$1"; }
 p_no_todays_date(){ ! grep -q "session-report-{YYYY-MM-DD}-\*.md\` (today's date" "$1"; }
@@ -46,7 +46,7 @@ mut(){ # $1 label  $2 perl substitution  $3 the one property that must now fail
 mut "redraw keyed on updated again"  's/whenever its own \*\*`rederived:`\*\* frontmatter date/whenever its **`updated:`** frontmatter date/'         redraw_clock
 mut "redraw stamps only updated"     's/After a redraw, set \*\*both\*\* `rederived:` and `updated:` to today/After a redraw, set `updated:` to today/' redraw_sets_both
 mut "Tier B reads the buffer only"   's/both those still in `session-insights\.md` and those the Tier A pass above routed out of it today/in `session-insights.md`/' tierb_reads_routed
-mut "marker lookup removed"          's/: that pass runs first and excises what it routes, so read those where they landed, via today.s `<!-- ROUTED \{date\} \(Tier A\): \{title\} → \[\[\{target\}\]\] -->` markers in the buffer//' tierb_reads_markers
+mut "marker lookup removed"          's/: that pass runs first and excises what it routes, so read those where they landed, via today.s markers in the buffer beginning `<!-- ROUTED \{date\} \(Tier A\)` — follow each marker.s `\[\[target\]\]` link to read the entry where it landed —//' tierb_reads_markers
 mut "clock widened to any aggregate" 's/\*\*`ecosystem\.md`\*\* gets a \*\*full-map re-derivation\*\*/an aggregate file gets a **full-map re-derivation**/' redraw_scope
 mut "agent reports by clock date"    's/`\{YYYY-MM-DD\}` is \*\*the date being closed\*\*, not the clock.s date/`{YYYY-MM-DD}` is the current date/' agent_report_date
 mut "snapshot by line budget"        's/read each section \*\*in full\*\* from its offset to the next `## ` heading/read the first lines of each section/' snapshot_sections
