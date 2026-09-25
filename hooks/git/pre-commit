@@ -8,8 +8,10 @@ set -uo pipefail
 
 if [ "${AIOS_HUMAN:-0}" = "1" ]; then
   SCAN="$(cd "$(dirname "$0")" && pwd)/secret-scan.sh"     # still secret-scan a human commit
-  [ -x "$SCAN" ] && exec "$SCAN"
-  exit 0
+  # Missing scanner = refuse, not pass: the old `[ -x ] && exec …; exit 0` let a commit through
+  # unscanned whenever the file was absent or had lost its +x bit. Run through bash for the latter.
+  [ -f "$SCAN" ] || { echo "pre-commit: secret scanner not found at $SCAN — refusing an unscanned commit." >&2; exit 1; }
+  exec bash "$SCAN"
 fi
 
 cat >&2 <<'EOF'

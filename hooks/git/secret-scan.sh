@@ -97,7 +97,9 @@ for pat in "${PATTERNS[@]}"; do
   # here as "clean". That pattern therefore never fired. A failed measurement must never be
   # read as a substantive result.
   # -H: name the file even when only one is scanned, so a blocked directory run says WHICH one.
-  match=$(grep -HInE -e "$pat" "${files[@]}" 2>/dev/null | head -3); rc=$?
+  # -a, not -I: `-I` treats a file with one NUL byte as binary and skips it, so a token next to
+  # a NUL passed as clean. git commits those bytes all the same; scan them as text.
+  match=$(grep -HanE -e "$pat" "${files[@]}" 2>/dev/null | head -3); rc=$?
   # rc: 0 = matched · 1 = no match · >1 = grep itself failed. Fail CLOSED on >1 rather than
   # silently treating an unusable scan as a pass.
   if [ "$rc" -gt 1 ]; then
