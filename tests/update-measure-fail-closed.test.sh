@@ -24,7 +24,7 @@
 # Run:  bash tests/update-measure-fail-closed.test.sh
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SPEC="$ROOT/plugins/aios/commands/update.md"
+SPEC="${SPEC_OVERRIDE:-$ROOT/plugins/aios/commands/update.md}"
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok    %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '        %s\n' "$2"; }
@@ -77,6 +77,14 @@ eval "$(printf '%s\n' "$HF" | sed 's/ \&\& \[ -n "\$h" \]//; s/^h_file/h_file_mu
 r_m=$( set +o pipefail; h_file_mut "$CLONE/f" 2>/dev/null | tr -d '\n'; echo ":rc=${PIPESTATUS[0]}" )
 have "$r_m" ":rc=0"      "1g. mutant without the empty-hash check accepts a silent shasum: empty hash, rc 0 (so 1e cannot be vacuous)"
 unset -f shasum
+
+# binary with bytes that are not valid UTF-8: tr in a UTF-8 locale printed NOTHING for it, so every
+# such file hashed as the empty stream and two different ones compared "identical"
+printf '\211PNG\r\n\032\n\377\376binary-A' > "$TMP/a.bin"; printf '\211PNG\r\n\032\n\377\376binary-B' > "$TMP/b.bin"
+ha=$(LC_ALL=en_US.UTF-8 h_file "$TMP/a.bin"); hb=$(LC_ALL=en_US.UTF-8 h_file "$TMP/b.bin")
+[ -n "$ha" ] && [ "$ha" != "$hb" ] && ok "1i. two binaries that differ hash differently, even in a UTF-8 locale" || no "1i. two different binaries hashed the same" "a=$ha b=$hb"
+want=$(python3 -c "import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],'rb').read().replace(b'\r',b'')).hexdigest())" "$TMP/a.bin" 2>/dev/null)
+[ "$ha" = "$want" ] && ok "1j. …and the hash is of the whole file, CR-stripped" || no "1j. binary hash is not of the whole file" "got $ha want $want"
 
 # ---------------------------------------------------------------------------
 # 2. legacy .gitignore carry keeps the operator's rule ORDER.

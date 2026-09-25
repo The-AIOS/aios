@@ -93,6 +93,9 @@ The right comparison: **local vs operator's last-synced BASELINE** (the version 
 
 CLONE="/tmp/aios-update-check"
 
+# `LC_ALL=C` on every `tr`: in a UTF-8 locale macOS's tr stops at the first byte that is not valid
+# UTF-8 and prints NOTHING, so every such binary (a PNG, a PDF) hashed as the empty stream and any
+# two of them compared "identical" — an update to one never landed. C makes tr byte-exact.
 # CRLF-normalized content hash of a working-tree file. Non-zero return = NOT MEASURED
 # (unreadable, or `shasum` missing). A pipeline's status is its LAST command's — `cut`
 # exits 0 whether or not `shasum` ran — so the tool is probed first and an empty hash is
@@ -103,14 +106,14 @@ CLONE="/tmp/aios-update-check"
 _sha(){ if command -v shasum >/dev/null 2>&1; then shasum -a 256; elif command -v sha256sum >/dev/null 2>&1; then sha256sum; else return 1; fi; }
 _have_sha(){ command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; }
 h_file(){ [ -f "$1" ] || return 1; _have_sha || return 1
-          local h; h=$(tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
+          local h; h=$(LC_ALL=C tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 # CRLF-normalized content hash of a git object (the baseline). Probe existence
 # FIRST: a failed `git show` prints nothing, and sha256("") is a real hash
 # (e3b0c442…) that would compare EQUAL to a genuinely-empty file.
 h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1
          _have_sha || return 1
-         local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
+         local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | LC_ALL=C tr -d '\r' | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 BASE=$(h_git "{stored_hash}:{path}") || BASE=""   # "" = baseline unreachable
 LOCAL=$(h_file "$HOME/aios/{path}") || LOCAL=""
@@ -119,7 +122,7 @@ UP=$(h_file "$CLONE/{path}") || UP=""            # canonical HEAD — needed for
 # below (back up, then apply) — never read an unmeasured pair as a verdict.
 ```
 
-> **CRLF note (Windows).** On Windows, Git's `core.autocrlf` converts LF→CRLF on checkout, so vault files have `\r\n` line endings while `git show {hash}:{path}` (and the temp clone's working tree) may not — an unnormalized compare then reports "differ" for byte-identical content, flooding `vault/04 - backups/` with false personalizations on every sync. **Every content comparison in this command strips `\r` before hashing** (`tr -d '\r'`, as in `h_file`/`h_git` above). This applies to the self-update guard (Step 2.5) and the duplicate-cleanup content-compares (§ Duplicate cleanup) too — normalize line endings, then compare.
+> **CRLF note (Windows).** On Windows, Git's `core.autocrlf` converts LF→CRLF on checkout, so vault files have `\r\n` line endings while `git show {hash}:{path}` (and the temp clone's working tree) may not — an unnormalized compare then reports "differ" for byte-identical content, flooding `vault/04 - backups/` with false personalizations on every sync. **Every content comparison in this command strips `\r` before hashing** (`LC_ALL=C tr -d '\r'`, as in `h_file`/`h_git` above). This applies to the self-update guard (Step 2.5) and the duplicate-cleanup content-compares (§ Duplicate cleanup) too — normalize line endings, then compare.
 
 **Three outcomes:**
 
@@ -224,7 +227,7 @@ For each layer in `agents`, `skills`, `plugins`, `mcps`, `templates`, `hooks`:
 
 1. Build the set of bundled file basenames — every `.md` under `{layer}/aios/`, the vendored source-peers (`{layer}/anthropic/`, `{layer}/superpowers/`, `{layer}/cloudflare/`), and (for plugins/) `{layer}/aios/commands/`. **Exclude `_index.md` from this set** — every folder gets its OWN `_index.md` as navigation metadata, they are NEVER duplicates of each other (`agents/aios/_index.md` is the bundled index; `agents/custom/_index.md` is the operator's index for their custom agents — both intentional, neither is a copy).
 2. Scan `{layer}/custom/*` for any file whose basename appears in the bundled set AND is not `_index.md`. **For each match: apply the stale-vs-personalized test, then remove.**
-   - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the CURRENT bundled file (`{layer}/{bundled-subfolder}/{name}.md`). **Normalize line endings first** (`tr -d '\r'` both sides — see CRLF note in § Backup-on-divergence) so Windows CRLF checkouts don't read as differences.
+   - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the CURRENT bundled file (`{layer}/{bundled-subfolder}/{name}.md`). **Normalize line endings first** (`LC_ALL=C tr -d '\r'` both sides — see CRLF note in § Backup-on-divergence) so Windows CRLF checkouts don't read as differences.
    - **If byte-identical to current bundled** (after CRLF-normalization — true duplicate, no operator value): remove silently, no backup needed.
    - **If different from current bundled → check if it's a stale-bundled version** (not a personalization): scan recent upstream history for any past version of the bundled file matching this content. Use `git -C /tmp/aios-update-check log --all -p -- {bundled-path}` and compare against the past few revisions of the file. If a match is found in upstream history → the file is just a stale bundled copy (migration leftover) → remove silently, no backup.
    - **Else** (different from current AND no match in upstream history): treat as real personalization → backup-on-divergence: copy operator's version to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-custom-{name}.md` FIRST, then remove.
@@ -490,7 +493,7 @@ LOCAL_MD="$HOME/aios/plugins/aios/commands/update.md"
 _sha(){ if command -v shasum >/dev/null 2>&1; then shasum -a 256; elif command -v sha256sum >/dev/null 2>&1; then sha256sum; else return 1; fi; }
 _have_sha(){ command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; }
 h_file(){ [ -f "$1" ] || return 1; _have_sha || return 1
-          local h; h=$(tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
+          local h; h=$(LC_ALL=C tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 SAME=0
 a=$(h_file "$LOCAL_MD") && b=$(h_file "$CLONE/plugins/aios/commands/update.md") \
@@ -588,10 +591,10 @@ For each changed Tier 1 file:
      # The LOCAL side keeps the operator's ORDER: .gitignore is read last-match-wins, so a
      # `!exception` line must stay BELOW the pattern it excepts. A sorted set (`sort -u` +
      # `comm`) put `!private/public.txt` above `private/*` and the exception stopped working.
-     tr -d '\r' < "$HOME/aios/.gitignore" > "$T/aios-gi-local"
+     LC_ALL=C tr -d '\r' < "$HOME/aios/.gitignore" > "$T/aios-gi-local"
      : > "$T/aios-gi-base"
      git -C "$CLONE" cat-file -e "{stored_hash}:.gitignore" 2>/dev/null \
-       && git -C "$CLONE" show "{stored_hash}:.gitignore" 2>/dev/null | tr -d '\r' | sort -u > "$T/aios-gi-base"
+       && git -C "$CLONE" show "{stored_hash}:.gitignore" 2>/dev/null | LC_ALL=C tr -d '\r' | sort -u > "$T/aios-gi-base"
      if [ -s "$T/aios-gi-base" ]; then
        # Baseline known → carry only what the operator ADDED since it.
        ops=$(grep -vxF -f "$T/aios-gi-base" "$T/aios-gi-local" | grep -vE '^[[:space:]]*(#|$)')
@@ -650,9 +653,9 @@ For each changed Tier 1 file:
    _sha(){ if command -v shasum >/dev/null 2>&1; then shasum -a 256; elif command -v sha256sum >/dev/null 2>&1; then sha256sum; else return 1; fi; }
    _have_sha(){ command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; }
    h_file(){ [ -f "$1" ] || return 1; _have_sha || return 1
-             local h; h=$(tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
+             local h; h=$(LC_ALL=C tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
    h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1; _have_sha || return 1
-            local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
+            local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | LC_ALL=C tr -d '\r' | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
    printf '%s\n' "${FILES[@]}" | while IFS= read -r f; do
      [ -n "$f" ] || continue
      [ -e "$CLONE/$f" ] && continue            # still in canonical — not a deletion
@@ -943,7 +946,7 @@ For each genuine framework drift surfaced (a Tier-1 file that **differs**, or a 
 - Sync any recovered command file to the plugin pipeline (marketplace + cache).
 - **Report it loudly** — this drift means the tracker was lying; name the files recovered so the operator knows a gap self-healed.
 
-CRLF-normalize when comparing file *contents* (`tr -d '\r'`) per the § Backup-on-divergence CRLF note. **Vault-side `Only in` lines are dropped wholesale** — operator extensions (`custom/`), company namespaces (`<company>/`), and runtime (`.venv/`, `__pycache__/`, `*.log`, OAuth/auth caches, `.session`) live only in the vault, are never in canonical, and are never framework-drift-to-pull. (An upstream *deletion* — a file the vault has that canonical removed — is handled by Step 3.4 — removed when you never edited it, asked about once when you did — not here.) Filtering by **side** (`^Only in $VAULT`), not by token, is what makes this robust — `diff` writes `Only in DIR: name` with a colon, so token patterns like `custom/` silently miss `…/custom: name`.
+CRLF-normalize when comparing file *contents* (`LC_ALL=C tr -d '\r'`) per the § Backup-on-divergence CRLF note. **Vault-side `Only in` lines are dropped wholesale** — operator extensions (`custom/`), company namespaces (`<company>/`), and runtime (`.venv/`, `__pycache__/`, `*.log`, OAuth/auth caches, `.session`) live only in the vault, are never in canonical, and are never framework-drift-to-pull. (An upstream *deletion* — a file the vault has that canonical removed — is handled by Step 3.4 — removed when you never edited it, asked about once when you did — not here.) Filtering by **side** (`^Only in $VAULT`), not by token, is what makes this robust — `diff` writes `Only in DIR: name` with a colon, so token patterns like `custom/` silently miss `…/custom: name`.
 
 ### 6.9. The star ask — applied runs only, asked once, never again either way
 
