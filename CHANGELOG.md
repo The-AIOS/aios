@@ -69,6 +69,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-25 — Commits refuse when the secret check could not run
+
+`hash: `
+
+> **What you can now do.** Commit knowing that a token pasted into the commit message is caught, that a missing scanner stops the commit instead of waving it through, and that a vault sweep which could not read the repository says so instead of reporting nothing to commit.
+
+**Four ways a commit passed with a check that never ran.** `aios-commit` scanned the files it committed but not the message, so a token pasted into `-m` went into history. If the secret scanner was missing, or had lost its executable bit, both `aios-commit` and the git pre-commit hook skipped it and committed anyway. The scanner treated any file containing a zero byte as binary and did not look inside it, so a token next to one passed. And `aios-commit --vault` discarded the errors of the git calls that list your changes, so a sweep that could not read the repository printed "no vault changes to commit". Each of these now refuses and says why; a scanner without its executable bit is run anyway rather than skipped.
+
+**Action required:** none.
+
 ## 2026-09-24 — A security audit for your code, routines that stay inside the sandbox, and a morning plan that checks two weeks out
 
 `hash: 65227d0 · e8bad7a · c1396c3 · 6401d87 · ea99bbd · 6292b09 · a8ed263 · ba0751f · 24d7c51 · 5fe7850 · 409cc22 · 15a1291 · 27ea3a1 · 000f325 · 346bbc4 · 6907b7f · 871ee23` · [#170](https://github.com/The-AIOS/aios/pull/170) · [#172](https://github.com/The-AIOS/aios/pull/172) · [#173](https://github.com/The-AIOS/aios/pull/173) · [#174](https://github.com/The-AIOS/aios/pull/174)
