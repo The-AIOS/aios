@@ -1122,6 +1122,9 @@ jobs:
       - name: /today's precondition and backup probes, and its carry rules
         # Both probes are extracted from today.md and run against temp vaults; the carry rules are anchored on the wording that removes each contradiction.
         run: bash tests/today-carries-and-probes.test.sh
+      - name: /close-day redraws on its own clock and reads everything it summarises
+        # The ecosystem redraw keyed on rederived:, Tier B reading what Tier A routed out, reports by the date being closed, and snapshots read by section — each proven able to fail by a mutated copy.
+        run: bash tests/close-day-derivation-and-sources.test.sh
 
       - name: two Windows probes that answered an adjacent question
         # `command -v python3` succeeds on the Microsoft Store App Execution Alias — a real file
