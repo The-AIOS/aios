@@ -133,7 +133,7 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
    ```
 
    An HTML comment renders invisibly in Obsidian and in every markdown preview, so the note stays clean for the human while carrying the identity the machine needs.
-4.7. **Ask before you write** (interactive only — under `--auto` both questions are skipped, per § Non-interactive mode). The block written in step 5 is **committed** by the helper the moment it lands, and the helper only appends — it cannot amend a block afterwards. So everything the block must contain is gathered *now*, before step 5, and steps 8 and 9 only verify it landed — they never ask again, write a second block, or reopen the first.
+4.7. **Ask before you write** — under `--auto` nobody is there to answer, so skip the question in **a** and the offer in **b2** — but still run **b**'s scan: if agents shipped anything, list each item in `**Comprehension:**` as *un-grasped* with an `**Open threads:**` carry. Writing *"All operator-authored"* there without the scan would erase real comprehension debt. The block written in step 5 is **committed** by the helper the moment it lands, and the helper only appends — it cannot amend a block afterwards. So every answer the block needs from the operator is gathered *now*, before step 5, and steps 8 and 9 only verify it landed — they never ask again, write a second block, or reopen the first.
 
    **a. Most useful.** If the session was substantive (>30 min, meaningful work), ask *"What was most useful for you in this session?"* and keep the verbatim answer for the block's `**Most useful:**` field.
 

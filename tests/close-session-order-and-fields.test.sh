@@ -75,5 +75,7 @@ mut "4.7 moved after step 5"        's/(4\.7\. \*\*Ask before you write\*\*[\s\S
 mut "most-useful question removed"  's/ If the session was substantive \(>30 min, meaningful work\), ask \*"What was most useful for you in this session\?"\*//' ask_most_useful
 mut "recap removed from 4.7"        's/\n   \*\*b1\. Recap first[^\n]*\n//' ask_recap_first
 
+# --auto must still run the comprehension scan — skipping it lets "All operator-authored" erase real debt
+ask47 "$SPEC" | grep -qF "still run **b**'s scan" && ok "auto_still_scans" || no "auto_still_scans" "under --auto the Comprehension field would be written without the scan"
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1
