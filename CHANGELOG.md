@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — Two framework updates no longer collide, and a stray skill folder keeps what you put in it
 
-`hash: `
+`hash: ` · [#179](https://github.com/The-AIOS/aios/pull/179)
 
 > **What you can now do.** Run `/aios:update` from two places at once — a morning plan and a routine, say — and get one sync plus one clear "already running" instead of two half-syncs; keep the scripts you added beside a bundled skill; and see drift in every framework file, including two the update used to skip.
 
