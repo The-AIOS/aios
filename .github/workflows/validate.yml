@@ -1101,6 +1101,10 @@ jobs:
         # produces the downgrade on the same inputs.
         run: bash tests/update-local-ahead.test.sh
 
+      - name: /today's precondition and backup probes, and its carry rules
+        # Both probes are extracted from today.md and run against temp vaults; the carry rules are anchored on the wording that removes each contradiction.
+        run: bash tests/today-carries-and-probes.test.sh
+
       - name: two Windows probes that answered an adjacent question
         # `command -v python3` succeeds on the Microsoft Store App Execution Alias — a real file
         # on PATH that exits 49 and prints an install notice — so connect.sh passed its own

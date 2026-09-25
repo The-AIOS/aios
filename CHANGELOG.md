@@ -69,6 +69,18 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-25 — The morning plan closes the right day and keeps every carry
+
+`hash: `
+
+> **What you can now do.** Start a day after a long break, or after `/7plan` already created today's note, and have `/today` close the day you actually left open, warn you when your vault has no backup, and carry forward every open task.
+
+**The morning checks could answer the wrong question.** The check for an unclosed previous day excluded only today's date, so a note dated in the future could be taken for yesterday's, and a missing calendar folder looked like a first run. When it did find an unclosed day, it asked `/close-day` to close "the most recent note" — which is today's once `/7plan` has created it. It now compares dates, reports a missing or unreadable calendar folder instead of treating it as empty, and hands `/close-day` the exact date, which `/close-day` now honours. The backup check looked only at `origin` unless a push target was configured, and read a missing URL as "ok": a vault whose only remote had another name was checked against nothing, and one with several remotes and no push target was reported as backed up. It now resolves the remote the way `git push` does, reports "no backup" when that remote has no URL, and when a vault pushes to the public framework it names the remote to remove instead of always saying `origin`.
+
+**Carried tasks could fall through.** The previous note was searched for in this month and last month only, so after a longer break its open tasks never carried. The check that nothing was dropped compared counts, so losing one task while adding another passed. And three rules disagreed on whether an old task with no tag and no deadline should be escalated. The search now covers every month, the check goes task by task, and the count-based escalation applies to exactly those untagged, undated tasks.
+
+**Action required:** none.
+
 ## 2026-09-24 — A security audit for your code, routines that stay inside the sandbox, and a morning plan that checks two weeks out
 
 `hash: 65227d0 · e8bad7a · c1396c3 · 6401d87 · ea99bbd · 6292b09 · a8ed263 · ba0751f · 24d7c51 · 5fe7850 · 409cc22 · 15a1291 · 27ea3a1 · 000f325 · 346bbc4 · 6907b7f · 871ee23` · [#170](https://github.com/The-AIOS/aios/pull/170) · [#172](https://github.com/The-AIOS/aios/pull/172) · [#173](https://github.com/The-AIOS/aios/pull/173) · [#174](https://github.com/The-AIOS/aios/pull/174)
