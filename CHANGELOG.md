@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — A session close asks its questions before it writes the block
 
-`hash: `
+`hash: ` · [#180](https://github.com/The-AIOS/aios/pull/180)
 
 > **What you can now do.** Close a session and find the "most useful" answer and the comprehension notes in the block that was actually written — and close several sessions at once without two of them editing the same observed file.
 
