@@ -54,6 +54,24 @@ for n in antifragile patterns preferences growth; do
   printf '# %s\n' "$n" > "$FAKE_VAULT/vault/00 - notes/context/observed/$n.md"
 done
 export AIOS_VAULT="$FAKE_VAULT"
+# Primaries are DECLARED, in USER.md's Identity table -- the same table that decides how a
+# session is greeted. The italic rows are the template's examples and must never count.
+cat > "$FAKE_VAULT/USER.md" <<'USEREOF'
+# USER
+
+## Identity
+
+*EXAMPLE ONLY (Claude: ignore these) — replace with yours:*
+
+| Name | Role | Greeting style |
+|------|------|----------------|
+| *`buddy`* | *My main session* | *Warm co-pilot* |
+| `main-seat` | Main session | Brief |
+
+## Settings
+
+| `not-a-primary` | a table in another section | - |
+USEREOF
 
 # Build a transcript: agent name + N tool_use events with the given commands.
 mk(){ # $1 name · $2 sid · $3.. commands
@@ -135,7 +153,7 @@ else
 fi
 
 echo "── 5. with a scoring primary, it reports and flags the zero ──"
-mk buddai pr000005 'cat "/Users/x/aios/vault/00 - notes/context/observed/patterns.md"'
+mk main-seat pr000005 'cat "/Users/x/aios/vault/00 - notes/context/observed/patterns.md"'
 OUT="$(run --min-tools 0)"
 printf '%s' "$OUT" | grep -q 'control — primary sessions: 1/1' \
   && ok "primary recognised as the control" || no "primary not detected" "$(printf '%s' "$OUT" | head -2)"
@@ -181,6 +199,135 @@ fi
 grep -q '_declared_names' "$H" \
   && ok "declared filenames are derived from the vault" \
   || no "declared names are hardcoded" "that list is empty on any vault that renamed them"
+
+echo "── 8. primaries come from USER.md, never from names written in the hook ──"
+mk buddy ex000008 'cat "/Users/x/aios/vault/00 - notes/context/observed/patterns.md"'
+mk not-a-primary np000008 'echo x'
+OUT="$(run --min-tools 0 --json)"
+P=$(printf '%s' "$OUT" | $PYBIN -c 'import json,sys; print(",".join(sorted(r["name"] for r in json.load(sys.stdin) if r["primary"])))' 2>/dev/null)
+[ "$P" = "main-seat" ] && ok "only the declared row is a primary (example row and other sections ignored)" \
+  || no "primaries were [$P], expected [main-seat]" "an example row or a table from another section was read as an identity"
+OUT="$(run --min-tools 0 --json --primary worker-zero)"
+printf '%s' "$OUT" | $PYBIN -c 'import json,sys; sys.exit(0 if [r for r in json.load(sys.stdin) if r["name"]=="worker-zero" and r["primary"]] else 1)' \
+  && ok "--primary adds a name" || no "--primary was ignored"
+if grep -qiE 'buddai|sarah|vault-sync' "$H"; then
+  no "the hook names another operator's sessions" "canonical ships to every vault; those names match nothing there"
+else
+  ok "no session names are written into the hook"
+fi
+NV="$TMP/nouser"; mkdir -p "$NV/vault/00 - notes/context/declared" "$NV/vault/00 - notes/context/observed"
+OUT="$(HOME="$HOME_FAKE" USERPROFILE="$HOME_FAKE" AIOS_VAULT="$NV" $PYBIN "$H" --min-tools 0 2>&1)"; RC=$?
+{ [ "$RC" = 2 ] && printf '%s' "$OUT" | grep -q 'Identity' && printf '%s' "$OUT" | grep -q -- '--primary'; } \
+  && ok "no USER.md → aborts and says how to declare a primary" || no "no-USER.md run did not explain itself (rc=$RC)" "$OUT"
+
+echo "── 9. FIT reads the whole transcript and respects order ──"
+# Built in one process: a worker's calls in order, "filler*N" expands to N no-op calls.
+mkseq(){ # $1 name · $2 sid · $3.. steps
+  local f="$HOME_FAKE/.claude/projects/proj/$2.jsonl" name="$1"; shift 2
+  $PYBIN - "$f" "$name" "$@" <<'PY'
+import json, sys
+f, name, steps = sys.argv[1], sys.argv[2], sys.argv[3:]
+dump = lambda o: json.dumps(o, separators=(",", ":"))   # compact, as real transcripts are
+sid = f.rsplit("/", 1)[-1][:-6]
+out = [dump({"type": "agent-name", "agentName": name, "sessionId": sid})]
+for s in steps:
+    cmds = ["echo filler"] * int(s[7:]) if s.startswith("filler*") else [s]
+    for c in cmds:
+        out.append(dump({"type": "assistant", "message": {"content": [
+            {"type": "tool_use", "name": "Bash", "input": {"command": c}}]}}))
+open(f, "w").write("\n".join(out) + "\n")
+PY
+}
+VOICE='cat "/Users/x/aios/vault/00 - notes/context/declared/personal_voice.md"'
+SHIP='cp draft.md "/Users/x/aios/vault/03 - export/post.md"'
+mkseq fit-late-ship  fl000009 'filler*130' "$SHIP"
+mkseq fit-read-after fa000009 "$SHIP" "$VOICE" 'filler*30'
+mkseq fit-late-good  fg000009 'filler*130' "$VOICE" "$SHIP"
+# One call that acts and reads: credited only when the read comes first in the call.
+mkseq fit-same-ship-first ss000009 "$SHIP && $VOICE" 'filler*30'
+mkseq fit-same-read-first sr000009 "$VOICE && $SHIP" 'filler*30'
+# The declared name also appears earlier inside another word; that is not the read.
+mkseq fit-same-lookalike sl000009 "echo backup_personal_voice.md && $SHIP && $VOICE" 'filler*30'
+fit(){ # $1 hook · prints the names flagged by the fit section
+  HOME="$HOME_FAKE" USERPROFILE="$HOME_FAKE" AIOS_VAULT="$FAKE_VAULT" $PYBIN "$1" --min-tools 0 2>&1 \
+    | sed -n '/^fit/,$p' | grep -oE 'fit-[a-z-]+' | sort | tr '\n' ' '
+}
+NEWF="$(fit "$H")"
+[ "$NEWF" = "fit-late-ship fit-read-after fit-same-lookalike fit-same-ship-first " ] \
+  && ok "flags a ship past the loading cap, a ship before the read, and a ship-then-read in one call" \
+  || no "fit flagged [$NEWF], expected [fit-late-ship fit-read-after fit-same-lookalike fit-same-ship-first]" "a read before a ship must pass, in one call or two; the others must not"
+
+# The same fixture against the pre-change hook, pinned by sha so the reproduction does not
+# move when this change lands. Skipped, with a message, when that commit is not present.
+PIN=3d135ded112bf7b77156b61bb29e6233ff7c7285
+OLD="$TMP/old-audit.py"
+if git cat-file -e "$PIN:$H" 2>/dev/null && git show "$PIN:$H" > "$OLD" && ! cmp -s "$OLD" "$H"; then
+  # The old hook recognised its primaries by hardcoded name; give it one so it reports.
+  mk buddai ob000009 'cat "/Users/x/aios/vault/00 - notes/context/observed/patterns.md"'
+  OLDOUT="$(HOME="$HOME_FAKE" USERPROFILE="$HOME_FAKE" AIOS_VAULT="$FAKE_VAULT" $PYBIN "$OLD" --min-tools 0 2>&1)"
+  OLDF="$(fit "$OLD")"
+  rm -f "$HOME_FAKE/.claude/projects/proj/ob000009.jsonl"
+  # The old run must be a VALID report -- a scoring control and a fit section -- before an
+  # empty flag list means anything. An aborted or crashed run also flags nothing.
+  { printf '%s' "$OLDOUT" | grep -q 'control — primary sessions: [1-9]' \
+    && printf '%s' "$OLDOUT" | grep -q '^fit — workers whose output went outward: [1-9]' \
+    && [ "$OLDF" = "" ]; } \
+    && ok "OLD: neither case was flagged (the cap hid the late ship, order was ignored)" \
+    || no "old hook flagged [$OLDF]; the reproduction no longer holds" "check the pin"
+else
+  echo "  SKIP  old-hook reproduction: $PIN not present or identical"
+fi
+
+echo "── 10. --min-tools still filters on the loading window ──"
+mkseq window-short ws000010 'filler*30'
+N2=$(run --cap 10 --min-tools 20 --json | $PYBIN -c 'import json,sys; print(sum(1 for r in json.load(sys.stdin) if r["name"]=="window-short"))' 2>/dev/null)
+T=$(run --session ws000010 --cap 10 --min-tools 0 --json | $PYBIN -c 'import json,sys; r=json.load(sys.stdin)[0]; print(r["tools"], r["tools_total"])' 2>/dev/null)
+{ [ "$N2" = 0 ] && [ "$T" = "10 30" ]; } \
+  && ok "a 30-call session with --cap 10 is below --min-tools 20 (tools=10, tools_total=30)" \
+  || no "the loading window no longer drives --min-tools (swept=$N2, tools/total=$T)" "reading the whole transcript for fit must not change which sessions are audited"
+
+echo "── 11. the Identity table parser: real tables in, everything else out ──"
+PT="$TMP/parse"; mkdir -p "$PT"
+$PYBIN - "$H" "$PT" <<'PY'
+import importlib.util, os, sys
+hook, d = sys.argv[1], sys.argv[2]
+os.environ["AIOS_VAULT"] = d
+spec = importlib.util.spec_from_file_location("audit", hook)
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+T = "| Name | Role |\n|---|---|\n"          # header + delimiter: what makes it a table
+cases = {
+    "no outer pipes":   ("## Identity\n\nName | Role\n--- | ---\n`bare-seat` | main\n", {"bare-seat"}),
+    "bold is a name":   ("## Identity\n\n" + T + "| **bold-seat** | main |\n", {"bold-seat"}),
+    "italic example":   ("## Identity\n\n" + T + "| *`ex`* | x |\n| _ex2_ | x |\n| `real` | y |\n", {"real"}),
+    "header not a name": ("## Identity\n\n| Session | Role |\n|---|---|\n| `a` | x |\n", {"a"}),
+    "h1 ends section":  ("## Identity\n\nnone yet\n\n# Settings\n\n" + T + "| `b` | y |\n", set()),
+    "h3 does not end":  ("## Identity\n\n### Mine\n\n" + T + "| `a` | x |\n", {"a"}),
+    "only first table": ("## Identity\n\n" + T + "| `a` | x |\n\n## Contacts\n\n" + T + "| `bob` | y |\n", {"a"}),
+    "code block":       ("## Identity\n\n```\n" + T + "| `fenced` | x |\n```\n" + T + "| `a` | x |\n", {"a"}),
+    "mixed fences":     ("## Identity\n\n````\n~~~\n" + T + "| `ghost` | x |\n```\n" + T + "| `ghost2` | x |\n````\n" + T + "| `a` | x |\n", {"a"}),
+    "not a fence (inline code)": ("```example`text\n\n## Identity\n\n" + T + "| `a` | x |\n", {"a"}),
+    "not a fence (indented)":    ("    ```\n\n## Identity\n\n" + T + "| `a` | x |\n", {"a"}),
+    "indented heading":  ("  ## Identity\n\n" + T + "| `a` | x |\n", {"a"}),
+    "closing hashes":    ("## Identity ##\n\n" + T + "| `a` | x |\n", {"a"}),
+    "setext heading":    ("## Identity\n\n| Name | Role |\n| --- | --- |\n| Ana | Owner |\n\nContacts\n--------\n\n| Name | Role |\n| --- | --- |\n| Bruno | Accountant |\n", {"Ana"}),
+    "pipe in the intro": ("## Identity\n> Fill in the columns Name | Role.\n\n| Name | Role |\n| --- | --- |\n| Ana | Owner |\n", {"Ana"}),
+    "pipe in plain text": ("## Identity\nColumns: Name | Role\n\n" + T + "| `a` | x |\n", {"a"}),
+    "quote after table": ("## Identity\n\n" + T + "| `a` | x |\n> tip: a | b\n", {"a"}),
+    "heading glued to table": ("## Identity\n\n" + T + "| Ana | Owner |\n## Contacts | Work\n" + T + "| Bruno | Accountant |\n", {"Ana"}),
+    "unclosed fence":   ("## Identity\n\n" + T + "| `a` | x |\n\n```\n" + T + "| `ghost` | x |\n", {"a"}),
+}
+bad = []
+for label, (text, want) in cases.items():
+    open(os.path.join(d, "USER.md"), "w").write("# USER\n\n" + text)
+    got = m._primary_names(d)
+    if got != want:
+        bad.append("%s: got %s want %s" % (label, sorted(got), sorted(want)))
+if bad:
+    print("\n".join(bad))
+sys.exit(1 if bad else 0)
+PY
+[ $? -eq 0 ] && ok "outer pipes optional, bold kept, italic skipped, # ends the section, code blocks ignored" \
+             || no "the Identity parser misread a table" "see above"
 
 printf '\n%d passed · %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

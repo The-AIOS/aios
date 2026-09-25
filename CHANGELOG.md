@@ -69,6 +69,20 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-25 — The context audit and the context ladder measure what they say they measure
+
+`hash: `
+
+> **What you can now do.** Run `/aios:housekeeping` and get a context audit that uses your own main sessions as its control, and a fit check that looks at a worker's whole session. Read the context ladder knowing its first rung costs what the floor actually loads.
+
+**The context audit used someone else's session names as its control.** The audit decides whether its detector works by checking that your main sessions loaded context. It found those sessions by a list of names written into the hook, and they were one operator's names. On any other vault they matched nothing, so your real main session was counted as a worker and could be listed as suspect. The audit now reads your main sessions from the `## Identity` table in `USER.md`, the same table that decides how a session greets you. You can add more with `--primary NAME`. With none declared, it stops and tells you how to declare one.
+
+**The fit check missed late actions and ignored order.** It asks whether a worker that published something in your name had read how you write. It only looked at the first 120 tool calls, so an export made later was never seen. And a worker that exported first and read your voice file afterwards counted as having read it. It now reads the whole session, and asks whether a `declared/` file was read before the first outward action.
+
+**The first rung of the context ladder was priced wrong.** It is defined as exactly what the context floor loads. The floor loads a rule library's index and the newest entries of every other observed file by the date they carry. The ladder priced the last five entries of every file instead, rule library included. The ladder now prices each file with the floor's own selection code, so the two cannot drift apart again.
+
+**Action required:** if you run `/aios:housekeeping` and its context audit stops with "no primary session found", add your main session names to the `## Identity` table in `USER.md`. Nothing else changes.
+
 ## 2026-09-24 — A security audit for your code, routines that stay inside the sandbox, and a morning plan that checks two weeks out
 
 `hash: 65227d0 · e8bad7a · c1396c3 · 6401d87 · ea99bbd · 6292b09 · a8ed263 · ba0751f · 24d7c51 · 5fe7850 · 409cc22 · 15a1291 · 27ea3a1 · 000f325 · 346bbc4 · 6907b7f · 871ee23` · [#170](https://github.com/The-AIOS/aios/pull/170) · [#172](https://github.com/The-AIOS/aios/pull/172) · [#173](https://github.com/The-AIOS/aios/pull/173) · [#174](https://github.com/The-AIOS/aios/pull/174)
