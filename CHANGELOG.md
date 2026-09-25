@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — The evening close redraws your relationship map on time and reads everything it summarises
 
-`hash: `
+`hash: ` · [#182](https://github.com/The-AIOS/aios/pull/182)
 
 > **What you can now do.** Rely on `/close-day` to redraw `ecosystem.md` every few weeks even while small observations keep landing in it, to consider every repeated insight about you when it updates `growth.md`, to harvest yesterday's session reports when you close yesterday after midnight, and to snapshot every open to-do of a project.
 
