@@ -98,15 +98,19 @@ CLONE="/tmp/aios-update-check"
 # exits 0 whether or not `shasum` ran — so the tool is probed first and an empty hash is
 # refused: an empty LOCAL equal to an empty BASE once read as "identical → overwrite,
 # no backup" on a machine without `shasum` (a Perl script, absent on minimal images).
-h_file(){ [ -f "$1" ] || return 1; command -v shasum >/dev/null 2>&1 || return 1
-          local h; h=$(tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
+# sha256 from whichever tool exists: `shasum` (macOS, most Linux) or `sha256sum` (coreutils —
+# Git Bash, minimal Linux images). Without either, nothing is measured and the helpers refuse.
+_sha(){ if command -v shasum >/dev/null 2>&1; then shasum -a 256; elif command -v sha256sum >/dev/null 2>&1; then sha256sum; else return 1; fi; }
+_have_sha(){ command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; }
+h_file(){ [ -f "$1" ] || return 1; _have_sha || return 1
+          local h; h=$(tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 # CRLF-normalized content hash of a git object (the baseline). Probe existence
 # FIRST: a failed `git show` prints nothing, and sha256("") is a real hash
 # (e3b0c442…) that would compare EQUAL to a genuinely-empty file.
 h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1
-         command -v shasum >/dev/null 2>&1 || return 1
-         local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | shasum -a 256 | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
+         _have_sha || return 1
+         local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 BASE=$(h_git "{stored_hash}:{path}") || BASE=""   # "" = baseline unreachable
 LOCAL=$(h_file "$HOME/aios/{path}") || LOCAL=""
@@ -124,7 +128,8 @@ UP=$(h_file "$CLONE/{path}") || UP=""            # canonical HEAD — needed for
 | **Identical** | Operator never touched this file — they just had an older synced version | **Overwrite silently. No backup.** The "diff vs upstream HEAD" is just stale, not personalization. |
 | **Different, and `UP == BASE`** — canonical did **not** touch this file | The local copy is **AHEAD**, not stale: the operator improved it and canonical has not caught up | **KEEP LOCAL. Do not overwrite.** Report it as *"kept your newer version — canonical has not changed this file since your last sync"*. No backup is needed because nothing is being replaced. |
 | **Different, and `UP != BASE`** — both sides moved | Genuine divergence: operator edited AND canonical changed the same file | **Backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{date}/{flattened-path}` BEFORE overwrite. Tell operator what was preserved. |
-| **Baseline unreachable, or any of the three hashes empty** (cross-repo case, `stored_hash` is `initial`, the object is missing, or `shasum` is not installed) | Can't establish a baseline — the compare is **inconclusive**, which is NOT the same as a detected difference | **Conservative fallback, and the file still applies:** back up, then overwrite. Report it as *"baseline unreachable — backed up conservatively"*, never as a personalization. Telling the operator an edit was found when none was measured is the failure this wording exists to prevent. |
+| **No local copy** — canonical added this file, or the operator deleted it | Nothing of the operator's is being replaced | **Add it. No backup, and never report it as backed up** — there was nothing to back up. |
+| **Baseline unreachable, or any of the three hashes empty** (cross-repo case, `stored_hash` is `initial`, the object is missing, or neither `shasum` nor `sha256sum` is installed) | Can't establish a baseline — the compare is **inconclusive**, which is NOT the same as a detected difference | **Conservative fallback, and the file still applies:** back up, then overwrite. Report it as *"baseline unreachable — backed up conservatively"*, never as a personalization. Telling the operator an edit was found when none was measured is the failure this wording exists to prevent. |
 
 **Exempt from backup entirely — `CHANGELOG.md`.** It is append-only **canonical history, mandated byte-identical across every repo** (no operator ever personalizes it — there is nothing in it that is theirs to keep). A local diff on `CHANGELOG.md` is therefore *always* stale-not-personalized, even when the three-way compare reports "Different" (e.g. a WIP entry an operator's earlier session left mid-edit). So `CHANGELOG.md` is **always a clean overwrite, never backed up** — skip the three-way compare for it and never write it to `vault/04 - backups/`. (Backing it up just produces noise files that duplicate canonical history.)
 
@@ -482,8 +487,10 @@ If no Tier 1 files changed in the tracker-diff → **still run the completeness 
 CLONE="/tmp/aios-update-check"
 LOCAL_MD="$HOME/aios/plugins/aios/commands/update.md"
 # Same helper as § Backup-on-divergence — probe the tool, refuse an empty hash.
-h_file(){ [ -f "$1" ] || return 1; command -v shasum >/dev/null 2>&1 || return 1
-          local h; h=$(tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
+_sha(){ if command -v shasum >/dev/null 2>&1; then shasum -a 256; elif command -v sha256sum >/dev/null 2>&1; then sha256sum; else return 1; fi; }
+_have_sha(){ command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; }
+h_file(){ [ -f "$1" ] || return 1; _have_sha || return 1
+          local h; h=$(tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 SAME=0
 a=$(h_file "$LOCAL_MD") && b=$(h_file "$CLONE/plugins/aios/commands/update.md") \
@@ -640,9 +647,12 @@ For each changed Tier 1 file:
    ```bash
    # Portable across bash and zsh. Paths come from Step 2's list (Tier-1 only, custom/ excluded).
    CLONE="/tmp/aios-update-check"; V="$HOME/aios"; S="{stored_hash}"
-   h_file(){ [ -f "$1" ] || return 1; tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1; }
-   h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1
-            git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | shasum -a 256 | cut -d' ' -f1; }
+   _sha(){ if command -v shasum >/dev/null 2>&1; then shasum -a 256; elif command -v sha256sum >/dev/null 2>&1; then sha256sum; else return 1; fi; }
+   _have_sha(){ command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; }
+   h_file(){ [ -f "$1" ] || return 1; _have_sha || return 1
+             local h; h=$(tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
+   h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1; _have_sha || return 1
+            local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
    printf '%s\n' "${FILES[@]}" | while IFS= read -r f; do
      [ -n "$f" ] || continue
      [ -e "$CLONE/$f" ] && continue            # still in canonical — not a deletion
@@ -892,7 +902,10 @@ done
     if [ ! -d "$VAULT/$p" ]; then echo "Only in $CLONE: $p"; else diff -rq "${SCR[@]}" "$VAULT/$p" "$CLONE/$p" 2>/dev/null; fi
   done
   # vault/.obsidian is the one Tier-1 path under the otherwise Tier-2 vault/ tree.
-  diff -rq "${SCR[@]}" "$VAULT/vault/.obsidian" "$CLONE/vault/.obsidian" 2>/dev/null
+  if [ -d "$CLONE/vault/.obsidian" ]; then
+    if [ ! -d "$VAULT/vault/.obsidian" ]; then echo "Only in $CLONE/vault: .obsidian"
+    else diff -rq "${SCR[@]}" "$VAULT/vault/.obsidian" "$CLONE/vault/.obsidian" 2>/dev/null; fi
+  fi
 } \
   | grep -vF "Only in $VAULT" \
   | grep -vF "Only in '$VAULT" \

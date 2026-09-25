@@ -36,7 +36,7 @@ printf '/aios:update — failed measurements fail CLOSED\n'
 # ---------------------------------------------------------------------------
 # 1. hash helpers, transcribed from § Backup-on-divergence.
 # ---------------------------------------------------------------------------
-CLONE="$TMP/clone"; git init -q "$CLONE"; ( cd "$CLONE" && printf 'a\r\nb\n' > f && git add f && git -c user.email=t@t -c user.name=t commit -q -m i )
+CLONE="$TMP/clone"; git init -q "$CLONE"; ( cd "$CLONE" && printf 'a\r\nb\n' > f && git add f && git -c user.email=t@t -c user.name=t -c commit.gpgsign=false commit -q -m i )
 
 h_file_old(){ [ -f "$1" ] || return 1; tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1; }
 # The helpers under test are EXTRACTED FROM THE SPEC, not transcribed — so a regression in
@@ -44,20 +44,26 @@ h_file_old(){ [ -f "$1" ] || return 1; tr -d '\r' < "$1" | shasum -a 256 | cut -
 # `h_file` is defined twice in the spec (backup compare, self-update compare); both copies are
 # extracted and eval'd in order, so the LAST one is what runs — a stale second copy fails 1c/1e.
 extract(){ awk -v n="$1" '$0 ~ "^"n"\\(\\)\\{" {f=1} f{print} f && /\}$/ {f=0}' "$SPEC"; }
-HF=$(extract h_file); HG=$(extract h_git)
+HF=$(extract h_file); HG=$(extract h_git); HS=$(extract _sha); HH=$(extract _have_sha)
+[ -n "$HS" ] && [ -n "$HH" ] && eval "$HS" && eval "$HH" || no "1a''. could not extract _sha/_have_sha" "the helpers below would pass vacuously"
 [ -n "$HF" ] && [ -n "$HG" ] && ok "1a'. h_file and h_git extracted from the spec" || no "1a'. could not extract the hash helpers from the spec" "anchors moved"
 eval "$HF"; eval "$HG"
 a=$(h_file "$CLONE/f"); b=$(h_git "HEAD:f")
 have "$a" "$b" "1a. spec helpers: file and object hash equal (CRLF-normalized), shasum present"
-# simulate a machine without shasum: a function that fails like a missing command
-shasum(){ echo "shasum: command not found" >&2; return 127; }
-# the session shell that runs the spec has NO pipefail — reproduce the defect under that shell
-r_old=$( set +o pipefail; h_file_old "$CLONE/f" 2>/dev/null; echo ":rc=$?" )
-have "$r_old" ":rc=0"    "1b. OLD h_file: shasum missing → rc 0 and an empty hash (the defect, reproduced)"
-r_new=$( set +o pipefail; h_file "$CLONE/f" 2>/dev/null; echo ":rc=$?" )
-have "$r_new" ":rc=1"    "1c. spec h_file: shasum missing → non-zero, no hash to compare"
-r_git=$( set +o pipefail; h_git "HEAD:f" 2>/dev/null; echo ":rc=$?" )
-have "$r_git" ":rc=1"    "1d. spec h_git: shasum missing → non-zero"
+# simulate a machine with NEITHER tool: a PATH holding only what the helpers need besides them
+NB="$TMP/nobin"; mkdir -p "$NB"; for t in tr cut git cat; do ln -sf "$(command -v $t)" "$NB/$t"; done
+r_old=$( PATH="$NB"; set +o pipefail; h_file_old "$CLONE/f" 2>/dev/null; echo ":rc=$?" )
+have "$r_old" ":rc=0"    "1b. OLD h_file: no hash tool → rc 0 and an empty hash (the defect, reproduced)"
+r_new=$( PATH="$NB"; set +o pipefail; h_file "$CLONE/f" 2>/dev/null; echo ":rc=$?" )
+have "$r_new" ":rc=1"    "1c. spec h_file: neither shasum nor sha256sum → non-zero, no hash to compare"
+r_git=$( PATH="$NB"; set +o pipefail; h_git "HEAD:f" 2>/dev/null; echo ":rc=$?" )
+have "$r_git" ":rc=1"    "1d. spec h_git: neither tool → non-zero"
+# only sha256sum present (Git Bash, minimal Linux): the fallback must MEASURE, and agree with shasum
+SB="$TMP/sha256bin"; mkdir -p "$SB"; for t in tr cut git cat; do ln -sf "$(command -v $t)" "$SB/$t"; done
+REAL=$(command -v shasum || command -v sha256sum)
+case "$REAL" in *shasum) printf '#!/bin/sh\nexec "%s" -a 256 "$@"\n' "$REAL" > "$SB/sha256sum" ;; *) ln -sf "$REAL" "$SB/sha256sum" ;; esac; chmod +x "$SB/sha256sum"
+r_fb=$( PATH="$SB"; h_file "$CLONE/f" 2>/dev/null )
+have "$r_fb" "$a"        "1h. only sha256sum installed → the same hash, measured (no permanent back-up-everything state)"
 unset -f shasum
 # a shasum that is PRESENT but emits nothing (rc 0) — only the empty-hash refusal catches this
 shasum(){ :; }
@@ -129,7 +135,7 @@ have "$new" "1" "4b. NEW reconcile: vault/agents missing → one 'Only in <clone
 # ---------------------------------------------------------------------------
 # 5. the spec carries the new shapes (anchors, so a rewrite that drops them fails here).
 # ---------------------------------------------------------------------------
-have "$(grep -c 'command -v shasum >/dev/null 2>&1 || return 1' "$SPEC"):$(grep -c '&& \[ -n "\$h" \] || return 1' "$SPEC")" "3:3" "5a. spec: all three hash helpers (two h_file, one h_git) probe for shasum AND refuse an empty hash"
+have "$(grep -c '_have_sha || return 1' "$SPEC"):$(grep -c '&& \[ -n "\$h" \] || return 1' "$SPEC")" "5:5" "5a. spec: all five hash helpers (Step 3's two h_file + h_git, Step 3.4's h_file + h_git) probe for a hash tool AND refuse an empty hash"
 grep -q 'grep -vxF -f' "$SPEC"      && ok "5b. spec: .gitignore carry is order-preserving" || no "5b. spec: .gitignore carry lost the order-preserving form"
 grep -q 'canonical .gitignore unreadable' "$SPEC" && ok "5c. spec: merge refuses on an unreadable canonical" || no "5c. spec: merge no longer refuses on an unreadable canonical"
 grep -q 'cat "\$CLONE/.gitignore" && awk' "$SPEC" && ok "5c'. spec: cat is chained with && into the merge group" || no "5c'. spec: the merge group lost the && after cat"
