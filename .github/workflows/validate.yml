@@ -1101,6 +1101,10 @@ jobs:
         # produces the downgrade on the same inputs.
         run: bash tests/update-local-ahead.test.sh
 
+      - name: /aios:update locks its clone, compares whole skill folders, anchors reconcile filters
+        # Lock, filter chain and residue sweep are extracted from the spec and run; each old shape runs beside the new one.
+        run: bash tests/update-clone-lock-skills-filters-sweep.test.sh
+
       - name: two Windows probes that answered an adjacent question
         # `command -v python3` succeeds on the Microsoft Store App Execution Alias — a real file
         # on PATH that exits 49 and prints an install notice — so connect.sh passed its own
