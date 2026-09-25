@@ -154,8 +154,10 @@ printf '%s' "$STEP4" | grep -q 'antifragile' \
 # reports a rung nobody reads. A string match on a label is not enough -- that is what
 # was here before, and it passed while the numbers disagreed by 70%. Compare the
 # CONSTANTS, and require each tool to name the other.
+# Strongest form: rungs reads the floor's own constant, so they cannot differ at all.
 FLOOR_N="$(grep -oE '^DEFAULT_RECENT = [0-9]+' hooks/context-floor.py | grep -oE '[0-9]+')"
 RUNGS_N="$(grep -oE '^RECENT_PER_FILE = [0-9]+' hooks/context-rungs.py | grep -oE '[0-9]+')"
+grep -qE '^RECENT_PER_FILE = FLOOR\.DEFAULT_RECENT$' hooks/context-rungs.py && RUNGS_N="$FLOOR_N"
 if [ -z "$FLOOR_N" ] || [ -z "$RUNGS_N" ]; then
   no "could not read the recency constant from both tools (floor='$FLOOR_N' rungs='$RUNGS_N')" \
      "if the constant cannot be found it cannot be compared, and this check passes vacuously"

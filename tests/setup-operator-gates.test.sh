@@ -119,6 +119,8 @@ else
     command -v "$sh" >/dev/null 2>&1 || { [ -n "${CI:-}" ] && [ "$sh" = zsh ] && no "zsh available under CI" "install zsh"; continue; }
     for pair in none:none private:ok renamed:ok upstream:ok fresh:framework-origin ssh:framework-origin app:ok; do
       c="${pair%%:*}"; want="backup: ${pair#*:}"
+      # framework-origin names the remote it found, so the operator removes the right one
+      [ "${pair#*:}" = framework-origin ] && want="backup: framework-origin (origin)"
       got="$(HOME="$R/$c" "$sh" "$PROBE" 2>&1)"
       [ "$got" = "$want" ] && ok "$sh · $c → $want" || no "$sh · $c gave '$got'" "expected '$want'"
     done

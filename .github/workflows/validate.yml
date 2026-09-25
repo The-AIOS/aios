@@ -1101,6 +1101,31 @@ jobs:
         # produces the downgrade on the same inputs.
         run: bash tests/update-local-ahead.test.sh
 
+      - name: /aios:update fails closed when a measurement did not run
+        # Hash helpers without shasum, the order-preserving .gitignore carry, the merge that refuses an unreadable canonical, a missing layer dir surfacing as drift — each old shape runs beside the new one.
+        run: bash tests/update-measure-fail-closed.test.sh
+      - name: /aios:update locks its clone, compares whole skill folders, anchors reconcile filters
+        # Lock, filter chain and residue sweep are extracted from the spec and run; each old shape runs beside the new one.
+        run: bash tests/update-clone-lock-skills-filters-sweep.test.sh
+      - name: commits and the secret scanner fail closed
+        # The commit message is scanned, a missing scanner refuses, a NUL byte does not hide a token, and a --vault sweep that cannot read the repo refuses — each reproduced against the previous hooks when the base commit is available.
+        run: bash tests/commit-scan-fail-closed.test.sh
+      - name: /close-session asks before it writes the block, and says None for empty fields
+        # Questions gathered before the committed block, step 8 verify-only, the --auto exception covering every observed write, one rule for empty fields — with mutated copies proving each check can fail.
+        run: bash tests/close-session-order-and-fields.test.sh
+      - name: commands archive observed context through hooks/aios-snapshot
+        # A command that names the dated snapshot destination must name the helper; none may prescribe the by-hand next-free-letter step.
+        run: bash tests/commands-snapshot-helper.test.sh
+      - name: /aios:housekeeping checks that could not tell true from false
+        # Prefix compare for vendored hashes, the frontmatter scan through uv with a visible count, and the graduation skip matching the mark it writes.
+        run: bash tests/housekeeping-checks-that-cannot-fail.test.sh
+      - name: /today's precondition and backup probes, and its carry rules
+        # Both probes are extracted from today.md and run against temp vaults; the carry rules are anchored on the wording that removes each contradiction.
+        run: bash tests/today-carries-and-probes.test.sh
+      - name: /close-day redraws on its own clock and reads everything it summarises
+        # The ecosystem redraw keyed on rederived:, Tier B reading what Tier A routed out, reports by the date being closed, and snapshots read by section — each proven able to fail by a mutated copy.
+        run: bash tests/close-day-derivation-and-sources.test.sh
+
       - name: two Windows probes that answered an adjacent question
         # `command -v python3` succeeds on the Microsoft Store App Execution Alias — a real file
         # on PATH that exits 49 and prints an install notice — so connect.sh passed its own
@@ -1207,6 +1232,14 @@ jobs:
         # launchd's PATH puts the Command Line Tools stub first; the probe must fall through
         # to absolute install locations. Skips where no fallback interpreter exists.
         run: bash tests/claude-identity-python-probe.test.sh
+
+      - name: a pinned MCP requirement reaches installs that already exist
+        # Python MCPs installed once and never again; a pin bump now reinstalls. Also checks the
+        # NotebookLM helpers follow notebooklm-py 0.8's profile folder.
+        run: bash tests/mcps-reinstall-on-pin.test.sh
+
+      - name: the macOS/Linux and Windows skill registrars skip the same sources
+        run: bash tests/skill-registrar-parity.test.sh
 
       - name: the secret scanner rejects what it is supposed to reject
         # Found by the derived-list guard below on its first run: this suite had been

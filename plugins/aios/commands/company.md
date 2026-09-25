@@ -206,7 +206,7 @@ Interview-driven scaffold for a new company. Walks the operator through the 12 c
 
 ### Step 1 — Substrate choice
 
-- Detect available substrates by checking active MCPs (GitHub MCP active? Google Workspace MCP active?)
+- Detect available substrates: GitHub → `gh auth status` succeeds; Drive → the Google Workspace MCP is active
 - Default recommendation: **GitHub** (frontmatter survives, version-controlled, PR-governed collaboration)
 - Alternative: **Drive** (collaboration-native, non-coder-friendly, but frontmatter caveat applies)
 

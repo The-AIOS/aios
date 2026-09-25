@@ -83,7 +83,7 @@ done
 grep -qF 'never in your interactive `~/.claude/settings.json`' MODEL-ROUTING.md \
   && ok "the recipe is scoped to a file only the job loads" \
   || no "the recipe lost its scope" "applied to interactive settings it breaks sessions and tools that read token folders"
-grep -qF "Never report the operator's interactive settings" plugins/aios/commands/housekeeping.md \
+grep -qF "Never report the operator's interactive sandbox settings" plugins/aios/commands/housekeeping.md \
   && ok "housekeeping never steers operators to their global sandbox" \
   || no "housekeeping may flag interactive settings" "the natural fix would break the operator's own sessions"
 grep -qF 'denying reads of your secrets folder' MODEL-ROUTING.md CLAUDE.md \
@@ -174,6 +174,13 @@ except Exception: print('')" 2>/dev/null)
   sbx "{\"sandbox\":{\"enabled\":true,\"filesystem\":{\"denyRead\":[\"$O\"]}}}"
   catrun && no "filesystem.denyRead did NOT hold" "sandboxed cat read the canary" \
     || ok "filesystem.denyRead blocks sandboxed reads of the folder"
+  # PROJECT layer — reported privately 2026-09-24: --setting-sources user,project keeps the
+  # project layer too, so a broad project allow rule reaches every headless Bash call. This is a
+  # documented risk, so it is a control (the risk exists here), not a guarantee to assert.
+  printf '{"permissions":{"allow":["Bash(mkfifo:*)"]}}\n' > "$P/.claude/settings.json"; rm -f "$P/fifo-canary"
+  ( cd "$P" && claude -p "Use the Bash tool to run exactly: mkfifo $P/fifo-canary" --tools "Bash" --allowedTools "Bash(echo:*)" --setting-sources user,project --strict-mcp-config --permission-mode default >/dev/null 2>&1 </dev/null )
+  if [ -p "$P/fifo-canary" ]; then ok "control: a project-layer allow rule reaches a headless Bash call outside its --allowedTools"
+  else sk "control" "the project rule was not inherited here — cannot demonstrate the project-layer risk on this machine"; fi
   rm -rf "$B"
 fi
 

@@ -90,32 +90,51 @@ fi
 [ ${#files[@]} -eq 0 ] && exit 0
 
 hit=0
-for pat in "${PATTERNS[@]}"; do
-  # -e is load-bearing: a pattern beginning with '-' (the private-key header) is otherwise
-  # parsed by grep as an OPTION BUNDLE. grep then exits 2 (TROUBLE, not "no match"), writes
-  # its usage to stderr — which this call discards — and leaves $match empty, which reads
-  # here as "clean". That pattern therefore never fired. A failed measurement must never be
-  # read as a substantive result.
-  # -H: name the file even when only one is scanned, so a blocked directory run says WHICH one.
-  match=$(grep -HInE -e "$pat" "${files[@]}" 2>/dev/null | head -3); rc=$?
-  # rc: 0 = matched · 1 = no match · >1 = grep itself failed. Fail CLOSED on >1 rather than
-  # silently treating an unusable scan as a pass.
-  if [ "$rc" -gt 1 ]; then
-    echo "secret-scan: FAILED to scan for pattern: $pat (grep exit $rc) — refusing to pass." >&2
-    exit 1
-  fi
-  if [ -n "$match" ]; then
-    [ "$hit" = 0 ] && echo "secret-scan: BLOCKED — secret-shaped string(s) found:" >&2
-    # A hit in the links temp file is reported against the symlink it came from.
-    printf '%s\n' "$match" | while IFS= read -r line; do
-      case "$line" in
-        "$links:"*) n=${line#"$links:"}; n=${n%%:*}; printf '  symlink %s -> %s\n' "${link_paths[$n]}" "${line#"$links:$n:"}" ;;
-        *)          printf '  %s\n' "$line" ;;
-      esac
-    done >&2
-    hit=1
-  fi
+# ONE pass with every pattern (`-e` each). The old loop read every file once per pattern, and
+# `-a` (below) makes a binary a full read — measured 11 passes over a 200 MB attachment at ~12 s.
+# -e is load-bearing: a pattern beginning with '-' (the private-key header) is otherwise parsed
+# as an OPTION BUNDLE; grep then exits 2 and an empty result read as "clean".
+# -H: name the file even when only one is scanned. -a, not -I: `-I` skips a file with one NUL
+# byte, so a token next to a NUL passed as clean; git commits those bytes all the same.
+# `cut` reads ALL of grep's output: a `head` here exits early, grep dies of SIGPIPE (141) under
+# pipefail, and a real hit read as "grep failed". It also caps each reported line, so a match in
+# a multi-megabyte binary "line" does not flood the terminal.
+EARGS=(); for pat in "${PATTERNS[@]}"; do EARGS+=(-e "$pat"); done
+# -a reads a binary in full (~60 ms/MB measured), so it applies up to a size cap; anything larger
+# is scanned the way it always was (-I: text files in full, binaries skipped) and is NAMED, so the
+# gap is visible rather than silent. A token sitting beside a NUL inside a >CAP binary is the one
+# case this gives up; a vault's large files are attachments, and the cap keeps every commit fast.
+CAP_MB="${AIOS_SECRET_SCAN_CAP_MB:-20}"; small=(); large=()
+for f in "${files[@]}"; do
+  sz=$(wc -c < "$f" 2>/dev/null | tr -d ' '); [ -n "$sz" ] || sz=0
+  if [ "$sz" -gt $((CAP_MB * 1048576)) ]; then large+=("$f"); else small+=("$f"); fi
 done
+out=""; rc=1
+if [ ${#small[@]} -gt 0 ]; then out=$(grep -HanE "${EARGS[@]}" "${small[@]}" 2>/dev/null | tr -d '\000' | cut -c1-200); rc=$?; fi
+if [ ${#large[@]} -gt 0 ] && [ "$rc" -le 1 ]; then
+  printf 'secret-scan: %s file(s) over %s MB scanned as text only (binary content skipped): %s\n' "${#large[@]}" "$CAP_MB" "${large[*]}" >&2
+  o2=$(grep -HInE "${EARGS[@]}" "${large[@]}" 2>/dev/null | tr -d '\000' | cut -c1-200); r2=$?
+  [ -n "$o2" ] && out="${out:+$out
+}$o2"
+  [ "$r2" -gt 1 ] && rc=$r2 || { [ "$r2" -eq 0 ] && rc=0; }
+fi
+# rc: 0 = matched · 1 = no match · >1 = grep itself failed. Fail CLOSED on >1.
+if [ "$rc" -gt 1 ]; then
+  echo "secret-scan: FAILED to scan (grep exit $rc) — refusing to pass." >&2
+  exit 1
+fi
+match=$(printf '%s\n' "$out" | sed -n '1,10p')
+if [ -n "$out" ]; then
+  echo "secret-scan: BLOCKED — secret-shaped string(s) found:" >&2
+  # A hit in the links temp file is reported against the symlink it came from.
+  printf '%s\n' "$match" | while IFS= read -r line; do
+    case "$line" in
+      "$links:"*) n=${line#"$links:"}; n=${n%%:*}; printf '  symlink %s -> %s\n' "${link_paths[$n]}" "${line#"$links:$n:"}" ;;
+      *)          printf '  %s\n' "$line" ;;
+    esac
+  done >&2
+  hit=1
+fi
 if [ "$hit" = 1 ]; then
   echo "secret-scan: remove the secret (store it in a gitignored .template) and retry." >&2
   exit 1

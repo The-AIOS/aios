@@ -48,7 +48,7 @@ The roster above shows *who + when*; this is the **operational view** — how yo
 
 ## Dependencies
 
-- **GitHub MCP** — for PRs, issues, file reads, branch ops
+- **`gh` CLI** — for PRs, issues, file reads, branch ops
 - **Bash** — for build/test/lint commands
 - **Obsidian MCP** — for project note + decision log routing
 

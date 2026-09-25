@@ -93,21 +93,36 @@ The right comparison: **local vs operator's last-synced BASELINE** (the version 
 
 CLONE="/tmp/aios-update-check"
 
-# CRLF-normalized content hash of a working-tree file. Non-zero return = unreadable.
-h_file(){ [ -f "$1" ] || return 1; tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1; }
+# `LC_ALL=C` on every `tr`: in a UTF-8 locale macOS's tr stops at the first byte that is not valid
+# UTF-8 and prints NOTHING, so every such binary (a PNG, a PDF) hashed as the empty stream and any
+# two of them compared "identical" — an update to one never landed. C makes tr byte-exact.
+# CRLF-normalized content hash of a working-tree file. Non-zero return = NOT MEASURED
+# (unreadable, or `shasum` missing). A pipeline's status is its LAST command's — `cut`
+# exits 0 whether or not `shasum` ran — so the tool is probed first and an empty hash is
+# refused: an empty LOCAL equal to an empty BASE once read as "identical → overwrite,
+# no backup" on a machine without `shasum` (a Perl script, absent on minimal images).
+# sha256 from whichever tool exists: `shasum` (macOS, most Linux) or `sha256sum` (coreutils —
+# Git Bash, minimal Linux images). Without either, nothing is measured and the helpers refuse.
+_sha(){ if command -v shasum >/dev/null 2>&1; then shasum -a 256; elif command -v sha256sum >/dev/null 2>&1; then sha256sum; else return 1; fi; }
+_have_sha(){ command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; }
+h_file(){ [ -f "$1" ] || return 1; _have_sha || return 1
+          local h; h=$(LC_ALL=C tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 # CRLF-normalized content hash of a git object (the baseline). Probe existence
 # FIRST: a failed `git show` prints nothing, and sha256("") is a real hash
 # (e3b0c442…) that would compare EQUAL to a genuinely-empty file.
 h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1
-         git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | shasum -a 256 | cut -d' ' -f1; }
+         _have_sha || return 1
+         local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | LC_ALL=C tr -d '\r' | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 BASE=$(h_git "{stored_hash}:{path}") || BASE=""   # "" = baseline unreachable
-LOCAL=$(h_file "$HOME/aios/{path}")
-UP=$(h_file "$CLONE/{path}")                     # canonical HEAD — needed for the AHEAD test below
+LOCAL=$(h_file "$HOME/aios/{path}") || LOCAL=""
+UP=$(h_file "$CLONE/{path}") || UP=""            # canonical HEAD — needed for the AHEAD test below
+# "" in ANY of the three = the compare did not run. Take the "baseline unreachable" row
+# below (back up, then apply) — never read an unmeasured pair as a verdict.
 ```
 
-> **CRLF note (Windows).** On Windows, Git's `core.autocrlf` converts LF→CRLF on checkout, so vault files have `\r\n` line endings while `git show {hash}:{path}` (and the temp clone's working tree) may not — an unnormalized compare then reports "differ" for byte-identical content, flooding `vault/04 - backups/` with false personalizations on every sync. **Every content comparison in this command strips `\r` before hashing** (`tr -d '\r'`, as in `h_file`/`h_git` above). This applies to the self-update guard (Step 2.5) and the duplicate-cleanup content-compares (§ Duplicate cleanup) too — normalize line endings, then compare.
+> **CRLF note (Windows).** On Windows, Git's `core.autocrlf` converts LF→CRLF on checkout, so vault files have `\r\n` line endings while `git show {hash}:{path}` (and the temp clone's working tree) may not — an unnormalized compare then reports "differ" for byte-identical content, flooding `vault/04 - backups/` with false personalizations on every sync. **Every content comparison in this command strips `\r` before hashing** (`LC_ALL=C tr -d '\r'`, as in `h_file`/`h_git` above). This applies to the self-update guard (Step 2.5) and the duplicate-cleanup content-compares (§ Duplicate cleanup) too — normalize line endings, then compare.
 
 **Three outcomes:**
 
@@ -116,7 +131,8 @@ UP=$(h_file "$CLONE/{path}")                     # canonical HEAD — needed for
 | **Identical** | Operator never touched this file — they just had an older synced version | **Overwrite silently. No backup.** The "diff vs upstream HEAD" is just stale, not personalization. |
 | **Different, and `UP == BASE`** — canonical did **not** touch this file | The local copy is **AHEAD**, not stale: the operator improved it and canonical has not caught up | **KEEP LOCAL. Do not overwrite.** Report it as *"kept your newer version — canonical has not changed this file since your last sync"*. No backup is needed because nothing is being replaced. |
 | **Different, and `UP != BASE`** — both sides moved | Genuine divergence: operator edited AND canonical changed the same file | **Backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{date}/{flattened-path}` BEFORE overwrite. Tell operator what was preserved. |
-| **Baseline unreachable** (cross-repo case, `stored_hash` is `initial`, or the object is missing) | Can't establish a baseline — the compare is **inconclusive**, which is NOT the same as a detected difference | **Conservative fallback, and the file still applies:** back up, then overwrite. Report it as *"baseline unreachable — backed up conservatively"*, never as a personalization. Telling the operator an edit was found when none was measured is the failure this wording exists to prevent. |
+| **No local copy** — canonical added this file, or the operator deleted it | Nothing of the operator's is being replaced | **Add it. No backup, and never report it as backed up** — there was nothing to back up. |
+| **Baseline unreachable, or any of the three hashes empty** (cross-repo case, `stored_hash` is `initial`, the object is missing, or neither `shasum` nor `sha256sum` is installed) | Can't establish a baseline — the compare is **inconclusive**, which is NOT the same as a detected difference | **Conservative fallback, and the file still applies:** back up, then overwrite. Report it as *"baseline unreachable — backed up conservatively"*, never as a personalization. Telling the operator an edit was found when none was measured is the failure this wording exists to prevent. |
 
 **Exempt from backup entirely — `CHANGELOG.md`.** It is append-only **canonical history, mandated byte-identical across every repo** (no operator ever personalizes it — there is nothing in it that is theirs to keep). A local diff on `CHANGELOG.md` is therefore *always* stale-not-personalized, even when the three-way compare reports "Different" (e.g. a WIP entry an operator's earlier session left mid-edit). So `CHANGELOG.md` is **always a clean overwrite, never backed up** — skip the three-way compare for it and never write it to `vault/04 - backups/`. (Backing it up just produces noise files that duplicate canonical history.)
 
@@ -156,13 +172,13 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   **Note the gate includes the hooks themselves, not only the installer** — a hook that is merely *copied* by Step 3 is not installed. It is a state-producer twice over: it sets `core.hooksPath` (per-machine, never version-controlled), and it **normalizes the hook scripts' line endings and exec bits**, which is the only surface that reaches an operator for that. `.gitattributes` carries the `text eol=lf` rule and cannot do the job: it is Tier-0, so it never syncs to a vault, and a fork's copy freezes at fork time. On Windows the difference is not cosmetic — `core.autocrlf=true` rewrites the hooks to CRLF on checkout, the shebang then fails to resolve (`env: bash\r`, exit 127), and git reads that as a refusal, so the operator cannot commit or push at all.
 
   This rule is also the answer to a question worth asking of every entry in this list: **the installer's own header said `/aios:update` auto-runs it, and this list did not name it.** A session could still get there by reading the class table above — one did, on 2026-09-07 — but "a careful reader can derive it" is how a step becomes optional in practice. If a script claims here that it is auto-run, it belongs in *this* list, not only in its own comments.
-- **A bundled skill changed — any `skills/<source>/**/SKILL.md` added/changed in the diff for a source other than `custom/` (or a company folder), OR `skills/setup.sh` itself updated** → run the skills registrar (an Installer/state-producer: it symlinks skills into `~/.claude/skills`; a newly-pulled bundled skill is NOT loadable until registered). Platform-guarded like the wrapper installer — `bash $HOME/aios/skills/setup.sh` on macOS/Linux; on Windows try `pwsh -File $HOME/aios/skills/setup.ps1` then fall back to `powershell -File …`. Idempotent (skips names already linked; the scan is venture-aware — `skills/*/*/SKILL.md` minus `anthropic`/`superpowers` source-peers). **Gate:** run ONLY when the diff touched a bundled `SKILL.md` or `skills/setup.sh` — not on every sync. Report: *"Registered {N} new skill(s) into `~/.claude/skills`. They load at session start, so **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working (they just won't see the new skills)."* (Mirrors `/aios:company` Step 5.5, which does this for venture skills on sync.)
+- **A bundled skill changed — any `skills/<source>/**/SKILL.md` added/changed in the diff for a source other than `custom/` (or a company folder), OR `skills/setup.sh` itself updated** → run the skills registrar (an Installer/state-producer: it symlinks skills into `~/.claude/skills`; a newly-pulled bundled skill is NOT loadable until registered). Platform-guarded like the wrapper installer — `bash $HOME/aios/skills/setup.sh` on macOS/Linux; on Windows try `pwsh -File $HOME/aios/skills/setup.ps1` then fall back to `powershell -File …`. Idempotent (skips names already linked; the scan is venture-aware — `skills/*/*/SKILL.md` minus the `superpowers` source-peer, which a marketplace provides). **Gate:** run ONLY when the diff touched a bundled `SKILL.md` or `skills/setup.sh` — not on every sync. Report: *"Registered {N} new skill(s) into `~/.claude/skills`. They load at session start, so **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working (they just won't see the new skills)."* (Mirrors `/aios:company` Step 5.5, which does this for venture skills on sync.)
 - **Any `plugins/aios/commands/*.md` updated** → sync to the plugin pipeline. **The marketplace copy applies ONLY to a GitHub-source install** — the **primary AIOS mode is a directory-source marketplace** (the local vault registered as `Directory → ~/aios`, which is what lets it carry ventures + `custom/` that a GitHub-source clone would miss). On a directory-source install the marketplace *reads `~/aios` in place*, the `marketplaces/the-aios/…` path **does not exist**, and the copy must skip silently. The cache is runtime-authoritative either way. **Guard both copies with `[ -d ]`** so directory-source no-ops cleanly:
   ```bash
   # GitHub-source only — directory-source has no marketplace dir (reads ~/aios in place). Guard → no-op on directory-source.
-  mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp $HOME/aios/plugins/aios/commands/*.md "$mp/"
+  mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp "$HOME"/aios/plugins/aios/commands/*.md "$mp/"
   # cache path is VERSION-AGNOSTIC — glob the installed version dir (never hard-pin a version; the plugin bumps but this string outlives the bump). Guard handles the no-match case.
-  for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/*.md "$d"; done
+  for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp "$HOME"/aios/plugins/aios/commands/*.md "$d"; done
   ```
 
   **Then check cache/manifest version parity — and understand that the sync above is what CAUSES the drift.** The loop copies `commands/*.md` and nothing else, so `.claude-plugin/plugin.json` inside the cache is **never** updated. The cache **directory is named for the version in that manifest**, so a manifest that never advances means a directory name that never advances: every version bump reproduces the mismatch, and it does not heal on its own. Measured 2026-08-13 on a live install — 25 of 26 cache files identical to their vault source, the 26th being that manifest, cache reading `0.4.0` while the vault read `0.5.0`. This was first reported as a harmless artifact of a missed re-resolve; it is the opposite — a recurring consequence of an incomplete sync.
@@ -211,13 +227,13 @@ For each layer in `agents`, `skills`, `plugins`, `mcps`, `templates`, `hooks`:
 
 1. Build the set of bundled file basenames — every `.md` under `{layer}/aios/`, the vendored source-peers (`{layer}/anthropic/`, `{layer}/superpowers/`, `{layer}/cloudflare/`), and (for plugins/) `{layer}/aios/commands/`. **Exclude `_index.md` from this set** — every folder gets its OWN `_index.md` as navigation metadata, they are NEVER duplicates of each other (`agents/aios/_index.md` is the bundled index; `agents/custom/_index.md` is the operator's index for their custom agents — both intentional, neither is a copy).
 2. Scan `{layer}/custom/*` for any file whose basename appears in the bundled set AND is not `_index.md`. **For each match: apply the stale-vs-personalized test, then remove.**
-   - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the CURRENT bundled file (`{layer}/{bundled-subfolder}/{name}.md`). **Normalize line endings first** (`tr -d '\r'` both sides — see CRLF note in § Backup-on-divergence) so Windows CRLF checkouts don't read as differences.
+   - **Content-compare** the local file (`{layer}/custom/{name}.md`) against the CURRENT bundled file (`{layer}/{bundled-subfolder}/{name}.md`). **Normalize line endings first** (`LC_ALL=C tr -d '\r'` both sides — see CRLF note in § Backup-on-divergence) so Windows CRLF checkouts don't read as differences.
    - **If byte-identical to current bundled** (after CRLF-normalization — true duplicate, no operator value): remove silently, no backup needed.
    - **If different from current bundled → check if it's a stale-bundled version** (not a personalization): scan recent upstream history for any past version of the bundled file matching this content. Use `git -C /tmp/aios-update-check log --all -p -- {bundled-path}` and compare against the past few revisions of the file. If a match is found in upstream history → the file is just a stale bundled copy (migration leftover) → remove silently, no backup.
    - **Else** (different from current AND no match in upstream history): treat as real personalization → backup-on-divergence: copy operator's version to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-custom-{name}.md` FIRST, then remove.
    - Log either way: *"Removed `agents/custom/lawyer.md` — duplicate of bundled `agents/aios/finance-legal/lawyer.md`. [Backed up to vault/04 - backups/aios-update-2026-05-25/duplicates/agents-custom-lawyer.md — your version didn't match current or any past bundled; restore manually if you had intentional edits.]"* (bracketed clause only when backed up).
 3. Scan `{layer}/*.md` at the top level (outside any subfolder). Skip `_index.md` (layer-root index is intentional, not an orphan). If a remaining top-level file's basename matches a bundled file → **same stale-vs-personalized test as step 2.** If byte-identical or matches a past bundled version → silent remove. Else → backup to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-root-{name}.md` then remove. Log: *"Removed `templates/project-template.md` — duplicate of bundled `templates/aios/project-template.md`."*
-3b. **Folder-based layers (skills/) need directory-level dedup, not just file-level.** A skill is a `{name}/` directory containing `SKILL.md` — so basename-matching on `.md` files (steps 1-3) can't catch a stray skill folder (every skill's file is `SKILL.md`; the identity is the FOLDER name). For `skills/` specifically: build the set of bundled skill-folder names (`basename` of each dir under `skills/aios/`, `skills/anthropic/`, `skills/superpowers/`). Then scan **both** `skills/*/` at root (pre-bundle layout) **and** `skills/custom/*/` for any folder whose name matches a bundled skill-folder name. For each match, apply the same stale-vs-personalized test (content-compare the folder's `SKILL.md` against the bundled one + check upstream history) → remove the stray folder (silent if matched current/past bundled, backup-then-remove if it looks personalized). Never touch `skills/aios/`, `skills/anthropic/`, `skills/superpowers/`, `skills/custom/`-unique folders, or any `_index.md`. (This is the gap that left 60+ pre-bundle skill folders sitting at `skills/` root after migration — they were folders, so the file-basename passes skipped them.)
+3b. **Folder-based layers (skills/) need directory-level dedup, not just file-level.** A skill is a `{name}/` directory containing `SKILL.md` — so basename-matching on `.md` files (steps 1-3) can't catch a stray skill folder (every skill's file is `SKILL.md`; the identity is the FOLDER name). For `skills/` specifically: build the set of bundled skill-folder names (`basename` of each dir under `skills/aios/`, `skills/anthropic/`, `skills/superpowers/`). Then scan **both** `skills/*/` at root (pre-bundle layout) **and** `skills/custom/*/` for any folder whose name matches a bundled skill-folder name. For each match, **compare the whole folder, never only its `SKILL.md`** — `diff -rq "$stray" "$bundled"` (CRLF-normalized, like every compare in this command): remove silently only when *every* file matches the current bundled folder (or a past bundled revision, per the history check). If any file differs, or the stray folder holds files the bundled one lacks — scripts, references, assets an operator added beside an unchanged `SKILL.md` — **back up the whole folder** first — to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/skills-root-{name}/` for a stray at `skills/{name}/` and `…/duplicates/skills-custom-{name}/` for one at `skills/custom/{name}/` (the same root/custom split steps 2–3 use, so two strays with one name never share a destination) — then remove. A skill *is* its folder; comparing one file and deleting the folder threw away everything that file did not describe. Never touch `skills/aios/`, `skills/anthropic/`, `skills/superpowers/`, `skills/custom/`-unique folders, or any `_index.md`. (This is the gap that left 60+ pre-bundle skill folders sitting at `skills/` root after migration — they were folders, so the file-basename passes skipped them.)
 4. Skip files/folders genuinely unique to `custom/` — those are operator extensions and stay. **All `_index.md` files at any level are also preserved** — navigation metadata is per-folder, never a duplicate.
 5. **Remove now-empty folders.** After steps 2-3b delete duplicate files/folders, a parent dir may be left empty (e.g. a `skills/{name}/` folder whose only content was a removed `SKILL.md`, or a `custom/` subfolder emptied of dups). Walk each touched layer and `rmdir` any directory that is now empty OR contains only an `_index.md` that references nothing. Do NOT remove `{layer}/custom/` itself even when empty — it's the operator's namespace and must persist for future extensions. Log: *"Removed empty folder `skills/old-skill/` (left after duplicate cleanup)."* (This is the gap where prior cleanups removed the `.md` files but left hollow folders behind.)
 
@@ -261,6 +277,29 @@ esac
 # file) + degraded changelog detection. A full clone is text-only, lands in
 # /tmp, and is deleted at the end — the depth optimization traded correctness
 # for a clone-time saving that doesn't matter for an occasional command.
+# ONE UPDATE AT A TIME. The clone path is fixed and shared, so a second /aios:update — two
+# `/today` runs, an operator beside a routine — would `rm -rf` the tree the first one is still
+# comparing, and the first would then report "0 drift" over a directory that no longer exists.
+# The lock is a directory: `mkdir` is atomic and its own mtime IS the start time, so there is
+# no second step (writing a timestamp) during which a peer could read "no timestamp" as "stale".
+# Not a pid: this command runs as many separate shell calls, so no pid survives between steps.
+# A lock older than 30 minutes is almost certainly a crash's leftover (no sync takes that long).
+# It is RECLAIMED, not left for a human: /today and /close-day fire this command unattended, and
+# a crash that left the lock behind would otherwise fail every later update until someone
+# noticed. The reclaim is an atomic `mv` to a name unique to this run, so when two runs both
+# judge the lock stale exactly one rename succeeds and the other refuses — one owner, never two.
+LOCK=/tmp/aios-update-check.lock
+if ! mkdir "$LOCK" 2>/dev/null; then
+  if [ -n "$(find "$LOCK" -maxdepth 0 -mmin +30 2>/dev/null)" ] \
+     && mv "$LOCK" "$LOCK.stale.$$" 2>/dev/null; then
+    rm -rf /tmp/aios-update-check "$LOCK.stale.$$"
+    mkdir "$LOCK" 2>/dev/null || { echo "FATAL: reclaimed a stale $LOCK but another run took it first — rerun when it finishes; do NOT run Step 7's cleanup." >&2; exit 1; }
+    echo "note: reclaimed a stale $LOCK (older than 30 min — a previous /aios:update most likely crashed)." >&2
+  else
+    echo "FATAL: another /aios:update holds $LOCK — its clone is not this run's to touch. Rerun when it finishes; do NOT run Step 7's cleanup, the clone and the lock are the other run's." >&2
+    exit 1
+  fi
+fi
 rm -rf /tmp/aios-update-check && git clone --single-branch "$clone_url" /tmp/aios-update-check 2>&1
 ```
 
@@ -450,7 +489,11 @@ If no Tier 1 files changed in the tracker-diff → **still run the completeness 
 # and spuriously re-invoke the whole command.
 CLONE="/tmp/aios-update-check"
 LOCAL_MD="$HOME/aios/plugins/aios/commands/update.md"
-h_file(){ [ -f "$1" ] || return 1; tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1; }
+# Same helper as § Backup-on-divergence — probe the tool, refuse an empty hash.
+_sha(){ if command -v shasum >/dev/null 2>&1; then shasum -a 256; elif command -v sha256sum >/dev/null 2>&1; then sha256sum; else return 1; fi; }
+_have_sha(){ command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; }
+h_file(){ [ -f "$1" ] || return 1; _have_sha || return 1
+          local h; h=$(LC_ALL=C tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 SAME=0
 a=$(h_file "$LOCAL_MD") && b=$(h_file "$CLONE/plugins/aios/commands/update.md") \
@@ -468,9 +511,9 @@ a=$(h_file "$LOCAL_MD") && b=$(h_file "$CLONE/plugins/aios/commands/update.md") 
    - Overwrite local `plugins/aios/commands/update.md` from upstream.
 2. Sync to the plugin pipeline (cache always; marketplace only if it's a GitHub-source install — directory-source reads `~/aios` in place, so its `marketplaces/…` path doesn't exist; both copies are `[ -d ]`-guarded):
    ```bash
-   mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp $HOME/aios/plugins/aios/commands/update.md "$mp/update.md"
+   mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp "$HOME"/aios/plugins/aios/commands/update.md "$mp/update.md"
    # cache path VERSION-AGNOSTIC — glob the installed version dir (was hard-pinned 0.1.0)
-   for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/update.md "$d"; done
+   for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp "$HOME"/aios/plugins/aios/commands/update.md "$d"; done
    ```
 3. **KEEP the temp clone. Do NOT delete it here.** This step used to end with `rm -rf /tmp/aios-update-check`, justified as *"the re-invoke will re-clone fresh"* — and that justification died when items 4–5 replaced re-invocation with read-the-file-and-continue. There is no inner run to re-clone: **this** run continues, and Step 6.5's precondition asserts the clone exists and **exits FATAL without advancing the tracker** when it doesn't. So obeying the old line aborts the sync at the reconcile, on the one run where `update.md` itself changed — which is precisely the run that can least afford to stop half-applied. The clone is deleted once, at the end of Step 7, as on every other run.
 4. **Load the new spec by READING IT, not by re-invoking the skill.** `Read` the just-applied `$HOME/aios/plugins/aios/commands/update.md` and follow *that* for the rest of this run, treating `AIOS_UPDATE_REINVOKED=1` as set.
@@ -530,8 +573,12 @@ For each changed Tier 1 file:
    ```bash
    SENT='AIOS-OPERATOR-IGNORES'
    CLONE="/tmp/aios-update-check"; T="/tmp"
+   # A group's status is its LAST command's, so `{ cat canonical; awk operator; }` succeeds
+   # when `cat` fails — and `mv` then installs a .gitignore holding ONLY the operator's lines.
+   # Refuse up front, and chain `cat` with `&&` so a late failure cannot reach the `mv` either.
+   [ -r "$CLONE/.gitignore" ] || { echo "FATAL: canonical .gitignore unreadable at $CLONE/.gitignore (clone missing or partial) — the vault's .gitignore is untouched" >&2; exit 1; }
    if grep -qF "$SENT" "$HOME/aios/.gitignore"; then
-     { cat "$CLONE/.gitignore"; awk -v s="$SENT" 'f{print} $0 ~ s {f=1}' "$HOME/aios/.gitignore"; } \
+     { cat "$CLONE/.gitignore" && awk -v s="$SENT" 'f{print} $0 ~ s {f=1}' "$HOME/aios/.gitignore"; } \
        > "$HOME/aios/.gitignore.new" && mv "$HOME/aios/.gitignore.new" "$HOME/aios/.gitignore"
    else
      # LEGACY local WITHOUT the marker (first update to the merge-aware version) → migrate SAFELY.
@@ -541,13 +588,16 @@ For each changed Tier 1 file:
      #   2. CARRY the operator's personal lines below the new marker.
      bk="$HOME/aios/vault/04 - backups/aios-update-$(date +%F)"; mkdir -p "$bk"; cp "$HOME/aios/.gitignore" "$bk/.gitignore"
      # Real files, no process substitution (see § Backup-on-divergence for why).
-     tr -d '\r' < "$HOME/aios/.gitignore" | sort -u > "$T/aios-gi-local"
+     # The LOCAL side keeps the operator's ORDER: .gitignore is read last-match-wins, so a
+     # `!exception` line must stay BELOW the pattern it excepts. A sorted set (`sort -u` +
+     # `comm`) put `!private/public.txt` above `private/*` and the exception stopped working.
+     LC_ALL=C tr -d '\r' < "$HOME/aios/.gitignore" > "$T/aios-gi-local"
      : > "$T/aios-gi-base"
      git -C "$CLONE" cat-file -e "{stored_hash}:.gitignore" 2>/dev/null \
-       && git -C "$CLONE" show "{stored_hash}:.gitignore" 2>/dev/null | tr -d '\r' | sort -u > "$T/aios-gi-base"
+       && git -C "$CLONE" show "{stored_hash}:.gitignore" 2>/dev/null | LC_ALL=C tr -d '\r' | sort -u > "$T/aios-gi-base"
      if [ -s "$T/aios-gi-base" ]; then
        # Baseline known → carry only what the operator ADDED since it.
-       ops=$(comm -13 "$T/aios-gi-base" "$T/aios-gi-local" | grep -vE '^[[:space:]]*(#|$)')
+       ops=$(grep -vxF -f "$T/aios-gi-base" "$T/aios-gi-local" | grep -vE '^[[:space:]]*(#|$)')
        note='# (auto-migrated from your previous .gitignore on the first merge-aware update — review/reorganize)'
      else
        # Baseline UNREACHABLE (cross-repo hash, stored_hash=initial, or the object is gone).
@@ -600,9 +650,12 @@ For each changed Tier 1 file:
    ```bash
    # Portable across bash and zsh. Paths come from Step 2's list (Tier-1 only, custom/ excluded).
    CLONE="/tmp/aios-update-check"; V="$HOME/aios"; S="{stored_hash}"
-   h_file(){ [ -f "$1" ] || return 1; tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1; }
-   h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1
-            git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | shasum -a 256 | cut -d' ' -f1; }
+   _sha(){ if command -v shasum >/dev/null 2>&1; then shasum -a 256; elif command -v sha256sum >/dev/null 2>&1; then sha256sum; else return 1; fi; }
+   _have_sha(){ command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1; }
+   h_file(){ [ -f "$1" ] || return 1; _have_sha || return 1
+             local h; h=$(LC_ALL=C tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
+   h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1; _have_sha || return 1
+            local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | LC_ALL=C tr -d '\r' | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
    printf '%s\n' "${FILES[@]}" | while IFS= read -r f; do
      [ -n "$f" ] || continue
      [ -e "$CLONE/$f" ] && continue            # still in canonical — not a deletion
@@ -627,19 +680,28 @@ For each changed Tier 1 file:
 Step 3's word-splitting warning has shipped since 2026-07-27 and was still violated on 2026-08-12, leaving a 14-deep chain of empty directories in a vault root. That is the predictable outcome of a rule with nothing behind it: an instruction must be read and obeyed on *every* run, while a check runs whether anyone remembered. Worse, this residue is invisible to every other check — `git status` does not report empty directories **at all**, and Step 6.5's reconcile deliberately drops every vault-side `Only in` line. So it accumulates silently, exactly as the warning predicted, and the operator finds it months later wondering who created it.
 
 ```bash
-# A residue dir is named like a JOINED FILE LIST — an extension followed by a
-# space ("CHANGELOG.md SETUP.md …") — and holds ZERO files, because only
-# `mkdir` ever ran. Both conditions are required.
-find "$HOME/aios" -maxdepth 1 -type d ! -name '.*' -print | while IFS= read -r d; do
-  case "$(basename "$d")" in
-    *.[A-Za-z0-9]*\ *) [ "$(find "$d" -type f | wc -l)" -eq 0 ] && echo "$d" ;;
-  esac
-done
+# A residue dir is named like a JOINED FILE LIST and holds ZERO files, because only
+# `mkdir` ever ran. Both conditions are required. The list is joined by a SPACE when a
+# bash word-split it, and by a NEWLINE when zsh — the session shell — did not split at
+# all (the shape the iteration note at the top of Step 3 documents). `find -print | read`
+# would split a newline-named directory into fragments that match neither shape, so each
+# directory is handed to a child shell whole, and a newline inside the name is printed as
+# a literal `^J` so the report stays one line per directory. The removal happens HERE, on the
+# name the shell holds, because a `^J`-printed name cannot be typed back into `rmdir`. No `{}`
+# may appear inside this inner script: BSD find substitutes it even mid-argument.
+find "$HOME/aios" -maxdepth 1 -type d ! -name '.*' -exec sh -c '
+  d=$1; n=${d##*/}; NL=$(printf "\nx"); NL=${NL%x}
+  case "$n" in
+    *.[A-Za-z0-9]*" "*|*.[A-Za-z0-9]*"$NL"*)
+      [ "$(find "$d" -type f | wc -l)" -eq 0 ] \
+        && find "$d" -depth -type d -print0 | xargs -0 rmdir 2>/dev/null \
+        && printf "%s\n" "$d" | awk -v j="^J" "NR>1{printf j} {printf \"%s\", \$0} END{print \"\"}" ;;
+  esac' _ {} \;
 ```
 
 **Both conditions are load-bearing, and the second is what makes this safe to automate.** A vault legitimately contains directories with spaces — `01 - calendar`, `00 - notes`, `02 - assets`, `03 - export`, `04 - backups` — so *"has a space"* alone would flag the entire vault. The extension-followed-by-space shape excludes all five (none contains a `.ext ` sequence), and the zero-files test means a directory holding anything real is never a candidate. Verified against a live vault plus a fixture reproducing the exact residue: **1 true positive, 0 false positives across 9 cases**, including a legitimately-empty space-named folder and an `ext+space` name that does hold files.
 
-Report what you find and remove it — it is empty by construction, so there is nothing to preserve: *"Removed {N} stray empty directories from a previous run's unquoted path list."* If the sweep finds nothing, say nothing. **Never widen this to non-empty directories or to a bare space match** — at that point you are deleting an operator's folders on a name heuristic, which is far worse than the residue.
+The block removes what it finds (each is empty by construction, so there is nothing to preserve) and prints one line per removed directory. Report them: *"Removed {N} stray empty directories from a previous run's unquoted path list."* If the sweep finds nothing, say nothing. **Never widen this to non-empty directories or to a bare space match** — at that point you are deleting an operator's folders on a name heuristic, which is far worse than the residue.
 
 ### 4. Auto-execute post-replace scripts
 
@@ -836,18 +898,31 @@ done
   done
   # Layer dirs — derived and asserted ABOVE this group (see the note there); here they are
   # only compared. diff -rq surfaces both "Files … differ" and dir-side "Only in …" lines.
+  # A layer dir MISSING from the vault makes `diff -rq` write to stderr only (exit 2) — swallowed
+  # by the redirect and by the trailing `|| true` — so the one case this reconcile exists to catch
+  # produced an empty list. Emit it in the shape the root-file loop already uses.
   for p in "${RDIRS[@]}"; do
-    diff -rq "${SCR[@]}" "$VAULT/$p" "$CLONE/$p" 2>/dev/null
+    if [ ! -d "$VAULT/$p" ]; then echo "Only in $CLONE: $p"; else diff -rq "${SCR[@]}" "$VAULT/$p" "$CLONE/$p" 2>/dev/null; fi
   done
   # vault/.obsidian is the one Tier-1 path under the otherwise Tier-2 vault/ tree.
-  diff -rq "${SCR[@]}" "$VAULT/vault/.obsidian" "$CLONE/vault/.obsidian" 2>/dev/null
+  if [ -d "$CLONE/vault/.obsidian" ]; then
+    if [ ! -d "$VAULT/vault/.obsidian" ]; then echo "Only in $CLONE/vault: .obsidian"
+    else diff -rq "${SCR[@]}" "$VAULT/vault/.obsidian" "$CLONE/vault/.obsidian" 2>/dev/null; fi
+  fi
 } \
   | grep -vF "Only in $VAULT" \
   | grep -vF "Only in '$VAULT" \
   | grep -vE "/custom(/|: )" \
   | grep -vE "(/|: )(\.venv|__pycache__|node_modules|auth|\.DS_Store)(/|$)" \
-  | grep -vE "\.(log|pyc)$|oauth|egg-info|\.session$" \
-  | grep -vE "(\.gitignore|marketplace\.json|mcps/_index\.md)" || true   # dual-owned — merged in Step 2.7, never plain-reconciled
+  | grep -vE "\.(log|pyc)$|(/|: )[^/ ']*oauth[^/ ']*\.json( |'|$)|\.egg-info(/|: | |'|$)|\.session( |'|$)" \
+  | grep -vE "(/|: )\.gitignore( |'|$)|(/|: )marketplace\.json( |'|$)|mcps/_index\.md( |'|$)" || true   # dual-owned — merged in Step 2.7, never plain-reconciled
+# ⚠️ ANCHORED, never bare substrings. A bare `oauth` also matched `skills/anthropic/doc-coauthoring/`
+# (co-OAUTH-oring) and `mcps/…/oauth.json.template` — two framework files whose drift the reconcile
+# then never reported, and it advanced the tracker over them. The runtime files these filters exist
+# for are `*oauth*.json` (the .gitignore pattern), `*.egg-info`, `*.session`, and the three
+# dual-owned names — each matched as a whole path element, not as letters inside another name.
+# A name ends at a space, a closing quote (GNU diff quotes paths that contain a space) or the
+# end of the line. Framework file names carry no spaces, so a space is a safe terminator here.
 # `/custom(/|: )` drops the operator namespace in BOTH line shapes — a
 # `Files …/custom/_index.md … differ` (framework ships a custom/_index.md SEED;
 # the operator's customized copy is Tier-2 denylist, never overwritten) AND any
@@ -871,7 +946,7 @@ For each genuine framework drift surfaced (a Tier-1 file that **differs**, or a 
 - Sync any recovered command file to the plugin pipeline (marketplace + cache).
 - **Report it loudly** — this drift means the tracker was lying; name the files recovered so the operator knows a gap self-healed.
 
-CRLF-normalize when comparing file *contents* (`tr -d '\r'`) per the § Backup-on-divergence CRLF note. **Vault-side `Only in` lines are dropped wholesale** — operator extensions (`custom/`), company namespaces (`<company>/`), and runtime (`.venv/`, `__pycache__/`, `*.log`, OAuth/auth caches, `.session`) live only in the vault, are never in canonical, and are never framework-drift-to-pull. (An upstream *deletion* — a file the vault has that canonical removed — is handled by Step 3.4 — removed when you never edited it, asked about once when you did — not here.) Filtering by **side** (`^Only in $VAULT`), not by token, is what makes this robust — `diff` writes `Only in DIR: name` with a colon, so token patterns like `custom/` silently miss `…/custom: name`.
+CRLF-normalize when comparing file *contents* (`LC_ALL=C tr -d '\r'`) per the § Backup-on-divergence CRLF note. **Vault-side `Only in` lines are dropped wholesale** — operator extensions (`custom/`), company namespaces (`<company>/`), and runtime (`.venv/`, `__pycache__/`, `*.log`, OAuth/auth caches, `.session`) live only in the vault, are never in canonical, and are never framework-drift-to-pull. (An upstream *deletion* — a file the vault has that canonical removed — is handled by Step 3.4 — removed when you never edited it, asked about once when you did — not here.) Filtering by **side** (`^Only in $VAULT`), not by token, is what makes this robust — `diff` writes `Only in DIR: name` with a colon, so token patterns like `custom/` silently miss `…/custom: name`.
 
 ### 6.9. The star ask — applied runs only, asked once, never again either way
 
@@ -923,7 +998,7 @@ On the answer:
 ```bash
 cd ~/aios && ~/aios/hooks/aios-commit -m "sync: framework → {short-HEAD} (via /aios:update)" -- {the Tier-1 paths applied this run} .aios-update
 ```
-If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update`. **Framework-sync commits stay DISTINCT from operator session-work commits** (clean attribution), and `aios-commit --vault` at session-end / `/close-day` stays scoped to vault *content* — never framework infra, which is THIS command's domain. Finally `rm -rf /tmp/aios-update-check`.
+If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update`. **Framework-sync commits stay DISTINCT from operator session-work commits** (clean attribution), and `aios-commit --vault` at session-end / `/close-day` stays scoped to vault *content* — never framework infra, which is THIS command's domain. Finally `rm -rf /tmp/aios-update-check /tmp/aios-update-check.lock` — clone first, lock last — unless Step 1's lock refused this run (then neither is this run's to remove).
 
 > **`hash=` is written ONLY by this command, after a clean fully-applied run. NEVER hand-edit it** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65). The rule is about *that field*, and saying so precisely matters now that the file is no longer single-writer: `hooks/aios-star-check --decline` appends `star-ask=` to the same file, deliberately, because a decline must be per-operator rather than per-machine and `.aios-update` is what travels with the vault. It touches nothing else and never reads `hash=`. A rule stated as *"never write this file"* would have been read as forbidding that, or quietly ignored — neither of which protects `hash=`.
 
@@ -979,7 +1054,7 @@ If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update
 - **Tier 2 (operator content) is sacred.** Never touched. Includes everything under the denylist.
 - **Self-update is bootstrap-safe by READING the new spec, not by re-invoking the skill.** When `update.md` itself is in the diff, apply + sync to the plugin pipeline FIRST, then `Read` the applied file and continue this run under it (treat `AIOS_UPDATE_REINVOKED=1` as set). A `Skill(aios:update)` re-invocation does **not** reload an already-loaded skill in the same session — it returns *"instructions unchanged"* and the run continues on the OLD spec, silently defeating the guard. **Recursion is bounded structurally by that env flag, not by the compare succeeding** — the content-compare still short-circuits the normal path (after self-apply local matches upstream → Case A → no re-invoke), but an *indeterminate* compare would otherwise keep answering "not identical" forever. The flag makes at-most-once independent of the measurement. Operator sees one report from the outer run; no manual re-invocation needed. See Step 2.5.
 - **Cross-repo cascades.** When CHANGELOG hashes don't exist in the cloned repo (common for operators syncing from a fork or downstream mirror), fall back to content-comparison via date header + title (see Step 1.5).
-- **Clean up temp clone.** Always `rm -rf /tmp/aios-update-check` at end, even on error.
+- **Clean up temp clone — and release the lock.** Always `rm -rf /tmp/aios-update-check /tmp/aios-update-check.lock` at end, even on error — **except when Step 1's lock refused this run**: a refused run never owned the clone or the lock, and cleaning up would destroy the other run's tree, which is the one thing the lock exists to prevent. The order matters: the clone goes first and the lock last, so nothing can acquire the lock while the clone is still being deleted under it. A lock left behind blocks every later update **until someone clears it** — the 30-minute mark only changes the diagnosis from "another run" to "a crashed run" — while a clone left behind is only disk.
 - Use `[[wiki-links]]` for project names, context files, ventures mentioned in the report.
 
 ## Relationship to /company

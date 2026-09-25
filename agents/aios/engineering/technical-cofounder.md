@@ -31,7 +31,7 @@ Lean on these registered skills as the build calls for them:
 - `team-archetypes` — **read this first to pick your posture for the project's stage.** Pre-PMF → **Prototyper** posture (churn ideas, throwaway-tolerant, speed over polish); growing/scaling → **Builder/Maintainer** posture (production-grade, hardening). Same agent, stage-appropriate mode
 - `shipping-a-saas` — **read this before proposing v1's scope.** It carries the build ORDER (admin view + deterministic seed data at rung 2, *before* auth and before the product) and the defaults that are cheap on day one and near-impossible to retrofit: deterministic seeds, non-sequential ids, one-command environments, integer money. Skipping rung 2 is the single most common way a shipped product becomes unsupportable
 - `writing-plans` — turn the spec into a reviewable implementation plan first
-- `executing-plans` / `subagent-driven-development` — execute that plan with review checkpoints; fan independent tasks out to parallel subagents when the build is large
+- `executing-plans` / `subagent-driven-development` — execute that plan continuously, with review at the end (or per task through subagents when the build is large). Upstream rules on ambiguities and keeps going; **anything the operator's `INTENT.md` marks ask or escalate still stops the run** — pricing, legal, public or client-facing calls are never one of its rulings
 - `using-git-worktrees` — isolate a non-trivial build from the operator's working tree
 - `architecture-patterns` · `api-design-principles` · `error-handling-patterns` — design decisions
 - `test-driven-development` — write the test before the implementation

@@ -1,38 +1,29 @@
 # Upstream Reference
 
-- **Package:** `@jtalk22/slack-mcp`
-- **Version:** 3.2.5 (vendored 2026-03-26)
+- **Package:** `@jtalk22/slack-mcp@5.0.0` — the version every AIOS registration runs
+- **Vendored:** 2026-09-25, the complete npm package, byte for byte (`.upstream-manifest`)
 - **Repository:** https://github.com/jtalk22/slack-mcp-server
 - **License:** MIT
 - **Author:** jtalk22
 
-## Why vendored
+## Why the copy is here
 
-The vault uses this MCP for Slack integration (unreads triage, message history, send messages). Vendoring ensures:
-1. Team doesn't depend on npm availability for a critical integration
-2. We can pin a known-good version
-3. Future modifications (if needed) are tracked in git
+It posts to Slack *as you*, so the code that runs should be readable in this repo. Registrations pin the same
+version (`npx -y @jtalk22/slack-mcp@5.0.0`), which makes the vendored files what executes. Its two dependencies are declared with
+`^` ranges and resolve at launch: the pin narrows the unpinned surface to them, it does not remove it.
+
+`connector.json` and this file are AIOS's own (`local=` in `.upstream-sync`); everything else is upstream's.
 
 ## How to update
 
-```bash
-# Check latest version
-npm view @jtalk22/slack-mcp version
-
-# If update needed, replace contents:
-npx -y @jtalk22/slack-mcp --help  # forces download
-cp -R ~/.npm/_npx/*/node_modules/@jtalk22/slack-mcp/{src,lib,package.json,README.md,LICENSE,server.json} mcps/slack-mcp/
-# Update version in this file
-```
-
-## How teammates install
+Bump deliberately, and vet the release first: it acts as you.
 
 ```bash
-# Option 1: Use vendored copy (recommended)
-cd ~/aios/mcps/slack-mcp && npm install
-
-# Option 2: Use upstream directly
-npx -y @jtalk22/slack-mcp --setup
+npm view @jtalk22/slack-mcp version                      # what is current
+cd "$(mktemp -d)" && npm pack @jtalk22/slack-mcp@<ver> && tar xzf *.tgz   # the exact published files
+# replace everything in mcps/slack-mcp except connector.json and UPSTREAM.md with package/*
+# set package=@jtalk22/slack-mcp@<ver> in .upstream-sync, then pin the same version everywhere it is invoked:
+#   connector.json · mcps/setup.sh · SETUP.md · plugins/aios/commands/mcps-setup.md · hooks/pipeline-executor.py
+bash tests/vendored-pins.test.sh --record mcps/slack-mcp
+bash tests/vendored-pins.test.sh --upstream mcps/slack-mcp  # must print N/N files match
 ```
-
-Both options store tokens at `~/.slack-mcp-tokens.json`.

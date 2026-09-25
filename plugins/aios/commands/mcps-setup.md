@@ -36,7 +36,6 @@ Manage all MCP env vars inside this block:
 ```
 # === BEGIN MCP CREDENTIALS (managed by /mcps-setup) ===
 export GEMINI_API_KEY="..."
-export GITHUB_TOKEN="..."
 export ATLASSIAN_URL="..."
 export ATLASSIAN_USERNAME="..."
 export ATLASSIAN_API_TOKEN="..."
@@ -73,7 +72,7 @@ their explicit choice, not this command's default.
   - **BUNDLED entries** look like `atlassian: ~/aios/mcps/atlassian-mcp/run.sh - ✓ Connected` — local paths pointing into the vault
   - **REMOTE entries** look like `claude.ai Atlassian: https://mcp.atlassian.com/v1/mcp - ✓ Connected` — URLs into Anthropic-hosted or vendor-hosted services
   - Only BUNDLED ✓ counts as "already working" for this command's purposes. Remote ✓ means "still needs bundling" — treat it as NOT working.
-- `source ~/.zshrc 2>/dev/null && env | grep -E "^(GEMINI_API_KEY|GITHUB_TOKEN|ATLASSIAN|SLACK_XOXB|SPOTIFY|STITCH_API_KEY)"` → which env vars are set (only show names + lengths, never values)
+- `source ~/.zshrc 2>/dev/null && env | grep -E "^(GEMINI_API_KEY|ATLASSIAN|SLACK_XOXB|SPOTIFY|STITCH_API_KEY)"` → which env vars are set (only show names + lengths, never values)
 - Tell the user: "Bundled + working: X, Y. Need bundled setup (may have remote-hosted version currently): A, B, C. Let's walk through them — I'll ask before each if you want it."
 
 ### 3. Walk through each MCP needing setup
@@ -115,15 +114,6 @@ Tell the user:
 - Register: `claude mcp add pdf-generator -- ~/aios/mcps/pdf-generator-mcp/.venv/bin/python ~/aios/mcps/pdf-generator-mcp/server.py`
 - Validate: confirm ✓ Connected in `claude mcp list`. That's it.
 
-### GitHub
-
-- **Ask first:** "Want GitHub MCP (repos, issues, PRs, files, branches, workflows)? Needs a Personal Access Token. (y/skip)"
-- **Token URL:** `https://github.com/settings/tokens/new`
-- **Guidance to user:** "Create a Personal Access Token. Name: 'Claude Code MCP'. Expiration: your call (90 days or no expiration). Scopes: check `repo`, `read:org`, `read:user`, `workflow`. Click Generate. Copy the `ghp_...` token."
-- **Env var:** `GITHUB_TOKEN`
-- **Validation:** `curl -s -H "Authorization: Bearer <token>" https://api.github.com/user | jq .login` — should return their username.
-- **Register:** `claude mcp add github -- npx -y @modelcontextprotocol/server-github`
-
 ### Nano Banana (Gemini image gen)
 
 - **Ask first:** "Want image generation (Gemini 2.5 Flash Image — cover art, content visuals, mockups)? Needs a Gemini API key and paid Cloud Billing (~$0.04/image, free tier has 0 image quota). (y/skip)"
@@ -154,12 +144,12 @@ Guidance to the user (one message):
 > 1. Make sure you're signed into Slack in **Chrome** (not the desktop app — the web version at `app.slack.com`)
 > 2. Quit Chrome completely, then re-open it. Token extraction needs a fresh Chrome launch to read the keychain.
 >    `osascript -e 'tell application "Google Chrome" to quit' && sleep 1 && open -a "Google Chrome"`
-> 3. Run: `npx -y @jtalk22/slack-mcp --refresh-tokens` — auto-extracts your `xoxc-` (token) + `xoxd-` (cookie) from Chrome, caches to `~/.slack-mcp-tokens.json`
-> 4. Verify: `npx -y @jtalk22/slack-mcp --status` — should print `Status: VALID`, your user name, your team
+> 3. Run: `npx -y @jtalk22/slack-mcp@5.0.0 --refresh-tokens` — auto-extracts your `xoxc-` (token) + `xoxd-` (cookie) from Chrome, caches to `~/.slack-mcp-tokens.json`
+> 4. Verify: `npx -y @jtalk22/slack-mcp@5.0.0 --status` — should print `Status: VALID`, your user name, your team
 
 - **Env vars:** none. Tokens live in the local file, not zshrc.
-- **Register:** `claude mcp add slack -- npx -y @jtalk22/slack-mcp`
-- **Validation:** `npx -y @jtalk22/slack-mcp --status` returns `VALID`. Then `claude mcp list` shows `slack: ✓ Connected`.
+- **Register:** `claude mcp add slack -- npx -y @jtalk22/slack-mcp@5.0.0`
+- **Validation:** `npx -y @jtalk22/slack-mcp@5.0.0 --status` returns `VALID`. Then `claude mcp list` shows `slack: ✓ Connected`.
 - **Token refresh:** if the user logs out of Slack in Chrome or rotates their Slack password, re-run step 3. One command, no new auth.
 - **What the user gets:** send messages, read threads, search, list channels, manage reactions — all acting as them. Posts appear in Slack history exactly as if they typed them manually.
 
@@ -177,7 +167,7 @@ Creates a dedicated Slack app. Messages post AS THE BOT, not as the user. Requir
 
 - **Env var:** `SLACK_XOXB_TOKEN`
 - **Validation:** `curl -s -H "Authorization: Bearer <token>" https://slack.com/api/auth.test | jq .team`
-- **Register:** same — `claude mcp add slack -- npx -y @jtalk22/slack-mcp`
+- **Register:** same — `claude mcp add slack -- npx -y @jtalk22/slack-mcp@5.0.0`
 
 **Precedence when both configured:** Chrome-extracted user tokens (`~/.slack-mcp-tokens.json`) win over `SLACK_XOXB_TOKEN`. Having both is fine — Chrome tokens are used, bot token stays dormant as fallback.
 

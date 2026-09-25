@@ -91,7 +91,7 @@ echo "── 4. CONCURRENCY — the reason this tool exists ──"
 $PYBIN - "$SNAP" "$TMP" <<'PY'
 import sys
 src=open(sys.argv[1]).read(); tmp=sys.argv[2]
-anchor='    cp -p "$src" "$cand" || break'
+anchor='    put "$src" "$cand" || break'
 assert anchor in src, "anchor moved — fix this test"
 locked=src.replace(anchor,'    sleep 0.4\n'+anchor,1)
 open(f"{tmp}/snap-locked","w").write(locked)
@@ -128,6 +128,88 @@ printf '        unlocked kept %s/6 · locked kept %s/6\n' "$U_KEPT" "$L_KEPT"
   || no "the lock did not prevent loss — $L_LOST of 6 contents lost"
 [ "$U_LOST" -gt 0 ] && ok "CONTROL FIRES: unlocked loses $U_LOST of 6 — the race is real and this test can see it" \
   || no "CONTROL DID NOT FIRE — unlocked lost nothing, so the locked result proves nothing"
+
+echo "── 5. an interrupted run leaves no partial archive and no unlocked work ──"
+# Shims on PATH replace `cp` only. `cp-partial` writes three bytes of the source to the
+# destination and fails, like a full disk. `cp-slow` sleeps, then copies for real, so a signal
+# can land while the lock is held.
+SH="$TMP/shims"; mkdir -p "$SH/partial" "$SH/slow" "$SH/killed"
+REAL_CP=$(command -v cp)
+cat > "$SH/partial/cp" <<SHIM
+#!/usr/bin/env bash
+for a; do :; done; dst="\$a"; src="\${@: -2:1}"
+head -c 3 "\$src" > "\$dst"; exit 1
+SHIM
+cat > "$SH/slow/cp" <<SHIM
+#!/usr/bin/env bash
+sleep 1.5; exec "$REAL_CP" "\$@"
+SHIM
+# `cp-killed` writes three bytes and then SIGKILLs the archiver: no trap, no cleanup runs,
+# which is what an out-of-memory kill or a force-quit looks like. Only the write path decides what stays.
+cat > "$SH/killed/cp" <<SHIM
+#!/usr/bin/env bash
+for a; do :; done; dst="\$a"; src="\${@: -2:1}"
+head -c 3 "\$src" > "\$dst"; kill -KILL \$PPID; sleep 1; exit 1
+SHIM
+chmod +x "$SH/partial/cp" "$SH/slow/cp" "$SH/killed/cp"
+
+partial(){ # $1 hook → prints "rc files" after a failing copy
+  local r d rc; r=$(newroot); d=$(D_OF "$r"); printf 'full content\n' > "$r/obs.md"
+  PATH="$SH/partial:$PATH" "$1" --root "$r" --date 2026-08-14 "$r/obs.md" >/dev/null 2>&1; rc=$?
+  echo "$rc $(ls -A "$d" | grep -v '^\.aios-snapshot\.lock$' | tr '\n' ' ')"
+}
+killed(){ # $1 hook → prints the snapshot-named files left after a SIGKILL mid-copy
+  local r d; r=$(newroot); d=$(D_OF "$r"); printf 'full content\n' > "$r/obs.md"
+  PATH="$SH/killed:$PATH" "$1" --root "$r" --date 2026-08-14 "$r/obs.md" >/dev/null 2>&1
+  sleep 0.2; ls "$d" | tr '\n' ' '
+}
+interrupted(){ # $1 hook · $2 signal (TERM|INT) → prints "rc archives lock temps"
+  local r d pid rc; r=$(newroot); d=$(D_OF "$r")
+  printf 'one\n' > "$r/a.md"; printf 'two\n' > "$r/b.md"
+  # Job control on: a non-interactive shell starts background jobs with SIGINT IGNORED, so
+  # without it an INT would never reach the archiver and the INT case would test nothing.
+  set -m
+  PATH="$SH/slow:$PATH" "$1" --root "$r" --date 2026-08-14 "$r/a.md" "$r/b.md" >/dev/null 2>&1 &
+  pid=$!; set +m; sleep 0.5; kill "-$2" "$pid"; wait "$pid"; rc=$?
+  echo "$rc $(ls "$d" | grep -c -- '-[ab]\.md$') $([ -e "$d/.aios-snapshot.lock" ] && echo locked || echo free) $(ls -A "$d" | grep -c '\.tmp$')"
+}
+
+read -r RC FILES <<<"$(partial "$SNAP")"
+{ [ "$RC" != 0 ] && [ -z "${FILES:-}" ]; } \
+  && ok "a copy that fails halfway leaves nothing behind: no archive, no temp file (exit $RC)" \
+  || no "a failed copy left [${FILES:-}] (exit $RC)" "a truncated file under a snapshot name reads as history"
+for SIG in TERM:143 INT:130; do
+  read -r RC N LK TM <<<"$(interrupted "$SNAP" "${SIG%:*}")"
+  { [ "$RC" = "${SIG#*:}" ] && [ "$N" = 0 ] && [ "$LK" = free ] && [ "$TM" = 0 ]; } \
+    && ok "${SIG%:*} mid-run stops the run: exit ${SIG#*:}, the copy in flight is discarded, nothing more is archived, lock released" \
+    || no "${SIG%:*} did not stop the run: exit $RC, $N archive(s), lock $LK, $TM temp file(s)" "work after the lock is released runs with no exclusion"
+done
+LEFT="$(killed "$SNAP")"
+[ -z "$LEFT" ] \
+  && ok "SIGKILL mid-copy leaves no file under a snapshot name (the partial stays hidden)" \
+  || no "SIGKILL mid-copy left [$LEFT] under a snapshot name" "the next run would compare against a truncated archive"
+
+# The same two cases against the pre-change hook, pinned by sha so the reproduction does not
+# move when this change lands. Skipped, with a message, when that commit is not present.
+PIN=3d135ded112bf7b77156b61bb29e6233ff7c7285
+OLD="$TMP/old-snapshot"
+if git -C "$ROOT" cat-file -e "$PIN:hooks/aios-snapshot" 2>/dev/null \
+   && git -C "$ROOT" show "$PIN:hooks/aios-snapshot" > "$OLD" && chmod +x "$OLD" && ! cmp -s "$OLD" "$SNAP"; then
+  read -r RC FILES <<<"$(partial "$OLD")"
+  [ "${FILES:-}" = "2026-08-14-obs.md" ] \
+    && ok "OLD: the failed copy stayed as 2026-08-14-obs.md (the defect, reproduced)" \
+    || no "old hook did not leave the partial archive [${FILES:-}]" "check the pin"
+  LEFT="$(killed "$OLD")"
+  [ "$LEFT" = "2026-08-14-obs.md " ] \
+    && ok "OLD: SIGKILL mid-copy left the truncated 2026-08-14-obs.md (the defect, reproduced)" \
+    || no "old hook did not leave the truncated archive [$LEFT]" "check the pin"
+  read -r RC N LK TM <<<"$(interrupted "$OLD" TERM)"
+  [ "$N" = 2 ] \
+    && ok "OLD: after TERM it released the lock and archived the second file anyway (exit $RC)" \
+    || no "old hook stopped on TERM ($N archives, exit $RC)" "check the pin"
+else
+  echo "  SKIP  old-hook reproduction: $PIN not present or identical"
+fi
 
 printf '\nRESULT: %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

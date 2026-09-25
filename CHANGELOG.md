@@ -57,7 +57,13 @@
 >
 > Entries are **date-keyed**; releases are **tagged in git**. A release contains every entry dated up to its tag, back to the previous release. **What you actually have is the hash in `.aios-update`** — a vault normally sits *between* releases, and `/aios:update` works off that hash, never off a version number.
 >
-> - **Unreleased** — entries after `2026-09-13`
+> - **Unreleased** — entries after `2026-09-25`
+> - **[v0.8.5](https://github.com/The-AIOS/aios/releases/tag/v0.8.5)** · `2026-09-25` — covers `2026-09-25`
+> - **[v0.8.4](https://github.com/The-AIOS/aios/releases/tag/v0.8.4)** · `2026-09-24` — covers `2026-09-24`
+> - **[v0.8.3](https://github.com/The-AIOS/aios/releases/tag/v0.8.3)** · `2026-09-23` — covers `2026-09-23`
+> - **[v0.8.2](https://github.com/The-AIOS/aios/releases/tag/v0.8.2)** · `2026-09-22` — patch
+> - **[v0.8.1](https://github.com/The-AIOS/aios/releases/tag/v0.8.1)** · `2026-09-22` — patch
+> - **[v0.8.0](https://github.com/The-AIOS/aios/releases/tag/v0.8.0)** · `2026-09-22` — covers `2026-09-14` → `2026-09-22`
 > - **[v0.7.1](https://github.com/The-AIOS/aios/releases/tag/v0.7.1)** · `2026-09-13` — patch
 > - **[v0.7.0](https://github.com/The-AIOS/aios/releases/tag/v0.7.0)** · `2026-09-13` — covers `2026-09-05` → `2026-09-13`
 > - **[v0.6.2](https://github.com/The-AIOS/aios/releases/tag/v0.6.2)** · `2026-09-04` — patch
@@ -82,6 +88,38 @@
 **A stranded commit could lose its "not pushed yet" marker.** When a push fails, `aios-commit` leaves a marker so the next run retries. A slow push from an earlier run could finish afterwards and clear it, even though the newer commit was still not on the remote. The marker now lists each stranded commit, and a commit comes off the list only once it is on a remote. That holds whichever branch you have checked out, and a failure to check keeps the entry.
 
 **Action required:** none.
+
+## 2026-09-25 — The MCPs you run are the versions AIOS names, and eleven fixes for failures nobody saw
+
+`hash: c879483 · d8b9246 · d515d48 · 33407db · 161532e · 7dcbdb7 · 8764f98 · 4050b6a · 4646f53 · 0edcb0b · 9da8a2d · 06a3839 · 6b1b8a0 · a454cc4 · b111fc6 · 79ad81b · 557196f · 8916a5d · 4a0ce5c · ebb2a9e · 4083b6c · 0c1a2a4 · 573b4e6 · 9382f39 · d30ce14 · 25d2872 · a3a1948` · [#175](https://github.com/The-AIOS/aios/pull/175) · [#176](https://github.com/The-AIOS/aios/pull/176) · [#177](https://github.com/The-AIOS/aios/pull/177) · [#178](https://github.com/The-AIOS/aios/pull/178) · [#179](https://github.com/The-AIOS/aios/pull/179) · [#180](https://github.com/The-AIOS/aios/pull/180) · [#181](https://github.com/The-AIOS/aios/pull/181) · [#182](https://github.com/The-AIOS/aios/pull/182) · [#183](https://github.com/The-AIOS/aios/pull/183) · [#184](https://github.com/The-AIOS/aios/pull/184) · [#185](https://github.com/The-AIOS/aios/pull/185) · [#186](https://github.com/The-AIOS/aios/pull/186)
+
+> **What you can now do.** Know which version of Slack, Atlassian and NotebookLM you are running, because AIOS now names one and your install follows it. Read the Slack server's code in your vault and know it is the code that runs. Trust `/aios:update`, `/today`, `/close-day` and your commits to say so when a check could not run, instead of reporting success. On Windows, use every skill your agents declare.
+
+**Your MCP servers run the version AIOS names.** Three of them resolved whatever their registry published at launch, and the Python ones never updated at all: every install was guarded by "only if there is no `.venv` yet", so a machine set up months ago kept those versions whatever AIOS pinned later. NotebookLM was found at 0.3.4 while 0.8.2 shipped. Now:
+- **Slack** is pinned to `@jtalk22/slack-mcp@5.0.0`, and the vendored copy in `mcps/slack-mcp/` is that exact package, byte for byte, where it used to be an older subset no registration ran. It posts as you, so reading it is now reading what runs. Its two dependencies still resolve at launch; `SECURITY.md` says so.
+- **Atlassian** is pinned to `mcp-atlassian==0.23.1`. Both pins were smoke-tested against live accounts first.
+- **NotebookLM** is pinned to `notebooklm-py==0.8.2`, and setup now reinstalls a Python MCP whenever its pinned requirements change. 0.8 moves your session into `~/.notebooklm/profiles/<name>/` on its first run; the two AIOS helper scripts follow it.
+- **The GitHub MCP is retired.** Its package is deprecated and archived upstream, and nothing in AIOS called it; sessions use the `gh` CLI. `/aios:company` now detects a GitHub substrate with `gh auth status`.
+
+**superpowers moves to v6.4.1, with your stop conditions stated above it.** v6 runs a plan continuously, and upstream tells the model to rule on ambiguities and keep going. AIOS's contract outranks that (upstream agrees), so its four stops apply plus anything your `INTENT.md` marks ask or escalate: pricing, legal, public or client-facing decisions are never one of its rulings. `skills/_index.md` says so, and names what it still does unasked. `diagnosing-superpowers` is left out: it files bug reports upstream. The folder also gains the MIT license its earlier copy lacked.
+
+**Eleven fixes contributed by an operator, each checked and extended so vaults shaped differently are covered too** ([#175](https://github.com/The-AIOS/aios/pull/175)–[#183](https://github.com/The-AIOS/aios/pull/183), [#185](https://github.com/The-AIOS/aios/pull/185), [#186](https://github.com/The-AIOS/aios/pull/186)). The pattern they share is a check that could fail without saying so:
+- `/aios:update` treated a hash it could not compute as a result, could reorder `.gitignore` rules, and read a missing folder as "no drift". Each now fails closed, and it hashes with `sha256sum` where `shasum` is missing. Binary files (images, PDFs) now compare by their actual content: in a UTF-8 locale every one of them read as empty, so any two compared identical and an update to one never landed. Two updates at once no longer delete each other's clone; a crashed one no longer blocks the next.
+- Commits refused to pass unscanned when the secret check could not run, and now also scan the commit message and files containing NUL bytes. Large binaries stay fast: files over 20 MB are scanned as text and named in the output.
+- `/today` no longer asks you to close a day that hasn't happened (the notes `/7plan` creates ahead), checks the remote your vault actually pushes to, and keeps every carry — **a carry with no reason tag now escalates as it keeps coming back**: flagged at its third carry, asked for a reason at the sixth, escalated at the tenth. A carry with a reason tag, a target date or a parked status is left as it was.
+- `/close-session` now asks its two questions before it writes the block, because the block is committed the moment it lands. A session without an id no longer loses its second close.
+- `/close-day` redraws `ecosystem.md` on its own clock, so a map that gets a small note every few weeks is still redrawn; it reads insights Tier A already routed, finds reports by the date it is closing, and snapshots through the helper — which now stops when it is interrupted instead of archiving on without its lock, and never leaves a half-written copy under a snapshot's name.
+- `/aios:housekeeping` stops reporting every vendored source as behind. Its context-loading audit now takes your primary sessions from `USER.md`'s `## Identity` table, where it used to match one operator's session names, so on every other vault it counted the real primary as a worker; it also sees an outward action anywhere in a worker's session, not only in its first 120 calls. **Expect it to flag more workers than before** — those that shipped something before reading your `declared/` files.
+
+**Headless routines, and one sentence in `CLAUDE.md`.** A routine's Bash inherits the allow rules of your project settings as well as your user settings; `MODEL-ROUTING.md` gives the two ways to close that and what each costs, and `/aios:housekeeping` reports broad rules in both. Reported privately by an operator. And `CLAUDE.md` no longer says writing an inbox request is never gated: a `kill` can need your approval in the session that writes it.
+
+**Windows gets the skills its agents declare.** The Windows skill registrar still skipped the Anthropic skills after the macOS/Linux one stopped, so agents using `doc-coauthoring`, `internal-comms`, `theme-factory`, `mcp-builder` or `skill-creator` got nothing. A test now keeps the two registrars in step.
+
+**Action required** — check each first; do only what applies:
+1. **NotebookLM, if you installed it** (`mcps/notebooklm-mcp/.venv` exists): run `bash mcps/setup.sh notebooklm-mcp` to move to 0.8.2. Then `mcps/notebooklm-mcp/.venv/bin/notebooklm list`; if it says your authentication expired, run `notebooklm login` yourself — it opens a browser for your Google sign-in.
+2. **The GitHub MCP, if `claude mcp list` shows `github`:** it keeps working until npm removes the package. If you don't use it, `claude mcp remove github`; the `gh` CLI covers what AIOS does.
+3. **Slack, if `claude mcp list` shows `slack` running `@jtalk22/slack-mcp` with no version:** it runs 5.0.0 today and would float to the next release. To pin it, re-register it in the scope it was added: `claude mcp remove slack` then `claude mcp add slack -- npx -y @jtalk22/slack-mcp@5.0.0`.
+4. **Start a new Claude session** after updating, so the revised commands and the new superpowers skills load.
 
 ## 2026-09-24 — A security audit for your code, routines that stay inside the sandbox, and a morning plan that checks two weeks out
 
