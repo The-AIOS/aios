@@ -1206,6 +1206,9 @@ jobs:
         # NotebookLM helpers follow notebooklm-py 0.8's profile folder.
         run: bash tests/mcps-reinstall-on-pin.test.sh
 
+      - name: the macOS/Linux and Windows skill registrars skip the same sources
+        run: bash tests/skill-registrar-parity.test.sh
+
       - name: the secret scanner rejects what it is supposed to reject
         # Found by the derived-list guard below on its first run: this suite had been
         # committed and never invoked by any workflow. It is the scanner that stands between

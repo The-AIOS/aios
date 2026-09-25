@@ -3,8 +3,10 @@
 # symlinks because they do NOT require admin / Developer Mode. Idempotent.
 # Usage:  pwsh skills/setup.ps1
 #
-# Mirrors skills/setup.sh: registers every source EXCEPT anthropic/ and
-# superpowers/ (marketplace-provided), and skips any name already present in
+# Mirrors skills/setup.sh: registers every source EXCEPT superpowers/
+# (marketplace-provided). anthropic/ is registered: its skills are NOT provided by
+# a marketplace, and skipping them left every agent that declares one without it
+# (see setup.sh's header). Skips any name already present in
 # ~/.claude/skills. Skills register standalone -- they do not touch the `aios`
 # commands plugin. Restart Claude Code to pick up new links.
 
@@ -16,7 +18,7 @@ Write-Host ""
 
 $linked = 0
 $skipped = 0
-$skipSources = @('anthropic', 'superpowers')
+$skipSources = @('superpowers')
 
 Get-ChildItem -Path $ScriptDir -Directory |
   Where-Object { $skipSources -notcontains $_.Name } |
