@@ -69,6 +69,18 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-25 — An interrupted snapshot leaves nothing half-written behind
+
+`hash: `
+
+> **What you can now do.** Stop a snapshot with Ctrl-C, or have it killed in the middle of one, and trust that every file under a snapshot name is a complete copy.
+
+**A copy cut short stayed behind as a real snapshot.** `hooks/aios-snapshot` copied straight to the final name. If the copy failed partway, from a full disk or a killed process, the truncated file kept that name. Every later run compared against it, and the history of that file read wrong from then on. Copies now go to a hidden temporary file and are renamed into place only when complete, so a snapshot name only ever holds a whole copy.
+
+**Stopping a snapshot did not stop it.** On Ctrl-C or a termination signal, the archiver released its lock and then went on archiving the remaining files with no lock at all. It now releases the lock, discards the copy in flight, and exits.
+
+**Action required:** none.
+
 ## 2026-09-24 — A security audit for your code, routines that stay inside the sandbox, and a morning plan that checks two weeks out
 
 `hash: 65227d0 · e8bad7a · c1396c3 · 6401d87 · ea99bbd · 6292b09 · a8ed263 · ba0751f · 24d7c51 · 5fe7850 · 409cc22 · 15a1291 · 27ea3a1 · 000f325 · 346bbc4 · 6907b7f · 871ee23` · [#170](https://github.com/The-AIOS/aios/pull/170) · [#172](https://github.com/The-AIOS/aios/pull/172) · [#173](https://github.com/The-AIOS/aios/pull/173) · [#174](https://github.com/The-AIOS/aios/pull/174)
