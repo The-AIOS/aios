@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — The context audit and the context ladder measure what they say they measure
 
-`hash: `
+`hash: ` · [#185](https://github.com/The-AIOS/aios/pull/185)
 
 > **What you can now do.** Run `/aios:housekeeping` and get a context audit that uses your own main sessions as its control, and a fit check that looks at a worker's whole session. Read the context ladder knowing its first rung costs what the floor actually loads.
 
