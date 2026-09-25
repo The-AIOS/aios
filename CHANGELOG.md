@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — An interrupted snapshot leaves nothing half-written behind
 
-`hash: `
+`hash: ` · [#186](https://github.com/The-AIOS/aios/pull/186)
 
 > **What you can now do.** Stop a snapshot with Ctrl-C, or have it killed in the middle of one, and trust that every file under a snapshot name is a complete copy.
 
