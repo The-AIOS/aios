@@ -138,7 +138,8 @@ out=$(cd "$R" && PATH="$SHIM:$PATH" "$TMP/new/aios-commit" --vault --no-push -m 
 
 # a repo with no commits yet: `git diff HEAD` has no HEAD, so the sweep must read the staged paths
 E=$(mktemp -d "${TMPDIR:-/tmp}/csfc-empty.XXXXXX"); git -C "$E" init -q; mkdir -p "$E/vault"; echo hi > "$E/vault/a.md"
-( cd "$E" && GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false "$ROOT/hooks/aios-commit" --vault --no-push -m first >/dev/null 2>&1 )
+# identity + no signing passed per command: a CI runner has no git identity, and this test must not set one globally
+( cd "$E" && GIT_CONFIG_COUNT=3 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false GIT_CONFIG_KEY_1=user.name GIT_CONFIG_VALUE_1=test GIT_CONFIG_KEY_2=user.email GIT_CONFIG_VALUE_2=test@example.com "$ROOT/hooks/aios-commit" --vault --no-push -m first >/dev/null 2>&1 )
 [ "$(git -C "$E" rev-list --count HEAD 2>/dev/null)" = 1 ] && ok "--vault makes the first commit in a repo with no commits yet" || no "--vault refused the first commit of an empty repo" "the sweep read a failed 'git diff HEAD' as a failed measurement"
 rm -rf "$E"
 [ "$HAVE_OLD" = 1 ] || printf '  skip  old-code reproductions: the pinned pre-change commit is not in this checkout, or its hooks equal the current ones (set BASE_REF to run them)\n'
