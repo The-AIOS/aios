@@ -332,7 +332,7 @@ The companion to Bucket 12. Where Bucket 12 promotes structure *within* `antifra
    - Entry count ≥ 4
    - Most recent entry ≤ 30 days ago
 
-4. **Skip meta-patterns that already show a `→ Graduated to USER.md on YYYY-MM-DD` flag** in their description. One graduation per pattern; subsequent recurrences signal the rule isn't being followed, not that re-graduation is needed.
+4. **Skip meta-patterns whose description already carries a `→ Graduated to USER.md` flag** — match on that prefix, because the full line steps 3–4 below write is `→ Graduated to USER.md → ## Personal antifragile graduations → "{rule name}" on YYYY-MM-DD.`, and a literal search for `Graduated to USER.md on` never finds it, so the same pattern re-graduates on every run. One graduation per pattern; subsequent recurrences signal the rule isn't being followed, not that re-graduation is needed.
 
 **For each flagged meta-pattern, draft a rule:**
 
@@ -476,7 +476,7 @@ The framework vendors content from upstream repos in two places: **skills** (sou
 2. **For each `.upstream-sync` found:**
    - Parse `repo=`, `hash=`, `date=`, optional `subdir=`, optional `note=`.
    - Query the upstream: `gh api "repos/<org>/<repo>/commits/HEAD" --jq '.sha'` → current upstream HEAD.
-   - Compare local vs upstream hash. If equal → mark `current`. If different → mark `behind`.
+   - Compare by **prefix**, never by string equality: the manifest stores the short sha (`hash=<short-sha>`, seven characters) and the API returns the full forty, so `[ "$local" = "$upstream" ]` is false for every vendored source and reports them all `behind` forever. `case "$upstream" in "$local"*) sync_status=current ;; *) sync_status=behind ;; esac` — the vendored hash is a prefix of the upstream sha when nothing moved. (`sync_status`, not `status`: that name is read-only in zsh, the session shell, and assigning it aborts the line.)
 3. **For `behind` sources** — fetch the commit list since local hash:
    ```bash
    gh api "repos/<org>/<repo>/compare/<local>...HEAD" --jq '.commits[] | .commit.message'
@@ -532,16 +532,22 @@ Some MCPs are AIOS-built, not vendored — `nano-banana-mcp`, `pdf-generator-mcp
 Scan every file in `context/declared/` and `context/observed/` for a **repeated frontmatter key**:
 
 ```bash
-python3 - <<'PY'
+# Through `uv`, never `python3` — on Windows that name runs nothing and its silence reads
+# like a clean result (CLAUDE.md § Identity & Greeting, step 4a). And the last line always
+# prints a count: an empty glob (wrong folder, unreadable vault) must look different from
+# "checked everything, found nothing".
+UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run - <<'PY'
 import re, glob, os
 os.chdir(os.path.expanduser("~/aios/vault/00 - notes/context"))
-for f in sorted(glob.glob("*/*.md")):
+files = sorted(glob.glob("*/*.md"))
+for f in files:
     m = re.match(r'^---\n(.*?)\n---\n', open(f, encoding="utf-8", errors="replace").read(), re.S)
     if not m:
         print("NO FRONTMATTER: %s" % f); continue
     keys = re.findall(r'^([A-Za-z_][A-Za-z0-9_-]*):', m.group(1), re.M)
     dupes = sorted({k for k in keys if keys.count(k) > 1})
     if dupes: print("DUPLICATE KEY: %s -> %s" % (f, ", ".join(dupes)))
+print("checked %d file(s)" % len(files))
 PY
 ```
 
