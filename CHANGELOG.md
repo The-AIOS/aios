@@ -77,7 +77,7 @@
 
 ## 2026-09-25 — A renamed note commits as a rename
 
-`hash: `
+`hash: ` · [#188](https://github.com/The-AIOS/aios/pull/188)
 
 > **What you can now do.** Rename or move a note, commit the vault, and find exactly one copy of it in history, under its new name.
 
