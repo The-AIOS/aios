@@ -1101,6 +1101,10 @@ jobs:
         # produces the downgrade on the same inputs.
         run: bash tests/update-local-ahead.test.sh
 
+      - name: /aios:housekeeping checks that could not tell true from false
+        # Prefix compare for vendored hashes, the frontmatter scan through uv with a visible count, and the graduation skip matching the mark it writes.
+        run: bash tests/housekeeping-checks-that-cannot-fail.test.sh
+
       - name: two Windows probes that answered an adjacent question
         # `command -v python3` succeeds on the Microsoft Store App Execution Alias — a real file
         # on PATH that exits 49 and prints an install notice — so connect.sh passed its own
