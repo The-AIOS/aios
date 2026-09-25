@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — The morning plan closes the right day and keeps every carry
 
-`hash: `
+`hash: ` · [#181](https://github.com/The-AIOS/aios/pull/181)
 
 > **What you can now do.** Start a day after a long break, or after `/7plan` already created today's note, and have `/today` close the day you actually left open, warn you when your vault has no backup, and carry forward every open task.
 
