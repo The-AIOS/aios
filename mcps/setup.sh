@@ -64,6 +64,21 @@ echo ""
 # Git Bash resolves bare names (pip, playwright) to their .exe, so no suffix needed.
 vbin() { if [ -d ".venv/Scripts" ]; then echo ".venv/Scripts"; else echo ".venv/bin"; fi; }
 
+# A pin bump must reach an install that already exists. Every Python MCP below used to be
+# guarded by `[ ! -d .venv ]`, so it installed once and never again: a machine set up in May
+# kept May's versions forever, whatever requirements.txt said (measured 2026-09-25: a
+# notebooklm-py pinned nowhere and frozen at 0.3.4 while 0.8.2 shipped). Each install now
+# records a hash of its requirements.txt in the venv, and a changed file reinstalls.
+# CRLF-normalised, so a Windows checkout does not read as a change. Without a working Python
+# there is nothing to hash, and an existing venv is left alone rather than rebuilt blind.
+req_sha() { $PY -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read().replace(b"\r\n",b"\n")).hexdigest())' "$1" 2>/dev/null; }
+needs_install() {
+  [ -d "$1/.venv" ] || return 0
+  [ -n "$PY" ] && [ -f "$1/requirements.txt" ] || return 1
+  [ "$(cat "$1/.venv/.aios-requirements.sha256" 2>/dev/null)" != "$(req_sha "$1/requirements.txt")" ]
+}
+stamp_install() { req_sha requirements.txt > .venv/.aios-requirements.sha256; }
+
 # Cross-platform Python launcher. On Windows, `python3.exe` is the Microsoft Store
 # redirector stub by default — invoking it opens an "install Python" page and exits
 # non-zero, so `python3 -m venv` silently no-ops while the `&& echo "✓"` chain hides
@@ -141,22 +156,22 @@ if want slack-mcp && [ -d "$SCRIPT_DIR/slack-mcp" ]; then
 fi
 
 # --- NotebookLM MCP ---
-if want notebooklm-mcp && [ -d "$SCRIPT_DIR/notebooklm-mcp" ] && [ ! -d "$SCRIPT_DIR/notebooklm-mcp/.venv" ]; then
+if want notebooklm-mcp && [ -d "$SCRIPT_DIR/notebooklm-mcp" ] && needs_install "$SCRIPT_DIR/notebooklm-mcp"; then
   echo "→ notebooklm-mcp..."
   cd "$SCRIPT_DIR/notebooklm-mcp"
-  $PY -m venv .venv
-  "$(vbin)/pip" install notebooklm-py playwright -q
+  [ -d .venv ] || $PY -m venv .venv
+  "$(vbin)/pip" install -r requirements.txt -q && stamp_install
   "$(vbin)/playwright" install chromium 2>/dev/null
   "$(vbin)/notebooklm" skill install 2>/dev/null || true
   echo "  ✓ installed (authenticate: run notebooklm login from mcps/notebooklm-mcp/$(vbin))"
 fi
 
 # --- Playwright MCP ---
-if want playwright-mcp && [ -d "$SCRIPT_DIR/playwright-mcp" ] && [ ! -d "$SCRIPT_DIR/playwright-mcp/.venv" ]; then
+if want playwright-mcp && [ -d "$SCRIPT_DIR/playwright-mcp" ] && needs_install "$SCRIPT_DIR/playwright-mcp"; then
   echo "→ playwright-mcp..."
   cd "$SCRIPT_DIR/playwright-mcp"
-  $PY -m venv .venv
-  "$(vbin)/pip" install playwright browser-cookie3 -q
+  [ -d .venv ] || $PY -m venv .venv
+  "$(vbin)/pip" install -r requirements.txt -q && stamp_install
   "$(vbin)/playwright" install chromium 2>/dev/null
   echo "  ✓ installed (chromium bundled)"
 fi
@@ -178,31 +193,31 @@ if want atlassian-mcp && [ -d "$SCRIPT_DIR/atlassian-mcp" ]; then
 fi
 
 # --- Nano Banana MCP (Gemini image gen) ---
-if want nano-banana-mcp && [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && [ ! -d "$SCRIPT_DIR/nano-banana-mcp/.venv" ]; then
+if want nano-banana-mcp && [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && needs_install "$SCRIPT_DIR/nano-banana-mcp"; then
   echo "→ nano-banana-mcp..."
   cd "$SCRIPT_DIR/nano-banana-mcp"
-  $PY -m venv .venv
-  "$(vbin)/pip" install -r requirements.txt -q
+  [ -d .venv ] || $PY -m venv .venv
+  "$(vbin)/pip" install -r requirements.txt -q && stamp_install
   echo "  ✓ installed (requires GEMINI_API_KEY — see README)"
 fi
 
 # --- PDF Generator MCP ---
-if want pdf-generator-mcp && [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && [ ! -d "$SCRIPT_DIR/pdf-generator-mcp/.venv" ]; then
+if want pdf-generator-mcp && [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && needs_install "$SCRIPT_DIR/pdf-generator-mcp"; then
   echo "→ pdf-generator-mcp..."
   cd "$SCRIPT_DIR/pdf-generator-mcp"
-  $PY -m venv .venv
-  "$(vbin)/pip" install -r requirements.txt -q
+  [ -d .venv ] || $PY -m venv .venv
+  "$(vbin)/pip" install -r requirements.txt -q && stamp_install
   command -v pandoc >/dev/null 2>&1 || echo "  ⚠ pandoc not found — $(pkg_hint pandoc)"
   have_chrome || echo "  ⚠ Google Chrome not found — install from https://google.com/chrome"
   echo "  ✓ installed (requires pandoc + Chrome)"
 fi
 
 # --- Spotify DJ MCP ---
-if want spotify-dj-mcp && [ -d "$SCRIPT_DIR/spotify-dj-mcp" ] && [ ! -d "$SCRIPT_DIR/spotify-dj-mcp/.venv" ]; then
+if want spotify-dj-mcp && [ -d "$SCRIPT_DIR/spotify-dj-mcp" ] && needs_install "$SCRIPT_DIR/spotify-dj-mcp"; then
   echo "→ spotify-dj-mcp..."
   cd "$SCRIPT_DIR/spotify-dj-mcp"
-  $PY -m venv .venv
-  "$(vbin)/pip" install -r requirements.txt -q
+  [ -d .venv ] || $PY -m venv .venv
+  "$(vbin)/pip" install -r requirements.txt -q && stamp_install
   echo "  ✓ installed (requires Spotify Dev app + SPOTIFY_CLIENT_ID/SECRET — see README)"
 fi
 

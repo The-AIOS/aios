@@ -1201,6 +1201,11 @@ jobs:
         # to absolute install locations. Skips where no fallback interpreter exists.
         run: bash tests/claude-identity-python-probe.test.sh
 
+      - name: a pinned MCP requirement reaches installs that already exist
+        # Python MCPs installed once and never again; a pin bump now reinstalls. Also checks the
+        # NotebookLM helpers follow notebooklm-py 0.8's profile folder.
+        run: bash tests/mcps-reinstall-on-pin.test.sh
+
       - name: the secret scanner rejects what it is supposed to reject
         # Found by the derived-list guard below on its first run: this suite had been
         # committed and never invoked by any workflow. It is the scanner that stands between

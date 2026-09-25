@@ -2,5 +2,8 @@
 #
 # playwright drives a real browser against notebooklm.google.com using the operator's own
 # Google session, so a version change alters what executes against a logged-in account.
-# Pinned to the version verified running on a live install, 2026-09-15.
+# playwright pinned to the version verified on a live install, 2026-09-15. notebooklm-py pinned
+# 2026-09-25 (was unpinned and frozen at first install). 0.8 moves ~/.notebooklm/{storage_state.json,
+# browser_profile} under profiles/<name>/ on first run; the helper scripts follow it.
+notebooklm-py==0.8.2
 playwright==1.58.0
