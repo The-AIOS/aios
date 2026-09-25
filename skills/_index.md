@@ -52,15 +52,17 @@ Apache-2.0 licensed example skills from Anthropic's official repo. Covers creati
 
 ## Superpowers (obra/superpowers)
 
-Core software-engineering disciplines. Many of these reference each other (e.g., `requesting-code-review` dispatches via `subagent-driven-development`).
+Core software-engineering disciplines, vendored at v6.4.1 (14 of its 15 skills; `diagnosing-superpowers` is left out on purpose — it files bug reports upstream). Many reference each other (e.g., `requesting-code-review` dispatches via `subagent-driven-development`).
+
+> **v6 runs a plan continuously, and upstream's own rule is to rule on ambiguities and keep going ("Rulings, not stalls") — listing every ruling in the final message.** AIOS's contract outranks that, and upstream agrees (`using-superpowers`: your CLAUDE.md and AGENTS.md take precedence). So its four stops — irreversible, security-sensitive, outward-facing, a plan too broken to follow — apply, **plus** anything the operator's `INTENT.md` marks ask or escalate: a pricing, legal, public or client-facing decision is never one of upstream's rulings. Two things it still does without asking, which an operator can gate with a permission rule if they want to: `using-git-worktrees` runs the project's dependency install (npm, pip, poetry, cargo), and `executing-plans` / `subagent-driven-development` need bash for their `scripts/`.
 
 | Skill | When to use |
 |-------|-------------|
 | `brainstorming` | Before any creative work — features, components, functionality |
 | `writing-plans` | Before touching code on multi-step tasks |
-| `executing-plans` | Implementation sessions with batched review |
+| `executing-plans` | Run a written plan inline, continuously, with one final review |
 | `dispatching-parallel-agents` | 2+ independent concurrent tasks |
-| `subagent-driven-development` | Plans with independent tasks in current session |
+| `subagent-driven-development` | Run a plan task by task through subagents, each task reviewed, then one whole-branch review |
 | `test-driven-development` | Before writing implementation code |
 | `systematic-debugging` | Before proposing fixes for any bug |
 | `requesting-code-review` | Before merging, after completing features |
