@@ -275,19 +275,22 @@ esac
 # The lock is a directory: `mkdir` is atomic and its own mtime IS the start time, so there is
 # no second step (writing a timestamp) during which a peer could read "no timestamp" as "stale".
 # Not a pid: this command runs as many separate shell calls, so no pid survives between steps.
-# A lock older than 30 minutes is almost certainly a crash's leftover (no sync takes that
-# long) — but this run NEVER clears it by itself: two runs that both judge it stale would both
-# clear it and both proceed, which is the two-owner state the lock exists to prevent. It says
-# which one command clears it and stops; a human (or the model, after checking that no other
-# update session or routine is running) removes it, and the next run acquires it normally.
+# A lock older than 30 minutes is almost certainly a crash's leftover (no sync takes that long).
+# It is RECLAIMED, not left for a human: /today and /close-day fire this command unattended, and
+# a crash that left the lock behind would otherwise fail every later update until someone
+# noticed. The reclaim is an atomic `mv` to a name unique to this run, so when two runs both
+# judge the lock stale exactly one rename succeeds and the other refuses — one owner, never two.
 LOCK=/tmp/aios-update-check.lock
 if ! mkdir "$LOCK" 2>/dev/null; then
-  if [ -n "$(find "$LOCK" -maxdepth 0 -mmin +30 2>/dev/null)" ]; then
-    echo "FATAL: $LOCK is older than 30 min — a previous /aios:update most likely crashed mid-run. Confirm no other update is running (other sessions, routines), then clear it CLONE FIRST, LOCK LAST — rm -rf /tmp/aios-update-check && rmdir $LOCK — so no run can acquire the lock while the clone is still being deleted; then rerun. Do NOT run Step 7's cleanup from this run." >&2
+  if [ -n "$(find "$LOCK" -maxdepth 0 -mmin +30 2>/dev/null)" ] \
+     && mv "$LOCK" "$LOCK.stale.$$" 2>/dev/null; then
+    rm -rf /tmp/aios-update-check "$LOCK.stale.$$"
+    mkdir "$LOCK" 2>/dev/null || { echo "FATAL: reclaimed a stale $LOCK but another run took it first — rerun when it finishes; do NOT run Step 7's cleanup." >&2; exit 1; }
+    echo "note: reclaimed a stale $LOCK (older than 30 min — a previous /aios:update most likely crashed)." >&2
   else
-    echo "FATAL: another /aios:update holds $LOCK (younger than 30 min) — its clone is not this run's to touch. Rerun when it finishes; do NOT run Step 7's cleanup, the clone and the lock are the other run's." >&2
+    echo "FATAL: another /aios:update holds $LOCK — its clone is not this run's to touch. Rerun when it finishes; do NOT run Step 7's cleanup, the clone and the lock are the other run's." >&2
+    exit 1
   fi
-  exit 1
 fi
 rm -rf /tmp/aios-update-check && git clone --single-branch "$clone_url" /tmp/aios-update-check 2>&1
 ```
@@ -670,19 +673,22 @@ Step 3's word-splitting warning has shipped since 2026-07-27 and was still viola
 # all (the shape the iteration note at the top of Step 3 documents). `find -print | read`
 # would split a newline-named directory into fragments that match neither shape, so each
 # directory is handed to a child shell whole, and a newline inside the name is printed as
-# a literal `^J` so the report stays one line per directory.
+# a literal `^J` so the report stays one line per directory. The removal happens HERE, on the
+# name the shell holds, because a `^J`-printed name cannot be typed back into `rmdir`. No `{}`
+# may appear inside this inner script: BSD find substitutes it even mid-argument.
 find "$HOME/aios" -maxdepth 1 -type d ! -name '.*' -exec sh -c '
   d=$1; n=${d##*/}; NL=$(printf "\nx"); NL=${NL%x}
   case "$n" in
     *.[A-Za-z0-9]*" "*|*.[A-Za-z0-9]*"$NL"*)
       [ "$(find "$d" -type f | wc -l)" -eq 0 ] \
+        && find "$d" -depth -type d -print0 | xargs -0 rmdir 2>/dev/null \
         && printf "%s\n" "$d" | awk -v j="^J" "NR>1{printf j} {printf \"%s\", \$0} END{print \"\"}" ;;
   esac' _ {} \;
 ```
 
 **Both conditions are load-bearing, and the second is what makes this safe to automate.** A vault legitimately contains directories with spaces — `01 - calendar`, `00 - notes`, `02 - assets`, `03 - export`, `04 - backups` — so *"has a space"* alone would flag the entire vault. The extension-followed-by-space shape excludes all five (none contains a `.ext ` sequence), and the zero-files test means a directory holding anything real is never a candidate. Verified against a live vault plus a fixture reproducing the exact residue: **1 true positive, 0 false positives across 9 cases**, including a legitimately-empty space-named folder and an `ext+space` name that does hold files.
 
-Report what you find and remove it — it is empty by construction, so there is nothing to preserve: *"Removed {N} stray empty directories from a previous run's unquoted path list."* If the sweep finds nothing, say nothing. **Never widen this to non-empty directories or to a bare space match** — at that point you are deleting an operator's folders on a name heuristic, which is far worse than the residue.
+The block removes what it finds (each is empty by construction, so there is nothing to preserve) and prints one line per removed directory. Report them: *"Removed {N} stray empty directories from a previous run's unquoted path list."* If the sweep finds nothing, say nothing. **Never widen this to non-empty directories or to a bare space match** — at that point you are deleting an operator's folders on a name heuristic, which is far worse than the residue.
 
 ### 4. Auto-execute post-replace scripts
 
@@ -976,7 +982,7 @@ On the answer:
 ```bash
 cd ~/aios && ~/aios/hooks/aios-commit -m "sync: framework → {short-HEAD} (via /aios:update)" -- {the Tier-1 paths applied this run} .aios-update
 ```
-If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update`. **Framework-sync commits stay DISTINCT from operator session-work commits** (clean attribution), and `aios-commit --vault` at session-end / `/close-day` stays scoped to vault *content* — never framework infra, which is THIS command's domain. Finally `rm -rf /tmp/aios-update-check`.
+If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update`. **Framework-sync commits stay DISTINCT from operator session-work commits** (clean attribution), and `aios-commit --vault` at session-end / `/close-day` stays scoped to vault *content* — never framework infra, which is THIS command's domain. Finally `rm -rf /tmp/aios-update-check /tmp/aios-update-check.lock` — clone first, lock last — unless Step 1's lock refused this run (then neither is this run's to remove).
 
 > **`hash=` is written ONLY by this command, after a clean fully-applied run. NEVER hand-edit it** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65). The rule is about *that field*, and saying so precisely matters now that the file is no longer single-writer: `hooks/aios-star-check --decline` appends `star-ask=` to the same file, deliberately, because a decline must be per-operator rather than per-machine and `.aios-update` is what travels with the vault. It touches nothing else and never reads `hash=`. A rule stated as *"never write this file"* would have been read as forbidding that, or quietly ignored — neither of which protects `hash=`.
 

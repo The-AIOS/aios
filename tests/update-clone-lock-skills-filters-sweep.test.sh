@@ -38,13 +38,17 @@ grep -q 'do NOT run Step 7' "$TMP/err" && ok "1e. …and tells this run not to c
 # with the directory's own mtime as the clock there is nothing missing to misread as stale
 rm -rf "$TMP/lock"; mkdir "$TMP/lock"
 have "$(run_lock)" "rc=1" "1f. a peer's lock with NO contents at all is still a fresh lock → refused"
-touch -t 200001010000 "$TMP/lock"
-have "$(run_lock)" "rc=1" "1g. a lock older than 30 min is NOT cleared by the run that finds it (two runs would both clear it) → refused"
-grep -q 'older than 30 min' "$TMP/err" && grep -q "rm -rf /tmp/aios-update-check && rmdir $TMP/lock" "$TMP/err" && ok "1h. …and the message names the clearing command, clone FIRST and lock LAST (nothing can acquire the lock while the clone is half-deleted)" || no "1h. stale-lock message incomplete or in the wrong order" "$(cat "$TMP/err")"
-[ -d "$TMP/lock" ] && ok "1h'. …and the stale lock is still there for a human to inspect" || no "1h'. the run removed the stale lock by itself"
-grep -q 'aios-update-check /tmp/aios-update-check.lock' "$SPEC" && ok "1i. spec: Step 7 releases the lock with the clone" || no "1i. spec: Step 7 does not release the lock"
+mkdir -p "$TMP/lock/owner-a"; touch -t 200001010000 "$TMP/lock"
+have "$(run_lock)" "rc=0" "1g. a lock older than 30 min is RECLAIMED (unattended /today runs must not wedge on a crash) → acquired"
+grep -q 'reclaimed a stale' "$TMP/err" && ok "1h. …and the reclaim is reported, not silent" || no "1h. stale reclaim not reported" "$(cat "$TMP/err")"
+[ -d "$TMP/lock" ] && [ ! -d "$TMP/lock/owner-a" ] && ok "1h'. …the lock now belongs to this run (the stale one's contents are gone)" || no "1h'. lock not re-acquired cleanly"
+# two runs that both judge it stale: the atomic mv lets exactly one through
+rm -rf "$TMP/lock"; mkdir "$TMP/lock"; touch -t 200001010000 "$TMP/lock"
+( run_lock > "$TMP/r1" ) & ( run_lock > "$TMP/r2" ) & wait
+wins=$(cat "$TMP/r1" "$TMP/r2" | grep -c 'rc=0')
+have "$wins" "1" "1l. two runs racing for one stale lock → exactly one acquires it"
+grep -qF 'Finally `rm -rf /tmp/aios-update-check /tmp/aios-update-check.lock`' "$SPEC" && ok "1i. spec: Step 7's own cleanup line releases the lock with the clone" || no "1i. spec: Step 7's cleanup line does not release the lock" "a model following Step 7 leaves the lock behind"
 grep -q "except when Step 1's lock refused this run" "$SPEC" && ok "1j. spec: Step 7's cleanup is withheld from a refused run" || no "1j. spec: a refused run would still clean up"
-grep -q 'until someone clears it' "$SPEC" && ok "1k. spec: Step 7 says a stale lock persists until cleared, not for 30 minutes" || no "1k. spec: Step 7 still promises the lock expires by itself"
 rm -rf "$TMP/lock"
 
 # ---------------------------------------------------------------------------
@@ -89,15 +93,25 @@ old_through(){ printf '%s\n' "$1" | grep -vE "\.(log|pyc)$|oauth|egg-info|\.sess
 # ---------------------------------------------------------------------------
 # 4. residue sweep, extracted from Step 3 and run over both residue shapes
 # ---------------------------------------------------------------------------
-SWEEP=$(awk '/^find "\$HOME\/aios" -maxdepth 1 -type d ! -name/{f=1} f{print} f&&/_ \{\} \\;$/{exit}' "$SPEC")
+# end marker by fixed string: BSD awk reads `\{\}` as an interval, so a regex end never matched and the
+# extraction silently ran on to the end of the spec (the sweep still printed first, so it "passed")
+SWEEP=$(awk '/^find "\$HOME\/aios" -maxdepth 1 -type d ! -name/{f=1} f{print} f&&index($0,"esac'"'"' _ {} \\;")==1+length($0)-length("esac'"'"' _ {} \\;"){exit}' "$SPEC")
+[ "$(printf '%s\n' "$SWEEP" | grep -c .)" -lt 20 ] && ok "4-'. extraction stops at the end of the sweep block" || no "4-'. extraction ran past the sweep block" "$(printf '%s\n' "$SWEEP" | grep -c .) lines"
 [ -n "$SWEEP" ] && ok "4-. sweep block extracted from Step 3" || no "4-. could not extract the sweep block"
 H="$TMP/home"; mkdir -p "$H/aios/01 - calendar" "$H/aios/CHANGELOG.md SETUP.md" "$H/aios/CHANGELOG.md
 CLAUDE.md
 hooks" "$H/aios/hooks"; echo x > "$H/aios/hooks/h"; echo y > "$H/aios/01 - calendar/n.md"
+mkres(){ mkdir -p "$H/aios/CHANGELOG.md SETUP.md" "$H/aios/CHANGELOG.md
+CLAUDE.md
+hooks"; }
 out=$(HOME="$H" bash -c "$SWEEP" 2>/dev/null | sort)
 printf '%s\n' "$out" | grep -q 'CHANGELOG.md SETUP.md$' && ok "4a. bash: the space-joined residue is found" || no "4a. bash: space-joined residue missed" "$out"
 printf '%s\n' "$out" | grep -q 'CHANGELOG.md^JCLAUDE.md^Jhooks$' && ok "4b. bash: the newline-joined residue is found (printed with ^J)" || no "4b. bash: newline-joined residue missed" "$out"
 have "$(printf '%s\n' "$out" | grep -c .)" "2" "4c. bash: nothing else is flagged (calendar and hooks are left alone)"
+left=$(find "$H/aios" -maxdepth 1 -type d -name 'CHANGELOG.md*' | grep -c .)
+have "$left" "0" "4d. the sweep REMOVED both residue directories itself (a ^J name cannot be typed back)"
+[ -f "$H/aios/hooks/h" ] && [ -f "$H/aios/01 - calendar/n.md" ] && ok "4e. real folders and their files are untouched" || no "4e. the sweep touched a real folder"
+mkres
 if command -v zsh >/dev/null 2>&1; then
   outz=$(HOME="$H" zsh -c "$SWEEP" 2>/dev/null | sort)
   have "$(printf '%s\n' "$outz" | grep -c .)" "2" "4z. zsh (the session shell): both shapes found, nothing else"
@@ -105,6 +119,7 @@ else
   sk "4z. zsh unavailable"
 fi
 # the OLD sweep, transcribed, misses the newline shape — so 4b is not vacuous
+mkres
 old_sweep(){ find "$H/aios" -maxdepth 1 -type d ! -name '.*' -print | while IFS= read -r d; do
   case "$(basename "$d")" in *.[A-Za-z0-9]*\ *) [ "$(find "$d" -type f | wc -l)" -eq 0 ] && echo "$d" ;; esac
 done; }
