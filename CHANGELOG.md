@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — A session without an id no longer loses its second close
 
-`hash: `
+`hash: ` · [#175](https://github.com/The-AIOS/aios/pull/175)
 
 > **What you can now do.** Close a session that runs without a session id — a script, an older headless run — more than once in a day and keep every block it writes.
 
