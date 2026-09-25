@@ -217,7 +217,7 @@ For each layer in `agents`, `skills`, `plugins`, `mcps`, `templates`, `hooks`:
    - **Else** (different from current AND no match in upstream history): treat as real personalization → backup-on-divergence: copy operator's version to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-custom-{name}.md` FIRST, then remove.
    - Log either way: *"Removed `agents/custom/lawyer.md` — duplicate of bundled `agents/aios/finance-legal/lawyer.md`. [Backed up to vault/04 - backups/aios-update-2026-05-25/duplicates/agents-custom-lawyer.md — your version didn't match current or any past bundled; restore manually if you had intentional edits.]"* (bracketed clause only when backed up).
 3. Scan `{layer}/*.md` at the top level (outside any subfolder). Skip `_index.md` (layer-root index is intentional, not an orphan). If a remaining top-level file's basename matches a bundled file → **same stale-vs-personalized test as step 2.** If byte-identical or matches a past bundled version → silent remove. Else → backup to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/{layer}-root-{name}.md` then remove. Log: *"Removed `templates/project-template.md` — duplicate of bundled `templates/aios/project-template.md`."*
-3b. **Folder-based layers (skills/) need directory-level dedup, not just file-level.** A skill is a `{name}/` directory containing `SKILL.md` — so basename-matching on `.md` files (steps 1-3) can't catch a stray skill folder (every skill's file is `SKILL.md`; the identity is the FOLDER name). For `skills/` specifically: build the set of bundled skill-folder names (`basename` of each dir under `skills/aios/`, `skills/anthropic/`, `skills/superpowers/`). Then scan **both** `skills/*/` at root (pre-bundle layout) **and** `skills/custom/*/` for any folder whose name matches a bundled skill-folder name. For each match, apply the same stale-vs-personalized test (content-compare the folder's `SKILL.md` against the bundled one + check upstream history) → remove the stray folder (silent if matched current/past bundled, backup-then-remove if it looks personalized). Never touch `skills/aios/`, `skills/anthropic/`, `skills/superpowers/`, `skills/custom/`-unique folders, or any `_index.md`. (This is the gap that left 60+ pre-bundle skill folders sitting at `skills/` root after migration — they were folders, so the file-basename passes skipped them.)
+3b. **Folder-based layers (skills/) need directory-level dedup, not just file-level.** A skill is a `{name}/` directory containing `SKILL.md` — so basename-matching on `.md` files (steps 1-3) can't catch a stray skill folder (every skill's file is `SKILL.md`; the identity is the FOLDER name). For `skills/` specifically: build the set of bundled skill-folder names (`basename` of each dir under `skills/aios/`, `skills/anthropic/`, `skills/superpowers/`). Then scan **both** `skills/*/` at root (pre-bundle layout) **and** `skills/custom/*/` for any folder whose name matches a bundled skill-folder name. For each match, **compare the whole folder, never only its `SKILL.md`** — `diff -rq "$stray" "$bundled"` (CRLF-normalized, like every compare in this command): remove silently only when *every* file matches the current bundled folder (or a past bundled revision, per the history check). If any file differs, or the stray folder holds files the bundled one lacks — scripts, references, assets an operator added beside an unchanged `SKILL.md` — **back up the whole folder** first — to `vault/04 - backups/aios-update-{YYYY-MM-DD}/duplicates/skills-root-{name}/` for a stray at `skills/{name}/` and `…/duplicates/skills-custom-{name}/` for one at `skills/custom/{name}/` (the same root/custom split steps 2–3 use, so two strays with one name never share a destination) — then remove. A skill *is* its folder; comparing one file and deleting the folder threw away everything that file did not describe. Never touch `skills/aios/`, `skills/anthropic/`, `skills/superpowers/`, `skills/custom/`-unique folders, or any `_index.md`. (This is the gap that left 60+ pre-bundle skill folders sitting at `skills/` root after migration — they were folders, so the file-basename passes skipped them.)
 4. Skip files/folders genuinely unique to `custom/` — those are operator extensions and stay. **All `_index.md` files at any level are also preserved** — navigation metadata is per-folder, never a duplicate.
 5. **Remove now-empty folders.** After steps 2-3b delete duplicate files/folders, a parent dir may be left empty (e.g. a `skills/{name}/` folder whose only content was a removed `SKILL.md`, or a `custom/` subfolder emptied of dups). Walk each touched layer and `rmdir` any directory that is now empty OR contains only an `_index.md` that references nothing. Do NOT remove `{layer}/custom/` itself even when empty — it's the operator's namespace and must persist for future extensions. Log: *"Removed empty folder `skills/old-skill/` (left after duplicate cleanup)."* (This is the gap where prior cleanups removed the `.md` files but left hollow folders behind.)
 
@@ -261,6 +261,26 @@ esac
 # file) + degraded changelog detection. A full clone is text-only, lands in
 # /tmp, and is deleted at the end — the depth optimization traded correctness
 # for a clone-time saving that doesn't matter for an occasional command.
+# ONE UPDATE AT A TIME. The clone path is fixed and shared, so a second /aios:update — two
+# `/today` runs, an operator beside a routine — would `rm -rf` the tree the first one is still
+# comparing, and the first would then report "0 drift" over a directory that no longer exists.
+# The lock is a directory: `mkdir` is atomic and its own mtime IS the start time, so there is
+# no second step (writing a timestamp) during which a peer could read "no timestamp" as "stale".
+# Not a pid: this command runs as many separate shell calls, so no pid survives between steps.
+# A lock older than 30 minutes is almost certainly a crash's leftover (no sync takes that
+# long) — but this run NEVER clears it by itself: two runs that both judge it stale would both
+# clear it and both proceed, which is the two-owner state the lock exists to prevent. It says
+# which one command clears it and stops; a human (or the model, after checking that no other
+# update session or routine is running) removes it, and the next run acquires it normally.
+LOCK=/tmp/aios-update-check.lock
+if ! mkdir "$LOCK" 2>/dev/null; then
+  if [ -n "$(find "$LOCK" -maxdepth 0 -mmin +30 2>/dev/null)" ]; then
+    echo "FATAL: $LOCK is older than 30 min — a previous /aios:update most likely crashed mid-run. Confirm no other update is running (other sessions, routines), then clear it CLONE FIRST, LOCK LAST — rm -rf /tmp/aios-update-check && rmdir $LOCK — so no run can acquire the lock while the clone is still being deleted; then rerun. Do NOT run Step 7's cleanup from this run." >&2
+  else
+    echo "FATAL: another /aios:update holds $LOCK (younger than 30 min) — its clone is not this run's to touch. Rerun when it finishes; do NOT run Step 7's cleanup, the clone and the lock are the other run's." >&2
+  fi
+  exit 1
+fi
 rm -rf /tmp/aios-update-check && git clone --single-branch "$clone_url" /tmp/aios-update-check 2>&1
 ```
 
@@ -627,14 +647,20 @@ For each changed Tier 1 file:
 Step 3's word-splitting warning has shipped since 2026-07-27 and was still violated on 2026-08-12, leaving a 14-deep chain of empty directories in a vault root. That is the predictable outcome of a rule with nothing behind it: an instruction must be read and obeyed on *every* run, while a check runs whether anyone remembered. Worse, this residue is invisible to every other check — `git status` does not report empty directories **at all**, and Step 6.5's reconcile deliberately drops every vault-side `Only in` line. So it accumulates silently, exactly as the warning predicted, and the operator finds it months later wondering who created it.
 
 ```bash
-# A residue dir is named like a JOINED FILE LIST — an extension followed by a
-# space ("CHANGELOG.md SETUP.md …") — and holds ZERO files, because only
-# `mkdir` ever ran. Both conditions are required.
-find "$HOME/aios" -maxdepth 1 -type d ! -name '.*' -print | while IFS= read -r d; do
-  case "$(basename "$d")" in
-    *.[A-Za-z0-9]*\ *) [ "$(find "$d" -type f | wc -l)" -eq 0 ] && echo "$d" ;;
-  esac
-done
+# A residue dir is named like a JOINED FILE LIST and holds ZERO files, because only
+# `mkdir` ever ran. Both conditions are required. The list is joined by a SPACE when a
+# bash word-split it, and by a NEWLINE when zsh — the session shell — did not split at
+# all (the shape the iteration note at the top of Step 3 documents). `find -print | read`
+# would split a newline-named directory into fragments that match neither shape, so each
+# directory is handed to a child shell whole, and a newline inside the name is printed as
+# a literal `^J` so the report stays one line per directory.
+find "$HOME/aios" -maxdepth 1 -type d ! -name '.*' -exec sh -c '
+  d=$1; n=${d##*/}; NL=$(printf "\nx"); NL=${NL%x}
+  case "$n" in
+    *.[A-Za-z0-9]*" "*|*.[A-Za-z0-9]*"$NL"*)
+      [ "$(find "$d" -type f | wc -l)" -eq 0 ] \
+        && printf "%s\n" "$d" | awk -v j="^J" "NR>1{printf j} {printf \"%s\", \$0} END{print \"\"}" ;;
+  esac' _ {} \;
 ```
 
 **Both conditions are load-bearing, and the second is what makes this safe to automate.** A vault legitimately contains directories with spaces — `01 - calendar`, `00 - notes`, `02 - assets`, `03 - export`, `04 - backups` — so *"has a space"* alone would flag the entire vault. The extension-followed-by-space shape excludes all five (none contains a `.ext ` sequence), and the zero-files test means a directory holding anything real is never a candidate. Verified against a live vault plus a fixture reproducing the exact residue: **1 true positive, 0 false positives across 9 cases**, including a legitimately-empty space-named folder and an `ext+space` name that does hold files.
@@ -846,8 +872,15 @@ done
   | grep -vF "Only in '$VAULT" \
   | grep -vE "/custom(/|: )" \
   | grep -vE "(/|: )(\.venv|__pycache__|node_modules|auth|\.DS_Store)(/|$)" \
-  | grep -vE "\.(log|pyc)$|oauth|egg-info|\.session$" \
-  | grep -vE "(\.gitignore|marketplace\.json|mcps/_index\.md)" || true   # dual-owned — merged in Step 2.7, never plain-reconciled
+  | grep -vE "\.(log|pyc)$|(/|: )[^/ ']*oauth[^/ ']*\.json( |'|$)|\.egg-info(/|: | |'|$)|\.session( |'|$)" \
+  | grep -vE "(/|: )\.gitignore( |'|$)|(/|: )marketplace\.json( |'|$)|mcps/_index\.md( |'|$)" || true   # dual-owned — merged in Step 2.7, never plain-reconciled
+# ⚠️ ANCHORED, never bare substrings. A bare `oauth` also matched `skills/anthropic/doc-coauthoring/`
+# (co-OAUTH-oring) and `mcps/…/oauth.json.template` — two framework files whose drift the reconcile
+# then never reported, and it advanced the tracker over them. The runtime files these filters exist
+# for are `*oauth*.json` (the .gitignore pattern), `*.egg-info`, `*.session`, and the three
+# dual-owned names — each matched as a whole path element, not as letters inside another name.
+# A name ends at a space, a closing quote (GNU diff quotes paths that contain a space) or the
+# end of the line. Framework file names carry no spaces, so a space is a safe terminator here.
 # `/custom(/|: )` drops the operator namespace in BOTH line shapes — a
 # `Files …/custom/_index.md … differ` (framework ships a custom/_index.md SEED;
 # the operator's customized copy is Tier-2 denylist, never overwritten) AND any
@@ -979,7 +1012,7 @@ If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update
 - **Tier 2 (operator content) is sacred.** Never touched. Includes everything under the denylist.
 - **Self-update is bootstrap-safe by READING the new spec, not by re-invoking the skill.** When `update.md` itself is in the diff, apply + sync to the plugin pipeline FIRST, then `Read` the applied file and continue this run under it (treat `AIOS_UPDATE_REINVOKED=1` as set). A `Skill(aios:update)` re-invocation does **not** reload an already-loaded skill in the same session — it returns *"instructions unchanged"* and the run continues on the OLD spec, silently defeating the guard. **Recursion is bounded structurally by that env flag, not by the compare succeeding** — the content-compare still short-circuits the normal path (after self-apply local matches upstream → Case A → no re-invoke), but an *indeterminate* compare would otherwise keep answering "not identical" forever. The flag makes at-most-once independent of the measurement. Operator sees one report from the outer run; no manual re-invocation needed. See Step 2.5.
 - **Cross-repo cascades.** When CHANGELOG hashes don't exist in the cloned repo (common for operators syncing from a fork or downstream mirror), fall back to content-comparison via date header + title (see Step 1.5).
-- **Clean up temp clone.** Always `rm -rf /tmp/aios-update-check` at end, even on error.
+- **Clean up temp clone — and release the lock.** Always `rm -rf /tmp/aios-update-check /tmp/aios-update-check.lock` at end, even on error — **except when Step 1's lock refused this run**: a refused run never owned the clone or the lock, and cleaning up would destroy the other run's tree, which is the one thing the lock exists to prevent. The order matters: the clone goes first and the lock last, so nothing can acquire the lock while the clone is still being deleted under it. A lock left behind blocks every later update **until someone clears it** — the 30-minute mark only changes the diagnosis from "another run" to "a crashed run" — while a clone left behind is only disk.
 - Use `[[wiki-links]]` for project names, context files, ventures mentioned in the report.
 
 ## Relationship to /company

@@ -69,6 +69,20 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-25 — Two framework updates no longer collide, and a stray skill folder keeps what you put in it
+
+`hash: `
+
+> **What you can now do.** Run `/aios:update` from two places at once — a morning plan and a routine, say — and get one sync plus one clear "already running" instead of two half-syncs; keep the scripts you added beside a bundled skill; and see drift in every framework file, including two the update used to skip.
+
+**Two updates at once destroyed each other's work.** Every `/aios:update` clones the framework to the same temporary folder and deletes it when done, so a second run starting mid-way wiped the tree the first one was still comparing — and the first then reported nothing to pull. The clone is now guarded by a lock: a second run stops and says so, and a lock older than half an hour — a crashed run's leftover — is reported together with the one command that clears it, rather than cleared automatically by whichever run sees it first.
+
+**A stray copy of a bundled skill was deleted on the strength of one file.** The duplicate cleanup (`--cleanup`) compared only `SKILL.md`; if that matched, the whole folder went, including any scripts or references you had added beside it. It now compares the whole folder and backs it up first when anything differs.
+
+**Two framework files were invisible to the completeness check.** A filter meant to skip OAuth credential files matched any path containing the letters `oauth` — which included the `doc-coauthoring` skill and the OAuth *template* the framework ships — so their drift was never reported. The filters now match whole names. And the sweep for stray empty folders left by an older bug looked for the space-joined shape only; on macOS the leftover is newline-joined, and it now finds both.
+
+**Action required:** none.
+
 ## 2026-09-24 — A security audit for your code, routines that stay inside the sandbox, and a morning plan that checks two weeks out
 
 `hash: 65227d0 · e8bad7a · c1396c3 · 6401d87 · ea99bbd · 6292b09 · a8ed263 · ba0751f · 24d7c51 · 5fe7850 · 409cc22 · 15a1291 · 27ea3a1 · 000f325 · 346bbc4 · 6907b7f · 871ee23` · [#170](https://github.com/The-AIOS/aios/pull/170) · [#172](https://github.com/The-AIOS/aios/pull/172) · [#173](https://github.com/The-AIOS/aios/pull/173) · [#174](https://github.com/The-AIOS/aios/pull/174)
