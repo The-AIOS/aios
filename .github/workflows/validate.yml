@@ -1113,6 +1113,9 @@ jobs:
       - name: /close-session asks before it writes the block, and says None for empty fields
         # Questions gathered before the committed block, step 8 verify-only, the --auto exception covering every observed write, one rule for empty fields — with mutated copies proving each check can fail.
         run: bash tests/close-session-order-and-fields.test.sh
+      - name: commands archive observed context through hooks/aios-snapshot
+        # A command that names the dated snapshot destination must name the helper; none may prescribe the by-hand next-free-letter step.
+        run: bash tests/commands-snapshot-helper.test.sh
 
       - name: two Windows probes that answered an adjacent question
         # `command -v python3` succeeds on the Microsoft Store App Execution Alias — a real file

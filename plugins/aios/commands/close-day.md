@@ -721,8 +721,11 @@ For each Tier B file (`growth.md`, `profile.md`, `ecosystem.md`):
 
 **Before modifying any observed context file**, archive the previous version:
 
-1. Copy the current file to `00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-{filename}.md` (create the monthly subfolder if needed)
-   - **If that destination already exists, never overwrite it.** Identical content → done, no second copy. Different content → **next free letter** (`{YYYY-MM-DD}b-`, then `c-`, `d-`…). The path carries the day and the filename but **not the writer**, so a peer session that archived the same file today owns that destination — and `cp` exits 0 either way, so a collision looks exactly like a success. `/close-day` is the single-writer consolidator, which makes it *more* exposed here, not less: it runs after N sessions have already closed.
+1. Archive it with the helper — **never a hand-rolled `cp`**:
+   ```bash
+   ~/aios/hooks/aios-snapshot "vault/00 - notes/context/observed/{filename}.md"
+   ```
+   It writes `00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-{filename}.md` (creating the month folder) and prints one line: `snapshot <dest>` (archived) · `identical <dest>` (an existing archive already holds this exact content — nothing written, **and that is success**) · `collision <dest>` (differed from every existing variant, took the next free letter). That path carries the day and the filename but **not the writer**, so a peer session that archived the same file today owns the base destination — and a plain `cp` exits 0 either way, so a collision looks exactly like a success. The helper takes both decisions under a lock and compares against *every* existing variant, which the old copy-then-pick-a-letter protocol could not do atomically. `/close-day` is the single-writer consolidator, which makes it *more* exposed here, not less: it runs after N sessions have already closed.
    - If you already edited the file, use `git show HEAD:"vault/00 - notes/context/observed/{file}"` to recover the previous version
    - **Skip snapshots for stub files** — if an observed file contains only frontmatter and seed text (no real observations yet), there is nothing to archive. Start snapshotting once the file has actual content.
 2. After archiving, edit the live observed file
