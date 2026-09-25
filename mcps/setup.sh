@@ -79,7 +79,7 @@ if [ -z "$PY" ]; then
   echo "✗ No working Python found (python3 / python / py -3 all failed)."
   echo "  On Windows: install Python from python.org, then disable the Store alias —"
   echo "  Settings → Apps → Advanced app settings → App execution aliases → turn OFF"
-  echo "  python.exe and python3.exe. Node-only MCPs (slack/github/stitch) still set up below."
+  echo "  python.exe and python3.exe. Node-only MCPs (slack/stitch) still set up below."
   echo ""
 fi
 
@@ -177,17 +177,6 @@ if want atlassian-mcp && [ -d "$SCRIPT_DIR/atlassian-mcp" ]; then
   fi
 fi
 
-# --- GitHub MCP (vendored via npx, no install needed) ---
-if want github-mcp && [ -d "$SCRIPT_DIR/github-mcp" ]; then
-  echo "→ github-mcp..."
-  if ! command -v npx >/dev/null 2>&1; then
-    echo "  ⚠ npx not found — install Node.js first"
-  else
-    npx -y @modelcontextprotocol/server-github --help >/dev/null 2>&1 || true
-    echo "  ✓ ready (invoked via npx @modelcontextprotocol/server-github at runtime)"
-  fi
-fi
-
 # --- Nano Banana MCP (Gemini image gen) ---
 if want nano-banana-mcp && [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && [ ! -d "$SCRIPT_DIR/nano-banana-mcp/.venv" ]; then
   echo "→ nano-banana-mcp..."
@@ -247,7 +236,6 @@ echo "  • pdf-generator    : no auth (works immediately — just register)"
 echo "  • google-workspace : uvx workspace-mcp (opens browser on first call)"
 echo "  • slack            : npx -y @jtalk22/slack-mcp --refresh-tokens  (extracts from Chrome; posts AS YOU)"
 echo "  • notebooklm       : run 'notebooklm login' from mcps/notebooklm-mcp/.venv/bin (Unix) or .venv/Scripts (Windows)"
-echo "  • github           : export GITHUB_TOKEN (Personal Access Token)"
 echo "  • atlassian        : export ATLASSIAN_URL / ATLASSIAN_USERNAME / ATLASSIAN_API_TOKEN"
 echo "  • nano-banana      : export GEMINI_API_KEY (requires Cloud Billing enabled — ~\$0.04/image)"
 echo "  • spotify-dj       : export SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET (Developer app)"

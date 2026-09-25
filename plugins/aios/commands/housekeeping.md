@@ -491,7 +491,6 @@ The framework vendors content from upstream repos in two places: **skills** (sou
 | 18.1 | `skills/superpowers/` | skill | 🟡 behind | 7 commits | [ ] review changes |
 | 18.2 | `skills/anthropic/` | skill | 🟢 current | — | — |
 | 18.3 | `mcps/atlassian-mcp/` | mcp | 🟡 behind | 23 commits since 2026-05-21 | [ ] review (may require deps + restart) |
-| 18.4 | `mcps/github-mcp/` | mcp | 🟢 current | — | — |
 
 **For approved pulls (skills):**
 - Update `skills/<source>/.upstream-sync` with new hash + date

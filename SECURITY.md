@@ -128,7 +128,6 @@ These folders hold configuration and documentation; **the program that actually 
 
 | Server | Source | Status |
 |---|---|---|
-| `github-mcp` | `npx @modelcontextprotocol/server-github` at runtime (Anthropic's own server, upstream commit recorded) | **unpinned** — resolved at launch; a session discloses the version and what it declares before connecting |
 | `atlassian-mcp` | `uvx mcp-atlassian` at runtime | **unpinned** — resolved at launch; a session discloses the version and what it declares before connecting |
 | Google Workspace server | `uvx workspace-mcp` at runtime | **unpinned** — resolved from the registry at launch, so a session discloses the version and what it declares before connecting it |
 | `obsidian-mcp` | `npx @mauricio.wolff/mcp-obsidian@latest` | **unpinned** — resolved from the registry at launch, so a session discloses the version and what it declares before connecting it |
