@@ -133,6 +133,20 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
    ```
 
    An HTML comment renders invisibly in Obsidian and in every markdown preview, so the note stays clean for the human while carrying the identity the machine needs.
+4.7. **Ask before you write** (interactive only — under `--auto` both questions are skipped, per § Non-interactive mode). The block written in step 5 is **committed** by the helper the moment it lands, and the helper only appends — it cannot amend a block afterwards. So everything the block must contain is gathered *now*, before step 5, and steps 8 and 9 only verify it landed — they never ask again, write a second block, or reopen the first.
+
+   **a. Most useful.** If the session was substantive (>30 min, meaningful work), ask *"What was most useful for you in this session?"* and keep the verbatim answer for the block's `**Most useful:**` field.
+
+   **b. Comprehension (CLAUDE.md § VI → "Comprehension debt").** Scan this session for changes the operator did *not* author themselves: commits by spawned workers / other agent sessions, files written by background subagents, anything `/aios:update` or an autonomous loop changed. **If there are none, skip this step silently** (the operator authored everything → no debt to surface). If there are:
+
+   **b1. Recap first — bullet the surface area.** Lead with a tight enumerated list of *everything* that shipped this session — one line per item: *what* shipped · *what it does* · *where it lives* (file / PR / repo / URL). **This recap is mandatory and comes before the offer.** The operator can't ask about what they don't know shipped — an offer with no list is the exact failure mode ("you don't know what you don't know"). Group by surface if it's a lot (vault / canonical / site / external).
+
+   **b2. Then offer, don't quiz:**
+
+   > *"☝️ That's everything that shipped this session. Want me to walk you through any of it? The bar isn't reading every line — it's that you understand what shipped well enough to defend, debug, or decide on it later. Anything you'd like me to explain?"*
+
+   Walk through whatever the operator asks about (the *why* + failure modes, not a line reading). What they decline to grasp goes into the session block's `**Comprehension:**` field and an `**Open threads:**` carry — marked *un-grasped*, not *done* — so `/close-day` can resurface it. The debt is the operator's (they're the one who owns the system in a room); your job is to keep it low, never to wave agent output through on their behalf. Full mechanism: the `comprehension-debt` skill.
+
 5. **Append the session block via the race-safe helper — never write the note directly** (a concurrent Close-all broadcast fires several vault sessions at once; a direct read-append-write would clobber). Write the block (format below) to a temp file, then:
    ```bash
    ~/aios/hooks/aios-note-append \
@@ -182,15 +196,7 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
    - Note Tier B candidates in this session's daily-note block under `**Observed (Tier B candidates):**` — e.g. *"possible growth edge: re-secuenciar > apurar el cierre, 3rd instance this month"*. One line each. Date + evidence. No write to growth/profile/ecosystem.md.
    - `/close-day` runs the digest across all sessions, the daily note, and recent antifragile/session-insights, then writes to Tier B files when the substance bar passes (see `/close-day` § Tier B observation pass for the bar + per-file feed-in sources).
    - **Why this split:** close-session is single-session scope; close-day has cross-session + daily synthesis context. Writing Tier B from close-session would amplify per-session noise (same insight surfacing 3 times across 3 close-sessions, written 3 times). Close-day consolidates the signal.
-8. **Comprehension ledger** — guard the operator's understanding against what the agents shipped (CLAUDE.md § VI → "Comprehension debt"). Scan this session for changes the operator did *not* author themselves: commits by spawned workers / other agent sessions, files written by background subagents, anything `/aios:update` or an autonomous loop changed. **If there are none, skip this step silently** (the operator authored everything → no debt to surface). If there are:
-
-   **a. Recap first — bullet the surface area.** Lead with a tight enumerated list of *everything* that shipped this session — one line per item: *what* shipped · *what it does* · *where it lives* (file / PR / repo / URL). **This recap is mandatory and comes before the offer.** The operator can't ask about what they don't know shipped — an offer with no list is the exact failure mode ("you don't know what you don't know"). Group by surface if it's a lot (vault / canonical / site / external).
-
-   **b. Then offer, don't quiz:**
-
-   > *"☝️ That's everything that shipped this session. Want me to walk you through any of it? The bar isn't reading every line — it's that you understand what shipped well enough to defend, debug, or decide on it later. Anything you'd like me to explain?"*
-
-   Walk through whatever the operator asks about (the *why* + failure modes, not a line reading). What they decline to grasp goes into the session block's `**Comprehension:**` field and an `**Open threads:**` carry — marked *un-grasped*, not *done* — so `/close-day` can resurface it. The debt is the operator's (they're the one who owns the system in a room); your job is to keep it low, never to wave agent output through on their behalf. Full mechanism: the `comprehension-debt` skill.
+8. **Comprehension ledger — verify, don't ask again.** The recap and the offer ran at step 4.7, before the block was written, and their outcome is already in the block: the `**Comprehension:**` field, and an `**Open threads:**` carry for anything the operator declined to walk through (marked *un-grasped*, not *done*). This step only confirms both are there. **Never repeat the recap or the offer here** — the block is committed, the helper only appends, and an answer given now would have nowhere to go. If nothing agent-authored shipped, the field reads "All operator-authored".
 
 9. **Self-update verification** — before commit, walk the CLAUDE.md Session End rules to confirm step 7 wasn't skipped. The compounding promise of the AI-OS lives in routing, not logging.
 
@@ -198,11 +204,11 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
    - [ ] Updated `session-insights.md` per CLAUDE.md → "Self-Update → Observed Context Rules" — Emerging / Reinforced / Routed lifecycle; ≤10 Emerging, ≤5 Reinforced
    - [ ] Updated other observed files when warranted (per CLAUDE.md → "Observed Context Rules" — patterns / preferences / business / ecosystem / growth / profile)
    - [ ] Wrote to `antifragile.md` if the user corrected me OR I caught my own system-level mistake (per CLAUDE.md mandatory triggers)
-   - [ ] Asked "What was most useful?" if the session was substantive (>30 min, meaningful work — per CLAUDE.md Session End step 4); verbatim answer captured in the session block's `**Most useful:**` field
+   - [ ] Asked "What was most useful?" **at step 4.7, before the block was written** — if the session was substantive (>30 min, meaningful work — per CLAUDE.md Session End step 4); verbatim answer captured in the session block's `**Most useful:**` field
 
-   If any unchecked, complete it now before commit.
+   If any unchecked, complete it now before commit. **Under `--auto`, every observed-context item above — `session-insights.md`, the other observed files, and `antifragile.md` — is satisfied by the candidates captured in the block's `**Observed (Tier A candidates):**` field** (§ Non-interactive mode defers every Tier A write to `/close-day`, the single writer); snapshotting and stamping apply only to files actually edited, which under `--auto` is none. Writing the observed files directly would reintroduce the parallel-close race that mode exists to avoid.
 
-   **Logging is not routing.** Don't commit until each insight from this session lives in `session-insights.md` (or routed onward to its target observed file). The daily-note "What I learned" is a holding cell, not a destination. The AI-OS compounds on routing — capture-only is stranded.
+   **Logging is not routing** (interactive closes; under `--auto` the captured candidates *are* the routing, and `/close-day` completes it). Don't commit until each insight from this session lives in `session-insights.md` (or routed onward to its target observed file). The daily-note "What I learned" is a holding cell, not a destination. The AI-OS compounds on routing — capture-only is stranded.
 
 10. **Commit any observed-context you touched via `aios-commit`** (the note block was already committed by `aios-note-append` in step 5). **NEVER `git add -A`** — in a concurrently-written vault it sweeps other sessions' + the human's in-flight files into your commit (scrambled attribution). Commit only the paths you changed:
    ```bash
@@ -231,7 +237,7 @@ Append this to the daily note:
 **Learned:**
 - {Pattern-level insight, not task-level}
 
-**Most useful:** {User's verbatim answer to "What was most useful for you in this session?" One line, in their words. Skip if not asked — quick session, no substantive work.}
+**Most useful:** {User's verbatim answer to "What was most useful for you in this session?" One line, in their words. Write "None — not asked" when the question was not asked (a quick session with no substantive work, or `--auto`). The field is always present: `/close-day` parses the block.}
 
 **Open threads:**
 - [ ] {Unfinished items — these feed next session or close-day carries. Write "None" if the session closed cleanly. Don't fabricate threads to fill the field.}
@@ -239,10 +245,10 @@ Append this to the daily note:
 **Comprehension:** {Of the agent-authored changes this session (work the operator didn't write themselves), what the operator now understands well enough to own — and what they declined to walk through (rolls forward as comprehension debt, not done). Write "All operator-authored" if nothing was agent-shipped this session. The bar is understanding (defend/debug/decide), not line-by-line reading. Don't fabricate. See the `comprehension-debt` skill.}
 
 **Observed (Tier A candidates):**
-- {**Under `--auto` only** (deferred routing — see § Non-interactive `--auto` mode): one-line captures of Tier A observations this session would otherwise have written inline — session-insights entries, confirmed patterns, preferences, business/venture insights, antifragile corrections. `/close-day` routes these as the single writer (Tier A → the target file, snapshot first). Format: `{observation} → {target file} _(evidence)_`. Interactive closes write Tier A inline and put "Routed inline" here. Skip the field entirely if nothing surfaced. Don't fabricate.}
+- {**Under `--auto` only** (deferred routing — see § Non-interactive `--auto` mode): one-line captures of Tier A observations this session would otherwise have written inline — session-insights entries, confirmed patterns, preferences, business/venture insights, antifragile corrections. `/close-day` routes these as the single writer (Tier A → the target file, snapshot first). Format: `{observation} → {target file} _(evidence)_`. Interactive closes write Tier A inline and put "Routed inline" here. Write "None" when nothing surfaced. Don't fabricate.}
 
 **Observed (Tier B candidates):**
-- {One-line capture of any growth / profile / ecosystem candidates surfaced this session — observations about the OPERATOR (not work mechanics). Skip the field entirely if nothing surfaced. Don't fabricate to fill it. Examples: "possible growth edge: re-secuenciar > apurar (3rd instance this month)" / "ecosystem shift: {a collaborator} is now in advisor-grade orbit, not weekly-collab" / "profile signal: integrative work AND presentation work compound together, naming the integrative posture as identity-level" — these become feed-in for /close-day's Tier B digest later, which decides whether they pass the substance bar to write.}
+- {One-line capture of any growth / profile / ecosystem candidates surfaced this session — observations about the OPERATOR (not work mechanics). Write "None" when nothing surfaced. Don't fabricate to fill it. Examples: "possible growth edge: re-secuenciar > apurar (3rd instance this month)" / "ecosystem shift: {a collaborator} is now in advisor-grade orbit, not weekly-collab" / "profile signal: integrative work AND presentation work compound together, naming the integrative posture as identity-level" — these become feed-in for /close-day's Tier B digest later, which decides whether they pass the substance bar to write.}
 
 **Energy:** {One honest word — sharp, scattered, fading, deep flow}
 ```
@@ -309,7 +315,7 @@ duration: {estimated hours}
 {Free context — insights, problems found, patterns noticed, blockers}
 
 ## Most useful
-{User's verbatim answer to "What was most useful for you in this session?" One line, in their words. Skip if not asked.}
+{User's verbatim answer to "What was most useful for you in this session?" One line, in their words. Write "None — not asked" when the question was not asked.}
 
 ## Observed
 <!-- Optional: patterns, preferences, or growth edges noticed about the user during this session.
@@ -321,7 +327,7 @@ duration: {estimated hours}
      observations about the OPERATOR, not about work mechanics. Single sessions lack the cross-session
      view to clear the substance bar, so we capture here and /close-day decides whether to write to
      growth.md / profile.md / ecosystem.md via its Tier B digest pass.
-     Skip entirely if nothing surfaced. Don't fabricate. Examples:
+     Write "None" when nothing surfaced. Don't fabricate. Examples:
      - "possible growth edge: re-secuenciar > apurar (3rd instance this month)"
      - "ecosystem shift: {person} now in advisor-grade orbit, not weekly-collab" -->
 

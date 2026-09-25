@@ -1110,6 +1110,9 @@ jobs:
       - name: commits and the secret scanner fail closed
         # The commit message is scanned, a missing scanner refuses, a NUL byte does not hide a token, and a --vault sweep that cannot read the repo refuses — each reproduced against the previous hooks when the base commit is available.
         run: bash tests/commit-scan-fail-closed.test.sh
+      - name: /close-session asks before it writes the block, and says None for empty fields
+        # Questions gathered before the committed block, step 8 verify-only, the --auto exception covering every observed write, one rule for empty fields — with mutated copies proving each check can fail.
+        run: bash tests/close-session-order-and-fields.test.sh
 
       - name: two Windows probes that answered an adjacent question
         # `command -v python3` succeeds on the Microsoft Store App Execution Alias — a real file
