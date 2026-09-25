@@ -1101,6 +1101,10 @@ jobs:
         # produces the downgrade on the same inputs.
         run: bash tests/update-local-ahead.test.sh
 
+      - name: /aios:update fails closed when a measurement did not run
+        # Hash helpers without shasum, the order-preserving .gitignore carry, the merge that refuses an unreadable canonical, a missing layer dir surfacing as drift — each old shape runs beside the new one.
+        run: bash tests/update-measure-fail-closed.test.sh
+
       - name: two Windows probes that answered an adjacent question
         # `command -v python3` succeeds on the Microsoft Store App Execution Alias — a real file
         # on PATH that exits 49 and prints an install notice — so connect.sh passed its own
