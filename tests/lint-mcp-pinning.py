@@ -74,10 +74,8 @@ STDLIB = {
 # there; the lint simply could not see them.
 KNOWN_UNPINNED = {
     "@mauricio.wolff/mcp-obsidian",
-    "@jtalk22/slack-mcp",
     "@_davideast/stitch-mcp",
     "workspace-mcp",
-    "mcp-atlassian",
 }
 
 # Prose mentions the word without invoking anything — "npx-based MCPs need it".

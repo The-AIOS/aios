@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Ink ground -->
+  <rect x="0" y="0" width="512" height="512" rx="96" ry="96" fill="#0b0b0c"/>
+
+  <!-- Stylized hashtag/channel symbol in paper -->
+  <g fill="none" stroke="#eeebe3" stroke-width="36" stroke-linecap="round">
+    <!-- Vertical lines -->
+    <line x1="180" y1="140" x2="160" y2="372"/>
+    <line x1="352" y1="140" x2="332" y2="372"/>
+    <!-- Horizontal lines -->
+    <line x1="120" y1="200" x2="392" y2="200"/>
+    <line x1="120" y1="312" x2="392" y2="312"/>
+  </g>
+
+  <!-- Notification badge -->
+  <circle cx="408" cy="104" r="34" fill="#e5482f"/>
+</svg>

@@ -1,0 +1,10 @@
+{
+  "profile_name": "oncall-handoff",
+  "workflow_kind": "incident_room",
+  "channels": [],
+  "priority_people": [],
+  "retention_mode": "persistent",
+  "summary_cadence": "on_demand",
+  "structured_keys": ["incident_summary", "timeline", "open_risks", "owner_gaps", "next_actions"],
+  "_template_notes": "Apply with: slack-mcp --apply-template oncall-handoff --channels C012345,C067890 --priority-people U0PRIME,U0SECONDARY. retention_mode=persistent so the next responder can see prior incident context. Run slack_catch_me_up against this profile before each handoff."
+}

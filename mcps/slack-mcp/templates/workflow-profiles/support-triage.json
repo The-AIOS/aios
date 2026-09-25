@@ -1,0 +1,16 @@
+{
+  "profile_name": "support-triage",
+  "workflow_kind": "support_inbox",
+  "channels": [],
+  "priority_people": [],
+  "retention_mode": "ephemeral",
+  "summary_cadence": "daily_8am",
+  "structured_keys": [
+    "open_threads",
+    "ack_lag",
+    "owner_gaps",
+    "escalations",
+    "next_actions"
+  ],
+  "_template_notes": "Apply with: slack-mcp --apply-template support-triage --channels C0SUPPORT,C0ESCALATIONS. summary_cadence=daily_8am needs Pro or Team for the scheduled morning DM (in development). Free tier can run on_demand."
+}

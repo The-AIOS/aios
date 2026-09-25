@@ -1,8 +1,12 @@
 {
   "name": "@jtalk22/slack-mcp",
   "mcpName": "io.github.jtalk22/slack-mcp-server",
-  "version": "3.2.5",
-  "description": "Claude-first Slack MCP for self-host or managed Cloud, with Gemini CLI, deployment review, and secure-default HTTP.",
+  "version": "5.0.0",
+  "description": "Catch up on Slack without reading it. Unreads, threads, search. Browser-session or hosted OAuth.",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/jtalk22"
+  },
   "type": "module",
   "main": "src/server.js",
   "bin": {
@@ -13,6 +17,7 @@
     "slack-mcp-setup": "scripts/setup-wizard.js"
   },
   "scripts": {
+    "test": "node --test",
     "start": "node src/server.js",
     "http": "node src/server-http.js",
     "web": "node src/web-server.js",
@@ -24,48 +29,56 @@
     "tokens:auto": "node scripts/token-cli.js auto",
     "tokens:clear": "node scripts/token-cli.js clear",
     "screenshot": "node scripts/capture-screenshots.js",
-    "build:social-preview": "node scripts/build-social-preview.js",
+    "build:social-preview": "node scripts/record-proof-reel.js --posters",
     "build:public-pages": "node scripts/generate-public-pages.js",
     "build:demo-mobile": "node scripts/build-mobile-demo.js",
     "build:demo-mobile:gif": "node scripts/build-mobile-demo.js --gif",
     "record-demo": "node scripts/record-demo.js",
+    "record-proof": "node scripts/record-proof-reel.js",
+    "build:media-manifest": "node scripts/media-manifest.js",
     "social-preview:update": "node scripts/update-github-social-preview.js --headed",
+    "bookmarklet": "node scripts/generate-bookmarklet.js",
     "cf:browser": "node scripts/cloudflare-browser-tool.js",
-    "metrics:release-health": "node scripts/collect-release-health.js",
-    "metrics:release-health:delta": "node scripts/build-release-health-delta.js",
-    "impact:push:v3": "node scripts/impact-push-v3.js --dry-run",
-    "impact:push:v3:apply": "node scripts/impact-push-v3.js --apply",
     "verify:attribution-guardrail": "node scripts/verify-attribution-guardrail.js",
+    "verify:dependabot-auto-merge": "node scripts/verify-dependabot-auto-merge.js",
     "verify:public-pages": "node scripts/verify-generated-public-pages.js",
     "verify:version-parity": "node scripts/check-version-parity.js",
     "verify:public-surface": "node scripts/check-public-surface-integrity.js",
+    "measure:tools": "node scripts/measure-tool-schema.js",
+    "verify:media-manifest": "node scripts/media-manifest.js --check",
     "verify:release-dry-run": "node scripts/release-preflight.js",
     "smoke:browser": "node scripts/browser-smoke.js",
     "smoke:browser:live": "node scripts/browser-smoke.js --mode live"
   },
   "keywords": [
-    "claude",
     "mcp",
+    "mcp-server",
     "model-context-protocol",
     "slack",
-    "slack-api",
-    "claude-desktop",
-    "cli",
-    "developer-tools",
-    "mcp-server",
-    "session-based",
-    "claude-code",
-    "gemini-cli",
-    "local-first",
-    "remote-mcp",
-    "session-mirroring",
     "slack-mcp",
-    "secure-by-default",
-    "llm",
+    "slack-api",
     "slack-integration",
+    "oauth-free",
+    "no-admin-approval",
+    "session-based",
+    "local-first",
     "ai-agents",
+    "llm",
+    "developer-tools",
     "automation",
-    "productivity"
+    "productivity",
+    "claude",
+    "claude-code",
+    "cursor",
+    "copilot",
+    "windsurf",
+    "gemini-cli",
+    "codex-cli",
+    "remote-mcp",
+    "triage",
+    "catch-up",
+    "unread",
+    "standup"
   ],
   "author": {
     "name": "Revasser",
@@ -85,8 +98,9 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.0",
-    "express": "^4.18.2"
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "express": "^5.2.1"
   },
   "files": [
     "src/",
@@ -95,9 +109,13 @@
     "public/share.html",
     "scripts/setup-wizard.js",
     "scripts/token-cli.js",
+    "scripts/apply-template.js",
+    "scripts/measure-tool-schema.js",
+    "templates/workflow-profiles/",
     "docs/SETUP.md",
     "docs/API.md",
     "docs/TROUBLESHOOTING.md",
+    "docs/DEPLOYMENT-MODES.md",
     "docs/assets/icon.svg",
     "docs/assets/icon-512.png",
     "README.md",
@@ -106,6 +124,10 @@
     "smithery.yaml"
   ],
   "devDependencies": {
-    "playwright": "^1.57.0"
+    "@modelcontextprotocol/client": "^2.0.0",
+    "playwright": "^1.62.1"
+  },
+  "overrides": {
+    "ip-address": "^10.1.1"
   }
 }

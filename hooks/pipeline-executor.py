@@ -670,7 +670,7 @@ def slack_unreads():
     import requests
 
     if not SLACK_TOKENS_PATH.exists():
-        raise FileNotFoundError(f"Slack tokens not found at {SLACK_TOKENS_PATH}. Run `npx -y @jtalk22/slack-mcp --setup` to configure.")
+        raise FileNotFoundError(f"Slack tokens not found at {SLACK_TOKENS_PATH}. Run `npx -y @jtalk22/slack-mcp@5.0.0 --setup` to configure.")
 
     tokens = json.loads(SLACK_TOKENS_PATH.read_text())
     token = tokens.get("SLACK_TOKEN", "")
@@ -1015,7 +1015,7 @@ def run_pipeline(command_name):
     elif "slack" in errors:
         lines.extend(["## Slack Unreads",
                        f"❌ FAILED: {errors['slack']}",
-                       "Fix: Slack browser tokens expired. Run `npx -y @jtalk22/slack-mcp --setup` to re-extract tokens from Chrome.", ""])
+                       "Fix: Slack browser tokens expired. Run `npx -y @jtalk22/slack-mcp@5.0.0 --setup` to re-extract tokens from Chrome.", ""])
 
     # Slack daily recap (close-day only)
     if "slack_recap" in results:

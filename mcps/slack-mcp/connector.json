@@ -10,7 +10,7 @@
     "command": "npx",
     "args": [
       "-y",
-      "@jtalk22/slack-mcp"
+      "@jtalk22/slack-mcp@5.0.0"
     ],
     "env": {}
   },
@@ -18,8 +18,8 @@
   "guided": {
     "why": "Credentials are extracted from your already-signed-in Chrome rather than typed, so no token is ever pasted or stored by the framework.",
     "steps": [
-      "npx -y @jtalk22/slack-mcp --setup",
-      "npx -y @jtalk22/slack-mcp@latest --doctor   # verify"
+      "npx -y @jtalk22/slack-mcp@5.0.0 --setup",
+      "npx -y @jtalk22/slack-mcp@5.0.0 --doctor   # verify"
     ],
     "note": "The registration itself needs no secret — `env` is empty by design. Do NOT infer 'has a key' from the registration (audit finding 4)."
   }

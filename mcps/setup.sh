@@ -149,8 +149,8 @@ if want slack-mcp && [ -d "$SCRIPT_DIR/slack-mcp" ]; then
   if ! command -v npx >/dev/null 2>&1; then
     echo "  ⚠ npx not found — install Node.js first"
   else
-    npx -y @jtalk22/slack-mcp --version >/dev/null 2>&1 \
-      && echo "  ✓ ready (invoked via npx @jtalk22/slack-mcp at runtime)" \
+    npx -y @jtalk22/slack-mcp@5.0.0 --version >/dev/null 2>&1 \
+      && echo "  ✓ ready (invoked via npx @jtalk22/slack-mcp@5.0.0 at runtime)" \
       || echo "  ✓ ready (will install on first invocation)"
   fi
 fi
@@ -183,10 +183,10 @@ if want atlassian-mcp && [ -d "$SCRIPT_DIR/atlassian-mcp" ]; then
     echo "  ⚠ neither uvx nor pipx found — install one ($(pkg_hint uv)), then re-run"
   else
     if command -v uvx >/dev/null 2>&1; then
-      uvx --help mcp-atlassian >/dev/null 2>&1 || uvx mcp-atlassian --help >/dev/null 2>&1 || true
-      echo "  ✓ ready (invoked via uvx mcp-atlassian at runtime)"
+      uvx 'mcp-atlassian==0.23.1' --help >/dev/null 2>&1 || true
+      echo "  ✓ ready (invoked via uvx mcp-atlassian==0.23.1 at runtime)"
     else
-      pipx install mcp-atlassian --force 2>/dev/null
+      pipx install 'mcp-atlassian==0.23.1' --force 2>/dev/null
       echo "  ✓ installed via pipx"
     fi
   fi
@@ -249,7 +249,7 @@ echo ""
 echo "Manual auth steps per MCP (if you prefer):"
 echo "  • pdf-generator    : no auth (works immediately — just register)"
 echo "  • google-workspace : uvx workspace-mcp (opens browser on first call)"
-echo "  • slack            : npx -y @jtalk22/slack-mcp --refresh-tokens  (extracts from Chrome; posts AS YOU)"
+echo "  • slack            : npx -y @jtalk22/slack-mcp@5.0.0 --refresh-tokens  (extracts from Chrome; posts AS YOU)"
 echo "  • notebooklm       : run 'notebooklm login' from mcps/notebooklm-mcp/.venv/bin (Unix) or .venv/Scripts (Windows)"
 echo "  • atlassian        : export ATLASSIAN_URL / ATLASSIAN_USERNAME / ATLASSIAN_API_TOKEN"
 echo "  • nano-banana      : export GEMINI_API_KEY (requires Cloud Billing enabled — ~\$0.04/image)"

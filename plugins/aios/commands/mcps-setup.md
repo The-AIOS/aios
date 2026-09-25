@@ -144,12 +144,12 @@ Guidance to the user (one message):
 > 1. Make sure you're signed into Slack in **Chrome** (not the desktop app — the web version at `app.slack.com`)
 > 2. Quit Chrome completely, then re-open it. Token extraction needs a fresh Chrome launch to read the keychain.
 >    `osascript -e 'tell application "Google Chrome" to quit' && sleep 1 && open -a "Google Chrome"`
-> 3. Run: `npx -y @jtalk22/slack-mcp --refresh-tokens` — auto-extracts your `xoxc-` (token) + `xoxd-` (cookie) from Chrome, caches to `~/.slack-mcp-tokens.json`
-> 4. Verify: `npx -y @jtalk22/slack-mcp --status` — should print `Status: VALID`, your user name, your team
+> 3. Run: `npx -y @jtalk22/slack-mcp@5.0.0 --refresh-tokens` — auto-extracts your `xoxc-` (token) + `xoxd-` (cookie) from Chrome, caches to `~/.slack-mcp-tokens.json`
+> 4. Verify: `npx -y @jtalk22/slack-mcp@5.0.0 --status` — should print `Status: VALID`, your user name, your team
 
 - **Env vars:** none. Tokens live in the local file, not zshrc.
-- **Register:** `claude mcp add slack -- npx -y @jtalk22/slack-mcp`
-- **Validation:** `npx -y @jtalk22/slack-mcp --status` returns `VALID`. Then `claude mcp list` shows `slack: ✓ Connected`.
+- **Register:** `claude mcp add slack -- npx -y @jtalk22/slack-mcp@5.0.0`
+- **Validation:** `npx -y @jtalk22/slack-mcp@5.0.0 --status` returns `VALID`. Then `claude mcp list` shows `slack: ✓ Connected`.
 - **Token refresh:** if the user logs out of Slack in Chrome or rotates their Slack password, re-run step 3. One command, no new auth.
 - **What the user gets:** send messages, read threads, search, list channels, manage reactions — all acting as them. Posts appear in Slack history exactly as if they typed them manually.
 
@@ -167,7 +167,7 @@ Creates a dedicated Slack app. Messages post AS THE BOT, not as the user. Requir
 
 - **Env var:** `SLACK_XOXB_TOKEN`
 - **Validation:** `curl -s -H "Authorization: Bearer <token>" https://slack.com/api/auth.test | jq .team`
-- **Register:** same — `claude mcp add slack -- npx -y @jtalk22/slack-mcp`
+- **Register:** same — `claude mcp add slack -- npx -y @jtalk22/slack-mcp@5.0.0`
 
 **Precedence when both configured:** Chrome-extracted user tokens (`~/.slack-mcp-tokens.json`) win over `SLACK_XOXB_TOKEN`. Having both is fine — Chrome tokens are used, bot token stays dormant as fallback.
 

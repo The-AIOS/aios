@@ -1,0 +1,10 @@
+{
+  "profile_name": "sprint-tracker",
+  "workflow_kind": "product_launch_watch",
+  "channels": [],
+  "priority_people": [],
+  "retention_mode": "ephemeral",
+  "summary_cadence": "daily_8am",
+  "structured_keys": ["launch_signals", "feedback_themes", "blockers", "metrics", "next_actions"],
+  "_template_notes": "Apply with: slack-mcp --apply-template sprint-tracker --channels C0SPRINT,C0BUGS,C0LAUNCHES. Use during active release cycles. Returns structured JSON so downstream automation (Linear, Notion, status dashboards) can consume directly."
+}

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slack MCP Server</title>
+  <meta name="description" content="Catch up on Slack without reading it: local browser-session control or hosted permanent OAuth for recurring workflows.">
+  <link rel="canonical" href="https://jtalk22.github.io/slack-mcp-server/public/share.html">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Slack MCP Server — Ask what happened. Get receipts. Close the loop.">
+  <meta property="og:description" content="The free local path ships 19 tools today. Hosted adds permanent OAuth, indexing, schedules, and team continuity.">
+  <meta property="og:url" content="https://jtalk22.github.io/slack-mcp-server/public/share.html">
+  <meta property="og:image" content="https://jtalk22.github.io/slack-mcp-server/docs/images/social-preview-v3.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Catch up on Slack without reading it">
+  <meta name="twitter:description" content="Local control now. Hosted continuity when the workflow must run without you.">
+  <meta name="twitter:image" content="https://jtalk22.github.io/slack-mcp-server/docs/images/social-preview-v3.png">
+  <link rel="icon" href="https://jtalk22.github.io/slack-mcp-server/docs/assets/icon-512.png" type="image/png">
+  <style>
+    @font-face { font-family: "Nyght Serif"; src: url("fonts/nyght-serif-medium.woff2") format("woff2"); font-display: swap; font-weight: 500; }
+    @font-face { font-family: "Nyght Serif"; src: url("fonts/nyght-serif-medium-italic.woff2") format("woff2"); font-display: swap; font-weight: 500; font-style: italic; }
+    @font-face { font-family: "Roobert"; src: url("fonts/roobert-regular.woff2") format("woff2"); font-display: swap; font-weight: 400; }
+    @font-face { font-family: "Roobert"; src: url("fonts/roobert-semibold.woff2") format("woff2"); font-display: swap; font-weight: 600; }
+    @font-face { font-family: "Roobert Mono"; src: url("fonts/roobert-mono.woff2") format("woff2"); font-display: swap; font-weight: 400 600; }
+    :root {
+      color-scheme: dark;
+      /* estate — outside the window */
+      --ink: #0b0b0c;
+      --surface: #131315;
+      --surface-2: #18181b;
+      --rule: #2b2b30;
+      --paper: #eeebe3;
+      --paper-2: #e3e0d6;
+      --muted: #9a978e;
+      --stamp: #e5482f;
+      --signal: #ffb224;
+      --desk-1: #1a1a2e;
+      --desk-2: #16213e;
+      --desk-3: #0f3460;
+      /* system register — inside app chrome only */
+      --sys-green: #28c840;
+      --sys-blue: #6eb5ff;
+      --clay: #da7756;
+      --traffic-red: #ff5f57;
+      --traffic-yellow: #febc2e;
+      --traffic-green: #28c840;
+      /* type */
+      --display: "Nyght Serif", Georgia, "Times New Roman", serif;
+      --body: "Roobert", system-ui, sans-serif;
+      --mono: "Roobert Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--paper);
+      background: var(--ink);
+      font-family: var(--body);
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .wrap {
+      width: min(980px, 100%);
+      border: 1px solid var(--rule);
+      border-radius: 16px;
+      background: var(--surface);
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
+      padding: 16px;
+    }
+    h1 {
+      margin: 0;
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      font-size: clamp(30px, 5vw, 48px);
+      font-weight: 600;
+    }
+    .sub {
+      margin: 8px 0 14px;
+      color: var(--muted);
+      font-size: clamp(16px, 2.4vw, 22px);
+      line-height: 1.25;
+    }
+    .sub a { color: var(--signal); }
+    .preview {
+      display: block;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--rule);
+      text-decoration: none;
+      margin-bottom: 14px;
+    }
+    .preview img {
+      width: 100%;
+      display: block;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .links a {
+      display: inline-block;
+      text-decoration: none;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 9px 12px;
+      color: var(--paper);
+      background: var(--surface-2);
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .links a:hover { background: #232329; }
+    .note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .note a { color: var(--signal); }
+    .note strong { color: var(--paper); }
+    @media (max-width: 640px) {
+      body { padding: 10px; }
+      .wrap { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>Slack MCP Server</h1>
+    <p class="sub">Slack for your AI agent — no OAuth, no admin, no app to register. Self-host 19 tools for free: 12 read, 4 write, 3 local workflow tools. Hosted free tier — workflow continuity + AI catch-up. Sign up no card at <a href="https://mcp.revasserlabs.com">mcp.revasserlabs.com</a>.</p>
+
+    <a class="preview" href="https://github.com/jtalk22/slack-mcp-server" rel="noopener">
+      <img src="https://jtalk22.github.io/slack-mcp-server/docs/images/social-preview-v3.png" alt="Slack MCP Server social preview card">
+    </a>
+
+    <div class="links">
+<a href="https://github.com/jtalk22/slack-mcp-server/blob/main/docs/SETUP.md" rel="noopener">Install (`--setup`)</a>
+      <a href="https://github.com/jtalk22/slack-mcp-server/blob/main/docs/SETUP.md" rel="noopener">Verify (`--version/--doctor/--status`)</a>
+      <a href="https://github.com/jtalk22/slack-mcp-server/releases/latest" rel="noopener">Latest Release</a>
+      <a href="https://jtalk22.github.io/slack-mcp-server/" rel="noopener">Autoplay Demo Landing</a>
+      <a href="https://jtalk22.github.io/slack-mcp-server/docs/videos/slack-mcp-proof-20s-vertical.mp4" rel="noopener">20s Mobile Clip</a>
+      <a href="https://www.npmjs.com/package/@jtalk22/slack-mcp" rel="noopener">npm Package</a>
+      <a href="https://mcp.revasserlabs.com" rel="noopener" style="background:rgba(255,178,36,0.18);border-color:rgba(255,178,36,0.45);color:var(--signal)">Hosted</a>
+    </div>
+
+    <p class="note"><strong>Ask what happened. Get receipts. Close the loop.</strong> The free local path gives you the current 19-tool surface without an app/admin queue. <a href="https://mcp.revasserlabs.com">Hosted</a> adds permanent OAuth, indexing, scheduled intelligence, and team continuity when the workflow must run without you.</p>
+  </main>
+</body>
+</html>

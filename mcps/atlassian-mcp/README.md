@@ -26,8 +26,8 @@ Ask Claude naturally — it picks the right tool:
 
 ```bash
 # Installed via mcps/setup.sh — or manually:
-pipx install mcp-atlassian
-# or: uvx mcp-atlassian --help
+pipx install 'mcp-atlassian==0.23.1'
+# or: uvx 'mcp-atlassian==0.23.1' --help
 ```
 
 ## Auth
@@ -48,7 +48,7 @@ pipx install mcp-atlassian
 claude mcp add atlassian -- ~/aios/mcps/atlassian-mcp/run.sh
 ```
 
-(The wrapper is `mcps/atlassian-mcp/run.sh` — it checks for the three env vars and calls `uvx mcp-atlassian` with them. DO NOT pass the token directly as an arg to `claude mcp add` — it gets stored in plaintext in your config.)
+(The wrapper is `mcps/atlassian-mcp/run.sh` — it checks for the three env vars and calls `uvx mcp-atlassian==0.23.1` with them. DO NOT pass the token directly as an arg to `claude mcp add` — it gets stored in plaintext in your config.)
 
 Restart your Claude session. Tools appear as `mcp__atlassian__*`.
 

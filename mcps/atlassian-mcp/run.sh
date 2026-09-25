@@ -14,7 +14,7 @@ for v in ATLASSIAN_URL ATLASSIAN_USERNAME ATLASSIAN_API_TOKEN; do
   fi
 done
 
-exec uvx mcp-atlassian \
+exec uvx 'mcp-atlassian==0.23.1' \
   --confluence-url "$ATLASSIAN_URL/wiki" \
   --jira-url "$ATLASSIAN_URL" \
   --confluence-username "$ATLASSIAN_USERNAME" \

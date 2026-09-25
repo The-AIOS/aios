@@ -1,3 +1,5 @@
 repo=https://github.com/jtalk22/slack-mcp-server
-hash=d01751e
-date=2026-05-21
+package=@jtalk22/slack-mcp@5.0.0
+date=2026-09-25
+local=connector.json,UPSTREAM.md
+note=The complete npm package at the pinned version, byte for byte, so the copy in this repo is what `npx -y @jtalk22/slack-mcp@5.0.0` runs. Its dependencies are declared with ^ ranges and resolve at launch. Replaces a 3.2.5 subset (2026-03-26) that no registration ran.
