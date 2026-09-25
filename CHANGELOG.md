@@ -69,6 +69,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-25 — Framework updates stop guessing when a check could not run
+
+`hash: `
+
+> **What you can now do.** Run `/aios:update` on a machine without `shasum`, with a home folder that has a space in its name, or with a bundled folder missing from your vault, and get a backup, a copy, or a drift line instead of silence.
+
+**An update no longer reads a check that never ran as a result.** On a machine without `shasum` — a Perl script, absent from minimal Linux images — the three-way compare measured every file as "identical" and overwrote your personalizations without a backup. The first merge-aware update sorted your old `.gitignore` rules alphabetically, so an exception like `!private/public.txt` landed above the pattern it excepts and stopped working. If the framework's `.gitignore` could not be read, the merge installed one holding only your lines. A bundled folder missing from your vault produced no drift line at all, and the update recorded itself as complete. And on Git Bash, a home folder with a space in its name made the plugin-cache copy fail with nothing reported, while the command told you your commands were current. Each of the five now stops, backs up, or reports — it never decides on a measurement it did not take.
+
+**Action required:** none, unless a past update ran on a machine without `shasum` (`command -v shasum` prints nothing). In that case a personalized framework file may have been overwritten then with no backup taken; restore it from your vault's git history if you had customized any.
+
 ## 2026-09-24 — A security audit for your code, routines that stay inside the sandbox, and a morning plan that checks two weeks out
 
 `hash: 65227d0 · e8bad7a · c1396c3 · 6401d87 · ea99bbd · 6292b09 · a8ed263 · ba0751f · 24d7c51 · 5fe7850 · 409cc22 · 15a1291 · 27ea3a1 · 000f325 · 346bbc4 · 6907b7f · 871ee23` · [#170](https://github.com/The-AIOS/aios/pull/170) · [#172](https://github.com/The-AIOS/aios/pull/172) · [#173](https://github.com/The-AIOS/aios/pull/173) · [#174](https://github.com/The-AIOS/aios/pull/174)

@@ -93,18 +93,26 @@ The right comparison: **local vs operator's last-synced BASELINE** (the version 
 
 CLONE="/tmp/aios-update-check"
 
-# CRLF-normalized content hash of a working-tree file. Non-zero return = unreadable.
-h_file(){ [ -f "$1" ] || return 1; tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1; }
+# CRLF-normalized content hash of a working-tree file. Non-zero return = NOT MEASURED
+# (unreadable, or `shasum` missing). A pipeline's status is its LAST command's — `cut`
+# exits 0 whether or not `shasum` ran — so the tool is probed first and an empty hash is
+# refused: an empty LOCAL equal to an empty BASE once read as "identical → overwrite,
+# no backup" on a machine without `shasum` (a Perl script, absent on minimal images).
+h_file(){ [ -f "$1" ] || return 1; command -v shasum >/dev/null 2>&1 || return 1
+          local h; h=$(tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 # CRLF-normalized content hash of a git object (the baseline). Probe existence
 # FIRST: a failed `git show` prints nothing, and sha256("") is a real hash
 # (e3b0c442…) that would compare EQUAL to a genuinely-empty file.
 h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1
-         git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | shasum -a 256 | cut -d' ' -f1; }
+         command -v shasum >/dev/null 2>&1 || return 1
+         local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | tr -d '\r' | shasum -a 256 | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 BASE=$(h_git "{stored_hash}:{path}") || BASE=""   # "" = baseline unreachable
-LOCAL=$(h_file "$HOME/aios/{path}")
-UP=$(h_file "$CLONE/{path}")                     # canonical HEAD — needed for the AHEAD test below
+LOCAL=$(h_file "$HOME/aios/{path}") || LOCAL=""
+UP=$(h_file "$CLONE/{path}") || UP=""            # canonical HEAD — needed for the AHEAD test below
+# "" in ANY of the three = the compare did not run. Take the "baseline unreachable" row
+# below (back up, then apply) — never read an unmeasured pair as a verdict.
 ```
 
 > **CRLF note (Windows).** On Windows, Git's `core.autocrlf` converts LF→CRLF on checkout, so vault files have `\r\n` line endings while `git show {hash}:{path}` (and the temp clone's working tree) may not — an unnormalized compare then reports "differ" for byte-identical content, flooding `vault/04 - backups/` with false personalizations on every sync. **Every content comparison in this command strips `\r` before hashing** (`tr -d '\r'`, as in `h_file`/`h_git` above). This applies to the self-update guard (Step 2.5) and the duplicate-cleanup content-compares (§ Duplicate cleanup) too — normalize line endings, then compare.
@@ -116,7 +124,7 @@ UP=$(h_file "$CLONE/{path}")                     # canonical HEAD — needed for
 | **Identical** | Operator never touched this file — they just had an older synced version | **Overwrite silently. No backup.** The "diff vs upstream HEAD" is just stale, not personalization. |
 | **Different, and `UP == BASE`** — canonical did **not** touch this file | The local copy is **AHEAD**, not stale: the operator improved it and canonical has not caught up | **KEEP LOCAL. Do not overwrite.** Report it as *"kept your newer version — canonical has not changed this file since your last sync"*. No backup is needed because nothing is being replaced. |
 | **Different, and `UP != BASE`** — both sides moved | Genuine divergence: operator edited AND canonical changed the same file | **Backup-on-divergence:** copy local to `vault/04 - backups/aios-update-{date}/{flattened-path}` BEFORE overwrite. Tell operator what was preserved. |
-| **Baseline unreachable** (cross-repo case, `stored_hash` is `initial`, or the object is missing) | Can't establish a baseline — the compare is **inconclusive**, which is NOT the same as a detected difference | **Conservative fallback, and the file still applies:** back up, then overwrite. Report it as *"baseline unreachable — backed up conservatively"*, never as a personalization. Telling the operator an edit was found when none was measured is the failure this wording exists to prevent. |
+| **Baseline unreachable, or any of the three hashes empty** (cross-repo case, `stored_hash` is `initial`, the object is missing, or `shasum` is not installed) | Can't establish a baseline — the compare is **inconclusive**, which is NOT the same as a detected difference | **Conservative fallback, and the file still applies:** back up, then overwrite. Report it as *"baseline unreachable — backed up conservatively"*, never as a personalization. Telling the operator an edit was found when none was measured is the failure this wording exists to prevent. |
 
 **Exempt from backup entirely — `CHANGELOG.md`.** It is append-only **canonical history, mandated byte-identical across every repo** (no operator ever personalizes it — there is nothing in it that is theirs to keep). A local diff on `CHANGELOG.md` is therefore *always* stale-not-personalized, even when the three-way compare reports "Different" (e.g. a WIP entry an operator's earlier session left mid-edit). So `CHANGELOG.md` is **always a clean overwrite, never backed up** — skip the three-way compare for it and never write it to `vault/04 - backups/`. (Backing it up just produces noise files that duplicate canonical history.)
 
@@ -160,9 +168,9 @@ Concrete rules for what's currently in the framework (the operator-environment-s
 - **Any `plugins/aios/commands/*.md` updated** → sync to the plugin pipeline. **The marketplace copy applies ONLY to a GitHub-source install** — the **primary AIOS mode is a directory-source marketplace** (the local vault registered as `Directory → ~/aios`, which is what lets it carry ventures + `custom/` that a GitHub-source clone would miss). On a directory-source install the marketplace *reads `~/aios` in place*, the `marketplaces/the-aios/…` path **does not exist**, and the copy must skip silently. The cache is runtime-authoritative either way. **Guard both copies with `[ -d ]`** so directory-source no-ops cleanly:
   ```bash
   # GitHub-source only — directory-source has no marketplace dir (reads ~/aios in place). Guard → no-op on directory-source.
-  mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp $HOME/aios/plugins/aios/commands/*.md "$mp/"
+  mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp "$HOME"/aios/plugins/aios/commands/*.md "$mp/"
   # cache path is VERSION-AGNOSTIC — glob the installed version dir (never hard-pin a version; the plugin bumps but this string outlives the bump). Guard handles the no-match case.
-  for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/*.md "$d"; done
+  for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp "$HOME"/aios/plugins/aios/commands/*.md "$d"; done
   ```
 
   **Then check cache/manifest version parity — and understand that the sync above is what CAUSES the drift.** The loop copies `commands/*.md` and nothing else, so `.claude-plugin/plugin.json` inside the cache is **never** updated. The cache **directory is named for the version in that manifest**, so a manifest that never advances means a directory name that never advances: every version bump reproduces the mismatch, and it does not heal on its own. Measured 2026-08-13 on a live install — 25 of 26 cache files identical to their vault source, the 26th being that manifest, cache reading `0.4.0` while the vault read `0.5.0`. This was first reported as a harmless artifact of a missed re-resolve; it is the opposite — a recurring consequence of an incomplete sync.
@@ -450,7 +458,9 @@ If no Tier 1 files changed in the tracker-diff → **still run the completeness 
 # and spuriously re-invoke the whole command.
 CLONE="/tmp/aios-update-check"
 LOCAL_MD="$HOME/aios/plugins/aios/commands/update.md"
-h_file(){ [ -f "$1" ] || return 1; tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1; }
+# Same helper as § Backup-on-divergence — probe the tool, refuse an empty hash.
+h_file(){ [ -f "$1" ] || return 1; command -v shasum >/dev/null 2>&1 || return 1
+          local h; h=$(tr -d '\r' < "$1" | shasum -a 256 | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
 
 SAME=0
 a=$(h_file "$LOCAL_MD") && b=$(h_file "$CLONE/plugins/aios/commands/update.md") \
@@ -468,9 +478,9 @@ a=$(h_file "$LOCAL_MD") && b=$(h_file "$CLONE/plugins/aios/commands/update.md") 
    - Overwrite local `plugins/aios/commands/update.md` from upstream.
 2. Sync to the plugin pipeline (cache always; marketplace only if it's a GitHub-source install — directory-source reads `~/aios` in place, so its `marketplaces/…` path doesn't exist; both copies are `[ -d ]`-guarded):
    ```bash
-   mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp $HOME/aios/plugins/aios/commands/update.md "$mp/update.md"
+   mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp "$HOME"/aios/plugins/aios/commands/update.md "$mp/update.md"
    # cache path VERSION-AGNOSTIC — glob the installed version dir (was hard-pinned 0.1.0)
-   for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp $HOME/aios/plugins/aios/commands/update.md "$d"; done
+   for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp "$HOME"/aios/plugins/aios/commands/update.md "$d"; done
    ```
 3. **KEEP the temp clone. Do NOT delete it here.** This step used to end with `rm -rf /tmp/aios-update-check`, justified as *"the re-invoke will re-clone fresh"* — and that justification died when items 4–5 replaced re-invocation with read-the-file-and-continue. There is no inner run to re-clone: **this** run continues, and Step 6.5's precondition asserts the clone exists and **exits FATAL without advancing the tracker** when it doesn't. So obeying the old line aborts the sync at the reconcile, on the one run where `update.md` itself changed — which is precisely the run that can least afford to stop half-applied. The clone is deleted once, at the end of Step 7, as on every other run.
 4. **Load the new spec by READING IT, not by re-invoking the skill.** `Read` the just-applied `$HOME/aios/plugins/aios/commands/update.md` and follow *that* for the rest of this run, treating `AIOS_UPDATE_REINVOKED=1` as set.
@@ -530,8 +540,12 @@ For each changed Tier 1 file:
    ```bash
    SENT='AIOS-OPERATOR-IGNORES'
    CLONE="/tmp/aios-update-check"; T="/tmp"
+   # A group's status is its LAST command's, so `{ cat canonical; awk operator; }` succeeds
+   # when `cat` fails — and `mv` then installs a .gitignore holding ONLY the operator's lines.
+   # Refuse up front, and chain `cat` with `&&` so a late failure cannot reach the `mv` either.
+   [ -r "$CLONE/.gitignore" ] || { echo "FATAL: canonical .gitignore unreadable at $CLONE/.gitignore (clone missing or partial) — the vault's .gitignore is untouched" >&2; exit 1; }
    if grep -qF "$SENT" "$HOME/aios/.gitignore"; then
-     { cat "$CLONE/.gitignore"; awk -v s="$SENT" 'f{print} $0 ~ s {f=1}' "$HOME/aios/.gitignore"; } \
+     { cat "$CLONE/.gitignore" && awk -v s="$SENT" 'f{print} $0 ~ s {f=1}' "$HOME/aios/.gitignore"; } \
        > "$HOME/aios/.gitignore.new" && mv "$HOME/aios/.gitignore.new" "$HOME/aios/.gitignore"
    else
      # LEGACY local WITHOUT the marker (first update to the merge-aware version) → migrate SAFELY.
@@ -541,13 +555,16 @@ For each changed Tier 1 file:
      #   2. CARRY the operator's personal lines below the new marker.
      bk="$HOME/aios/vault/04 - backups/aios-update-$(date +%F)"; mkdir -p "$bk"; cp "$HOME/aios/.gitignore" "$bk/.gitignore"
      # Real files, no process substitution (see § Backup-on-divergence for why).
-     tr -d '\r' < "$HOME/aios/.gitignore" | sort -u > "$T/aios-gi-local"
+     # The LOCAL side keeps the operator's ORDER: .gitignore is read last-match-wins, so a
+     # `!exception` line must stay BELOW the pattern it excepts. A sorted set (`sort -u` +
+     # `comm`) put `!private/public.txt` above `private/*` and the exception stopped working.
+     tr -d '\r' < "$HOME/aios/.gitignore" > "$T/aios-gi-local"
      : > "$T/aios-gi-base"
      git -C "$CLONE" cat-file -e "{stored_hash}:.gitignore" 2>/dev/null \
        && git -C "$CLONE" show "{stored_hash}:.gitignore" 2>/dev/null | tr -d '\r' | sort -u > "$T/aios-gi-base"
      if [ -s "$T/aios-gi-base" ]; then
        # Baseline known → carry only what the operator ADDED since it.
-       ops=$(comm -13 "$T/aios-gi-base" "$T/aios-gi-local" | grep -vE '^[[:space:]]*(#|$)')
+       ops=$(grep -vxF -f "$T/aios-gi-base" "$T/aios-gi-local" | grep -vE '^[[:space:]]*(#|$)')
        note='# (auto-migrated from your previous .gitignore on the first merge-aware update — review/reorganize)'
      else
        # Baseline UNREACHABLE (cross-repo hash, stored_hash=initial, or the object is gone).
@@ -836,8 +853,11 @@ done
   done
   # Layer dirs — derived and asserted ABOVE this group (see the note there); here they are
   # only compared. diff -rq surfaces both "Files … differ" and dir-side "Only in …" lines.
+  # A layer dir MISSING from the vault makes `diff -rq` write to stderr only (exit 2) — swallowed
+  # by the redirect and by the trailing `|| true` — so the one case this reconcile exists to catch
+  # produced an empty list. Emit it in the shape the root-file loop already uses.
   for p in "${RDIRS[@]}"; do
-    diff -rq "${SCR[@]}" "$VAULT/$p" "$CLONE/$p" 2>/dev/null
+    if [ ! -d "$VAULT/$p" ]; then echo "Only in $CLONE: $p"; else diff -rq "${SCR[@]}" "$VAULT/$p" "$CLONE/$p" 2>/dev/null; fi
   done
   # vault/.obsidian is the one Tier-1 path under the otherwise Tier-2 vault/ tree.
   diff -rq "${SCR[@]}" "$VAULT/vault/.obsidian" "$CLONE/vault/.obsidian" 2>/dev/null
