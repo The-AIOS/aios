@@ -74,11 +74,48 @@ cd "$TOPLEVEL" || die "cannot cd to repo root"
 # sweep point, whether or not it has anything of its own to commit.
 # Costs a single stat when nothing is pending.
 PENDING="$GIT_DIR/aios-push-pending"
+# The marker lists the stranded COMMITS, one `pending <oid> <branch>` line each, and an entry
+# clears only when some remote-tracking ref contains that commit -- i.e. it is published.
+#  · Commits, not "is HEAD ahead": pushes run outside the lock, so an older run's successful
+#    push could finish after a newer run's push failed, and a bare `rm` erased the only record
+#    that the newer commit was stranded.
+#  · Not branch names or @{push}: after a checkout, a rename, or a push remote beside the fetch
+#    remote, those describe the wrong thing, and a name that no longer resolves said nothing.
+#    Reachability from refs/remotes answers "did it get out" whatever the config.
+#  · Any error while checking keeps the entry: an error is not evidence of publication.
+#  · Entries are added and settled UNDER THE LOCK, so two runs cannot drop each other's entry.
+#  · A marker from before this format (a bare timestamp) is judged by the current HEAD.
+#  · Known limit, on the safe side: a commit published only to a branch the fetch refspec does
+#    not map (a --single-branch clone pushing a new branch) has no remote-tracking ref to show
+#    it, so its entry stays and later runs retry a push with nothing to send. Nothing is lost;
+#    `rm "$(git rev-parse --git-dir)/aios-push-pending"` clears it once you know it is out.
+mark_pending(){ # $1 oid · $2 branch (informational) -- caller holds the lock
+  local tmp="$PENDING.tmp.$$"
+  { grep '^pending ' "$PENDING" 2>/dev/null | grep -v "^pending $1 "; echo "pending $1 ${2:-HEAD}"; } > "$tmp" \
+    && mv -f "$tmp" "$PENDING" 2>/dev/null || rm -f "$tmp"
+}
+settle_pending(){ # caller holds the lock
+  local oids oid out keep="" tmp="$PENDING.tmp.$$"
+  [ -f "$PENDING" ] || return 0
+  oids=$(sed -n 's/^pending \([0-9a-f][0-9a-f]*\).*/\1/p' "$PENDING")
+  [ -n "$oids" ] || oids=$(git rev-parse -q --verify HEAD 2>/dev/null)
+  for oid in $oids; do
+    if out=$(git for-each-ref --contains "$oid" --format=x refs/remotes 2>/dev/null) && [ -n "$out" ]; then
+      continue                               # published
+    fi
+    keep="$keep $oid"
+  done
+  if [ -z "$keep" ]; then rm -f "$PENDING"; return 0; fi
+  if grep -q '^pending ' "$PENDING" 2>/dev/null; then
+    for oid in $keep; do grep "^pending $oid " "$PENDING"; done > "$tmp" && mv -f "$tmp" "$PENDING" || rm -f "$tmp"
+  fi                                         # a legacy marker is left as it was
+  return 0
+}
 if [ "$NO_PUSH" != 1 ] && [ -f "$PENDING" ] \
    && git remote | grep -q . && git symbolic-ref --short HEAD >/dev/null 2>&1; then
   SWEEP_N=$(git rev-list --count @{u}..HEAD 2>/dev/null || echo '?')
   if git push -q 2>/dev/null; then
-    rm -f "$PENDING"
+    SWEPT=1          # settled under the lock, right after it is taken below
     echo "aios-commit: swept a pending push from an earlier run — $SWEEP_N commit(s) now on the remote."
   fi
   # Still blocked → keep the marker. If this run commits, the push at the end
@@ -87,6 +124,26 @@ fi
 
 # ── per-repo mutex: mkdir is atomic; a stale lock from a dead holder is reclaimed ──
 LOCK="$GIT_DIR/aios-commit.lock"
+# Reclaim a lock whose holder is dead -- but only THAT lock. Two waiters can read the same dead
+# pid; with a bare `rm -rf` the slower one deleted the lock the faster one had just re-created,
+# and both proceeded as holders. So removal is serialised by a second mkdir mutex, and under it
+# the pid is re-read: the lock goes only if it still names the same pid and that pid is still
+# dead. A fresh lock (a new pid, or none written yet) is never touched. The mutex is NEVER
+# removed by anyone but the process that made it: clearing an "old" one would reopen the same
+# race one level up (two observers, one deletes a fresh mutex). A reclaimer that dies inside
+# this two-line section leaves it behind, and the lock wait then times out naming it.
+reclaim(){ # $1 lock dir · $2 the dead pid that was read
+  local m="$1.reclaim" cur
+  if ! mkdir "$m" 2>/dev/null; then
+    sleep 0.05; return 0
+  fi
+  cur=$(cat "$1/pid" 2>/dev/null || true)
+  if [ -n "$cur" ] && [ "$cur" = "$2" ] && ! kill -0 "$cur" 2>/dev/null; then
+    rm -rf "$1" 2>/dev/null
+  fi
+  rmdir "$m" 2>/dev/null
+  return 0
+}
 acquire(){
   local tries=0 holder saw_lock=0
   while ! mkdir "$LOCK" 2>/dev/null; do
@@ -104,7 +161,7 @@ acquire(){
       saw_lock=1
       holder=$(cat "$LOCK/pid" 2>/dev/null || true)
       if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
-        rm -rf "$LOCK" 2>/dev/null; continue      # dead holder → reclaim
+        reclaim "$LOCK" "$holder"      # dead holder → reclaim, race-free; still counts toward the timeout
       fi
     else
       holder=""
@@ -116,7 +173,7 @@ acquire(){
     if [ "$saw_lock" -eq 0 ] && [ "$tries" -ge 20 ]; then
       die "cannot create $LOCK — $tries attempts, no lock ever present: this is NOT contention. $GIT_DIR is likely not writable (sandboxed session? read-only checkout?), or a non-directory occupies the lock path."
     fi
-    [ "$tries" -gt 600 ] && die "lock timeout (held by pid ${holder:-unknown})"
+    [ "$tries" -gt 600 ] && { [ -d "$LOCK.reclaim" ] && die "lock timeout: $LOCK.reclaim was left by a process that died while reclaiming. If no aios-commit is running, remove it: rmdir \"$LOCK.reclaim\""; die "lock timeout (held by pid ${holder:-unknown})"; }
     sleep 0.1
   done
   echo "$$" > "$LOCK/pid"
@@ -127,6 +184,7 @@ TMPIDX=""
 cleanup(){ [ -n "$TMPIDX" ] && rm -f "$TMPIDX"; release; }
 trap cleanup EXIT
 acquire; LOCKED=1
+[ "${SWEPT:-0}" = 1 ] && settle_pending
 
 # ── --vault: build PATHS from the scoped vault sweep, under the lock so it's atomic vs a sibling
 #    commit. Space-safe (core.quotePath=false + one path per line, read into an array) and
@@ -214,9 +272,19 @@ rm -f "$MSGF"
 
 # ── build the commit from a throwaway index — the working tree is NEVER touched ──
 TMPIDX=$(mktemp "${TMPDIR:-/tmp}/aios-commit-idx.XXXXXX")
-if git rev-parse -q --verify HEAD >/dev/null 2>&1; then
-  GIT_INDEX_FILE="$TMPIDX" git read-tree HEAD
-  PARENTS=(-p HEAD)
+# Resolve HEAD ONCE. The tree is built from this commit, so the parent must be this commit too:
+# `-p HEAD` resolved HEAD again at commit-tree time, and a commit that landed in between (a
+# plain `git commit`, an editor's git plugin) became the parent of a tree that did not contain
+# its changes -- silently reverting them. The same value guards update-ref below.
+# The BRANCH is captured first and the commit is resolved FROM it, so both describe the same
+# ref: the swap below targets that branch, and a checkout of another branch at the same
+# commit cannot redirect this commit onto it. Detached HEAD: HEAD itself, swapped with
+# --no-deref so a branch attached meanwhile is never written.
+TARGET=$(git symbolic-ref -q HEAD 2>/dev/null || echo HEAD)
+OLDHEAD=$(git rev-parse -q --verify "$TARGET" 2>/dev/null || true)
+if [ -n "$OLDHEAD" ]; then
+  GIT_INDEX_FILE="$TMPIDX" git read-tree "$OLDHEAD"
+  PARENTS=(-p "$OLDHEAD")
 else
   GIT_INDEX_FILE="$TMPIDX" git read-tree --empty
   PARENTS=()
@@ -272,7 +340,13 @@ fi
 # (the macOS system bash) treats "${arr[@]}" on an empty array as unbound under `set -u` → the
 # very first commit in a fresh repo aborts. The +alternate form is empty-safe on 3.2 and 4+.
 COMMIT=$(git commit-tree "$TREE" ${PARENTS[@]+"${PARENTS[@]}"} -m "$MSG") || die "commit-tree failed"
-git update-ref HEAD "$COMMIT" || die "update-ref failed"
+# Compare-and-swap: move HEAD only if it still points where this commit was built from. Without
+# the old value, update-ref overwrote whatever HEAD had become, orphaning a commit made meanwhile
+# outside aios-commit (its lock only excludes other aios-commit runs).
+if [ -n "$OLDHEAD" ]; then _expect="$OLDHEAD"; else _expect=$(printf '%s' "$COMMIT" | tr '0-9a-f' '0'); fi
+_noderef=""; [ "$TARGET" = HEAD ] && _noderef=--no-deref
+git update-ref $_noderef "$TARGET" "$COMMIT" "$_expect" \
+  || die "HEAD moved while this commit was being built (another commit landed outside aios-commit). Nothing was committed and nothing was lost; run the same command again."
 
 # sync the REAL index for the committed paths only → `git status` shows them clean;
 # every other actor's in-flight file is left exactly as it was.
@@ -359,11 +433,19 @@ release; trap cleanup EXIT
 [ "$NO_PUSH" = 1 ] && exit 0
 git remote | grep -q . || exit 0
 git symbolic-ref --short HEAD >/dev/null 2>&1 || exit 0   # detached HEAD → skip push
+# HEAD moved to another branch while this ran: the commit is on $TARGET, and a bare `git push`
+# would publish the OTHER branch and report success. Do not push; leave the marker so the
+# stranded commit is not forgotten, and say which branch holds it.
+if [ -n "${TARGET:-}" ] && [ "$(git symbolic-ref -q HEAD 2>/dev/null)" != "$TARGET" ]; then
+  echo "aios-commit: HEAD moved to another branch during this run — the commit is on ${TARGET#refs/heads/} and was NOT pushed. Push it with: git push <remote> ${TARGET#refs/heads/}" >&2
+  acquire; LOCKED=1; mark_pending "$COMMIT" "${TARGET#refs/heads/}"; release
+  exit 0
+fi
 
 PUSH_ERR=$(git push 2>&1); PUSH_RC=$?
 if [ "$PUSH_RC" = 0 ]; then
   echo "aios-commit: pushed."
-  rm -f "$PENDING"
+  acquire; LOCKED=1; settle_pending; release
 else
   # Classify by whether the blocker is TRANSIENT (deferring genuinely self-heals)
   # or PERSISTENT (it does not, so name the action instead of promising a retry).
@@ -400,6 +482,6 @@ else
   # Durable marker so an unpushed commit is never invisible. /today, /close-session
   # and /close-day sweep this and retry the push with network access. Lives inside
   # .git/ so it is never committed and needs no ignore rule.
-  date -u +%Y-%m-%dT%H:%M:%SZ > "$PENDING" 2>/dev/null || :
+  acquire; LOCKED=1; mark_pending "$COMMIT" "${TARGET#refs/heads/}"; release
 fi
 exit 0
