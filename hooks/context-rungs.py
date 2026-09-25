@@ -23,10 +23,27 @@ It never reports a rung it did not actually count -- an absent folder is named
 as absent, not folded into a total that then reads as small.
 """
 
+import importlib.util
 import json
 import os
 import re
 import sys
+
+# Rung 1 is defined as "exactly what hooks/context-floor.py emits", so the recent slice is
+# priced with the floor's OWN selection function rather than a second copy of the rule.
+# The copy drifted once: the floor emitted a rule library's index and entries sorted by
+# date, while this file priced the last five bodies of every file -- rung 1 overstated
+# by a rule library's bodies, and the "cheap vault" ratio moved with it.
+def _load_floor():
+    here = os.path.dirname(os.path.abspath(__file__))
+    spec = importlib.util.spec_from_file_location(
+        "aios_context_floor", os.path.join(here, "context-floor.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)   # no fallback: a rung 1 priced without the floor is a guess
+    return mod
+
+
+FLOOR = _load_floor()
 
 # Text read from files (vault headings, request payloads, names) carries "→", "—" and
 # accents. On a Windows console stdout/stderr default to cp1252, so print() raises
@@ -45,16 +62,8 @@ TOK_PER_WORD = 1.3
 HEADING = re.compile(r"^\#{2,6}\s+\S")
 ENTRY = re.compile(r"^\#{3}\s+\S")
 
-# The floor reads the last N entries of every OBSERVED file, in full -- see
-# hooks/context-floor.py for why (observed/ accumulates and is append-ordered;
-# declared/ is restated and has no newest end). Keep this in step with that
-# tool's DEFAULT_RECENT: rung 1 here must be the same thing the floor emits,
-# or Bucket 31 reports a number that describes nothing any session does.
-RECENT_PER_FILE = 5
-
-# The floor emits a rule library's INDEX rather than its newest entries, so pricing it as
-# 5 bodies overstates rung 1. Priced as the index instead -- see hooks/context-floor.py.
-RULE_LIBRARY_HEADING = re.compile(r'^\#{1,3}\s+.*\b(meta-pattern|read these first|index)\b', re.I)
+# The floor's default recency depth, read from the floor itself rather than restated.
+RECENT_PER_FILE = FLOOR.DEFAULT_RECENT
 
 # When is "just read everything" the right answer? NOT at some absolute token count --
 # that is a constant about a growing quantity, which is the exact bug this tool exists to
@@ -84,23 +93,16 @@ def measure(folder):
             continue  # unreadable file: counted as absent, never as empty
         words = sum(len(l.split()) for l in lines)
         heads = [l for l in lines if HEADING.match(l)]
-        # Split into ### entries so the recency slice can be priced.
-        blocks, cur = [], None
-        for l in lines:
-            if ENTRY.match(l):
-                if cur is not None:
-                    blocks.append(cur)
-                cur = [l]
-            elif cur is not None:
-                cur.append(l)
-        if cur is not None:
-            blocks.append(cur)
+        # Price the recency slice as the floor emits it: a rule library's index, or the
+        # newest entries by the date they carry (never simply the file's tail).
+        entries, is_lib, recent = FLOOR.recent_slice(lines, RECENT_PER_FILE)
         out[name] = {
             "words": words,
             "headings": len(heads),
-            "entries": len(blocks),
+            "entries": len(entries),
+            "rule_library": is_lib,
             "heading_words": sum(len(l.split()) for l in heads),
-            "recent_words": sum(len(" ".join(b).split()) for b in blocks[-RECENT_PER_FILE:]),
+            "recent_words": sum(len(t.split()) for t in recent),
         }
     return out
 
@@ -132,7 +134,8 @@ def rungs(dec, obs, root_for_intent, ventures):
     return [
         ("0", "both _index.md only", idx,
          "orientation only -- you know the filenames, nothing else"),
-        ("1", "+ all headings + last %d entries/observed file + INTENT.md" % RECENT_PER_FILE,
+        ("1", "+ all headings + newest %d entries/observed file + INTENT.md"
+         % RECENT_PER_FILE,
          idx + heads + recent + intent,
          "THE FLOOR. Always. Exactly what hooks/context-floor.py emits."),
         ("2", "+ declared/ read whole", idx + heads + recent + intent + dec_body,

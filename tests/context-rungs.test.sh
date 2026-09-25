@@ -174,6 +174,59 @@ PY
              || no "some files were skipped" "a per-vault file list is the bug this whole change removes"
 
 echo
+echo " rung 1 is priced as exactly what the floor emits"
+# The floor emits a rule library's INDEX, and the newest entries of every other observed file
+# by the date they carry. Rung 1 must price that same text, word for word -- this file once
+# carried its own copy of the rule, left the rule-library part unused, and priced five bodies
+# of the rule library instead of its index.
+RL="$TMP/rulelib/vault/00 - notes/context"
+mkdir -p "$RL/declared" "$RL/observed"
+printf '# Index\n' > "$RL/declared/_index.md"; printf '# Index\n' > "$RL/observed/_index.md"
+printf '# Me\n## Who\nsome words\n' > "$RL/declared/me.md"
+$PYBIN - "$RL/observed" <<'PY'
+import os, sys
+d = sys.argv[1]
+body = " ".join(["word"] * 400)
+# A rule library: the index section first, then long numbered entries.
+lib = ["# Rules", "", "## Meta-patterns -- read these first", "", "### A. Scan before acting", "short",
+       "### B. Verify the effect", "short", "", "## Entries", ""]
+for i in range(1, 13):
+    lib += ["### %d. Rule number %d (2026-0%d-1%d)" % (i, i, 1 + i % 9, i % 9), body, ""]
+open(os.path.join(d, "rules.md"), "w").write("\n".join(lib))
+# A chronology whose TAIL is not its newest: the last entries are the oldest.
+ch = ["# Notes", ""]
+for day in ["2026-09-20", "2026-09-21", "2026-09-22", "2026-09-23", "2026-09-24", "2026-09-25"]:
+    ch += ["### %s new thing" % day, "short note", ""]
+for day in ["2026-01-02", "2026-01-03", "2026-01-04"]:
+    ch += ["### %s old thing" % day, body, ""]
+open(os.path.join(d, "notes.md"), "w").write("\n".join(ch))
+PY
+price(){ # $1 rungs hook · prints "file:recent_words" per observed file
+  $PYBIN "$1" --json "$TMP/rulelib" | $PYBIN -c 'import json,sys; d=json.load(sys.stdin)["observed"]["detail"]; print(" ".join("%s:%d" % (k, v["recent_words"]) for k, v in sorted(d.items()) if k != "_index.md"))'
+}
+EMIT="$($PYBIN hooks/context-floor.py --json "$TMP/rulelib" | $PYBIN -c 'import json,sys; print(" ".join("%s:%d" % (o["file"], sum(len(t.split()) for t in o["recent"])) for o in sorted(json.load(sys.stdin)["observed"], key=lambda o: o["file"]) if o["file"] != "_index.md"))')"
+GOT="$(price "$H")"
+[ -n "$EMIT" ] && [ "$GOT" = "$EMIT" ] \
+  && ok "rung 1 prices each observed file at the words the floor emits ($GOT)" \
+  || no "rung 1 priced [$GOT], the floor emits [$EMIT]" "rung 1 is defined as what the floor emits"
+if grep -qE 'INDEX_HEADING|RULE_LIBRARY_HEADING|blocks\[-' "$H"; then
+  no "$H carries its own copy of the floor's selection rule" "two copies of one rule drift; this one already did"
+else
+  ok "the selection rule lives only in the floor"
+fi
+PIN=3d135ded112bf7b77156b61bb29e6233ff7c7285
+OLD="$TMP/old-rungs.py"
+if git cat-file -e "$PIN:$H" 2>/dev/null && git show "$PIN:$H" > "$OLD" && ! cmp -s "$OLD" "$H"; then
+  OLDP="$(price "$OLD")"
+  # A valid old reading first -- both files priced -- or an empty run would "differ" too.
+  printf '%s' "$OLDP" | grep -qE '^notes\.md:[0-9]+ rules\.md:[0-9]+$' && [ "$OLDP" != "$EMIT" ] \
+    && ok "OLD: priced [$OLDP] against an emitted [$EMIT] (the defect, reproduced)" \
+    || no "old hook matched the floor; the reproduction no longer holds" "check the pin"
+else
+  echo "  SKIP  old-hook reproduction: $PIN not present or identical"
+fi
+
+echo
 echo " no consumer hardcodes a volume the tool is supposed to answer"
 
 # CLAUDE.md and the wrappers may name a MAGNITUDE ("six figures of tokens") -- that is a
