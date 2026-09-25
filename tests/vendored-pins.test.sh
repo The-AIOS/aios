@@ -41,14 +41,24 @@ def meta(d):
             k, v = line.rstrip("\n").split("=", 1); out[k.strip()] = v.strip()
     return out
 
+def local_files(d):
+    # files the framework itself wrote beside a vendored copy (a connector, a note) — not upstream's
+    try:
+        return {x.strip() for x in meta(d).get("local", "").split(",") if x.strip()}
+    except OSError:
+        return set()
+
 def files_in(d):
+    own = local_files(d)
     out = []
     for root, dirs, fs in os.walk(d):
         dirs[:] = [x for x in dirs if x not in ("__pycache__", ".git")]
         for f in fs:
             if f in (".upstream-sync", ".upstream-manifest") or f.endswith(".pyc") or f == ".DS_Store":
                 continue
-            out.append(os.path.relpath(os.path.join(root, f), d).replace(os.sep, "/"))
+            rel = os.path.relpath(os.path.join(root, f), d).replace(os.sep, "/")
+            if rel not in own:
+                out.append(rel)
     return sorted(out)
 
 def load_manifest(d):
@@ -63,9 +73,11 @@ def check(d):
     """-> list of problems (empty = matches its record)."""
     probs = []
     md = meta(d)
-    for k in ("repo", "hash"):
-        if not md.get(k):
-            probs.append(f"{d}/.upstream-sync has no {k}=")
+    # a repo commit (hash=) or, for a runtime package, the exact published version (package=)
+    if not md.get("repo"):
+        probs.append(f"{d}/.upstream-sync has no repo=")
+    if not (md.get("hash") or "@" in md.get("package", "")[1:]):
+        probs.append(f"{d}/.upstream-sync has neither hash= nor package=<name>@<version>")
     m = load_manifest(d)
     have = set(files_in(d))
     for rel, digest in m.items():
@@ -89,9 +101,16 @@ def record(d):
 
 def upstream(d):
     md = meta(d); tmp = tempfile.mkdtemp()
-    subprocess.run(["git", "clone", "-q", md["repo"], tmp], check=True)
-    subprocess.run(["git", "-C", tmp, "checkout", "-q", md["hash"]], check=True)
-    root = md.get("root", md.get("subdir", ""))
+    if md.get("package"):
+        # the published tarball IS the source of truth for a runtime package
+        subprocess.run(["npm", "pack", "-q", md["package"]], cwd=tmp, check=True, stdout=subprocess.DEVNULL)
+        tgz = [f for f in os.listdir(tmp) if f.endswith(".tgz")][0]
+        subprocess.run(["tar", "xzf", tgz], cwd=tmp, check=True)
+        root = "package"
+    else:
+        subprocess.run(["git", "clone", "-q", md["repo"], tmp], check=True)
+        subprocess.run(["git", "-C", tmp, "checkout", "-q", md["hash"]], check=True)
+        root = md.get("root", md.get("subdir", ""))
     def src(rel):
         # a source-level LICENSE/NOTICE sits at the upstream repo root, not under root=
         p = os.path.join(tmp, root, rel)
@@ -102,7 +121,7 @@ def upstream(d):
            if not os.path.isfile(src(rel)) or h(src(rel)) != dg]
     shutil.rmtree(tmp, ignore_errors=True)
     n = len(load_manifest(d))
-    print(f"{d}: {n - len(bad)}/{n} files match {md['repo']}@{md['hash']}" + ("" if not bad else f" — first mismatch: {bad[0]}"))
+    print(f"{d}: {n - len(bad)}/{n} files match {md.get('package') or md['repo'] + '@' + md['hash']}" + ("" if not bad else f" — first mismatch: {bad[0]}"))
     return 0 if not bad else 1
 
 args = sys.argv[1:]

@@ -1,0 +1,10 @@
+{
+  "profile_name": "incident-room",
+  "workflow_kind": "incident_room",
+  "channels": [],
+  "priority_people": [],
+  "retention_mode": "persistent",
+  "summary_cadence": "on_demand",
+  "structured_keys": ["incident_summary", "timeline", "open_risks", "owner_gaps", "next_actions"],
+  "_template_notes": "Apply with: slack-mcp --apply-template incident-room --channels C0INCIDENTS --priority-people U0ONCALL. on_demand cadence — call slack_catch_me_up at handoff or before stakeholder updates. retention_mode=persistent so post-incident review has the timeline."
+}

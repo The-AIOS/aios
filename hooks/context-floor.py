@@ -141,6 +141,35 @@ def split_entries(lines):
     return pre, out
 
 
+def recent_slice(lines, n):
+    """What the floor emits for ONE observed file: (entries, is_rule_library, texts).
+
+    The single definition of "the recent slice". hooks/context-rungs.py imports it to price
+    rung 1, so the price and the emission cannot drift apart: a second copy of this rule is
+    how rung 1 once priced five antifragile bodies while the floor emitted its index.
+    """
+    _, es = split_entries(lines)
+    # A rule library announces itself: it opens with a meta-pattern / index heading
+    # saying to read that first. Recency is the wrong selector there -- an entry from
+    # four months ago binds as hard as one from this week, and the file's job is to
+    # fire BEFORE the mistake. So emit its index instead of its newest bodies; every
+    # title is already in the map above, which is what makes scanning it possible.
+    idx = [l for l in lines if INDEX_HEADING.match(l)]
+    if idx:
+        i = lines.index(idx[0])
+        # The index is the SECTION the heading opens: everything up to the next heading at
+        # the same or a higher level. It used to stop at the next `###`, which for a
+        # `## Meta-patterns` section whose patterns are `###` children meant emitting the
+        # heading and one sentence and NONE of the patterns -- measured on a live vault,
+        # 234 bytes emitted of a 13.4 KB index, 0 of 23 meta-patterns (#150c).
+        lvl = len(lines[i]) - len(lines[i].lstrip("#"))
+        j = next((k for k in range(i + 1, len(lines))
+                  if HEADING.match(lines[k]) and len(lines[k]) - len(lines[k].lstrip("#")) <= lvl),
+                 len(lines))
+        return es, True, ["\n".join(lines[i:j]).rstrip()]
+    return es, False, ["\n".join(e).rstrip() for e in newest(es, n)]
+
+
 UNREADABLE = []   # files a listing returned but open() could not read -- see main()
 
 
@@ -269,41 +298,23 @@ def main(argv):
     w("(older entries are indexed by title above; open any of them at any time)")
     w("=" * 72)
     for fn, lines in obs:
-        _, es = split_entries(lines)
-        # A rule library announces itself: it opens with a meta-pattern / index heading
-        # saying to read that first. Recency is the wrong selector there -- an entry from
-        # four months ago binds as hard as one from this week, and the file's job is to
-        # fire BEFORE the mistake. So emit its index instead of its newest bodies; every
-        # title is already in the map above, which is what makes scanning it possible.
-        idx = [l for l in lines if INDEX_HEADING.match(l)]
-        if idx:
-            i = lines.index(idx[0])
-            # The index is the SECTION the heading opens: everything up to the next heading at
-            # the same or a higher level. It used to stop at the next `###`, which for a
-            # `## Meta-patterns` section whose patterns are `###` children meant emitting the
-            # heading and one sentence and NONE of the patterns -- measured on a live vault,
-            # 234 bytes emitted of a 13.4 KB index, 0 of 23 meta-patterns (#150c).
-            lvl = len(lines[i]) - len(lines[i].lstrip("#"))
-            j = next((k for k in range(i + 1, len(lines))
-                      if HEADING.match(lines[k]) and len(lines[k]) - len(lines[k].lstrip("#")) <= lvl),
-                     len(lines))
+        es, is_lib, rec = recent_slice(lines, recent)
+        if is_lib:
             w("")
             w("### FILE: %s  (%d entries -- RULE LIBRARY, index shown instead of newest)" % (fn, len(es)))
             w("")
-            w("\n".join(lines[i:j]).rstrip())
+            w(rec[0])
             for d in payload["observed"]:
                 if d["file"] == fn:
-                    d["recent"] = ["\n".join(lines[i:j]).rstrip()]
+                    d["recent"] = rec
                     d["rule_library"] = True
             continue
-        tail = newest(es, recent)
-        rec = ["\n".join(e).rstrip() for e in tail]
         for d in payload["observed"]:
             if d["file"] == fn:
                 d["recent"] = rec
         w("")
         w("### FILE: %s  (%d entries total, showing the %d newest by date)"
-          % (fn, len(es), len(tail)))
+          % (fn, len(es), len(rec)))
         if not es:
             w("  (no ### entries -- this file is mapped by its headings above)")
         for block in rec:

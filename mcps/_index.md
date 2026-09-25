@@ -11,7 +11,6 @@ This is the **canonical list** referenced by `CLAUDE.md` → MCP Policy. When yo
 | Google Workspace | `google-workspace-mcp/` (config + docs only — server runs from PyPI via `uvx`) | Calendar, Tasks, Drive, Docs, Sheets, Slides, Gmail, Contacts, Forms — **Chat supported upstream but off by default** (add `chat:full`; needs re-consent) | OAuth |
 | Slack | `slack-mcp/` | Send/read messages AS YOU, search channels, DMs, threads, unreads | Chrome token extraction (default) or bot token (advanced) |
 | Atlassian | `atlassian-mcp/` | Jira issues + Confluence pages | API token (scoped recommended for least-privilege, classic also works) |
-| GitHub | `github-mcp/` | Repos, issues, PRs, files, branches, workflows | PAT |
 | Stitch | `stitch-mcp/` | AI-native design → code pipeline (Stitch 2.0) | Google Cloud OAuth — `stitch-mcp init` (browser sign-in; needs `gcloud`) |
 | NotebookLM | `notebooklm-mcp/` | Google NotebookLM — notebooks, audio/podcasts, quizzes | `notebooklm login` ⚠️ **needs Python 3.10+ — see README** |
 | Playwright¹ | `playwright-mcp/` | Browser automation — auto-publish, testing, screenshots | Browser storage state (Chrome cookie import) |

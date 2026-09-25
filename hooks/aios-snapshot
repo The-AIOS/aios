@@ -85,8 +85,18 @@ mkdir -p "$DESTDIR" || die "cannot create $DESTDIR"
 #    operation that runs a handful of times a day.
 LOCK="$DESTDIR/.aios-snapshot.lock"
 LOCKED=0
-release(){ [ "$LOCKED" = 1 ] && { rm -rf "$LOCK" 2>/dev/null; LOCKED=0; }; }
-trap release EXIT INT TERM
+TMPF=""
+release(){
+  [ -n "$TMPF" ] && { rm -f "$TMPF" 2>/dev/null; TMPF=""; }
+  [ "$LOCKED" = 1 ] && { rm -rf "$LOCK" 2>/dev/null; LOCKED=0; }
+  return 0
+}
+# A signal must END the run, not just drop the lock. With `trap release INT TERM` the handler
+# released the lock and the loop carried on, archiving the remaining files with no exclusion --
+# the one thing the lock exists to prevent. Release, then exit with the signal's status.
+trap release EXIT
+trap 'release; exit 130' INT
+trap 'release; exit 143' TERM
 
 acquire(){
   local tries=0 holder saw_lock=0
@@ -111,6 +121,19 @@ acquire(){
 }
 
 same(){ cmp -s "$1" "$2"; }
+
+# Copy to a hidden temp name in the same directory, then rename into place. A copy written
+# straight to the final name and cut short (disk full, a kill, a failing cp) stayed behind as
+# a VALID-looking snapshot: every later run compared against it, and a truncated archive read
+# as history. The rename is atomic on one filesystem, so a final name only ever holds a
+# complete copy. The temp name starts with a dot and cannot match a snapshot name.
+put(){
+  TMPF="$DESTDIR/.aios-snapshot.$$.tmp"
+  if cp -p "$1" "$TMPF" && mv -f "$TMPF" "$2"; then
+    TMPF=""; return 0
+  fi
+  rm -f "$TMPF" 2>/dev/null; TMPF=""; return 1
+}
 
 acquire; LOCKED=1
 
@@ -137,7 +160,7 @@ for src in "${FILES[@]}"; do
 
   dest="$DESTDIR/$DATE-$base"
   if [ ! -e "$dest" ]; then
-    cp -p "$src" "$dest" || { echo "failed   $src" >&2; RC=1; continue; }
+    put "$src" "$dest" || { echo "failed   $src" >&2; RC=1; continue; }
     echo "snapshot $dest"
     continue
   fi
@@ -149,7 +172,7 @@ for src in "${FILES[@]}"; do
   for L in b c d e f g h i j k l m n o p q r s t u v w x y z; do
     cand="$DESTDIR/$DATE$L-$base"
     [ -e "$cand" ] && continue
-    cp -p "$src" "$cand" || break
+    put "$src" "$cand" || break
     echo "collision $cand"
     placed=1
     break

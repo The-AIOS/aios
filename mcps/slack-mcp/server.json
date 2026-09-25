@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.jtalk22/slack-mcp-server",
   "title": "Slack MCP Server",
-  "description": "Claude-first Slack MCP for self-host or managed Cloud, with Gemini CLI, deployment review, and secure-default HTTP.",
+  "description": "Catch up on Slack without reading it. Unreads, threads, search. Browser-session or hosted OAuth.",
   "websiteUrl": "https://mcp.revasserlabs.com",
   "icons": [
     {
@@ -17,7 +17,7 @@
     "url": "https://github.com/jtalk22/slack-mcp-server",
     "source": "github"
   },
-  "version": "3.2.5",
+  "version": "5.0.0",
   "remotes": [
     {
       "type": "streamable-http",
@@ -28,7 +28,7 @@
     {
       "registryType": "npm",
       "identifier": "@jtalk22/slack-mcp",
-      "version": "3.2.5",
+      "version": "5.0.0",
       "transport": {
         "type": "stdio"
       },

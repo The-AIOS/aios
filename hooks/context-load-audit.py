@@ -31,7 +31,12 @@ DEPTH. Reading the `###` titles of a file is the floor; reading the file is the
 full load. They are counted separately, because a floor that silently degrades
 into nothing looks identical to a floor that is firing if you only count files.
 
-Usage:  context-load-audit.py [--min-tools N] [--cap N] [--json] [--session SID]
+PRIMARIES, the control, are the session names the operator declared in USER.md's
+`## Identity` table (plus any `--primary NAME`). Never a list written here: a list of
+names in canonical is one operator's session names shipped to every vault, where it
+matches nothing and turns the operator's real primary into a "worker" under suspicion.
+
+Usage:  context-load-audit.py [--min-tools N] [--cap N] [--primary NAME]... [--json] [--session SID]
 """
 import argparse
 import glob
@@ -107,7 +112,79 @@ OUTWARD = re.compile(
     re.I)
 
 TITLES_ONLY = re.compile(r"grep\s+[^|]*'?\^#{2,3}\s|head\s+-\d+|--?l\b")
-PRIMARY_HINT = re.compile(r"^(buddai|sarah|aios-|update$|vault-sync)", re.I)
+
+
+ITALIC = re.compile(r"^(\*(?!\*)|_(?!_))")   # *x* or _x_, but not **x** or __x__
+# A GFM table's delimiter row: `| --- | :---: |`, outer pipes optional.
+DELIM_ROW = re.compile(r"^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?$")
+
+
+def _cells(s):
+    s = s.strip()
+    s = s[1:] if s.startswith("|") else s
+    s = s[:-1] if s.endswith("|") else s
+    return [c.strip() for c in s.split("|")]
+
+
+def _primary_names(root):
+    """Session names declared in USER.md's `## Identity` table.
+
+    Only the FIRST table under a `## Identity` heading is read. A table is what GFM says it
+    is -- a header row followed by a delimiter row -- so explanatory text or a blockquote
+    that happens to contain a `|` never starts one. It ends at the first line that is not a
+    row, so nothing after it contributes, however the next section's heading is written.
+    Lines inside a fenced code block are not rows. Rows whose name cell is ITALIC are the
+    template's EXAMPLE rows ("EXAMPLE ONLY (Claude: ignore these)") and are skipped; a bold
+    name is a real name. An absent or unreadable USER.md yields no names, and main() then
+    aborts saying how to declare one.
+    """
+    try:
+        with open(os.path.join(root, "USER.md"), encoding="utf-8", errors="replace") as fh:
+            lines = [l.rstrip("\r") for l in fh.read().split("\n")]
+    except OSError:
+        return set()
+    # Blank out fenced code first, so nothing inside a fence is a heading or a row.
+    # CommonMark fences: at most 3 spaces of indent; a backtick opener has no backtick after
+    # it; a closer is the SAME character, at least as long, and nothing else on the line.
+    # An unclosed fence runs to the end of the file.
+    fence = None
+    for i, l in enumerate(lines):
+        f = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", l)
+        if fence:
+            if f and f.group(1)[0] == fence[0] and len(f.group(1)) >= len(fence) \
+                    and not f.group(2).strip():
+                fence = None
+            lines[i] = ""
+        elif f and not (f.group(1)[0] == "`" and "`" in f.group(2)):
+            fence = f.group(1)
+            lines[i] = ""
+    names, inside, i = set(), False, 0
+    while i < len(lines):
+        l = lines[i]
+        # An ATX heading of level 1-2: up to 3 spaces of indent, optional closing hashes.
+        m = re.match(r"^ {0,3}(#{1,2})(?:[ \t]+(.*?))?[ \t]*$", l)
+        if m:
+            title = re.sub(r"(^|[ \t]+)#+$", "", m.group(2) or "").strip()
+            inside = title.lower() == "identity"
+            i += 1
+            continue
+        nxt = lines[i + 1] if i + 1 < len(lines) else ""
+        if inside and "|" in l and not l.lstrip().startswith(">") and DELIM_ROW.match(nxt.strip()):
+            i += 2                                   # header row + delimiter row
+            while i < len(lines) and "|" in lines[i] and not lines[i].lstrip().startswith(">") \
+                    and not re.match(r"^ {0,3}#{1,6}(\s|$)", lines[i]):   # a heading ends it
+                cell = _cells(lines[i])[0]
+                if cell and not ITALIC.match(cell):
+                    name = cell.strip("*_`").strip()   # `name`, **name** and name are the same name
+                    if name:
+                        names.add(name)
+                i += 1
+            break                                    # only the first table
+        i += 1
+    return names
+
+
+PRIMARY_NAMES = _primary_names(VAULT_ROOT)
 
 
 def tool_inputs(path, cap):
@@ -140,27 +217,61 @@ def tool_inputs(path, cap):
 
 
 def audit(path, cap):
-    read_full, read_titles, tools = set(), set(), 0
+    """Loading is measured over the first `cap` calls; FIT over the whole transcript.
+
+    The cap answers "did it load context at the START". Fit asks a different question --
+    "was a declared/ file read BEFORE the first outward action" -- and an outward action,
+    or the declared read that preceded it, can happen at call 300. Capping fit at the
+    loading window reported workers that did read declared/ as misses, and dropped
+    workers whose outward action came late (measured: 13 names with the cap, 16 without,
+    and not the same 13).
+    """
+    read_full, read_titles, tools, loaded = set(), set(), 0, 0
     floor = False
     outward = False
+    declared_all, declared_first = set(), False
     ventures = set()
-    for _name, inp in tool_inputs(path, cap):
+    for _name, inp in tool_inputs(path, 0):
         tools += 1
-        if OUTWARD.search(inp):
+        loading = not cap or tools <= cap
+        loaded += loading
+        if FLOOR_CMD.search(inp):
+            if loading:
+                floor = True      # one call = the whole floor
+            hits, found = set(), []
+        else:
+            found = [(m.start(), m.group(1)) for m in PATH_RE.finditer(inp)]
+            # CD-RESOLUTION: after a cd into the context tree, bare filenames are context files.
+            if NAME_RE and (CD_INTO_CONTEXT.search(inp) or CTX_MENTION.search(inp)):
+                found += [(m.start(), m.group(1)) for m in NAME_RE.finditer(inp)]
+            hits = {n for _, n in found}
+        dec = hits & DECLARED_NAMES
+        # Where in the call each declared read was MATCHED -- the same matches that made it
+        # a hit, never a fresh substring search (which finds the name inside other words).
+        dec_pos = [pos for pos, n in found if n in DECLARED_NAMES] if dec else []
+        declared_all |= dec
+        out_m = OUTWARD.search(inp)
+        if dec and not outward:
+            # One call can both read and act (`cp draft export/ && cat voice.md`). It counts
+            # as read-first only when a declared name appears BEFORE the outward action in
+            # the call's text; otherwise the order is not shown, and it is not credited.
+            if not out_m or min(dec_pos) < out_m.start():
+                declared_first = True
+        if out_m:
             outward = True
+        if not loading:
+            continue
         for m in re.finditer(r"context/ventures/([A-Za-z0-9_\-]+)", inp):
             ventures.add(m.group(1))
-        if FLOOR_CMD.search(inp):
-            floor = True          # one call = the whole floor
-            continue
-        hits = {m.group(1) for m in PATH_RE.finditer(inp)}
-        # CD-RESOLUTION: after a cd into the context tree, bare filenames are context files.
-        if NAME_RE and (CD_INTO_CONTEXT.search(inp) or CTX_MENTION.search(inp)):
-            hits |= {m.group(1) for m in NAME_RE.finditer(inp)}
-        if not hits:
-            continue
-        (read_titles if TITLES_ONLY.search(inp) else read_full).update(hits)
-    return tools, read_full, read_titles - read_full, floor, outward, sorted(ventures)
+        if hits:
+            (read_titles if TITLES_ONLY.search(inp) else read_full).update(hits)
+    return {
+        # `tools` is the LOADING window, as before (it feeds --min-tools); `tools_total`
+        # is what the fit check read.
+        "tools": loaded, "tools_total": tools, "full": read_full, "titles": read_titles - read_full,
+        "floor": floor, "outward": outward, "ventures": sorted(ventures),
+        "declared": sorted(declared_all), "declared_before_outward": declared_first,
+    }
 
 
 def agent_name(path):
@@ -178,13 +289,17 @@ def main():
     ap.add_argument("--min-tools", type=int, default=20,
                     help="ignore sessions below this many tool calls (probes never had work to contextualise)")
     ap.add_argument("--cap", type=int, default=120,
-                    help="how many tool calls from the start to scan; 0 = whole transcript")
+                    help="how many tool calls from the start count as LOADING; 0 = whole "
+                         "transcript. Fit (outward vs declared/) always reads all of it")
+    ap.add_argument("--primary", action="append", default=[],
+                    help="a primary session name, in addition to USER.md's ## Identity table")
     ap.add_argument("--session", help="audit one sessionId prefix instead of sweeping")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
 
     root = os.path.expanduser("~/.claude/projects")
     pattern = f"{root}/*/{a.session}*.jsonl" if a.session else f"{root}/*/*.jsonl"
+    primaries = PRIMARY_NAMES | set(a.primary)
     rows = []
     for f in glob.glob(pattern):
         if os.path.getsize(f) < 2000 and not a.session:
@@ -192,15 +307,17 @@ def main():
         name = agent_name(f)
         if not name:
             continue
-        tools, full, titles, floor, outward, vents = audit(f, a.cap)
-        if tools < a.min_tools and not a.session:
+        r = audit(f, a.cap)
+        if r["tools"] < a.min_tools and not a.session:
             continue
+        full, titles, floor = r["full"], r["titles"], r["floor"]
         rows.append({
-            "name": name, "primary": bool(PRIMARY_HINT.match(name)),
-            "tools": tools, "full": sorted(full), "titles_only": sorted(titles),
-            "floor_cmd": floor, "outward": outward, "ventures": vents,
+            "name": name, "primary": name in primaries,
+            "tools": r["tools"], "tools_total": r["tools_total"], "full": sorted(full), "titles_only": sorted(titles),
+            "floor_cmd": floor, "outward": r["outward"], "ventures": r["ventures"],
             # Declared reads are what makes an outward-facing deliverable sound like them.
-            "declared": sorted(x for x in (full | titles) if x in DECLARED_NAMES),
+            "declared": r["declared"],
+            "declared_before_outward": r["declared_before_outward"],
             # A single context-floor.py call IS the whole floor. Counting only files
             # would score the worker that did exactly the right thing at zero.
             "total": len(full) + len(titles) + (1 if floor else 0),
@@ -228,6 +345,9 @@ def main():
         print("      Set AIOS_VAULT to the vault root to resolve them.")
     if not primaries:
         print("ABORT: no primary session found, so the detector has no control.")
+        if not primaries:
+            print("       No primary is declared: add your main session names to the")
+            print("       `## Identity` table in USER.md, or pass --primary NAME.")
         print("       A worker reading nothing and a detector seeing nothing are the same")
         print("       output here. Not reporting findings from an unvalidated instrument.")
         return 2
@@ -262,17 +382,17 @@ def main():
     # fact on the transcript -- and it is the failure that does NOT announce itself,
     # because the output reads fluent and correct either way. This is the one place the
     # audit reports on JUDGEMENT rather than quantity.
-    miss = [r for r in workers if r.get("outward") and not r.get("declared")]
+    miss = [r for r in workers if r.get("outward") and not r.get("declared_before_outward")]
     out_n = sum(1 for r in workers if r.get("outward"))
     print("\nfit — workers whose output went outward: %d of %d" % (out_n, len(workers)))
     if miss:
-        print("  %d produced operator-facing work having read NO declared/ file:" % len(miss))
+        print("  %d acted outward before reading any declared/ file:" % len(miss))
         for r in sorted(miss, key=lambda r: -r["tools"]):
             print("    %-30s %3d tool calls" % (r["name"][:30], r["tools"]))
         print("  Not automatically wrong -- judge each. But this is the shape of work that")
         print("  comes back fluent, correct, and not theirs, with nothing in it looking off.")
     else:
-        print("  every outward-facing worker read at least one declared/ file.")
+        print("  every outward-facing worker read a declared/ file before acting outward.")
 
     return 0
 

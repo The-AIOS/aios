@@ -13,11 +13,27 @@ it easy to debug headless / silent-failure cases (e.g. Windows on ARM).
 Run from any terminal that supports interactive input:
   python mcps/notebooklm-mcp/manual_login.py
 """
+import json
 from pathlib import Path
+
 from playwright.sync_api import sync_playwright, Error as PlaywrightError
 
-PROFILE = Path.home() / ".notebooklm" / "browser_profile"
-STORAGE = Path.home() / ".notebooklm" / "storage_state.json"
+
+def _notebooklm_dirs():
+    """Where notebooklm-py keeps the session. 0.8 moved it under profiles/<name>/ and migrates
+    the old location on its first run, so prefer the profile when it exists and fall back to the
+    old root otherwise (0.8 then migrates what this script wrote)."""
+    root = Path.home() / ".notebooklm"
+    try:
+        name = json.loads((root / "config.json").read_text(encoding="utf-8")).get("default_profile")
+    except (OSError, ValueError):
+        name = None
+    base = root / "profiles" / name if name and (root / "profiles" / name).is_dir() else root
+    return base / "browser_profile", base / "storage_state.json"
+
+
+PROFILE, STORAGE = _notebooklm_dirs()
+
 URL = "https://notebooklm.google.com/"
 
 print(f"[1/5] Profile dir: {PROFILE}", flush=True)

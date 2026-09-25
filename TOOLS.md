@@ -156,7 +156,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | Skill | Source | Trigger phrase |
 |---|---|---|
 | `brainstorming` | `skills/superpowers/` | "Let's brainstorm before building" |
-| `executing-plans` | `skills/superpowers/` | "Execute this plan with checkpoints" |
+| `executing-plans` | `skills/superpowers/` | "Execute this plan" (runs continuously; stops on INTENT.md ask/escalate items) |
 | `verification-before-completion` | `skills/superpowers/` | "Verify everything works before we ship" |
 | `writing-plans` | `skills/superpowers/` | "Help me plan the implementation" |
 

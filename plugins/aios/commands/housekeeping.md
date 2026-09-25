@@ -332,7 +332,7 @@ The companion to Bucket 12. Where Bucket 12 promotes structure *within* `antifra
    - Entry count ≥ 4
    - Most recent entry ≤ 30 days ago
 
-4. **Skip meta-patterns that already show a `→ Graduated to USER.md on YYYY-MM-DD` flag** in their description. One graduation per pattern; subsequent recurrences signal the rule isn't being followed, not that re-graduation is needed.
+4. **Skip meta-patterns whose description already carries a `→ Graduated to USER.md` flag** — match on that prefix, because the full line steps 3–4 below write is `→ Graduated to USER.md → ## Personal antifragile graduations → "{rule name}" on YYYY-MM-DD.`, and a literal search for `Graduated to USER.md on` never finds it, so the same pattern re-graduates on every run. One graduation per pattern; subsequent recurrences signal the rule isn't being followed, not that re-graduation is needed.
 
 **For each flagged meta-pattern, draft a rule:**
 
@@ -373,7 +373,7 @@ Synthesize a ≤100-word behavioral rule from the pattern description + the sour
 
 4. **Annotate the meta-pattern description** with the same graduation flag inline.
 
-5. **Snapshot `antifragile.md` before editing** (per CLAUDE.md observed-context rules). Save to `00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-antifragile.md`, applying CLAUDE.md § Session End's collision rule: destination exists + identical → done; exists + different → **next free letter** (`b`, `c`, …). _(This command carried the suffix convention alone for weeks — it is now the global rule, so the two cannot drift apart.)_
+5. **Snapshot `antifragile.md` before editing** with the helper, never a hand-rolled copy: `~/aios/hooks/aios-snapshot "vault/00 - notes/context/observed/antifragile.md"`. It archives to `00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-antifragile.md`, compares against every existing archive for the day under a lock, and takes the next free letter itself; `identical` on its output is success, not a skipped step (CLAUDE.md § Session End).
 
 **Evidence discipline:** show the entry numbers, dates, and the synthesized rule text. *"Meta-pattern Q has 5 entries (most recent #51, 1 day ago) — proposed rule reads: '{exact text}'"* beats *"Q is ready to graduate."*
 
@@ -476,7 +476,7 @@ The framework vendors content from upstream repos in two places: **skills** (sou
 2. **For each `.upstream-sync` found:**
    - Parse `repo=`, `hash=`, `date=`, optional `subdir=`, optional `note=`.
    - Query the upstream: `gh api "repos/<org>/<repo>/commits/HEAD" --jq '.sha'` → current upstream HEAD.
-   - Compare local vs upstream hash. If equal → mark `current`. If different → mark `behind`.
+   - Compare by **prefix**, never by string equality: the manifest stores the short sha (`hash=<short-sha>`, seven characters) and the API returns the full forty, so `[ "$local" = "$upstream" ]` is false for every vendored source and reports them all `behind` forever. `if [ -z "$local" ]; then sync_status=unrecorded; else case "$upstream" in "$local"*) sync_status=current ;; *) sync_status=behind ;; esac; fi` — an empty `hash=` would otherwise be a prefix of everything and read `current`; a runtime package records `package=<name>@<version>` instead and is checked against the registry's latest version, not a commit — the vendored hash is a prefix of the upstream sha when nothing moved. (`sync_status`, not `status`: that name is read-only in zsh, the session shell, and assigning it aborts the line.)
 3. **For `behind` sources** — fetch the commit list since local hash:
    ```bash
    gh api "repos/<org>/<repo>/compare/<local>...HEAD" --jq '.commits[] | .commit.message'
@@ -491,7 +491,6 @@ The framework vendors content from upstream repos in two places: **skills** (sou
 | 18.1 | `skills/superpowers/` | skill | 🟡 behind | 7 commits | [ ] review changes |
 | 18.2 | `skills/anthropic/` | skill | 🟢 current | — | — |
 | 18.3 | `mcps/atlassian-mcp/` | mcp | 🟡 behind | 23 commits since 2026-05-21 | [ ] review (may require deps + restart) |
-| 18.4 | `mcps/github-mcp/` | mcp | 🟢 current | — | — |
 
 **For approved pulls (skills):**
 - Update `skills/<source>/.upstream-sync` with new hash + date
@@ -532,16 +531,22 @@ Some MCPs are AIOS-built, not vendored — `nano-banana-mcp`, `pdf-generator-mcp
 Scan every file in `context/declared/` and `context/observed/` for a **repeated frontmatter key**:
 
 ```bash
-python3 - <<'PY'
+# Through `uv`, never `python3` — on Windows that name runs nothing and its silence reads
+# like a clean result (CLAUDE.md § Identity & Greeting, step 4a). And the last line always
+# prints a count: an empty glob (wrong folder, unreadable vault) must look different from
+# "checked everything, found nothing".
+UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run - <<'PY'
 import re, glob, os
 os.chdir(os.path.expanduser("~/aios/vault/00 - notes/context"))
-for f in sorted(glob.glob("*/*.md")):
+files = sorted(glob.glob("*/*.md"))
+for f in files:
     m = re.match(r'^---\n(.*?)\n---\n', open(f, encoding="utf-8", errors="replace").read(), re.S)
     if not m:
         print("NO FRONTMATTER: %s" % f); continue
     keys = re.findall(r'^([A-Za-z_][A-Za-z0-9_-]*):', m.group(1), re.M)
     dupes = sorted({k for k in keys if keys.count(k) > 1})
     if dupes: print("DUPLICATE KEY: %s -> %s" % (f, ", ".join(dupes)))
+print("checked %d file(s)" % len(files))
 PY
 ```
 
@@ -842,7 +847,9 @@ It runs for months without complaining, which is why it needs a periodic sweep r
 
 Report as: *"`{file}:{line}` runs headless `Bash` {with no `--settings` file / with `{settings file}`, which leaves Bash auto-approved / does not deny reads of `{folder}`}. The settings, and why they go in a file only the job loads, are in `MODEL-ROUTING.md` § Verify an id before you trust it."*
 
-**Never report the operator's interactive settings for this** (`~/.claude/settings.json`, the vault's `.claude/settings*.json`). Auto-approve there is what keeps a sandboxed session usable, and denying a token folder there breaks tools that read it, `/today` included. An operator told their global sandbox is "missing" these would fix the wrong file and break their own sessions. Never edit any file.
+**Then read the allow lists those calls inherit** — the user layer (`~/.claude/settings.json`) and the project layer (the vault's `.claude/settings.json`), both kept by `--setting-sources user,project`. Report every `Bash(...)` rule that names an interpreter or a directory of scripts with a wildcard (`Bash(python3 *)`, `Bash(bash ~/aios/hooks/:*)`, `Bash(node *)`): each lets a headless Bash job run anything under it. Report as: *"`{file}` allows `{rule}`, which every headless Bash call inherits. Two ways to close it: narrow the rule to the scripts you run (this also changes your interactive sessions, which will prompt where they didn't), or leave your settings alone and run the routine from its own folder with its own `.claude/settings.json` and `--setting-sources project`, which keeps neither your user rules nor this project's."* Name both; the choice is the operator's. Report only; never edit.
+
+**Never report the operator's interactive sandbox settings for this** (`~/.claude/settings.json`, the vault's `.claude/settings*.json`). Auto-approve there is what keeps a sandboxed session usable, and denying a token folder there breaks tools that read it, `/today` included. An operator told their global sandbox is "missing" these would fix the wrong file and break their own sessions. Never edit any file.
 
 **State COVERAGE, every run:** *"Headless calls: **{N}** invocations found across **{F}** operator files · **{G}** already name their tools · **{R}** reported. Headless `Bash` calls: **{B}** · **{K}** pass a `--settings` file configured as documented."*
 
@@ -864,9 +871,9 @@ uv run ~/aios/hooks/context-load-audit.py
 
 **Compaction does not affect it.** Compaction rewrites the model's context window; the transcript on disk is append-only. Measured on a live session with 8 compaction events: all 10,241 `tool_use` records, spanning seven weeks, were still present. The audit sees what a session *did*, not what it still remembers.
 
-**It aborts rather than reassures.** Primary sessions are the control — they run the full ritual, so they must score. If none does, the detector prints `ABORT: the detector is broken, not the workers` and reports nothing else. A scan that cannot see a primary's reads cannot be trusted about a worker's.
+**It aborts rather than reassures.** Primary sessions are the control — the names in `USER.md`'s `## Identity` table, which run the full ritual, so they must score. A vault with none declared gets an abort that says how to declare one. If none does, the detector prints `ABORT: the detector is broken, not the workers` and reports nothing else. A scan that cannot see a primary's reads cannot be trusted about a worker's.
 
-**It also reports FIT, which is the measure that matters.** Volume is a proxy; the question worth asking is whether what a session read *fits what it was asked to do*. *"Was the answer good"* is subjective and not auditable. *"Did a worker that published in the operator's name ever read the file that says how the operator writes"* is a fact on the transcript — and it is the failure that does **not** announce itself, because the output reads fluent and correct either way. The audit names any worker that took an outward-facing action (wrote to `03 - export/`, sent mail or a message, created a doc or deck) having read **no** `declared/` file. Not automatically wrong — judge each — but that is the shape of work that comes back *not theirs* with nothing in it looking off.
+**It also reports FIT, which is the measure that matters.** Volume is a proxy; the question worth asking is whether what a session read *fits what it was asked to do*. *"Was the answer good"* is subjective and not auditable. *"Did a worker that published in the operator's name ever read the file that says how the operator writes"* is a fact on the transcript — and it is the failure that does **not** announce itself, because the output reads fluent and correct either way. The audit names any worker that took an outward-facing action (wrote to `03 - export/`, sent mail or a message, created a doc or deck) before reading any `declared/` file, anywhere in its transcript. Not automatically wrong — judge each — but that is the shape of work that comes back *not theirs* with nothing in it looking off.
 
 **Propose:** nothing automatic. Report the names and counts; the operator decides whether a given worker's task genuinely needed no context. The value is that the number exists and can be watched — a floor that stops firing shows up here before it shows up as work that quietly stopped sounding like them.
 

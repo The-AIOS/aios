@@ -419,7 +419,7 @@ Provides `conversations_unreads` — used by the pipeline executor for daily tri
 ```bash
 cd ~/aios/mcps/slack-mcp && npm install --production
 claude mcp add slack-local -- node ~/aios/mcps/slack-mcp/src/server.js
-npx @jtalk22/slack-mcp --setup
+npx @jtalk22/slack-mcp@5.0.0 --setup
 ```
 
 ### 5. Pipeline executor (no action needed)

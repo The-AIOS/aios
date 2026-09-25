@@ -74,11 +74,8 @@ STDLIB = {
 # there; the lint simply could not see them.
 KNOWN_UNPINNED = {
     "@mauricio.wolff/mcp-obsidian",
-    "@jtalk22/slack-mcp",
     "@_davideast/stitch-mcp",
     "workspace-mcp",
-    "mcp-atlassian",
-    "@modelcontextprotocol/server-github",
 }
 
 # Prose mentions the word without invoking anything — "npx-based MCPs need it".
@@ -86,7 +83,7 @@ KNOWN_UNPINNED = {
 # `--help` USED TO BE ON THIS LIST, and it was the wrong call: `npx -y pkg --help` and
 # `uvx pkg --help` are not documentation, they are a fetch-and-execute of whatever the
 # registry publishes right now, used as a reachability probe. Two invocations hid behind it
-# in `mcps/setup.sh` — `mcp-atlassian` and `@modelcontextprotocol/server-github` — so the
+# in `mcps/setup.sh` — `mcp-atlassian` and the since-retired GitHub server — so the
 # lint reported clean while SECURITY.md described five unpinned rows, and the ratchet held
 # three of them. An escape hatch wide enough to hide a real invocation is not a false-positive
 # fix, it is a blind spot. Removing it surfaced exactly those two and nothing else.

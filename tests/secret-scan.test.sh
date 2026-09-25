@@ -131,5 +131,22 @@ else
   echo "  skip  git not on PATH — repo-scoped enumeration not exercised"
 fi
 
+# --- size cap: files over the cap are scanned as text, NAMED, and a text token still blocks ----
+C=$(mktemp -d "${TMPDIR:-/tmp}/ss-cap.XXXXXX")
+printf 'plain text with ghp_%s inside\n' "$(printf 'a%.0s' $(seq 36))" > "$C/text.md"
+printf 'nothing here\n' > "$C/clean.md"
+out=$(AIOS_SECRET_SCAN_CAP_MB=0 bash "$SCAN" "$C/text.md" 2>&1); rc=$?
+[ "$rc" -ne 0 ] && printf '%s' "$out" | grep -c 'scanned as text only' >/dev/null && ok "over the cap: a text token still blocks, and the file is named as text-only" || no "over-cap scan did not block or did not name the file" "rc=$rc $out"
+out=$(AIOS_SECRET_SCAN_CAP_MB=0 bash "$SCAN" "$C/clean.md" 2>&1); rc=$?
+[ "$rc" -eq 0 ] && ok "over the cap: a clean file passes" || no "over-cap clean file refused" "rc=$rc $out"
+# many hits must read as BLOCKED, never as a failed scan: once grep's output overflowed the pipe
+# buffer, `| head -3` exited, grep died of SIGPIPE (141) under pipefail, and a real hit was reported
+# as "FAILED to scan" (measured with ~1.3 MB of matching lines)
+L="ghp_$(printf 'b%.0s' $(seq 36)) $(printf 'x%.0s' $(seq 400))"
+for i in $(seq 1 3000); do printf '%s\n' "$L"; done > "$C/many.md"
+out=$(bash "$SCAN" "$C/many.md" 2>&1); rc=$?
+printf '%s' "$out" | grep -c 'BLOCKED' >/dev/null && ! printf '%s' "$out" | grep -c 'FAILED to scan' >/dev/null && ok "~1.3 MB of hits → BLOCKED, not 'FAILED to scan' (grep SIGPIPE)" || no "many hits misreported" "$out"
+rm -rf "$C"
+
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

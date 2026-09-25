@@ -34,6 +34,8 @@ hooks/git/pre-push      text eol=lf
 *.js            text eol=lf
 *.cjs           text eol=lf
 *.mjs           text eol=lf
+# Extensionless executables that vendored skills ship in scripts/ (superpowers v6) — same shebang breakage.
+skills/*/*/scripts/*    text eol=lf
 
 # Python hooks: CRLF is survivable for the interpreter but breaks `#!` shebang invocation the
 # same way, and these are invoked directly by settings.json and by other scripts.

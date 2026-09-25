@@ -11,8 +11,7 @@ import express from "express";
 import { randomBytes } from "crypto";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { execSync } from "child_process";
+import { existsSync, readFileSync, writeFileSync, chmodSync } from "fs";
 import { homedir } from "os";
 import { loadTokensReadOnly } from "../lib/token-store.js";
 import { PUBLIC_METADATA, RELEASE_VERSION } from "../lib/public-metadata.js";
@@ -60,7 +59,7 @@ function getOrCreateAPIKey() {
   const newKey = `smcp_${randomBytes(24).toString('base64url')}`;
   try {
     writeFileSync(API_KEY_FILE, newKey);
-    execSync(`chmod 600 "${API_KEY_FILE}"`);
+    chmodSync(API_KEY_FILE, 0o600);
   } catch {}
 
   return newKey;
@@ -97,6 +96,12 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+function safeParseInt(value, fallback, max = 10000) {
+  const n = parseInt(value, 10);
+  if (isNaN(n) || n < 1) return fallback;
+  return Math.min(n, max);
+}
 
 // API Key authentication
 function authenticate(req, res, next) {
@@ -209,7 +214,7 @@ app.get("/conversations", authenticate, async (req, res) => {
   try {
     const result = await handleListConversations({
       types: req.query.types || "im,mpim",
-      limit: parseInt(req.query.limit) || 100
+      limit: safeParseInt(req.query.limit, 100)
     });
     res.json(extractContent(result));
   } catch (e) {
@@ -222,7 +227,7 @@ app.get("/conversations/unreads", authenticate, async (req, res) => {
   try {
     const result = await handleConversationsUnreads({
       types: req.query.types || "im,mpim,public_channel,private_channel",
-      limit: parseInt(req.query.limit) || 50
+      limit: safeParseInt(req.query.limit, 50)
     });
     res.json(extractContent(result));
   } catch (e) {
@@ -235,7 +240,7 @@ app.get("/conversations/:id/history", authenticate, async (req, res) => {
   try {
     const result = await handleConversationsHistory({
       channel_id: req.params.id,
-      limit: parseInt(req.query.limit) || 50,
+      limit: safeParseInt(req.query.limit, 50),
       oldest: req.query.oldest,
       latest: req.query.latest,
       resolve_users: req.query.resolve_users !== "false"
@@ -253,7 +258,7 @@ app.get("/conversations/:id/full", authenticate, async (req, res) => {
       channel_id: req.params.id,
       oldest: req.query.oldest,
       latest: req.query.latest,
-      max_messages: parseInt(req.query.max_messages) || 2000,
+      max_messages: safeParseInt(req.query.max_messages, 2000, 50000),
       include_threads: req.query.include_threads !== "false",
       output_file: req.query.output_file
     });
@@ -312,7 +317,7 @@ app.get("/search", authenticate, async (req, res) => {
     }
     const result = await handleSearchMessages({
       query: req.query.q,
-      count: parseInt(req.query.count) || 20
+      count: safeParseInt(req.query.count, 20)
     });
     res.json(extractContent(result));
   } catch (e) {
@@ -347,7 +352,7 @@ app.post("/messages", authenticate, async (req, res) => {
 app.get("/users", authenticate, async (req, res) => {
   try {
     const result = await handleListUsers({
-      limit: parseInt(req.query.limit) || 100
+      limit: safeParseInt(req.query.limit, 100)
     });
     res.json(extractContent(result));
   } catch (e) {
@@ -369,7 +374,7 @@ app.get("/users/search", authenticate, async (req, res) => {
     }
     const result = await handleUsersSearch({
       query: req.query.q,
-      limit: parseInt(req.query.limit) || 20
+      limit: safeParseInt(req.query.limit, 20)
     });
     res.json(extractContent(result));
   } catch (e) {
@@ -452,9 +457,9 @@ async function main() {
     console.error(`\n${"═".repeat(60)}`);
     console.error(`  Slack Web API Server v${RELEASE_VERSION}`);
     console.error(`${"═".repeat(60)}`);
-    console.error(`\n  Dashboard: http://localhost:${PORT}/?key=${API_KEY}`);
-    console.error(`\n  API Key:   ${API_KEY}`);
-    console.error(`\n  curl -H "Authorization: Bearer ${API_KEY}" http://localhost:${PORT}/health`);
+    console.error(`\n  Dashboard: http://localhost:${PORT}/?key=${API_KEY.slice(0, 8)}...`);
+    console.error(`\n  API Key:   ${API_KEY.slice(0, 8)}${"*".repeat(12)}`);
+    console.error(`\n  curl -H "Authorization: Bearer <key>" http://localhost:${PORT}/health`);
     console.error(`\n  Security: Bound to localhost only (127.0.0.1)`);
     console.error(`\n${"═".repeat(60)}\n`);
   });

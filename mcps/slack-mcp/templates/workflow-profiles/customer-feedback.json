@@ -1,0 +1,10 @@
+{
+  "profile_name": "customer-feedback",
+  "workflow_kind": "product_launch_watch",
+  "channels": [],
+  "priority_people": [],
+  "retention_mode": "persistent",
+  "summary_cadence": "daily_8am",
+  "structured_keys": ["launch_signals", "feedback_themes", "blockers", "metrics", "next_actions"],
+  "_template_notes": "Apply with: slack-mcp --apply-template customer-feedback --channels C0FEEDBACK,C0CUSTOMERS,C0SUPPORT. retention_mode=persistent so feedback themes accumulate across days. Weekly synthesis becomes more valuable as the index grows."
+}

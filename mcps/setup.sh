@@ -64,6 +64,21 @@ echo ""
 # Git Bash resolves bare names (pip, playwright) to their .exe, so no suffix needed.
 vbin() { if [ -d ".venv/Scripts" ]; then echo ".venv/Scripts"; else echo ".venv/bin"; fi; }
 
+# A pin bump must reach an install that already exists. Every Python MCP below used to be
+# guarded by `[ ! -d .venv ]`, so it installed once and never again: a machine set up in May
+# kept May's versions forever, whatever requirements.txt said (measured 2026-09-25: a
+# notebooklm-py pinned nowhere and frozen at 0.3.4 while 0.8.2 shipped). Each install now
+# records a hash of its requirements.txt in the venv, and a changed file reinstalls.
+# CRLF-normalised, so a Windows checkout does not read as a change. Without a working Python
+# there is nothing to hash, and an existing venv is left alone rather than rebuilt blind.
+req_sha() { $PY -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read().replace(b"\r\n",b"\n")).hexdigest())' "$1" 2>/dev/null; }
+needs_install() {
+  [ -d "$1/.venv" ] || return 0
+  [ -n "$PY" ] && [ -f "$1/requirements.txt" ] || return 1
+  [ "$(cat "$1/.venv/.aios-requirements.sha256" 2>/dev/null)" != "$(req_sha "$1/requirements.txt")" ]
+}
+stamp_install() { req_sha requirements.txt > .venv/.aios-requirements.sha256; }
+
 # Cross-platform Python launcher. On Windows, `python3.exe` is the Microsoft Store
 # redirector stub by default — invoking it opens an "install Python" page and exits
 # non-zero, so `python3 -m venv` silently no-ops while the `&& echo "✓"` chain hides
@@ -79,7 +94,7 @@ if [ -z "$PY" ]; then
   echo "✗ No working Python found (python3 / python / py -3 all failed)."
   echo "  On Windows: install Python from python.org, then disable the Store alias —"
   echo "  Settings → Apps → Advanced app settings → App execution aliases → turn OFF"
-  echo "  python.exe and python3.exe. Node-only MCPs (slack/github/stitch) still set up below."
+  echo "  python.exe and python3.exe. Node-only MCPs (slack/stitch) still set up below."
   echo ""
 fi
 
@@ -134,29 +149,29 @@ if want slack-mcp && [ -d "$SCRIPT_DIR/slack-mcp" ]; then
   if ! command -v npx >/dev/null 2>&1; then
     echo "  ⚠ npx not found — install Node.js first"
   else
-    npx -y @jtalk22/slack-mcp --version >/dev/null 2>&1 \
-      && echo "  ✓ ready (invoked via npx @jtalk22/slack-mcp at runtime)" \
+    npx -y @jtalk22/slack-mcp@5.0.0 --version >/dev/null 2>&1 \
+      && echo "  ✓ ready (invoked via npx @jtalk22/slack-mcp@5.0.0 at runtime)" \
       || echo "  ✓ ready (will install on first invocation)"
   fi
 fi
 
 # --- NotebookLM MCP ---
-if want notebooklm-mcp && [ -d "$SCRIPT_DIR/notebooklm-mcp" ] && [ ! -d "$SCRIPT_DIR/notebooklm-mcp/.venv" ]; then
+if want notebooklm-mcp && [ -d "$SCRIPT_DIR/notebooklm-mcp" ] && needs_install "$SCRIPT_DIR/notebooklm-mcp"; then
   echo "→ notebooklm-mcp..."
   cd "$SCRIPT_DIR/notebooklm-mcp"
-  $PY -m venv .venv
-  "$(vbin)/pip" install notebooklm-py playwright -q
+  [ -d .venv ] || $PY -m venv .venv
+  "$(vbin)/pip" install -r requirements.txt -q && stamp_install
   "$(vbin)/playwright" install chromium 2>/dev/null
   "$(vbin)/notebooklm" skill install 2>/dev/null || true
   echo "  ✓ installed (authenticate: run notebooklm login from mcps/notebooklm-mcp/$(vbin))"
 fi
 
 # --- Playwright MCP ---
-if want playwright-mcp && [ -d "$SCRIPT_DIR/playwright-mcp" ] && [ ! -d "$SCRIPT_DIR/playwright-mcp/.venv" ]; then
+if want playwright-mcp && [ -d "$SCRIPT_DIR/playwright-mcp" ] && needs_install "$SCRIPT_DIR/playwright-mcp"; then
   echo "→ playwright-mcp..."
   cd "$SCRIPT_DIR/playwright-mcp"
-  $PY -m venv .venv
-  "$(vbin)/pip" install playwright browser-cookie3 -q
+  [ -d .venv ] || $PY -m venv .venv
+  "$(vbin)/pip" install -r requirements.txt -q && stamp_install
   "$(vbin)/playwright" install chromium 2>/dev/null
   echo "  ✓ installed (chromium bundled)"
 fi
@@ -168,52 +183,41 @@ if want atlassian-mcp && [ -d "$SCRIPT_DIR/atlassian-mcp" ]; then
     echo "  ⚠ neither uvx nor pipx found — install one ($(pkg_hint uv)), then re-run"
   else
     if command -v uvx >/dev/null 2>&1; then
-      uvx --help mcp-atlassian >/dev/null 2>&1 || uvx mcp-atlassian --help >/dev/null 2>&1 || true
-      echo "  ✓ ready (invoked via uvx mcp-atlassian at runtime)"
+      uvx 'mcp-atlassian==0.23.1' --help >/dev/null 2>&1 || true
+      echo "  ✓ ready (invoked via uvx mcp-atlassian==0.23.1 at runtime)"
     else
-      pipx install mcp-atlassian --force 2>/dev/null
+      pipx install 'mcp-atlassian==0.23.1' --force 2>/dev/null
       echo "  ✓ installed via pipx"
     fi
   fi
 fi
 
-# --- GitHub MCP (vendored via npx, no install needed) ---
-if want github-mcp && [ -d "$SCRIPT_DIR/github-mcp" ]; then
-  echo "→ github-mcp..."
-  if ! command -v npx >/dev/null 2>&1; then
-    echo "  ⚠ npx not found — install Node.js first"
-  else
-    npx -y @modelcontextprotocol/server-github --help >/dev/null 2>&1 || true
-    echo "  ✓ ready (invoked via npx @modelcontextprotocol/server-github at runtime)"
-  fi
-fi
-
 # --- Nano Banana MCP (Gemini image gen) ---
-if want nano-banana-mcp && [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && [ ! -d "$SCRIPT_DIR/nano-banana-mcp/.venv" ]; then
+if want nano-banana-mcp && [ -d "$SCRIPT_DIR/nano-banana-mcp" ] && needs_install "$SCRIPT_DIR/nano-banana-mcp"; then
   echo "→ nano-banana-mcp..."
   cd "$SCRIPT_DIR/nano-banana-mcp"
-  $PY -m venv .venv
-  "$(vbin)/pip" install -r requirements.txt -q
+  [ -d .venv ] || $PY -m venv .venv
+  "$(vbin)/pip" install -r requirements.txt -q && stamp_install
   echo "  ✓ installed (requires GEMINI_API_KEY — see README)"
 fi
 
 # --- PDF Generator MCP ---
-if want pdf-generator-mcp && [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && [ ! -d "$SCRIPT_DIR/pdf-generator-mcp/.venv" ]; then
+if want pdf-generator-mcp && [ -d "$SCRIPT_DIR/pdf-generator-mcp" ] && needs_install "$SCRIPT_DIR/pdf-generator-mcp"; then
   echo "→ pdf-generator-mcp..."
   cd "$SCRIPT_DIR/pdf-generator-mcp"
-  $PY -m venv .venv
-  "$(vbin)/pip" install -r requirements.txt -q
+  [ -d .venv ] || $PY -m venv .venv
+  "$(vbin)/pip" install -r requirements.txt -q && stamp_install
   command -v pandoc >/dev/null 2>&1 || echo "  ⚠ pandoc not found — $(pkg_hint pandoc)"
   have_chrome || echo "  ⚠ Google Chrome not found — install from https://google.com/chrome"
   echo "  ✓ installed (requires pandoc + Chrome)"
 fi
 
 # --- Spotify DJ MCP ---
-if want spotify-dj-mcp && [ -d "$SCRIPT_DIR/spotify-dj-mcp" ] && [ ! -d "$SCRIPT_DIR/spotify-dj-mcp/.venv" ]; then
+if want spotify-dj-mcp && [ -d "$SCRIPT_DIR/spotify-dj-mcp" ] && needs_install "$SCRIPT_DIR/spotify-dj-mcp"; then
   echo "→ spotify-dj-mcp..."
   cd "$SCRIPT_DIR/spotify-dj-mcp"
-  $PY -m venv .venv
-  "$(vbin)/pip" install -r requirements.txt -q
+  [ -d .venv ] || $PY -m venv .venv
+  "$(vbin)/pip" install -r requirements.txt -q && stamp_install
   echo "  ✓ installed (requires Spotify Dev app + SPOTIFY_CLIENT_ID/SECRET — see README)"
 fi
 
@@ -245,9 +249,8 @@ echo ""
 echo "Manual auth steps per MCP (if you prefer):"
 echo "  • pdf-generator    : no auth (works immediately — just register)"
 echo "  • google-workspace : uvx workspace-mcp (opens browser on first call)"
-echo "  • slack            : npx -y @jtalk22/slack-mcp --refresh-tokens  (extracts from Chrome; posts AS YOU)"
+echo "  • slack            : npx -y @jtalk22/slack-mcp@5.0.0 --refresh-tokens  (extracts from Chrome; posts AS YOU)"
 echo "  • notebooklm       : run 'notebooklm login' from mcps/notebooklm-mcp/.venv/bin (Unix) or .venv/Scripts (Windows)"
-echo "  • github           : export GITHUB_TOKEN (Personal Access Token)"
 echo "  • atlassian        : export ATLASSIAN_URL / ATLASSIAN_USERNAME / ATLASSIAN_API_TOKEN"
 echo "  • nano-banana      : export GEMINI_API_KEY (requires Cloud Billing enabled — ~\$0.04/image)"
 echo "  • spotify-dj       : export SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET (Developer app)"

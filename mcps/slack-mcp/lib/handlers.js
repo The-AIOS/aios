@@ -4,8 +4,7 @@
  * Implementation of all MCP tool handlers.
  */
 
-import { writeFileSync, readFileSync, existsSync, renameSync, unlinkSync, mkdirSync } from "fs";
-import { execSync } from "child_process";
+import { writeFileSync, readFileSync, existsSync, renameSync, unlinkSync, mkdirSync, chmodSync } from "fs";
 import { homedir, platform } from "os";
 import { join } from "path";
 import {
@@ -13,9 +12,20 @@ import {
   saveTokens,
   extractFromChrome,
   isAutoRefreshAvailable,
-  getLastExtractionError
+  getLastExtractionError,
+  getStorageInfo
 } from "./token-store.js";
 import { slackAPI, resolveUser, formatTimestamp, sleep, checkTokenHealth, getUserCacheStats } from "./slack-client.js";
+import {
+  saveProfile as workflowSaveProfile,
+  listProfiles as workflowListProfiles,
+  getProfile as workflowGetProfile,
+  structuredKeysFor,
+  ALLOWED_WORKFLOW_KINDS_LIST,
+} from "./workflow-store.js";
+import { assembleCatchUp, resolveSince } from "./catch-up.js";
+import { withRichMessageFields } from "./rich-message-fields.js";
+import { isAuthDeath, lifeboatResponse } from "./lifeboat.js";
 
 // ============ Utilities ============
 
@@ -50,7 +60,7 @@ function atomicWriteSync(filePath, content) {
   try {
     writeFileSync(tempPath, content);
     if (platform() === 'darwin' || platform() === 'linux') {
-      try { execSync(`chmod 600 "${tempPath}"`); } catch {}
+      try { chmodSync(tempPath, 0o600); } catch {}
     }
     renameSync(tempPath, filePath);
   } catch (e) {
@@ -120,6 +130,7 @@ export async function handleTokenStatus() {
       source: health.source,
       updated_at: health.updated_at
     },
+    storage: getStorageInfo(),
     auto_refresh: {
       enabled: isAutoRefreshAvailable(),
       interval: "4 hours",
@@ -164,6 +175,12 @@ export async function handleHealthCheck() {
       token_updated: creds.updatedAt || null
     });
   } catch (e) {
+    // OAuth Lifeboat: a dead session token here is the most common first
+    // signal of token death — hand back recovery guidance, not a bare error.
+    // lifeboatResponse keeps the shape identical across all three call sites.
+    if (isAuthDeath(e)) {
+      return lifeboatResponse(e);
+    }
     return asMcpJson({
       status: "error",
       code: "auth_failed",
@@ -189,7 +206,18 @@ export async function handleRefreshTokens() {
 
   const chromeTokens = extractFromChrome();
   if (chromeTokens) {
-    saveTokens(chromeTokens.token, chromeTokens.cookie);
+    try {
+      saveTokens(chromeTokens.token, chromeTokens.cookie);
+    } catch (e) {
+      // keychain-only mode with an unwritable Keychain: extraction worked,
+      // persistence did not — report exactly that instead of a generic failure.
+      return asMcpJson({
+        status: "error",
+        code: e.code || "token_save_failed",
+        message: e.message,
+        next_action: "Unlock the macOS Keychain (or adjust SLACK_MCP_TOKEN_STORAGE) and rerun slack_refresh_tokens."
+      }, true);
+    }
     try {
       const result = await slackAPI("auth.test", {}, { retryOnAuthFail: false });
       return asMcpJson({
@@ -216,7 +244,7 @@ export async function handleRefreshTokens() {
       code: extractionError.code,
       message: extractionError.message,
       detail: extractionError.detail,
-      next_action: "In Chrome: View > Developer > Allow JavaScript from Apple Events, then retry."
+      next_action: "In Chrome: View > Developer > Allow JavaScript from Apple Events, then retry. (Only needed for token — cookie is extracted from Chrome's database automatically.)"
     }, true);
   }
 
@@ -330,17 +358,22 @@ export async function handleListConversations(args) {
  */
 export async function handleConversationsHistory(args) {
   const resolveUsers = args.resolve_users !== false;
-  const result = await slackAPI("conversations.history", {
+  const includeRichMessageFields = parseBool(args.include_rich_message_fields);
+  const historyParams = {
     channel: args.channel_id,
     limit: args.limit || 50,
     oldest: args.oldest,
     latest: args.latest,
-    inclusive: true
-  });
+    include_all_metadata: parseBool(args.include_all_metadata)
+  };
+  // Only opt into boundary-inclusive reads when a boundary was actually
+  // provided — otherwise leave Slack's default behavior untouched.
+  if (args.oldest || args.latest) historyParams.inclusive = true;
+  const result = await slackAPI("conversations.history", historyParams);
 
   const messages = await Promise.all((result.messages || []).map(async (msg) => {
     const userName = resolveUsers ? await resolveUser(msg.user) : msg.user;
-    return {
+    return withRichMessageFields({
       ts: msg.ts,
       user: userName,
       user_id: msg.user,
@@ -348,7 +381,7 @@ export async function handleConversationsHistory(args) {
       datetime: formatTimestamp(msg.ts),
       has_thread: !!msg.thread_ts && msg.reply_count > 0,
       reply_count: msg.reply_count
-    };
+    }, msg, includeRichMessageFields);
   }));
 
   return {
@@ -370,48 +403,54 @@ export async function handleConversationsHistory(args) {
 export async function handleGetFullConversation(args) {
   const maxMessages = Math.min(args.max_messages || 2000, 10000);
   const includeThreads = args.include_threads !== false;
+  const includeRichMessageFields = parseBool(args.include_rich_message_fields);
   const allMessages = [];
   let cursor;
   let hasMore = true;
 
   // Fetch all messages with pagination
   while (hasMore && allMessages.length < maxMessages) {
-    const result = await slackAPI("conversations.history", {
+    const historyParams = {
       channel: args.channel_id,
       limit: Math.min(100, maxMessages - allMessages.length),
       oldest: args.oldest,
       latest: args.latest,
       cursor,
-      inclusive: true
-    });
+      include_all_metadata: parseBool(args.include_all_metadata)
+    };
+    // Boundary-inclusive only when a boundary was actually provided —
+    // otherwise leave Slack's default behavior untouched.
+    if (args.oldest || args.latest) historyParams.inclusive = true;
+    const result = await slackAPI("conversations.history", historyParams);
 
     for (const msg of result.messages || []) {
       const userName = await resolveUser(msg.user);
-      const message = {
+      const message = withRichMessageFields({
         ts: msg.ts,
         user: userName,
         user_id: msg.user,
         text: msg.text || "",
         datetime: formatTimestamp(msg.ts),
         replies: []
-      };
+      }, msg, includeRichMessageFields);
 
       // Fetch thread replies if present
       if (includeThreads && msg.reply_count > 0) {
         try {
           const threadResult = await slackAPI("conversations.replies", {
             channel: args.channel_id,
-            ts: msg.ts
+            ts: msg.ts,
+            include_all_metadata: parseBool(args.include_all_metadata)
           });
           // Skip first message (parent)
           for (const reply of (threadResult.messages || []).slice(1)) {
             const replyUserName = await resolveUser(reply.user);
-            message.replies.push({
+            message.replies.push(withRichMessageFields({
               ts: reply.ts,
               user: replyUserName,
               text: reply.text || "",
               datetime: formatTimestamp(reply.ts)
-            });
+            }, reply, includeRichMessageFields));
           }
           await sleep(50); // Rate limit
         } catch (e) {
@@ -466,6 +505,7 @@ export async function handleGetFullConversation(args) {
  * Search messages handler
  */
 export async function handleSearchMessages(args) {
+  const includeRichMessageFields = parseBool(args.include_rich_message_fields);
   const result = await slackAPI("search.messages", {
     query: args.query,
     count: args.count || 20,
@@ -473,7 +513,7 @@ export async function handleSearchMessages(args) {
     sort_dir: "desc"
   });
 
-  const matches = await Promise.all((result.messages?.matches || []).map(async (m) => ({
+  const matches = await Promise.all((result.messages?.matches || []).map(async (m) => withRichMessageFields({
     ts: m.ts,
     channel: m.channel?.name || m.channel?.id,
     channel_id: m.channel?.id,
@@ -481,7 +521,7 @@ export async function handleSearchMessages(args) {
     text: m.text,
     datetime: formatTimestamp(m.ts),
     permalink: m.permalink
-  })));
+  }, m, includeRichMessageFields)));
 
   return {
     content: [{
@@ -549,19 +589,21 @@ export async function handleSendMessage(args) {
  * Get thread handler
  */
 export async function handleGetThread(args) {
+  const includeRichMessageFields = parseBool(args.include_rich_message_fields);
   const result = await slackAPI("conversations.replies", {
     channel: args.channel_id,
-    ts: args.thread_ts
+    ts: args.thread_ts,
+    include_all_metadata: parseBool(args.include_all_metadata)
   });
 
-  const messages = await Promise.all((result.messages || []).map(async (msg) => ({
+  const messages = await Promise.all((result.messages || []).map(async (msg) => withRichMessageFields({
     ts: msg.ts,
     user: await resolveUser(msg.user),
     user_id: msg.user,
     text: msg.text || "",
     datetime: formatTimestamp(msg.ts),
     is_parent: msg.ts === args.thread_ts
-  })));
+  }, msg, includeRichMessageFields)));
 
   return {
     content: [{
@@ -725,13 +767,32 @@ export async function handleConversationsUnreads(args) {
 /**
  * Search users handler - client-side filter on users.list
  */
+// Explicit scan cap for client-side user search: stop paginating after
+// scanning this many workspace users (or when the cursor is exhausted) and
+// flag the result as truncated so total_matches is never misreported as
+// complete.
+const USERS_SEARCH_MAX_SCANNED = 1000;
+
 export async function handleUsersSearch(args) {
-  const query = (args.query || "").toLowerCase();
+  const rawQuery = typeof args.query === "string" ? args.query : "";
+  const query = rawQuery.trim().toLowerCase();
   const limit = args.limit || 20;
 
-  // Fetch all users (paginated)
+  // An empty/whitespace query would match every user in the workspace.
+  if (!query) {
+    return asMcpJson({
+      status: "error",
+      code: "invalid_arguments",
+      message: "query must be a non-empty string (an empty query would match all users).",
+      next_action: "Provide a name, display name, real name, or email fragment to search for."
+    }, true);
+  }
+
+  // Fetch users (paginated) and filter client-side
   const allUsers = [];
   let cursor;
+  let scannedUsers = 0;
+  let truncated = false;
 
   do {
     const result = await slackAPI("users.list", {
@@ -740,6 +801,7 @@ export async function handleUsersSearch(args) {
     });
 
     for (const u of (result.members || [])) {
+      scannedUsers++;
       if (u.deleted || u.is_bot || u.id === "USLACKBOT") continue;
 
       const searchFields = [
@@ -763,13 +825,140 @@ export async function handleUsersSearch(args) {
     }
 
     cursor = result.response_metadata?.next_cursor;
+    if (cursor && scannedUsers >= USERS_SEARCH_MAX_SCANNED) {
+      truncated = true;
+      break;
+    }
     if (cursor) await sleep(100);
-  } while (cursor && allUsers.length < 500);
+  } while (cursor);
 
   return asMcpJson({
     query: args.query,
     count: Math.min(allUsers.length, limit),
     total_matches: allUsers.length,
+    truncated,
     users: allUsers.slice(0, limit)
   });
 }
+
+// ============ Workflow Profile Primitives (OSS) ============
+
+/**
+ * Save (or update) a workflow profile to ~/.slack-mcp-workflows.json
+ * Profile binds a workflow_kind to channels + priority_people + retention + cadence.
+ */
+export async function handleWorkflowSave(args) {
+  const safeArgs = args || {};
+  const result = workflowSaveProfile({
+    profile_name: safeArgs.profile_name,
+    workflow_kind: safeArgs.workflow_kind,
+    channels: safeArgs.channels,
+    priority_people: safeArgs.priority_people,
+    retention_mode: safeArgs.retention_mode,
+    summary_cadence: safeArgs.summary_cadence,
+  });
+  if (!result.ok) {
+    return asMcpJson({ error: "invalid_workflow_profile", errors: result.errors }, true);
+  }
+  return asMcpJson({
+    ok: true,
+    profile_name: result.profile_name,
+    profile: result.profile,
+    note: "Profile saved locally to ~/.slack-mcp-workflows.json. Run slack_catch_me_up with this profile_name to read its scope.",
+  });
+}
+
+/**
+ * List saved workflow profiles, optionally filtered by workflow_kind.
+ */
+export async function handleWorkflows(args) {
+  const result = workflowListProfiles({ workflow_kind: args && args.workflow_kind });
+  if (!result.ok) {
+    return asMcpJson({ error: "invalid_workflow_filter", errors: result.errors }, true);
+  }
+  return asMcpJson({
+    ok: true,
+    count: result.profiles.length,
+    workflow_kinds: ALLOWED_WORKFLOW_KINDS_LIST,
+    profiles: result.profiles,
+  });
+}
+
+/**
+ * Catch up on a saved workflow profile — locally, with no hosted dependency.
+ *
+ * The expensive part was never the summarising: the caller is already a
+ * language model. What it needed was the evidence, gathered and structured.
+ * See lib/catch-up.js.
+ */
+export async function handleCatchMeUp(args) {
+  const profileName = args && typeof args.profile_name === "string" ? args.profile_name.trim() : "";
+  if (!profileName) {
+    return asMcpJson(
+      {
+        status: "error",
+        code: "invalid_arguments",
+        message: "profile_name is required.",
+        next_action: "Run slack_workflows to list saved profiles, or slack_workflow_save to create one.",
+      },
+      true
+    );
+  }
+
+  const profile = workflowGetProfile(profileName);
+  if (!profile) {
+    const known = workflowListProfiles();
+    return asMcpJson(
+      {
+        status: "error",
+        code: "profile_not_found",
+        message: `No saved workflow profile named "${profileName}".`,
+        available_profiles: known.ok ? known.profiles.map((p) => p.profile_name) : [],
+        next_action: "Create it with slack_workflow_save, or apply a starter template with --apply-template.",
+      },
+      true
+    );
+  }
+
+  const since = resolveSince({ since: args.since, profile });
+  if (!since.ok) {
+    return asMcpJson({ status: "error", code: "invalid_arguments", message: since.error }, true);
+  }
+
+  const bundle = await assembleCatchUp({
+    profile,
+    since,
+    deps: { slackAPI, resolveUser, structuredKeys: structuredKeysFor(profile.workflow_kind) },
+  });
+
+  return asMcpJson(bundle);
+}
+
+// ============ Shared Tool Dispatch Map ============
+// Single source of truth mapping every advertised tool name (lib/tools.js)
+// to its handler. Both transports — stdio (src/server.js) and HTTP
+// (src/server-http.js) — dispatch through this map so the advertised tool
+// list and the dispatch surface cannot drift apart.
+
+export const TOOL_HANDLERS = Object.freeze({
+  slack_token_status: handleTokenStatus,
+  slack_health_check: handleHealthCheck,
+  slack_refresh_tokens: handleRefreshTokens,
+  slack_list_conversations: handleListConversations,
+  slack_conversations_history: handleConversationsHistory,
+  slack_get_full_conversation: handleGetFullConversation,
+  slack_search_messages: handleSearchMessages,
+  slack_users_info: handleUsersInfo,
+  slack_send_message: handleSendMessage,
+  slack_get_thread: handleGetThread,
+  slack_list_users: handleListUsers,
+  slack_add_reaction: handleAddReaction,
+  slack_remove_reaction: handleRemoveReaction,
+  slack_conversations_mark: handleConversationsMark,
+  slack_conversations_unreads: handleConversationsUnreads,
+  slack_users_search: handleUsersSearch,
+  // Workflow profile primitives (OSS local JSON store)
+  slack_workflow_save: handleWorkflowSave,
+  slack_workflows: handleWorkflows,
+  slack_catch_me_up: handleCatchMeUp,
+});

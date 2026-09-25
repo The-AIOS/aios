@@ -1,0 +1,10 @@
+{
+  "profile_name": "exec-monday",
+  "workflow_kind": "exec_brief",
+  "channels": [],
+  "priority_people": [],
+  "retention_mode": "ephemeral",
+  "summary_cadence": "weekly_monday",
+  "structured_keys": ["summary", "decisions", "risks", "asks", "action_items"],
+  "_template_notes": "Apply with: slack-mcp --apply-template exec-monday --channels C0EXEC,C0PRODUCT,C0OPS --priority-people U0CEO,U0CTO. Weekly Monday cadence requires Pro or Team. Posts a structured brief to your DM at 8am workspace time on Mondays."
+}

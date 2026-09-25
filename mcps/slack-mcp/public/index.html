@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slack MCP Server — Web Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+  <style>
+    :root {
+      --font-heading: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+      --font-body: "IBM Plex Sans", "Inter", "Segoe UI", sans-serif;
+      --bg: #0f1736;
+      --panel: #16213e;
+      --panel-alt: #0f3460;
+      --teal: #4ecdc4;
+      --teal-hover: #45b7aa;
+      --danger: #ff6b6b;
+      --search: #e94560;
+      --text: #e8ecff;
+      --muted: #9fb0cf;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      background: radial-gradient(circle at 20% -10%, #1b2f67 0%, var(--bg) 48%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 {
+      color: var(--teal);
+      margin-bottom: 20px;
+      font-family: var(--font-heading);
+      font-size: clamp(1.9rem, 2vw, 2.35rem);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+    .status { display: inline-block; margin-left: 15px; }
+    .status.ok { color: var(--teal); }
+    .status.error { color: var(--danger); }
+    .grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; }
+    .sidebar {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 15px;
+      height: fit-content;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .sidebar h3 {
+      color: var(--teal);
+      margin-bottom: 15px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-family: var(--font-heading);
+    }
+    .conversation-list { list-style: none; }
+    .conversation-list li {
+      padding: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 5px;
+      background: var(--panel-alt);
+    }
+    .conversation-list li:hover { background: #1a4a7a; }
+    .conversation-list li.active { background: var(--teal); color: #1a1a2e; }
+    .conversation-list .type { font-size: 11px; opacity: 0.7; }
+    .main-panel {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 500px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .main-panel h2 {
+      color: var(--teal);
+      margin-bottom: 15px;
+      font-family: var(--font-heading);
+      letter-spacing: -0.01em;
+    }
+    .messages { max-height: 400px; overflow-y: auto; margin-bottom: 15px; }
+    .message {
+      background: var(--panel-alt);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .message .header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .message .user { font-weight: bold; color: var(--teal); }
+    .message .time { font-size: 12px; opacity: 0.6; }
+    .message .text { line-height: 1.5; white-space: pre-wrap; }
+    .send-box { display: flex; gap: 10px; }
+    .send-box input {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 4px;
+      background: var(--panel-alt);
+      color: #fff;
+      min-width: 0;
+    }
+    .send-box button {
+      padding: 12px 24px;
+      background: var(--teal);
+      color: #1a1a2e;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .search-section { margin-bottom: 20px; display: flex; gap: 10px; }
+    .search-section input {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      background: var(--panel-alt);
+      color: #fff;
+      min-width: 0;
+    }
+    .search-section button {
+      padding: 10px 20px;
+      background: var(--search);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .loading { text-align: center; padding: 40px; opacity: 0.6; color: var(--muted); }
+    .error-msg { background: #ff6b6b22; color: var(--danger); padding: 15px; border-radius: 8px; }
+    .tabs { display: flex; gap: 5px; margin-bottom: 15px; }
+    .tabs button {
+      padding: 8px 16px;
+      background: var(--panel-alt);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .tabs button.active { background: var(--teal); color: #1a1a2e; }
+    /* Auth Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: var(--panel);
+      padding: 36px;
+      border-radius: 12px;
+      width: min(92vw, 460px);
+      text-align: center;
+      border: 2px solid var(--teal);
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+    .modal h2 {
+      color: var(--teal);
+      margin-bottom: 20px;
+      font-family: var(--font-heading);
+      letter-spacing: -0.01em;
+    }
+    .modal p { color: #c2c7d6; margin-bottom: 25px; line-height: 1.6; }
+    .modal code {
+      background: var(--panel-alt);
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: var(--teal);
+    }
+    .modal input {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid var(--panel-alt);
+      border-radius: 6px;
+      background: var(--panel-alt);
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+    .modal input:focus { border-color: var(--teal); outline: none; }
+    .auth-options {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: -4px 0 16px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: left;
+    }
+    .auth-options input { width: auto; margin: 0; }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .header-row h1 { margin-bottom: 0; }
+    .disconnect-btn {
+      display: none;
+      padding: 8px 12px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .disconnect-btn.visible { display: inline-block; }
+    .disconnect-btn:hover { color: var(--text); border-color: rgba(255, 255, 255, 0.32); }
+    .modal button {
+      width: 100%;
+      padding: 14px;
+      background: var(--teal);
+      color: #1a1a2e;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .modal button:hover { background: var(--teal-hover); }
+    .modal .error { color: var(--danger); margin-top: 10px; font-size: 14px; }
+
+    @media (max-width: 960px) {
+      body { padding: 16px; }
+      .grid { grid-template-columns: minmax(0, 1fr); }
+      .sidebar, .main-panel { padding: 16px; }
+      .messages { max-height: 50vh; }
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 12px; }
+      .header-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      h1 {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .status {
+        margin-left: 0;
+        font-size: 14px;
+      }
+      .tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .search-section,
+      .send-box {
+        flex-direction: column;
+      }
+      .search-section button,
+      .send-box button {
+        width: 100%;
+      }
+      .modal {
+        width: min(92vw, 460px);
+        padding: 24px 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Auth Modal -->
+  <div id="authModal" class="modal-overlay">
+    <div class="modal">
+      <h2>Enter API Key</h2>
+      <p>Copy the API key from the console where you ran<br><code>npm run web</code></p>
+      <input type="text" id="modalApiKey" placeholder="smcp_xxxxxxxxxxxx" autocomplete="off" autofocus>
+      <label class="auth-options"><input type="checkbox" id="rememberApiKey"> Remember this key on this device</label>
+      <button onclick="submitApiKey()">Connect</button>
+      <div id="modalError" class="error"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="header-row">
+      <h1>Slack Web API <span id="status" class="status"></span></h1>
+      <button type="button" id="disconnectButton" class="disconnect-btn" onclick="disconnect()">Disconnect</button>
+    </div>
+    <div style="background:rgba(240,194,70,0.08);border:1px solid rgba(240,194,70,0.2);border-radius:8px;padding:8px 14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:13px;color:#d4c48a">
+      <span>Hosted tiers live — <strong style="color:#f0c246">managed MCP endpoint, OAuth bridge for Claude.ai, encrypted storage</strong></span>
+      <a href="https://mcp.revasserlabs.com" style="color:#f0c246;font-weight:600;text-decoration:none;white-space:nowrap" target="_blank">See tiers &rarr;</a>
+    </div>
+    <div class="grid">
+      <div class="sidebar">
+        <h3>CONVERSATIONS</h3>
+        <div class="tabs">
+          <button class="active" onclick="loadConversations('im,mpim', this)">DMs</button>
+          <button onclick="loadConversations('public_channel,private_channel', this)">Channels</button>
+        </div>
+        <ul id="conversationList" class="conversation-list">
+          <li class="loading">Enter API key to connect</li>
+        </ul>
+      </div>
+      <div class="main-panel">
+        <div class="search-section">
+          <input type="text" id="searchQuery" placeholder="Search messages..." onkeypress="if(event.key==='Enter')searchMessages()">
+          <button onclick="searchMessages()">Search</button>
+        </div>
+        <h2 id="channelName">Select a conversation</h2>
+        <div id="messages" class="messages">
+          <div class="loading">Messages will appear here</div>
+        </div>
+        <div class="send-box">
+          <input type="text" id="messageInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendMessage()">
+          <button onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    let apiKey = null;
+    let currentChannel = null;
+
+    function clearStoredApiKey() {
+      sessionStorage.removeItem('slackApiKey');
+      localStorage.removeItem('slackApiKey');
+    }
+
+    function rememberStoredApiKey(key) {
+      sessionStorage.removeItem('slackApiKey');
+      localStorage.setItem('slackApiKey', key);
+    }
+
+    function storeSessionApiKey(key) {
+      localStorage.removeItem('slackApiKey');
+      sessionStorage.setItem('slackApiKey', key);
+    }
+
+    // Initialize: check URL param, session storage, then remembered local storage
+    (function init() {
+      const params = new URLSearchParams(window.location.search);
+      const keyFromUrl = params.get('key');
+
+      if (keyFromUrl) {
+        // Save magic-link keys for this tab only and strip them from the URL.
+        apiKey = keyFromUrl;
+        storeSessionApiKey(apiKey);
+        history.replaceState({}, '', window.location.pathname);
+      } else {
+        apiKey = sessionStorage.getItem('slackApiKey') || localStorage.getItem('slackApiKey');
+      }
+
+      if (apiKey) {
+        hideModal();
+        connect();
+      } else {
+        showModal();
+      }
+    })();
+
+    function showModal(errorMsg) {
+      document.getElementById('authModal').classList.remove('hidden');
+      document.getElementById('modalError').textContent = errorMsg || '';
+      document.getElementById('modalApiKey').focus();
+    }
+
+    function hideModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function submitApiKey() {
+      const input = document.getElementById('modalApiKey').value.trim();
+      if (!input) {
+        document.getElementById('modalError').textContent = 'Please enter an API key';
+        return;
+      }
+      apiKey = input;
+      if (document.getElementById('rememberApiKey').checked) {
+        rememberStoredApiKey(apiKey);
+      } else {
+        storeSessionApiKey(apiKey);
+      }
+      hideModal();
+      connect();
+    }
+
+    // Handle Enter key in modal
+    document.getElementById('modalApiKey').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') submitApiKey();
+    });
+
+    async function api(endpoint, options = {}) {
+      const res = await fetch(endpoint, {
+        ...options,
+        headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json', ...options.headers }
+      });
+      if (res.status === 401 || res.status === 403) {
+        // Auth failed - clear stored key and show modal
+        clearStoredApiKey();
+        apiKey = null;
+        document.getElementById('disconnectButton').classList.remove('visible');
+        showModal('Invalid or expired API key. Check console for current key.');
+        throw new Error('Authentication failed');
+      }
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'API error'); }
+      return res.json();
+    }
+
+    async function connect() {
+      const status = document.getElementById('status');
+      status.textContent = 'Connecting...';
+      status.className = 'status';
+      try {
+        const health = await api('/health');
+        status.textContent = '● ' + health.user + ' @ ' + health.team;
+        status.className = 'status ok';
+        document.getElementById('disconnectButton').classList.add('visible');
+        loadConversations('im,mpim');
+      } catch (e) {
+        if (e.message !== 'Authentication failed') {
+          status.textContent = 'Error: ' + e.message;
+          status.className = 'status error';
+        }
+      }
+    }
+    function disconnect() {
+      clearStoredApiKey();
+      apiKey = null;
+      currentChannel = null;
+      document.getElementById('disconnectButton').classList.remove('visible');
+      document.getElementById('status').textContent = '';
+      document.getElementById('conversationList').innerHTML = '<li class="loading">Enter API key to connect</li>';
+      document.getElementById('channelName').textContent = 'Select a conversation';
+      document.getElementById('messages').innerHTML = '<div class="loading">Messages will appear here</div>';
+      showModal('Disconnected. Enter an API key to reconnect.');
+    }
+
+    async function loadConversations(types, sourceButton = null) {
+      const list = document.getElementById('conversationList');
+      list.innerHTML = '<li class="loading">Loading...</li>';
+      document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+      if (!sourceButton) {
+        sourceButton = document.querySelector('.tabs button:first-child');
+      }
+      if (sourceButton) sourceButton.classList.add('active');
+      try {
+        const data = await api('/conversations?types=' + types);
+        list.innerHTML = data.conversations.map(c =>
+          '<li onclick="loadHistory(\'' + c.id + '\', \'' + escapeHtml(c.name).replace(/'/g, "&#39;") + '\', this)"><div>' + escapeHtml(c.name) + '</div><div class="type">' + escapeHtml(c.type) + '</div></li>'
+        ).join('');
+      } catch (e) { list.innerHTML = '<li class="error-msg">' + e.message + '</li>'; }
+    }
+    async function loadHistory(channelId, name, sourceItem = null) {
+      currentChannel = channelId;
+      document.getElementById('channelName').textContent = name;
+      document.querySelectorAll('.conversation-list li').forEach(li => li.classList.remove('active'));
+      if (sourceItem) sourceItem.classList.add('active');
+      const container = document.getElementById('messages');
+      container.innerHTML = '<div class="loading">Loading messages...</div>';
+      try {
+        const data = await api('/conversations/' + channelId + '/history?limit=50');
+        renderMessages(data.messages);
+      } catch (e) { container.innerHTML = '<div class="error-msg">' + e.message + '</div>'; }
+    }
+    function renderMessages(messages) {
+      const container = document.getElementById('messages');
+      if (!messages || messages.length === 0) { container.innerHTML = '<div class="loading">No messages</div>'; return; }
+      container.innerHTML = messages.map(m =>
+        '<div class="message"><div class="header"><span class="user">' + escapeHtml(m.user || m.user_id || 'Unknown') + '</span><span class="time">' + new Date(m.datetime).toLocaleString() + '</span></div><div class="text">' + escapeHtml(m.text || '') + '</div></div>'
+      ).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+    function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+    async function sendMessage() {
+      if (!currentChannel) { alert('Select a conversation first'); return; }
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      if (!text) return;
+      try {
+        await api('/messages', { method: 'POST', body: JSON.stringify({ channel_id: currentChannel, text: text }) });
+        input.value = '';
+        loadHistory(currentChannel, document.getElementById('channelName').textContent);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+    async function searchMessages() {
+      const query = document.getElementById('searchQuery').value.trim();
+      if (!query) return;
+      document.getElementById('channelName').textContent = 'Search: "' + query + '"';
+      const container = document.getElementById('messages');
+      container.innerHTML = '<div class="loading">Searching...</div>';
+      try {
+        const data = await api('/search?q=' + encodeURIComponent(query));
+        if (data.matches && data.matches.length > 0) {
+          container.innerHTML = data.matches.map(m =>
+            '<div class="message"><div class="header"><span class="user">' + escapeHtml(m.user || 'Unknown') + ' in #' + escapeHtml(m.channel || '') + '</span><span class="time">' + new Date(m.datetime).toLocaleString() + '</span></div><div class="text">' + escapeHtml(m.text || '') + '</div></div>'
+          ).join('');
+        } else { container.innerHTML = '<div class="loading">No results found</div>'; }
+      } catch (e) { container.innerHTML = '<div class="error-msg">' + e.message + '</div>'; }
+    }
+  </script>
+</body>
+</html>
