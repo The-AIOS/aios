@@ -69,6 +69,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-25 — A session close asks its questions before it writes the block
+
+`hash: `
+
+> **What you can now do.** Close a session and find the "most useful" answer and the comprehension notes in the block that was actually written — and close several sessions at once without two of them editing the same observed file.
+
+**Three instructions in `/close-session` contradicted each other.** The block is written and committed by the append helper, which cannot amend it; two later steps then asked the operator questions whose answers were supposed to go into that block. Those questions now come first, so the block is written once, complete, and the later step only checks that the answers landed. The `--auto` mode, used when several sessions close at once, defers every observed-context write to `/close-day` because those files have no lock — but the pre-commit checklist still demanded those writes — insights buffer, other observed files, the failure log — with no exception; it now says the captured candidates satisfy all three. And the block format said to skip an empty field while the rules said every field must be present; every field is now present and an empty one reads `None`.
+
+**Action required:** none.
+
 ## 2026-09-24 — A security audit for your code, routines that stay inside the sandbox, and a morning plan that checks two weeks out
 
 `hash: 65227d0 · e8bad7a · c1396c3 · 6401d87 · ea99bbd · 6292b09 · a8ed263 · ba0751f · 24d7c51 · 5fe7850 · 409cc22 · 15a1291 · 27ea3a1 · 000f325 · 346bbc4 · 6907b7f · 871ee23` · [#170](https://github.com/The-AIOS/aios/pull/170) · [#172](https://github.com/The-AIOS/aios/pull/172) · [#173](https://github.com/The-AIOS/aios/pull/173) · [#174](https://github.com/The-AIOS/aios/pull/174)
