@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — Evening close and housekeeping archive observed context the safe way
 
-`hash: `
+`hash: ` · [#177](https://github.com/The-AIOS/aios/pull/177)
 
 > **What you can now do.** Run `/close-day` or `/aios:housekeeping` while other sessions are closing, and every archived version of your observed context survives.
 
