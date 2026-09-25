@@ -1149,6 +1149,13 @@ jobs:
         # race that never occurred.
         run: bash tests/aios-snapshot.test.sh
 
+      - name: a stale lock is reclaimed once, and HEAD only moves from where the commit began
+        # A dead holder's lock reclaimed by two waiters used to be deleted out from under the
+        # one that re-took it; a commit landing mid-run was reverted by update-ref; a push that
+        # left commits behind cleared the pending marker. Each case also runs against the
+        # pre-change hooks (pinned) and must reproduce there, when that commit is present.
+        run: bash tests/lock-reclaim-and-head-cas.test.sh
+
       - name: the star ask decides correctly about whether to ask
         # Every defect this suite covers fails in the SILENT direction — the script still
         # exits 0 and still prints a verdict, just the wrong one. A missing tracker reading as
@@ -1869,6 +1876,9 @@ jobs:
 
       - name: Regression suite under bash 3.2
         run: /bin/bash tests/aios-commit.test.sh
+
+      - name: lock reclaim and HEAD compare-and-swap under bash 3.2
+        run: /bin/bash tests/lock-reclaim-and-head-cas.test.sh
 
       - name: install-wrappers regression under bash 3.2
         # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.

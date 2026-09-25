@@ -69,6 +69,20 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-25 — Commits and snapshots stop losing work to a lock race or a concurrent commit
+
+`hash: `
+
+> **What you can now do.** Run several sessions that commit and archive at once, next to an editor that commits on its own, and keep every commit and every snapshot. A commit that could not be pushed stays marked until it is.
+
+**Two processes could both believe they held the lock.** When a session died holding the commit, snapshot or daily-note lock, the next ones to arrive reclaimed it. Two of them could read the same dead holder. The slower one then deleted the lock the faster one had just taken, and both went ahead. For snapshots that meant two archives written to the same name, with one lost. A reclaim is now done by one process at a time, and it removes the lock only if it still belongs to the dead holder. If a process dies in the middle of reclaiming, the wait ends after a minute with a message naming the one directory to remove.
+
+**A commit made while `aios-commit` was running could be reverted.** `aios-commit` builds a commit from what `HEAD` was when it started, then moves `HEAD` to it. If something else committed in between, such as a plain `git commit` or an editor's git plugin, that commit's changes disappeared from the branch, and both commands reported success. `aios-commit` now moves the branch only if it has not moved. Otherwise it stops, says so and commits nothing, and you run it again. If you switch branches while it runs, the commit still goes on the branch it started on, and it is not pushed; the message names the branch to push.
+
+**A stranded commit could lose its "not pushed yet" marker.** When a push fails, `aios-commit` leaves a marker so the next run retries. A slow push from an earlier run could finish afterwards and clear it, even though the newer commit was still not on the remote. The marker now lists each stranded commit, and a commit comes off the list only once it is on a remote. That holds whichever branch you have checked out, and a failure to check keeps the entry.
+
+**Action required:** none.
+
 ## 2026-09-24 — A security audit for your code, routines that stay inside the sandbox, and a morning plan that checks two weeks out
 
 `hash: 65227d0 · e8bad7a · c1396c3 · 6401d87 · ea99bbd · 6292b09 · a8ed263 · ba0751f · 24d7c51 · 5fe7850 · 409cc22 · 15a1291 · 27ea3a1 · 000f325 · 346bbc4 · 6907b7f · 871ee23` · [#170](https://github.com/The-AIOS/aios/pull/170) · [#172](https://github.com/The-AIOS/aios/pull/172) · [#173](https://github.com/The-AIOS/aios/pull/173) · [#174](https://github.com/The-AIOS/aios/pull/174)

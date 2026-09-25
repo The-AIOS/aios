@@ -88,6 +88,26 @@ LOCKED=0
 release(){ [ "$LOCKED" = 1 ] && { rm -rf "$LOCK" 2>/dev/null; LOCKED=0; }; }
 trap release EXIT INT TERM
 
+# Reclaim a lock whose holder is dead -- but only THAT lock. Two waiters can read the same dead
+# pid; with a bare `rm -rf` the slower one deleted the lock the faster one had just re-created,
+# and both proceeded as holders. So removal is serialised by a second mkdir mutex, and under it
+# the pid is re-read: the lock goes only if it still names the same pid and that pid is still
+# dead. A fresh lock (a new pid, or none written yet) is never touched. The mutex is NEVER
+# removed by anyone but the process that made it: clearing an "old" one would reopen the same
+# race one level up (two observers, one deletes a fresh mutex). A reclaimer that dies inside
+# this two-line section leaves it behind, and the lock wait then times out naming it.
+reclaim(){ # $1 lock dir · $2 the dead pid that was read
+  local m="$1.reclaim" cur
+  if ! mkdir "$m" 2>/dev/null; then
+    sleep 0.05; return 0
+  fi
+  cur=$(cat "$1/pid" 2>/dev/null || true)
+  if [ -n "$cur" ] && [ "$cur" = "$2" ] && ! kill -0 "$cur" 2>/dev/null; then
+    rm -rf "$1" 2>/dev/null
+  fi
+  rmdir "$m" 2>/dev/null
+  return 0
+}
 acquire(){
   local tries=0 holder saw_lock=0
   while ! mkdir "$LOCK" 2>/dev/null; do
@@ -95,7 +115,7 @@ acquire(){
       saw_lock=1
       holder=$(cat "$LOCK/pid" 2>/dev/null || true)
       if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
-        rm -rf "$LOCK" 2>/dev/null; continue      # dead holder → reclaim
+        reclaim "$LOCK" "$holder"      # dead holder → reclaim, race-free; still counts toward the timeout
       fi
     else
       holder=""
@@ -104,7 +124,7 @@ acquire(){
     if [ "$saw_lock" -eq 0 ] && [ "$tries" -ge 20 ]; then
       die "cannot create $LOCK — $tries attempts, no lock ever present: this is NOT contention. Is $DESTDIR writable?"
     fi
-    [ "$tries" -gt 600 ] && die "lock timeout (held by pid ${holder:-unknown})"
+    [ "$tries" -gt 600 ] && { [ -d "$LOCK.reclaim" ] && die "lock timeout: $LOCK.reclaim was left by a process that died while reclaiming. If no aios-snapshot is running, remove it: rmdir \"$LOCK.reclaim\""; die "lock timeout (held by pid ${holder:-unknown})"; }
     sleep 0.1
   done
   echo "$$" > "$LOCK/pid"
