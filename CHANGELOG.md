@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — Commits and snapshots stop losing work to a lock race or a concurrent commit
 
-`hash: `
+`hash: ` · [#187](https://github.com/The-AIOS/aios/pull/187)
 
 > **What you can now do.** Run several sessions that commit and archive at once, next to an editor that commits on its own, and keep every commit and every snapshot. A commit that could not be pushed stays marked until it is.
 
