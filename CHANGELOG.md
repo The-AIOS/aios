@@ -71,7 +71,7 @@
 
 ## 2026-09-25 — Commits refuse when the secret check could not run
 
-`hash: `
+`hash: ` · [#183](https://github.com/The-AIOS/aios/pull/183)
 
 > **What you can now do.** Commit knowing that a token pasted into the commit message is caught, that a missing scanner stops the commit instead of waving it through, and that a vault sweep which could not read the repository says so instead of reporting nothing to commit.
 
