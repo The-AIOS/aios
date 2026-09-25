@@ -136,6 +136,11 @@ done
 R="$TMP/r4ok"; mkvault "$R"; echo m >> "$R/vault/n.md"
 out=$(cd "$R" && PATH="$SHIM:$PATH" "$TMP/new/aios-commit" --vault --no-push -m "x" 2>&1); [ "$(commits "$R")" = 3 ] && ok "4c. with nothing failing, the sweep commits as before (shim in place)" || no "4c. the sweep did not commit" "$out"
 
+# a repo with no commits yet: `git diff HEAD` has no HEAD, so the sweep must read the staged paths
+E=$(mktemp -d "${TMPDIR:-/tmp}/csfc-empty.XXXXXX"); git -C "$E" init -q; mkdir -p "$E/vault"; echo hi > "$E/vault/a.md"
+( cd "$E" && GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false "$ROOT/hooks/aios-commit" --vault --no-push -m first >/dev/null 2>&1 )
+[ "$(git -C "$E" rev-list --count HEAD 2>/dev/null)" = 1 ] && ok "--vault makes the first commit in a repo with no commits yet" || no "--vault refused the first commit of an empty repo" "the sweep read a failed 'git diff HEAD' as a failed measurement"
+rm -rf "$E"
 [ "$HAVE_OLD" = 1 ] || printf '  skip  old-code reproductions: the pinned pre-change commit is not in this checkout, or its hooks equal the current ones (set BASE_REF to run them)\n'
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1
