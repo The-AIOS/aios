@@ -69,6 +69,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-25 — Evening close and housekeeping archive observed context the safe way
+
+`hash: `
+
+> **What you can now do.** Run `/close-day` or `/aios:housekeeping` while other sessions are closing, and every archived version of your observed context survives.
+
+**Two commands still told a session to archive by hand.** The framework moved the snapshot step to `hooks/aios-snapshot`, which takes the archive decision under a lock and compares against every version already written that day — two sessions archiving the same file on the same day used to land on the same path, and a plain copy reports success either way. `/close-day` and `/aios:housekeeping` kept the older text: copy the file, then pick the next free letter yourself. A session following the command instead of the rule ran the protocol the helper exists to retire. Both now call the helper; `identical` in its output means that version was already archived, and that is success.
+
+**Action required:** none.
+
 ## 2026-09-24 — A security audit for your code, routines that stay inside the sandbox, and a morning plan that checks two weeks out
 
 `hash: 65227d0 · e8bad7a · c1396c3 · 6401d87 · ea99bbd · 6292b09 · a8ed263 · ba0751f · 24d7c51 · 5fe7850 · 409cc22 · 15a1291 · 27ea3a1 · 000f325 · 346bbc4 · 6907b7f · 871ee23` · [#170](https://github.com/The-AIOS/aios/pull/170) · [#172](https://github.com/The-AIOS/aios/pull/172) · [#173](https://github.com/The-AIOS/aios/pull/173) · [#174](https://github.com/The-AIOS/aios/pull/174)
