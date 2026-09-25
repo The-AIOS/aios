@@ -1119,6 +1119,9 @@ jobs:
       - name: /aios:housekeeping checks that could not tell true from false
         # Prefix compare for vendored hashes, the frontmatter scan through uv with a visible count, and the graduation skip matching the mark it writes.
         run: bash tests/housekeeping-checks-that-cannot-fail.test.sh
+      - name: /today's precondition and backup probes, and its carry rules
+        # Both probes are extracted from today.md and run against temp vaults; the carry rules are anchored on the wording that removes each contradiction.
+        run: bash tests/today-carries-and-probes.test.sh
 
       - name: two Windows probes that answered an adjacent question
         # `command -v python3` succeeds on the Microsoft Store App Execution Alias — a real file
