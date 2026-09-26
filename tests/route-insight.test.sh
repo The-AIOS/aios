@@ -202,5 +202,25 @@ $PYBIN "$TOOL" --match "entry with evidence" "$m/ev.md" >/dev/null 2>&1
   || no "control: evidence list handling wrong" "$(grep -c evidence "$m/ev.md") evidence lines left"
 rm -rf "$m"
 
+echo "── routing several entries within one second keeps every backup ──"
+# The backup is named from the file's mtime at one-second resolution. A close that routes
+# several entries in a row rewrites the file within the same second each time, so every later
+# backup took the previous one's name and replaced it: only the last pre-image survived, and
+# the first one — the only copy holding everything routed away — was gone. Pinning the mtime
+# before each run makes that collision deterministic instead of timing-dependent.
+d="$(mktemp -d)"; f="$d/si.md"; fixture_bullets "$f"
+for who in Alpha Bravo Charlie; do
+  touch -t 202601011200.00 "$f"
+  $PYBIN "$TOOL" "$f" --match "$who entry" --marker "<!-- ROUTED: $who -->" >/dev/null 2>&1 \
+    || no "routing $who for the backup scenario" "the tool failed; the backup checks below mean nothing"
+done
+nb=$(ls "$d" | grep -c 'routebak-')
+[ "$nb" -eq 3 ] && ok "three routings in one second leave three backups" \
+  || no "three routings in one second leave three backups" "found $nb — a later backup overwrote an earlier one"
+grep -l 'first facet of alpha' "$d"/si.md.routebak-* >/dev/null 2>&1 \
+  && ok "the first pre-image (the only one still holding the first entry) survives" \
+  || no "the first pre-image survives" "no backup still holds the first routed entry"
+rm -rf "$d"
+
 printf '\n  %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

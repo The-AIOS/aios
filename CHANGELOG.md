@@ -75,6 +75,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-26 — Routing several insights in a row keeps a backup of each step
+
+`hash: `
+
+> **What you can now do.** Route several insights in one close and still recover any of the earlier versions of the file.
+
+**Only the last backup survived.** Before it changes a file, `route-insight.py` saves a copy named with the file's time, to the second. A close that routes several insights in a row changes the file several times within the same second, so each new copy took the previous one's name and replaced it. The first copy, the only one that still held everything routed away, was lost. A copy now never replaces another: when the name is taken, it gets `-2`, `-3` and so on.
+
+**Action required:** none.
+
 ## 2026-09-25 — The MCPs you run are the versions AIOS names, and eleven fixes for failures nobody saw
 
 `hash: c879483 · d8b9246 · d515d48 · 33407db · 161532e · 7dcbdb7 · 8764f98 · 4050b6a · 4646f53 · 0edcb0b · 9da8a2d · 06a3839 · 6b1b8a0 · a454cc4 · b111fc6 · 79ad81b · 557196f · 8916a5d · 4a0ce5c · ebb2a9e · 4083b6c · 0c1a2a4 · 573b4e6 · 9382f39 · d30ce14 · 25d2872 · a3a1948` · [#175](https://github.com/The-AIOS/aios/pull/175) · [#176](https://github.com/The-AIOS/aios/pull/176) · [#177](https://github.com/The-AIOS/aios/pull/177) · [#178](https://github.com/The-AIOS/aios/pull/178) · [#179](https://github.com/The-AIOS/aios/pull/179) · [#180](https://github.com/The-AIOS/aios/pull/180) · [#181](https://github.com/The-AIOS/aios/pull/181) · [#182](https://github.com/The-AIOS/aios/pull/182) · [#183](https://github.com/The-AIOS/aios/pull/183) · [#184](https://github.com/The-AIOS/aios/pull/184) · [#185](https://github.com/The-AIOS/aios/pull/185) · [#186](https://github.com/The-AIOS/aios/pull/186)
