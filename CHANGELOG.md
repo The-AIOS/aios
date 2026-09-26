@@ -77,7 +77,7 @@
 
 ## 2026-09-26 — A vault commit no longer carries the helpers' locks, temp files and backups
 
-`hash: `
+`hash: ` · [#189](https://github.com/The-AIOS/aios/pull/189)
 
 > **What you can now do.** Run `aios-commit --vault` while other sessions are writing, or right after routing an insight, and commit only your notes.
 
