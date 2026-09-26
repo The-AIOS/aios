@@ -77,7 +77,7 @@
 
 ## 2026-09-26 — Routing several insights in a row keeps a backup of each step
 
-`hash: `
+`hash: ` · [#191](https://github.com/The-AIOS/aios/pull/191)
 
 > **What you can now do.** Route several insights in one close and still recover any of the earlier versions of the file.
 
