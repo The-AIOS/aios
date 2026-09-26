@@ -1770,6 +1770,12 @@ jobs:
         # false. Both directions are checked, with a control that the extractor found the tree.
         run: bash tests/readme-tree.test.sh
 
+      - name: a --vault commit never carries the helpers' locks, temps or backups
+        # Helpers write a lock, a temp file or a backup inside the vault tree, and --vault adds
+        # untracked files through --exclude-standard, so .gitignore is its only filter. A control
+        # proves the scratch commit picks the artifacts up when nothing ignores them.
+        run: bash tests/gitignore-helper-artifacts.test.sh
+
       - name: owned numbers are pointed at, not restated; memory holds a pointer, not a copy
         # #152-#155: a hand-rolled snapshot cp and a gap-illegal invariant in /aios:compact,
         # CLAUDE.md's dual-write rule contradicting its own channeling rule, and two thresholds
@@ -1906,6 +1912,10 @@ jobs:
       - name: install-wrappers regression under bash 3.2
         # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.
         run: /bin/bash tests/install-wrappers.test.sh
+
+      - name: helper artifacts stay out of a --vault commit under bash 3.2
+        # The suite drives the real aios-commit --vault, whose shebang resolves to 3.2 here.
+        run: /bin/bash tests/gitignore-helper-artifacts.test.sh
 
       - name: rotation threshold under bash 3.2
         # macOS is the platform the rotation autopilot already supports, so this
