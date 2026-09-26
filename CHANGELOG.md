@@ -75,6 +75,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-26 — A vault commit no longer carries the helpers' locks, temp files and backups
+
+`hash: ` · [#189](https://github.com/The-AIOS/aios/pull/189)
+
+> **What you can now do.** Run `aios-commit --vault` while other sessions are writing, or right after routing an insight, and commit only your notes.
+
+**A vault commit could pick up files that are not notes.** Several AIOS helpers write a small file next to the note they work on: a lock while they hold it, a temporary file while they write, and, for `route-insight.py`, a backup of the file it changed. `aios-commit --vault` adds every new file that `.gitignore` does not exclude, and none of these were excluded. So a commit made at the wrong moment, or after an insight was routed, carried them. The framework's `.gitignore` now ignores all of them. It also ignores `.superpowers/`, where the vendored superpowers skills keep their working files.
+
+**Action required:** only if one of these files is already in your repo. Git keeps committing a file it already tracks, even once it is ignored. `git ls-files -ci --exclude-standard` lists every tracked file your `.gitignore` now excludes. Check the list, then run `git rm -r --cached <path>` for each helper file on it. That takes it out of the repo and leaves your copy on disk.
+
 ## 2026-09-25 — The MCPs you run are the versions AIOS names, and eleven fixes for failures nobody saw
 
 `hash: c879483 · d8b9246 · d515d48 · 33407db · 161532e · 7dcbdb7 · 8764f98 · 4050b6a · 4646f53 · 0edcb0b · 9da8a2d · 06a3839 · 6b1b8a0 · a454cc4 · b111fc6 · 79ad81b · 557196f · 8916a5d · 4a0ce5c · ebb2a9e · 4083b6c · 0c1a2a4 · 573b4e6 · 9382f39 · d30ce14 · 25d2872 · a3a1948` · [#175](https://github.com/The-AIOS/aios/pull/175) · [#176](https://github.com/The-AIOS/aios/pull/176) · [#177](https://github.com/The-AIOS/aios/pull/177) · [#178](https://github.com/The-AIOS/aios/pull/178) · [#179](https://github.com/The-AIOS/aios/pull/179) · [#180](https://github.com/The-AIOS/aios/pull/180) · [#181](https://github.com/The-AIOS/aios/pull/181) · [#182](https://github.com/The-AIOS/aios/pull/182) · [#183](https://github.com/The-AIOS/aios/pull/183) · [#184](https://github.com/The-AIOS/aios/pull/184) · [#185](https://github.com/The-AIOS/aios/pull/185) · [#186](https://github.com/The-AIOS/aios/pull/186)
