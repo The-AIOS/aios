@@ -75,6 +75,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-26 — /today stops carrying a task that is already done elsewhere in the same note
+
+`hash: ` · [#190](https://github.com/The-AIOS/aios/pull/190)
+
+> **What you can now do.** Mark a task done in one place in your daily note and stop seeing it carried the next morning.
+
+**A finished task could keep coming back.** One task often sits in several places in a daily note: the morning plan, a session summary written before it shipped, the close-of-day list. The done mark usually lands on only one of them. `/today` carried every open `- [ ]` line, so the other copies came back the next morning, with a carry count that grew each day. It now drops an open line when a line with the same task identity in that note is checked `[x]` or struck through, and that mark closes the whole task. A checked line that notes what is still open, struck sub-items under an open title, another occurrence of a recurring task, or a task reopened later in the note still carry. The morning check that nothing was lost counts that as a deliberate exit, so it does not add the task back. When the match is uncertain, `/today` carries the task and says so.
+
+**Action required:** none.
+
 ## 2026-09-25 — The MCPs you run are the versions AIOS names, and eleven fixes for failures nobody saw
 
 `hash: c879483 · d8b9246 · d515d48 · 33407db · 161532e · 7dcbdb7 · 8764f98 · 4050b6a · 4646f53 · 0edcb0b · 9da8a2d · 06a3839 · 6b1b8a0 · a454cc4 · b111fc6 · 79ad81b · 557196f · 8916a5d · 4a0ce5c · ebb2a9e · 4083b6c · 0c1a2a4 · 573b4e6 · 9382f39 · d30ce14 · 25d2872 · a3a1948` · [#175](https://github.com/The-AIOS/aios/pull/175) · [#176](https://github.com/The-AIOS/aios/pull/176) · [#177](https://github.com/The-AIOS/aios/pull/177) · [#178](https://github.com/The-AIOS/aios/pull/178) · [#179](https://github.com/The-AIOS/aios/pull/179) · [#180](https://github.com/The-AIOS/aios/pull/180) · [#181](https://github.com/The-AIOS/aios/pull/181) · [#182](https://github.com/The-AIOS/aios/pull/182) · [#183](https://github.com/The-AIOS/aios/pull/183) · [#184](https://github.com/The-AIOS/aios/pull/184) · [#185](https://github.com/The-AIOS/aios/pull/185) · [#186](https://github.com/The-AIOS/aios/pull/186)
