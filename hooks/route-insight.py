@@ -240,8 +240,27 @@ def main():
 
     # snapshot, then write
     ts = datetime.datetime.fromtimestamp(os.path.getmtime(a.file)).strftime("%Y%m%d-%H%M%S")
-    bak = f"{a.file}.routebak-{ts}"
-    shutil.copy2(a.file, bak)
+    # The name has one-second resolution, and a close that routes several entries in a row
+    # writes the file within the same second each time — so every later backup landed on the
+    # previous one's name and replaced it, leaving only the last pre-image. Claim the name
+    # exclusively (O_EXCL cannot overwrite) and take the next free -N suffix when it is taken.
+    base = f"{a.file}.routebak-{ts}"
+    bak, n = base, 1
+    while True:
+        try:
+            os.close(os.open(bak, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
+            break
+        except FileExistsError:
+            n += 1
+            bak = f"{base}-{n}"
+    try:
+        shutil.copy2(a.file, bak)
+    except BaseException:
+        # Nothing has been written to the note yet; do not leave an empty placeholder that
+        # reads as a backup.
+        try: os.remove(bak)
+        except OSError: pass
+        raise
     open(a.file, "w", encoding="utf-8").write(new)
     # post-write re-read guard
     if open(a.file, encoding="utf-8").read() != new:
