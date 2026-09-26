@@ -77,7 +77,7 @@
 
 ## 2026-09-26 — /today stops carrying a task that is already done elsewhere in the same note
 
-`hash: `
+`hash: ` · [#190](https://github.com/The-AIOS/aios/pull/190)
 
 > **What you can now do.** Mark a task done in one place in your daily note and stop seeing it carried the next morning.
 
