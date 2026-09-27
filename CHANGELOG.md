@@ -75,6 +75,25 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-27 — Remote Control survives an account change
+
+`hash: e100508`
+
+> **What you can now do.** Switch Anthropic accounts — by `/login` or by the quota autopilot — and keep reaching every running session from your phone or claude.ai/code. You no longer have to notice that Remote Control dropped, or type `/remote-control` in each terminal to get it back.
+
+**Changing the active account can silently drop Remote Control across every live session.** The sessions keep running and their command line still says `--remote-control`, so nothing looks wrong and nothing errors — they just stop being reachable, and you find out by trying. Restoring it meant typing one slash command per terminal, which is a shrug with two sessions and an evening with fifteen.
+
+The account email is already in the cache the quota watcher reads on every tick, so the change costs nothing to notice. `_watch.py` now compares it against the last one it saw and, when it differs, calls the new `hooks/claude-identity/rc-reconnect`, which writes one spawn-inbox `send` request per live session carrying `/remote-control`. Your surface types it; no keystroke injection, no permission gate. **No new scheduler and no new install step on any platform** — if the autopilot is installed, this is already wired.
+
+Four decisions worth knowing, because each is a failure someone would otherwise hit:
+
+- **It fires on ANY account change, not only a rotation AIOS performed.** A manual `/login` is the more common cause, and nothing else would see it.
+- **It runs BEFORE the pause gate.** Pausing the autopilot pauses *rotation*; nobody asked to become unreachable. A paused window is in fact when a manual `/login` is most likely.
+- **It refuses when no surface is alive** rather than writing requests into the void. The inbox directory persists forever, so its existence proves nothing; a request with no fulfiller running is not dead-lettered, it sits unclaimed, and nothing watches for unclaimed. Writing files nobody will read looks exactly like success.
+- **Exactly one fan-out per change.** The statusLine kick and the scheduled run can both see the same change, and near a cap the kick tightens to seconds. An exclusive lock on the state file means one acts and the rest return — `tests/rc-reconnect.test.sh` proves it with an unlocked control that produces one fan-out per observer, so a passing run cannot be satisfied by a race that never happened.
+
+First run adopts the current account silently: with no prior state every account looks like a change, and reconnecting everything at install time is a surprise rather than a service. `rc-reconnect` is also safe to run by hand (`--dry-run`, `--skip a,b`); re-attaching an already-attached session is a no-op.
+
 ## 2026-09-25 — The MCPs you run are the versions AIOS names, and eleven fixes for failures nobody saw
 
 `hash: c879483 · d8b9246 · d515d48 · 33407db · 161532e · 7dcbdb7 · 8764f98 · 4050b6a · 4646f53 · 0edcb0b · 9da8a2d · 06a3839 · 6b1b8a0 · a454cc4 · b111fc6 · 79ad81b · 557196f · 8916a5d · 4a0ce5c · ebb2a9e · 4083b6c · 0c1a2a4 · 573b4e6 · 9382f39 · d30ce14 · 25d2872 · a3a1948` · [#175](https://github.com/The-AIOS/aios/pull/175) · [#176](https://github.com/The-AIOS/aios/pull/176) · [#177](https://github.com/The-AIOS/aios/pull/177) · [#178](https://github.com/The-AIOS/aios/pull/178) · [#179](https://github.com/The-AIOS/aios/pull/179) · [#180](https://github.com/The-AIOS/aios/pull/180) · [#181](https://github.com/The-AIOS/aios/pull/181) · [#182](https://github.com/The-AIOS/aios/pull/182) · [#183](https://github.com/The-AIOS/aios/pull/183) · [#184](https://github.com/The-AIOS/aios/pull/184) · [#185](https://github.com/The-AIOS/aios/pull/185) · [#186](https://github.com/The-AIOS/aios/pull/186)
