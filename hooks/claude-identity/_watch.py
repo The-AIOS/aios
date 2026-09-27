@@ -483,9 +483,91 @@ def paused_until() -> float:
     return until
 
 
+RC_STATE_FILE = os.path.join(CONFIG_DIR, "rc-reconnect.state")
+
+
+def reconnect_if_account_changed(self_path: str) -> None:
+    """Re-attach Remote Control across every live session when the ACCOUNT changes.
+
+    Changing the active account can drop Remote Control. The sessions keep
+    running and their argv still says `--remote-control`, but they stop being
+    reachable from the phone or claude.ai/code — with no error anywhere. The
+    operator finds out by trying. Restoring it means typing `/remote-control`
+    in every terminal, which scales badly with the number of live sessions.
+
+    The account email is already in the cache this watcher reads on every tick,
+    so the change is free to detect and needs no new scheduler: folding it here
+    means an operator who installed the quota autopilot gets this with no extra
+    install step on any of the three platforms.
+
+    Fires on ANY account change, not only a rotation this file performed — a
+    manual `/login` is the more common cause and nothing else would see it.
+
+    Concurrency: the statusLine kick and the scheduled run can both land on the
+    same change, and near a cap the kick tightens to seconds. An exclusive
+    non-blocking lock on the state file means exactly one of them acts; the
+    losers return immediately rather than queueing a second fan-out.
+
+    First run adopts the current account silently — with no prior state, every
+    account looks like a change, and reconnecting every session on install is a
+    surprise rather than a service."""
+    try:
+        email = (json.load(open(CACHE)) or {}).get("email") or ""
+    except Exception:
+        return
+    if not email:
+        return
+
+    import fcntl
+
+    try:
+        fd = os.open(RC_STATE_FILE, os.O_RDWR | os.O_CREAT, 0o600)
+    except Exception:
+        return
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            return  # another invocation owns this change
+        previous = os.read(fd, 4096).decode("utf-8", "replace").strip()
+
+        if previous == email:
+            return
+        # Record BEFORE acting. If the fan-out fails we do not want the next
+        # tick — seconds later — to try again forever; a missed reconnect is
+        # recoverable by hand, a reconnect storm is not.
+        os.lseek(fd, 0, os.SEEK_SET)
+        os.ftruncate(fd, 0)
+        os.write(fd, email.encode())
+        if not previous:
+            return  # first run: adopt, do not act
+
+        script = os.path.join(os.path.dirname(os.path.abspath(self_path)), "rc-reconnect")
+        if not os.access(script, os.X_OK):
+            log(f"account changed to {email} — rc-reconnect not executable at {script}, skipping")
+            return
+        try:
+            r = subprocess.run([script, "--quiet"], capture_output=True, text=True, timeout=60)
+            if r.returncode == 0:
+                log(f"account changed ({previous} -> {email}) — Remote Control re-attach requested")
+            else:
+                log(f"account changed ({previous} -> {email}) — rc-reconnect refused: "
+                    f"{(r.stderr or '').strip().splitlines()[0] if r.stderr else 'rc=' + str(r.returncode)}")
+        except Exception as e:
+            log(f"account changed ({previous} -> {email}) — rc-reconnect failed: {type(e).__name__}: {e}")
+    finally:
+        os.close(fd)
+
+
 def main(self_path: str) -> None:
     try:
         t5, t7 = thresholds()
+
+        # Remote Control reconnection runs BEFORE the pause gate, deliberately.
+        # The operator pauses ROTATION; they never asked to become unreachable.
+        # And a paused window is exactly when a manual /login is most likely,
+        # which is the most common cause of the drop.
+        reconnect_if_account_changed(self_path)
 
         until = paused_until()
         if until:

@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# rc-reconnect — re-attach Remote Control in every live Claude Code session.
+#
+# ============================================================================
+# WHAT THIS SOLVES
+# ============================================================================
+# Changing the active Anthropic account can drop Remote Control. The sessions
+# keep running and their argv still says `--remote-control --name <x>`, but the
+# connection is gone — so the operator can no longer reach them from the phone
+# or from claude.ai/code. Nothing errors; the sessions simply stop being
+# reachable, and the operator finds out when they try.
+#
+# `/remote-control` is an in-session slash command that re-attaches the session
+# it is typed into. It takes NO argument: a session already carries the name it
+# was launched with (`--name`), so there is nothing to pass and nothing to get
+# wrong. The whole fix is typing one slash command per terminal — which is
+# trivial with two sessions and miserable with fifteen.
+#
+# An agent cannot type into another session's terminal: the auto-mode classifier
+# gates that, and the keystroke path it would fall back to leaks synthetic
+# keystrokes. It CAN write a file, and a surface the operator already trusts
+# types it. That is the spawn-inbox `send` verb, and it is the whole mechanism
+# here — the same request/fulfil split the rest of AIOS uses.
+#
+# Called automatically by _watch.py when the active account changes (see
+# § Remote Control reconnection there). Safe to run by hand at any time:
+# re-attaching an already-attached session is a no-op.
+#
+# ============================================================================
+# USAGE
+# ============================================================================
+#   rc-reconnect                 re-attach every live session
+#   rc-reconnect --dry-run       print what it WOULD send, write nothing
+#   rc-reconnect --skip a,b      leave those sessions alone (comma-separated)
+#   rc-reconnect --quiet         print only on refusal (the automated path)
+#
+# Exit: 0 = requests written, or nothing to do · 1 = refused, reason on stderr
+# ============================================================================
+
+set -uo pipefail
+
+CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+SESSIONS_DIR="$CONFIG_DIR/sessions"
+AIOS_HOME="${AIOS_HOME:-$HOME/.aios}"
+INBOX="$AIOS_HOME/spawn-inbox"
+SURFACES="$AIOS_HOME/surfaces"
+PROMPT="/remote-control"
+PY="${AIOS_PYTHON:-python3}"
+
+DRY=0; QUIET=0; SKIP=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run) DRY=1 ;;
+    --quiet)   QUIET=1 ;;
+    --skip)    SKIP="${2:-}"; shift ;;
+    --help|-h) sed -n '2,38p' "$0"; exit 0 ;;
+    *) echo "rc-reconnect: unknown argument '$1' (try --help)" >&2; exit 1 ;;
+  esac
+  shift
+done
+
+say() { [ "$QUIET" = "1" ] || printf '%s\n' "$*"; }
+
+# ---- refuse when no surface is ALIVE ---------------------------------------
+# The inbox directory persists forever once created, so its existence proves
+# nothing: an operator who closed their surface has the directory and no
+# fulfiller. A request written then is NOT dead-lettered — it sits unclaimed,
+# and nothing watches for unclaimed. Writing N files nobody will ever read is
+# the one outcome worth refusing outright, precisely because it is
+# indistinguishable from success.
+alive_surface=""
+for f in "$SURFACES"/*.json; do
+  [ -f "$f" ] || continue
+  pid=$("$PY" -c "
+import json,sys
+try: print(json.load(open(sys.argv[1])).get('pid') or '')
+except Exception: print('')
+" "$f" 2>/dev/null)
+  [ -n "$pid" ] || continue
+  if kill -0 "$pid" 2>/dev/null; then
+    alive_surface="$(basename "$f" .json) (pid $pid)"
+    break
+  fi
+done
+if [ -z "$alive_surface" ]; then
+  echo "rc-reconnect: no live surface — every $SURFACES/*.json names a dead pid." >&2
+  echo "  A request written now would sit UNCLAIMED (not dead-lettered), and nothing watches for that." >&2
+  echo "  Open your AIOS surface and re-run, or type $PROMPT in each terminal by hand." >&2
+  exit 1
+fi
+say "surface: $alive_surface"
+
+[ -d "$SESSIONS_DIR" ] || { echo "rc-reconnect: no session registry at $SESSIONS_DIR" >&2; exit 1; }
+mkdir -p "$INBOX"
+
+# ---- fan out over the session registry -------------------------------------
+# The registry is the only truth for live sessions. Never pgrep and never a
+# terminal tab title: a resumed session keeps its old title and reads as dead.
+sent=0; skipped=0; stale=0
+for f in "$SESSIONS_DIR"/*.json; do
+  [ -f "$f" ] || continue
+  read -r name pid status <<<"$("$PY" -c "
+import json,sys
+try: d = json.load(open(sys.argv[1]))
+except Exception: raise SystemExit
+print(d.get('name') or '', d.get('pid') or '', d.get('status') or '?')
+" "$f" 2>/dev/null)"
+  [ -n "$name" ] && [ -n "$pid" ] || continue
+
+  # A registry entry outlives its process; only a live pid is a live session.
+  if ! kill -0 "$pid" 2>/dev/null; then stale=$(( stale + 1 )); continue; fi
+
+  case ",$SKIP," in *",$name,"*) say "  skip   $name"; skipped=$(( skipped + 1 )); continue ;; esac
+
+  if [ "$DRY" = "1" ]; then
+    say "  would  $name  ($status)"; sent=$(( sent + 1 )); continue
+  fi
+
+  # A distinct filename per request: the contract requires that concurrent
+  # requests never collide on one name, and this fans out over every session
+  # at once.
+  req="$INBOX/rc-reconnect-$name-$(date +%s)-$$.json"
+  "$PY" -c "
+import json,sys
+json.dump({'action':'send','name':sys.argv[1],'prompt':sys.argv[2]}, open(sys.argv[3],'w'))
+" "$name" "$PROMPT" "$req" 2>/dev/null \
+    || { echo "rc-reconnect: could not write $req" >&2; continue; }
+  say "  sent   $name  ($status)"
+  sent=$(( sent + 1 ))
+done
+
+suffix=""; [ "$DRY" = "1" ] && suffix=" (dry-run — nothing written)"
+say "rc-reconnect: $sent session(s)$suffix, $skipped skipped, $stale stale registry entries"
+exit 0
