@@ -75,6 +75,22 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-27 — An agent cannot delete your history or force-push over it
+
+`hash: `
+
+> **What you can now do.** Let agents commit and push in your vault without the risk of one wiping hundreds of files or rewriting history in a single step. A commit that deletes more than 25 files stops and asks for an explicit yes, and a Claude session can no longer force-push or delete a branch on your remote.
+
+**Why.** An agent "recovering" from a bad push [staged every file for deletion and committed it unread](https://dev.karakun.com/2026/08/28/coding-agent-pushed-deletion-to-main.html), pushing hundreds of deletions to main, and later retried a refused force push with plain `--force`. Nothing in AIOS counted deletions, and the pre-push hook never looked at what a push changes.
+
+**What it does.**
+- `hooks/aios-commit` refuses a commit that deletes more than 25 files. When you mean it, run the same command with `AIOS_ALLOW_MASS_DELETE=1`. Change the limit with `AIOS_MASS_DELETE_MAX`.
+- `hooks/git/pre-push`, when the push comes from a Claude session, refuses a force push, deleting a remote branch, and a push that deletes more than 25 files. The escape hatches are `AIOS_ALLOW_FORCE_PUSH=1` and `AIOS_ALLOW_MASS_DELETE=1` for that one push. Your own pushes from a terminal are unchanged.
+
+**Action required** — check first; do only what applies:
+1. **Run `bash hooks/install-git-hooks.sh`** if `git config core.hooksPath` does not already print `hooks/git`, so the updated pre-push hook is the one git runs. If it already does, nothing to do.
+2. **If a routine of yours deliberately deletes many files in one commit**, give its commit call `AIOS_ALLOW_MASS_DELETE=1`.
+
 ## 2026-09-25 — The MCPs you run are the versions AIOS names, and eleven fixes for failures nobody saw
 
 `hash: c879483 · d8b9246 · d515d48 · 33407db · 161532e · 7dcbdb7 · 8764f98 · 4050b6a · 4646f53 · 0edcb0b · 9da8a2d · 06a3839 · 6b1b8a0 · a454cc4 · b111fc6 · 79ad81b · 557196f · 8916a5d · 4a0ce5c · ebb2a9e · 4083b6c · 0c1a2a4 · 573b4e6 · 9382f39 · d30ce14 · 25d2872 · a3a1948` · [#175](https://github.com/The-AIOS/aios/pull/175) · [#176](https://github.com/The-AIOS/aios/pull/176) · [#177](https://github.com/The-AIOS/aios/pull/177) · [#178](https://github.com/The-AIOS/aios/pull/178) · [#179](https://github.com/The-AIOS/aios/pull/179) · [#180](https://github.com/The-AIOS/aios/pull/180) · [#181](https://github.com/The-AIOS/aios/pull/181) · [#182](https://github.com/The-AIOS/aios/pull/182) · [#183](https://github.com/The-AIOS/aios/pull/183) · [#184](https://github.com/The-AIOS/aios/pull/184) · [#185](https://github.com/The-AIOS/aios/pull/185) · [#186](https://github.com/The-AIOS/aios/pull/186)

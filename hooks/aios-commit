@@ -247,6 +247,19 @@ fi
 
 TREE=$(GIT_INDEX_FILE="$TMPIDX" git write-tree) || die "write-tree failed"
 
+# ── mass-deletion ceiling ─────────────────────────────────────────────────────
+# WHY: an agent "recovering" from a bad push ran `git revert` in a shallow clone, which staged
+# every file for deletion, and committed it unread — 151 and 723 files gone from main
+# (https://dev.karakun.com/2026/08/28/coding-agent-pushed-deletion-to-main.html). --vault sweeps
+# deletions in, and an explicit path list can carry them too, so a commit that deletes more than
+# AIOS_MASS_DELETE_MAX files (default 25) refuses unless AIOS_ALLOW_MASS_DELETE=1 is set for that
+# one call. Counted against HEAD, so the first commit of a repo is never affected.
+if [ "${#PARENTS[@]}" -gt 0 ] && [ "${AIOS_ALLOW_MASS_DELETE:-0}" != "1" ]; then
+  NDEL=$(git diff --diff-filter=D --name-only HEAD "$TREE" | wc -l | tr -d ' ') || die "could not count deletions"
+  [ "$NDEL" -le "${AIOS_MASS_DELETE_MAX:-25}" ] \
+    || die "this commit deletes $NDEL files (limit ${AIOS_MASS_DELETE_MAX:-25}) — nothing committed. If that is intended, re-run with AIOS_ALLOW_MASS_DELETE=1."
+fi
+
 # ── session provenance trailer ────────────────────────────────────────────────
 # WHY: a vault is written CONCURRENTLY by several Claude sessions, and git cannot
 # tell them apart — same author, same committer, no distinguishing field. Anything

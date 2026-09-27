@@ -1316,6 +1316,9 @@ jobs:
         # discovered as a broken push on someone else's machine. The suite runs against
         # a scratch GIT_CONFIG_GLOBAL so it can never read or write the real config.
         run: bash tests/pre-push.test.sh
+      - name: agents cannot mass-delete or force-push
+        # aios-commit refuses a commit deleting more than 25 files; from a Claude session pre-push refuses a force push, a remote-branch deletion and a push deleting more than 25 files — each with its explicit escape hatch, a human at a terminal unaffected.
+        run: bash tests/mass-delete-force-push-guard.test.sh
 
       - name: the tier dial resolves from ONE table, and the installers cover the same hooks
         # The rung→model table lived only inside the spawn shell function, so any surface
@@ -1902,6 +1905,9 @@ jobs:
 
       - name: Regression suite under bash 3.2
         run: /bin/bash tests/aios-commit.test.sh
+
+      - name: mass-delete and force-push guard under bash 3.2
+        run: /bin/bash tests/mass-delete-force-push-guard.test.sh
 
       - name: install-wrappers regression under bash 3.2
         # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.

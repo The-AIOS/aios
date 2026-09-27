@@ -15,12 +15,58 @@
 # nothing, which is the correct default for a stranger's empty vault.
 #
 # Escape hatch, deliberate and loud:  AIOS_ALLOW_BLOCKED_REMOTE=1 git push …
+#
+# It also carries the AGENT PUSH GUARD below (branch deletion, force push, mass deletion from a
+# Claude session), which is active whatever the owner list says.
 set -uo pipefail
 
 remote_name="${1:-}"
 remote_url="${2:-}"
 [ -z "$remote_url" ] && remote_url="$(git remote get-url "$remote_name" 2>/dev/null || true)"
 [ -z "$remote_url" ] && exit 0
+
+# ── Agent push guard ──────────────────────────────────────────────────────────
+# From a Claude Code session (CLAUDECODE=1), refuse: deleting a remote branch, a push that does
+# not fast-forward (a force push rewrites history), and a pushed range that deletes more than
+# AIOS_MASS_DELETE_MAX files (default 25). The incident it answers: an agent committed hundreds of
+# deletions unread, pushed them to main, and later retried a rejected --force-with-lease as a
+# plain --force (https://dev.karakun.com/2026/08/28/coding-agent-pushed-deletion-to-main.html).
+# A guard that reads command TEXT misses a push started by a script; this hook sees every push.
+# A human at a terminal is unaffected. Escape hatches, per push:
+#   AIOS_ALLOW_FORCE_PUSH=1   AIOS_ALLOW_MASS_DELETE=1
+if [ "${CLAUDECODE:-0}" = "1" ]; then
+  # Git writes the ref list and closes stdin. A caller that leaves stdin open with nothing on it
+  # (a test harness, a wrapper) must not hang the hook, so each line gets a read timeout.
+  REFS=""
+  while IFS= read -r -t 5 _line; do REFS="$REFS$_line
+"; done
+  while read -r _ local_sha remote_ref remote_sha; do
+    [ -n "${local_sha:-}" ] || continue
+    if printf '%s' "$local_sha" | grep -qE '^0+$'; then
+      [ "${AIOS_ALLOW_FORCE_PUSH:-0}" = "1" ] && continue
+      echo "BLOCKED (pre-push): deleting remote branch $remote_ref from a Claude session. If the operator asked for it: AIOS_ALLOW_FORCE_PUSH=1 git push …" >&2
+      exit 1
+    fi
+    printf '%s' "${remote_sha:-0}" | grep -qE '^0+$' && continue     # a new branch: nothing to compare
+    # Judge only what this repo can see. If the remote tip is not present locally, git's own
+    # non-fast-forward check still refuses an ordinary push; a forced push over an unfetched
+    # remote tip is the one case this guard cannot measure, and it says nothing rather than
+    # refusing every push from a clone that has not fetched.
+    git cat-file -e "$remote_sha^{commit}" 2>/dev/null && git cat-file -e "$local_sha^{commit}" 2>/dev/null || continue
+    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null \
+       && [ "${AIOS_ALLOW_FORCE_PUSH:-0}" != "1" ]; then
+      echo "BLOCKED (pre-push): $remote_ref would not fast-forward (a force push rewrites history). If the operator asked for it: AIOS_ALLOW_FORCE_PUSH=1 git push …" >&2
+      exit 1
+    fi
+    ndel=$(git diff --diff-filter=D --name-only "$remote_sha" "$local_sha" 2>/dev/null | wc -l | tr -d ' ')
+    if [ "${ndel:-0}" -gt "${AIOS_MASS_DELETE_MAX:-25}" ] && [ "${AIOS_ALLOW_MASS_DELETE:-0}" != "1" ]; then
+      echo "BLOCKED (pre-push): this push deletes $ndel files on $remote_ref (limit ${AIOS_MASS_DELETE_MAX:-25}). If intended: AIOS_ALLOW_MASS_DELETE=1 git push …" >&2
+      exit 1
+    fi
+  done <<EOF_REFS
+$REFS
+EOF_REFS
+fi
 
 blocked="$(git config --get aios.blockedRemoteOwners 2>/dev/null || true)"
 [ -z "$blocked" ] && exit 0
