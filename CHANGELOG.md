@@ -75,6 +75,20 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-27 — Nothing is sent, shared or published unless you asked
+
+`hash: `
+
+> **What you can now do.** Let agents work near your inbox and your Drive without the risk of one sending, forwarding or sharing something on its own initiative. A send happens only when your latest message asks for it, a contract never leaves by an agent's hand, and an unattended routine cannot send at all unless you named it.
+
+**Why.** A Claude Code user [reported](https://news.ycombinator.com/item?id=49798257) that, asked to "push a project further", the agent pulled a contract from Gmail, placed a signature image on it and was about to send it. The rule against that already lived in `INTENT.md` as prose, and an `ask` permission does not prompt in auto mode, so nothing stopped it mechanically.
+
+**What it does.** `hooks/guard-outward-action.py` is a PreToolUse hook on the send, reply, forward and share tools of Gmail, Outlook, Teams, Drive and Slack. It allows one only when your latest instruction asks for that kind of action: a message you typed ("send it", "share it with…", in English, Italian or Spanish), or your answer to a question the agent put to you. It reads only the records Claude Code marks as typed by a human, so a subagent's report or a tool's output that says "send" never counts as you. A PDF named like a contract, agreement or mandate is always refused. Blocked calls tell the agent to show you what would go out and wait. **It also refuses a prompt the spawn inbox typed.** The App and Glass deliver a request by typing it into the session, and the transcript records that exactly like you; `hooks/bus_log.py` fingerprints every request when it is written, so a scheduled routine's prompt that says "sent" never counts as you asking to send.
+
+**Action required** — check first; do only what applies:
+1. **If you want the gate** (recommended for anyone with Gmail, Outlook or Drive connected): add the Hook D block from `SETUP.md` §10 to `~/.claude/settings.json`, merged into your existing `PreToolUse` array. If you already have a `guard-outward-action` entry, nothing to do. Add the `bus_log --hook` entry from Hook D part 2 in the same array; on macOS, optionally the inbox watcher it describes.
+2. **If a routine of yours sends by design**, add `AIOS_OUTWARD_OK=<tool name>` to its launcher, or it will be refused once the hook is wired.
+
 ## 2026-09-25 — The MCPs you run are the versions AIOS names, and eleven fixes for failures nobody saw
 
 `hash: c879483 · d8b9246 · d515d48 · 33407db · 161532e · 7dcbdb7 · 8764f98 · 4050b6a · 4646f53 · 0edcb0b · 9da8a2d · 06a3839 · 6b1b8a0 · a454cc4 · b111fc6 · 79ad81b · 557196f · 8916a5d · 4a0ce5c · ebb2a9e · 4083b6c · 0c1a2a4 · 573b4e6 · 9382f39 · d30ce14 · 25d2872 · a3a1948` · [#175](https://github.com/The-AIOS/aios/pull/175) · [#176](https://github.com/The-AIOS/aios/pull/176) · [#177](https://github.com/The-AIOS/aios/pull/177) · [#178](https://github.com/The-AIOS/aios/pull/178) · [#179](https://github.com/The-AIOS/aios/pull/179) · [#180](https://github.com/The-AIOS/aios/pull/180) · [#181](https://github.com/The-AIOS/aios/pull/181) · [#182](https://github.com/The-AIOS/aios/pull/182) · [#183](https://github.com/The-AIOS/aios/pull/183) · [#184](https://github.com/The-AIOS/aios/pull/184) · [#185](https://github.com/The-AIOS/aios/pull/185) · [#186](https://github.com/The-AIOS/aios/pull/186)
