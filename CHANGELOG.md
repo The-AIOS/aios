@@ -83,7 +83,11 @@
 
 **Changing the active account can silently drop Remote Control across every live session.** The sessions keep running and their command line still says `--remote-control`, so nothing looks wrong and nothing errors — they just stop being reachable, and you find out by trying. Restoring it meant typing one slash command per terminal, which is a shrug with two sessions and an evening with fifteen.
 
-The account email is already in the cache the quota watcher reads on every tick, so the change costs nothing to notice. `_watch.py` now compares it against the last one it saw and, when it differs, calls the new `hooks/claude-identity/rc-reconnect`, which writes one spawn-inbox `send` request per live session carrying `/remote-control`. Your surface types it; no keystroke injection, no permission gate. **No new scheduler and no new install step on any platform** — if the autopilot is installed, this is already wired.
+The account email is already in the cache the quota watcher reads on every tick, so the change costs nothing to notice. `_watch.py` now compares it against the last one it saw and, when it differs, calls the new `hooks/claude-identity/rc-reconnect`, which writes one spawn-inbox `send` request per live session carrying `/remote-control <that session's name>`. Your surface types it; no keystroke injection, no permission gate.
+
+**The name in that command is load-bearing.** Run bare, `/remote-control` re-attaches under an auto-generated name (the prefix defaults to your hostname) rather than inheriting the name the session was launched with — so a bare fan-out reconnects everything and leaves the sessions mutually indistinguishable. Reachable but unidentifiable is worse than disconnected, because it looks like it worked.
+
+**No new scheduler and no new install step on any platform** — if the autopilot is installed, this is already wired.
 
 Four decisions worth knowing, because each is a failure someone would otherwise hit:
 

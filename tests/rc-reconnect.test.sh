@@ -113,6 +113,26 @@ body=$(cat "$(ls "$AIOS_HOME/spawn-inbox"/*.json | head -1)")
 case "$body" in *'"action": "send"'*|*'"action":"send"'*) ok "uses the send verb" ;; *) bad "wrong verb -- $body" ;; esac
 case "$body" in *"/remote-control"*) ok "carries the slash command" ;; *) bad "missing prompt -- $body" ;; esac
 
+# ── the defect the two assertions above CANNOT see ──────────────────────────
+# Run bare, `/remote-control` re-attaches under an AUTO-GENERATED name (the
+# prefix defaults to the hostname) instead of inheriting the session's launch
+# `--name`. A bare fan-out therefore reconnects every session and leaves them
+# mutually indistinguishable — reachable but unidentifiable, which is worse
+# than disconnected because it looks like it worked.
+#
+# Every assertion above passes with the bare form. They check that a request
+# was written and that its prompt contains the command: they measure the
+# REQUEST, never the EFFECT. Found by hand against a live session, which is
+# the only place the difference was visible.
+for s in alpha beta; do
+  hit=$(grep -l "\"name\": \"$s\"\|\"name\":\"$s\"" "$AIOS_HOME/spawn-inbox"/*.json 2>/dev/null | head -1)
+  if [ -z "$hit" ]; then bad "no request addressed to $s"; continue; fi
+  case "$(cat "$hit")" in
+    *"/remote-control $s"*) ok "$s: prompt carries its OWN name, not the bare command" ;;
+    *) bad "$s: prompt bare or naming the wrong session -- $(cat "$hit")" ;;
+  esac
+done
+
 echo "== 4. --dry-run writes nothing =="
 clear_reqs
 "$SCRIPT" --dry-run >/dev/null 2>&1
