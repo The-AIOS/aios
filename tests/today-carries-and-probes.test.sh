@@ -9,6 +9,8 @@
 #      missing URL as "ok".
 #   3. Carry escalation had three rules for the same untagged carry; the drop check compared
 #      counts; the last-note search looked two months back.
+#   4. A task written in several places was carried from its open copies after one copy was
+#      marked done, re-opening finished work each morning; the drop check would have re-added it.
 #
 # Both probes are EXTRACTED from today.md and run against temp vaults, under bash and under zsh
 # (the session shell). The carry rules are checked as properties, and each property is proven
@@ -100,7 +102,15 @@ p_parked_exit(){ grep -q '\*\*parked\*\* (matched `## Explicitly NOT doing` — 
 p_hidden_verified(){ grep -q "\*\*compass-hidden\*\* (target > 14 days — confirm it is in its project note's to-dos; if it is not, it is not hidden, it is lost" "$1"; }
 p_table_applies(){ grep -q 'the count-based table above applies. That table exists for exactly these carries: untagged, no target, no window' "$1"; }
 p_no_exempt(){ ! grep -q 'apply to explicit-target items only, not raw age' "$1"; }
-PROPS="all_months no_two_months per_item no_count parked_exit hidden_verified table_applies no_exempt"
+p_done_twin(){ grep -q '\*\*Then drop any open line whose done twin is in the same note:\*\* if a line with the same core identity (same dedup key) is `\[x\]` or `~~struck~~` anywhere in that note' "$1"; }
+p_done_exit(){ grep -q '\*\*done elsewhere\*\* (a `\[x\]` or struck twin with the same identity in the previous note' "$1"; }
+p_twin_partial(){ grep -q 'an `\[x\]` that notes what is still open is partial work and does not count' "$1"; }
+p_twin_multipart(){ grep -q 'for a multi-part task only a struck title counts, never struck sub-items alone' "$1"; }
+p_twin_recurring(){ grep -q 'a recurring task (daily, per meeting, per time slot) is closed only for the instance that was marked' "$1"; }
+p_twin_reopen(){ grep -q 'an open line written after the done one as an explicit reopening stays open' "$1"; }
+p_exit_limits(){ grep -q 'that closes the whole task, under the same limits as the extraction above — re-check them here; a twin that fails them is not an exit' "$1"; }
+p_twin_uncertain(){ grep -q 'When the match is uncertain (similar wording, a different deliverable, a different instance), carry it and say so rather than drop it' "$1"; }
+PROPS="all_months no_two_months per_item no_count parked_exit hidden_verified table_applies no_exempt done_twin done_exit twin_partial twin_multipart twin_recurring twin_reopen twin_uncertain exit_limits"
 failing(){ local out="" n; for n in $PROPS; do "p_$n" "$1" || out="$out $n"; done; printf '%s' "${out# }"; }
 for n in $PROPS; do "p_$n" "$SPEC" && ok "3. $n" || no "3. $n"; done
 mut(){ # $1 label  $2 perl substitution  $3 the one property that must now fail
@@ -112,6 +122,14 @@ mut "all-months search removed"   's/take the latest `YYYY-MM-DD\.md` dated befo
 mut "per-item sentence removed"   's/For each unique unchecked `- \[ \]` item of the previous note \(same dedup key as the extraction\), confirm it is placed in today.s note, or that it left on purpose: //' per_item
 mut "parked exit removed"         's/\*\*parked\*\* \(matched `## Explicitly NOT doing` — removed by design\) or //' parked_exit
 mut "hidden verification removed" 's/ — confirm it is in its project note.s to-dos; if it is not, it is not hidden, it is lost: put it there or in Parking//' hidden_verified
+mut "done-twin rule removed"      's/\*\*Then drop any open line whose done twin is in the same note:\*\*[^*]*?does not carry\. //' done_twin
+mut "done-elsewhere exit removed" 's/or \*\*done elsewhere\*\* \([^)]*\) //' "done_exit exit_limits"
+mut "partial-[x] limit removed"   's/an `\[x\]` that notes what is still open is partial work and does not count; //' twin_partial
+mut "multi-part limit removed"    's/for a multi-part task only a struck title counts, never struck sub-items alone; //' twin_multipart
+mut "recurring limit removed"     's/a recurring task \(daily, per meeting, per time slot\) is closed only for the instance that was marked; //' twin_recurring
+mut "reopen limit removed"        's/; and an open line written after the done one as an explicit reopening stays open//' twin_reopen
+mut "exit limits removed"         's/ that closes the whole task, under the same limits as the extraction above — re-check them here; a twin that fails them is not an exit//' exit_limits
+mut "uncertain guard removed"     's/When the match is uncertain \([^)]*\), carry it and say so rather than drop it\. //' twin_uncertain
 mut "table sentence removed"      's/ — and the count-based table above applies\. That table exists for exactly these carries: untagged, no target, no window\.//' table_applies
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
