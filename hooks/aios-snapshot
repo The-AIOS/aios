@@ -134,7 +134,7 @@ acquire(){
     if [ "$saw_lock" -eq 0 ] && [ "$tries" -ge 20 ]; then
       die "cannot create $LOCK — $tries attempts, no lock ever present: this is NOT contention. Is $DESTDIR writable?"
     fi
-    [ "$tries" -gt 600 ] && { [ -d "$LOCK.reclaim" ] && die "lock timeout: $LOCK.reclaim was left by a process that died while reclaiming. If no aios-snapshot is running, remove it: rmdir \"$LOCK.reclaim\""; die "lock timeout (held by pid ${holder:-unknown})"; }
+    [ "$tries" -gt 600 ] && { [ -d "$LOCK.reclaim" ] && die "lock timeout: $LOCK.reclaim was left by a process that died while reclaiming. If no aios-snapshot is running, remove it: rmdir \"$LOCK.reclaim\" — until then every run stops here"; die "lock timeout (held by pid ${holder:-unknown})"; }
     sleep 0.1
   done
   echo "$$" > "$LOCK/pid"

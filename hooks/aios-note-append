@@ -77,7 +77,7 @@ acquire(){ local t=0 h; while ! mkdir "$LOCK" 2>/dev/null; do
     h=$(cat "$LOCK/pid" 2>/dev/null || true)
     if [ -n "$h" ] && ! kill -0 "$h" 2>/dev/null; then reclaim "$LOCK" "$h"; fi   # counts toward the timeout
     t=$((t+1)); if [ "$t" -gt 600 ]; then
-      [ -d "$LOCK.reclaim" ] && die "note lock timeout: $LOCK.reclaim was left by a process that died while reclaiming. If no close is running, remove it: rmdir \"$LOCK.reclaim\""
+      [ -d "$LOCK.reclaim" ] && die "note lock timeout: $LOCK.reclaim was left by a process that died while reclaiming. If no close is running, remove it: rmdir \"$LOCK.reclaim\" — until then every run stops here"
       die "note lock timeout on $NOTE"; fi; sleep 0.1
   done; echo "$$" > "$LOCK/pid"; }
 LOCKED=0

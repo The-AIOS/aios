@@ -173,7 +173,7 @@ acquire(){
     if [ "$saw_lock" -eq 0 ] && [ "$tries" -ge 20 ]; then
       die "cannot create $LOCK — $tries attempts, no lock ever present: this is NOT contention. $GIT_DIR is likely not writable (sandboxed session? read-only checkout?), or a non-directory occupies the lock path."
     fi
-    [ "$tries" -gt 600 ] && { [ -d "$LOCK.reclaim" ] && die "lock timeout: $LOCK.reclaim was left by a process that died while reclaiming. If no aios-commit is running, remove it: rmdir \"$LOCK.reclaim\""; die "lock timeout (held by pid ${holder:-unknown})"; }
+    [ "$tries" -gt 600 ] && { [ -d "$LOCK.reclaim" ] && die "lock timeout: $LOCK.reclaim was left by a process that died while reclaiming. If no aios-commit is running, remove it: rmdir \"$LOCK.reclaim\" — until then every run stops here"; die "lock timeout (held by pid ${holder:-unknown})"; }
     sleep 0.1
   done
   echo "$$" > "$LOCK/pid"
@@ -386,6 +386,12 @@ git update-ref $_noderef "$TARGET" "$COMMIT" "$_expect" \
 # the whole difference between this recurring and this being fixable next time.
 if [ ${#PATHS[@]} -gt 0 ]; then
   for _p in "${PATHS[@]}"; do
+    # A path gone from BOTH the working tree and the real index (the old half of a staged
+    # `git mv`) has nothing left to sync; `git add` on it only fails, and that failure used
+    # to print a false "sync failed" warning after every rename.
+    if [ ! -e "$_p" ] && [ ! -L "$_p" ] && ! git ls-files --error-unmatch -- "$_p" >/dev/null 2>&1; then
+      continue
+    fi
     if ! _sync_err=$(git add --all -- "$_p" 2>&1); then
       printf 'aios-commit: WARNING — post-commit index sync failed for: %s\n' "$_p" >&2
       [ -n "$_sync_err" ] && printf 'aios-commit:   git said: %s\n' "$_sync_err" >&2
