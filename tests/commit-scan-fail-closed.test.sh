@@ -107,7 +107,7 @@ SHIM="$TMP/shim"; mkdir -p "$SHIM"
 cat > "$SHIM/git" <<SHIMEOF
 #!/usr/bin/env bash
 case "\${FAIL_ON:-} \$*" in
-  "diff "*"diff --name-only HEAD -- vault/"*)                  echo "fatal: simulated diff failure" >&2; exit 128 ;;
+  "diff "*"diff --name-only HEAD -- vault/"*|"diff "*"diff --no-renames --name-only HEAD -- vault/"*)  echo "fatal: simulated diff failure" >&2; exit 128 ;;
   "ls "*"ls-files --others --exclude-standard -- vault/"*)      echo "fatal: simulated ls-files failure" >&2; exit 128 ;;
 esac
 exec "$REAL_GIT" "\$@"

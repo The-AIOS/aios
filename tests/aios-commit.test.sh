@@ -174,20 +174,25 @@ grep -q 'index still lags HEAD' "$AC" && grep -q 'git diff --cached --name-only 
 # cause are different reports and both are worth having: the NOTE tells the operator
 # what to clean, this tells whoever is debugging WHY it happened.
 #
-# Trigger is the ordinary `git mv` flow — the throwaway index is seeded from HEAD,
-# where the OLD name still exists, so pre-commit staging succeeds; post-commit HEAD
-# no longer carries it and the per-path sync matches nothing.
+# Trigger: a stand-in `git` on PATH that fails ONLY the real-index `add --all` (no
+# GIT_INDEX_FILE set), so the throwaway-index staging and the commit go through untouched and
+# only the post-commit sync fails. This used to be triggered by a `git mv`, but that case was
+# never a real failure — the old name is gone from worktree and index, nothing is left to sync —
+# and the hook now skips it (tested below with the --vault rename). A stand-in makes the
+# failure genuine and deterministic.
 echo "── aios-commit: the sync reports its own failure, not just the resulting staleness ──"
-R=$(mktemp -d)
-( cd "$R" && git init -q . && git config user.email t@t && git config user.name t \
-  && mkdir -p "00 - notes" && echo one > "00 - notes/old.md" && git add -A && git commit -qm init \
-  && git mv "00 - notes/old.md" "00 - notes/new.md" ) >/dev/null 2>&1
-OUT=$( cd "$R" && "$AC" --no-push -m "rename" -- "00 - notes/old.md" "00 - notes/new.md" 2>&1 )
+R=$(mktemp -d); SHIM=$(mktemp -d); REALGIT=$(command -v git)
+printf '#!/bin/sh\nif [ -z "$GIT_INDEX_FILE" ] && [ "$1" = add ] && [ "$2" = --all ]; then echo "fatal: simulated index write failure" >&2; exit 128; fi\nexec "%s" "$@"\n' "$REALGIT" > "$SHIM/git"; chmod +x "$SHIM/git"
+( cd "$R" && git init -q . && git config user.email t@t && git config user.name t && git config commit.gpgsign false \
+  && mkdir -p "00 - notes" && echo one > "00 - notes/a.md" && git add -A && git commit -qm init \
+  && echo two > "00 - notes/a.md" ) >/dev/null 2>&1
+OUT=$( cd "$R" && PATH="$SHIM:$PATH" "$AC" --no-push -m "edit" -- "00 - notes/a.md" 2>&1 )
+rm -rf "$SHIM"
 case "$OUT" in
   *"post-commit index sync failed"*) ok "a failed post-commit index sync names itself" ;;
   *) no "the index sync failed silently" "an unrecorded cause is why the 2026-08-27 staleness is unexplainable" ;;
 esac
-( cd "$R" && [ "$(git ls-tree -r HEAD --name-only | grep -c 'new.md')" = "1" ] ) \
+( cd "$R" && [ "$(git show HEAD:"00 - notes/a.md" 2>/dev/null)" = "two" ] ) \
   && ok "the commit still lands despite a sync warning (non-fatal by design)" \
   || no "a sync warning broke the commit" "cosmetic staleness must never fail work that is already committed"
 rm -rf "$R"
@@ -329,6 +334,63 @@ printf '%s' "$OUT" | grep -q 'no vault changes to commit' \
   && [ "$(git show HEAD:vault/n.md)" = "C" ] ) \
   && ok "a real change still commits normally" || no "the normal --vault path regressed"
 rm -rf "$R"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# --vault after a rename. With rename detection on (git diff's default), a rename already staged
+# in the real index listed only the NEW name, so the commit added it and never removed the old
+# one: both names landed in HEAD. A plain `mv` (nothing staged) listed both and was fine, which
+# is why this hid. Checked against the hook at a pinned pre-change commit, skipped when absent.
+echo "── aios-commit --vault: a staged rename commits as a rename, not a copy ──"
+h5(){ # $1 hook · $2 "git mv" or "mv" → the vault paths in HEAD
+  local r; r=$(newrepo)
+  ( cd "$r" && mkdir vault && echo hello > vault/a.md && git add vault && git commit -qm init \
+    && $2 vault/a.md vault/b.md \
+    && CLAUDE_CODE_SESSION_ID= "$1" --vault --no-push -m rename >/dev/null 2>&1 )
+  git -C "$r" ls-tree -r --name-only HEAD -- vault | tr '\n' ' '; rm -rf "$r"
+}
+[ "$(h5 "$AC" "git mv")" = "vault/b.md " ] && ok "git mv then --vault → HEAD holds only the new name" \
+  || no "git mv then --vault → HEAD holds [$(h5 "$AC" "git mv")]"
+[ "$(h5 "$AC" mv)" = "vault/b.md " ] && ok "plain mv then --vault → HEAD holds only the new name" \
+  || no "plain mv then --vault → HEAD holds [$(h5 "$AC" mv)]"
+# …and says nothing false about it. The old name is gone from both the working tree and the real
+# index, so a per-path `git add` on it fails; that used to print "post-commit index sync failed"
+# after every rename, on a commit that had succeeded with a clean status.
+h5w(){ # $1 hook → "<stderr WARNING count>:<git status line count>"
+  local r e; r=$(newrepo)
+  e=$( cd "$r" && mkdir vault && echo hello > vault/a.md && git add vault && git commit -qm init \
+    && git mv vault/a.md vault/b.md && CLAUDE_CODE_SESSION_ID= "$1" --vault --no-push -m rename 2>&1 >/dev/null )
+  printf '%s:%s' "$(printf '%s' "$e" | grep -c 'WARNING')" "$(git -C "$r" status --porcelain | grep -c .)"; rm -rf "$r"
+}
+[ "$(h5w "$AC")" = "0:0" ] && ok "git mv then --vault → no warning, clean status" || no "git mv then --vault → warning:status = $(h5w "$AC")" "a false sync warning on a successful commit"
+H5W=$(mktemp -d); mkdir -p "$H5W/git"; cp "$ROOT/hooks/git/secret-scan.sh" "$H5W/git/"
+sed '/the old half of a staged/,/^    fi$/d' "$AC" > "$H5W/aios-commit"; chmod +x "$H5W/aios-commit"
+case "$(h5w "$H5W/aios-commit")" in 0:*) no "control: without the skip the warning did not return" "the check above proves nothing";; *) ok "control: without the skip, the false warning returns";; esac
+rm -rf "$H5W"
+H5_PIN=a1bdd93a25a85749df66db0a94a8ea4701fbefc7
+H5_OLD=$(mktemp -d); mkdir -p "$H5_OLD/git"
+if git -C "$ROOT" cat-file -e "$H5_PIN:hooks/aios-commit" 2>/dev/null \
+   && git -C "$ROOT" show "$H5_PIN:hooks/aios-commit" > "$H5_OLD/aios-commit" \
+   && git -C "$ROOT" show "$H5_PIN:hooks/git/secret-scan.sh" > "$H5_OLD/git/secret-scan.sh" \
+   && ! cmp -s "$H5_OLD/aios-commit" "$AC"; then
+  chmod +x "$H5_OLD/aios-commit" "$H5_OLD/git/secret-scan.sh"
+  [ "$(h5 "$H5_OLD/aios-commit" "git mv")" = "vault/a.md vault/b.md " ] \
+    && ok "OLD: git mv then --vault left both names in HEAD (the defect, reproduced)" \
+    || no "OLD: did not reproduce — HEAD holds [$(h5 "$H5_OLD/aios-commit" "git mv")]"
+  # A vault that already has the duplicate heals on its next --vault commit: the old file is
+  # gone from disk, and the sweep now reports it as a deletion.
+  R=$(newrepo)
+  ( cd "$R" && mkdir vault && echo hello > vault/a.md && git add vault && git commit -qm init \
+    && git mv vault/a.md vault/b.md \
+    && CLAUDE_CODE_SESSION_ID= "$H5_OLD/aios-commit" --vault --no-push -m old >/dev/null 2>&1 \
+    && CLAUDE_CODE_SESSION_ID= "$AC" --vault --no-push -m heal >/dev/null 2>&1 )
+  [ "$(git -C "$R" ls-tree -r --name-only HEAD -- vault | tr '\n' ' ')" = "vault/b.md " ] \
+    && ok "a duplicate left by the old sweep is removed by the next --vault commit" \
+    || no "the leftover old name survived the next --vault commit"
+  rm -rf "$R"
+else
+  echo "  - SKIP old-hook reproduction: $H5_PIN not present or identical"
+fi
+rm -rf "$H5_OLD"
 
 echo ""
 echo "── RESULT: $PASS passed, $FAIL failed  (bash $BASH_VERSION) ──"

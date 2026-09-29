@@ -1174,6 +1174,13 @@ jobs:
         # race that never occurred.
         run: bash tests/aios-snapshot.test.sh
 
+      - name: a stale lock is reclaimed once, and HEAD only moves from where the commit began
+        # A dead holder's lock reclaimed by two waiters used to be deleted out from under the
+        # one that re-took it; a commit landing mid-run was reverted by update-ref; a push that
+        # left commits behind cleared the pending marker. Each case also runs against the
+        # pre-change hooks (pinned) and must reproduce there, when that commit is present.
+        run: bash tests/lock-reclaim-and-head-cas.test.sh
+
       - name: the star ask decides correctly about whether to ask
         # Every defect this suite covers fails in the SILENT direction — the script still
         # exits 0 and still prints a verdict, just the wrong one. A missing tracker reading as
@@ -1770,6 +1777,12 @@ jobs:
         # false. Both directions are checked, with a control that the extractor found the tree.
         run: bash tests/readme-tree.test.sh
 
+      - name: a --vault commit never carries the helpers' locks, temps or backups
+        # Helpers write a lock, a temp file or a backup inside the vault tree, and --vault adds
+        # untracked files through --exclude-standard, so .gitignore is its only filter. A control
+        # proves the scratch commit picks the artifacts up when nothing ignores them.
+        run: bash tests/gitignore-helper-artifacts.test.sh
+
       - name: owned numbers are pointed at, not restated; memory holds a pointer, not a copy
         # #152-#155: a hand-rolled snapshot cp and a gap-illegal invariant in /aios:compact,
         # CLAUDE.md's dual-write rule contradicting its own channeling rule, and two thresholds
@@ -1903,9 +1916,16 @@ jobs:
       - name: Regression suite under bash 3.2
         run: /bin/bash tests/aios-commit.test.sh
 
+      - name: lock reclaim and HEAD compare-and-swap under bash 3.2
+        run: /bin/bash tests/lock-reclaim-and-head-cas.test.sh
+
       - name: install-wrappers regression under bash 3.2
         # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.
         run: /bin/bash tests/install-wrappers.test.sh
+
+      - name: helper artifacts stay out of a --vault commit under bash 3.2
+        # The suite drives the real aios-commit --vault, whose shebang resolves to 3.2 here.
+        run: /bin/bash tests/gitignore-helper-artifacts.test.sh
 
       - name: rotation threshold under bash 3.2
         # macOS is the platform the rotation autopilot already supports, so this
