@@ -30,7 +30,7 @@ This is the **canonical list** referenced by `CLAUDE.md` → MCP Policy. When yo
 
 **Who bumps, and when.** A pin nobody bumps becomes a stale-CVE problem, so the duty is named rather than assumed: **whoever touches a server bumps its pins in that same PR**, and a pin is re-vetted at bump time — which is the moment a review is worth doing, and the reason pinning does not create an audit treadmill. It creates a *schedule*. Bumping is a deliberate edit with the new version in the diff, never a range that moves on its own.
 
-**`unpinned` is a legitimate row, and it must appear where true.** Four invocations are currently unpinned because their versions could not be resolved when this rule was written, and **a guessed pin is worse than a recorded gap** — it reads as a verified version and is not one. They sit in `KNOWN_UNPINNED` in the lint and as `unpinned` rows in `SECURITY.md`. That is a ratchet, not an amnesty: an entry leaves the list by being pinned, never by being deleted, and any *new* unpinned invocation fails the build.
+**`unpinned` is a legitimate row, and it must appear where true.** Three invocations are currently unpinned because their versions could not be resolved when this rule was written, and **a guessed pin is worse than a recorded gap** — it reads as a verified version and is not one. They sit in `KNOWN_UNPINNED` in the lint and as `unpinned` rows in `SECURITY.md`. That is a ratchet, not an amnesty: an entry leaves the list by being pinned, never by being deleted, and any *new* unpinned invocation fails the build.
 
 ### Connecting a server whose code AIOS does not ship
 
