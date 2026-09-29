@@ -57,7 +57,8 @@
 >
 > Entries are **date-keyed**; releases are **tagged in git**. A release contains every entry dated up to its tag, back to the previous release. **What you actually have is the hash in `.aios-update`** — a vault normally sits *between* releases, and `/aios:update` works off that hash, never off a version number.
 >
-> - **Unreleased** — entries after `2026-09-25`
+> - **Unreleased** — entries after `2026-09-29`
+> - **[v0.8.6](https://github.com/The-AIOS/aios/releases/tag/v0.8.6)** · `2026-09-29` — covers `2026-09-29`
 > - **[v0.8.5](https://github.com/The-AIOS/aios/releases/tag/v0.8.5)** · `2026-09-25` — covers `2026-09-25`
 > - **[v0.8.4](https://github.com/The-AIOS/aios/releases/tag/v0.8.4)** · `2026-09-24` — covers `2026-09-24`
 > - **[v0.8.3](https://github.com/The-AIOS/aios/releases/tag/v0.8.3)** · `2026-09-23` — covers `2026-09-23`
@@ -74,6 +75,36 @@
 > - **[v0.2.0](https://github.com/The-AIOS/aios/releases/tag/v0.2.0)** · `2026-05-25` · **[v0.1.0](https://github.com/The-AIOS/aios/releases/tag/v0.1.0)** · `2026-05-21`
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
+
+## 2026-09-29 — Commits that can't undo each other, and a morning plan that stops reopening finished work
+
+`hash: 45b69e0 · 09fce76 · e0214cd · cee0900 · a6156df · 95f4a82 · f82a5af · 1f4c62c` · [#187](https://github.com/The-AIOS/aios/pull/187) · [#188](https://github.com/The-AIOS/aios/pull/188) · [#189](https://github.com/The-AIOS/aios/pull/189) · [#190](https://github.com/The-AIOS/aios/pull/190) · [#191](https://github.com/The-AIOS/aios/pull/191)
+
+> **What you can now do.** Run several sessions that commit to your vault at once without one quietly undoing another's commit. Rename or move a note and have the commit record a rename, not two copies. Trust `/today` not to carry a task you already finished somewhere else in the same note. Nothing runs on your machine by itself: this update changes files only, and no installer.
+
+**Five fixes contributed by an operator, each checked and extended so vaults shaped differently are covered too** ([#187](https://github.com/The-AIOS/aios/pull/187)–[#191](https://github.com/The-AIOS/aios/pull/191)).
+
+**Concurrent commits stop undoing each other.** Two things could go wrong when several sessions wrote at once:
+- A lock left by a crashed session is reclaimed, and two waiting sessions could both reclaim it, so the slower one deleted the lock the faster one had just taken. Reclaiming is now done by one session at a time, and only while the lock still belongs to the dead one. If a reclaim itself gets stuck, the message says so and says every run will stop there until it is cleared.
+- `aios-commit` moved your branch without checking where it was, so a commit made meanwhile by something else (a plain `git commit`, Obsidian Git) was reverted with no error. It now moves the branch only from where its own commit began. If the branch moved meanwhile, it stops, commits nothing, and asks you to run the same command again; nothing is lost.
+
+Commits waiting to push are now tracked one by one, so a later push that happens to succeed no longer marks an earlier stranded commit as pushed.
+
+**A rename commits as a rename.** When a move was already staged (`git mv`, or an editor that stages its moves), `aios-commit --vault` committed the new name and kept the old one, so both copies landed in your history. Both sides are now recorded. A duplicate left by the old behaviour is removed by your next `--vault` commit.
+
+**Helper files stay out of your commits.** The locks and temporary files the note and snapshot helpers write beside a note, and the backups `route-insight.py` keeps, could be swept into a `--vault` commit. `.gitignore` now excludes them, along with `.superpowers/`, the vendored skills' working state. Your own ignore rules below the operator marker are kept, as always.
+
+**Routing several insights in a row keeps every backup.** Backups were named to the second, so each one replaced the last and the first copy was lost. Each backup now takes its own name.
+
+**`/today` stops reopening finished work.** A task written in several places in one note (the plan, a session block, the close-of-day list) was carried forward from its open copies even after one copy was marked done. Now an open copy is dropped when another copy of the same task in that note is checked, or struck with ✅. It is kept when:
+- only part of the task is done, or the strike has no ✅ (an edit or a reschedule, not a finish);
+- it is another instance of a recurring task, or the task was reopened later;
+- it sits under Close of Day's `### Carries forward`;
+- the struck copy is an agent's draft and the open one is your own send.
+
+**What you'll notice:** the morning commit names each task it dropped this way, so you can see why a carry disappeared.
+
+**Action required:** start a new Claude session after updating, so the revised `/today` loads.
 
 ## 2026-09-25 — The MCPs you run are the versions AIOS names, and eleven fixes for failures nobody saw
 
