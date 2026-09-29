@@ -330,6 +330,49 @@ printf '%s' "$OUT" | grep -q 'no vault changes to commit' \
   && ok "a real change still commits normally" || no "the normal --vault path regressed"
 rm -rf "$R"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# --vault after a rename. With rename detection on (git diff's default), a rename already staged
+# in the real index listed only the NEW name, so the commit added it and never removed the old
+# one: both names landed in HEAD. A plain `mv` (nothing staged) listed both and was fine, which
+# is why this hid. Checked against the hook at a pinned pre-change commit, skipped when absent.
+echo "── aios-commit --vault: a staged rename commits as a rename, not a copy ──"
+h5(){ # $1 hook · $2 "git mv" or "mv" → the vault paths in HEAD
+  local r; r=$(newrepo)
+  ( cd "$r" && mkdir vault && echo hello > vault/a.md && git add vault && git commit -qm init \
+    && $2 vault/a.md vault/b.md \
+    && CLAUDE_CODE_SESSION_ID= "$1" --vault --no-push -m rename >/dev/null 2>&1 )
+  git -C "$r" ls-tree -r --name-only HEAD -- vault | tr '\n' ' '; rm -rf "$r"
+}
+[ "$(h5 "$AC" "git mv")" = "vault/b.md " ] && ok "git mv then --vault → HEAD holds only the new name" \
+  || no "git mv then --vault → HEAD holds [$(h5 "$AC" "git mv")]"
+[ "$(h5 "$AC" mv)" = "vault/b.md " ] && ok "plain mv then --vault → HEAD holds only the new name" \
+  || no "plain mv then --vault → HEAD holds [$(h5 "$AC" mv)]"
+H5_PIN=a1bdd93a25a85749df66db0a94a8ea4701fbefc7
+H5_OLD=$(mktemp -d); mkdir -p "$H5_OLD/git"
+if git -C "$ROOT" cat-file -e "$H5_PIN:hooks/aios-commit" 2>/dev/null \
+   && git -C "$ROOT" show "$H5_PIN:hooks/aios-commit" > "$H5_OLD/aios-commit" \
+   && git -C "$ROOT" show "$H5_PIN:hooks/git/secret-scan.sh" > "$H5_OLD/git/secret-scan.sh" \
+   && ! cmp -s "$H5_OLD/aios-commit" "$AC"; then
+  chmod +x "$H5_OLD/aios-commit" "$H5_OLD/git/secret-scan.sh"
+  [ "$(h5 "$H5_OLD/aios-commit" "git mv")" = "vault/a.md vault/b.md " ] \
+    && ok "OLD: git mv then --vault left both names in HEAD (the defect, reproduced)" \
+    || no "OLD: did not reproduce — HEAD holds [$(h5 "$H5_OLD/aios-commit" "git mv")]"
+  # A vault that already has the duplicate heals on its next --vault commit: the old file is
+  # gone from disk, and the sweep now reports it as a deletion.
+  R=$(newrepo)
+  ( cd "$R" && mkdir vault && echo hello > vault/a.md && git add vault && git commit -qm init \
+    && git mv vault/a.md vault/b.md \
+    && CLAUDE_CODE_SESSION_ID= "$H5_OLD/aios-commit" --vault --no-push -m old >/dev/null 2>&1 \
+    && CLAUDE_CODE_SESSION_ID= "$AC" --vault --no-push -m heal >/dev/null 2>&1 )
+  [ "$(git -C "$R" ls-tree -r --name-only HEAD -- vault | tr '\n' ' ')" = "vault/b.md " ] \
+    && ok "a duplicate left by the old sweep is removed by the next --vault commit" \
+    || no "the leftover old name survived the next --vault commit"
+  rm -rf "$R"
+else
+  echo "  - SKIP old-hook reproduction: $H5_PIN not present or identical"
+fi
+rm -rf "$H5_OLD"
+
 echo ""
 echo "── RESULT: $PASS passed, $FAIL failed  (bash $BASH_VERSION) ──"
 [ "$FAIL" = "0" ] || exit 1

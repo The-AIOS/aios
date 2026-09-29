@@ -130,7 +130,9 @@ acquire; LOCKED=1
 
 # ── --vault: build PATHS from the scoped vault sweep, under the lock so it's atomic vs a sibling
 #    commit. Space-safe (core.quotePath=false + one path per line, read into an array) and
-#    rename-safe (diff --name-only yields the new path). Union of tracked-changed-vs-HEAD +
+#    rename-safe: --no-renames lists BOTH sides of a rename. With rename detection on (the default
+#    for `git diff`), a rename already staged in the real index showed only its new name, so the
+#    commit added the new path and never removed the old one -- both names landed in HEAD. Union of tracked-changed-vs-HEAD +
 #    untracked (gitignore-respecting) under vault/ + .aios-update, minus machine-local noise. ──
 if [ "$VAULT_MODE" = 1 ]; then
   SWEEP_FAILED=$'\x01aios-sweep-failed'   # a control byte: never a real path
@@ -143,9 +145,9 @@ if [ "$VAULT_MODE" = 1 ]; then
   # A repo with no commits yet has no HEAD to diff against: its tracked-but-uncommitted paths are
   # the staged ones. Without this branch the sweep "failed" and the first --vault commit refused.
   done < <( { if git rev-parse -q --verify HEAD >/dev/null 2>&1; then
-                git -c core.quotePath=false diff --name-only HEAD -- 'vault/' '.aios-update' || echo "$SWEEP_FAILED"
+                git -c core.quotePath=false diff --no-renames --name-only HEAD -- 'vault/' '.aios-update' || echo "$SWEEP_FAILED"
               else
-                git -c core.quotePath=false diff --cached --name-only -- 'vault/' '.aios-update' || echo "$SWEEP_FAILED"
+                git -c core.quotePath=false diff --no-renames --cached --name-only -- 'vault/' '.aios-update' || echo "$SWEEP_FAILED"
               fi
               git -c core.quotePath=false ls-files --others --exclude-standard -- 'vault/' '.aios-update' || echo "$SWEEP_FAILED"; } | sort -u )
   # A sweep whose git calls FAILED produced no paths — and "no paths" then printed "no vault

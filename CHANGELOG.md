@@ -75,6 +75,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-09-25 — A renamed note commits as a rename
+
+`hash: ` · [#188](https://github.com/The-AIOS/aios/pull/188)
+
+> **What you can now do.** Rename or move a note, commit the vault, and find exactly one copy of it in history, under its new name.
+
+**A rename could leave both names in the commit.** When a rename had already been staged, for example with `git mv` or by an editor that stages its own moves, `aios-commit --vault` only saw the new name. It committed the new file and never removed the old one, so the note appeared twice in the repository. A move made without staging was not affected, which is why this went unnoticed. The sweep now lists both sides of a rename.
+
+**Action required:** none. If a rename before this update left an old name behind, the next `aios-commit --vault` removes it, because the old file is no longer on disk.
+
 ## 2026-09-25 — The MCPs you run are the versions AIOS names, and eleven fixes for failures nobody saw
 
 `hash: c879483 · d8b9246 · d515d48 · 33407db · 161532e · 7dcbdb7 · 8764f98 · 4050b6a · 4646f53 · 0edcb0b · 9da8a2d · 06a3839 · 6b1b8a0 · a454cc4 · b111fc6 · 79ad81b · 557196f · 8916a5d · 4a0ce5c · ebb2a9e · 4083b6c · 0c1a2a4 · 573b4e6 · 9382f39 · d30ce14 · 25d2872 · a3a1948` · [#175](https://github.com/The-AIOS/aios/pull/175) · [#176](https://github.com/The-AIOS/aios/pull/176) · [#177](https://github.com/The-AIOS/aios/pull/177) · [#178](https://github.com/The-AIOS/aios/pull/178) · [#179](https://github.com/The-AIOS/aios/pull/179) · [#180](https://github.com/The-AIOS/aios/pull/180) · [#181](https://github.com/The-AIOS/aios/pull/181) · [#182](https://github.com/The-AIOS/aios/pull/182) · [#183](https://github.com/The-AIOS/aios/pull/183) · [#184](https://github.com/The-AIOS/aios/pull/184) · [#185](https://github.com/The-AIOS/aios/pull/185) · [#186](https://github.com/The-AIOS/aios/pull/186)
