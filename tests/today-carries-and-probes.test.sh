@@ -102,7 +102,7 @@ p_parked_exit(){ grep -q '\*\*parked\*\* (matched `## Explicitly NOT doing` — 
 p_hidden_verified(){ grep -q "\*\*compass-hidden\*\* (target > 14 days — confirm it is in its project note's to-dos; if it is not, it is not hidden, it is lost" "$1"; }
 p_table_applies(){ grep -q 'the count-based table above applies. That table exists for exactly these carries: untagged, no target, no window' "$1"; }
 p_no_exempt(){ ! grep -q 'apply to explicit-target items only, not raw age' "$1"; }
-p_done_twin(){ grep -q '\*\*Then drop any open line whose done twin is in the same note:\*\* if a line with the same core identity (same dedup key) is `\[x\]` or `~~struck~~` anywhere in that note' "$1"; }
+p_done_twin(){ grep -q '\*\*Then drop any open line whose done twin is in the same note:\*\* if a line with the same core identity (same dedup key; for a sub-item, its parent task is part of the identity) is `\[x\]`, or struck with the done mark' "$1"; }
 p_done_exit(){ grep -q '\*\*done elsewhere\*\* (a `\[x\]` or struck twin with the same identity in the previous note' "$1"; }
 p_twin_partial(){ grep -q 'an `\[x\]` that notes what is still open is partial work and does not count' "$1"; }
 p_twin_multipart(){ grep -q 'for a multi-part task only a struck title counts, never struck sub-items alone' "$1"; }
@@ -127,10 +127,14 @@ mut "done-elsewhere exit removed" 's/or \*\*done elsewhere\*\* \([^)]*\) //' "do
 mut "partial-[x] limit removed"   's/an `\[x\]` that notes what is still open is partial work and does not count; //' twin_partial
 mut "multi-part limit removed"    's/for a multi-part task only a struck title counts, never struck sub-items alone; //' twin_multipart
 mut "recurring limit removed"     's/a recurring task \(daily, per meeting, per time slot\) is closed only for the instance that was marked; //' twin_recurring
-mut "reopen limit removed"        's/; and an open line written after the done one as an explicit reopening stays open//' twin_reopen
+mut "reopen limit removed"        's/; an open line written after the done one as an explicit reopening stays open//' twin_reopen
 mut "exit limits removed"         's/ that closes the whole task, under the same limits as the extraction above — re-check them here; a twin that fails them is not an exit//' exit_limits
 mut "uncertain guard removed"     's/When the match is uncertain \([^)]*\), carry it and say so rather than drop it\. //' twin_uncertain
 mut "table sentence removed"      's/ — and the count-based table above applies\. That table exists for exactly these carries: untagged, no target, no window\.//' table_applies
 
+# the limits added on top of #190: each keeps a still-open task from being dropped as a "twin"
+for pat in 'A strike without ✅ is an edit or a reschedule' 'for a sub-item, its parent task is part of the identity' "an agent's draft never closes the operator's send" 'Carries forward` subsection is never dropped by a twin elsewhere' 'closed-twin: Z'; do
+  grep -qF -- "$pat" "$SPEC" && ok "twin limit: $pat" || no "twin limit missing: $pat" "an open task could be dropped as a done twin"
+done
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1
