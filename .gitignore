@@ -71,6 +71,28 @@ vault/.obsidian/workspace-mobile.json
 # one such change is enough to show a dirty tree forever and train you to ignore git status.
 .glass/
 
+# Runtime artifacts of AIOS's own helpers: locks, temp files and backups that the
+# framework's hooks create INSIDE the vault tree, next to the notes they protect. None of
+# it is content. `aios-commit --vault` picks up untracked files through
+# `--exclude-standard`, so this file is its only filter. Without these rules, a sweep that
+# runs while a helper holds a lock, or after a helper kept a backup, commits the artifact
+# next to the real change.
+#   aios-note-append  <note>.aios-lock/ (per-note mutex) · <note>.aiostmp (atomic write)
+#   aios-snapshot     .aios-snapshot.lock/ · .aios-snapshot.<pid>.tmp (in the snapshot dir)
+#   route-insight.py  <file>.routebak-<timestamp> (a pre-write backup it keeps on success)
+# A helper that serialises reclaiming a dead lock does it under <lock>.reclaim/.
+*.aios-lock/
+*.aios-lock.reclaim/
+*.aiostmp
+.aios-snapshot.lock/
+.aios-snapshot.lock.reclaim/
+.aios-snapshot.*.tmp
+*.routebak-*
+
+# The vendored superpowers skills keep working state in <project>/.superpowers/
+# (brainstorm mockups, plan-execution scratch), and their own docs ask you to ignore it.
+.superpowers/
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Your own ignores go BELOW the marker line — `/aios:update` MERGES everything after
 # it (it never overwrites your personal rules). Put private-data / machine-local
