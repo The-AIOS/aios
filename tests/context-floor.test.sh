@@ -69,6 +69,23 @@ $PYBIN "$H" --recent notanumber >/dev/null 2>&1
 [ $? -eq 2 ] && ok "a non-numeric --recent exits 2" || no "--recent accepted garbage" "it would silently fall back to a default"
 
 echo
+echo " a truncated read is detectable -- the floor ends on a line that says so"
+mkvault "$TMP/e" 12 40
+$PYBIN "$H" "$TMP/e" > "$TMP/e.out"
+LAST="$(tail -n 1 "$TMP/e.out")"
+case "$LAST" in "=== END OF FLOOR -- "*) ok "the last line is the END marker" ;;
+  *) no "no END marker" "a read cut at N bytes looks exactly like a complete floor" ;; esac
+CLAIM="$(printf '%s' "$LAST" | sed -E 's/^=== END OF FLOOR -- ([0-9]+) bytes.*/\1/')"
+REAL="$(sed '$d' "$TMP/e.out" | wc -c | tr -d ' ')"
+[ "$CLAIM" = "$REAL" ] && ok "the byte count matches what precedes it ($REAL)" \
+  || no "END claims $CLAIM bytes, $REAL precede it" "the count is what lets a reader verify it got everything"
+head -c 200 "$TMP/e.out" | grep -q 'END OF FLOOR' \
+  && no "a cut read still shows the marker" "then its absence proves nothing" \
+  || ok "a read cut short does not contain the marker (control)"
+$PYBIN "$H" --json "$TMP/e" | $PYBIN -c 'import json,sys; json.load(sys.stdin)' 2>/dev/null \
+  && ok "--json output stays valid JSON (no marker appended)" || no "--json broke" "the marker must not corrupt the structured form"
+
+echo
 echo " the floor emits BODIES, not only headings"
 mkvault "$TMP/v" 12 40
 F="$($PYBIN "$H" "$TMP/v")"
