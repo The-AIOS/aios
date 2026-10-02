@@ -3,7 +3,7 @@
   "service": "Stitch (UI design)",
   "value": "Generate interface designs from a description — screens and design systems without starting in a design tool.",
   "infrastructure": false,
-  "connect": "guided",
+  "connect": "needs-key",
   "requires": [],
   "register": {
     "transport": "stdio",
@@ -13,7 +13,9 @@
       "@_davideast/stitch-mcp",
       "proxy"
     ],
-    "env": {}
+    "env": {
+      "STITCH_API_KEY": "{ask:stitch-api-key}"
+    }
   },
   "docs": "README.md"
 }
