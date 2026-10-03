@@ -68,7 +68,10 @@ trap cleanup EXIT
 
 export CLAUDE_CONFIG_DIR="$FIX/cfg"
 export AIOS_HOME="$FIX/aios"
-export AIOS_QUOTA_NOTIFY=0   # the watcher must never raise a real desktop notification from a test
+export AIOS_QUOTA_NOTIFY=0
+# The settle hold (15 s after a drop in real use) and the 30 s confirmation are timing for
+# live sessions; here they are set short so each case is fast, and 5f tests the hold itself.
+export AIOS_RC_SETTLE=0 AIOS_RC_CONFIRM_SECS=3   # the watcher must never raise a real desktop notification from a test
 mkdir -p "$CLAUDE_CONFIG_DIR/sessions" "$AIOS_HOME/spawn-inbox" "$AIOS_HOME/surfaces"
 
 # A session registry entry: $1 name, $2 pid, $3 status, $4 "no" = Remote Control NOT attached
@@ -201,6 +204,25 @@ out=$("$SCRIPT" --only stuck --wait-drop 3 2>&1)
 chk "a session that never drops gets nothing" "$(reqs)" "0"
 case "$out" in *"stuck  still shows Remote Control connected"*) ok "and the report names it" ;; *) bad "unnamed -- $out" ;; esac
 rm -f "$CLAUDE_CONFIG_DIR/sessions/late.json" "$CLAUDE_CONFIG_DIR/sessions/stuck.json" "$CLAUDE_CONFIG_DIR/sessions/linked.json"; clear_reqs
+
+echo "== 5f. --settle holds a dropped session before sending (typed too soon, it opens the panel) =="
+# Measured live: the command typed within ~1 s of the drop opened the panel; 34 s after,
+# it reconnected silently.
+mksession "fresh" "$LIVE_PID" "idle" no
+t0=$(date +%s)
+out=$("$SCRIPT" --only fresh --settle 3 2>&1)
+t1=$(date +%s)
+chk "sent once" "$(ls "$AIOS_HOME/spawn-inbox"/ | grep -c fresh || true)" "1"
+[ $((t1 - t0)) -ge 3 ] && ok "and only after the hold ($((t1 - t0))s)" || bad "sent after $((t1 - t0))s -- inside the hold"
+clear_reqs
+( sleep 1; mksession "fresh" "$LIVE_PID" "idle" ) & h=$!   # it reconnects after the send
+out=$("$SCRIPT" --only fresh --settle 0 --wait-drop 5 2>&1); wait "$h"
+case "$out" in *"back   fresh  reconnected"*) ok "a reconnect is confirmed in the report" ;; *) bad "no confirmation -- $out" ;; esac
+mksession "fresh" "$LIVE_PID" "idle" no; clear_reqs
+( sleep 1; mksession "fresh" "$LIVE_PID" "waiting" no ) & h=$!
+out=$("$SCRIPT" --only fresh --settle 0 --wait-drop 5 2>&1); wait "$h"
+case "$out" in *"PANEL  fresh"*) ok "a panel is reported, and nothing is pressed" ;; *) bad "panel not reported -- $out" ;; esac
+rm -f "$CLAUDE_CONFIG_DIR/sessions/fresh.json"; clear_reqs
 
 # ── the account-change trigger ──────────────────────────────────────────────
 # A stub rc-reconnect that records each invocation, so a fan-out is countable.

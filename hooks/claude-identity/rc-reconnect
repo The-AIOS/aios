@@ -41,6 +41,14 @@
 # the registry still shows as connected: with --wait-drop it waits for the drop, and
 # a session that never shows one is left alone and named in the report.
 #
+# AND IT WAITS A LITTLE LONGER. The registry flag and the session's own "Remote
+# Control disconnected" notice appear together, but the session needs a few more
+# seconds to finish letting go: typed within ~1 s of the drop the command still opened
+# the panel (19:52 run); typed 34 s and 10 min after, it reconnected silently. So each
+# session is held --settle seconds (default 15) after its drop is seen. After sending,
+# its registry is watched: a new bridgeSessionId is reported as reconnected, `waiting`
+# as "panel opened". No key is ever pressed into a session.
+#
 # WHICH SESSIONS, AND THROUGH WHICH SURFACE
 # Only sessions that HAD Remote Control are re-attached; a session that was never
 # exposed must not become reachable because an account changed. The registry entry
@@ -63,6 +71,7 @@
 #   rc-reconnect --all           every live interactive session not connected now
 #   rc-reconnect --wait-drop N   wait up to N seconds for each session to show the drop
 #                                (what the watcher passes, detached)
+#   rc-reconnect --settle N      seconds to hold a session after its drop (default 15)
 #   rc-reconnect --dry-run       print what it WOULD send, and where, write nothing
 #   rc-reconnect --skip a,b      leave those sessions alone (comma-separated)
 #   rc-reconnect --quiet         print only on refusal (the automated path)
@@ -85,23 +94,24 @@ if [ -z "$PY" ]; then
 fi
 [ -n "$PY" ] || { echo "rc-reconnect: no working Python found (set AIOS_PYTHON)" >&2; exit 1; }
 
-DRY=0; QUIET=0; SKIP=""; ONLY=""; ALL=0; WAIT=0
+DRY=0; QUIET=0; SKIP=""; ONLY=""; ALL=0; WAIT=0; SETTLE="${AIOS_RC_SETTLE:-15}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1 ;;
     --quiet)   QUIET=1 ;;
     --all)     ALL=1 ;;
+    --settle)  SETTLE="${2:-}"; case "$SETTLE" in ''|*[!0-9]*) echo "rc-reconnect: --settle needs seconds" >&2; exit 1 ;; esac; shift ;;
     --wait-drop) WAIT="${2:-}"; case "$WAIT" in ''|*[!0-9]*) echo "rc-reconnect: --wait-drop needs seconds" >&2; exit 1 ;; esac; shift ;;
     --skip)    SKIP="${2:-}"; shift ;;
     --only)    ONLY="${2:-}"; [ -n "$ONLY" ] || { echo "rc-reconnect: --only needs names" >&2; exit 1; }; shift ;;
-    --help|-h) sed -n '2,60p' "$0"; exit 0 ;;
+    --help|-h) sed -n '2,70p' "$0"; exit 0 ;;
     *) echo "rc-reconnect: unknown argument '$1' (try --help)" >&2; exit 1 ;;
   esac
   shift
 done
 
 export RC_CONFIG_DIR="$CONFIG_DIR" RC_AIOS_HOME="$AIOS_HOME" RC_DRY="$DRY" RC_QUIET="$QUIET" \
-       RC_SKIP="$SKIP" RC_ONLY="$ONLY" RC_ALL="$ALL" RC_WAIT="$WAIT"
+       RC_SKIP="$SKIP" RC_ONLY="$ONLY" RC_ALL="$ALL" RC_WAIT="$WAIT" RC_SETTLE="$SETTLE"
 exec $PY - <<'PY'
 import json, os, re, subprocess, sys, time
 
@@ -192,6 +202,7 @@ if not os.path.isdir(SESSIONS):
 if not DRY:
     os.makedirs(INBOX, exist_ok=True)
 WAIT = int(E.get("RC_WAIT") or 0)
+SETTLE = int(E.get("RC_SETTLE") or 0)
 
 def registry():
     """name -> entry, for every registry file that parses. The registry is the only
@@ -250,10 +261,13 @@ def send(name, d):
     say("  sent   %s  (%s) -> %s" % (name, d.get("status") or "?", where))
     return True
 
-# ---- send each one once it has DROPPED -------------------------------------
+# ---- send each one once it has DROPPED and SETTLED -------------------------
 sent = stale = gone = 0
-deadline = time.time() + WAIT
+seen_drop = {}          # name -> when this run first saw it dropped
+sent_at = {}            # name -> (bridge id it had before, when sent)
+deadline = time.time() + WAIT + SETTLE
 while True:
+    t = time.time()
     for name in sorted(pending):
         d = R.get(name)
         if d is None:
@@ -263,15 +277,38 @@ while True:
         if d.get("kind") not in (None, "interactive"):
             pending.discard(name); continue
         if d.get("bridgeSessionId"):
+            seen_drop.pop(name, None)
             continue            # still connected: sending now would open the panel
+        seen_drop.setdefault(name, t)
+        if t - seen_drop[name] < SETTLE:
+            continue            # dropped, but still letting go of the old connection
         if send(name, d):
             sent += 1
+            sent_at[name] = t
         pending.discard(name)
     if not pending or time.time() >= deadline:
         break
-    time.sleep(5 if os.name == "nt" else 2)
+    time.sleep(1 if SETTLE else (5 if os.name == "nt" else 2))
     T = process_table() or T
     R = registry()
+
+# ---- confirm: did each one come back? -------------------------------------
+# Reported, never acted on: no key is pressed into a session whatever is seen here.
+if sent_at and not DRY and WAIT:
+    until = time.time() + int(E.get("AIOS_RC_CONFIRM_SECS") or 30)
+    open_ = set(sent_at)
+    while open_ and time.time() < until:
+        time.sleep(2)
+        R = registry()
+        for name in sorted(open_):
+            d = R.get(name) or {}
+            if d.get("bridgeSessionId"):
+                say("  back   %s  reconnected" % name); open_.discard(name)
+            elif d.get("status") == "waiting":
+                say("  PANEL  %s  is waiting on the Remote Control panel -- press Enter there (Continue)" % name)
+                open_.discard(name)
+    for name in sorted(open_):
+        say("  ?      %s  not confirmed within 30 s (still delivering, or busy)" % name)
 
 for name in sorted(pending):
     say("  left   %s  still shows Remote Control connected -- nothing sent (it would open the panel)" % name)
