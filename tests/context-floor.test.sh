@@ -147,11 +147,11 @@ printf '%s' "$F" | grep -q 'w40' \
 # Scope this to the RECENCY section: the map above it legitimately lists every title,
 # including Entry 1, so grepping the whole output tests nothing. (First version did
 # exactly that and failed on correct output.)
-RECENT_ONLY="$(printf '%s\n' "$F" | awk '/MOST RECENT/{f=1} f')"
+RECENT_ONLY="$(printf '%s\n' "$F" | awk '/MOST RECENT/{f=1} /^--- declared\//{f=0} f')"
 printf '%s' "$RECENT_ONLY" | grep -qE '^### Entry 1$' \
   && no "the OLDEST entry body was included" "the slice is not a tail -- it is unbounded" \
   || ok "older entry bodies are left to the map (slice is a tail)"
-MAP_ONLY="$(printf '%s\n' "$F" | awk '/MOST RECENT/{exit} {print}')"
+MAP_ONLY="$(printf '%s\n' "$F" | awk '/^--- declared\//{f=1} f')"
 printf '%s' "$MAP_ONLY" | grep -qE '### Entry 1$' \
   && ok "older entries still appear as titles in the map" \
      || no "older entries vanished entirely" "recency is not relevance -- they must stay indexed"
@@ -224,7 +224,7 @@ lib(){ # $1 root · stdin = the observed file's body → prints the hook's antif
   printf '# Index\n' > "$base/declared/_index.md"; printf '# Index\n' > "$base/observed/_index.md"
   printf '# Quien soy\n' > "$base/declared/quien-soy.md"
   cat > "$base/observed/antifragile.md"
-  $PYBIN "$H" --print "$1" 2>&1 | awk '/^### FILE: antifragile\.md/{f=1} f&&/^### FILE: /&&!/antifragile/{exit} f'
+  $PYBIN "$H" --print "$1" 2>&1 | awk '/^### FILE: antifragile\.md/{f=1} f&&/^### FILE: /&&!/antifragile/{exit} f&&/^--- declared\//{exit} f'
 }
 
 # (a) the canonical seed's own heading, plural, and nothing else that could match

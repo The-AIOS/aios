@@ -278,6 +278,48 @@ def main(argv):
         w("")
         w("\n".join(intent).rstrip())
 
+    # ---- payload entries for the map (emitted after the recency slice) -------
+    for label, files in (("declared", dec), ("observed", obs)):
+        for fn, lines in files:
+            payload[label].append({"file": fn, "headings": [l.rstrip() for l in lines if HEADING.match(l)]})
+
+    # ORDER IS DELIBERATE: INTENT, then what was learned most recently, then the maps.
+    # The floor is larger than one read of the file, so a session reads it in parts, and
+    # one that stops early should lose the INDEX (consultable any time), never the newest
+    # learnings -- they are what makes the session smarter from its first minute.
+    # ---- the recency slice, observed only ----------------------------------
+    # declared/ is restated rather than appended, so it has no newest end to read.
+    w("")
+    w("=" * 72)
+    w("MOST RECENT %d ENTRIES PER OBSERVED FILE  --  what the last sessions learned" % recent)
+    w("(older entries are indexed by title in the map below; open any of them at any time)")
+    w("=" * 72)
+    for fn, lines in obs:
+        es, is_lib, rec = recent_slice(lines, recent)
+        if is_lib:
+            w("")
+            mark("newest: %s -- rule library, its index" % fn)
+            w("### FILE: %s  (%d entries -- RULE LIBRARY, index shown instead of newest)" % (fn, len(es)))
+            w("")
+            w(rec[0])
+            for d in payload["observed"]:
+                if d["file"] == fn:
+                    d["recent"] = rec
+                    d["rule_library"] = True
+            continue
+        for d in payload["observed"]:
+            if d["file"] == fn:
+                d["recent"] = rec
+        w("")
+        mark("newest: %s -- %d newest of %d entries" % (fn, len(rec), len(es)))
+        w("### FILE: %s  (%d entries total, showing the %d newest by date)"
+          % (fn, len(es), len(rec)))
+        if not es:
+            w("  (no ### entries -- this file is mapped by its headings above)")
+        for block in rec:
+            w("")
+            w(block)
+
     # ---- the map -----------------------------------------------------------
     for label, files in (("declared", dec), ("observed", obs)):
         w("")
@@ -285,7 +327,6 @@ def main(argv):
         w("--- %s/ : %d files ---" % (label, len(files)))
         for fn, lines in files:
             heads = [l.rstrip() for l in lines if HEADING.match(l)]
-            payload[label].append({"file": fn, "headings": heads})
             w("")
             w("  %s" % fn)
             for h in heads:
@@ -321,39 +362,6 @@ def main(argv):
                 w("    %s" % f)
         if not vents:
             w("  (ventures/ exists but holds no venture folders)")
-
-    # ---- the recency slice, observed only ----------------------------------
-    # declared/ is restated rather than appended, so it has no newest end to read.
-    w("")
-    w("=" * 72)
-    w("MOST RECENT %d ENTRIES PER OBSERVED FILE  --  what the last sessions learned" % recent)
-    w("(older entries are indexed by title above; open any of them at any time)")
-    w("=" * 72)
-    for fn, lines in obs:
-        es, is_lib, rec = recent_slice(lines, recent)
-        if is_lib:
-            w("")
-            mark("newest: %s -- rule library, its index" % fn)
-            w("### FILE: %s  (%d entries -- RULE LIBRARY, index shown instead of newest)" % (fn, len(es)))
-            w("")
-            w(rec[0])
-            for d in payload["observed"]:
-                if d["file"] == fn:
-                    d["recent"] = rec
-                    d["rule_library"] = True
-            continue
-        for d in payload["observed"]:
-            if d["file"] == fn:
-                d["recent"] = rec
-        w("")
-        mark("newest: %s -- %d newest of %d entries" % (fn, len(rec), len(es)))
-        w("### FILE: %s  (%d entries total, showing the %d newest by date)"
-          % (fn, len(es), len(rec)))
-        if not es:
-            w("  (no ### entries -- this file is mapped by its headings above)")
-        for block in rec:
-            w("")
-            w(block)
 
     if as_json:
         print(json.dumps(payload, indent=2))
@@ -419,7 +427,8 @@ def main(argv):
     o("CONTEXT FLOOR -- written in full to:")
     o("  %s" % out_path)
     o("  %d bytes, %d lines. READ THAT FILE TO THE END BEFORE ACTING: this map is not the floor." % (len(floor.encode("utf-8")), total))
-    o("  The newest learnings are at the end of the file; a session that stops early misses them.")
+    o("  It is larger than one read returns: read it in parts (about 600 lines at a time) until")
+    o("  you reach its last line. INTENT and the newest learnings come first, the maps after.")
     o("")
     o("Sections (lines in that file, size):")
     for k, (ln, label) in enumerate(starts):
