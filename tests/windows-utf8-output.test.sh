@@ -30,7 +30,7 @@ printf '# Observed\n' > "$C/observed/_index.md"
 printf -- '---\nupdated: "2026-09-20"\n---\n# Patterns → ñ\n### entry — sí (2026-09-20)\nbody\n' > "$C/observed/patterns.md"
 printf '# Intent\n' > "$V/INTENT.md"
 
-out="$(cd "$V" && HOME="$V" PYTHONIOENCODING=cp1252 $PYBIN "$OLDPWD/hooks/context-floor.py" "$V" 2>&1)"; rc=$?
+out="$(cd "$V" && HOME="$V" PYTHONIOENCODING=cp1252 $PYBIN "$OLDPWD/hooks/context-floor.py" --print "$V" 2>&1)"; rc=$?
 if [ "$rc" -eq 0 ] && printf '%s' "$out" | grep -q 'Patterns'; then
   ok "context-floor prints non-ASCII headings under a cp1252 console (exit 0)"
 else

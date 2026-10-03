@@ -40,6 +40,7 @@ no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf ' 
 H="hooks/context-floor.py"
 [ -f "$H" ] || { printf '  FAIL  %s missing\n' "$H"; exit 1; }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+export TMPDIR="$TMP"   # a default (file-mode) run writes its floor here, never the real temp dir
 
 # $1 root · $2 entries-per-observed-file · $3 body-words-per-entry
 mkvault(){
@@ -58,10 +59,10 @@ mkvault(){
 
 echo
 echo " refusal -- a short floor looks exactly like a complete one"
-$PYBIN "$H" "$TMP/absent" >/dev/null 2>&1
+$PYBIN "$H" --print "$TMP/absent" >/dev/null 2>&1
 [ $? -eq 2 ] && ok "absent vault exits 2" || no "absent vault printed a floor" "a session cannot tell an empty floor from a full one"
 mkdir -p "$TMP/half/vault/00 - notes/context/declared"
-OUT="$($PYBIN "$H" "$TMP/half" 2>&1 >/dev/null)"; RC=$?
+OUT="$($PYBIN "$H" --print "$TMP/half" 2>&1 >/dev/null)"; RC=$?
 { [ $RC -eq 2 ] && printf '%s' "$OUT" | grep -q observed; } \
   && ok "one folder present -> refuses and names the missing one" \
   || no "a half floor was emitted (rc=$RC)" "partial floors are indistinguishable from complete ones"
@@ -71,7 +72,7 @@ $PYBIN "$H" --recent notanumber >/dev/null 2>&1
 echo
 echo " a truncated read is detectable -- the floor ends on a line that says so"
 mkvault "$TMP/e" 12 40
-$PYBIN "$H" "$TMP/e" > "$TMP/e.out"
+$PYBIN "$H" --print "$TMP/e" > "$TMP/e.out"
 LAST="$(tail -n 1 "$TMP/e.out")"
 case "$LAST" in "=== END OF FLOOR -- "*) ok "the last line is the END marker" ;;
   *) no "no END marker" "a read cut at N bytes looks exactly like a complete floor" ;; esac
@@ -86,9 +87,47 @@ $PYBIN "$H" --json "$TMP/e" | $PYBIN -c 'import json,sys; json.load(sys.stdin)' 
   && ok "--json output stays valid JSON (no marker appended)" || no "--json broke" "the marker must not corrupt the structured form"
 
 echo
+echo " by default the floor goes to a FILE and stdout carries only its map"
+mkvault "$TMP/m" 12 2000
+MAP="$(CLAUDE_CODE_SESSION_ID=t-1 $PYBIN "$H" "$TMP/m")"; RC=$?
+FF="$TMP/aios-context-floor-t-1.md"
+[ $RC -eq 0 ] && [ -f "$FF" ] && ok "default run exits 0 and writes the floor to the temp dir" \
+  || no "no floor file (rc=$RC)" "the map would point at nothing"
+$PYBIN "$H" --print "$TMP/m" | cmp -s - "$FF" \
+  && ok "the file is byte-identical to --print" || no "file and --print differ" "two deliveries of one floor must agree"
+tail -n 1 "$FF" | grep -q '^=== END OF FLOOR -- ' && ok "the file ends on the END marker" || no "file has no END marker" ""
+printf '%s' "$MAP" | grep -qF "$FF" && ok "the map names the file" || no "the map does not name the file" ""
+MB=$(printf '%s' "$MAP" | wc -c | tr -d ' '); FB=$(wc -c < "$FF" | tr -d ' ')
+[ "$MB" -lt 4000 ] && [ "$FB" -gt 20000 ] && ok "the map is small ($MB B) where the floor is not ($FB B)" \
+  || no "map $MB B / floor $FB B" "the map must stay readable in one tool result"
+printf '%s' "$MAP" | grep -q "w2000" && no "the map carries entry bodies" "then it is the floor again, and gets cut again" \
+  || ok "the map carries no entry bodies"
+# Every section's start line must be that section's own header in the file.
+BAD=0
+while read -r a label; do
+  line="$(sed -n "${a}p" "$FF")"
+  case "$label" in
+    INTENT*)   case "$line" in "--- INTENT.md"*) ;; *) BAD=1 ;; esac ;;
+    declared*) case "$line" in "--- declared/"*) ;; *) BAD=1 ;; esac ;;
+    observed*) case "$line" in "--- observed/"*) ;; *) BAD=1 ;; esac ;;
+    newest:*)  f="${label#newest: }"; f="${f%% *}"; case "$line" in "### FILE: $f "*) ;; *) BAD=1 ;; esac ;;
+  esac
+done <<EOT
+$(printf '%s\n' "$MAP" | sed -nE 's/^ +([0-9]+)-[0-9]+ +[0-9.]+ KB  (.*)$/\1 \2/p')
+EOT
+N=$(printf '%s\n' "$MAP" | grep -cE '^ +[0-9]+-[0-9]+ ')
+[ "$BAD" -eq 0 ] && [ "$N" -ge 4 ] && ok "every section's line range starts on its own header ($N sections)" \
+  || no "a line range points at the wrong line" "a reader jumping to a section would read the wrong one"
+$PYBIN "$H" --out "$TMP/x/y/floor.md" "$TMP/m" > "$TMP/fb.out" 2>"$TMP/fb.err"; RC=$?
+{ [ $RC -eq 0 ] && tail -n 1 "$TMP/fb.out" | grep -q '^=== END OF FLOOR' && grep -q 'could not write' "$TMP/fb.err"; } \
+  && ok "an unwritable --out prints the whole floor instead (never nothing)" \
+  || no "unwritable --out (rc=$RC)" "emitting nothing is the failure this hook exists to end"
+$PYBIN "$H" --out >/dev/null 2>&1; [ $? -eq 2 ] && ok "--out with no path exits 2" || no "--out accepted no path" ""
+
+echo
 echo " the floor emits BODIES, not only headings"
 mkvault "$TMP/v" 12 40
-F="$($PYBIN "$H" "$TMP/v")"
+F="$($PYBIN "$H" --print "$TMP/v")"
 printf '%s' "$F" | grep -q 'Entry 12' \
   && ok "the newest entry is present" || no "newest entry missing" "the last close-day's write never reaches the next session"
 printf '%s' "$F" | grep -q 'w40' \
@@ -110,8 +149,8 @@ echo
 echo " the slice is BOUNDED -- this is what makes it safe where a volume was not"
 mkvault "$TMP/small" 10 40
 mkvault "$TMP/big"  100 40
-WS=$($PYBIN "$H" "$TMP/small" | wc -w | tr -d ' ')
-WB=$($PYBIN "$H" "$TMP/big"   | wc -w | tr -d ' ')
+WS=$($PYBIN "$H" --print "$TMP/small" | wc -w | tr -d ' ')
+WB=$($PYBIN "$H" --print "$TMP/big"   | wc -w | tr -d ' ')
 # 10x the entries adds 90 more TITLES to the map but the same 5 bodies. Growth must be
 # roughly linear in titles, never in bodies -- a doubling here would mean it is unbounded.
 if [ "$WB" -lt $(( WS * 3 )) ]; then
@@ -132,7 +171,7 @@ printf '# Ventures\n' > "$VD/_index.md"
 printf '# Acme\n' > "$VD/acme/about_venture.md"
 for i in $(seq 1 300); do printf 'secretword '; done >> "$VD/acme/pricing.md"
 printf '# Globex\n' > "$VD/globex/about_venture.md"
-FV="$($PYBIN "$H" "$TMP/v")"
+FV="$($PYBIN "$H" --print "$TMP/v")"
 printf '%s' "$FV" | grep -q 'acme' && printf '%s' "$FV" | grep -q 'globex' \
   && ok "every venture is listed at the floor" \
   || no "a venture was not listed" "a worker cannot open what it does not know exists"
@@ -174,7 +213,7 @@ lib(){ # $1 root · stdin = the observed file's body → prints the hook's antif
   printf '# Index\n' > "$base/declared/_index.md"; printf '# Index\n' > "$base/observed/_index.md"
   printf '# Quien soy\n' > "$base/declared/quien-soy.md"
   cat > "$base/observed/antifragile.md"
-  $PYBIN "$H" "$1" 2>&1 | awk '/^### FILE: antifragile\.md/{f=1} f&&/^### FILE: /&&!/antifragile/{exit} f'
+  $PYBIN "$H" --print "$1" 2>&1 | awk '/^### FILE: antifragile\.md/{f=1} f&&/^### FILE: /&&!/antifragile/{exit} f'
 }
 
 # (a) the canonical seed's own heading, plural, and nothing else that could match
@@ -208,7 +247,7 @@ printf '# Hidden\n### Two\nbody\n' > "$D/observed/locked.md"; chmod 000 "$D/obse
 if [ -r "$D/observed/locked.md" ]; then
   printf '  SKIP  (d) running as a user who can read a mode-000 file (root?) -- cannot reproduce\n'
 else
-  $PYBIN "$H" "$TMP/lib-d" >/dev/null 2>"$TMP/lib-d.err"; rc=$?
+  $PYBIN "$H" --print "$TMP/lib-d" >/dev/null 2>"$TMP/lib-d.err"; rc=$?
   { [ "$rc" -eq 2 ] && grep -q 'locked.md' "$TMP/lib-d.err"; } \
     && ok "(d) an unreadable observed file refuses (exit 2) and names the file" \
     || no "(d) an unreadable file dropped out silently" "exit=$rc -- the floor printed as complete with a file missing"
