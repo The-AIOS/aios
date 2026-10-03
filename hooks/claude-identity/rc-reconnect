@@ -33,11 +33,26 @@
 # § Remote Control reconnection there). Safe to run by hand at any time:
 # re-attaching an already-attached session is a no-op.
 #
+# WHICH SESSIONS, AND THROUGH WHICH SURFACE
+# Only sessions that HAD Remote Control are re-attached; a session that was never
+# exposed must not become reachable because an account changed. The registry entry
+# carries `bridgeSessionId` while Remote Control is attached, and the watcher records
+# that set every tick, so on the tick that sees the change it passes --only with the
+# sessions attached just before. Not argv: a session the App resumes runs as
+# `claude --resume <id>` and is attached all the same.
+#
+# Each request names the surface that HOSTS the session (its pid is an ancestor of the
+# session's pid -- the recipe in ~/.aios/spawn-inbox/README.md), so the App types into
+# App panes and Glass into IDE terminals. No surface in the ancestry: `surface` is
+# omitted and any surface may take it, which the inbox contract allows for `send`.
+#
 # ============================================================================
 # USAGE
 # ============================================================================
-#   rc-reconnect                 re-attach every live session
-#   rc-reconnect --dry-run       print what it WOULD send, write nothing
+#   rc-reconnect                 re-attach every live session showing Remote Control
+#   rc-reconnect --only a,b      exactly these sessions (what the watcher passes)
+#   rc-reconnect --all           every live interactive session, attached or not
+#   rc-reconnect --dry-run       print what it WOULD send, and where, write nothing
 #   rc-reconnect --skip a,b      leave those sessions alone (comma-separated)
 #   rc-reconnect --quiet         print only on refusal (the automated path)
 #
@@ -47,95 +62,176 @@
 set -uo pipefail
 
 CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-SESSIONS_DIR="$CONFIG_DIR/sessions"
 AIOS_HOME="${AIOS_HOME:-$HOME/.aios}"
-INBOX="$AIOS_HOME/spawn-inbox"
-SURFACES="$AIOS_HOME/surfaces"
-PROMPT_CMD="/remote-control"   # the session name is appended per session
-PY="${AIOS_PYTHON:-python3}"
 
-DRY=0; QUIET=0; SKIP=""
+# A Python that RUNS. On Windows `python3` can be the Microsoft Store alias, which prints
+# an installer notice and runs nothing; the watcher passes its own interpreter instead.
+PY="${AIOS_PYTHON:-}"
+if [ -z "$PY" ]; then
+  for c in python3 python "py -3"; do
+    if $c -c 'import sys' >/dev/null 2>&1; then PY="$c"; break; fi
+  done
+fi
+[ -n "$PY" ] || { echo "rc-reconnect: no working Python found (set AIOS_PYTHON)" >&2; exit 1; }
+
+DRY=0; QUIET=0; SKIP=""; ONLY=""; ALL=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1 ;;
     --quiet)   QUIET=1 ;;
+    --all)     ALL=1 ;;
     --skip)    SKIP="${2:-}"; shift ;;
-    --help|-h) sed -n '2,38p' "$0"; exit 0 ;;
+    --only)    ONLY="${2:-}"; [ -n "$ONLY" ] || { echo "rc-reconnect: --only needs names" >&2; exit 1; }; shift ;;
+    --help|-h) sed -n '2,57p' "$0"; exit 0 ;;
     *) echo "rc-reconnect: unknown argument '$1' (try --help)" >&2; exit 1 ;;
   esac
   shift
 done
 
-say() { [ "$QUIET" = "1" ] || printf '%s\n' "$*"; }
+export RC_CONFIG_DIR="$CONFIG_DIR" RC_AIOS_HOME="$AIOS_HOME" RC_DRY="$DRY" RC_QUIET="$QUIET" \
+       RC_SKIP="$SKIP" RC_ONLY="$ONLY" RC_ALL="$ALL"
+exec $PY - <<'PY'
+import json, os, re, subprocess, sys, time
+
+E = os.environ
+QUIET, DRY, ALL = E["RC_QUIET"] == "1", E["RC_DRY"] == "1", E["RC_ALL"] == "1"
+SKIP = {n for n in E["RC_SKIP"].split(",") if n}
+ONLY = {n for n in E["RC_ONLY"].split(",") if n}
+SESSIONS = os.path.join(E["RC_CONFIG_DIR"], "sessions")
+INBOX = os.path.join(E["RC_AIOS_HOME"], "spawn-inbox")
+SURFACES = os.path.join(E["RC_AIOS_HOME"], "surfaces")
+PROMPT_CMD = "/remote-control"   # the session name is appended per session
+
+def say(m):
+    if not QUIET:
+        print(m)
+
+def refuse(m):
+    sys.stderr.write("rc-reconnect: " + m + "\n")
+    sys.exit(1)
+
+# ---- one process table: liveness AND ancestry, the same way on every OS ------
+# Never `kill -0`: under Git Bash it only sees MSYS pids, so every native Windows
+# session would read as dead. Never os.kill(pid, 0) on Windows: that terminates it.
+def process_table():
+    t = {}
+    try:
+        if os.name == "nt":
+            out = subprocess.run(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command",
+                 "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId | ConvertTo-Json -Compress"],
+                capture_output=True, text=True, timeout=60).stdout
+            rows = json.loads(out or "[]")
+            for r in rows if isinstance(rows, list) else [rows]:
+                t[int(r["ProcessId"])] = int(r.get("ParentProcessId") or 0)
+        else:
+            out = subprocess.run(["ps", "-Ao", "pid=,ppid="], capture_output=True, text=True, timeout=30).stdout
+            for line in out.splitlines():
+                a = line.split()
+                if len(a) == 2 and a[0].isdigit() and a[1].isdigit():
+                    t[int(a[0])] = int(a[1])
+    except Exception:
+        pass
+    return t
+
+T = process_table()
+if not T:
+    refuse("could not read the process table, so liveness cannot be checked -- refusing rather than guessing.")
 
 # ---- refuse when no surface is ALIVE ---------------------------------------
 # The inbox directory persists forever once created, so its existence proves
 # nothing: an operator who closed their surface has the directory and no
-# fulfiller. A request written then is NOT dead-lettered — it sits unclaimed,
+# fulfiller. A request written then is NOT dead-lettered -- it sits unclaimed,
 # and nothing watches for unclaimed. Writing N files nobody will ever read is
 # the one outcome worth refusing outright, precisely because it is
 # indistinguishable from success.
-alive_surface=""
-for f in "$SURFACES"/*.json; do
-  [ -f "$f" ] || continue
-  pid=$("$PY" -c "
-import json,sys
-try: print(json.load(open(sys.argv[1])).get('pid') or '')
-except Exception: print('')
-" "$f" 2>/dev/null)
-  [ -n "$pid" ] || continue
-  if kill -0 "$pid" 2>/dev/null; then
-    alive_surface="$(basename "$f" .json) (pid $pid)"
-    break
-  fi
-done
-if [ -z "$alive_surface" ]; then
-  echo "rc-reconnect: no live surface — every $SURFACES/*.json names a dead pid." >&2
-  echo "  A request written now would sit UNCLAIMED (not dead-lettered), and nothing watches for that." >&2
-  echo "  Open your AIOS surface and re-run, or type '$PROMPT_CMD <session-name>' in each terminal by hand." >&2
-  exit 1
-fi
-say "surface: $alive_surface"
+live = {}
+try:
+    names = sorted(os.listdir(SURFACES))
+except OSError:
+    names = []
+for fn in names:
+    if not fn.endswith(".json"):
+        continue
+    try:
+        d = json.load(open(os.path.join(SURFACES, fn), encoding="utf-8"))
+        pid = int(d.get("pid") or 0)
+    except Exception:
+        continue
+    if pid in T:
+        live[pid] = d.get("surface") or fn[:-5]
+if not live:
+    refuse("no live surface -- every %s/*.json names a dead pid.\n"
+           "  A request written now would sit UNCLAIMED (not dead-lettered), and nothing watches for that.\n"
+           "  Open your AIOS surface and re-run, or type '%s <session-name>' in each terminal by hand."
+           % (SURFACES, PROMPT_CMD))
+say("surface: " + ", ".join("%s (pid %d)" % (n, p) for p, n in sorted(live.items())))
 
-[ -d "$SESSIONS_DIR" ] || { echo "rc-reconnect: no session registry at $SESSIONS_DIR" >&2; exit 1; }
-mkdir -p "$INBOX"
+def host(pid):
+    seen = 0
+    while pid and pid in T and seen < 64:
+        if pid in live:
+            return live[pid]
+        pid, seen = T[pid], seen + 1
+    return None
+
+if not os.path.isdir(SESSIONS):
+    refuse("no session registry at " + SESSIONS)
+if not DRY:
+    os.makedirs(INBOX, exist_ok=True)
 
 # ---- fan out over the session registry -------------------------------------
 # The registry is the only truth for live sessions. Never pgrep and never a
 # terminal tab title: a resumed session keeps its old title and reads as dead.
-sent=0; skipped=0; stale=0
-for f in "$SESSIONS_DIR"/*.json; do
-  [ -f "$f" ] || continue
-  read -r name pid status <<<"$("$PY" -c "
-import json,sys
-try: d = json.load(open(sys.argv[1]))
-except Exception: raise SystemExit
-print(d.get('name') or '', d.get('pid') or '', d.get('status') or '?')
-" "$f" 2>/dev/null)"
-  [ -n "$name" ] && [ -n "$pid" ] || continue
+sent = skipped = stale = unattached = 0
+for fn in sorted(os.listdir(SESSIONS)):
+    if not fn.endswith(".json"):
+        continue
+    try:
+        d = json.load(open(os.path.join(SESSIONS, fn), encoding="utf-8"))
+    except Exception:
+        continue
+    name, pid, status = d.get("name") or "", int(d.get("pid") or 0), d.get("status") or "?"
+    if not name or not pid:
+        continue
+    # A registry entry outlives its process; only a live pid is a live session.
+    if pid not in T:
+        stale += 1
+        continue
+    if name in SKIP:
+        say("  skip   %s" % name); skipped += 1
+        continue
+    if ONLY:
+        if name not in ONLY:
+            continue
+    elif not ALL and not d.get("bridgeSessionId"):
+        unattached += 1
+        continue
+    if d.get("kind") not in (None, "interactive"):
+        continue
+    surf = host(pid)
+    where = surf or "any surface"
+    if DRY:
+        say("  would  %s  (%s) -> %s" % (name, status, where)); sent += 1
+        continue
+    req = {"action": "send", "name": name, "prompt": "%s %s" % (PROMPT_CMD, name)}
+    if surf:
+        req["surface"] = surf
+    # A distinct filename per request: concurrent requests must never collide on one
+    # name, and this fans out over every session at once. Written under a name no
+    # fulfiller reads, then renamed, so a surface never picks up a half-written file.
+    base = "rc-reconnect-%s-%d-%d" % (re.sub(r"[^A-Za-z0-9_.-]", "_", name), int(time.time()), os.getpid())
+    tmp, dst = os.path.join(INBOX, "." + base + ".tmp"), os.path.join(INBOX, base + ".json")
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(req, fh)
+        os.replace(tmp, dst)
+    except OSError as e:
+        sys.stderr.write("rc-reconnect: could not write %s (%s)\n" % (dst, e))
+        continue
+    say("  sent   %s  (%s) -> %s" % (name, status, where)); sent += 1
 
-  # A registry entry outlives its process; only a live pid is a live session.
-  if ! kill -0 "$pid" 2>/dev/null; then stale=$(( stale + 1 )); continue; fi
-
-  case ",$SKIP," in *",$name,"*) say "  skip   $name"; skipped=$(( skipped + 1 )); continue ;; esac
-
-  if [ "$DRY" = "1" ]; then
-    say "  would  $name  ($status)"; sent=$(( sent + 1 )); continue
-  fi
-
-  # A distinct filename per request: the contract requires that concurrent
-  # requests never collide on one name, and this fans out over every session
-  # at once.
-  req="$INBOX/rc-reconnect-$name-$(date +%s)-$$.json"
-  "$PY" -c "
-import json,sys
-json.dump({'action':'send','name':sys.argv[1],'prompt':sys.argv[2]}, open(sys.argv[3],'w'))
-" "$name" "$PROMPT_CMD $name" "$req" 2>/dev/null \
-    || { echo "rc-reconnect: could not write $req" >&2; continue; }
-  say "  sent   $name  ($status)"
-  sent=$(( sent + 1 ))
-done
-
-suffix=""; [ "$DRY" = "1" ] && suffix=" (dry-run — nothing written)"
-say "rc-reconnect: $sent session(s)$suffix, $skipped skipped, $stale stale registry entries"
-exit 0
+suffix = " (dry-run -- nothing written)" if DRY else ""
+say("rc-reconnect: %d session(s)%s, %d skipped, %d without Remote Control left alone, %d stale registry entries"
+    % (sent, suffix, skipped, unattached, stale))
+PY

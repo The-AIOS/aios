@@ -70,13 +70,15 @@ export CLAUDE_CONFIG_DIR="$FIX/cfg"
 export AIOS_HOME="$FIX/aios"
 mkdir -p "$CLAUDE_CONFIG_DIR/sessions" "$AIOS_HOME/spawn-inbox" "$AIOS_HOME/surfaces"
 
-# A session registry entry: $1 name, $2 pid, $3 status
+# A session registry entry: $1 name, $2 pid, $3 status, $4 "no" = Remote Control NOT attached
+# (attached entries carry bridgeSessionId, as Claude Code writes it while Remote Control is on)
 mksession() {
   $PYBIN -c "
 import json,sys
-json.dump({'name':sys.argv[1],'pid':int(sys.argv[2]),'status':sys.argv[3]},
-          open(sys.argv[4],'w'))
-" "$1" "$2" "$3" "$CLAUDE_CONFIG_DIR/sessions/$1.json"
+d={'name':sys.argv[1],'pid':int(sys.argv[2]),'status':sys.argv[3],'kind':'interactive'}
+if sys.argv[5] != 'no': d['bridgeSessionId']='session_'+sys.argv[1]
+json.dump(d, open(sys.argv[4],'w'))
+" "$1" "$2" "$3" "$CLAUDE_CONFIG_DIR/sessions/$1.json" "${4:-yes}"
 }
 reqs() { ls "$AIOS_HOME/spawn-inbox"/*.json 2>/dev/null | wc -l | tr -d ' '; }
 clear_reqs() { rm -f "$AIOS_HOME/spawn-inbox"/*.json; }
@@ -133,6 +135,12 @@ for s in alpha beta; do
   esac
 done
 
+echo "== 3b. each request names the surface that HOSTS the session =="
+# LIVE_PID is a child of this shell, and this shell is the "app" surface's pid.
+hit=$(grep -l '"name": "alpha"' "$AIOS_HOME/spawn-inbox"/*.json | head -1)
+case "$(cat "$hit")" in *'"surface": "app"'*) ok "a session under the App is routed to the App" ;; *) bad "not routed to its host -- $(cat "$hit")" ;; esac
+chk "no half-written temp left in the inbox" "$(ls -a "$AIOS_HOME/spawn-inbox" | grep -c '\.tmp$' || true)" "0"
+
 echo "== 4. --dry-run writes nothing =="
 clear_reqs
 "$SCRIPT" --dry-run >/dev/null 2>&1
@@ -142,6 +150,26 @@ echo "== 5. --skip leaves that session alone =="
 clear_reqs
 "$SCRIPT" --skip alpha >/dev/null 2>&1
 chk "skipped one of two" "$(reqs)" "1"
+
+echo "== 5b. a session WITHOUT Remote Control is never exposed by a re-attach =="
+clear_reqs
+mksession "private" "$LIVE_PID" "idle" no
+"$SCRIPT" >/dev/null 2>&1
+chk "two attached sessions re-attached, the unattached one left alone" "$(reqs)" "2"
+chk "no request for the unattached session" "$(ls "$AIOS_HOME/spawn-inbox"/ | grep -c private || true)" "0"
+clear_reqs; "$SCRIPT" --all >/dev/null 2>&1
+chk "--all includes it" "$(reqs)" "3"
+clear_reqs; "$SCRIPT" --only private,alpha >/dev/null 2>&1
+chk "--only sends exactly the named sessions, attached or not" "$(reqs)" "2"
+rm -f "$CLAUDE_CONFIG_DIR/sessions/private.json"
+
+echo "== 5c. a session no surface hosts gets no surface field (any surface may take it) =="
+clear_reqs
+mksession "outside" 1 "idle"
+"$SCRIPT" --only outside >/dev/null 2>&1
+hit=$(ls "$AIOS_HOME/spawn-inbox"/*.json 2>/dev/null | head -1)
+if [ -n "$hit" ] && ! grep -q '"surface"' "$hit"; then ok "unhosted session: request carries no surface"; else bad "unhosted session -- $(cat "$hit" 2>/dev/null)"; fi
+rm -f "$CLAUDE_CONFIG_DIR/sessions/outside.json"; clear_reqs
 
 # ── the account-change trigger ──────────────────────────────────────────────
 # A stub rc-reconnect that records each invocation, so a fan-out is countable.
@@ -153,7 +181,7 @@ STUBDIR="$FIX/stub"
 cp -R "$(dirname "$WATCH")" "$STUBDIR"
 cat > "$STUBDIR/rc-reconnect" <<EOF
 #!/usr/bin/env bash
-echo "fired" >> "$FIX/fired.log"
+echo "fired \$*" >> "$FIX/fired.log"
 EOF
 chmod +x "$STUBDIR/rc-reconnect"
 fired() { [ -f "$FIX/fired.log" ] && wc -l < "$FIX/fired.log" | tr -d ' ' || echo 0; }
@@ -185,7 +213,25 @@ trigger; chk "still no fan-out" "$(fired)" "0"
 echo "== 8. a CHANGED account fires exactly once =="
 set_account "two@example.com"
 trigger; chk "fired" "$(fired)" "1"
+case "$(cat "$FIX/fired.log")" in *"--only alpha,beta"*) ok "the watcher passes exactly the attached sessions" ;; *) bad "watcher args -- $(cat "$FIX/fired.log")" ;; esac
 trigger; chk "does not re-fire on the next tick" "$(fired)" "1"
+
+echo "== 8b. sessions attached BEFORE the change are re-attached even if the registry no longer says so =="
+# The drop may clear bridgeSessionId. The watcher's record from the previous tick is what
+# remembers who was attached.
+rm -f "$FIX/fired.log"
+mksession "alpha" "$LIVE_PID" "idle" no; mksession "beta" "$LIVE_PID" "busy" no
+set_account "two-b@example.com"
+trigger
+case "$(cat "$FIX/fired.log" 2>/dev/null)" in *"--only alpha,beta"*) ok "re-attached from the previous tick's record" ;; *) bad "lost the pre-change set -- $(cat "$FIX/fired.log" 2>/dev/null)" ;; esac
+
+echo "== 8c. nothing was attached: an account change sends nothing =="
+rm -f "$FIX/fired.log"
+set_account "two-c@example.com"
+trigger
+chk "no fan-out when no session had Remote Control" "$(fired)" "0"
+mksession "alpha" "$LIVE_PID" "idle"; mksession "beta" "$LIVE_PID" "busy"
+trigger   # refresh the attached record before the concurrency cases
 
 echo "== 9. CONCURRENCY: one change seen by 8 observers =="
 N=8

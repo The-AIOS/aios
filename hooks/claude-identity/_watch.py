@@ -484,6 +484,92 @@ def paused_until() -> float:
 
 
 RC_STATE_FILE = os.path.join(CONFIG_DIR, "rc-reconnect.state")
+# Which sessions had Remote Control attached at the last tick. Recorded every tick so
+# that, on the tick that sees the account change, the sessions to re-attach are the ones
+# attached BEFORE it -- whatever the registry says about them afterwards. Not every
+# attached session was launched with --remote-control: a session the App resumes runs as
+# `claude --resume <id>` and is attached all the same, so argv cannot be the test.
+RC_ATTACHED_FILE = os.path.join(CONFIG_DIR, "rc-attached.json")
+SESSIONS_DIR = os.path.join(CONFIG_DIR, "sessions")
+
+
+def _pid_alive(pid: int) -> bool:
+    """Liveness without side effects on every platform. NEVER os.kill(pid, 0) on Windows:
+    there signal 0 is not a probe, it is TerminateProcess with exit code 0."""
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return k32.GetLastError() == 5         # ERROR_ACCESS_DENIED: exists, not ours
+        try:
+            code = ctypes.c_ulong()
+            return bool(k32.GetExitCodeProcess(h, ctypes.byref(code))) and code.value == 259  # STILL_ACTIVE
+        finally:
+            k32.CloseHandle(h)
+    try:
+        os.kill(pid, 0)
+        return True
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+
+
+def attached_sessions() -> list:
+    """Names of live sessions whose registry entry shows Remote Control attached."""
+    out = []
+    try:
+        names = os.listdir(SESSIONS_DIR)
+    except OSError:
+        return out
+    for fn in names:
+        if not fn.endswith(".json"):
+            continue
+        try:
+            d = json.load(open(os.path.join(SESSIONS_DIR, fn), encoding="utf-8"))
+        except Exception:
+            continue
+        if d.get("name") and d.get("bridgeSessionId") and _pid_alive(int(d.get("pid") or 0)):
+            out.append(d["name"])
+    return sorted(set(out))
+
+
+def _lock_nb(fd: int) -> bool:
+    """Exclusive, non-blocking lock on fd. fcntl does not exist on Windows, and an
+    unguarded `import fcntl` there raised inside the tick and took rotation down with it."""
+    if os.name == "nt":
+        import msvcrt
+        try:
+            os.lseek(fd, 0, os.SEEK_SET)
+            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+            return True
+        except OSError:
+            return False
+    import fcntl
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except OSError:
+        return False
+
+
+def _bash() -> str:
+    """The bash that runs rc-reconnect. On Windows the watcher runs under Git Bash, but a
+    bare `bash` can resolve to System32's WSL launcher, which would run it in Linux."""
+    import shutil
+    for cand in (os.environ.get("AIOS_BASH"), shutil.which("bash")):
+        if cand and not (os.name == "nt" and "system32" in cand.lower()):
+            return cand
+    if os.name == "nt":
+        for root in (os.environ.get("ProgramFiles"), os.environ.get("ProgramW6432"),
+                     os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs")):
+            c = os.path.join(root or "", "Git", "bin", "bash.exe")
+            if os.path.isfile(c):
+                return c
+    return ""
 
 
 def reconnect_if_account_changed(self_path: str) -> None:
@@ -518,18 +604,26 @@ def reconnect_if_account_changed(self_path: str) -> None:
     if not email:
         return
 
-    import fcntl
+    # Who was attached at the LAST tick, then record who is attached now.
+    try:
+        before = json.load(open(RC_ATTACHED_FILE, encoding="utf-8")).get("names") or []
+    except Exception:
+        before = []
+    now = attached_sessions()
 
     try:
         fd = os.open(RC_STATE_FILE, os.O_RDWR | os.O_CREAT, 0o600)
     except Exception:
         return
     try:
-        try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
+        if not _lock_nb(fd):
             return  # another invocation owns this change
+        os.lseek(fd, 0, os.SEEK_SET)
         previous = os.read(fd, 4096).decode("utf-8", "replace").strip()
+        try:
+            write_json_atomic(RC_ATTACHED_FILE, {"names": now, "at": int(time.time())})
+        except Exception:
+            pass
 
         if previous == email:
             return
@@ -542,12 +636,19 @@ def reconnect_if_account_changed(self_path: str) -> None:
         if not previous:
             return  # first run: adopt, do not act
 
+        targets = sorted(set(before) | set(now))
+        if not targets:
+            log(f"account changed ({previous} -> {email}) — no session had Remote Control attached, nothing to re-attach")
+            return
         script = os.path.join(os.path.dirname(os.path.abspath(self_path)), "rc-reconnect")
-        if not os.access(script, os.X_OK):
-            log(f"account changed to {email} — rc-reconnect not executable at {script}, skipping")
+        bash = _bash()
+        if not os.path.isfile(script) or not bash:
+            log(f"account changed to {email} — cannot run rc-reconnect (script {script}, bash {bash or 'not found'}), skipping")
             return
         try:
-            r = subprocess.run([script, "--quiet"], capture_output=True, text=True, timeout=60)
+            env = dict(os.environ, AIOS_PYTHON=sys.executable)
+            r = subprocess.run([bash, script, "--quiet", "--only", ",".join(targets)],
+                               capture_output=True, text=True, timeout=120, env=env)
             if r.returncode == 0:
                 log(f"account changed ({previous} -> {email}) — Remote Control re-attach requested")
             else:
