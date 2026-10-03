@@ -477,6 +477,24 @@ else
       echo "aios-commit: push deferred — offline (transient). Retries on the next aios-commit or a manual push." >&2
       ;;
     *"rejected"*|*"non-fast-forward"*|*"etch first"*)
+      # Operator extension point. With two machines pushing one vault, a diverged push is
+      # routine, not rare, and only the operator knows how their setup should reconcile it.
+      # If hooks/custom/on-push-diverged exists and is executable, it gets one chance: it
+      # runs from the repo root with AIOS_REPO set, and exits 0 only once HEAD is pushed.
+      # That exit 0 is a CLAIM, not a result, so it is checked: after a fresh fetch, HEAD
+      # must be contained in its upstream. Anything else falls through to the message and
+      # marker below, so an absent, failing or mistaken hook behaves exactly like no hook.
+      ON_DIVERGED="$(dirname "$0")/custom/on-push-diverged"
+      if [ -f "$ON_DIVERGED" ] && [ -x "$ON_DIVERGED" ]; then
+        if AIOS_REPO="$(pwd)" "$ON_DIVERGED" >&2 \
+           && git fetch -q 2>/dev/null \
+           && git merge-base --is-ancestor HEAD '@{upstream}' 2>/dev/null; then
+          echo "aios-commit: pushed (after hooks/custom/on-push-diverged reconciled the divergence)."
+          acquire; LOCKED=1; settle_pending; release
+          exit 0
+        fi
+        echo "aios-commit: hooks/custom/on-push-diverged ran, but HEAD is not on the remote — treating the push as rejected." >&2
+      fi
       echo "aios-commit: push rejected — the remote has diverged. Pull/rebase, then push. Commit is safe locally." >&2
       ;;
     *"ermission denied"*|*"publickey"*|*"uthentication failed"*)
