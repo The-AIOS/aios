@@ -369,15 +369,40 @@ def main(argv):
         return 0
 
     # Default: the whole floor to a file, the map on stdout. Per session, so two sessions
-    # never read each other's floor; the temp dir, so it never lands in the vault's git.
-    if out_path is None:
-        sid = re.sub(r"[^A-Za-z0-9_.-]", "", os.environ.get("CLAUDE_CODE_SESSION_ID", "")) or str(os.getpid())
-        out_path = os.path.join(tempfile.gettempdir(), "aios-context-floor-%s.md" % sid)
+    # never read each other's floor; outside the vault, so it never lands in its git.
+    #
+    # The floor is PRIVATE (INTENT.md, observed context) and the temp dir may be shared by
+    # every user on the machine (Linux /tmp). So it lives in a per-user folder created 0700,
+    # refused if it is a symlink or not ours, and the file is created by mkstemp (O_EXCL,
+    # 0600, random name) and renamed into place -- a predictable name opened for writing is
+    # one another user can pre-plant as a symlink to a file of yours.
     try:
-        tmp = out_path + ".tmp%d" % os.getpid()
-        with open(tmp, "w", encoding="utf-8", newline="\n") as fh:
-            fh.write(floor)
-        os.replace(tmp, out_path)
+        if out_path is None:
+            sid = re.sub(r"[^A-Za-z0-9_.-]", "", os.environ.get("CLAUDE_CODE_SESSION_ID", "")) or str(os.getpid())
+            who = str(os.getuid()) if hasattr(os, "getuid") else re.sub(r"[^A-Za-z0-9_.-]", "", os.environ.get("USERNAME", "")) or "user"
+            d = os.path.join(tempfile.gettempdir(), "aios-floor-" + who)
+            try:
+                os.mkdir(d, 0o700)
+            except FileExistsError:
+                pass
+            st = os.lstat(d)
+            import stat
+            if not stat.S_ISDIR(st.st_mode) or (hasattr(os, "getuid") and st.st_uid != os.getuid()):
+                raise OSError("%s is not a directory owned by you" % d)
+            if hasattr(os, "getuid") and stat.S_IMODE(st.st_mode) & 0o077:
+                os.chmod(d, 0o700)
+            out_path = os.path.join(d, "context-floor-%s.md" % sid)
+        fd, tmp = tempfile.mkstemp(prefix=".floor-", dir=os.path.dirname(os.path.abspath(out_path)))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(floor)
+            os.replace(tmp, out_path)
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
     except OSError as e:
         sys.stderr.write("context-floor: could not write %s (%s) -- printing the whole floor "
                          "instead\n" % (out_path, e))
