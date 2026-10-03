@@ -76,18 +76,6 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
-## 2026-10-02 — A cut context floor says so, and Stitch connects on the first try
-
-`hash: `
-
-> **What you can now do.** Tell when a session read only part of its context floor. Connect the Stitch MCP by following its README, without hitting a proxy that exits at start.
-
-**The context floor ends on a line that says where it ends.** On a heavily-used vault the floor runs past 100 KB, and a session reading it through any fixed limit (`head -c`, a tool's output cap) got the first part and nothing to show it stopped early. The part that drops is the end, where the newest observed files are. The floor now closes with `=== END OF FLOOR -- N bytes above this line…`. If a read does not end on that line, the floor was cut, and the byte count lets a session check it got everything above it. `--json` output is unchanged.
-
-**Stitch needs an API key, and now says so.** The manifest and README said Stitch authenticates through the `gcloud` sign-in and needs no key. The proxy, which is the only part Claude Code runs, reads `STITCH_API_KEY` and nothing else, and exits at start without it. The connector now asks for the key, and the README says where to create it and that `stitch-mcp doctor` installs a `gcloud` and opens a browser sign-in the first time it runs.
-
-**Action required:** none for most operators. If you use Stitch, run `claude mcp list` first, and only if `stitch` shows as failed to connect, create the MCP key in Stitch Settings → API Key and re-register the server with it as `mcps/stitch-mcp/README.md` shows. If it shows as connected, nothing to do.
-
 ## 2026-09-29 — Commits that can't undo each other, and a morning plan that stops reopening finished work
 
 `hash: 45b69e0 · 09fce76 · e0214cd · cee0900 · a6156df · 95f4a82 · f82a5af · 1f4c62c` · [#187](https://github.com/The-AIOS/aios/pull/187) · [#188](https://github.com/The-AIOS/aios/pull/188) · [#189](https://github.com/The-AIOS/aios/pull/189) · [#190](https://github.com/The-AIOS/aios/pull/190) · [#191](https://github.com/The-AIOS/aios/pull/191)
