@@ -219,10 +219,15 @@ chmod +x "$STUBDIR/rc-reconnect"
 # a count is read after the stub has had time to run.
 fired() { sleep 1; [ -f "$FIX/fired.log" ] && wc -l < "$FIX/fired.log" | tr -d ' ' || echo 0; }
 
+# The watcher reads the account from .claude.json (a swap rewrites it at that instant),
+# falling back to the rate-limit cache. Write both, INSIDE the fixture's config dir: the
+# watcher reads $CLAUDE_CONFIG_DIR/.claude.json first, and must never reach the real one.
 set_account() {
   $PYBIN -c "
-import json,sys; json.dump({'email':sys.argv[1]}, open(sys.argv[2],'w'))
-" "$1" "$CLAUDE_CONFIG_DIR/rate-limit-cache.json"
+import json,sys
+json.dump({'email':sys.argv[1]}, open(sys.argv[2],'w'))
+json.dump({'oauthAccount':{'emailAddress':sys.argv[1]}}, open(sys.argv[3],'w'))
+" "$1" "$CLAUDE_CONFIG_DIR/rate-limit-cache.json" "$CLAUDE_CONFIG_DIR/.claude.json"
 }
 trigger() {
   $PYBIN -c "
@@ -259,22 +264,46 @@ trigger; chk "fired" "$(fired)" "1"
 case "$(cat "$FIX/fired.log")" in *"--only alpha,beta --wait-drop "*) ok "the watcher passes exactly the attached sessions, and waits for each to drop" ;; *) bad "watcher args -- $(cat "$FIX/fired.log")" ;; esac
 trigger; chk "does not re-fire on the next tick" "$(fired)" "1"
 
-echo "== 8b. sessions attached BEFORE the change are re-attached even if the registry no longer says so =="
-# The drop may clear bridgeSessionId. The watcher's record from the previous tick is what
-# remembers who was attached.
+echo "== 8b. a drop seen in the SAME tick as the change is still re-attached =="
+# Sessions drop within seconds of a swap. The record of who had Remote Control on the
+# outgoing account is what remembers them.
+trigger                                             # same account: learn alpha, beta
 rm -f "$FIX/fired.log"
 mksession "alpha" "$LIVE_PID" "idle" no; mksession "beta" "$LIVE_PID" "busy" no
 set_account "two-b@example.com"
 trigger
-case "$(cat "$FIX/fired.log" 2>/dev/null)" in *"--only alpha,beta"*) ok "re-attached from the previous tick's record" ;; *) bad "lost the pre-change set -- $(cat "$FIX/fired.log" 2>/dev/null)" ;; esac
+case "$(cat "$FIX/fired.log" 2>/dev/null)" in *"--only alpha,beta"*) ok "re-attached from the outgoing account's record" ;; *) bad "lost the pre-change set -- $(cat "$FIX/fired.log" 2>/dev/null)" ;; esac
 
-echo "== 8c. nothing was attached: an account change sends nothing =="
+echo "== 8c. a session disconnected ON PURPOSE (account unchanged) is not re-attached later =="
+mksession "alpha" "$LIVE_PID" "idle"; mksession "beta" "$LIVE_PID" "busy"
+trigger                                             # same account: both attached
+mksession "alpha" "$LIVE_PID" "idle" no             # the operator chose "Disconnect"
+trigger                                             # same account: alpha forgotten
 rm -f "$FIX/fired.log"
-set_account "two-c@example.com"
+set_account "two-c@example.com"; trigger
+case "$(cat "$FIX/fired.log" 2>/dev/null)" in
+  *"--only beta "*) ok "only the session still attached before the swap is re-attached" ;;
+  *) bad "a deliberately disconnected session would be reconnected -- $(cat "$FIX/fired.log" 2>/dev/null)" ;; esac
+
+echo "== 8d. claude-identity.sh switch fires it at once (--rc-after-switch), and no tick repeats it =="
+mksession "alpha" "$LIVE_PID" "idle"; mksession "beta" "$LIVE_PID" "busy"
 trigger
+rm -f "$FIX/fired.log"
+set_account "two-d@example.com"
+$PYBIN "$STUBDIR/_watch.py" --rc-after-switch "two-d@example.com" "$STUBDIR/claude-identity.sh" 2>>"$FIX/trigger.err"
+chk "the switch path fired once" "$(fired)" "1"
+trigger; chk "the next tick does not fire again" "$(fired)" "1"
+grep -q -- '--rc-after-switch "$target"' "$ROOT/hooks/claude-identity/claude-identity.sh" \
+  && ok "claude-identity.sh switch calls it right after the swap" || bad "the switch never calls --rc-after-switch"
+
+echo "== 8e. nothing was attached: an account change sends nothing =="
+mksession "alpha" "$LIVE_PID" "idle" no; mksession "beta" "$LIVE_PID" "busy" no
+trigger                                             # same account: both forgotten
+rm -f "$FIX/fired.log"
+set_account "two-e@example.com"; trigger
 chk "no fan-out when no session had Remote Control" "$(fired)" "0"
 mksession "alpha" "$LIVE_PID" "idle"; mksession "beta" "$LIVE_PID" "busy"
-trigger   # refresh the attached record before the concurrency cases
+trigger   # learn both before the concurrency cases
 
 echo "== 9. CONCURRENCY: one change seen by 8 observers =="
 N=8
