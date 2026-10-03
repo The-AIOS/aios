@@ -119,7 +119,8 @@ N=$(printf '%s\n' "$MAP" | grep -cE '^ +[0-9]+-[0-9]+ ')
 [ "$BAD" -eq 0 ] && [ "$N" -ge 4 ] && ok "every section's line range starts on its own header ($N sections)" \
   || no "a line range points at the wrong line" "a reader jumping to a section would read the wrong one"
 case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) ;; *)
-  P=$(stat -f '%Lp' "$FF" 2>/dev/null || stat -c '%a' "$FF"); D=$(stat -f '%Lp' "$(dirname "$FF")" 2>/dev/null || stat -c '%a' "$(dirname "$FF")")
+  # GNU first: on Linux `stat -f` is FILESYSTEM status, exits 0, and the BSD fallback never runs.
+  P=$(stat -c '%a' "$FF" 2>/dev/null || stat -f '%Lp' "$FF"); D=$(stat -c '%a' "$(dirname "$FF")" 2>/dev/null || stat -f '%Lp' "$(dirname "$FF")")
   [ "$P" = 600 ] && [ "$D" = 700 ] && ok "the floor is private: file 600, folder 700" || no "file $P / folder $D" "the floor holds INTENT and observed context; a shared /tmp would expose it"
   rm -rf "$TMP/aios-floor-$(id -u)"; ln -s "$TMP/elsewhere" "$TMP/aios-floor-$(id -u)"; mkdir -p "$TMP/elsewhere"
   CLAUDE_CODE_SESSION_ID=t-2 $PYBIN "$H" "$TMP/m" > "$TMP/sl.out" 2>"$TMP/sl.err"
