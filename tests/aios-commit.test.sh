@@ -441,9 +441,16 @@ echo "$OUT" | grep -q "remote has diverged" && opd_pending && ! opd_on_remote \
   && ok "failing hook: rejected message + marker" || no "failing hook: $OUT"
 
 echo "── aios-commit: hook present but not executable → ignored ──"
+# Git Bash reports any file that starts with #! as executable, whatever its mode, so on Windows
+# this case cannot be built: there the way to disable the hook is to remove or rename it.
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) echo "  - SKIP on $(uname -s): [ -x ] is true for any #! file regardless of mode" ;;
+  *)
 opd_hook "$RECONCILE" 644; opd_setup; OUT=$(opd_run "$OPD/hooks/aios-commit")
 ! echo "$OUT" | grep -q "on-push-diverged" && opd_pending && ! opd_on_remote \
   && ok "non-executable hook is not run" || no "non-executable hook ran — $OUT"
+  ;;
+esac
 
 # CONTROL: with the remote check removed, the lying hook IS believed — so the test above
 # proves the check, not an accident of the fixture.
