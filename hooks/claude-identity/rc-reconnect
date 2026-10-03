@@ -44,8 +44,10 @@
 # AND IT WAITS A LITTLE LONGER. The registry flag and the session's own "Remote
 # Control disconnected" notice appear together, but the session needs a few more
 # seconds to finish letting go: typed within ~1 s of the drop the command still opened
-# the panel (19:52 run); typed 34 s and 10 min after, it reconnected silently. So each
-# session is held --settle seconds (default 15) after its drop is seen. After sending,
+# the panel (19:52 run); typed 34 s and 10 min after, it reconnected silently. Measured
+# one swap with four sessions held 5/10/20/30 s: 5 s opened the panel, 10 s and above
+# reconnected silently. So each session is held --settle seconds after its drop is seen,
+# default 20 -- twice the shortest hold that worked. After sending,
 # its registry is watched: a new bridgeSessionId is reported as reconnected, `waiting`
 # as "panel opened". No key is ever pressed into a session.
 #
@@ -71,7 +73,7 @@
 #   rc-reconnect --all           every live interactive session not connected now
 #   rc-reconnect --wait-drop N   wait up to N seconds for each session to show the drop
 #                                (what the watcher passes, detached)
-#   rc-reconnect --settle N      seconds to hold a session after its drop (default 15)
+#   rc-reconnect --settle N      seconds to hold a session after its drop (default 20)
 #   rc-reconnect --dry-run       print what it WOULD send, and where, write nothing
 #   rc-reconnect --skip a,b      leave those sessions alone (comma-separated)
 #   rc-reconnect --quiet         print only on refusal (the automated path)
@@ -94,7 +96,7 @@ if [ -z "$PY" ]; then
 fi
 [ -n "$PY" ] || { echo "rc-reconnect: no working Python found (set AIOS_PYTHON)" >&2; exit 1; }
 
-DRY=0; QUIET=0; SKIP=""; ONLY=""; ALL=0; WAIT=0; SETTLE="${AIOS_RC_SETTLE:-15}"
+DRY=0; QUIET=0; SKIP=""; ONLY=""; ALL=0; WAIT=0; SETTLE="${AIOS_RC_SETTLE:-20}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1 ;;
