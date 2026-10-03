@@ -491,6 +491,14 @@ RC_STATE_FILE = os.path.join(CONFIG_DIR, "rc-reconnect.state")
 # `claude --resume <id>` and is attached all the same, so argv cannot be the test.
 RC_ATTACHED_FILE = os.path.join(CONFIG_DIR, "rc-attached.json")
 SESSIONS_DIR = os.path.join(CONFIG_DIR, "sessions")
+# OPT-IN until a surface can finish the job. `/remote-control <name>` does reconnect a
+# dropped session, but it always ends on Claude Code's Remote Control panel ("Continue"),
+# and a session left on that panel reads `waiting`, so every later inbox message to it
+# waits too. On by default, every account swap -- including the autopilot's unattended
+# ones -- would park every session there. A FILE, not an env var: this runs from the
+# statusLine, launchd, systemd and the Windows Scheduled Task, each with its own
+# environment, and a file is the one switch all four see.
+RC_ENABLED_FILE = os.path.join(CONFIG_DIR, "rc-reconnect.enabled")
 
 
 def _pid_alive(pid: int) -> bool:
@@ -597,6 +605,8 @@ def reconnect_if_account_changed(self_path: str) -> None:
     First run adopts the current account silently — with no prior state, every
     account looks like a change, and reconnecting every session on install is a
     surprise rather than a service."""
+    if not os.path.exists(RC_ENABLED_FILE):
+        return
     try:
         email = (json.load(open(CACHE)) or {}).get("email") or ""
     except Exception:

@@ -201,6 +201,14 @@ w.reconnect_if_account_changed(sys.argv[1])
 " "$STUBDIR/_watch.py" 2>>"$FIX/trigger.err"
 }
 
+echo "== 5d. OPT-IN: without the switch file the watcher does nothing at all =="
+rm -f "$FIX/fired.log" "$CLAUDE_CONFIG_DIR/rc-reconnect.state" "$CLAUDE_CONFIG_DIR/rc-reconnect.enabled"
+set_account "off-1@example.com"; trigger
+set_account "off-2@example.com"; trigger
+chk "no fan-out across an account change while off" "$(fired)" "0"
+[ -e "$CLAUDE_CONFIG_DIR/rc-reconnect.state" ] && bad "wrote state while off" || ok "wrote no state while off (turning it on later adopts silently)"
+: > "$CLAUDE_CONFIG_DIR/rc-reconnect.enabled"
+
 echo "== 6. first run ADOPTS the account, does not fan out =="
 rm -f "$FIX/fired.log" "$CLAUDE_CONFIG_DIR/rc-reconnect.state"
 set_account "one@example.com"
