@@ -36,6 +36,7 @@ updated: '2026-09-24'
 ## Operator extensions
 
 - `custom/` — your own hooks (survive `/aios:update`). Documented in `custom/_index.md` with the registry table format.
+- `custom/on-push-diverged` — optional, executable. When `aios-commit`'s push is rejected because the remote moved (another machine pushed first), it runs this from the repo root with `AIOS_REPO` set, so your setup decides how to reconcile — e.g. replay your commits on top of the remote and push. Exit 0 only once HEAD is pushed. `aios-commit` checks that itself after a fetch, so a hook that exits 0 without pushing is treated as a rejected push. Absent, not executable, or failing → the usual *"remote has diverged"* message and pending marker. To disable it, remove or rename it: Git Bash on Windows treats any file starting with `#!` as executable, whatever its mode.
 
 **Wiring:** event hooks are wired in `.claude/settings.json` (project-level) or `~/.claude/settings.json` (user-level). The vault ships a project-level `.claude/settings.json` that wires `inject-datetime.sh` to `UserPromptSubmit`. On Windows, use `powershell -NoProfile -ExecutionPolicy Bypass -File` (not `pwsh`, which a stock install lacks) and `python` (not `python3`, the Store placeholder) — SETUP §10 → *On Windows* has the exact block. **`PreToolUse` hooks** (e.g. `guard-venture-mount.py`) wire the same way with a `matcher` — see SETUP §10 Hook C.
 

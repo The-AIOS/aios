@@ -392,6 +392,76 @@ else
 fi
 rm -rf "$H5_OLD"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# hooks/custom/on-push-diverged — the operator's one chance to reconcile a diverged push.
+# Run against a COPY of the hooks dir so no test ever writes into the real hooks/custom/.
+# The hook's exit 0 is a claim; aios-commit must check HEAD reached the remote itself.
+# ─────────────────────────────────────────────────────────────────────────────
+OPD=$(mktemp -d); mkdir -p "$OPD/hooks/git" "$OPD/hooks/custom"
+cp "$AC" "$OPD/hooks/aios-commit"; cp "$ROOT/hooks/git/secret-scan.sh" "$OPD/hooks/git/"
+chmod +x "$OPD/hooks/aios-commit" "$OPD/hooks/git/secret-scan.sh"
+opd_hook(){ # $1 body ("" = no hook) · $2 mode → writes hooks/custom/on-push-diverged
+  rm -f "$OPD/hooks/custom/on-push-diverged"; [ -n "$1" ] || return 0
+  printf '#!/bin/sh\n%s\n' "$1" > "$OPD/hooks/custom/on-push-diverged"; chmod "$2" "$OPD/hooks/custom/on-push-diverged"
+}
+opd_setup(){ # → $BARE remote + $A clone whose next push is rejected (a twin pushed first)
+  local base twin; base=$(mktemp -d); BARE="$base/remote.git"; A="$base/a"; twin="$base/b"
+  git init -q --bare "$BARE"
+  git clone -q "$BARE" "$A" 2>/dev/null; git clone -q "$BARE" "$twin" 2>/dev/null
+  for d in "$A" "$twin"; do git -C "$d" config user.email t@t.io; git -C "$d" config user.name t; done
+  ( cd "$A" && echo init > base && git add base && git commit -qm init && git push -q origin HEAD 2>/dev/null \
+    && git branch -q --set-upstream-to="origin/$(git symbolic-ref --short HEAD)" )
+  ( cd "$twin" && git pull -q 2>/dev/null && echo twin > twin.txt && git add twin.txt && git commit -qm twin && git push -q 2>/dev/null )
+}
+opd_run(){ # $1 aios-commit copy → its stdout+stderr (call opd_setup first, outside $(…))
+  ( cd "$A" && echo mine > mine.txt && CLAUDE_CODE_SESSION_ID= "$1" -m mine -- mine.txt 2>&1 )
+}
+opd_on_remote(){ local s; s=$(git --git-dir="$BARE" log --all --format=%s); case "$s" in *mine*) return 0;; esac; return 1; }  # no grep -q after a pipe: SIGPIPE under pipefail
+opd_pending(){ [ -f "$A/.git/aios-push-pending" ]; }
+RECONCILE='git pull -q --rebase && git push -q'
+
+echo "── aios-commit: diverged push, no hook → rejected message + pending marker (unchanged) ──"
+opd_hook "" ""; opd_setup; OUT=$(opd_run "$OPD/hooks/aios-commit")
+echo "$OUT" | grep -q "remote has diverged" && opd_pending && ! opd_on_remote \
+  && ok "no hook: same message and marker as before" || no "no hook: behaviour changed — $OUT"
+
+echo "── aios-commit: diverged push, hook reconciles → pushed, no marker ──"
+opd_hook "$RECONCILE" 755; opd_setup; OUT=$(opd_run "$OPD/hooks/aios-commit")
+echo "$OUT" | grep -q "on-push-diverged reconciled" && opd_on_remote && ! opd_pending \
+  && ok "hook reconciles: commit on the remote, marker cleared" || no "hook reconciles: $OUT"
+
+echo "── aios-commit: hook exits 0 without pushing → NOT believed ──"
+opd_hook "exit 0" 755; opd_setup; OUT=$(opd_run "$OPD/hooks/aios-commit")
+echo "$OUT" | grep -q "HEAD is not on the remote" && ! echo "$OUT" | grep -q "^aios-commit: pushed" && opd_pending \
+  && ok "a hook's exit 0 is checked against the remote" || no "a lying hook was believed — $OUT"
+
+echo "── aios-commit: hook fails → falls through to the rejected path ──"
+opd_hook "exit 3" 755; opd_setup; OUT=$(opd_run "$OPD/hooks/aios-commit")
+echo "$OUT" | grep -q "remote has diverged" && opd_pending && ! opd_on_remote \
+  && ok "failing hook: rejected message + marker" || no "failing hook: $OUT"
+
+echo "── aios-commit: hook present but not executable → ignored ──"
+# Git Bash reports any file that starts with #! as executable, whatever its mode, so on Windows
+# this case cannot be built: there the way to disable the hook is to remove or rename it.
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) echo "  - SKIP on $(uname -s): [ -x ] is true for any #! file regardless of mode" ;;
+  *)
+opd_hook "$RECONCILE" 644; opd_setup; OUT=$(opd_run "$OPD/hooks/aios-commit")
+! echo "$OUT" | grep -q "on-push-diverged" && opd_pending && ! opd_on_remote \
+  && ok "non-executable hook is not run" || no "non-executable hook ran — $OUT"
+  ;;
+esac
+
+# CONTROL: with the remote check removed, the lying hook IS believed — so the test above
+# proves the check, not an accident of the fixture.
+sed "s/git merge-base --is-ancestor HEAD '@{upstream}'/true/" "$AC" > "$OPD/hooks/aios-commit"
+grep -q "is-ancestor HEAD '@{upstream}'" "$OPD/hooks/aios-commit" && no "control: mutation did not apply"
+opd_hook "exit 0" 755; opd_setup; OUT=$(opd_run "$OPD/hooks/aios-commit")
+echo "$OUT" | grep -q "on-push-diverged reconciled" \
+  && ok "control: without the remote check, a lying hook is reported as pushed" \
+  || no "control: the mutation did not change the verdict — the lying-hook test proves nothing"
+rm -rf "$OPD"
+
 echo ""
 echo "── RESULT: $PASS passed, $FAIL failed  (bash $BASH_VERSION) ──"
 [ "$FAIL" = "0" ] || exit 1
