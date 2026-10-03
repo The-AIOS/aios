@@ -656,6 +656,11 @@ USAGE
 
   restore_identity "$target"
 
+  # Remote Control drops in every session when the account changes. Re-attach now,
+  # not at the watcher's next tick (up to 30 min away, or the next turn anyone takes).
+  # It returns at once (the re-attach runs detached) and never fails the switch.
+  $PY "$SELF_DIR/_watch.py" --rc-after-switch "$target" "$SELF_DIR/claude-identity.sh" </dev/null >/dev/null 2>&1 || true
+
   # A manual swap is still a swap: the watcher's cooldown and its "is this
   # sample from before the last swap?" check both read swap-log.jsonl, and a
   # swap they cannot see lets a pre-swap sample decide about the new seat.

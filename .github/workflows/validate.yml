@@ -1223,6 +1223,13 @@ jobs:
         # a control proves notify() is still live for operators.
         run: bash tests/watch-notify-isolation.test.sh
 
+      - name: Remote Control comes back after an account change, without the panel
+        # The watcher records who had Remote Control; on a swap rc-reconnect waits for each
+        # session to drop, holds it, then sends /remote-control through its surface. Never
+        # into a session still connected (that opens Claude Code's panel), never twice per
+        # change. The lock test ships with a control that must race without the lock.
+        run: bash tests/rc-reconnect.test.sh
+
       - name: hooks that print text read from files survive a Windows console
         # cp1252 consoles made the context floor crash on the first "→" in a heading and emit
         # nothing (#172). PYTHONIOENCODING=cp1252 reproduces that console on any runner.

@@ -1,9 +1,24 @@
 #!/usr/bin/env python3
 """Emit the context FLOOR in one call: the map, plus what was learned most recently.
 
-    python3 hooks/context-floor.py            # the floor, ready to read
+    python3 hooks/context-floor.py            # write the floor to a file, print its map
     python3 hooks/context-floor.py --recent 8 # widen the recency slice
+    python3 hooks/context-floor.py --out F    # write the floor to F instead of the temp dir
+    python3 hooks/context-floor.py --print    # the whole floor on stdout (pipes, tests)
     python3 hooks/context-floor.py --json
+
+WHY IT WRITES A FILE AND PRINTS A MAP
+-------------------------------------
+The floor outgrows what a session can see in one tool result. Measured on a live
+vault it is 203 KB, while a Bash result shows about 30,000 characters, so a session
+reading stdout saw roughly the first 15% -- and the part it lost was the END, where
+the newest observed entries sit, i.e. exactly what the last close-day wrote. Nothing
+in a cut read says it was cut. So by default the whole floor goes to a file and
+stdout carries only a map: every section, its size and its line range in that file.
+A session then reads the file with a paged reader, which says when there is more.
+The selection is unchanged; only the delivery is. If the file cannot be written the
+floor is printed in full instead, because emitting nothing is the one failure this
+hook exists to end.
 
 WHY THE FLOOR IS NOT JUST TITLES
 --------------------------------
@@ -69,6 +84,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 
 HEADING = re.compile(r"^\#{1,6}\s+\S")
 ENTRY = re.compile(r"^\#{3}\s+\S")
@@ -191,6 +207,15 @@ def folder(base, name):
 
 def main(argv):
     as_json = "--json" in argv
+    to_stdout = "--print" in argv
+    out_path = None
+    if "--out" in argv:
+        i = argv.index("--out")
+        if i + 1 >= len(argv) or argv[i + 1].startswith("-"):
+            sys.stderr.write("context-floor: --out needs a file path\n")
+            return 2
+        out_path = argv[i + 1]
+        argv = argv[:i] + argv[i + 2:]
     recent = DEFAULT_RECENT
     if "--recent" in argv:
         i = argv.index("--recent")
@@ -231,6 +256,10 @@ def main(argv):
                "intent": None, "ventures": []}
     buf = []
     w = buf.append
+    marks = []   # (buf index where a section starts, label) -- turned into line ranges for the map
+
+    def mark(label):
+        marks.append((len(buf), label))
 
     w("=" * 72)
     w("CONTEXT FLOOR  --  the map, what was learned most recently, and your limits")
@@ -240,6 +269,7 @@ def main(argv):
     intent_path = os.path.join(root, "INTENT.md")
     intent = read(intent_path)
     w("")
+    mark("INTENT.md -- the trust contract: what you may do without asking")
     w("--- INTENT.md : the trust contract (what you may do without asking) ---")
     if intent is None:
         w("  (absent -- no trust contract in this vault; assume nothing is pre-authorised)")
@@ -248,13 +278,55 @@ def main(argv):
         w("")
         w("\n".join(intent).rstrip())
 
+    # ---- payload entries for the map (emitted after the recency slice) -------
+    for label, files in (("declared", dec), ("observed", obs)):
+        for fn, lines in files:
+            payload[label].append({"file": fn, "headings": [l.rstrip() for l in lines if HEADING.match(l)]})
+
+    # ORDER IS DELIBERATE: INTENT, then what was learned most recently, then the maps.
+    # The floor is larger than one read of the file, so a session reads it in parts, and
+    # one that stops early should lose the INDEX (consultable any time), never the newest
+    # learnings -- they are what makes the session smarter from its first minute.
+    # ---- the recency slice, observed only ----------------------------------
+    # declared/ is restated rather than appended, so it has no newest end to read.
+    w("")
+    w("=" * 72)
+    w("MOST RECENT %d ENTRIES PER OBSERVED FILE  --  what the last sessions learned" % recent)
+    w("(older entries are indexed by title in the map below; open any of them at any time)")
+    w("=" * 72)
+    for fn, lines in obs:
+        es, is_lib, rec = recent_slice(lines, recent)
+        if is_lib:
+            w("")
+            mark("newest: %s -- rule library, its index" % fn)
+            w("### FILE: %s  (%d entries -- RULE LIBRARY, index shown instead of newest)" % (fn, len(es)))
+            w("")
+            w(rec[0])
+            for d in payload["observed"]:
+                if d["file"] == fn:
+                    d["recent"] = rec
+                    d["rule_library"] = True
+            continue
+        for d in payload["observed"]:
+            if d["file"] == fn:
+                d["recent"] = rec
+        w("")
+        mark("newest: %s -- %d newest of %d entries" % (fn, len(rec), len(es)))
+        w("### FILE: %s  (%d entries total, showing the %d newest by date)"
+          % (fn, len(es), len(rec)))
+        if not es:
+            w("  (no ### entries -- this file is mapped by its headings above)")
+        for block in rec:
+            w("")
+            w(block)
+
     # ---- the map -----------------------------------------------------------
     for label, files in (("declared", dec), ("observed", obs)):
         w("")
+        mark("%s/ -- every heading of %d files (the map)" % (label, len(files)))
         w("--- %s/ : %d files ---" % (label, len(files)))
         for fn, lines in files:
             heads = [l.rstrip() for l in lines if HEADING.match(l)]
-            payload[label].append({"file": fn, "headings": heads})
             w("")
             w("  %s" % fn)
             for h in heads:
@@ -263,6 +335,7 @@ def main(argv):
     # ---- ventures: listed and indexed, never read whole at the floor -------
     vdir = os.path.join(base, "ventures")
     w("")
+    mark("ventures/ -- listed, not read; open the one your task touches")
     w("--- ventures/ : scoped context, OPEN THE ONE YOUR TASK TOUCHES ---")
     if not os.path.isdir(vdir):
         w("  (no ventures/ folder in this vault)")
@@ -290,41 +363,81 @@ def main(argv):
         if not vents:
             w("  (ventures/ exists but holds no venture folders)")
 
-    # ---- the recency slice, observed only ----------------------------------
-    # declared/ is restated rather than appended, so it has no newest end to read.
-    w("")
-    w("=" * 72)
-    w("MOST RECENT %d ENTRIES PER OBSERVED FILE  --  what the last sessions learned" % recent)
-    w("(older entries are indexed by title above; open any of them at any time)")
-    w("=" * 72)
-    for fn, lines in obs:
-        es, is_lib, rec = recent_slice(lines, recent)
-        if is_lib:
-            w("")
-            w("### FILE: %s  (%d entries -- RULE LIBRARY, index shown instead of newest)" % (fn, len(es)))
-            w("")
-            w(rec[0])
-            for d in payload["observed"]:
-                if d["file"] == fn:
-                    d["recent"] = rec
-                    d["rule_library"] = True
-            continue
-        for d in payload["observed"]:
-            if d["file"] == fn:
-                d["recent"] = rec
-        w("")
-        w("### FILE: %s  (%d entries total, showing the %d newest by date)"
-          % (fn, len(es), len(rec)))
-        if not es:
-            w("  (no ### entries -- this file is mapped by its headings above)")
-        for block in rec:
-            w("")
-            w(block)
-
     if as_json:
         print(json.dumps(payload, indent=2))
-    else:
-        print("\n".join(buf))
+        return 0
+
+    body = "\n".join(buf)
+    end = ("=== END OF FLOOR -- %d bytes above this line. If your read of the floor does "
+           "not end on this line, it was cut: read the rest before acting. ==="
+           % len((body + "\n").encode("utf-8")))
+    floor = body + "\n" + end + "\n"
+    if to_stdout:
+        sys.stdout.write(floor)
+        return 0
+
+    # Default: the whole floor to a file, the map on stdout. Per session, so two sessions
+    # never read each other's floor; outside the vault, so it never lands in its git.
+    #
+    # The floor is PRIVATE (INTENT.md, observed context) and the temp dir may be shared by
+    # every user on the machine (Linux /tmp). So it lives in a per-user folder created 0700,
+    # refused if it is a symlink or not ours, and the file is created by mkstemp (O_EXCL,
+    # 0600, random name) and renamed into place -- a predictable name opened for writing is
+    # one another user can pre-plant as a symlink to a file of yours.
+    try:
+        if out_path is None:
+            sid = re.sub(r"[^A-Za-z0-9_.-]", "", os.environ.get("CLAUDE_CODE_SESSION_ID", "")) or str(os.getpid())
+            who = str(os.getuid()) if hasattr(os, "getuid") else re.sub(r"[^A-Za-z0-9_.-]", "", os.environ.get("USERNAME", "")) or "user"
+            d = os.path.join(tempfile.gettempdir(), "aios-floor-" + who)
+            try:
+                os.mkdir(d, 0o700)
+            except FileExistsError:
+                pass
+            st = os.lstat(d)
+            import stat
+            if not stat.S_ISDIR(st.st_mode) or (hasattr(os, "getuid") and st.st_uid != os.getuid()):
+                raise OSError("%s is not a directory owned by you" % d)
+            if hasattr(os, "getuid") and stat.S_IMODE(st.st_mode) & 0o077:
+                os.chmod(d, 0o700)
+            out_path = os.path.join(d, "context-floor-%s.md" % sid)
+        fd, tmp = tempfile.mkstemp(prefix=".floor-", dir=os.path.dirname(os.path.abspath(out_path)))
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(floor)
+            os.replace(tmp, out_path)
+        except BaseException:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
+            raise
+    except OSError as e:
+        sys.stderr.write("context-floor: could not write %s (%s) -- printing the whole floor "
+                         "instead\n" % (out_path, e))
+        sys.stdout.write(floor)
+        return 0
+
+    # Line numbers of each section start, 1-based, in the file as written.
+    starts = []
+    for idx, label in marks:
+        starts.append((body[:len("\n".join(buf[:idx]))].count("\n") + 2 if idx else 1, label))
+    total = floor.count("\n")
+    out = []
+    o = out.append
+    o("CONTEXT FLOOR -- written in full to:")
+    o("  %s" % out_path)
+    o("  %d bytes, %d lines. READ THAT FILE TO THE END BEFORE ACTING: this map is not the floor." % (len(floor.encode("utf-8")), total))
+    o("  It is larger than one read returns: read it in parts (about 600 lines at a time) until")
+    o("  you reach its last line. INTENT and the newest learnings come first, the maps after.")
+    o("")
+    o("Sections (lines in that file, size):")
+    for k, (ln, label) in enumerate(starts):
+        nxt = starts[k + 1][0] - 1 if k + 1 < len(starts) else total
+        size = len("\n".join(floor.split("\n")[ln - 1:nxt]).encode("utf-8"))
+        o("  %5d-%-5d %6.1f KB  %s" % (ln, nxt, size / 1024.0, label))
+    o("")
+    o("The file's last line is '=== END OF FLOOR'. If your read did not reach it, read on.")
+    print("\n".join(out))
     return 0
 
 

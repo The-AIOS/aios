@@ -483,9 +483,241 @@ def paused_until() -> float:
     return until
 
 
+RC_STATE_FILE = os.path.join(CONFIG_DIR, "rc-reconnect.state")
+# Which sessions had Remote Control attached at the last tick. Recorded every tick so
+# that, on the tick that sees the account change, the sessions to re-attach are the ones
+# attached BEFORE it -- whatever the registry says about them afterwards. Not every
+# attached session was launched with --remote-control: a session the App resumes runs as
+# `claude --resume <id>` and is attached all the same, so argv cannot be the test.
+RC_ATTACHED_FILE = os.path.join(CONFIG_DIR, "rc-attached.json")
+SESSIONS_DIR = os.path.join(CONFIG_DIR, "sessions")
+# On by default; this file turns it off. A FILE, not an env var: this runs from the
+# statusLine, launchd, systemd and the Windows Scheduled Task, each with its own
+# environment, and a file is the one switch all four see.
+RC_DISABLED_FILE = os.path.join(CONFIG_DIR, "rc-reconnect.disabled")
+RC_LOG = os.path.join(CONFIG_DIR, "rc-reconnect.log")
+# How long rc-reconnect waits for each session to NOTICE the drop. Measured: a session
+# clears its bridgeSessionId within seconds of the swap. Typed before that, while the
+# session still believes it is connected, /remote-control opens Claude Code's Remote
+# Control panel and the session sits `waiting` on "Continue" -- so the command is only
+# ever sent once the registry shows the drop.
+RC_WAIT_DROP_SECS = 90
+
+
+def _pid_alive(pid: int) -> bool:
+    """Liveness without side effects on every platform. NEVER os.kill(pid, 0) on Windows:
+    there signal 0 is not a probe, it is TerminateProcess with exit code 0."""
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return k32.GetLastError() == 5         # ERROR_ACCESS_DENIED: exists, not ours
+        try:
+            code = ctypes.c_ulong()
+            return bool(k32.GetExitCodeProcess(h, ctypes.byref(code))) and code.value == 259  # STILL_ACTIVE
+        finally:
+            k32.CloseHandle(h)
+    try:
+        os.kill(pid, 0)
+        return True
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+
+
+def session_states() -> tuple:
+    """(attached, unattached): names of LIVE sessions whose registry entry does / does not
+    show Remote Control (bridgeSessionId)."""
+    att, un = set(), set()
+    try:
+        names = os.listdir(SESSIONS_DIR)
+    except OSError:
+        return [], []
+    for fn in names:
+        if not fn.endswith(".json"):
+            continue
+        try:
+            d = json.load(open(os.path.join(SESSIONS_DIR, fn), encoding="utf-8"))
+        except Exception:
+            continue
+        n = d.get("name")
+        if not n or not _pid_alive(int(d.get("pid") or 0)):
+            continue
+        (att if d.get("bridgeSessionId") else un).add(n)
+    return sorted(att), sorted(un - att)
+
+
+def attached_sessions() -> list:
+    """Names of live sessions whose registry entry shows Remote Control attached."""
+    return session_states()[0]
+
+
+def _load_rc_record() -> dict:
+    """name -> last time seen attached, on the CURRENT account. (An older record was a
+    plain list; read it as seen-now so an upgrade loses nobody.)"""
+    try:
+        names = json.load(open(RC_ATTACHED_FILE, encoding="utf-8")).get("names") or {}
+    except Exception:
+        return {}
+    if isinstance(names, list):
+        return {n: int(time.time()) for n in names}
+    return {n: int(t) for n, t in names.items()} if isinstance(names, dict) else {}
+
+
+def _lock_nb(fd: int) -> bool:
+    """Exclusive, non-blocking lock on fd. fcntl does not exist on Windows, and an
+    unguarded `import fcntl` there raised inside the tick and took rotation down with it."""
+    if os.name == "nt":
+        import msvcrt
+        try:
+            os.lseek(fd, 0, os.SEEK_SET)
+            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+            return True
+        except OSError:
+            return False
+    import fcntl
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except OSError:
+        return False
+
+
+def _bash() -> str:
+    """The bash that runs rc-reconnect. On Windows the watcher runs under Git Bash, but a
+    bare `bash` can resolve to System32's WSL launcher, which would run it in Linux."""
+    import shutil
+    for cand in (os.environ.get("AIOS_BASH"), shutil.which("bash")):
+        if cand and not (os.name == "nt" and "system32" in cand.lower()):
+            return cand
+    if os.name == "nt":
+        for root in (os.environ.get("ProgramFiles"), os.environ.get("ProgramW6432"),
+                     os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs")):
+            c = os.path.join(root or "", "Git", "bin", "bash.exe")
+            if os.path.isfile(c):
+                return c
+    return ""
+
+
+def reconnect_if_account_changed(self_path: str, switched_to: str = "") -> None:
+    """Re-attach Remote Control across every live session when the ACCOUNT changes.
+
+    Changing the active account can drop Remote Control. The sessions keep
+    running and their argv still says `--remote-control`, but they stop being
+    reachable from the phone or claude.ai/code — with no error anywhere. The
+    operator finds out by trying. Restoring it means typing `/remote-control`
+    in every terminal, which scales badly with the number of live sessions.
+
+    The account email is already in the cache this watcher reads on every tick,
+    so the change is free to detect and needs no new scheduler: folding it here
+    means an operator who installed the quota autopilot gets this with no extra
+    install step on any of the three platforms.
+
+    Fires on ANY account change, not only a rotation this file performed — a
+    manual `/login` is the more common cause and nothing else would see it.
+
+    Concurrency: the statusLine kick and the scheduled run can both land on the
+    same change, and near a cap the kick tightens to seconds. An exclusive
+    non-blocking lock on the state file means exactly one of them acts; the
+    losers return immediately rather than queueing a second fan-out.
+
+    First run adopts the current account silently — with no prior state, every
+    account looks like a change, and reconnecting every session on install is a
+    surprise rather than a service."""
+    if os.path.exists(RC_DISABLED_FILE):
+        return
+    # The account comes from .claude.json, which a swap or a /login rewrites at that
+    # instant. NOT the rate-limit cache: that is refreshed only when some session's
+    # statusLine runs, i.e. on a turn -- measured, a swap nobody followed with a turn went
+    # unseen for two minutes, and by then nothing remembered who had been attached.
+    email = switched_to or _read_active_email()
+    if not email:
+        try:
+            email = (json.load(open(CACHE)) or {}).get("email") or ""
+        except Exception:
+            email = ""
+    if not email:
+        return
+    now, dropped = session_states()
+
+    try:
+        fd = os.open(RC_STATE_FILE, os.O_RDWR | os.O_CREAT, 0o600)
+    except Exception:
+        return
+    try:
+        if not _lock_nb(fd):
+            return  # another invocation owns this change
+        os.lseek(fd, 0, os.SEEK_SET)
+        previous = os.read(fd, 4096).decode("utf-8", "replace").strip()
+        rec = _load_rc_record()
+        stamp = int(time.time())
+
+        def save(r):
+            try:
+                write_json_atomic(RC_ATTACHED_FILE, {"names": r, "account": email, "at": stamp})
+            except Exception:
+                pass
+
+        if previous == email:
+            # Same account: learn who has Remote Control. A live session that lost it
+            # while the account did NOT change was disconnected on purpose (the panel's
+            # "Disconnect this session") -- forget it, so a later swap does not undo that.
+            for n in now:
+                rec[n] = stamp
+            for n in dropped:
+                rec.pop(n, None)
+            save(rec)
+            return
+        # Record BEFORE acting. If the fan-out fails we do not want the next
+        # tick — seconds later — to try again forever; a missed reconnect is
+        # recoverable by hand, a reconnect storm is not.
+        os.lseek(fd, 0, os.SEEK_SET)
+        os.ftruncate(fd, 0)
+        os.write(fd, email.encode())
+        targets = sorted(set(rec) | set(now))
+        save({n: stamp for n in now})          # the new account starts its own record
+        if not previous:
+            return  # first run: adopt, do not act
+
+        if not targets:
+            log(f"account changed ({previous} -> {email}) — no session had Remote Control attached, nothing to re-attach")
+            return
+        script = os.path.join(os.path.dirname(os.path.abspath(self_path)), "rc-reconnect")
+        bash = _bash()
+        if not os.path.isfile(script) or not bash:
+            log(f"account changed to {email} — cannot run rc-reconnect (script {script}, bash {bash or 'not found'}), skipping")
+            return
+        # DETACHED: rc-reconnect waits up to RC_WAIT_DROP_SECS for each session to notice the
+        # drop, and this runs on the statusLine's hot path and inside a switch. It must
+        # return at once; the script's own report goes to RC_LOG.
+        try:
+            env = dict(os.environ, AIOS_PYTHON=sys.executable)
+            kw = {"creationflags": 0x00000008 | 0x00000200} if os.name == "nt" else {"start_new_session": True}
+            with open(RC_LOG, "a", encoding="utf-8") as out:
+                out.write(time.strftime("%Y-%m-%d %H:%M:%S") + f" account {previous} -> {email}; re-attach {','.join(targets)}\n")
+                out.flush()
+                subprocess.Popen([bash, script, "--only", ",".join(targets), "--wait-drop", str(RC_WAIT_DROP_SECS)],
+                                 stdin=subprocess.DEVNULL, stdout=out, stderr=out, env=env, **kw)
+            log(f"account changed ({previous} -> {email}) — Remote Control re-attach started for {len(targets)} session(s); see {RC_LOG}")
+        except Exception as e:
+            log(f"account changed ({previous} -> {email}) — rc-reconnect failed: {type(e).__name__}: {e}")
+    finally:
+        os.close(fd)
+
+
 def main(self_path: str) -> None:
     try:
         t5, t7 = thresholds()
+
+        # Remote Control reconnection runs BEFORE the pause gate, deliberately.
+        # The operator pauses ROTATION; they never asked to become unreachable.
+        # And a paused window is exactly when a manual /login is most likely,
+        # which is the most common cause of the drop.
+        reconnect_if_account_changed(self_path)
 
         until = paused_until()
         if until:
@@ -714,7 +946,13 @@ if __name__ == "__main__":
         print(f"5h: {t5}%  ({s5})")
         print(f"7d: {t7}%  ({s7})")
         sys.exit(0)
+    if len(sys.argv) >= 4 and sys.argv[1] == "--rc-after-switch":
+        # claude-identity.sh switch calls this the moment a swap lands, so Remote Control
+        # comes back without waiting for a tick (launchd/systemd/Task: every 30 min; the
+        # statusLine: only when some session takes a turn). argv: <to-email> <self_path>.
+        reconnect_if_account_changed(sys.argv[3], switched_to=sys.argv[2])
+        sys.exit(0)
     if len(sys.argv) < 2:
-        sys.stderr.write("_watch.py: usage: _watch.py <self_path> | --threshold\n")
+        sys.stderr.write("_watch.py: usage: _watch.py <self_path> | --threshold | --rc-after-switch <to> <self_path>\n")
         sys.exit(2)
     main(sys.argv[1])

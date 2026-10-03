@@ -52,16 +52,19 @@ ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 B=hooks/buffer-status.py
+# Fresh entries are dated relative to TODAY: a hardcoded date ages past STALE_DAYS and turns
+# the "clean buffer" fixture stale on its own, 30 days after it was written.
+FRESH=$($PYBIN -c "import datetime;print(datetime.date.today()-datetime.timedelta(days=2))")
 
 mk(){ # mk <file> <n-emerging-method> <n-emerging-behavioural> [extra]
   { echo "# Session Insights"; echo; echo "## Emerging"; echo
     i=0; while [ "$i" -lt "$2" ]; do i=$((i+1))
       echo "### method finding $i"
-      echo '`class: method` · `first-seen: 2026-09-01` · `route: antifragile.md`'
+      echo "\`class: method\` · \`first-seen: $FRESH\` · \`route: antifragile.md\`"
       echo "body"; echo; done
     i=0; while [ "$i" -lt "$3" ]; do i=$((i+1))
       echo "### behavioural finding $i"
-      echo '`class: behavioural` · `first-seen: 2026-09-01` · `route: patterns.md`'
+      echo "\`class: behavioural\` · \`first-seen: $FRESH\` · \`route: patterns.md\`"
       echo "body"; echo; done
     printf '%s\n' "${4:-}"
     echo; echo "## Reinforced"; echo
@@ -213,7 +216,7 @@ echo "── a MIXED section counts BOTH styles ──"
 # bullet invisible: 1/10 reported while the section sat at 10/10, "within contract".
 { echo "## Emerging"; echo
   echo "### a heading entry"
-  echo '`class: behavioural` · `first-seen: 2026-09-01` · `route: patterns.md`'
+  echo "\`class: behavioural\` · \`first-seen: $FRESH\` · \`route: patterns.md\`"
   echo "body"; echo
   i=0; while [ "$i" -lt 9 ]; do i=$((i+1))
     echo "- **(2026-09-0$i)** bullet entry $i"
@@ -226,11 +229,11 @@ me=$($PYBIN "$B" "$T/mix.md" --json | $PYBIN -c 'import sys,json;print(json.load
 # entry — counting both styles must not turn every heading entry's facets into entries.
 { echo "## Emerging"; echo
   echo "### heading entry with facets"
-  echo '`class: behavioural` · `first-seen: 2026-09-01` · `route: patterns.md`'
+  echo "\`class: behavioural\` · \`first-seen: $FRESH\` · \`route: patterns.md\`"
   echo "- evidence one"
   echo "- evidence two"; echo
   echo "### second heading entry"
-  echo '`class: behavioural` · `first-seen: 2026-09-02` · `route: patterns.md`'
+  echo "\`class: behavioural\` · \`first-seen: $FRESH\` · \`route: patterns.md\`"
   echo "- evidence"
   echo "## Reinforced"; echo
 } > "$T/facets.md"

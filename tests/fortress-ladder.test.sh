@@ -59,7 +59,9 @@ grep -qF '/Applications/Tailscale.app' "$DOC" && ok "tailscale probe checks the 
   || no "tailscale probe only checks PATH" "reports absent on a machine that uses it daily"
 # REGRESSION 2 — the zsh-fatal glob, scoped to executable text (a whole-file grep
 # fires on the reading-note that documents it; that shape has bitten 7x here).
-if sed 's/^ *- \*\*.*//' "$DOC" | grep -qE '^\s*ls ~/\.config/aios-secrets/\*'; then
+# `grep -E … >/dev/null`, never `grep -q`, after a pipe: under pipefail an early-exiting
+# grep -q can SIGPIPE the writer, and the pipeline then reads as "not found" on some runs.
+if sed 's/^ *- \*\*.*//' "$DOC" | grep -E '^\s*ls ~/\.config/aios-secrets/\*' >/dev/null; then
   no "the zsh-fatal glob is back in the probe block" "zsh aborts before ls runs"
 else ok "no bare glob into ls in the probe block"; fi
 printf 'ls ~/.config/aios-secrets/*.env\n' > "$T/planted"
@@ -95,7 +97,7 @@ echo "── the periodic check is a housekeeping bucket, not a new command ─�
 grep -qF 'Bucket 28' "$HK" && ok "Bucket 28 exists" || no "no containment bucket"
 grep -qiE 'do not re-derive it here' "$HK" && ok "the bucket defers to the doc for the probes" \
   || no "the bucket may re-derive the probes" "a second copy is a second implementation"
-sed -n '/Bucket 28/,/^#### /p' "$HK" | grep -qiE 'READ-ONLY' \
+sed -n '/Bucket 28/,/^#### /p' "$HK" | grep -iE 'READ-ONLY' >/dev/null \
   && ok "the bucket is read-only" || no "the bucket could edit a shell rc"
 [ ! -f plugins/aios/commands/fortress.md ] && ok "no /aios:fortress command (consolidated into the doc + bucket)" \
   || no "a new command surface exists" "the ladder is documentation; the periodic check is a bucket"
