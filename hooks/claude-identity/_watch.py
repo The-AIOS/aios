@@ -491,14 +491,17 @@ RC_STATE_FILE = os.path.join(CONFIG_DIR, "rc-reconnect.state")
 # `claude --resume <id>` and is attached all the same, so argv cannot be the test.
 RC_ATTACHED_FILE = os.path.join(CONFIG_DIR, "rc-attached.json")
 SESSIONS_DIR = os.path.join(CONFIG_DIR, "sessions")
-# OPT-IN until a surface can finish the job. `/remote-control <name>` does reconnect a
-# dropped session, but it always ends on Claude Code's Remote Control panel ("Continue"),
-# and a session left on that panel reads `waiting`, so every later inbox message to it
-# waits too. On by default, every account swap -- including the autopilot's unattended
-# ones -- would park every session there. A FILE, not an env var: this runs from the
+# On by default; this file turns it off. A FILE, not an env var: this runs from the
 # statusLine, launchd, systemd and the Windows Scheduled Task, each with its own
 # environment, and a file is the one switch all four see.
-RC_ENABLED_FILE = os.path.join(CONFIG_DIR, "rc-reconnect.enabled")
+RC_DISABLED_FILE = os.path.join(CONFIG_DIR, "rc-reconnect.disabled")
+RC_LOG = os.path.join(CONFIG_DIR, "rc-reconnect.log")
+# How long rc-reconnect waits for each session to NOTICE the drop. Measured: a session
+# clears its bridgeSessionId within seconds of the swap. Typed before that, while the
+# session still believes it is connected, /remote-control opens Claude Code's Remote
+# Control panel and the session sits `waiting` on "Continue" -- so the command is only
+# ever sent once the registry shows the drop.
+RC_WAIT_DROP_SECS = 90
 
 
 def _pid_alive(pid: int) -> bool:
@@ -605,7 +608,7 @@ def reconnect_if_account_changed(self_path: str) -> None:
     First run adopts the current account silently — with no prior state, every
     account looks like a change, and reconnecting every session on install is a
     surprise rather than a service."""
-    if not os.path.exists(RC_ENABLED_FILE):
+    if os.path.exists(RC_DISABLED_FILE):
         return
     try:
         email = (json.load(open(CACHE)) or {}).get("email") or ""
@@ -655,15 +658,18 @@ def reconnect_if_account_changed(self_path: str) -> None:
         if not os.path.isfile(script) or not bash:
             log(f"account changed to {email} — cannot run rc-reconnect (script {script}, bash {bash or 'not found'}), skipping")
             return
+        # DETACHED: rc-reconnect waits up to RC_WAIT_DROP_SECS for each session to notice the
+        # drop, and this tick runs on the statusLine's hot path. It must return at once; the
+        # script's own report goes to RC_LOG.
         try:
             env = dict(os.environ, AIOS_PYTHON=sys.executable)
-            r = subprocess.run([bash, script, "--quiet", "--only", ",".join(targets)],
-                               capture_output=True, text=True, timeout=120, env=env)
-            if r.returncode == 0:
-                log(f"account changed ({previous} -> {email}) — Remote Control re-attach requested")
-            else:
-                log(f"account changed ({previous} -> {email}) — rc-reconnect refused: "
-                    f"{(r.stderr or '').strip().splitlines()[0] if r.stderr else 'rc=' + str(r.returncode)}")
+            kw = {"creationflags": 0x00000008 | 0x00000200} if os.name == "nt" else {"start_new_session": True}
+            with open(RC_LOG, "a", encoding="utf-8") as out:
+                out.write(time.strftime("%Y-%m-%d %H:%M:%S") + f" account {previous} -> {email}; re-attach {','.join(targets)}\n")
+                out.flush()
+                subprocess.Popen([bash, script, "--only", ",".join(targets), "--wait-drop", str(RC_WAIT_DROP_SECS)],
+                                 stdin=subprocess.DEVNULL, stdout=out, stderr=out, env=env, **kw)
+            log(f"account changed ({previous} -> {email}) — Remote Control re-attach started for {len(targets)} session(s); see {RC_LOG}")
         except Exception as e:
             log(f"account changed ({previous} -> {email}) — rc-reconnect failed: {type(e).__name__}: {e}")
     finally:

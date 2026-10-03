@@ -88,8 +88,15 @@ clear_reqs() { rm -f "$AIOS_HOME/spawn-inbox"/*.json; }
 sleep 300 & LIVE_PID=$!
 DEAD_PID=$(  $PYBIN -c "print(2**22 - 7)" )
 
+# The watcher's record of who had Remote Control before the swap, which is what a bare
+# run re-attaches. Sessions in it that the registry shows DROPPED get the command.
+record() { $PYBIN -c "
+import json,sys; json.dump({'names':sys.argv[2:]}, open(sys.argv[1],'w'))
+" "$CLAUDE_CONFIG_DIR/rc-attached.json" "$@"; }
+
 echo "== 1. no live surface: refuse, and write NOTHING =="
-mksession "alpha" "$LIVE_PID" "idle"
+mksession "alpha" "$LIVE_PID" "idle" no
+record alpha
 out=$("$SCRIPT" 2>&1); rc=$?
 chk "exits 1" "$rc" "1"
 chk "wrote no requests" "$(reqs)" "0"
@@ -102,16 +109,23 @@ import json,sys; json.dump({'pid':int(sys.argv[1])}, open(sys.argv[2],'w'))
 "$SCRIPT" >/dev/null 2>&1; chk "still exits 1" "$?" "1"
 chk "still wrote nothing" "$(reqs)" "0"
 
-echo "== 3. live surface: one request per LIVE session, none for stale entries =="
+echo "== 3. one request per recorded session that has DROPPED; none for stale or still-connected =="
 $PYBIN -c "
 import json,sys; json.dump({'pid':int(sys.argv[1])}, open(sys.argv[2],'w'))
 " "$$" "$AIOS_HOME/surfaces/app.json"
-mksession "beta"  "$LIVE_PID" "busy"
-mksession "zombie" "$DEAD_PID" "idle"
-"$SCRIPT" >/dev/null 2>&1; chk "exits 0" "$?" "0"
-chk "two live sessions -> two requests" "$(reqs)" "2"
-got=$(ls "$AIOS_HOME/spawn-inbox"/ | grep -c zombie || true)
-chk "no request for the stale registry entry" "$got" "0"
+mksession "beta"   "$LIVE_PID" "busy" no
+mksession "zombie" "$DEAD_PID" "idle" no
+mksession "linked" "$LIVE_PID" "idle"          # still shows Remote Control connected
+record alpha beta zombie linked
+out=$("$SCRIPT" 2>&1); chk "exits 0" "$?" "0"
+chk "two dropped live sessions -> two requests" "$(reqs)" "2"
+chk "no request for the stale registry entry" "$(ls "$AIOS_HOME/spawn-inbox"/ | grep -c zombie || true)" "0"
+# THE PANEL RULE. Typed into a session that still believes it is connected,
+# /remote-control opens Claude Code's Remote Control panel and the session sits
+# `waiting` on "Continue". Measured live 2026-10-02: the same command typed after the
+# session noticed the drop reconnected with no panel.
+chk "no request for a session still connected (it would open the panel)" "$(ls "$AIOS_HOME/spawn-inbox"/ | grep -c linked || true)" "0"
+case "$out" in *"linked  still shows Remote Control connected"*) ok "the left-alone session is named in the report" ;; *) bad "report does not name it -- $out" ;; esac
 body=$(cat "$(ls "$AIOS_HOME/spawn-inbox"/*.json | head -1)")
 case "$body" in *'"action": "send"'*|*'"action":"send"'*) ok "uses the send verb" ;; *) bad "wrong verb -- $body" ;; esac
 case "$body" in *"/remote-control"*) ok "carries the slash command" ;; *) bad "missing prompt -- $body" ;; esac
@@ -152,25 +166,41 @@ clear_reqs
 "$SCRIPT" --skip alpha >/dev/null 2>&1
 chk "skipped one of two" "$(reqs)" "1"
 
-echo "== 5b. a session WITHOUT Remote Control is never exposed by a re-attach =="
+echo "== 5b. a session that never had Remote Control is not exposed by a bare run =="
 clear_reqs
-mksession "private" "$LIVE_PID" "idle" no
+mksession "private" "$LIVE_PID" "idle" no      # not connected, and not in the record
 "$SCRIPT" >/dev/null 2>&1
-chk "two attached sessions re-attached, the unattached one left alone" "$(reqs)" "2"
-chk "no request for the unattached session" "$(ls "$AIOS_HOME/spawn-inbox"/ | grep -c private || true)" "0"
+chk "only the recorded sessions are re-attached" "$(reqs)" "2"
+chk "no request for the never-attached session" "$(ls "$AIOS_HOME/spawn-inbox"/ | grep -c private || true)" "0"
 clear_reqs; "$SCRIPT" --all >/dev/null 2>&1
-chk "--all includes it" "$(reqs)" "3"
-clear_reqs; "$SCRIPT" --only private,alpha >/dev/null 2>&1
-chk "--only sends exactly the named sessions, attached or not" "$(reqs)" "2"
+chk "--all reaches every live session not connected now (and still not the connected one)" "$(reqs)" "3"
+clear_reqs; "$SCRIPT" --only private,linked >/dev/null 2>&1
+chk "--only still refuses a connected session" "$(reqs)" "1"
 rm -f "$CLAUDE_CONFIG_DIR/sessions/private.json"
 
 echo "== 5c. a session no surface hosts gets no surface field (any surface may take it) =="
 clear_reqs
-mksession "outside" 1 "idle"
+mksession "outside" 1 "idle" no
 "$SCRIPT" --only outside >/dev/null 2>&1
 hit=$(ls "$AIOS_HOME/spawn-inbox"/*.json 2>/dev/null | head -1)
 if [ -n "$hit" ] && ! grep -q '"surface"' "$hit"; then ok "unhosted session: request carries no surface"; else bad "unhosted session -- $(cat "$hit" 2>/dev/null)"; fi
 rm -f "$CLAUDE_CONFIG_DIR/sessions/outside.json"; clear_reqs
+
+echo "== 5e. --wait-drop sends the moment a session shows the drop, and never before =="
+mksession "late" "$LIVE_PID" "idle"            # connected at the start
+( sleep 3; mksession "late" "$LIVE_PID" "idle" no ) &
+flip=$!
+t0=$(date +%s)
+out=$("$SCRIPT" --only late --wait-drop 15 2>&1)
+t1=$(date +%s); wait "$flip" 2>/dev/null
+chk "the dropped session got exactly one request" "$(ls "$AIOS_HOME/spawn-inbox"/ | grep -c late || true)" "1"
+[ $((t1 - t0)) -ge 2 ] && ok "and not before it dropped ($((t1 - t0))s)" || bad "sent after $((t1 - t0))s -- before the drop"
+clear_reqs
+mksession "stuck" "$LIVE_PID" "idle"           # never drops
+out=$("$SCRIPT" --only stuck --wait-drop 3 2>&1)
+chk "a session that never drops gets nothing" "$(reqs)" "0"
+case "$out" in *"stuck  still shows Remote Control connected"*) ok "and the report names it" ;; *) bad "unnamed -- $out" ;; esac
+rm -f "$CLAUDE_CONFIG_DIR/sessions/late.json" "$CLAUDE_CONFIG_DIR/sessions/stuck.json" "$CLAUDE_CONFIG_DIR/sessions/linked.json"; clear_reqs
 
 # ── the account-change trigger ──────────────────────────────────────────────
 # A stub rc-reconnect that records each invocation, so a fan-out is countable.
@@ -185,7 +215,9 @@ cat > "$STUBDIR/rc-reconnect" <<EOF
 echo "fired \$*" >> "$FIX/fired.log"
 EOF
 chmod +x "$STUBDIR/rc-reconnect"
-fired() { [ -f "$FIX/fired.log" ] && wc -l < "$FIX/fired.log" | tr -d ' ' || echo 0; }
+# The watcher launches rc-reconnect DETACHED (it must not block the statusLine tick), so
+# a count is read after the stub has had time to run.
+fired() { sleep 1; [ -f "$FIX/fired.log" ] && wc -l < "$FIX/fired.log" | tr -d ' ' || echo 0; }
 
 set_account() {
   $PYBIN -c "
@@ -201,13 +233,15 @@ w.reconnect_if_account_changed(sys.argv[1])
 " "$STUBDIR/_watch.py" 2>>"$FIX/trigger.err"
 }
 
-echo "== 5d. OPT-IN: without the switch file the watcher does nothing at all =="
-rm -f "$FIX/fired.log" "$CLAUDE_CONFIG_DIR/rc-reconnect.state" "$CLAUDE_CONFIG_DIR/rc-reconnect.enabled"
+echo "== 5d. OFF SWITCH: with rc-reconnect.disabled the watcher does nothing at all =="
+mksession "alpha" "$LIVE_PID" "idle"; mksession "beta" "$LIVE_PID" "busy"   # connected before any swap
+rm -f "$FIX/fired.log" "$CLAUDE_CONFIG_DIR/rc-reconnect.state" "$CLAUDE_CONFIG_DIR/rc-attached.json"
+: > "$CLAUDE_CONFIG_DIR/rc-reconnect.disabled"
 set_account "off-1@example.com"; trigger
 set_account "off-2@example.com"; trigger
 chk "no fan-out across an account change while off" "$(fired)" "0"
-[ -e "$CLAUDE_CONFIG_DIR/rc-reconnect.state" ] && bad "wrote state while off" || ok "wrote no state while off (turning it on later adopts silently)"
-: > "$CLAUDE_CONFIG_DIR/rc-reconnect.enabled"
+[ -e "$CLAUDE_CONFIG_DIR/rc-reconnect.state" ] && bad "wrote state while off" || ok "wrote no state while off (turning it back on adopts silently)"
+rm -f "$CLAUDE_CONFIG_DIR/rc-reconnect.disabled"
 
 echo "== 6. first run ADOPTS the account, does not fan out =="
 rm -f "$FIX/fired.log" "$CLAUDE_CONFIG_DIR/rc-reconnect.state"
@@ -222,7 +256,7 @@ trigger; chk "still no fan-out" "$(fired)" "0"
 echo "== 8. a CHANGED account fires exactly once =="
 set_account "two@example.com"
 trigger; chk "fired" "$(fired)" "1"
-case "$(cat "$FIX/fired.log")" in *"--only alpha,beta"*) ok "the watcher passes exactly the attached sessions" ;; *) bad "watcher args -- $(cat "$FIX/fired.log")" ;; esac
+case "$(cat "$FIX/fired.log")" in *"--only alpha,beta --wait-drop "*) ok "the watcher passes exactly the attached sessions, and waits for each to drop" ;; *) bad "watcher args -- $(cat "$FIX/fired.log")" ;; esac
 trigger; chk "does not re-fire on the next tick" "$(fired)" "1"
 
 echo "== 8b. sessions attached BEFORE the change are re-attached even if the registry no longer says so =="

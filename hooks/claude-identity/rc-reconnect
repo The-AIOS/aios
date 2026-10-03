@@ -29,16 +29,17 @@
 # types it. That is the spawn-inbox `send` verb, and it is the whole mechanism
 # here — the same request/fulfil split the rest of AIOS uses.
 #
-# Called by _watch.py when the active account changes, ONLY when the operator has
-# opted in by creating ~/.claude/rc-reconnect.enabled. Safe to run by hand.
+# Called by _watch.py when the active account changes (off with
+# ~/.claude/rc-reconnect.disabled). Safe to run by hand.
 #
-# KNOWN LIMIT, measured 2026-10-02: `/remote-control <name>` is NOT a no-op. In a
-# connected session, and in one whose connection dropped with an account change, it
-# reconnects and then opens Claude Code's Remote Control panel, which waits for Enter
-# on "Continue". The session reads `waiting` until then, and the inbox delivers
-# nothing else to it. Finishing that step belongs to the surface that typed the
-# command (idle -> typed -> waiting -> Enter); until a surface does, this ends on
-# the panel, which is why the watcher's trigger is opt-in.
+# TIMING IS THE WHOLE TRICK, measured 2026-10-02. Within seconds of an account swap
+# each session NOTICES the drop on its own and its registry entry loses its
+# `bridgeSessionId`. Typed after that, `/remote-control <name>` reconnects silently.
+# Typed before that -- into a session that still believes it is connected -- it opens
+# Claude Code's Remote Control panel and the session sits `waiting` on "Continue",
+# which also blocks every later inbox message to it. So this NEVER sends to a session
+# the registry still shows as connected: with --wait-drop it waits for the drop, and
+# a session that never shows one is left alone and named in the report.
 #
 # WHICH SESSIONS, AND THROUGH WHICH SURFACE
 # Only sessions that HAD Remote Control are re-attached; a session that was never
@@ -56,9 +57,12 @@
 # ============================================================================
 # USAGE
 # ============================================================================
-#   rc-reconnect                 re-attach every live session showing Remote Control
-#   rc-reconnect --only a,b      exactly these sessions (what the watcher passes)
-#   rc-reconnect --all           every live interactive session, attached or not
+#   rc-reconnect                 re-attach the sessions the watcher last recorded as
+#                                attached that have since dropped
+#   rc-reconnect --only a,b      exactly these sessions, once each has dropped
+#   rc-reconnect --all           every live interactive session not connected now
+#   rc-reconnect --wait-drop N   wait up to N seconds for each session to show the drop
+#                                (what the watcher passes, detached)
 #   rc-reconnect --dry-run       print what it WOULD send, and where, write nothing
 #   rc-reconnect --skip a,b      leave those sessions alone (comma-separated)
 #   rc-reconnect --quiet         print only on refusal (the automated path)
@@ -81,22 +85,23 @@ if [ -z "$PY" ]; then
 fi
 [ -n "$PY" ] || { echo "rc-reconnect: no working Python found (set AIOS_PYTHON)" >&2; exit 1; }
 
-DRY=0; QUIET=0; SKIP=""; ONLY=""; ALL=0
+DRY=0; QUIET=0; SKIP=""; ONLY=""; ALL=0; WAIT=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1 ;;
     --quiet)   QUIET=1 ;;
     --all)     ALL=1 ;;
+    --wait-drop) WAIT="${2:-}"; case "$WAIT" in ''|*[!0-9]*) echo "rc-reconnect: --wait-drop needs seconds" >&2; exit 1 ;; esac; shift ;;
     --skip)    SKIP="${2:-}"; shift ;;
     --only)    ONLY="${2:-}"; [ -n "$ONLY" ] || { echo "rc-reconnect: --only needs names" >&2; exit 1; }; shift ;;
-    --help|-h) sed -n '2,57p' "$0"; exit 0 ;;
+    --help|-h) sed -n '2,60p' "$0"; exit 0 ;;
     *) echo "rc-reconnect: unknown argument '$1' (try --help)" >&2; exit 1 ;;
   esac
   shift
 done
 
 export RC_CONFIG_DIR="$CONFIG_DIR" RC_AIOS_HOME="$AIOS_HOME" RC_DRY="$DRY" RC_QUIET="$QUIET" \
-       RC_SKIP="$SKIP" RC_ONLY="$ONLY" RC_ALL="$ALL"
+       RC_SKIP="$SKIP" RC_ONLY="$ONLY" RC_ALL="$ALL" RC_WAIT="$WAIT"
 exec $PY - <<'PY'
 import json, os, re, subprocess, sys, time
 
@@ -186,47 +191,53 @@ if not os.path.isdir(SESSIONS):
     refuse("no session registry at " + SESSIONS)
 if not DRY:
     os.makedirs(INBOX, exist_ok=True)
+WAIT = int(E.get("RC_WAIT") or 0)
 
-# ---- fan out over the session registry -------------------------------------
-# The registry is the only truth for live sessions. Never pgrep and never a
-# terminal tab title: a resumed session keeps its old title and reads as dead.
-sent = skipped = stale = unattached = 0
-for fn in sorted(os.listdir(SESSIONS)):
-    if not fn.endswith(".json"):
-        continue
+def registry():
+    """name -> entry, for every registry file that parses. The registry is the only
+    truth for live sessions: never pgrep, never a terminal tab title."""
+    out = {}
+    for fn in sorted(os.listdir(SESSIONS)):
+        if fn.endswith(".json"):
+            try:
+                d = json.load(open(os.path.join(SESSIONS, fn), encoding="utf-8"))
+            except Exception:
+                continue
+            if d.get("name") and d.get("pid"):
+                out[d["name"]] = d
+    return out
+
+# ---- who to re-attach ------------------------------------------------------
+R = registry()
+if ONLY:
+    want = set(ONLY)
+elif ALL:
+    want = {n for n, d in R.items() if d.get("kind") in (None, "interactive")}
+else:
     try:
-        d = json.load(open(os.path.join(SESSIONS, fn), encoding="utf-8"))
+        want = set(json.load(open(os.path.join(E["RC_CONFIG_DIR"], "rc-attached.json"),
+                                   encoding="utf-8")).get("names") or [])
     except Exception:
-        continue
-    name, pid, status = d.get("name") or "", int(d.get("pid") or 0), d.get("status") or "?"
-    if not name or not pid:
-        continue
-    # A registry entry outlives its process; only a live pid is a live session.
-    if pid not in T:
-        stale += 1
-        continue
-    if name in SKIP:
-        say("  skip   %s" % name); skipped += 1
-        continue
-    if ONLY:
-        if name not in ONLY:
-            continue
-    elif not ALL and not d.get("bridgeSessionId"):
-        unattached += 1
-        continue
-    if d.get("kind") not in (None, "interactive"):
-        continue
-    surf = host(pid)
+        want = set()
+    if not want:
+        say("rc-reconnect: no record of which sessions had Remote Control; name them with --only, or use --all")
+for n in sorted(want & SKIP):
+    say("  skip   %s" % n)
+pending = want - SKIP
+skipped = len(want & SKIP)
+
+def send(name, d):
+    surf = host(int(d["pid"]))
     where = surf or "any surface"
     if DRY:
-        say("  would  %s  (%s) -> %s" % (name, status, where)); sent += 1
-        continue
+        say("  would  %s  (%s) -> %s" % (name, d.get("status") or "?", where))
+        return True
     req = {"action": "send", "name": name, "prompt": "%s %s" % (PROMPT_CMD, name)}
     if surf:
         req["surface"] = surf
     # A distinct filename per request: concurrent requests must never collide on one
-    # name, and this fans out over every session at once. Written under a name no
-    # fulfiller reads, then renamed, so a surface never picks up a half-written file.
+    # name. Written under a name no fulfiller reads, then renamed, so a surface never
+    # picks up a half-written file.
     base = "rc-reconnect-%s-%d-%d" % (re.sub(r"[^A-Za-z0-9_.-]", "_", name), int(time.time()), os.getpid())
     tmp, dst = os.path.join(INBOX, "." + base + ".tmp"), os.path.join(INBOX, base + ".json")
     try:
@@ -235,10 +246,36 @@ for fn in sorted(os.listdir(SESSIONS)):
         os.replace(tmp, dst)
     except OSError as e:
         sys.stderr.write("rc-reconnect: could not write %s (%s)\n" % (dst, e))
-        continue
-    say("  sent   %s  (%s) -> %s" % (name, status, where)); sent += 1
+        return False
+    say("  sent   %s  (%s) -> %s" % (name, d.get("status") or "?", where))
+    return True
 
+# ---- send each one once it has DROPPED -------------------------------------
+sent = stale = gone = 0
+deadline = time.time() + WAIT
+while True:
+    for name in sorted(pending):
+        d = R.get(name)
+        if d is None:
+            gone += 1; pending.discard(name); continue
+        if int(d["pid"]) not in T:
+            stale += 1; pending.discard(name); continue
+        if d.get("kind") not in (None, "interactive"):
+            pending.discard(name); continue
+        if d.get("bridgeSessionId"):
+            continue            # still connected: sending now would open the panel
+        if send(name, d):
+            sent += 1
+        pending.discard(name)
+    if not pending or time.time() >= deadline:
+        break
+    time.sleep(5 if os.name == "nt" else 2)
+    T = process_table() or T
+    R = registry()
+
+for name in sorted(pending):
+    say("  left   %s  still shows Remote Control connected -- nothing sent (it would open the panel)" % name)
 suffix = " (dry-run -- nothing written)" if DRY else ""
-say("rc-reconnect: %d session(s)%s, %d skipped, %d without Remote Control left alone, %d stale registry entries"
-    % (sent, suffix, skipped, unattached, stale))
+say("rc-reconnect: %d session(s)%s, %d still connected left alone, %d skipped, %d stale, %d not in the registry"
+    % (sent, suffix, len(pending), skipped, stale, gone))
 PY
