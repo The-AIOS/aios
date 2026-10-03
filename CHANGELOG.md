@@ -77,7 +77,7 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
-## 2026-10-02 — Every session starts with its whole context, and Remote Control comes back after an account change
+## 2026-10-02 — Every session starts with its full context, newest learnings first, and Remote Control comes back after an account change
 
 `hash: d058d27 · 978160d · e100508 · ce1bd2f · 8638e8d · a25730f · e6d9bfe · 019f120 · 17b2256 · 75bbd0a · a3735b6 · 8f4e080 · 9b525b1 · 93904ed · 1ac528d · 10af1b1 · f068093 · 456bef9 · ccd5f9b · 6804e73` · [#194](https://github.com/The-AIOS/aios/pull/194) · [#199](https://github.com/The-AIOS/aios/pull/199)
 
@@ -89,6 +89,7 @@
 - The floor writes itself to a private file and prints a short map: each section, its size and its line range. The session reads the file in parts until its last line, which says `END OF FLOOR`.
 - The newest learnings come right after `INTENT.md`, before the title maps, so a read that stops early loses the index rather than the learnings.
 - What the floor selects is unchanged. `CLAUDE.md` says to read the file, in a sentence reworded in place.
+- **It costs more to start, and that is the honest price.** On a heavily used vault a session now reads the whole floor, about 50,000 tokens, where it used to read a cut-off fraction without knowing. Making the floor itself smaller is the next step, not this one.
 
 **Remote Control survives an account change.** Changing accounts drops Remote Control in every session, and getting it back meant typing `/remote-control <name>` in each one. Now the switch does it:
 - The App's menu, Glass and the rotation autopilot all switch through `claude-identity.sh`, and it starts the re-attach the moment the swap lands. A manual `/login` is picked up at the watcher's next run.
