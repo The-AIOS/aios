@@ -324,7 +324,15 @@ def main(argv):
     if as_json:
         print(json.dumps(payload, indent=2))
     else:
-        print("\n".join(buf))
+        # The floor outgrows any fixed read limit (one live vault: 119 KB), and a read
+        # cut at N bytes looks complete: nothing in the text says it stopped early.
+        # The END line makes a truncated read detectable by its absence, and the byte
+        # count lets the reader check it got everything above it.
+        body = "\n".join(buf)
+        print(body)
+        print("=== END OF FLOOR -- %d bytes above this line. If your read of the floor does "
+              "not end on this line, it was cut: write the floor to a file and read it to the "
+              "end. ===" % len((body + "\n").encode("utf-8")))
     return 0
 
 

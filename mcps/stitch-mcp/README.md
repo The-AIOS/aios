@@ -4,30 +4,33 @@ Google Stitch 2.0's MCP bridge. Design screens from natural language in Stitch, 
 
 ## Auth
 
-Stitch MCP is a proxy to `stitch.googleapis.com/mcp`. It authenticates with a
-**Google Cloud OAuth login** — an interactive browser sign-in, handled by `gcloud`.
-There is **no API key and no `STITCH_API_KEY` env var**; the CLI describes itself as
-the "Stitch MCP OAuth setup assistant" and exposes no key flag on any subcommand.
+**Needs an API key.** The `proxy` command — the only part Claude Code runs — reads
+`STITCH_API_KEY` and nothing else. Without it the process exits immediately with
+*"StitchProxy requires an API key (STITCH_API_KEY) or access token"*, which `claude mcp list`
+shows as `✘ Failed to connect`. (Checked against the package source for v0.5.5 through v0.9.0.)
 
-1. Install the Google Cloud CLI if missing: `brew install --cask google-cloud-sdk`
-2. Run the interactive setup (opens a browser — must be run by a human, not an agent):
-   ```bash
-   npx -y @_davideast/stitch-mcp init
-   ```
-3. `source ~/.zshrc` (or open a new shell)
+The CLI's Google Cloud login (`init`) does **not** feed the proxy. It serves the CLI's other
+commands (`doctor`, `serve`, `site`, `screens`). **`doctor` does more than check:** on a machine that
+has never run it, it installs a bundled `gcloud` into `~/.stitch-mcp/` and opens a Google sign-in
+in the browser.
 
-Verify: `echo $STITCH_API_KEY` shows the key.
+1. Open https://stitch.withgoogle.com/settings (profile picture → **Stitch Settings**) → **API Key**
+   → **Create Key**. If it offers two kinds of key, choose the **MCP** key; that is the one verified here.
+   No Google Cloud project or billing is needed.
+2. Copy it. Don't paste it into a chat: read it from the clipboard in step 3 so it never lands in
+   the conversation.
 
 ## Install
 
+Register with Claude Code. `-s user` makes it available from every folder, not only the one you ran it in:
 ```bash
-npx @_davideast/stitch-mcp proxy
+claude mcp add -s user stitch -e STITCH_API_KEY="$(pbpaste | tr -d '[:space:]')" -- npx -y @_davideast/stitch-mcp proxy
 ```
+(`pbpaste` is macOS. On Linux use `xclip -o -selection clipboard`; on Windows paste the key in place of the `$(…)`.)
 
-Register with Claude Code (reads `STITCH_API_KEY` from env at launch):
-```bash
-claude mcp add stitch -- npx -y @_davideast/stitch-mcp proxy
-```
+**Verify with a real call, not only the status line.** `✔ Connected` means the process started. It
+does not prove the key is accepted. Ask Claude to *"list my Stitch projects"*: an empty result `{}`
+is success, and an auth error means the key is wrong.
 
 No vendored code — runs directly via npx.
 
