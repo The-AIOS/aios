@@ -68,6 +68,7 @@ trap cleanup EXIT
 
 export CLAUDE_CONFIG_DIR="$FIX/cfg"
 export AIOS_HOME="$FIX/aios"
+export AIOS_QUOTA_NOTIFY=0   # the watcher must never raise a real desktop notification from a test
 mkdir -p "$CLAUDE_CONFIG_DIR/sessions" "$AIOS_HOME/spawn-inbox" "$AIOS_HOME/surfaces"
 
 # A session registry entry: $1 name, $2 pid, $3 status, $4 "no" = Remote Control NOT attached
