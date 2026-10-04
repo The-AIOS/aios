@@ -163,7 +163,7 @@ RESTATED = re.compile(r"^restated:\s*true\s*$", re.I)
 def is_restated(lines):
     """A file that declares `restated: true` in its front matter is a specification rewritten in
     place, not a chronology -- the same shape as declared/, so it has no newest end to read. Read
-    from the front matter only, never sniffed from headings (CLAUDE.md § A third shape)."""
+    from the front matter only, never sniffed from headings (CLAUDE.md § Observed Context Rules, "restated files have no clock")."""
     if not lines or lines[0].strip() != "---":
         return False
     for l in lines[1:40]:
