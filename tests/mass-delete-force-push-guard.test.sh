@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # tests/mass-delete-force-push-guard.test.sh
 #
-# The mass-deletion ceiling in hooks/aios-commit and the agent push guard in hooks/git/pre-push.
-# Drives the REAL scripts in a throwaway repo with a throwaway bare remote: a commit deleting more
-# than the limit refuses, and from a Claude session (CLAUDECODE=1) a force push, a remote-branch
-# deletion and a push that deletes more than the limit all refuse — each with its explicit escape
-# hatch, and a human at a terminal unaffected. bash 3.2-safe.
+# Deletions are ANNOUNCED, never blocked (hooks/aios-commit and hooks/git/pre-push), and from a
+# Claude session (CLAUDECODE=1) a force push or a remote-branch deletion STOPS and asks the
+# operator, passing with AIOS_ALLOW_FORCE_PUSH=1 once they said yes. A human at a terminal is
+# unaffected. Drives the REAL scripts in a throwaway repo with a throwaway bare remote. bash 3.2-safe.
 #
 # Run:  bash tests/mass-delete-force-push-guard.test.sh
 set -uo pipefail
@@ -28,24 +27,29 @@ mkdir -p notes; i=1; while [ $i -le 40 ]; do echo "note $i" > "notes/n$i.md"; i=
 git add -A && git commit -qm init && git push -q origin main 2>/dev/null
 P=""; i=1; while [ $i -le 30 ]; do rm "notes/n$i.md"; P="$P notes/n$i.md"; i=$((i+1)); done
 
-echo "-- aios-commit --"
+echo "-- aios-commit: a deletion is announced, never refused --"
 # shellcheck disable=SC2086
-env -u AIOS_ALLOW_MASS_DELETE bash "$AC" --no-push -m "delete 30" $P >/dev/null 2>&1; rc=$?
-[ "$rc" != 0 ] && ok "a commit deleting 30 files refuses" || no "a commit deleting 30 files went through"
-[ "$(git rev-list --count HEAD)" = 1 ] && ok "…and nothing was committed" || no "a refused commit still moved HEAD"
-# shellcheck disable=SC2086
-AIOS_ALLOW_MASS_DELETE=1 bash "$AC" --no-push -m "delete 30 ok" $P >/dev/null 2>&1; expect $? 0 "AIOS_ALLOW_MASS_DELETE=1 lets it through"
-rm notes/n31.md; bash "$AC" --no-push -m "delete 1" notes/n31.md >/dev/null 2>&1; expect $? 0 "a small deletion is untouched"
+out=$(bash "$AC" --no-push -m "delete 30" $P 2>&1); rc=$?
+expect $rc 0 "a commit deleting 30 files goes through (git is the undo)"
+[ "$(git rev-list --count HEAD)" = 2 ] && ok "…and is committed" || no "the deletion commit did not land"
+case "$out" in *"DELETES 30 file(s)"*"undo: git revert"*) ok "…and says how many, with the undo" ;; *) no "no deletion announcement — $out" ;; esac
+echo z > notes/n40.md; out=$(bash "$AC" --no-push -m "edit" notes/n40.md 2>&1)
+case "$out" in *DELETES*) no "an edit was announced as a deletion" ;; *) ok "a commit with no deletion says nothing about deletions" ;; esac
 
 echo "-- pre-push, from a Claude session --"
-CLAUDECODE=1 git push -q origin main 2>/dev/null; expect $? 1 "a push deleting 31 files refuses"
-CLAUDECODE=1 AIOS_ALLOW_MASS_DELETE=1 git push -q origin main 2>/dev/null; expect $? 0 "…and passes with AIOS_ALLOW_MASS_DELETE=1"
+out=$(CLAUDECODE=1 git push origin main 2>&1); rc=$?
+expect $rc 0 "an agent's push carrying 30 deletions is not refused"
+case "$out" in *"DELETES 30 file(s)"*) ok "…and it is announced" ;; *) no "push deletions not announced — $out" ;; esac
 echo x > f.md; git add f.md; git commit -qm f; CLAUDECODE=1 git push -q origin main 2>/dev/null; expect $? 0 "a normal fast-forward passes"
 git commit -q --amend -m rewritten
-CLAUDECODE=1 git push -q --force origin main 2>/dev/null; expect $? 1 "a force push refuses"
-env -u CLAUDECODE git push -q --force origin main 2>/dev/null; expect $? 0 "a human's force push is not blocked"
+out=$(CLAUDECODE=1 git push --force origin main 2>&1); rc=$?
+expect $rc 1 "an agent's force push stops"
+case "$out" in *"Ask the operator first"*) ok "…and tells it to ask the operator" ;; *) no "no ask-the-operator message — $out" ;; esac
+CLAUDECODE=1 AIOS_ALLOW_FORCE_PUSH=1 git push -q --force origin main 2>/dev/null; expect $? 0 "…and passes with the operator's yes (AIOS_ALLOW_FORCE_PUSH=1)"
+git commit -q --amend -m rewritten-again
+env -u CLAUDECODE git push -q --force origin main 2>/dev/null; expect $? 0 "a human's force push is not stopped"
 git push -q origin main:side 2>/dev/null
-CLAUDECODE=1 git push -q origin --delete side 2>/dev/null; expect $? 1 "deleting a remote branch refuses"
+CLAUDECODE=1 git push -q origin --delete side 2>/dev/null; expect $? 1 "an agent deleting a remote branch stops"
 CLAUDECODE=1 AIOS_ALLOW_FORCE_PUSH=1 git push -q origin --delete side 2>/dev/null; expect $? 0 "…and passes with AIOS_ALLOW_FORCE_PUSH=1"
 
 echo "-- the owner guard still reads the ref list --"
