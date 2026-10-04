@@ -26,6 +26,10 @@ case "$(tool mcp__slack__slack_get_thread)" in *'came from a chat message'*) ok 
 [ -z "$(tool mcp__google-workspace__send_gmail_message)" ] && ok "a send is the session's own act: no label" || no "a send was labelled"
 [ -z "$(tool mcp__forum__forum_send_message)" ] && ok "a Forum send: no label" || no "a Forum send was labelled"
 [ -z "$(tool Read)" ] && ok "a local file read: no label" || no "Read was labelled"
+case "$(tool mcp__claude_ai_Gmail__get_thread_replies)" in *'came from an email'*) ok "a READ named with a write word (get_thread_replies) is still labelled" ;; *) no "a read with 'repl' in its name went unlabelled" ;; esac
+case "$(tool mcp__claude-in-chrome__get_page_text)" in *'web page'*) ok "a browser page read is labelled" ;; *) no "browser read not labelled" ;; esac
+case "$(tool mcp__claude_ai_Canva__search_designs)" in *'connected service'*) ok "an unknown hosted connector's read is labelled" ;; *) no "hosted connector read not labelled" ;; esac
+[ -z "$(tool mcp__slack__slack_add_reaction)" ] && ok "a family-prefixed write (slack_add_reaction): no label" || no "slack_add_reaction was labelled"
 out=$(tool mcp__google-workspace__get_gmail_message_content)
 printf '%s' "$out" | $PYBIN -c 'import json,sys; d=json.load(sys.stdin)["hookSpecificOutput"]; assert d["hookEventName"]=="PostToolUse" and d["additionalContext"]' \
   && ok "PostToolUse output is the hook JSON shape" || no "bad PostToolUse JSON"

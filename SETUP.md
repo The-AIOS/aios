@@ -555,7 +555,7 @@ Merge `PreToolUse` alongside your existing `UserPromptSubmit` array — don't re
     ],
     "PostToolUse": [
       {
-        "matcher": "mcp__forum__.*|mcp__google-workspace__.*|mcp__claude_ai_Gmail__.*|mcp__claude_ai_Google_Drive__.*|mcp__claude_ai_Slack__.*|mcp__slack__.*|mcp__claude_ai_Microsoft_365__.*|mcp__atlassian__.*|WebFetch|WebSearch",
+        "matcher": "mcp__forum__.*|mcp__google-workspace__.*|mcp__claude_ai_.*|mcp__slack__.*|mcp__atlassian__.*|mcp__claude-in-chrome__.*|mcp__notebooklm.*|WebFetch|WebSearch",
         "hooks": [ { "type": "command", "command": "python3 ~/aios/hooks/provenance.py --tool", "timeout": 10 } ]
       }
     ]
@@ -563,7 +563,7 @@ Merge `PreToolUse` alongside your existing `UserPromptSubmit` array — don't re
 }
 ```
 
-A label only marks *reading* tools; a send, create or share returns your own act and gets none. Requests that a script writes straight into `~/.aios/spawn-inbox/` (not through a Claude session) are not fingerprinted, and a long request delivered as a pointer line is recognised by the pointer itself.
+Labels **inform** the model; they are not a lock. A send, create or share returns your own act and gets none; anything else from these services is labelled. Text pulled in by a shell command (`curl`) or a plain file read cannot be told apart by tool name and gets no label. Requests that a script writes straight into `~/.aios/spawn-inbox/` (not through a Claude session) are not fingerprinted, and a long request delivered as a pointer line is recognised by the pointer itself.
 
 **On Windows — the same hooks, in the form that actually runs there.** Two names in the blocks above do not exist on a stock Windows install, and a setup session will otherwise find that out by trial:
 
@@ -592,7 +592,7 @@ Write **absolute paths with forward slashes** (resolve them once with `cygpath -
     ],
     "PostToolUse": [
       {
-        "matcher": "mcp__forum__.*|mcp__google-workspace__.*|mcp__claude_ai_Gmail__.*|mcp__claude_ai_Google_Drive__.*|mcp__claude_ai_Slack__.*|mcp__slack__.*|mcp__claude_ai_Microsoft_365__.*|mcp__atlassian__.*|WebFetch|WebSearch",
+        "matcher": "mcp__forum__.*|mcp__google-workspace__.*|mcp__claude_ai_.*|mcp__slack__.*|mcp__atlassian__.*|mcp__claude-in-chrome__.*|mcp__notebooklm.*|WebFetch|WebSearch",
         "hooks": [ { "type": "command", "command": "python \"C:/Users/<you>/aios/hooks/provenance.py\" --tool", "timeout": 10 } ]
       }
     ]

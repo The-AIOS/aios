@@ -11,6 +11,11 @@ wrote, while looking exactly like text that matters:
      into the target session, and the transcript records it exactly like the operator typing
      (origin.kind "human"). A routine's or another session's words then read as the operator's.
 
+It INFORMS the model; it is not an enforcement control. Text from a shell command (curl) or a
+plain file read cannot be classified by tool name and is not labelled; a bus prompt is matched by
+its normalised text (case and spacing aside), so a surface that rewrites a prompt before typing
+it would defeat the match -- the pointer line for long payloads is matched on its own.
+
 This hook labels both, by STRUCTURE, never by guessing at wording: (1) by which tool returned the
 text, (2) by matching the prompt against the fingerprints hooks/bus_log.py recorded when the
 request was written (or by the bus's own pointer line for a long payload). It never blocks
@@ -45,12 +50,17 @@ SOURCES = [
     (r"slack|teams_|_chat", "a chat message"),
     (r"^mcp__atlassian__|jira|confluence", "a ticket or wiki page"),
     (r"drive|_doc|sheet|slide|presentation|form", "a shared document"),
-    (r"^WebFetch$|^WebSearch$|^mcp__.*(fetch|browse|scrape)", "a web page"),
+    (r"^WebFetch$|^WebSearch$|^mcp__claude-in-chrome__|^mcp__.*(fetch|browse|scrape)", "a web page"),
+    (r"notebooklm", "a notebook source"),
+    (r"^mcp__claude_ai_", "a connected service"),
 ]
-# Results of tools that WRITE (a send receipt, a created doc's id) are the session's own act.
-WRITES = re.compile(r"send|create|update|manage|delete|modify|add_|set_|draft|import_|batch_|"
-                    r"move|copy|append|insert|reply|forward|share|publish|post|upload|bind|join|"
-                    r"leave|login|offer|present|verify|sync|mark|reaction", re.I)
+# Results of tools that WRITE (a send receipt, a created doc's id) are the session's own act. A tool
+# counts as a write only when its ACTION starts with a write verb (after an optional family prefix,
+# as in slack_send_message); anything else from an outside-content family is labelled. Matching a
+# verb anywhere in the name was fail-open: a read like get_thread_replies looked like a "reply".
+WRITES = re.compile(r"^(?:[a-z0-9]+_)?(?:send|create|update|delete|manage|modify|set|add|draft|import|"
+                    r"batch|move|copy|append|insert|share|publish|post|upload|bind|join|leave|login|"
+                    r"offer|present|mark|remove|resize|format|authenticate|complete)(?:_|$)", re.I)
 PAYLOAD_POINTER = re.compile(r"\.aios/bus-payloads/")
 
 
@@ -59,7 +69,7 @@ def emit(event, text):
 
 
 def source_of(tool):
-    if not tool or WRITES.search(tool.split("__")[-1]):
+    if not tool or WRITES.match(tool.split("__")[-1]):
         return None
     for pat, name in SOURCES:
         if re.search(pat, tool, re.I):
