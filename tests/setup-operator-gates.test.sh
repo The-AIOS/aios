@@ -73,6 +73,15 @@ github_optional SETUP.md \
 backup_probe plugins/aios/commands/today.md \
   && ok "/today re-derives the not-backed-up warning from the remote" \
   || no "/today has no backup probe" "a vault left local-only by setup would be silent forever"
+# The executor applies settings and runs installers itself; a newcomer is never handed JSON,
+# paths or shell to paste (#196 — a Windows first install stopped exactly there).
+block SETUP.md | grep -F 'the operator never edits JSON, types a path or pastes a shell command' >/dev/null \
+  && ok "the setup executor applies the technical steps itself" \
+  || no "SETUP's executor block no longer forbids handing the operator JSON or shell" "#196"
+block SETUP.md | grep -F 'never hand them the JSON to merge by hand' >/dev/null \
+  && ok "a refused write is reported in a sentence, never handed over as JSON" \
+  || no "SETUP no longer forbids the hand-merge fallback" "#196"
+
 for f in SETUP.md plugins/aios/commands/cold-start-interview.md; do
   no_pwsh "$f" && ok "$f invokes no pwsh" \
     || no "$f still invokes pwsh" "the Windows prerequisites never install PowerShell 7"
