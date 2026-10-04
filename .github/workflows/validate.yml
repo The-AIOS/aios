@@ -1039,6 +1039,8 @@ jobs:
 
       - name: aios-commit / aios-note-append / secret-scan regression test
         run: bash tests/aios-commit.test.sh
+      - name: a diverged push with disjoint changes reconciles itself
+        run: bash tests/aios-commit-reconcile.test.sh
 
       - name: install-wrappers detect_primary_session regression test
         # The name this returns is written into the operator's shell rc, so a wrong answer
@@ -1928,6 +1930,8 @@ jobs:
 
       - name: Regression suite under bash 3.2
         run: /bin/bash tests/aios-commit.test.sh
+      - name: a diverged push with disjoint changes reconciles itself (bash 3.2)
+        run: /bin/bash tests/aios-commit-reconcile.test.sh
 
       - name: lock reclaim and HEAD compare-and-swap under bash 3.2
         run: /bin/bash tests/lock-reclaim-and-head-cas.test.sh
@@ -1999,6 +2003,8 @@ jobs:
       - name: Regression suite under Git Bash
         shell: bash
         run: bash tests/aios-commit.test.sh
+      - name: a diverged push with disjoint changes reconciles itself
+        run: bash tests/aios-commit-reconcile.test.sh
 
   connector_windows:
     # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
