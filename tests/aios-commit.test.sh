@@ -39,7 +39,7 @@ R=$(newrepo); ( cd "$R"; echo v1>tracked; echo o>unrel; git add -A; git commit -
   echo v2>tracked; echo DIRTY>unrel
   "$AC" -m "scoped" --no-push -- tracked >/dev/null 2>&1
   n=$(git show --stat --format='' HEAD | grep -c '|')
-  [ "$n" = "1" ] && git status --porcelain unrel | grep -q '^ M' ) && ok "scoped: 1 file committed, unrelated stays dirty" || no "scope leak"
+  [ "$n" = "1" ] && git status --porcelain unrel | grep '^ M' >/dev/null ) && ok "scoped: 1 file committed, unrelated stays dirty" || no "scope leak"
 rm -rf "$R"
 
 echo "── aios-commit --vault: space-path committed, machine-local excluded ──"
@@ -89,7 +89,7 @@ rm -rf "$R"
 echo "── aios-commit: ROOT commit, no HEAD yet (PARENTS empty) ──"
 R=$(newrepo); ( cd "$R"; echo v1>f
   "$AC" -m "root" --no-push -- f >/dev/null 2>&1
-  git rev-parse HEAD >/dev/null 2>&1 && git show --stat --format='' HEAD | grep -q 'f' ) \
+  git rev-parse HEAD >/dev/null 2>&1 && git show --stat --format='' HEAD | grep 'f' >/dev/null ) \
   && ok "first commit in a fresh repo succeeds (empty PARENTS[@])" || no "root commit failed — PARENTS[@] unbound"
 rm -rf "$R"
 
@@ -103,7 +103,7 @@ R=$(newrepo); ( cd "$R"; printf 'top\n' > note.md; git add -A; git commit -qm in
   # proved nothing). Pre-fix, the expansion aborts *after* the write and *before* the commit, so the
   # block is on disk but HEAD never moves — and the instinctive retry duplicates it.
   "$ANA" --note note.md -m "s" --block-file blk.md >/dev/null 2>&1
-  [ "$H0" != "$(git rev-parse HEAD)" ] && git show HEAD:note.md | grep -q "## Session C" ) \
+  [ "$H0" != "$(git rev-parse HEAD)" ] && git show HEAD:note.md | grep "## Session C" >/dev/null ) \
   && ok "note-append commits on the default push path (empty NOPUSH[@])" || no "note-append aborted — NOPUSH[@] unbound; block written to disk but never committed"
 rm -rf "$R"
 
@@ -121,7 +121,7 @@ R=$(newrepo); ( cd "$R"; mkdir .glass; echo '{"f":14}' > .glass/shell.json; echo
     && [ "$(git ls-files .glass/ | wc -l | tr -d ' ')" = 0 ] \
     && [ -f .glass/shell.json ] \
     && [ "$(git show --name-only --format= HEAD | grep -c sibling)" = 0 ] \
-    && git ls-files --cached sibling.txt | grep -q . ) \
+    && git ls-files --cached sibling.txt | grep . >/dev/null ) \
   && ok "--untrack: removal committed, sticks in the index, file kept on disk, sibling's staging preserved" \
   || no "--untrack broken (re-added by git add, or index not synced so the untrack won't stick, or sibling swept)"
 rm -rf "$R"
@@ -147,7 +147,7 @@ R=$(newrepo); ( cd "$R"; echo gpl > LICENSE; echo old > NOTICE; git add -A; git 
   git mv LICENSE LICENSE-TEMPLATE                           # 'LICENSE' now matches nothing
   "$AC" -m "renamed" --no-push -- NOTICE LICENSE LICENSE-TEMPLATE >/dev/null 2>&1
   # the commit must carry the new NOTICE *and* the real index must agree with HEAD afterwards
-  git show HEAD:NOTICE 2>/dev/null | grep -qx new \
+  git show HEAD:NOTICE 2>/dev/null | grep -x new \ >/dev/null
     && [ -z "$(git diff --cached --name-only HEAD -- NOTICE LICENSE LICENSE-TEMPLATE)" ] \
     && [ -z "$(git status --porcelain -- NOTICE LICENSE-TEMPLATE)" ] ) \
   && ok "dead pathspec doesn't abort the sync: NOTICE committed AND index clean (no phantom MM)" \
@@ -258,18 +258,18 @@ R=$(mktemp -d); ( cd "$R" && git init -q . && git config user.email t@t && git c
   && git config commit.gpgsign false && echo x > a.md && git add a.md && git commit -qm base ) >/dev/null 2>&1
 
 ( cd "$R" && echo y > a.md && CLAUDE_CODE_SESSION_ID="sess-abc-123" "$AC" --no-push -m "feat: tagged" -- a.md >/dev/null 2>&1 \
-  && git log -1 --format='%B' | grep -q '^AIOS-Session: sess-abc-123$' ) \
+  && git log -1 --format='%B' | grep '^AIOS-Session: sess-abc-123$' >/dev/null ) \
   && ok "session trailer written when CLAUDE_CODE_SESSION_ID is set" \
   || no "session trailer missing when the env var is set"
 
 ( cd "$R" && echo z > a.md && env -u CLAUDE_CODE_SESSION_ID "$AC" --no-push -m "feat: untagged" -- a.md >/dev/null 2>&1 \
-  && ! git log -1 --format='%B' | grep -q 'AIOS-Session' ) \
+  && ! git log -1 --format='%B' | grep 'AIOS-Session' >/dev/null ) \
   && ok "no session id → no trailer (additive, never required)" \
   || no "a trailer appeared with no session id — the change must be additive"
 
 ( cd "$R" && echo w > a.md && CLAUDE_CODE_SESSION_ID='bad
 AIOS-Session: forged' "$AC" --no-push -m "feat: hostile" -- a.md >/dev/null 2>&1 \
-  && ! git log -1 --format='%B' | grep -q 'AIOS-Session' ) \
+  && ! git log -1 --format='%B' | grep 'AIOS-Session' >/dev/null ) \
   && ok "a session id with illegal characters is REJECTED, not injected" \
   || no "a multi-line session id forged a trailer line"
 rm -rf "$R"
