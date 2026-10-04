@@ -38,5 +38,31 @@ echo mine3 > a.md
 out=$(bash "$AC" -m "mine-a3" a.md 2>&1)
 case "$out" in *"local edits to b.md"*) ok "a local edit to a remote-changed file stops it" ;; *) no "dirty remote path — $out" ;; esac
 [ "$(cat b.md)" = local-wip ] && ok "…and the operator's edit is untouched" || no "operator edit lost: $(cat b.md)"
+# 4. a remote file NAMED like a pathspec must stay literal: `*` must not check out every file
+g fetch -q; g reset -q --hard origin/main
+( cd "$T/twin" && g pull -q && echo star > '*' && g add -- '*' && g commit -qm star && g push -q )
+echo wip > c.md                # the operator's uncommitted edit, on a file the remote did NOT change
+echo mine4 > a.md
+out=$(bash "$AC" -m "mine-a4" a.md 2>&1)
+case "$out" in *"combined"*) ok "a remote file named '*' still reconciles" ;; *) no "glob-named file — $out" ;; esac
+[ "$(cat c.md)" = wip ] && ok "…and the operator's unrelated edit survives (the name stayed literal)" || no "a glob name overwrote c.md: $(cat c.md)"
+[ "$(cat '*')" = star ] && ok "…and the '*' file itself arrived" || no "the '*' file is missing"
+git checkout -q -- c.md
+# 5. a name git would quote (non-ASCII) changed on BOTH sides is still an overlap
+( cd "$T/twin" && g pull -q && echo t > 'café.md' && g add -- 'café.md' && g commit -qm cafe1 && g push -q )
+g pull -q 2>/dev/null
+( cd "$T/twin" && echo t2 > 'café.md' && g commit -qam cafe2 && g push -q )
+echo m > 'café.md'
+out=$(bash "$AC" -m "cafe-mine" 'café.md' 2>&1)
+case "$out" in *"both machines changed"*) ok "a non-ASCII name changed on both sides is caught as overlap" ;; *) no "quoted-name overlap missed — $out" ;; esac
+
+# 6. removals never use a bare rm (it follows a symlinked directory out of the repo; `git rm`
+#    refuses any path "beyond a symbolic link"). A git tree cannot express the attack directly, so
+#    this is a static guard on the function rather than a runtime case that would pass either way.
+FN=$(awk '/^reconcile_diverged\(\)\{/,/^\}/' "$AC")
+[ -n "$FN" ] || no "could not read reconcile_diverged from aios-commit"
+printf '%s\n' "$FN" | grep -v '^ *#' | sed 's/git rm/GIT_RM/g' | grep -E '(^|[^a-z_-])rm -' >/dev/null \
+  && no "reconcile_diverged removes files with a bare rm" || ok "reconcile_diverged removes files only through git rm"
+
 echo "-- $pass passed, $fail failed --"
 [ "$fail" -eq 0 ]

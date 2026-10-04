@@ -476,40 +476,46 @@ fi
 # done and the old message stands. Echo of #201, which asked for a custom hook here; the need is
 # every multi-machine operator's, so it is built in rather than left to whoever can script it.
 reconcile_diverged(){ # prints a reason and returns 1 when it will not act
-  local UPREF UP BASE TREE LP RP p MSG2 NEW
+  # File names here come from ANOTHER machine, so they are read NUL-separated (a newline in a name
+  # must not split it into two "disjoint" names) and every path is a LITERAL pathspec (a remote file
+  # named `*` or `:(glob)**` must never widen a checkout over the operator's own edits).
+  local GIT_LITERAL_PATHSPECS=1; export GIT_LITERAL_PATHSPECS
+  local UPREF UP BASE TREE p q MSG2 NEW OLD
+  local -a LP RP
   UPREF=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null) || { echo "no upstream branch"; return 1; }
   git fetch -q "${UPREF%%/*}" 2>/dev/null || { echo "could not fetch ${UPREF%%/*}"; return 1; }
   UP=$(git rev-parse -q --verify "$UPREF^{commit}") || { echo "upstream not found"; return 1; }
   git merge-base --is-ancestor "$UP" HEAD 2>/dev/null && { echo "already contains the remote"; return 1; }
-  BASE=$(git merge-base HEAD "$UP") || { echo "no common history"; return 1; }
-  LP=$(git diff --name-only --no-renames "$BASE" HEAD); RP=$(git diff --name-only --no-renames "$BASE" "$UP")
-  OVER=$(printf '%s\n' "$LP" | grep -Fx -f <(printf '%s\n' "$RP") 2>/dev/null | grep . || true)
-  [ -z "$OVER" ] || { echo "both machines changed: $(printf '%s' "$OVER" | head -3 | paste -sd ',' - | sed 's/,/, /g')"; return 1; }
-  # A remote-changed path the operator has touched here -- edited, staged, or present untracked
-  # where the remote adds it -- would be overwritten on disk. Leave it to them.
-  while IFS= read -r p; do
-    [ -n "$p" ] || continue
+  OLD=$(git rev-parse HEAD) || return 1
+  BASE=$(git merge-base "$OLD" "$UP") || { echo "no common history"; return 1; }
+  LP=(); RP=()
+  while IFS= read -r -d '' p; do LP+=("$p"); done < <(git diff -z --name-only --no-renames "$BASE" "$OLD")
+  while IFS= read -r -d '' p; do RP+=("$p"); done < <(git diff -z --name-only --no-renames "$BASE" "$UP")
+  for p in ${RP[@]+"${RP[@]}"}; do
+    case "$p" in /*|../*|*/../*|..) echo "an unsafe path from the remote"; return 1 ;; esac
+    for q in ${LP[@]+"${LP[@]}"}; do
+      [ "$p" = "$q" ] && { echo "both machines changed: $p"; return 1; }
+    done
+    # A remote-changed path the operator has touched here -- edited, staged, or present untracked
+    # where the remote adds it -- would be overwritten on disk. Leave it to them.
     if git ls-files --error-unmatch -- "$p" >/dev/null 2>&1; then
       git diff --quiet HEAD -- "$p" 2>/dev/null || { echo "you have local edits to $p, which the other machine also changed"; return 1; }
-    elif [ -e "$p" ]; then
+    elif [ -e "$p" ] || [ -L "$p" ]; then
       echo "an untracked $p is where the other machine added one"; return 1
     fi
-  done <<EOF_RP
-$RP
-EOF_RP
-  TREE=$(git merge-tree --write-tree "$UP" HEAD 2>/dev/null) || { echo "git merge-tree could not combine them (git 2.38+ needed)"; return 1; }
+  done
+  TREE=$(git merge-tree --write-tree "$UP" "$OLD" 2>/dev/null) || { echo "git merge-tree could not combine them (git 2.38+ needed)"; return 1; }
   TREE=$(printf '%s' "$TREE" | head -1)
   MSG2="merge: reconcile with ${UPREF} (another machine pushed first; disjoint files)"
-  NEW=$(git commit-tree "$TREE" -p HEAD -p "$UP" -m "$MSG2") || { echo "commit-tree failed"; return 1; }
-  git update-ref HEAD "$NEW" "$(git rev-parse HEAD)" 2>/dev/null || { echo "HEAD moved meanwhile"; return 1; }
+  NEW=$(git commit-tree "$TREE" -p "$OLD" -p "$UP" -m "$MSG2") || { echo "commit-tree failed"; return 1; }
+  git update-ref HEAD "$NEW" "$OLD" 2>/dev/null || { echo "HEAD moved meanwhile"; return 1; }
   # Bring ONLY the remote's files onto disk and into the index; every other file is untouched.
-  while IFS= read -r p; do
-    [ -n "$p" ] || continue
+  for p in ${RP[@]+"${RP[@]}"}; do
     if git cat-file -e "HEAD:$p" 2>/dev/null; then git checkout -q HEAD -- "$p"
-    else git rm -q --cached --ignore-unmatch -- "$p" >/dev/null 2>&1; rm -f -- "$p"; fi
-  done <<EOF_RP2
-$RP
-EOF_RP2
+    # Never a bare `rm`: it follows a symlinked directory out of the repo. `git rm` refuses any
+    # path "beyond a symbolic link", and the path was already verified unmodified above.
+    else git rm -q -f --ignore-unmatch -- "$p" >/dev/null 2>&1 || { echo "could not remove $p safely"; return 1; }; fi
+  done
   echo "aios-commit: the other machine pushed first; it changed different files, so they were combined (${NEW:0:9})."
 }
 
