@@ -2319,7 +2319,6 @@ jobs:
       - manifests
       - frontmatter
       - personalization
-      - credentials
       - drift
       - counts
       - skill_resolution
