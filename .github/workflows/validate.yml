@@ -555,16 +555,76 @@ jobs:
           [ "$PLUGIN_NAME" = "aios" ] || { echo "::error::marketplace plugin entry should be 'aios', got '$PLUGIN_NAME'"; exit 1; }
           echo "OK: manifest naming is aios @ the-aios"
 
+  # The credentials guard and the frontmatter check share ONE job. GitHub bills every job
+  # rounded UP to the whole minute, and each takes ~15 s: as two jobs they billed 2 minutes
+  # per push, as one they bill 1. In a fork these are the only two jobs that run, so every
+  # operator whose vault is a fork paid double on every push. `!cancelled()` keeps the
+  # frontmatter check running when the credentials guard fails, as when they were separate.
   frontmatter:
-    name: YAML frontmatter
+    name: Vault guards (credentials + YAML frontmatter)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: No credential-shaped files in tree (secrets, tokens, cookies, OAuth, certs, keys)
+        run: |
+          set -e
+          # Pattern-based scan for files that look like real credentials. The framework
+          # ships only *.template files; real credentials are operator-specific and must
+          # stay gitignored. This is a path/filename check — content-based secret detection
+          # is GitHub Push Protection at push time where it is enabled — it is on by default
+          # for PUBLIC repos only, so a private operator vault usually lacks it — plus the
+          # secret self-scan in hooks/aios-commit before the commit exists.
+          #
+          # Categories covered:
+          # - Cryptographic keys: *.key, *.pem, *.pfx, *.p12, *.cer, *.crt
+          # - Token/credential files: token.json, credentials.json, *-tokens.json
+          # - Secret-named JSON: *secret*.json, *credentials*.json, *oauth*.json
+          # - Environment files: .env, .env.local
+          # - Browser session state: storage_state.json, cookies.json, **/auth/*.json
+          # - Spotify/Slack/etc. cache: *spotify*cache*.json, *.slack-tokens.json
+          # - OAuth callback artifacts: auth_link.html
+          FOUND=$(
+            {
+              find . -type f \( \
+                -name "*.key" -o \
+                -name "*.pem" -o \
+                -name "*.pfx" -o \
+                -name "*.p12" -o \
+                -name "*.cer" -o \
+                -name "*.crt" -o \
+                -name "token.json" -o \
+                -name "credentials.json" -o \
+                -name ".env" -o \
+                -name ".env.local" -o \
+                -name "storage_state.json" -o \
+                -name "cookies.json" -o \
+                -name "auth_link.html" -o \
+                -name "*-tokens.json" -o \
+                -name ".slack-mcp-tokens.json" -o \
+                -name "spotify-cache.json" \
+              \) -not -path "./.git/*" -not -path "./vault/.obsidian/*" 2>/dev/null
+              find . -type f -name "*oauth*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
+              find . -type f -name "*secret*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
+              find . -type f -name "*credentials*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
+              find . -type f -path "*/auth/*.json" -not -path "./.git/*" 2>/dev/null
+            } | sort -u
+          )
+          if [ -n "$FOUND" ]; then
+            echo "::error::Credential-shaped files found in tree. Only *.template files ship; real credentials must stay gitignored:"
+            echo "$FOUND" | sed 's/^/  - /'
+            echo ""
+            echo "If these are legitimate (e.g., a *.key file that's actually not a credential), add the specific path to an allowlist in this workflow. If they're real credentials: 'git rm --cached <file>', verify .gitignore covers them, rotate the leaked credential immediately, and recommit without the file."
+            exit 1
+          fi
+          echo "OK: no credential-shaped files in tree"
+
       - name: Install PyYAML
+        if: ${{ !cancelled() }}
         run: pip install pyyaml
 
       - name: All command + agent + skill files have parseable frontmatter
+        if: ${{ !cancelled() }}
         run: |
           python3 <<'PY'
           import sys, yaml, glob
@@ -658,63 +718,6 @@ jobs:
             exit 1
           fi
           echo "OK: no infra→personal-vault wikilinks"
-
-  credentials:
-    name: Credentials guard
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: No credential-shaped files in tree (secrets, tokens, cookies, OAuth, certs, keys)
-        run: |
-          set -e
-          # Pattern-based scan for files that look like real credentials. The framework
-          # ships only *.template files; real credentials are operator-specific and must
-          # stay gitignored. This is a path/filename check — content-based secret detection
-          # is handled by GitHub Push Protection at push time (layered defense).
-          #
-          # Categories covered:
-          # - Cryptographic keys: *.key, *.pem, *.pfx, *.p12, *.cer, *.crt
-          # - Token/credential files: token.json, credentials.json, *-tokens.json
-          # - Secret-named JSON: *secret*.json, *credentials*.json, *oauth*.json
-          # - Environment files: .env, .env.local
-          # - Browser session state: storage_state.json, cookies.json, **/auth/*.json
-          # - Spotify/Slack/etc. cache: *spotify*cache*.json, *.slack-tokens.json
-          # - OAuth callback artifacts: auth_link.html
-          FOUND=$(
-            {
-              find . -type f \( \
-                -name "*.key" -o \
-                -name "*.pem" -o \
-                -name "*.pfx" -o \
-                -name "*.p12" -o \
-                -name "*.cer" -o \
-                -name "*.crt" -o \
-                -name "token.json" -o \
-                -name "credentials.json" -o \
-                -name ".env" -o \
-                -name ".env.local" -o \
-                -name "storage_state.json" -o \
-                -name "cookies.json" -o \
-                -name "auth_link.html" -o \
-                -name "*-tokens.json" -o \
-                -name ".slack-mcp-tokens.json" -o \
-                -name "spotify-cache.json" \
-              \) -not -path "./.git/*" -not -path "./vault/.obsidian/*" 2>/dev/null
-              find . -type f -name "*oauth*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
-              find . -type f -name "*secret*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
-              find . -type f -name "*credentials*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
-              find . -type f -path "*/auth/*.json" -not -path "./.git/*" 2>/dev/null
-            } | sort -u
-          )
-          if [ -n "$FOUND" ]; then
-            echo "::error::Credential-shaped files found in tree. Only *.template files ship; real credentials must stay gitignored:"
-            echo "$FOUND" | sed 's/^/  - /'
-            echo ""
-            echo "If these are legitimate (e.g., a *.key file that's actually not a credential), add the specific path to an allowlist in this workflow. If they're real credentials: 'git rm --cached <file>', verify .gitignore covers them, rotate the leaked credential immediately, and recommit without the file."
-            exit 1
-          fi
-          echo "OK: no credential-shaped files in tree"
 
   drift:
     name: Migration drift
