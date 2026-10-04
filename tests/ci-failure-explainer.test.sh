@@ -46,6 +46,14 @@ done
 if [ -z "$MISSING" ]; then ok "every job in validate.yml is in explain's needs"
 else no "jobs missing from explain's needs:$MISSING" "a job outside that list fails while the summary says nothing"; fi
 
+# The other half: every name in `needs:` must be a job that EXISTS. GitHub rejects a workflow
+# that names a missing job before running a single step (0 s, "workflow file issue"), so a job
+# removed or renamed elsewhere turns every push red -- and no local suite runs the YAML that way.
+DANGLING=""
+for n in $(needs_list); do job_ids | grep -qx "$n" || DANGLING="$DANGLING $n"; done
+if [ -z "$DANGLING" ]; then ok "every name in explain's needs is a real job"
+else no "explain's needs names jobs that do not exist:$DANGLING" "GitHub rejects the whole workflow file"; fi
+
 # CONTROL: the comparison must be able to fail, or it is measuring nothing.
 if needs_list | grep -qx "a-job-that-does-not-exist"; then
   no "the control matched a job that does not exist — the needs parser is not reading the file"

@@ -196,6 +196,12 @@ Present what will be created as a **numbered list** (NOT a wide markdown table �
 
 **Existing-artifact collision check (mount-existing branch (i) only).** When scaffolding into an existing folder (i.e. routed from mount-existing → "set this folder up"), before the plan, list any artifacts already present in the folder that would collide with the scaffold (`README.md`, `collaborate.md`, `space-*.md`, `projects/` subfolder). Per collision, ask the user: *"Existing `{artifact}` found. Preserve (skip the scaffold for this one), overwrite (replace with template), or cancel?"*. New-space flow into a fresh folder skips this check (nothing to collide).
 
+**Inherited audience — say who will REALLY see the space (all flows, before the plan).** On Drive a folder inherits its parent's sharing, and a child in My Drive cannot drop an inherited grant: if the parent from step 2.6 is already shared, everyone on it can open the new space and everything moved into it. That sharing is the parent's and stays the parent's — **never change, remove or "fix" a parent folder's permissions; it reaches beyond this space.** What is ours is the plan telling the truth. So read the parent's access list with the adapter's `read_access(parent_id)` and compare it with the declared collaborators:
+- **Anyone beyond the operator and the declared collaborators** → add the plan's ⚠️ line (item 2b below), naming each, and ask: *"Continue with this parent, or pick another?"* A space whose real audience is wider than its plan is the one outcome this check exists to prevent.
+- **A declared collaborator who already has access through the parent** → say *"{name} already has access through {parent} — no invitation email will go out"*, so nobody waits for an email that is never sent.
+- **Context moved (not copied) into the space** → it takes on the space's audience, inherited part included; say so on that item.
+- **The list cannot be read** (no permission to view sharing, tool missing) → say *"could not read who else can see {parent}"* on item 2b. Never print a plan that implies the audience is only the declared collaborators when that was not checked.
+
 **Format (terminal-friendly — short bolded items, indented detail):**
 
 ```
@@ -203,6 +209,7 @@ Present what will be created as a **numbered list** (NOT a wide markdown table �
 
 1. **Space folder** — `{space}` at {parent path/URL} ({create new | use existing})
 2. **Space access** — {collaborators} as editors (only if new space + substrate supports access)
+   2b. ⚠️ **Also visible to** — everyone on {parent}: {names} — inherited from the parent folder; AIOS does not change the parent's sharing (only when the parent has a wider audience)
 3. **Space root artifacts** — `README.md`, `collaborate.md`, `space-{slug}.md` (3 artifacts; `collaborate.md` carries the operating protocol; on Drive these are Google Docs named with .md)
 4. **Project folder** — `projects/{project-slug}/` (new collaborative project inside the space)
 5. **Project artifacts** — `README.md` (always) + {opted-in context-derived artifacts}
@@ -365,6 +372,7 @@ Each substrate implements the same abstract operations: `find_folder`, `ensure_f
 - `find_folder` (cross-substrate existence check at step 2.2) → `mcp__google-workspace__search_drive_files` (mimeType=folder, name match across user's whole Drive).
 - **`/spaces/` convention check (step 2.6 default):** `mcp__google-workspace__search_drive_files(query="name='spaces' and mimeType='application/vnd.google-apps.folder' and 'root' in parents")`.
 - `ensure_folder` → `mcp__google-workspace__create_drive_folder` (with `parent_id` from step 2.6) or use existing if found.
+- `read_access` (step 3's inherited-audience check) → `mcp__google-workspace__get_drive_file_permissions(file_id={parent_id})`. Read-only, always. (GitHub: the owner's org members and teams; local: no inherited audience.)
 - `apply_access` → **`mcp__google-workspace__manage_drive_access(action='grant', share_with={email}, role='writer', share_type='user', send_notification=true)`**. (Pilot finding 2026-05-09: `set_drive_file_permissions` is link-sharing only — wrong tool. `manage_drive_access` is the per-user grant.)
 - `write_doc` (markdown content → Google Doc with .md filename) → `mcp__google-workspace__import_to_google_doc(file_name='{name}.md', folder_id={parent}, content={markdown}, source_format='md')`. **NOTE:** `import_to_google_doc`'s description says "extension will be ignored," and the Doc gets created without .md in the name. **Two-step pattern required:** (1) `import_to_google_doc(file_name='{name}', ...)` to create the Doc; (2) `update_drive_file(file_id={new_id}, name='{name}.md')` to add the .md extension as the visible name. Both confirmed working in pilot 2026-05-09.
 - `read_doc` (Google Doc → markdown) → `mcp__google-workspace__get_doc_as_markdown`. **Caveat:** content-identical only, not byte-identical. Frontmatter, HTML comments, blockquotes are LOST in round-trip. Use `read_doc` for human-meaningful body content, NOT for parsing structured metadata — metadata lives in the local mirror.

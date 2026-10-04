@@ -136,6 +136,18 @@ $PYBIN "$H" --out "$TMP/x/y/floor.md" "$TMP/m" > "$TMP/fb.out" 2>"$TMP/fb.err"; 
 $PYBIN "$H" --out >/dev/null 2>&1; [ $? -eq 2 ] && ok "--out with no path exits 2" || no "--out accepted no path" ""
 
 echo
+echo " a RESTATED file is mapped, not read -- it has no newest end"
+mkvault "$TMP/rs" 3 30
+RS="$TMP/rs/vault/00 - notes/context/observed/routine.md"
+{ printf -- '---\nupdated: "2026-10-01"\nrestated: true\n---\n# Routine\n'; for i in 1 2 3; do printf '### Cadence %s\nspec-body-%s spec-body-%s\n' "$i" "$i" "$i"; done; } > "$RS"
+F="$($PYBIN "$H" --print "$TMP/rs")"
+printf '%s' "$F" | grep 'spec-body-3' >/dev/null && no "a restated file's body was emitted" "it has no newest end; it belongs in the map" || ok "a restated file's bodies are not emitted"
+printf '%s' "$F" | grep '### Cadence 3' >/dev/null && ok "…its headings are still in the map" || no "a restated file vanished from the map"
+printf '%s' "$F" | grep 'Entry 3' >/dev/null && printf '%s' "$F" | grep 'w30' >/dev/null && ok "…and an accumulating file beside it still gets its newest bodies" || no "the restated rule leaked onto other files"
+sed -i.bak 's/^restated: true$/restated: false/' "$RS"
+$PYBIN "$H" --print "$TMP/rs" | grep 'spec-body-3' >/dev/null && ok "control: without the flag the body is emitted" || no "control: the body is missing even without the flag"
+
+echo
 echo " the floor emits BODIES, not only headings"
 mkvault "$TMP/v" 12 40
 F="$($PYBIN "$H" --print "$TMP/v")"

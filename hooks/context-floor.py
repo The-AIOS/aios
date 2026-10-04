@@ -157,6 +157,23 @@ def split_entries(lines):
     return pre, out
 
 
+RESTATED = re.compile(r"^restated:\s*true\s*$", re.I)
+
+
+def is_restated(lines):
+    """A file that declares `restated: true` in its front matter is a specification rewritten in
+    place, not a chronology -- the same shape as declared/, so it has no newest end to read. Read
+    from the front matter only, never sniffed from headings (CLAUDE.md § Observed Context Rules, "restated files have no clock")."""
+    if not lines or lines[0].strip() != "---":
+        return False
+    for l in lines[1:40]:
+        if l.strip() == "---":
+            return False
+        if RESTATED.match(l.strip()):
+            return True
+    return False
+
+
 def recent_slice(lines, n):
     """What the floor emits for ONE observed file: (entries, is_rule_library, texts).
 
@@ -165,6 +182,10 @@ def recent_slice(lines, n):
     how rung 1 once priced five antifragile bodies while the floor emitted its index.
     """
     _, es = split_entries(lines)
+    # A restated file has no newest end: it is mapped by its headings, like declared/, and read
+    # when a task needs it. Measured on a heavy vault: one such file was 13 KB of every floor.
+    if is_restated(lines):
+        return es, False, []
     # A rule library announces itself: it opens with a meta-pattern / index heading
     # saying to read that first. Recency is the wrong selector there -- an entry from
     # four months ago binds as hard as one from this week, and the file's job is to
@@ -296,6 +317,15 @@ def main(argv):
     w("=" * 72)
     for fn, lines in obs:
         es, is_lib, rec = recent_slice(lines, recent)
+        if is_restated(lines):
+            w("")
+            mark("newest: %s -- restated spec, mapped not read" % fn)
+            w("### FILE: %s  (restated spec -- every heading is in the map below; open the file when the task needs it)" % fn)
+            for d in payload["observed"]:
+                if d["file"] == fn:
+                    d["recent"] = []
+                    d["restated"] = True
+            continue
         if is_lib:
             w("")
             mark("newest: %s -- rule library, its index" % fn)

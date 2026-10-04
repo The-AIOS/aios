@@ -133,9 +133,15 @@ have "$(probe "$MIX_DOC" "Slack")" "ON" "7. a later enabling operator line still
 # ---------------------------------------------------------------------------
 if [ -f "$ROOT/USER.md" ]; then
   REAL="$(cat "$ROOT/USER.md")"
-  for kw in Slack calendar; do
-    have "$(probe "$REAL" "$kw")" "off" "8. canonical's own USER.md leaves '$kw' off"
-  done
+  # Only canonical's TEMPLATE is judged. In an operator vault USER.md is the operator's own
+  # file, and a legitimate line naming a source would turn this red on every push (#198).
+  if printf '%s' "$REAL" | grep -q 'EXAMPLE ONLY'; then
+    for kw in Slack calendar; do
+      have "$(probe "$REAL" "$kw")" "off" "8. canonical's own USER.md leaves '$kw' off"
+    done
+  else
+    ok "8. skipped — USER.md is an operator's own file, not the shipped template"
+  fi
 else
   ok "8. skipped — no USER.md at repo root"
 fi

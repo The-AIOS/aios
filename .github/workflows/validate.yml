@@ -13,12 +13,12 @@ permissions:
 jobs:
   structure:
     name: Repo structure
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -517,12 +517,12 @@ jobs:
 
   manifests:
     name: Plugin manifests
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -555,16 +555,76 @@ jobs:
           [ "$PLUGIN_NAME" = "aios" ] || { echo "::error::marketplace plugin entry should be 'aios', got '$PLUGIN_NAME'"; exit 1; }
           echo "OK: manifest naming is aios @ the-aios"
 
+  # The credentials guard and the frontmatter check share ONE job. GitHub bills every job
+  # rounded UP to the whole minute, and each takes ~15 s: as two jobs they billed 2 minutes
+  # per push, as one they bill 1. In a fork these are the only two jobs that run, so every
+  # operator whose vault is a fork paid double on every push. `!cancelled()` keeps the
+  # frontmatter check running when the credentials guard fails, as when they were separate.
   frontmatter:
-    name: YAML frontmatter
+    name: Vault guards (credentials + YAML frontmatter)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      - name: No credential-shaped files in tree (secrets, tokens, cookies, OAuth, certs, keys)
+        run: |
+          set -e
+          # Pattern-based scan for files that look like real credentials. The framework
+          # ships only *.template files; real credentials are operator-specific and must
+          # stay gitignored. This is a path/filename check — content-based secret detection
+          # is GitHub Push Protection at push time where it is enabled — it is on by default
+          # for PUBLIC repos only, so a private operator vault usually lacks it — plus the
+          # secret self-scan in hooks/aios-commit before the commit exists.
+          #
+          # Categories covered:
+          # - Cryptographic keys: *.key, *.pem, *.pfx, *.p12, *.cer, *.crt
+          # - Token/credential files: token.json, credentials.json, *-tokens.json
+          # - Secret-named JSON: *secret*.json, *credentials*.json, *oauth*.json
+          # - Environment files: .env, .env.local
+          # - Browser session state: storage_state.json, cookies.json, **/auth/*.json
+          # - Spotify/Slack/etc. cache: *spotify*cache*.json, *.slack-tokens.json
+          # - OAuth callback artifacts: auth_link.html
+          FOUND=$(
+            {
+              find . -type f \( \
+                -name "*.key" -o \
+                -name "*.pem" -o \
+                -name "*.pfx" -o \
+                -name "*.p12" -o \
+                -name "*.cer" -o \
+                -name "*.crt" -o \
+                -name "token.json" -o \
+                -name "credentials.json" -o \
+                -name ".env" -o \
+                -name ".env.local" -o \
+                -name "storage_state.json" -o \
+                -name "cookies.json" -o \
+                -name "auth_link.html" -o \
+                -name "*-tokens.json" -o \
+                -name ".slack-mcp-tokens.json" -o \
+                -name "spotify-cache.json" \
+              \) -not -path "./.git/*" -not -path "./vault/.obsidian/*" 2>/dev/null
+              find . -type f -name "*oauth*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
+              find . -type f -name "*secret*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
+              find . -type f -name "*credentials*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
+              find . -type f -path "*/auth/*.json" -not -path "./.git/*" 2>/dev/null
+            } | sort -u
+          )
+          if [ -n "$FOUND" ]; then
+            echo "::error::Credential-shaped files found in tree. Only *.template files ship; real credentials must stay gitignored:"
+            echo "$FOUND" | sed 's/^/  - /'
+            echo ""
+            echo "If these are legitimate (e.g., a *.key file that's actually not a credential), add the specific path to an allowlist in this workflow. If they're real credentials: 'git rm --cached <file>', verify .gitignore covers them, rotate the leaked credential immediately, and recommit without the file."
+            exit 1
+          fi
+          echo "OK: no credential-shaped files in tree"
+
       - name: Install PyYAML
+        if: ${{ !cancelled() }}
         run: pip install pyyaml
 
       - name: All command + agent + skill files have parseable frontmatter
+        if: ${{ !cancelled() }}
         run: |
           python3 <<'PY'
           import sys, yaml, glob
@@ -603,12 +663,12 @@ jobs:
 
   personalization:
     name: Personalization guard
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -659,71 +719,14 @@ jobs:
           fi
           echo "OK: no infra→personal-vault wikilinks"
 
-  credentials:
-    name: Credentials guard
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: No credential-shaped files in tree (secrets, tokens, cookies, OAuth, certs, keys)
-        run: |
-          set -e
-          # Pattern-based scan for files that look like real credentials. The framework
-          # ships only *.template files; real credentials are operator-specific and must
-          # stay gitignored. This is a path/filename check — content-based secret detection
-          # is handled by GitHub Push Protection at push time (layered defense).
-          #
-          # Categories covered:
-          # - Cryptographic keys: *.key, *.pem, *.pfx, *.p12, *.cer, *.crt
-          # - Token/credential files: token.json, credentials.json, *-tokens.json
-          # - Secret-named JSON: *secret*.json, *credentials*.json, *oauth*.json
-          # - Environment files: .env, .env.local
-          # - Browser session state: storage_state.json, cookies.json, **/auth/*.json
-          # - Spotify/Slack/etc. cache: *spotify*cache*.json, *.slack-tokens.json
-          # - OAuth callback artifacts: auth_link.html
-          FOUND=$(
-            {
-              find . -type f \( \
-                -name "*.key" -o \
-                -name "*.pem" -o \
-                -name "*.pfx" -o \
-                -name "*.p12" -o \
-                -name "*.cer" -o \
-                -name "*.crt" -o \
-                -name "token.json" -o \
-                -name "credentials.json" -o \
-                -name ".env" -o \
-                -name ".env.local" -o \
-                -name "storage_state.json" -o \
-                -name "cookies.json" -o \
-                -name "auth_link.html" -o \
-                -name "*-tokens.json" -o \
-                -name ".slack-mcp-tokens.json" -o \
-                -name "spotify-cache.json" \
-              \) -not -path "./.git/*" -not -path "./vault/.obsidian/*" 2>/dev/null
-              find . -type f -name "*oauth*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
-              find . -type f -name "*secret*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
-              find . -type f -name "*credentials*.json" -not -name "*.template" -not -path "./.git/*" 2>/dev/null
-              find . -type f -path "*/auth/*.json" -not -path "./.git/*" 2>/dev/null
-            } | sort -u
-          )
-          if [ -n "$FOUND" ]; then
-            echo "::error::Credential-shaped files found in tree. Only *.template files ship; real credentials must stay gitignored:"
-            echo "$FOUND" | sed 's/^/  - /'
-            echo ""
-            echo "If these are legitimate (e.g., a *.key file that's actually not a credential), add the specific path to an allowlist in this workflow. If they're real credentials: 'git rm --cached <file>', verify .gitignore covers them, rotate the leaked credential immediately, and recommit without the file."
-            exit 1
-          fi
-          echo "OK: no credential-shaped files in tree"
-
   drift:
     name: Migration drift
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -810,12 +813,12 @@ jobs:
 
   counts:
     name: Capability counts
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     permissions:
       contents: write    # only the repair step below writes, and only on main
@@ -903,12 +906,12 @@ jobs:
 
   skill_resolution:
     name: Skill resolution
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -978,7 +981,7 @@ jobs:
   identity_backends:
     name: Identity manager — both credential backends (${{ matrix.os }})
     # Canonical-contract check, so it carries the fork guard like its siblings.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     strategy:
       fail-fast: false
       matrix:
@@ -1018,12 +1021,12 @@ jobs:
 
   primitives:
     name: Commit primitives
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -1036,6 +1039,8 @@ jobs:
 
       - name: aios-commit / aios-note-append / secret-scan regression test
         run: bash tests/aios-commit.test.sh
+      - name: a diverged push with disjoint changes reconciles itself
+        run: bash tests/aios-commit-reconcile.test.sh
 
       - name: install-wrappers detect_primary_session regression test
         # The name this returns is written into the operator's shell rc, so a wrong answer
@@ -1110,6 +1115,10 @@ jobs:
       - name: commits and the secret scanner fail closed
         # The commit message is scanned, a missing scanner refuses, a NUL byte does not hide a token, and a --vault sweep that cannot read the repo refuses — each reproduced against the previous hooks when the base commit is available.
         run: bash tests/commit-scan-fail-closed.test.sh
+      - name: provenance marks what the operator did not write
+        # Tool results from email, chat, docs, web and Forum, and prompts the spawn inbox typed,
+        # each get one line of context saying they are not the operator's words. Never blocks.
+        run: bash tests/provenance.test.sh
       - name: /close-session asks before it writes the block, and says None for empty fields
         # Questions gathered before the committed block, step 8 verify-only, the --auto exception covering every observed write, one rule for empty fields — with mutated copies proving each check can fail.
         run: bash tests/close-session-order-and-fields.test.sh
@@ -1330,6 +1339,9 @@ jobs:
         # discovered as a broken push on someone else's machine. The suite runs against
         # a scratch GIT_CONFIG_GLOBAL so it can never read or write the real config.
         run: bash tests/pre-push.test.sh
+      - name: deletions are announced; an agent's force push asks first
+        # aios-commit and pre-push announce every deletion and never refuse it (git is the undo); from a Claude session pre-push stops a force push or a remote-branch deletion and tells the agent to ask the operator, passing with AIOS_ALLOW_FORCE_PUSH=1. A human at a terminal is unaffected.
+        run: bash tests/mass-delete-force-push-guard.test.sh
 
       - name: the tier dial resolves from ONE table, and the installers cover the same hooks
         # The rung→model table lived only inside the spawn shell function, so any surface
@@ -1885,12 +1897,12 @@ jobs:
           echo "OK: every tests/*.sh is referenced by a workflow"
 
   primitives_bash32:
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     # The same regression suite under bash 3.2 — the bash Apple ships at /bin/bash on every
     # macOS, and what `#!/usr/bin/env bash` resolves to on a stock Mac. The `primitives` job
     # above runs on ubuntu (bash 5), where `"${arr[@]}"` on an empty array is harmless — so it
@@ -1922,9 +1934,13 @@ jobs:
 
       - name: Regression suite under bash 3.2
         run: /bin/bash tests/aios-commit.test.sh
+      - name: a diverged push with disjoint changes reconciles itself (bash 3.2)
+        run: /bin/bash tests/aios-commit-reconcile.test.sh
 
       - name: lock reclaim and HEAD compare-and-swap under bash 3.2
         run: /bin/bash tests/lock-reclaim-and-head-cas.test.sh
+      - name: deletion announcements and the agent push guard under bash 3.2
+        run: /bin/bash tests/mass-delete-force-push-guard.test.sh
 
       - name: install-wrappers regression under bash 3.2
         # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.
@@ -1940,12 +1956,12 @@ jobs:
         run: /bin/bash tests/quota-threshold.test.sh
 
   primitives_windows:
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     # The same regression suite under GIT BASH — the shell Windows operators actually run
     # `aios-commit` in. The windows_installer lane below covers only the PowerShell installer,
     # so until this lane existed NOTHING had ever executed the commit primitives on Windows:
@@ -1991,14 +2007,16 @@ jobs:
       - name: Regression suite under Git Bash
         shell: bash
         run: bash tests/aios-commit.test.sh
+      - name: a diverged push with disjoint changes reconciles itself
+        run: bash tests/aios-commit-reconcile.test.sh
 
   connector_windows:
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     # The Google connector's API derivation, on the platform whose fault it was. On Windows
     # python3's stdout is TEXT mode, so `connect.sh`'s permission_groups() emits CRLF, and
     # api_for()'s `case` compared `drive<CR>` against a bare `drive)` and matched nothing —
@@ -2060,12 +2078,12 @@ jobs:
           echo "OK: $N APIs derived under Git Bash, every one a clean service name"
 
   windows_installer:
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     # The Windows installer had NO execution lane. `install-wrappers.ps1` shipped
     # twice on regex-inspection alone ("regex-verified against the same case matrix
     # but not execution-verified -- no PowerShell on the authoring machine"), and the
@@ -2301,7 +2319,6 @@ jobs:
       - manifests
       - frontmatter
       - personalization
-      - credentials
       - drift
       - counts
       - skill_resolution

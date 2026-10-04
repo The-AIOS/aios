@@ -189,7 +189,7 @@ cas(){ # $1 old|new → "rc their_in_HEAD their_reachable mine_in_HEAD"
   local their mine reach
   git -C "$r" cat-file -e HEAD:their.txt 2>/dev/null && their=yes || their=no
   git -C "$r" cat-file -e HEAD:mine.txt 2>/dev/null && mine=yes || mine=no
-  git -C "$r" log --format=%s HEAD | grep -qx theirs && reach=yes || reach=no
+  git -C "$r" log --format=%s HEAD | grep -x theirs >/dev/null && reach=yes || reach=no
   echo "$rc $their $reach $mine $(grep -c 'HEAD moved' "$r/.out")"
 }
 read -r RC THEIR REACH MINE MSG <<<"$(cas new)"

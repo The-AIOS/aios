@@ -317,6 +317,19 @@ fi
 
 TREE=$(GIT_INDEX_FILE="$TMPIDX" git write-tree) || die "write-tree failed"
 
+# ── deletions are ANNOUNCED, never blocked ────────────────────────────────────
+# WHY: an agent "recovering" from a bad push once committed hundreds of deletions unread
+# (https://dev.karakun.com/2026/08/28/coding-agent-pushed-deletion-to-main.html). The answer
+# here is to make a deletion impossible to miss, not to cap it: a number that blocks also blocks
+# the legitimate big cleanups (/aios:compact, /aios:update removals), and git already holds the
+# undo for every committed file. So every commit that deletes files says how many, and names the
+# first few, in the line it already prints.
+NDEL=0; DELNAMES=""
+if [ "${#PARENTS[@]}" -gt 0 ]; then
+  DELNAMES=$(git diff --diff-filter=D --name-only "${PARENTS[1]}" "$TREE" 2>/dev/null) || DELNAMES=""
+  NDEL=$(printf '%s' "$DELNAMES" | grep -c . || true)
+fi
+
 # ── session provenance trailer ────────────────────────────────────────────────
 # WHY: a vault is written CONCURRENTLY by several Claude sessions, and git cannot
 # tell them apart — same author, same committer, no distinguishing field. Anything
@@ -433,6 +446,9 @@ if [ ${#PATHS[@]} -gt 0 ]; then
 fi
 
 echo "aios-commit: ${COMMIT:0:9} — $(printf '%s' "$MSG" | head -1)"
+if [ "${NDEL:-0}" -gt 0 ]; then
+  echo "aios-commit: this commit DELETES $NDEL file(s): $(printf '%s\n' "$DELNAMES" | head -3 | paste -sd ',' - | sed 's/,/, /g')$([ "$NDEL" -gt 3 ] && echo ", …")  (undo: git revert ${COMMIT:0:9})"
+fi
 
 # release the lock BEFORE the (slow, network) push so other commits don't wait on it
 release; trap cleanup EXIT
@@ -450,7 +466,71 @@ if [ -n "${TARGET:-}" ] && [ "$(git symbolic-ref -q HEAD 2>/dev/null)" != "$TARG
   exit 0
 fi
 
+# ── a diverged push where the two machines changed DIFFERENT files reconciles itself ──
+# Two machines on one vault is normal (a laptop and an always-on box, a routine on another host),
+# and "another machine pushed first" is the push failure an operator meets most. When the two
+# sides touched disjoint files, the right answer is mechanical: combine them. The combined tree
+# is built with `git merge-tree` -- never in the working tree, the same discipline as the commit
+# above -- and only the remote's files are then written to disk, and only when the operator has
+# not touched them. Any overlap, any local edit to a remote-changed file, any doubt: nothing is
+# done and the old message stands. Echo of #201, which asked for a custom hook here; the need is
+# every multi-machine operator's, so it is built in rather than left to whoever can script it.
+reconcile_diverged(){ # prints a reason and returns 1 when it will not act
+  # File names here come from ANOTHER machine, so they are read NUL-separated (a newline in a name
+  # must not split it into two "disjoint" names) and every path is a LITERAL pathspec (a remote file
+  # named `*` or `:(glob)**` must never widen a checkout over the operator's own edits).
+  local GIT_LITERAL_PATHSPECS=1; export GIT_LITERAL_PATHSPECS
+  local UPREF UP BASE TREE p q MSG2 NEW OLD
+  local -a LP RP
+  UPREF=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null) || { echo "no upstream branch"; return 1; }
+  git fetch -q "${UPREF%%/*}" 2>/dev/null || { echo "could not fetch ${UPREF%%/*}"; return 1; }
+  UP=$(git rev-parse -q --verify "$UPREF^{commit}") || { echo "upstream not found"; return 1; }
+  git merge-base --is-ancestor "$UP" HEAD 2>/dev/null && { echo "already contains the remote"; return 1; }
+  OLD=$(git rev-parse HEAD) || return 1
+  BASE=$(git merge-base "$OLD" "$UP") || { echo "no common history"; return 1; }
+  LP=(); RP=()
+  while IFS= read -r -d '' p; do LP+=("$p"); done < <(git diff -z --name-only --no-renames "$BASE" "$OLD")
+  while IFS= read -r -d '' p; do RP+=("$p"); done < <(git diff -z --name-only --no-renames "$BASE" "$UP")
+  for p in ${RP[@]+"${RP[@]}"}; do
+    case "$p" in /*|../*|*/../*|..) echo "an unsafe path from the remote"; return 1 ;; esac
+    for q in ${LP[@]+"${LP[@]}"}; do
+      [ "$p" = "$q" ] && { echo "both machines changed: $p"; return 1; }
+    done
+    # A remote-changed path the operator has touched here -- edited, staged, or present untracked
+    # where the remote adds it -- would be overwritten on disk. Leave it to them.
+    if git ls-files --error-unmatch -- "$p" >/dev/null 2>&1; then
+      git diff --quiet HEAD -- "$p" 2>/dev/null || { echo "you have local edits to $p, which the other machine also changed"; return 1; }
+    elif [ -e "$p" ] || [ -L "$p" ]; then
+      echo "an untracked $p is where the other machine added one"; return 1
+    fi
+  done
+  TREE=$(git merge-tree --write-tree "$UP" "$OLD" 2>/dev/null) || { echo "git merge-tree could not combine them (git 2.38+ needed)"; return 1; }
+  TREE=$(printf '%s' "$TREE" | head -1)
+  MSG2="merge: reconcile with ${UPREF} (another machine pushed first; disjoint files)"
+  NEW=$(git commit-tree "$TREE" -p "$OLD" -p "$UP" -m "$MSG2") || { echo "commit-tree failed"; return 1; }
+  git update-ref HEAD "$NEW" "$OLD" 2>/dev/null || { echo "HEAD moved meanwhile"; return 1; }
+  # Bring ONLY the remote's files onto disk and into the index; every other file is untouched.
+  for p in ${RP[@]+"${RP[@]}"}; do
+    if git cat-file -e "HEAD:$p" 2>/dev/null; then git checkout -q HEAD -- "$p"
+    # Never a bare `rm`: it follows a symlinked directory out of the repo. `git rm` refuses any
+    # path "beyond a symbolic link", and the path was already verified unmodified above.
+    else git rm -q -f --ignore-unmatch -- "$p" >/dev/null 2>&1 || { echo "could not remove $p safely"; return 1; }; fi
+  done
+  echo "aios-commit: the other machine pushed first; it changed different files, so they were combined (${NEW:0:9})."
+}
+
 PUSH_ERR=$(git push 2>&1); PUSH_RC=$?
+case "$PUSH_ERR" in
+  *"rejected"*|*"non-fast-forward"*|*"etch first"*)
+    if [ "$PUSH_RC" != 0 ] && [ "${AIOS_NO_RECONCILE:-0}" != "1" ]; then
+      if WHY=$(reconcile_diverged); then
+        printf '%s\n' "$WHY"
+        PUSH_ERR=$(git push 2>&1); PUSH_RC=$?
+      else
+        RECONCILE_WHY=$WHY
+      fi
+    fi ;;
+esac
 if [ "$PUSH_RC" = 0 ]; then
   echo "aios-commit: pushed."
   acquire; LOCKED=1; settle_pending; release
@@ -477,7 +557,7 @@ else
       echo "aios-commit: push deferred — offline (transient). Retries on the next aios-commit or a manual push." >&2
       ;;
     *"rejected"*|*"non-fast-forward"*|*"etch first"*)
-      echo "aios-commit: push rejected — the remote has diverged. Pull/rebase, then push. Commit is safe locally." >&2
+      echo "aios-commit: push rejected — the remote has diverged${RECONCILE_WHY:+, and could not be combined automatically ($RECONCILE_WHY)}. Pull/rebase, then push. Commit is safe locally." >&2
       ;;
     *"ermission denied"*|*"publickey"*|*"uthentication failed"*)
       echo "aios-commit: push failed — authentication (ssh key / agent / token). Commit is safe locally." >&2
