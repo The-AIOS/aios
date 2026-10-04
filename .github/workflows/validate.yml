@@ -13,12 +13,12 @@ permissions:
 jobs:
   structure:
     name: Repo structure
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -517,12 +517,12 @@ jobs:
 
   manifests:
     name: Plugin manifests
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -663,12 +663,12 @@ jobs:
 
   personalization:
     name: Personalization guard
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -721,12 +721,12 @@ jobs:
 
   drift:
     name: Migration drift
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -813,12 +813,12 @@ jobs:
 
   counts:
     name: Capability counts
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     permissions:
       contents: write    # only the repair step below writes, and only on main
@@ -906,12 +906,12 @@ jobs:
 
   skill_resolution:
     name: Skill resolution
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -981,7 +981,7 @@ jobs:
   identity_backends:
     name: Identity manager — both credential backends (${{ matrix.os }})
     # Canonical-contract check, so it carries the fork guard like its siblings.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     strategy:
       fail-fast: false
       matrix:
@@ -1021,12 +1021,12 @@ jobs:
 
   primitives:
     name: Commit primitives
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -1888,12 +1888,12 @@ jobs:
           echo "OK: every tests/*.sh is referenced by a workflow"
 
   primitives_bash32:
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     # The same regression suite under bash 3.2 — the bash Apple ships at /bin/bash on every
     # macOS, and what `#!/usr/bin/env bash` resolves to on a stock Mac. The `primitives` job
     # above runs on ubuntu (bash 5), where `"${arr[@]}"` on an empty array is harmless — so it
@@ -1943,12 +1943,12 @@ jobs:
         run: /bin/bash tests/quota-threshold.test.sh
 
   primitives_windows:
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     # The same regression suite under GIT BASH — the shell Windows operators actually run
     # `aios-commit` in. The windows_installer lane below covers only the PowerShell installer,
     # so until this lane existed NOTHING had ever executed the commit primitives on Windows:
@@ -1996,12 +1996,12 @@ jobs:
         run: bash tests/aios-commit.test.sh
 
   connector_windows:
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     # The Google connector's API derivation, on the platform whose fault it was. On Windows
     # python3's stdout is TEXT mode, so `connect.sh`'s permission_groups() emits CRLF, and
     # api_for()'s `case` compared `drive<CR>` against a bare `drive)` and matched nothing —
@@ -2063,12 +2063,12 @@ jobs:
           echo "OK: $N APIs derived under Git Bash, every one a clean service name"
 
   windows_installer:
-    # Canonical-contract check: skipped when this repo is a FORK used as an operator vault.
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
     # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
     # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
-    if: github.event.repository.fork != true
+    if: github.event.repository.fork != true && github.event.repository.private != true
     # The Windows installer had NO execution lane. `install-wrappers.ps1` shipped
     # twice on regex-inspection alone ("regex-verified against the same case matrix
     # but not execution-verified -- no PowerShell on the authoring machine"), and the
