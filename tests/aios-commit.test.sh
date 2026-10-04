@@ -147,7 +147,7 @@ R=$(newrepo); ( cd "$R"; echo gpl > LICENSE; echo old > NOTICE; git add -A; git 
   git mv LICENSE LICENSE-TEMPLATE                           # 'LICENSE' now matches nothing
   "$AC" -m "renamed" --no-push -- NOTICE LICENSE LICENSE-TEMPLATE >/dev/null 2>&1
   # the commit must carry the new NOTICE *and* the real index must agree with HEAD afterwards
-  git show HEAD:NOTICE 2>/dev/null | grep -x new \ >/dev/null
+  git show HEAD:NOTICE 2>/dev/null | grep -x new >/dev/null \
     && [ -z "$(git diff --cached --name-only HEAD -- NOTICE LICENSE LICENSE-TEMPLATE)" ] \
     && [ -z "$(git status --porcelain -- NOTICE LICENSE-TEMPLATE)" ] ) \
   && ok "dead pathspec doesn't abort the sync: NOTICE committed AND index clean (no phantom MM)" \
