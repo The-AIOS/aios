@@ -115,7 +115,7 @@ fi
 echo "── 5. A2 · the vault connector is registered silently, never asked ──"
 grep -q 'mcp-obsidian@latest' "$F" && ok "obsidian registration is present" || no "obsidian registration missing"
 grep -q 'Never ask the operator about it' "$F" && ok "explicitly marked never-ask" || no "not marked never-ask"
-awk '/^### Step 11/,/^## Output/' "$F" | grep -qi 'obsidian' \
+awk '/^### Step 11/,/^## Output/' "$F" | grep -i 'obsidian' >/dev/null \
   && no "obsidian is listed as a connector — it is infrastructure, must not appear" \
   || ok "obsidian is absent from the connectors list (infrastructure, not a connector)"
 
@@ -246,7 +246,7 @@ if grep -qE '^\s*(\|\|)?\s*claude mcp add obsidian' "$F"; then
 else
   no "the interview no longer registers the Obsidian bridge" "an App-path operator never passes through SETUP.md, so this is their only pass"
 fi
-if awk '/<summary>.*Reading this as Claude/,/<\/details>/' SETUP.md | grep -qF 'claude mcp add obsidian'; then
+if awk '/<summary>.*Reading this as Claude/,/<\/details>/' SETUP.md | grep -F 'claude mcp add obsidian' >/dev/null; then
   no "SETUP.md's executable sequence registers the Obsidian bridge again" \
      "two owners, two argument sets, and a skip-if-present guard that makes the first one permanent"
 else

@@ -121,7 +121,7 @@ grep -qF 'connector.json' mcps/_index.md \
   || no "_index.md does not point anywhere" "removing the commands without naming their replacement is worse than leaving them"
 
 echo "── 4. adding a new MCP requires a manifest ──"
-if awk '/^## Adding a new MCP/,0' mcps/_index.md | grep -qF 'connector.json'; then
+if awk '/^## Adding a new MCP/,0' mcps/_index.md | grep -F 'connector.json' >/dev/null; then
   ok "the add-an-MCP checklist requires connector.json"
 else
   no "a new MCP can be added without a manifest" "it would be invisible to the App with nothing reporting why"
@@ -201,7 +201,7 @@ else
   no "the custom-MCP index does not mention connector.json" \
      "the App will silently not list their MCP, and this suite never reaches their machine to say so"
 fi
-if awk '/^## Adding a new MCP/,0' mcps/_index.md | grep -qiE 'custom'; then
+if awk '/^## Adding a new MCP/,0' mcps/_index.md | grep -iE 'custom' >/dev/null; then
   ok "the add-an-MCP checklist covers mcps/custom/ explicitly"
 else
   no "the checklist does not mention custom/" "the case that most needs stating is the one nothing checks"

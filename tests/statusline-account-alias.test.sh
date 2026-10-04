@@ -92,7 +92,7 @@ printf 'garbage without a section\n\x00\xff binary-ish\n' > "$T/junk.md"
 echo "── it self-locates rather than hardcoding the install path ──"
 grep -q 'parents\[2\]' "$MOD" && ok "derives the repo root from __file__" \
   || no "no self-locating default" "hardcoding ~/aios depends on the operator's symlink; CI forbids it in .py"
-sed 's/#.*//' "$MOD" | grep -q 'expanduser("~/aios' \
+sed 's/#.*//' "$MOD" | grep 'expanduser("~/aios' >/dev/null \
   && no "still hardcodes ~/aios in executable text" "Migration drift will fail" \
   || ok "no hardcoded ~/aios outside comments"
 
