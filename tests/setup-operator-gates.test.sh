@@ -38,6 +38,9 @@ has(){ grep -F -- "$1" >/dev/null; }
 gates_up_front(){ before_clone "$1" | has 'gh auth status' && before_clone "$1" | has '/add-dir'; }
 clone_in_place(){ step2 "$1" | has 'git clone https://github.com/The-AIOS/aios.git .'; }
 no_pwsh(){ ! grep -qE 'pwsh (-File|skills/)' "$1"; }
+# `/add-dir` never reaches the session, so the ask must tell the operator to send a message after
+# it, or setup sits at an empty prompt waiting for a turn that never comes.
+adddir_wakes(){ before_clone "$1" | grep -F '/add-dir <path>' | has 'then type **done**'; }
 # No GitHub must not stop setup: step 2 names the fallback, and the fallback drops
 # the framework origin so a vault commit can never target the public repo.
 github_optional(){ step2 "$1" | has 'No GitHub → continue' && step2 "$1" | has 'remote remove origin'; }
@@ -66,6 +69,9 @@ echo "-- 1. the live file --"
 gates_up_front SETUP.md \
   && ok "GitHub login and /add-dir are asked for BEFORE the clone step" \
   || no "operator-only gates are not batched before step 2" "each one found later is a second, unexpected stop"
+adddir_wakes SETUP.md \
+  && ok "the /add-dir ask tells the operator to send a message after it" \
+  || no "the /add-dir ask does not say to send a message after it" "/add-dir does not reach the session; setup waits at an empty prompt"
 clone_in_place SETUP.md \
   && ok "step 2 clones INTO an empty ~/aios, not beside it" \
   || no "step 2 has no clone-in-place instruction" "the App starts the session inside ~/aios; a sibling clone is unreadable"
@@ -96,6 +102,8 @@ echo "-- 2. each check fails on the defect it guards --"
 M="$TMP/SETUP.md"
 sed '/gh auth status/d' SETUP.md > "$M"
 gates_up_front "$M" && no "gate check passed with the gh probe removed" "it is not measuring anything" || ok "gate check fires without the up-front probe"
+sed 's#, then type \*\*done\*\* so I carry on##' SETUP.md > "$M"
+adddir_wakes "$M" && no "add-dir check passed with the wake-up removed" "" || ok "add-dir check fires without the wake-up"
 sed 's#git clone https://github.com/The-AIOS/aios.git \.#git clone https://github.com/The-AIOS/aios.git ~/aios-src#' SETUP.md > "$M"
 clone_in_place "$M" && no "clone check passed with a sibling clone" "" || ok "clone check fires on a sibling clone"
 sed 's#(Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File skills/setup.ps1`)#(Windows: `pwsh skills/setup.ps1`)#' SETUP.md > "$M"
