@@ -230,11 +230,13 @@ for sh in bash zsh; do
   rm -rf "$tmp"
   # A tmp others could already write is refused, not chmod-ed (their files in it would stay theirs);
   # and on macOS, an ACL granting another account write access is refused although the mode is 0700.
-  for case_ in writable acl; do
+  for case_ in writable acl acl+xattr; do
     tmp=$(mktemp -d); mkdir -p "$tmp/aios" "$tmp/bin" "$tmp/.aios/tmp"; chmod 700 "$tmp/.aios" "$tmp/.aios/tmp"
     printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/claude"; chmod +x "$tmp/bin/claude"
     if [ "$case_" = writable ]; then chmod 777 "$tmp/.aios/tmp"
-    elif ! chmod +a "everyone allow add_file,delete_child" "$tmp/.aios/tmp" 2>/dev/null; then echo "  (skip: $sh ACL case needs macOS chmod +a)"; rm -rf "$tmp"; continue; fi
+    elif ! chmod +a "everyone allow add_file,delete_child" "$tmp/.aios/tmp" 2>/dev/null; then echo "  (skip: $sh ACL case needs macOS chmod +a)"; rm -rf "$tmp"; continue
+    # With an extended attribute too, macOS's ls -ld shows `@`, not `+`: the ACL must still be seen.
+    elif [ "$case_" = acl+xattr ]; then xattr -w com.aios.test v "$tmp/.aios/tmp" 2>/dev/null; fi
     out=$( env -u CLAUDECODE -u AIOS_GLASS_TERM HOME="$tmp" PATH="$tmp/bin:$PATH" "$sh" -c 'eval "$1"; shift; spawn "$@"' _ "$FNS" worker task 2>&1 ); rc=$?
     [ "$rc" != 0 ] && [ -z "$(ls "$tmp/.aios/tmp" 2>/dev/null)" ] && case "$out" in *"carries an ACL"*) true ;; *) false ;; esac \
       && ok "$sh: a pre-existing tmp that is $case_ is refused" || no "$sh: $case_ tmp not refused (rc=$rc): $out"
@@ -344,11 +346,14 @@ except OSError: print("refused")' "$(dirname "$SRC")" > "$tmp/out" 2>&1
   grep -qx refused "$tmp/out" && ok "_resume.py refuses a ~/.aios others can write, as the shell does" || no "_resume.py accepted a world-writable ~/.aios: $(cat "$tmp/out")"
   mkdir -p "$tmp/a/.aios/tmp"; chmod 700 "$tmp/a/.aios" "$tmp/a/.aios/tmp"
   if chmod +a "everyone allow add_file,delete_child" "$tmp/a/.aios/tmp" 2>/dev/null; then
-    HOME="$tmp/a" $PY -c 'import sys; sys.path.insert(0, sys.argv[1]); import _resume
+    for xa in no yes; do
+      [ "$xa" = yes ] && xattr -w com.aios.test v "$tmp/a/.aios/tmp" 2>/dev/null
+      HOME="$tmp/a" $PY -c 'import sys; sys.path.insert(0, sys.argv[1]); import _resume
 try:
     _resume._private_dir(); print("accepted")
 except OSError: print("refused")' "$(dirname "$SRC")" > "$tmp/out" 2>&1
-    grep -qx refused "$tmp/out" && ok "_resume.py refuses a tmp with an ACL, as the shell does" || no "_resume.py accepted a tmp with an ACL: $(cat "$tmp/out")"
+      grep -qx refused "$tmp/out" && ok "_resume.py refuses a tmp with an ACL (xattr too: $xa), as the shell does" || no "_resume.py accepted a tmp with an ACL (xattr: $xa): $(cat "$tmp/out")"
+    done
   else
     echo "  (skip: Python ACL case needs macOS chmod +a)"
   fi

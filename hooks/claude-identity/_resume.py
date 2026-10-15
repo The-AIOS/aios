@@ -76,6 +76,7 @@ Useful for verifying the fix before the next real swap fires.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 
@@ -517,13 +518,17 @@ def _private_dir() -> str:
 
 
 def _has_acl(path: str) -> bool:
-    """True when `ls -ld` marks an ACL (a trailing `+` on the mode). Same test as the shell side."""
+    """True when `path` carries an ACL. Same test as the shell side: a trailing `+` on the mode
+    in `ls -ld` (Linux), or ACL entries in `ls -lde` (macOS, which prints `@` instead of `+`
+    when the directory also has extended attributes)."""
     try:
         r = subprocess.run(["ls", "-ld", path], capture_output=True, text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.split(" ", 1)[0].endswith("+"):
+            return True
+        r = subprocess.run(["ls", "-lde", path], capture_output=True, text=True, timeout=5)
     except Exception:
         return False
-    mode = r.stdout.split(" ", 1)[0] if r.returncode == 0 else ""
-    return mode.endswith("+")
+    return r.returncode == 0 and any(re.match(r"^ *[0-9]+: ", ln) for ln in r.stdout.splitlines()[1:])
 
 
 def _write_private(path: str, text: str) -> None:

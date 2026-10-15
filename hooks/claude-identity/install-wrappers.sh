@@ -159,13 +159,19 @@ _aios_tmp_dir() {
   esac
   ( umask 077; mkdir -p "$d" ) 2>/dev/null
   # The parent counts too: whoever can write ~/.aios can rename tmp away and put their own in
-  # its place after this check. Both must be yours, writable by nobody else, and carry no ACL
-  # (a trailing `+` in ls -ld): an ACL can grant another account write access the mode bits hide.
+  # its place after this check. Both must be yours, writable by nobody else, and carry no ACL:
+  # an ACL can grant another account write access the mode bits hide. Linux marks one with a
+  # trailing `+` in ls -ld; macOS prints `@` instead when the dir also has extended attributes,
+  # so there the ACL entries themselves are read with ls -lde.
   # A tmp others could ever write is refused rather than chmod-ed: files they left in it stay theirs.
   local _p
   for _p in "$HOME/.aios/" "$d/"; do
     case "$(ls -ld "$_p" 2>/dev/null | cut -d' ' -f1)" in
-      ?????w*|????????w*|*+) echo "spawn: $_p is writable by other users or carries an ACL; refusing to write session files there." >&2; return 1 ;;
+      ?????w*|????????w*|*+) _p="!$_p" ;;
+    esac
+    case "$_p" in !*) ;; *) ls -lde "$_p" 2>/dev/null | grep -E '^ *[0-9]+: ' >/dev/null && _p="!$_p" ;; esac
+    case "$_p" in
+      !*) echo "spawn: ${_p#!} is writable by other users or carries an ACL; refusing to write session files there." >&2; return 1 ;;
     esac
   done
   if [ ! -O "$HOME/.aios/" ] || [ -L "$d" ] || [ ! -d "$d" ] || [ ! -O "$d" ]; then
