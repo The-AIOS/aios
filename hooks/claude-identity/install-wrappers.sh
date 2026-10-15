@@ -187,10 +187,11 @@ _aios_tmp_dir() {
 _spawn_clean_files() {
   # Remove one session's spawn files. Previously fixed names were simply overwritten by the
   # next spawn of the same name; mktemp names are not, so they are cleared explicitly.
-  # `find`, not a glob: an unmatched glob is a hard error in zsh.
+  # `find`, not a glob: an unmatched glob is a hard error in zsh. No prefix below is another's
+  # prefix plus a hyphen, so cleaning "foo" can never match a file of a session named "x-foo".
   local d; d="$(_aios_tmp_dir 2>/dev/null)" || return 0
   find "$d" -maxdepth 1 -type f \( -name "spawn-task-$1.*" -o -name "spawn-launch-$1.*" \
-    -o -name "spawn-launch-cmd-$1.*" -o -name "spawn-script-$1.*" \) -exec rm -f {} + 2>/dev/null
+    -o -name "spawn-paste-$1.*" -o -name "spawn-script-$1.*" \) -exec rm -f {} + 2>/dev/null
   return 0
 }
 
@@ -871,7 +872,7 @@ LAUNCHER
         # Glass-shell spawns natively (node-pty) and never uses this path.
         local applescript_file launch_cmd_file
         applescript_file="$(mktemp "$_rt/spawn-script-$name.XXXXXX")" || exit 1
-        launch_cmd_file="$(mktemp "$_rt/spawn-launch-cmd-$name.XXXXXX")" || exit 1
+        launch_cmd_file="$(mktemp "$_rt/spawn-paste-$name.XXXXXX")" || exit 1
         # Address Antigravity by bundle ID (its System-Events process name is stock
         # "Electron"); VS Code / Cursor fall back to display-name addressing.
         local activate_clause tell_process_clause

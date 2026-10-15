@@ -205,7 +205,13 @@ for sh in bash zsh; do
   [ "$(ls "$RT"/spawn-task-worker.* 2>/dev/null | wc -l | tr -d ' ')" = 1 ] && [ "$(ls "$RT"/spawn-launch-worker.* 2>/dev/null | wc -l | tr -d ' ')" = 1 ] \
     && [ "$tf2" != "$tf" ] && grep -q again "$tf2" && grep -qx "Read $tf2 and follow the instructions inside." "$tmp/args" \
     && ok "$sh: a second spawn of the same name succeeds and replaces the first one's files (no pile-up)" || no "$sh: second spawn did not run on fresh files, or files pile up: $(ls "$RT" | tr '\n' ' ')"
+  # Cleaning one name never touches another session's files, whatever its name looks like.
+  for other in cmd-worker task-worker launch-worker script-worker paste-worker worker-2; do
+    for kind in task launch script paste; do : > "$RT/spawn-$kind-$other.KEEPME"; done
+  done
   env HOME="$tmp" "$sh" -c 'eval "$1"; _spawn_clean_files worker' _ "$FNS" >/dev/null 2>&1
+  [ "$(ls "$RT"/*.KEEPME 2>/dev/null | wc -l | tr -d ' ')" = 24 ] && ok "$sh: cleaning 'worker' leaves sessions named task-worker, launch-worker, ... alone" || no "$sh: cleaning 'worker' removed another session's files: $(ls "$RT" | tr '\n' ' ')"
+  rm -f "$RT"/*.KEEPME
   ls "$RT"/spawn-*-worker.* >/dev/null 2>&1 && no "$sh: _spawn_clean_files left files behind" || ok "$sh: _spawn_clean_files removes them (and an empty match is not a zsh error)"
   grep -qx 'CLAUDE_RESPAWN_PROTOCOL=2' "$tmp/env" 2>/dev/null && ok "$sh: the respawn loop announces protocol 2 to _resume.py" || no "$sh: CLAUDE_RESPAWN_PROTOCOL=2 not exported to claude"
   rm -rf "$tmp"
@@ -290,7 +296,7 @@ OSA
     # What Terminal is told to run: the text inside do script "...".
     sed -n 's/.*do script "\(.*\)"$/\1/p' "$tmp/osa" 2>/dev/null | head -1 > "$tmp/delivered"
   else
-    ls "$RT"/spawn-launch-cmd-w1.* >/dev/null 2>&1 && no "ide: the palette's staging file was left behind" || ok "ide: the palette's staging file is removed after use"
+    ls "$RT"/spawn-paste-w1.* >/dev/null 2>&1 && no "ide: the palette's staging file was left behind" || ok "ide: the palette's staging file is removed after use"
   fi
   dcmd=$(cat "$tmp/delivered" 2>/dev/null)
   case "$dcmd" in "'$RT/spawn-launch-w1."*"'") ok "$mode: what gets run is a quoted private launcher path" ;; *) no "$mode: delivered command is '$dcmd'" ;; esac
@@ -300,7 +306,7 @@ OSA
     && ok "$mode: running it starts claude --remote-control --name w1 on the private task file" || no "$mode: the delivered command did not start the session: $(cat "$tmp/args" 2>/dev/null)"
   # spawn-kill with no live process still clears this session's files. Counted with find, one
   # pattern per name, and checked non-zero first so the "after" count cannot pass vacuously.
-  count(){ find "$RT" -maxdepth 1 -type f \( -name 'spawn-task-w1.*' -o -name 'spawn-launch-w1.*' -o -name 'spawn-script-w1.*' -o -name 'spawn-launch-cmd-w1.*' \) 2>/dev/null | wc -l | tr -d ' '; }
+  count(){ find "$RT" -maxdepth 1 -type f \( -name 'spawn-task-w1.*' -o -name 'spawn-launch-w1.*' -o -name 'spawn-script-w1.*' -o -name 'spawn-paste-w1.*' \) 2>/dev/null | wc -l | tr -d ' '; }
   before=$(count)
   env HOME="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; spawn-kill w1' _ "$KFNS" >/dev/null 2>&1
   after=$(count)
