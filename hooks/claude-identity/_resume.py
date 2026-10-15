@@ -566,6 +566,14 @@ def _write_prompt_to_tempfile(name: str, prompt: str) -> str:
     always goes to a task file and only a fixed bootstrap prompt is
     interpolated. Same class of bug, same fix."""
     path = os.path.join(_private_dir(), f"resume-prompt-{name}.md")
+    # main() writes this before stopping the session; the respawn paths call again after, and
+    # reuse that file rather than depend on a second write succeeding.
+    try:
+        with open(path, encoding="utf-8") as f:
+            if f.read() == prompt + "\n":
+                return path
+    except OSError:
+        pass
     _write_private(path, prompt + "\n")
     return path
 
@@ -835,10 +843,11 @@ def main() -> None:
             )
             continue
 
-        # Every respawn path reads its prompt from the private dir. If that dir is unusable no
-        # path can bring the session back, so it is left running rather than stopped.
+        # Every respawn path reads its prompt from the private dir, so it is written here, before
+        # the session is stopped. If that fails (an unusable dir, a full disk) no path can bring
+        # the session back, so it is left running rather than stopped.
         try:
-            _private_dir()
+            _write_prompt_to_tempfile(name, prompt)
         except OSError as e:
             failed.append(f"{pid} ({name}) not stopped: {e}")
             continue

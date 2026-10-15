@@ -400,6 +400,10 @@ sys.path.insert(0, sys.argv[1])
 import _resume as r
 
 proto = sys.argv[2]
+if len(sys.argv) > 3 and sys.argv[3] == "full-disk":
+    def full(path, text):
+        raise OSError(28, "No space left on device")
+    r._write_private = full
 os.makedirs(r.SESSIONS_DIR, exist_ok=True)
 with open(os.path.join(r.SESSIONS_DIR, "424242.json"), "w") as f:
     json.dump({"cwd": "/nonexistent"}, f)
@@ -432,6 +436,12 @@ PROBE
     HOME="$h" $PY "$tmp/probe.py" "$(dirname "$SRC")" "$proto" > "$tmp/out" 2>&1
     ! grep -qx KILL "$tmp/out" && grep -q "not stopped" "$tmp/out" \
       && ok "$lab: with a rejected private dir, main() leaves the session running and says so" || no "$lab: session stopped despite a rejected dir: $(cat "$tmp/out")"
+    rm -rf "$h"
+    # A usable dir but a failing write (a full disk): the prompt cannot be saved, so no stop either.
+    h=$(mktemp -d)
+    HOME="$h" $PY "$tmp/probe.py" "$(dirname "$SRC")" "$proto" full-disk > "$tmp/out" 2>&1
+    ! grep -qx KILL "$tmp/out" && grep -q "not stopped" "$tmp/out" \
+      && ok "$lab: when the resume prompt cannot be written, main() leaves the session running" || no "$lab: session stopped although its prompt was never written: $(cat "$tmp/out")"
     rm -rf "$h"
   done
   rm -rf "$tmp"
