@@ -81,7 +81,7 @@
 
 ## 2026-10-15 — `spawn` keeps its session files in a private folder, not in `/tmp`
 
-`hash: `
+`hash: ` · [#216](https://github.com/The-AIOS/aios/pull/216)
 
 > **What you can now do.** Run `spawn` on a Mac that other people also log into without another account being able to swap the script a new worker runs, or redirect what it writes.
 
