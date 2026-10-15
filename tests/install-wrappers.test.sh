@@ -242,6 +242,16 @@ for sh in bash zsh; do
       && ok "$sh: a pre-existing tmp that is $case_ is refused" || no "$sh: $case_ tmp not refused (rc=$rc): $out"
     rm -rf "$tmp"
   done
+  # ~/.aios as a symlink to a directory with an ACL: the target is what gets checked.
+  tmp=$(mktemp -d); mkdir -p "$tmp/aios" "$tmp/bin" "$tmp/real/tmp"; chmod 700 "$tmp/real/tmp"; ln -s "$tmp/real" "$tmp/.aios"
+  printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/claude"; chmod +x "$tmp/bin/claude"
+  if chmod +a "everyone allow add_file,delete_child" "$tmp/real" 2>/dev/null; then
+    out=$( env -u CLAUDECODE -u AIOS_GLASS_TERM HOME="$tmp" PATH="$tmp/bin:$PATH" "$sh" -c 'eval "$1"; shift; spawn "$@"' _ "$FNS" worker task 2>&1 ); rc=$?
+    [ "$rc" != 0 ] && [ -z "$(ls "$tmp/real/tmp")" ] && ok "$sh: a symlinked ~/.aios whose target has an ACL is refused" || no "$sh: symlinked ~/.aios with ACL not refused (rc=$rc): $out"
+  else
+    echo "  (skip: $sh symlinked-parent ACL case needs macOS chmod +a)"
+  fi
+  rm -rf "$tmp"
 done
 echo "── the Terminal and IDE launch paths hand over a private launcher that still starts --name <name> ──"
 # Stand-ins for osascript, pgrep and the clipboard: the branch runs for real, and the launcher it
@@ -354,6 +364,12 @@ try:
 except OSError: print("refused")' "$(dirname "$SRC")" > "$tmp/out" 2>&1
       grep -qx refused "$tmp/out" && ok "_resume.py refuses a tmp with an ACL (xattr too: $xa), as the shell does" || no "_resume.py accepted a tmp with an ACL (xattr: $xa): $(cat "$tmp/out")"
     done
+    mkdir -p "$tmp/s/real/tmp"; chmod 700 "$tmp/s/real/tmp"; ln -s "$tmp/s/real" "$tmp/s/.aios"; chmod +a "everyone allow add_file,delete_child" "$tmp/s/real"
+    HOME="$tmp/s" $PY -c 'import sys; sys.path.insert(0, sys.argv[1]); import _resume
+try:
+    _resume._private_dir(); print("accepted")
+except OSError: print("refused")' "$(dirname "$SRC")" > "$tmp/out" 2>&1
+    grep -qx refused "$tmp/out" && ok "_resume.py checks the ACL of a symlinked ~/.aios's target, as the shell does" || no "_resume.py accepted a symlinked ~/.aios whose target has an ACL: $(cat "$tmp/out")"
   else
     echo "  (skip: Python ACL case needs macOS chmod +a)"
   fi

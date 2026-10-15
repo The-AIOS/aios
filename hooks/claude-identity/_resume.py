@@ -508,7 +508,7 @@ def _private_dir() -> str:
     # they left in it would stay theirs.
     for p in (os.path.dirname(d), d):
         st = os.stat(p)
-        if (hasattr(os, "getuid") and st.st_uid != os.getuid()) or st.st_mode & 0o022 or _has_acl(p):
+        if (hasattr(os, "getuid") and st.st_uid != os.getuid()) or st.st_mode & 0o022 or _has_acl(p + os.sep):
             raise OSError(f"{p} is not owned by the current user, is writable by others, or has an ACL")
     st = os.lstat(d)
     if stat.S_ISLNK(st.st_mode) or not stat.S_ISDIR(st.st_mode):
@@ -518,7 +518,8 @@ def _private_dir() -> str:
 
 
 def _has_acl(path: str) -> bool:
-    """True when `path` carries an ACL. Same test as the shell side: a trailing `+` on the mode
+    """True when `path` carries an ACL (pass it with a trailing separator so `ls` reads the
+    directory a symlink points to, not the link). Same test as the shell side: a trailing `+` on the mode
     in `ls -ld` (Linux), or ACL entries in `ls -lde` (macOS, which prints `@` instead of `+`
     when the directory also has extended attributes)."""
     try:
