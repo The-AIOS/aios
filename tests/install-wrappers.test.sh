@@ -252,6 +252,13 @@ for sh in bash zsh; do
     echo "  (skip: $sh symlinked-parent ACL case needs macOS chmod +a)"
   fi
   rm -rf "$tmp"
+  # Any symlinked ~/.aios is refused, even to a clean 0700 directory: its target's parent may be shared.
+  tmp=$(mktemp -d); mkdir -p "$tmp/aios" "$tmp/bin" "$tmp/real/tmp"; chmod 700 "$tmp/real" "$tmp/real/tmp"; ln -s "$tmp/real" "$tmp/.aios"
+  printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/claude"; chmod +x "$tmp/bin/claude"
+  out=$( env -u CLAUDECODE -u AIOS_GLASS_TERM HOME="$tmp" PATH="$tmp/bin:$PATH" "$sh" -c 'eval "$1"; shift; spawn "$@"' _ "$FNS" worker task 2>&1 ); rc=$?
+  [ "$rc" != 0 ] && [ -z "$(ls "$tmp/real/tmp")" ] && case "$out" in *"is a symlink"*) true ;; *) false ;; esac \
+    && ok "$sh: a symlinked ~/.aios is refused outright" || no "$sh: symlinked ~/.aios accepted (rc=$rc): $out"
+  rm -rf "$tmp"
 done
 echo "── the Terminal and IDE launch paths hand over a private launcher that still starts --name <name> ──"
 # Stand-ins for osascript, pgrep and the clipboard: the branch runs for real, and the launcher it
@@ -348,6 +355,12 @@ try:
     _resume._private_dir(); print("accepted")
 except OSError: print("refused")' "$(dirname "$SRC")" > "$tmp/out" 2>&1
   grep -qx refused "$tmp/out" && [ ! -e "$tmp/q'h/.aios" ] && ok "_resume.py refuses a HOME with a quote, as the shell does" || no "_resume.py accepted a quoted HOME: $(cat "$tmp/out")"
+  mkdir -p "$tmp/l/real/tmp"; chmod 700 "$tmp/l/real" "$tmp/l/real/tmp"; ln -s "$tmp/l/real" "$tmp/l/.aios"
+  HOME="$tmp/l" $PY -c 'import sys; sys.path.insert(0, sys.argv[1]); import _resume
+try:
+    _resume._private_dir(); print("accepted")
+except OSError: print("refused")' "$(dirname "$SRC")" > "$tmp/out" 2>&1
+  grep -qx refused "$tmp/out" && ok "_resume.py refuses a symlinked ~/.aios outright, as the shell does" || no "_resume.py accepted a symlinked ~/.aios: $(cat "$tmp/out")"
   mkdir -p "$tmp/w/.aios"; chmod 777 "$tmp/w/.aios"
   HOME="$tmp/w" $PY -c 'import sys; sys.path.insert(0, sys.argv[1]); import _resume
 try:

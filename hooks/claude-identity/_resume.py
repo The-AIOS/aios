@@ -506,6 +506,10 @@ def _private_dir() -> str:
     # be ours, writable by nobody else, and carry no ACL (an ACL can grant another account write
     # access the mode bits hide). A tmp others could write is refused, never chmod-ed: files
     # they left in it would stay theirs.
+    # A symlinked ~/.aios is refused outright: its target's own parent could be one another
+    # account can write, which would let them swap the whole tree after these checks.
+    if os.path.islink(os.path.dirname(d)):
+        raise OSError(f"{os.path.dirname(d)} is a symlink")
     for p in (os.path.dirname(d), d):
         st = os.stat(p)
         if (hasattr(os, "getuid") and st.st_uid != os.getuid()) or st.st_mode & 0o022 or _has_acl(p + os.sep):

@@ -174,8 +174,10 @@ _aios_tmp_dir() {
       !*) echo "spawn: ${_p#!} is writable by other users or carries an ACL; refusing to write session files there." >&2; return 1 ;;
     esac
   done
-  if [ ! -O "$HOME/.aios/" ] || [ -L "$d" ] || [ ! -d "$d" ] || [ ! -O "$d" ]; then
-    echo "spawn: $d is not a directory you own; refusing to write session files there." >&2
+  # A symlinked ~/.aios is refused outright: its target's own parent could be one another
+  # account can write, which would let them swap the whole tree after these checks.
+  if [ -L "$HOME/.aios" ] || [ ! -O "$HOME/.aios/" ] || [ -L "$d" ] || [ ! -d "$d" ] || [ ! -O "$d" ]; then
+    echo "spawn: $d is not a directory you own (or ~/.aios is a symlink); refusing to write session files there." >&2
     return 1
   fi
   chmod 700 "$d" 2>/dev/null
