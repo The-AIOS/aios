@@ -43,7 +43,7 @@ capture each session's session_id via lsof BEFORE kill, then respawn each
 with `--resume <its-own-session-id>` so transcripts stay isolated.
 
 Belt-and-suspenders: before each kill, _resume.py also writes a pre-swap
-marker to /tmp/swap-marker-{name}-{ts}.json with session metadata + git
+marker to ~/.aios/tmp/swap-marker-{name}-{ts}.json with session metadata + git
 status. The resume prompt instructs Claude to read the marker and
 reconcile filesystem state vs. transcript expectation before doing any
 new work. Handles the narrow window where a tool call modified files but
@@ -88,6 +88,7 @@ if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
+import stat
 import time
 from glob import glob
 
@@ -115,9 +116,12 @@ def build_resume_prompt(name: str, cwd: str, marker_path: str) -> str:
         f"exactly yours (not cross-contaminated with a sibling session).\n"
         f"\n"
         f"**Before continuing any work — verified-resume checklist:**\n"
-        f"1. Read `{marker_path}` — the pre-swap snapshot captured just before kill. "
-        f"It contains your session_id, cwd, and the git status at kill time.\n"
-        f"2. Run `git status` in `{cwd}` and compare against the marker's `git_status` "
+        + (f"1. Read `{marker_path}` — the pre-swap snapshot captured just before kill. "
+           f"It contains your session_id, cwd, and the git status at kill time.\n"
+           if marker_path else
+           "1. No pre-swap snapshot could be written, so there is no recorded git status "
+           "to compare against; treat step 2's `git status` as the only evidence.\n")
+        + f"2. Run `git status` in `{cwd}` and compare against the marker's `git_status` "
         f"field. If they match, filesystem state matches your transcript — continue.\n"
         f"3. If they differ (files modified on disk but not reflected in your last "
         f"transcript turn), the kill landed mid-tool-use — a write succeeded on disk "
@@ -364,12 +368,15 @@ def session_id_from_pid(pid: int, info: dict) -> str:
 
 
 def write_swap_marker(name: str, session_id: str, cwd: str) -> str:
-    """Write a pre-swap snapshot to /tmp so the resumed session can
+    """Write a pre-swap snapshot to the private dir so the resumed session can
     reconcile filesystem vs. transcript state. Always returns the marker
     path (even on partial failure — the file is cheap and helpful even if
-    git fields are blank)."""
+    git fields are blank), or "" when the private directory is unusable."""
     ts = time.strftime("%Y%m%dT%H%M%S")
-    path = f"/tmp/swap-marker-{name}-{ts}.json"
+    try:
+        path = os.path.join(_private_dir(), f"swap-marker-{name}-{ts}.json")
+    except OSError:
+        return ""  # no private dir, no snapshot: never write it anywhere else
     marker = {
         "kill_time": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
         "name": name,
@@ -401,8 +408,7 @@ def write_swap_marker(name: str, session_id: str, cwd: str) -> str:
         except Exception:
             pass
     try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(marker, f, indent=2)
+        _write_private(path, json.dumps(marker, indent=2))
     except Exception:
         pass  # marker is belt-and-suspenders; failing to write isn't fatal
     return path
@@ -476,6 +482,70 @@ def close_terminal_tab_by_tty(tty: str) -> None:
         pass  # best-effort
 
 
+def _private_dir() -> str:
+    """The private directory the respawn protocol's files live in: ~/.aios/tmp, mode 0700.
+
+    The same path `_aios_tmp_dir` derives in install-wrappers.sh -- the respawn loop reads
+    what this script writes, so the two must agree. Never /tmp: a fixed name there can be
+    created first or symlinked by another local user, who then decides where these writes
+    land or what prompt the resumed session is told to follow. Keyed on HOME, not TMPDIR,
+    because this script and the loop run in different contexts. Raises OSError when the
+    directory is not one the current user owns."""
+    d = os.path.join(os.path.expanduser("~"), ".aios", "tmp")
+    # The same refusal as the shell side: these paths are pasted into shell and AppleScript
+    # strings by the respawn paths below, and a quote or backslash would break that command.
+    if any(c in d for c in "'\"\\"):
+        raise OSError(f"{d} contains a quote or backslash; it cannot be quoted safely")
+    old = os.umask(0o077)
+    try:
+        os.makedirs(d, exist_ok=True)
+    finally:
+        os.umask(old)
+    # The parent counts too: whoever can write ~/.aios can swap tmp after this check. Both must
+    # be ours, writable by nobody else, and carry no ACL (an ACL can grant another account write
+    # access the mode bits hide). A tmp others could write is refused, never chmod-ed: files
+    # they left in it would stay theirs.
+    for p in (os.path.dirname(d), d):
+        st = os.stat(p)
+        if (hasattr(os, "getuid") and st.st_uid != os.getuid()) or st.st_mode & 0o022 or _has_acl(p):
+            raise OSError(f"{p} is not owned by the current user, is writable by others, or has an ACL")
+    st = os.lstat(d)
+    if stat.S_ISLNK(st.st_mode) or not stat.S_ISDIR(st.st_mode):
+        raise OSError(f"{d} is not a directory owned by the current user")
+    os.chmod(d, 0o700)
+    return d
+
+
+def _has_acl(path: str) -> bool:
+    """True when `ls -ld` marks an ACL (a trailing `+` on the mode). Same test as the shell side."""
+    try:
+        r = subprocess.run(["ls", "-ld", path], capture_output=True, text=True, timeout=5)
+    except Exception:
+        return False
+    mode = r.stdout.split(" ", 1)[0] if r.returncode == 0 else ""
+    return mode.endswith("+")
+
+
+def _write_private(path: str, text: str) -> None:
+    """Write `text` to `path` as a fresh 0600 file: written under a new exclusive name, then
+    renamed over `path`. Never reuses an existing inode, so a file someone else created at that
+    name (or a link planted there) is replaced, not written through."""
+    d, base = os.path.split(path)
+    tmp = os.path.join(d, f".{base}.{os.getpid()}.{time.time_ns()}")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(tmp, flags, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
 def _write_prompt_to_tempfile(name: str, prompt: str) -> str:
     """Route the prompt through a temp file so apostrophes, parens, and
     quotes in it can't break the AppleScript keystroke / `do script`
@@ -483,11 +553,10 @@ def _write_prompt_to_tempfile(name: str, prompt: str) -> str:
     the shell command has no special chars — safe everywhere.
 
     Mirrors the spawn-wrapper fix in ~/.zshrc (Apr 22) where `$task`
-    always goes to /tmp/spawn-task-$name.md and only a fixed bootstrap
-    prompt is interpolated. Same class of bug, same fix."""
-    path = f"/tmp/resume-prompt-{name}.md"
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(prompt + "\n")
+    always goes to a task file and only a fixed bootstrap prompt is
+    interpolated. Same class of bug, same fix."""
+    path = os.path.join(_private_dir(), f"resume-prompt-{name}.md")
+    _write_private(path, prompt + "\n")
     return path
 
 
@@ -499,7 +568,10 @@ def respawn_in_terminal(name: str, cwd: str, prompt: str, session_id: str) -> tu
     new tab IS a wrapped session. Subsequent swaps use the in-place
     path and stay in this tab. Without the wrapper indirection, every
     swap would open ANOTHER new tab — tab proliferation."""
-    prompt_file = _write_prompt_to_tempfile(name, prompt)
+    try:
+        prompt_file = _write_prompt_to_tempfile(name, prompt)
+    except OSError as e:
+        return False, f"resume prompt not written: {e}"
     bootstrap = f"Read {prompt_file} and follow the instructions inside."
     inner = (
         f'cd "{cwd}" && '
@@ -532,7 +604,10 @@ def respawn_in_ide(ide_app: str, name: str, cwd: str, prompt: str, session_id: s
     Subsequent swaps use the in-place path and stay in this tab — eventual
     convergence to in-place even for sessions originally launched outside
     the wrapper (plain `claude`, manual `--resume`, etc.)."""
-    prompt_file = _write_prompt_to_tempfile(name, prompt)
+    try:
+        prompt_file = _write_prompt_to_tempfile(name, prompt)
+    except OSError as e:
+        return False, f"resume prompt not written: {e}"
     bootstrap = f"Read {prompt_file} and follow the instructions inside."
     # The command typed into the new IDE terminal tab — bootstrap has no
     # apostrophes / parens / special chars, so single-quote wrapping is safe.
@@ -580,9 +655,9 @@ def write_in_place_signal(name: str, session_id: str, prompt: str) -> None:
     """Write the three files the spawn-wrapper's `_claude_with_respawn` loop
     polls for after claude exits:
 
-      /tmp/swap-respawn-{name}.flag      — signal: respawn me
-      /tmp/swap-respawn-{name}.session   — session UUID for --resume
-      /tmp/resume-prompt-{name}.md       — verified-resume bootstrap
+      ~/.aios/tmp/swap-respawn-{name}.flag      — signal: respawn me
+      ~/.aios/tmp/swap-respawn-{name}.session   — session UUID for --resume
+      ~/.aios/tmp/resume-prompt-{name}.md       — verified-resume bootstrap
 
     Must be written BEFORE SIGTERM so the wrapper sees them on the first
     check after claude exits. The wrapper consumes (deletes) .flag and
@@ -591,14 +666,12 @@ def write_in_place_signal(name: str, session_id: str, prompt: str) -> None:
     Used only when the killed process has CLAUDE_RESPAWN_CAPABLE=1 in env
     (set by `_claude_with_respawn` in ~/.zshrc). Sessions launched without
     the wrapper get the legacy AppleScript respawn path."""
-    with open(f"/tmp/swap-respawn-{name}.session", "w", encoding="utf-8") as f:
-        f.write(session_id)
-    with open(f"/tmp/resume-prompt-{name}.md", "w", encoding="utf-8") as f:
-        f.write(prompt + "\n")
+    d = _private_dir()
+    _write_private(os.path.join(d, f"swap-respawn-{name}.session"), session_id)
+    _write_private(os.path.join(d, f"resume-prompt-{name}.md"), prompt + "\n")
     # Flag last — the wrapper short-circuits if absent, so we want everything
     # else on disk before the flag exists.
-    with open(f"/tmp/swap-respawn-{name}.flag", "w", encoding="utf-8") as f:
-        pass
+    _write_private(os.path.join(d, f"swap-respawn-{name}.flag"), "")
 
 
 def wait_for_new_claude(name: str, killed_pid: int, timeout: float = 8.0) -> tuple[int, str]:
@@ -732,7 +805,11 @@ def main() -> None:
         # signal the wrapper + SIGTERM and the same terminal re-launches
         # claude. Falls back to legacy AppleScript respawn for sessions
         # launched directly without the wrapper.
-        respawn_capable = env_var_from_pid(pid, "CLAUDE_RESPAWN_CAPABLE") == "1"
+        # CLAUDE_RESPAWN_PROTOCOL=2: the loop reads its signal files from ~/.aios/tmp. A loop
+        # started before that change still polls /tmp and would never see them, so it gets the
+        # legacy path (a fresh tab) instead of being stopped with no way back.
+        respawn_capable = (env_var_from_pid(pid, "CLAUDE_RESPAWN_CAPABLE") == "1"
+                           and env_var_from_pid(pid, "CLAUDE_RESPAWN_PROTOCOL") == "2")
 
         # Write pre-swap marker with git status — Claude reads it on wake
         # to reconcile filesystem vs. transcript expectation.
@@ -748,10 +825,23 @@ def main() -> None:
             )
             continue
 
+        # Every respawn path reads its prompt from the private dir. If that dir is unusable no
+        # path can bring the session back, so it is left running rather than stopped.
+        try:
+            _private_dir()
+        except OSError as e:
+            failed.append(f"{pid} ({name}) not stopped: {e}")
+            continue
+
         # If capable: write the in-place signal files BEFORE the kill so the
         # wrapper sees them on its first post-exit check.
         if respawn_capable and session_id:
-            write_in_place_signal(name, session_id, prompt)
+            try:
+                write_in_place_signal(name, session_id, prompt)
+            except OSError as e:
+                # Never stop a session that could not be told how to come back.
+                failed.append(f"{pid} ({name}) signal: {e}")
+                continue
 
         # Kill + respawn
         try:

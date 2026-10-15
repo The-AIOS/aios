@@ -79,6 +79,18 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-10-15 — `spawn` keeps its session files in a private folder, not in `/tmp`
+
+`hash: `
+
+> **What you can now do.** Run `spawn` on a Mac that other people also log into without another account being able to swap the script a new worker runs, or redirect what it writes.
+
+**Session files move from `/tmp` to `~/.aios/tmp`, a folder only you can open.** `spawn` used to write the launcher Terminal runs, the worker's task, the AppleScript and, after an account switch, the resume prompt under fixed names in `/tmp`, which every local user can write to. Another account could create one of those names first, or a link in its place, and decide where the write landed or what the new session was told to do. They now live in `~/.aios/tmp` (mode 0700), each created fresh with `mktemp`, and `spawn` refuses to write there if that folder is a link or not yours. On a single-user Mac nothing changes in practice; on a shared one this closes the gap. Windows already used a per-user temp folder and is unchanged.
+
+**Action required** — check first; do only what applies:
+1. **Re-install the shell wrappers.** `/aios:update` runs `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (modified, not new). It rewrites the AIOS block in your shell rc (`~/.zshrc` or `~/.bashrc`), as on earlier updates; the new block also creates `~/.aios/tmp` the first time you spawn. Windows: skip this.
+2. **Open a new terminal** (or `source ~/.zshrc`) so `spawn` and `spawn-kill` load the new version. Terminals already open keep the old one until then.
+
 ## 2026-10-12 — A moved or renamed hook can no longer lock you out, and feedback finds its right form
 
 `hash: d4099d0 · 1d2168a · 1d02c27 · dfbdcd2`
