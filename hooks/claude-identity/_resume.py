@@ -43,7 +43,7 @@ capture each session's session_id via lsof BEFORE kill, then respawn each
 with `--resume <its-own-session-id>` so transcripts stay isolated.
 
 Belt-and-suspenders: before each kill, _resume.py also writes a pre-swap
-marker to /tmp/swap-marker-{name}-{ts}.json with session metadata + git
+marker to ~/.aios/run/swap-marker-{name}-{ts}.json with session metadata + git
 status. The resume prompt instructs Claude to read the marker and
 reconcile filesystem state vs. transcript expectation before doing any
 new work. Handles the narrow window where a tool call modified files but
@@ -76,6 +76,7 @@ Useful for verifying the fix before the next real swap fires.
 """
 import json
 import os
+import stat
 import subprocess
 import sys
 
@@ -107,6 +108,20 @@ SESSIONS_DIR = os.path.expanduser("~/.claude/sessions")
 # 2026-04-23 update: prompt now references a pre-swap marker file so the
 # resumed session can reconcile filesystem state vs. transcript expectation.
 # Built per-session via build_resume_prompt() because marker_path is unique.
+
+def _run_dir() -> str:
+    """Private per-user directory for swap/resume files (same one the shell wrappers use:
+    $AIOS_RUN_DIR or ~/.aios/run, mode 0700). These used to be fixed names in /tmp, where another
+    local user could pre-create the session file or the resume prompt that the respawned session
+    is told to follow. Raises instead of falling back to /tmp."""
+    d = os.environ.get("AIOS_RUN_DIR") or os.path.expanduser("~/.aios/run")
+    os.makedirs(d, mode=0o700, exist_ok=True)
+    st = os.lstat(d)
+    if stat.S_ISLNK(st.st_mode) or not stat.S_ISDIR(st.st_mode) or st.st_uid != os.getuid():
+        raise RuntimeError(f"{d} is not a private directory owned by this user")
+    os.chmod(d, 0o700)
+    return d
+
 def build_resume_prompt(name: str, cwd: str, marker_path: str) -> str:
     ts = time.strftime("%Y-%m-%d %H:%M:%S %Z")
     return (
@@ -364,12 +379,12 @@ def session_id_from_pid(pid: int, info: dict) -> str:
 
 
 def write_swap_marker(name: str, session_id: str, cwd: str) -> str:
-    """Write a pre-swap snapshot to /tmp so the resumed session can
+    """Write a pre-swap snapshot to the private run dir so the resumed session can
     reconcile filesystem vs. transcript state. Always returns the marker
     path (even on partial failure — the file is cheap and helpful even if
     git fields are blank)."""
     ts = time.strftime("%Y%m%dT%H%M%S")
-    path = f"/tmp/swap-marker-{name}-{ts}.json"
+    path = os.path.join(_run_dir(), f"swap-marker-{name}-{ts}.json")
     marker = {
         "kill_time": time.strftime("%Y-%m-%d %H:%M:%S %Z"),
         "name": name,
@@ -483,9 +498,9 @@ def _write_prompt_to_tempfile(name: str, prompt: str) -> str:
     the shell command has no special chars — safe everywhere.
 
     Mirrors the spawn-wrapper fix in ~/.zshrc (Apr 22) where `$task`
-    always goes to /tmp/spawn-task-$name.md and only a fixed bootstrap
+    always goes to ~/.aios/run/spawn-task-$name.md and only a fixed bootstrap
     prompt is interpolated. Same class of bug, same fix."""
-    path = f"/tmp/resume-prompt-{name}.md"
+    path = os.path.join(_run_dir(), f"resume-prompt-{name}.md")
     with open(path, "w", encoding="utf-8") as f:
         f.write(prompt + "\n")
     return path
@@ -580,9 +595,11 @@ def write_in_place_signal(name: str, session_id: str, prompt: str) -> None:
     """Write the three files the spawn-wrapper's `_claude_with_respawn` loop
     polls for after claude exits:
 
-      /tmp/swap-respawn-{name}.flag      — signal: respawn me
-      /tmp/swap-respawn-{name}.session   — session UUID for --resume
-      /tmp/resume-prompt-{name}.md       — verified-resume bootstrap
+      <run dir>/swap-respawn-{name}.flag      — signal: respawn me
+      <run dir>/swap-respawn-{name}.session   — session UUID for --resume
+      <run dir>/resume-prompt-{name}.md       — verified-resume bootstrap
+
+    <run dir> is _run_dir(): ~/.aios/run, 0700, the same directory the wrapper polls.
 
     Must be written BEFORE SIGTERM so the wrapper sees them on the first
     check after claude exits. The wrapper consumes (deletes) .flag and
@@ -591,13 +608,14 @@ def write_in_place_signal(name: str, session_id: str, prompt: str) -> None:
     Used only when the killed process has CLAUDE_RESPAWN_CAPABLE=1 in env
     (set by `_claude_with_respawn` in ~/.zshrc). Sessions launched without
     the wrapper get the legacy AppleScript respawn path."""
-    with open(f"/tmp/swap-respawn-{name}.session", "w", encoding="utf-8") as f:
+    d = _run_dir()
+    with open(os.path.join(d, f"swap-respawn-{name}.session"), "w", encoding="utf-8") as f:
         f.write(session_id)
-    with open(f"/tmp/resume-prompt-{name}.md", "w", encoding="utf-8") as f:
+    with open(os.path.join(d, f"resume-prompt-{name}.md"), "w", encoding="utf-8") as f:
         f.write(prompt + "\n")
     # Flag last — the wrapper short-circuits if absent, so we want everything
     # else on disk before the flag exists.
-    with open(f"/tmp/swap-respawn-{name}.flag", "w", encoding="utf-8") as f:
+    with open(os.path.join(d, f"swap-respawn-{name}.flag"), "w", encoding="utf-8") as f:
         pass
 
 

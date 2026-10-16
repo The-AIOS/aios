@@ -19,7 +19,7 @@ Glass-shell spawns **natively** (node-pty) and never uses this AppleScript path 
 **"My active tab got renamed to the agent name and the launcher text spilled into my session; no new terminal/session appeared."**
 This is the leak signature — keystrokes landed in the wrong place. Check, in order:
 1. **Stale wrapper.** Did the operator's `~/.zshrc` predate the palette+paste fix? Run `grep -c "Terminal: Create New Terminal" ~/.zshrc` (expect ≥1) and `grep -c 'control down, shift down' ~/.zshrc` (expect 0 — a hit means the legacy keystroke-create is still installed). Fix: re-run `bash ~/aios/hooks/claude-identity/install-wrappers.sh`, open a new terminal.
-2. **Focus race / wrong IDE detected.** Inspect the generated `/tmp/spawn-script-<name>.applescript` — does the bundle ID match the running IDE? Antigravity's System-Events process name is stock `Electron`, so it must be addressed by bundle id (`com.google.antigravity-ide`), not name. If the operator runs a different IDE, confirm detection in the wrapper's `pgrep` block.
+2. **Focus race / wrong IDE detected.** Inspect the generated `~/.aios/run/spawn-script-<name>.applescript` — does the bundle ID match the running IDE? Antigravity's System-Events process name is stock `Electron`, so it must be addressed by bundle id (`com.google.antigravity-ide`), not name. If the operator runs a different IDE, confirm detection in the wrapper's `pgrep` block.
 3. **Keyboard layout (legacy wrapper only).** If they're on a stale wrapper AND a non-US layout, that's the original bug — the palette+paste version is immune. Re-install (step 1) resolves it.
 
 **"Nothing happened at all — no terminal, no leak."**

@@ -79,6 +79,18 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-10-16 — `spawn` keeps its launcher, task and swap files where only you can write them
+
+`hash: `
+
+> **What you can now do.** Spawn workers and swap accounts on a computer other people also log into, without another local user being able to plant the script or the instructions your new session runs.
+
+**Spawn and swap files moved from `/tmp` to `~/.aios/run`.** `spawn` used to write each worker's launcher, task file, AppleScript and pasted launch command to fixed names in `/tmp`, such as `/tmp/spawn-launch-<name>.sh`. The account-swap respawn used fixed names there too, including the resume prompt the resumed session is told to follow. Anyone else with an account on the same Mac could create one of those names first and have it executed, or read as instructions, as you. They now live in `~/.aios/run`, a directory only you can read or write (mode 700). If that directory is a symlink or owned by someone else, `spawn` refuses and says so instead of falling back to `/tmp`. On a machine only you log into, nothing changes in practice. `spawn-kill` also removes leftovers at the old `/tmp` names, but only files you own.
+
+**Action required** — check first; do only what applies:
+1. **Re-run the modified installer.** `/aios:update` runs `hooks/claude-identity/install-wrappers.sh` (Windows: `install-wrappers.ps1`, unchanged in this entry, since `%TEMP%` is already per-user). It is the same installer as before and writes to the same shell rc file (`~/.zshrc` or `~/.bashrc`). What changed is where the installed `spawn` writes when it runs: `~/.aios/run` instead of `/tmp`. If the installer is already current, it reports that and does nothing.
+2. **Open a new terminal** (or `source ~/.zshrc`) last. A shell that was already open keeps the old `spawn` and the old swap loop until it reloads, and until then an account swap in that shell will not find its resume files.
+
 ## 2026-10-12 — A moved or renamed hook can no longer lock you out, and feedback finds its right form
 
 `hash: d4099d0 · 1d2168a · 1d02c27 · dfbdcd2`

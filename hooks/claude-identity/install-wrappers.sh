@@ -142,6 +142,23 @@ cat >> "$RC" << 'WRAPPER'
 # ==== claude-spawn-wrappers (managed by hooks/claude-identity/install-wrappers.sh) ====
 # Re-run that script to update. Don't hand-edit between this banner and the
 # matching END banner — your changes will be wiped on the next install.
+_aios_run_dir() {
+  # Private per-user directory for spawn/swap scratch files (launcher, task, AppleScript, swap
+  # markers). These used to live at fixed names in /tmp: on a shared machine another local user
+  # could pre-create /tmp/spawn-launch-<name>.sh (or the task / AppleScript / swap files) and have
+  # it executed — or followed as instructions — as this user. A 0700 directory under $HOME that we
+  # own closes that; the fixed names inside it stay, because spawn-kill and _resume.py address
+  # them by session name. Refuses (returns 1) rather than falling back to /tmp.
+  local d="${AIOS_RUN_DIR:-$HOME/.aios/run}"
+  if [ -L "$d" ] || { [ -e "$d" ] && [ ! -d "$d" ]; }; then
+    echo "⚠️  spawn: $d is not a plain directory — refusing to write session files there" >&2
+    return 1
+  fi
+  mkdir -p "$d" 2>/dev/null && chmod 700 "$d" 2>/dev/null || {
+    echo "⚠️  spawn: cannot create private directory $d" >&2; return 1; }
+  [ -O "$d" ] || { echo "⚠️  spawn: $d is not owned by $(id -un) — refusing" >&2; return 1; }
+  printf '%s' "$d"
+}
 _claude_with_respawn() {
   local name="${1:?Usage: _claude_with_respawn <name> [bootstrap] [initial-session-id]}"
   local bootstrap="${2:-}"
@@ -247,8 +264,11 @@ _claude_with_respawn() {
   # spawned worker is a first-class, resumable, Glass-visible session. (2026-07-23)
   unset CLAUDE_CODE_CHILD_SESSION
   export CLAUDE_CODE_FORCE_SESSION_PERSIST=1
-  local marker="/tmp/swap-respawn-$name.flag"
-  local sid_file="/tmp/swap-respawn-$name.session"
+  # Swap markers live in the private run dir (see _aios_run_dir). If it cannot be made, account-swap
+  # respawn is disabled for this session (an empty path never exists) rather than polled in /tmp.
+  local run_dir; run_dir=$(_aios_run_dir) || run_dir=""
+  local marker="${run_dir:+$run_dir/swap-respawn-$name.flag}"
+  local sid_file="${run_dir:+$run_dir/swap-respawn-$name.session}"
   local consecutive_failures=0
 
   while true; do
@@ -267,7 +287,7 @@ _claude_with_respawn() {
     local exit_code=$?
 
     # Branch 1: account-swap-triggered respawn (marker file present).
-    if [ -f "$marker" ]; then
+    if [ -n "$marker" ] && [ -f "$marker" ]; then
       local sid="$(cat "$sid_file" 2>/dev/null)"
       rm -f "$marker" "$sid_file"
       if [ -z "$sid" ]; then
@@ -281,7 +301,7 @@ _claude_with_respawn() {
         echo ""
         echo "🔄 Account swap detected. Resuming session $sid in 3s…"
         resume_args=(--resume "$sid")
-        bootstrap="Read /tmp/resume-prompt-$name.md and follow the instructions inside."
+        bootstrap="Read $run_dir/resume-prompt-$name.md and follow the instructions inside."
         consecutive_failures=0
       fi
       sleep 3
@@ -668,7 +688,7 @@ spawn() {
   # Arg-pass / stale-shell guard. A parent shell that sourced an OLDER spawn()
   # (before --tier/--model existed) treats "--tier" as the NAME positional and
   # "mechanical" as the TASK — silently producing a junk worker named "--tier"
-  # (task file /tmp/spawn-task---tier.md == "mechanical"), while the real agent
+  # (task file ~/.aios/run/spawn-task---tier.md == "mechanical"), while the real agent
   # name + task are shifted off and lost. The generic ^[a-zA-Z0-9_-]+$ check
   # below ACCEPTS "--tier" (- is legal anywhere in it), so the misfire stays
   # silent. Reject flag-shaped names + bare-tier-word tasks so it surfaces
@@ -701,7 +721,8 @@ spawn() {
     return 1
   fi
 
-  local task_file="/tmp/spawn-task-$name.md"
+  local run_dir; run_dir=$(_aios_run_dir) || return 1
+  local task_file="$run_dir/spawn-task-$name.md"
   # The task file opens with the on-demand context preamble (see _spawn_task_preamble): a spawned
   # worker otherwise boots with NO operator context — CLAUDE.md tells it to load context on demand
   # and in practice it often skips that step entirely. The preamble hands it the map and the rule.
@@ -712,7 +733,7 @@ spawn() {
     case "$spawn_model" in *sonnet*|*haiku*) _spawn_advisor_block >> "$task_file" ;; esac
   fi
 
-  local launcher="/tmp/spawn-launch-$name.sh"
+  local launcher="$run_dir/spawn-launch-$name.sh"
   # Match the launcher's shell + rc to the user's LOGIN shell — the same
   # resolution install-wrappers.sh used to decide where these functions were
   # installed. Hard-coding zsh/.zshrc here silently broke spawn on any non-zsh
@@ -748,7 +769,7 @@ LAUNCHER
   # (no $CLAUDECODE) also goes in-shell. (2026-07-23)
   if [ -n "$CLAUDECODE" ] && [ -z "$AIOS_GLASS_TERM" ]; then
     (
-      local lockdir="/tmp/spawn.lock.d"
+      local lockdir="$run_dir/spawn.lock.d"
       local waited=0
       while ! mkdir "$lockdir" 2>/dev/null; do
         sleep 0.5
@@ -799,7 +820,7 @@ LAUNCHER
         #   * NO rename step         → the session is already named via --name; the old
         #     palette-rename was the step that leaked. (Tab title is cosmetic.)
         # Glass-shell spawns natively (node-pty) and never uses this path.
-        local applescript_file="/tmp/spawn-script-$name.applescript"
+        local applescript_file="$run_dir/spawn-script-$name.applescript"
         # Address Antigravity by bundle ID (its System-Events process name is stock
         # "Electron"); VS Code / Cursor fall back to display-name addressing.
         local activate_clause tell_process_clause
@@ -818,7 +839,7 @@ LAUNCHER
         # almost empty environment -- so non-ASCII in a launcher or a saved clipboard would be
         # mangled. hooks/clip does the same with a read-back; it is used where it is installed.
         local saved_clip; saved_clip=$(LC_ALL=en_US.UTF-8 pbpaste 2>/dev/null)
-        printf '%s' "$launcher" > "/tmp/spawn-launch-cmd-$name"
+        printf '%s' "$launcher" > "$run_dir/spawn-launch-cmd-$name"
         printf '%s' 'Terminal: Create New Terminal' | LC_ALL=en_US.UTF-8 pbcopy
         cat > "$applescript_file" <<APPLESCRIPT
 $activate_clause
@@ -855,7 +876,7 @@ tell application "System Events"
     delay 0.6
     -- Step 2: deliver the launcher via PASTE — swap the clipboard to the launcher
     -- command (staged in a temp file), paste, and run.
-    do shell script "f=/tmp/spawn-launch-cmd-$name; if [ -x ~/aios/hooks/clip ]; then ~/aios/hooks/clip --no-verify \"\$f\" || true; else LC_ALL=en_US.UTF-8 pbcopy < \"\$f\"; fi"
+    do shell script "f=\"$run_dir/spawn-launch-cmd-$name\"; if [ -x ~/aios/hooks/clip ]; then ~/aios/hooks/clip --no-verify \"\$f\" || true; else LC_ALL=en_US.UTF-8 pbcopy < \"\$f\"; fi"
     keystroke "v" using {command down}
     delay 0.4
     keystroke return
@@ -868,16 +889,16 @@ APPLESCRIPT
         # loaded spawn() ever leaks "spawn:NN: command not found: activate", it is
         # COSMETIC and NON-FATAL — the session STILL launches with its task. Verify
         # before ever declaring spawn broken:  pgrep -fl "--name $name"  (and the
-        # task file /tmp/spawn-task-$name.md exists). Never fire a duplicate worker
+        # task file ~/.aios/run/spawn-task-$name.md exists). Never fire a duplicate worker
         # off the activate error alone — that races the real session on one repo.
-        osascript "$applescript_file" 2>>"/tmp/spawn-osascript-$name.log" || true
+        osascript "$applescript_file" 2>>"$run_dir/spawn-osascript-$name.log" || true
         # Hold the lock ~1.5s after the AppleScript returns so a consecutive spawn
         # can't re-activate the IDE while these keystrokes are still in flight.
         # Caught 2026-06-08.
         sleep 1.5
         # Restore the user's clipboard + clean the staged launcher command file.
         printf '%s' "$saved_clip" | LC_ALL=en_US.UTF-8 pbcopy
-        rm -f "/tmp/spawn-launch-cmd-$name"
+        rm -f "$run_dir/spawn-launch-cmd-$name"
       else
         osascript -e "tell application \"Terminal\" to do script \"$launcher\""
       fi
@@ -917,6 +938,17 @@ APPLESCRIPT
   fi
 }
 
+_spawn_clean_files() {
+  # The private run dir, plus the old /tmp names (removed only if this user owns them): a session
+  # spawned before the move still has its files there.
+  local name="$1" d f
+  d=$(_aios_run_dir 2>/dev/null) && rm -f "$d/spawn-task-$name.md" "$d/spawn-launch-$name.sh" "$d/spawn-script-$name.applescript" 2>/dev/null
+  for f in "/tmp/spawn-task-$name.md" "/tmp/spawn-launch-$name.sh" "/tmp/spawn-script-$name.applescript"; do
+    [ -O "$f" ] && [ ! -L "$f" ] && rm -f "$f"
+  done
+  return 0
+}
+
 spawn-kill() {
   # Kill a spawned worker session cleanly.
   #
@@ -944,7 +976,7 @@ spawn-kill() {
   claude_pid=$(pgrep -f "claude .*--remote-control --name $name" | head -1)
   if [ -z "$claude_pid" ]; then
     echo "[spawn-kill] no claude process found for '$name'" >&2
-    rm -f "/tmp/spawn-task-$name.md" "/tmp/spawn-launch-$name.sh" "/tmp/spawn-script-$name.applescript" 2>/dev/null
+    _spawn_clean_files "$name"
     return 1
   fi
 
@@ -970,7 +1002,7 @@ spawn-kill() {
   fi
 
   # Clean tmp artifacts so the next \`spawn $name\` starts fresh
-  rm -f "/tmp/spawn-task-$name.md" "/tmp/spawn-launch-$name.sh" "/tmp/spawn-script-$name.applescript" 2>/dev/null
+  _spawn_clean_files "$name"
 
   echo "[ok] killed '$name' (PID $claude_pid, PGID $pgid, $tty)"
 }
