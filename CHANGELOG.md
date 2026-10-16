@@ -81,7 +81,7 @@
 
 ## 2026-10-16 — `spawn` keeps its launcher, task and swap files where only you can write them
 
-`hash: `
+`hash: ` · [#217](https://github.com/The-AIOS/aios/pull/217)
 
 > **What you can now do.** Spawn workers and swap accounts on a computer other people also log into, without another local user being able to plant the script or the instructions your new session runs.
 
