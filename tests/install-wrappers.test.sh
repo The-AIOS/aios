@@ -158,7 +158,7 @@ probe="privdir-$$"
 env -u CLAUDECODE -u AIOS_GLASS_TERM HOME="$tmp" TMPDIR="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; spawn "$2" task' _ "$FNS" "$probe" >/dev/null 2>&1
 [ -f "$tmp/.aios/run/spawn-task-$probe.md" ] && [ -f "$tmp/.aios/run/spawn-launch-$probe.sh" ] && ok "task file and launcher are written to ~/.aios/run" || no "task file / launcher not in ~/.aios/run" "$(ls -la "$tmp/.aios/run" 2>&1)"
 [ ! -e "/tmp/spawn-task-$probe.md" ] && [ ! -e "/tmp/spawn-launch-$probe.sh" ] && ok "nothing is written at the old /tmp names" || no "spawn still wrote to /tmp"
-mode=$(stat -f '%Lp' "$tmp/.aios/run" 2>/dev/null || stat -c '%a' "$tmp/.aios/run" 2>/dev/null)
+mode=$(stat -c '%a' "$tmp/.aios/run" 2>/dev/null || stat -f '%Lp' "$tmp/.aios/run" 2>/dev/null)  # GNU first: on Linux `stat -f` is filesystem stat and does not fail
 [ "$mode" = "700" ] && ok "the run dir is mode 700" || no "run dir mode is $mode, not 700"
 grep -q "$tmp/.aios/run/spawn-task-$probe.md" "$tmp/.aios/run/spawn-launch-$probe.sh" && ok "the launcher points the worker at the private task file" || no "launcher does not reference the private task file"
 # Control: a run dir that is a symlink (pointing anywhere — here at a world-writable place) is refused.
