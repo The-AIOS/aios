@@ -127,6 +127,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 ### Content & design
 | Skill | Source | Trigger phrase |
 |---|---|---|
+| `aios-avatar` | `skills/aios/` | "Make me my AIOS avatar" — the AIOS ant with a hat for what you do, or your initial, from the public avatar seeds |
 | `algorithmic-art` | `skills/anthropic/` | "Generate code-based art / generative visuals" |
 | `brand-guidelines` | `skills/anthropic/` | "Apply Anthropic brand styling" — for AIOS contributions |
 | `canvas-design` | `document-skills` plugin | "Create a poster / visual design" |
