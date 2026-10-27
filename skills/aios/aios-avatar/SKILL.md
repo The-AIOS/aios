@@ -37,7 +37,6 @@ Fetch the manifest and the generator into a fresh temp folder before using them.
 
 ## Rules that keep the family together
 
-- **Coral `#ff5d4d` is kept for the AIOS team.** Do not give it to a member's hat or initial, even on request; offer the nearest palette colour.
 - One flat background colour, a white ant, a white hat. No text, gradients, faces, photos or extra colours.
 - Never reshape the head or the antennae. The ant is the constant; only the hat or the letter changes.
 - Nothing is exclusive. If an operator wants a one-of-a-kind hat, make it, and tell them anyone may make the same.
