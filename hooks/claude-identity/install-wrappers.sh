@@ -187,6 +187,20 @@ _claude_with_respawn() {
   # makes vault-loading independent of OS, IDE automation, and the caller's cwd.
   cd ~/aios 2>/dev/null
 
+  # Per-session environment, one-shot. A caller that needs this ONE session to start with
+  # extra variables (e.g. a launcher pinning an account with CLAUDE_CODE_OAUTH_TOKEN) writes
+  # ~/.aios/spawn-env/<name>.sh before calling `spawn`. It cannot export them itself: on macOS
+  # `spawn` opens a NEW Terminal, whose shell inherits nothing from the caller. So the file is
+  # sourced HERE, inside the new shell, right before `claude` starts, and deleted, so it never
+  # leaks into a later session that reuses the name. Only a file this user owns is read.
+  # (`: AIOS_SPAWN_ENV_HOOK` marks the function for any older rc wrapper that did this itself.)
+  : AIOS_SPAWN_ENV_HOOK
+  local _spawn_env="$HOME/.aios/spawn-env/$name.sh"
+  if [ -f "$_spawn_env" ] && [ ! -L "$_spawn_env" ] && [ -O "$_spawn_env" ]; then
+    . "$_spawn_env"
+    rm -f "$_spawn_env"
+  fi
+
   # Use ARRAY for resume args (portable bash + zsh). Unquoted string $resume_flag
   # would word-split in bash but NOT in zsh (default) — zsh would pass the whole
   # "--resume <uuid>" as ONE option-name, and claude would error with

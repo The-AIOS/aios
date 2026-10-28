@@ -357,5 +357,26 @@ for sh in bash zsh; do
 done
 rm -rf "$tmp"
 
+echo "── ~/.aios/spawn-env/<name>.sh reaches claude once, inside the new shell ──"
+# A caller cannot export into the Terminal spawn opens, so the launcher sources this file itself,
+# right before claude starts, and deletes it so a later session with the same name starts clean.
+tmp=$(mktemp -d); mkdir -p "$tmp/bin" "$tmp/aios" "$tmp/.aios/spawn-env"
+printf '#!/bin/sh\nprintf "%%s\\n" "${AIOS_SPAWN_ENV_PROBE:-unset}" >> "%s/seen"\nexit 0\n' "$tmp" > "$tmp/bin/claude"; chmod +x "$tmp/bin/claude"
+FNS=$( for f in _aios_run_dir _aios_handoff_dir _claude_with_respawn; do sed -n "/^$f() {/,/^}/p" "$SRC"; done )
+envrun(){ env -u CLAUDECODE -u AIOS_SPAWN_ENV_PROBE HOME="$tmp" TMPDIR="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; _claude_with_respawn "$2" ""' _ "$FNS" "$1" >/dev/null 2>&1; }
+echo 'export AIOS_SPAWN_ENV_PROBE=pinned' > "$tmp/.aios/spawn-env/envw.sh"
+envrun envw
+[ "$(sed -n 1p "$tmp/seen" 2>/dev/null)" = pinned ] && ok "the variable in spawn-env/<name>.sh reaches claude" || no "claude started without the spawn-env variable" "$(cat "$tmp/seen" 2>&1)"
+[ ! -e "$tmp/.aios/spawn-env/envw.sh" ] && ok "the file is deleted once read" || no "spawn-env file survived the launch"
+envrun envw
+[ "$(sed -n 2p "$tmp/seen" 2>/dev/null)" = unset ] && ok "a second launch with the same name starts without it" || no "the variable leaked into a later launch"
+echo 'export AIOS_SPAWN_ENV_PROBE=other' > "$tmp/.aios/spawn-env/someone.sh"
+envrun envw
+[ "$(sed -n 3p "$tmp/seen" 2>/dev/null)" = unset ] && [ -e "$tmp/.aios/spawn-env/someone.sh" ] && ok "another name's file is neither read nor removed" || no "a launch read or removed another session's spawn-env file"
+echo 'export AIOS_SPAWN_ENV_PROBE=linked' > "$tmp/real.sh"; rm -f "$tmp/.aios/spawn-env/envw.sh"; ln -s "$tmp/real.sh" "$tmp/.aios/spawn-env/envw.sh"
+envrun envw
+[ "$(sed -n 4p "$tmp/seen" 2>/dev/null)" = unset ] && ok "a symlinked spawn-env file is not sourced" || no "a symlink was followed and sourced"
+rm -rf "$tmp"
+
 echo "── RESULT: $PASS passed, $FAIL failed  (${BASH_VERSION:+bash $BASH_VERSION}${ZSH_VERSION:+zsh $ZSH_VERSION}) ──"
 [ "$FAIL" = "0" ] || exit 1
