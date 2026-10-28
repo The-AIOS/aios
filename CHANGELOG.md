@@ -112,7 +112,7 @@
 - MCP setup needs Python 3.10+ and names every server it could not install (#235).
 - A paused quota watcher logs the pause once, not every tick (#239).
 - `/aios:housekeeping` weighs each project's `CLAUDE.md` (#240).
-- A session can be started with its own environment: write shell lines (`export X=…`, `cd <folder>`) to `~/.aios/spawn-env/<name>.sh`, mode `600`, before `spawn <name>`. That one session starts with them and the file is deleted; your own shell is never touched. If the file is unsafe or a line in it fails, the session does not start and says why. Model, tier and MCP profile still go to `spawn` as flags.
+- A session can be started with its own environment: write shell lines (`export X=…`, `cd <folder>`) to `~/.aios/spawn-env/<name>.sh`, mode `600`, before `spawn <name>`. That one session starts with them and the file is deleted; your own shell is never touched. If the file is unsafe or a line in it fails, the session does not start and says why. Model, tier and MCP profile still go to `spawn` as flags. (#244)
 
 **Action required** — check each first; do only what applies:
 1. **The modified installers.** `/aios:update` re-runs `hooks/claude-identity/install-wrappers.sh` (Windows: `.ps1`); it writes the same shell file, now passing `--add-dir` for task files. It also runs `hooks/install-settings.py`: read its lines to the operator, and `--apply` only on yes. On a vault without `cleanupPeriodDays` it proposes 10-year transcript retention. Recommend yes to both.
