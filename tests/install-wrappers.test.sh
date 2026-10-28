@@ -357,26 +357,84 @@ for sh in bash zsh; do
 done
 rm -rf "$tmp"
 
-echo "── ~/.aios/spawn-env/<name>.sh reaches claude once, inside the new shell ──"
-# A caller cannot export into the Terminal spawn opens, so the launcher sources this file itself,
-# right before claude starts, and deletes it so a later session with the same name starts clean.
-tmp=$(mktemp -d); mkdir -p "$tmp/bin" "$tmp/aios" "$tmp/.aios/spawn-env"
-printf '#!/bin/sh\nprintf "%%s\\n" "${AIOS_SPAWN_ENV_PROBE:-unset}" >> "%s/seen"\nexit 0\n' "$tmp" > "$tmp/bin/claude"; chmod +x "$tmp/bin/claude"
+echo "── ~/.aios/spawn-env/<name>.sh applies to one launch, never to the shell that ran it ──"
+# A caller cannot export into the Terminal spawn opens, so the launcher reads this file itself and
+# evaluates it in the subshell that starts claude. A primary session runs this function in the
+# operator's own interactive shell, so cases run several launches in ONE shell and then ask that
+# shell for its own state. Every case asserts claude's launch (or its absence) positively, so none
+# can pass by nothing having run.
+# Never `exec command claude`: bash's exec looks for a PROGRAM named "command". macOS ships one
+# (/usr/bin/command), so a test on a Mac passes while every Linux launch fails with 127.
+grep -v '^[[:space:]]*#' "$SRC" | grep -q 'exec command claude' && no "the launch uses 'exec command claude' (exit 127 on Linux, where no 'command' program exists)" || ok "the launch never relies on a 'command' program on PATH"
 FNS=$( for f in _aios_run_dir _aios_handoff_dir _claude_with_respawn; do sed -n "/^$f() {/,/^}/p" "$SRC"; done )
-envrun(){ env -u CLAUDECODE -u AIOS_SPAWN_ENV_PROBE HOME="$tmp" TMPDIR="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; _claude_with_respawn "$2" ""' _ "$FNS" "$1" >/dev/null 2>&1; }
-echo 'export AIOS_SPAWN_ENV_PROBE=pinned' > "$tmp/.aios/spawn-env/envw.sh"
-envrun envw
-[ "$(sed -n 1p "$tmp/seen" 2>/dev/null)" = pinned ] && ok "the variable in spawn-env/<name>.sh reaches claude" || no "claude started without the spawn-env variable" "$(cat "$tmp/seen" 2>&1)"
-[ ! -e "$tmp/.aios/spawn-env/envw.sh" ] && ok "the file is deleted once read" || no "spawn-env file survived the launch"
-envrun envw
-[ "$(sed -n 2p "$tmp/seen" 2>/dev/null)" = unset ] && ok "a second launch with the same name starts without it" || no "the variable leaked into a later launch"
-echo 'export AIOS_SPAWN_ENV_PROBE=other' > "$tmp/.aios/spawn-env/someone.sh"
-envrun envw
-[ "$(sed -n 3p "$tmp/seen" 2>/dev/null)" = unset ] && [ -e "$tmp/.aios/spawn-env/someone.sh" ] && ok "another name's file is neither read nor removed" || no "a launch read or removed another session's spawn-env file"
-echo 'export AIOS_SPAWN_ENV_PROBE=linked' > "$tmp/real.sh"; rm -f "$tmp/.aios/spawn-env/envw.sh"; ln -s "$tmp/real.sh" "$tmp/.aios/spawn-env/envw.sh"
-envrun envw
-[ "$(sed -n 4p "$tmp/seen" 2>/dev/null)" = unset ] && ok "a symlinked spawn-env file is not sourced" || no "a symlink was followed and sourced"
-rm -rf "$tmp"
+for sh in bash /bin/bash zsh; do
+  command -v "$sh" >/dev/null 2>&1 || { echo "  - $sh not installed, skipped"; continue; }
+  tmp=$(mktemp -d); mkdir -p "$tmp/bin" "$tmp/aios" "$tmp/proj" "$tmp/.aios/spawn-env"; chmod 700 "$tmp/.aios" "$tmp/.aios/spawn-env"
+  # The stub records what it saw, and exits with the code in $HOME/rc when that file exists.
+  printf '#!/bin/sh\nprintf "%%s %%s\\n" "${AIOS_SPAWN_ENV_PROBE:-unset}" "$PWD" >> "%s/seen"\n[ -f "%s/rc" ] && exit "$(cat "%s/rc")"\nexit 0\n' "$tmp" "$tmp" "$tmp" > "$tmp/bin/claude"; chmod +x "$tmp/bin/claude"
+  envrun(){ env -u CLAUDECODE -u AIOS_SPAWN_ENV_PROBE HOME="$tmp" TMPDIR="$tmp" PATH="$tmp/bin:$PATH" "$sh" -c 'eval "$1"; shift; for n in "$@"; do _claude_with_respawn "$n" ""; done; echo "shell ${AIOS_SPAWN_ENV_PROBE:-unset}" >> "$HOME/seen"' _ "$FNS" "$@" </dev/null >/dev/null 2>&1; }
+  seen(){ sed -n "${1}p" "$tmp/seen" 2>/dev/null; }
+  fresh(){ rm -f "$tmp/seen" "$tmp/evals" "$tmp/rc"; }
+  w(){ printf '%s\n' "$2" > "$tmp/.aios/spawn-env/$1.sh"; chmod 600 "$tmp/.aios/spawn-env/$1.sh"; }
+  clean="unset $tmp/aios"
+
+  w envw "export AIOS_SPAWN_ENV_PROBE=pinned; cd \"$tmp/proj\""
+  envrun envw envw
+  [ "$(seen 1)" = "pinned $tmp/proj" ] && ok "$sh: the variable and the cd in the file reach claude" || no "$sh: first launch saw '$(seen 1)'"
+  [ ! -e "$tmp/.aios/spawn-env/envw.sh" ] && ok "$sh: the file is deleted once read" || no "$sh: spawn-env file survived the launch"
+  [ "$(seen 2)" = "$clean" ] && ok "$sh: the next launch in the same shell starts without it" || no "$sh: it leaked into the next launch: '$(seen 2)'"
+  [ "$(seen 3)" = "shell unset" ] && ok "$sh: the operator's shell never gets the variable" || no "$sh: the calling shell was changed: '$(seen 3)'"
+
+  for body in 'exit 0' 'exit 1' 'export AIOS_SPAWN_ENV_PROBE=half; false'; do
+    fresh; w envw "echo x >> \"\$HOME/evals\"; $body"; envrun envw
+    [ "$(seen 1)" = "shell unset" ] && [ "$(grep -c . "$tmp/evals" 2>/dev/null)" = 1 ] \
+      && ok "$sh: '$body' in the file: claude not started, evaluated once, the shell lives" \
+      || no "$sh: '$body' in the file" "seen: $(tr '\n' '|' < "$tmp/seen" 2>/dev/null) evals: $(grep -c . "$tmp/evals" 2>/dev/null)"
+  done
+  fresh; w envw "echo x >> \"\$HOME/evals\"; cd \"$tmp/missing\"; export AIOS_SPAWN_ENV_PROBE=after"; envrun envw
+  [ "$(seen 1)" = "shell unset" ] && [ "$(grep -c . "$tmp/evals" 2>/dev/null)" = 1 ] && ok "$sh: a failing line in the middle stops the launch, evaluated once" || no "$sh: failed cd in the middle" "seen: '$(seen 1)' evals: $(grep -c . "$tmp/evals" 2>/dev/null)"
+
+  fresh; echo 97 > "$tmp/rc"; w envw "echo x >> \"\$HOME/evals\""; envrun envw
+  [ "$(grep -c "^$clean" "$tmp/seen")" = 3 ] && [ "$(grep -c . "$tmp/evals")" = 3 ] \
+    && ok "$sh: claude's own exit 97 is a normal failure (retried, file re-applied), never mistaken for the file's" \
+    || no "$sh: a claude exit 97 was not handled as claude's" "launches: $(grep -c "^$clean" "$tmp/seen") evals: $(grep -c . "$tmp/evals" 2>/dev/null)"
+
+  fresh; w someone 'export AIOS_SPAWN_ENV_PROBE=other'; envrun envw
+  [ "$(seen 1)" = "$clean" ] && [ -e "$tmp/.aios/spawn-env/someone.sh" ] && ok "$sh: another name's file is neither read nor removed" || no "$sh: a launch read or removed another session's file"
+
+  fresh; printf 'export AIOS_SPAWN_ENV_PROBE=outside\n' > "$tmp/.aios/outside.sh"; chmod 600 "$tmp/.aios/outside.sh"; envrun ../outside
+  [ "$(seen 1)" = "$clean" ] && [ -e "$tmp/.aios/outside.sh" ] && ok "$sh: a name with a path starts clean and never reaches a file outside spawn-env" || no "$sh: '../outside': '$(seen 1)'"
+
+  fresh; printf 'export AIOS_SPAWN_ENV_PROBE=linked\n' > "$tmp/real.sh"; ln -s "$tmp/real.sh" "$tmp/.aios/spawn-env/envw.sh"; envrun envw
+  [ "$(seen 1)" = "shell unset" ] && [ -L "$tmp/.aios/spawn-env/envw.sh" ] && ok "$sh: a symlinked file: not loaded, not started, kept" || no "$sh: symlink case: '$(seen 1)'"; rm -f "$tmp/.aios/spawn-env/envw.sh"
+
+  fresh; w envw 'export AIOS_SPAWN_ENV_PROBE=open'; chmod 666 "$tmp/.aios/spawn-env/envw.sh"; envrun envw
+  [ "$(seen 1)" = "shell unset" ] && [ -e "$tmp/.aios/spawn-env/envw.sh" ] && ok "$sh: a file others can write: not started, kept" || no "$sh: world-writable file: '$(seen 1)'"
+
+  fresh; w envw 'export AIOS_SPAWN_ENV_PROBE=group'; chmod 770 "$tmp/.aios/spawn-env"; envrun envw
+  [ "$(seen 1)" = "shell unset" ] && [ -e "$tmp/.aios/spawn-env/envw.sh" ] && ok "$sh: a group-writable spawn-env/: not started, kept" || no "$sh: group-writable folder: '$(seen 1)'"
+  chmod 700 "$tmp/.aios/spawn-env"; rm -f "$tmp/.aios/spawn-env/envw.sh"
+
+  fresh; w envw 'export AIOS_SPAWN_ENV_PROBE=hidden'; chmod 600 "$tmp/.aios/spawn-env"; envrun envw; chmod 700 "$tmp/.aios/spawn-env"
+  [ "$(seen 1)" = "shell unset" ] && [ -e "$tmp/.aios/spawn-env/envw.sh" ] && ok "$sh: a spawn-env/ that cannot be searched: not started (unknown is not absent)" || no "$sh: unsearchable folder: '$(seen 1)'"
+  rm -f "$tmp/.aios/spawn-env/envw.sh"
+
+  fresh; w envw 'export AIOS_SPAWN_ENV_PROBE=home'; chmod 770 "$tmp"; envrun envw; chmod 700 "$tmp"
+  [ "$(seen 1)" = "shell unset" ] && ok "$sh: a home folder others can write: not started" || no "$sh: group-writable home: '$(seen 1)'"
+  rm -f "$tmp/.aios/spawn-env/envw.sh"
+
+  # A relative TMPDIR plus a `cd` in the file: the marker must still be found and removed, or a
+  # launch that DID start would be reported as stopped and never respawned.
+  fresh; w envw "export AIOS_SPAWN_ENV_PROBE=rel; cd \"$tmp/proj\""; mkdir -p "$tmp/aios/t"
+  err=$(cd "$tmp/aios" && env -u CLAUDECODE -u AIOS_SPAWN_ENV_PROBE HOME="$tmp" TMPDIR=t PATH="$tmp/bin:$PATH" "$sh" -c 'eval "$1"; _claude_with_respawn envw ""' _ "$FNS" </dev/null 2>&1 >/dev/null)
+  [ "$(seen 1)" = "rel $tmp/proj" ] && case "$err" in *stopped*) false ;; *) true ;; esac && [ -z "$(ls -A "$tmp/aios/t")" ] \
+    && ok "$sh: a relative TMPDIR and a cd: launched, not reported as stopped, marker gone" || no "$sh: relative TMPDIR" "seen: '$(seen 1)' err: $err left: $(ls -A "$tmp/aios/t")"
+
+  fresh
+  env -u CLAUDECODE HOME="$tmp" TMPDIR="$tmp" PATH="$tmp/bin:$PATH" "$sh" -c 'eval "$1"; claude(){ echo function >> "$HOME/seen"; }; _claude_with_respawn claude ""' _ "$FNS" </dev/null >/dev/null 2>&1
+  [ "$(seen 1)" = "$clean" ] && ok "$sh: a shell function named claude is never what gets launched" || no "$sh: the launch ran a shell function: '$(seen 1)'"
+  rm -rf "$tmp"
+done
 
 echo "── RESULT: $PASS passed, $FAIL failed  (${BASH_VERSION:+bash $BASH_VERSION}${ZSH_VERSION:+zsh $ZSH_VERSION}) ──"
 [ "$FAIL" = "0" ] || exit 1

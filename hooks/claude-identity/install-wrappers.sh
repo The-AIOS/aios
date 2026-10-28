@@ -188,18 +188,57 @@ _claude_with_respawn() {
   cd ~/aios 2>/dev/null
 
   # Per-session environment, one-shot. A caller that needs this ONE session to start with
-  # extra variables (e.g. a launcher pinning an account with CLAUDE_CODE_OAUTH_TOKEN) writes
-  # ~/.aios/spawn-env/<name>.sh before calling `spawn`. It cannot export them itself: on macOS
-  # `spawn` opens a NEW Terminal, whose shell inherits nothing from the caller. So the file is
-  # sourced HERE, inside the new shell, right before `claude` starts, and deleted, so it never
-  # leaks into a later session that reuses the name. Only a file this user owns is read.
+  # extra variables or in another folder (e.g. a launcher pinning an account with
+  # CLAUDE_CODE_OAUTH_TOKEN, or a `cd` into a project repo) writes ~/.aios/spawn-env/<name>.sh,
+  # mode 600, before calling `spawn`. It cannot export them itself: on macOS `spawn` opens a NEW
+  # Terminal, whose shell inherits nothing from the caller. So the file is read HERE, once, and
+  # deleted, and its text is evaluated with errexit in the SUBSHELL that starts claude (below):
+  # never in this shell, which for a primary session is the operator's own interactive shell,
+  # so an `export`, a `cd` or an `exit` in it stays inside that launch. It is re-applied on every
+  # relaunch of this session (respawn, account swap); a later session starts without it.
+  # It cannot change --model, --tier, --profile, --effort or --advisor: those are built before
+  # it runs, so pass them to `spawn` instead.
+  # A plain name only (never a path). The file must be a regular file of this user's, and
+  # neither it, spawn-env/ nor ~/.aios may be a symlink, someone else's, or writable by group
+  # or others. A file that fails those checks or cannot be read is kept, reported, and the
+  # session is NOT started: it may exist to pin an account, and starting on the wrong one is
+  # worse than not starting. The checks are by path, then the file is read once — trusted
+  # because the folders on the way (home included) are this user's alone, not because of a lock.
+  # A failing line stops the launch through errexit, with errexit's own limits: it is off when
+  # the caller itself runs in a condition (`if aios; then`, `aios && …`), and `export X="$(cmd)"`
+  # succeeds even when cmd fails — write `X=$(cmd) || exit 1; export X` for a value that must exist.
   # (`: AIOS_SPAWN_ENV_HOOK` marks the function for any older rc wrapper that did this itself.)
   : AIOS_SPAWN_ENV_HOOK
-  local _spawn_env="$HOME/.aios/spawn-env/$name.sh"
-  if [ -f "$_spawn_env" ] && [ ! -L "$_spawn_env" ] && [ -O "$_spawn_env" ]; then
-    . "$_spawn_env"
-    rm -f "$_spawn_env"
-  fi
+  local _spawn_env_code="" _spawn_env_bad="" _spawn_env_pending=""
+  local _spawn_env_dir="$HOME/.aios/spawn-env"
+  local _spawn_env="$_spawn_env_dir/$name.sh"
+  case "$name" in
+    */*|.*) ;;
+    *)
+      # A spawn-env/ this user cannot search hides the file: that is "cannot tell", not "absent".
+      if [ -d "$_spawn_env_dir" ] && [ ! -x "$_spawn_env_dir" ]; then
+        _spawn_env_bad="spawn-env/ cannot be searched, so whether a file waits there is unknown"
+      fi
+      if [ -n "$_spawn_env_bad" ]; then
+        :
+      elif [ -e "$_spawn_env" ] || [ -L "$_spawn_env" ]; then
+        if [ -L "$_spawn_env" ] || [ ! -f "$_spawn_env" ] || [ -L "$_spawn_env_dir" ] || [ -L "$HOME/.aios" ] \
+           || [ ! -O "$_spawn_env" ] || [ ! -O "$_spawn_env_dir" ] || [ ! -O "$HOME/.aios" ]; then
+          _spawn_env_bad="it is not a regular file, or it, spawn-env/ or ~/.aios is a symlink or not yours"
+        elif ! _spawn_env_bad=$(find "$HOME" "$HOME/.aios" "$_spawn_env_dir" "$_spawn_env" -prune \( -perm -020 -o -perm -002 \) -print); then
+          _spawn_env_bad="its permissions could not be checked"
+        elif [ -n "$_spawn_env_bad" ]; then
+          _spawn_env_bad="it, spawn-env/, ~/.aios or your home folder is writable by group or others"
+        elif ! _spawn_env_code=$(cat "$_spawn_env"); then
+          _spawn_env_bad="it could not be read"
+        fi
+        [ -n "$_spawn_env_bad" ] || rm -f "$_spawn_env" || echo "⚠️  spawn: could not delete $_spawn_env — it would load again for the next '$name'" >&2
+      fi
+      if [ -n "$_spawn_env_bad" ]; then
+        echo "⚠️  spawn: $_spawn_env not loaded — $_spawn_env_bad. '$name' was not started; the file is kept." >&2
+        return 1
+      fi ;;
+  esac
 
   # Use ARRAY for resume args (portable bash + zsh). Unquoted string $resume_flag
   # would word-split in bash but NOT in zsh (default) — zsh would pass the whole
@@ -336,19 +375,41 @@ $_ad
 ${CLAUDE_ADD_DIRS:-}
 $_f
 ADDDIRS
-    # `command claude` bypasses function/alias lookup and resolves to the PATH
-    # binary directly. Critical for the edge case where the operator NAMES their
-    # session "claude" in USER.md — that installs a `claude()` shell function, and
-    # without `command` the bare `claude` here would re-resolve to it → infinite
-    # recursion. (The default fallback is now "aios", which never shadows the
-    # CLI — see detect_primary_session; this guard now covers only the explicit
-    # "claude" session-name case.) Safe for all primary names.
-    if [ -n "$bootstrap" ]; then
-      command claude "${model_args[@]}" "${effort_args[@]}" "${advisor_args[@]}" "${mcp_args[@]}" "${add_dir_args[@]}" "${resume_args[@]}" --remote-control --name "$name" "$bootstrap"
-    else
-      command claude "${model_args[@]}" "${effort_args[@]}" "${advisor_args[@]}" "${mcp_args[@]}" "${add_dir_args[@]}" "${resume_args[@]}" --remote-control --name "$name"
+    # `command claude` bypasses function/alias lookup and resolves to the PATH binary. Critical
+    # for the edge case where the operator NAMES their session "claude" in USER.md — that
+    # installs a `claude()` shell function, and a bare `claude` here would re-resolve to it →
+    # infinite recursion. Never `exec command claude`: bash's exec does not run the `command`
+    # builtin, it looks for a program called "command", which most Linux systems do not have.
+    # The SUBSHELL keeps spawn-env/<name>.sh out of this shell (see the top of this function).
+    # Whether the file got as far as claude is told by a marker file, never by the exit code:
+    # the subshell removes it right before claude starts, so a marker still there means the
+    # file stopped first (a failed line, or an `exit`) — whatever code claude itself can return.
+    _spawn_env_pending=""
+    if [ -n "$_spawn_env_code" ]; then
+      # Absolute, because the file may `cd` before the subshell removes it.
+      _spawn_env_pending=$(mktemp "${TMPDIR:-/tmp}/aios-spawn-env.XXXXXX") || {
+        echo "⚠️  spawn: no temp file to watch ~/.aios/spawn-env/$name.sh — not started" >&2; break; }
+      case "$_spawn_env_pending" in /*) ;; *) _spawn_env_pending="$PWD/$_spawn_env_pending" ;; esac
     fi
+    (
+      if [ -n "$_spawn_env_code" ]; then
+        set -e
+        eval "$_spawn_env_code"
+        set +e
+        rm -f "$_spawn_env_pending" || exit 1
+      fi
+      if [ -n "$bootstrap" ]; then
+        command claude "${model_args[@]}" "${effort_args[@]}" "${advisor_args[@]}" "${mcp_args[@]}" "${add_dir_args[@]}" "${resume_args[@]}" --remote-control --name "$name" "$bootstrap"
+      else
+        command claude "${model_args[@]}" "${effort_args[@]}" "${advisor_args[@]}" "${mcp_args[@]}" "${add_dir_args[@]}" "${resume_args[@]}" --remote-control --name "$name"
+      fi
+    )
     local exit_code=$?
+    if [ -n "$_spawn_env_pending" ] && [ -e "$_spawn_env_pending" ]; then
+      rm -f "$_spawn_env_pending"
+      echo "⚠️  spawn: ~/.aios/spawn-env/$name.sh stopped (status $exit_code) before claude started — not retrying, it would stop the same way." >&2
+      break
+    fi
 
     # Branch 1: account-swap-triggered respawn (marker file present).
     if [ -n "$marker" ] && [ -f "$marker" ]; then
