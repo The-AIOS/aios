@@ -55,6 +55,7 @@ blocks "Slack token"              "tok = xoxb${DASH}${A}"
 blocks "Google API key"           "key = AIza${A}"
 blocks "GitLab PAT"               "tok = glpat${DASH}${A}"
 blocks "Google OAuth secret"      "sec = GOCSPX${DASH}${A}"
+blocks "Gemini key (AQ. shape)"   "key = AQ.${A}"
 blocks "launchd plist 40-hex tok" "<string>${H}</string>"
 
 echo "── 2. clean input is not blocked (no false positive) ──"

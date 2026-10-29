@@ -1053,6 +1053,9 @@ jobs:
 
       - name: aios-commit / aios-note-append / secret-scan regression test
         run: bash tests/aios-commit.test.sh
+      - name: transcript-secret-scan finds a pasted key and never reprints it
+        # A token pasted into a session stays in its transcript; the scan reports kind, date, file:line and the last 4 characters, never the value, and a missing folder is exit 2, not a clean zero.
+        run: bash tests/transcript-secret-scan.test.sh
       - name: Commands commit their own paths, not the whole changed vault
         # aios-commit --vault sweeps other sessions' uncommitted files into a commit stamped as this command's; each command must name what it wrote.
         run: bash tests/commands-commit-own-paths.test.sh

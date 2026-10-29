@@ -79,6 +79,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-10-29 — Find the keys you pasted into your sessions
+
+`hash: `
+
+> **What you can now do.** Ask which API keys and tokens you ever pasted into a Claude Code session, and get where each one sits and its last 4 characters, never the key. Run it nightly and be told only when a new one appears.
+
+**Pasted keys are found, not forgotten** (#PR). A key pasted into a chat stays in that session's transcript for as long as transcripts are kept, and the commit scanner never reads them. `hooks/transcript-secret-scan.py scan` reads each transcript once, then only what was added, using the same pattern list as `hooks/git/secret-scan.sh`. Its report lists, per distinct value, the kind, the date, the file and line, and the last 4 characters; the key itself is never printed or stored. Matches glued into longer base64 text or attachment ids are skipped, and the newer `AQ.` Gemini key shape is now caught here and by the commit scanner. The fix is to rotate the key, and `ack ID` marks one done. A missing folder or an unreadable file makes the run say INCOMPLETE and exit non-zero, never a clean zero. `--notify "CMD"` runs your command once with a one-line summary when a new value appears.
+
+**Action required:** none. To use it, run `python3 hooks/transcript-secret-scan.py scan` once (the first run reads your whole history and reports a backlog; rotate the live keys, then `ack` the dead ones), and schedule the same command nightly with cron, launchd or Task Scheduler if you want it watched. Each machine scans only its own transcripts.
+
 ## 2026-10-28 — Two machines that sync cleanly, work that finishes outside a session that closes, and sessions that read what they are handed
 
 **🐜 The AIOS now has a home for humans. Ask, share what you built, meet other operators → https://discord.gg/f3rdxBTDMG**
