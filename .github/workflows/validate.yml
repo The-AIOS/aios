@@ -1697,6 +1697,21 @@ jobs:
         # answer that talks a session out of loading any context at all.
         run: bash tests/context-rungs.test.sh
 
+      - name: recall finds what a title does not say, inside a hard output cap, writing nothing
+        # The floor names every title and prints only the newest few bodies, so an old lesson
+        # whose title does not name the concept is invisible to a session looking for the
+        # concept -- and nothing in the output says it missed. recall is the on-demand index
+        # that ends that miss, and each property below is one a retrieval tool loses silently.
+        #
+        # Under test: a POSITIVE CONTROL (an entry only its BODY names must come back first,
+        # past decoys -- a recall that stops finding must fail here); a total output cap that no
+        # flag combination can pass, measured on the whole rendered text; zero writes, by
+        # before/after hashes of the vault and of hooks/; observed/ only; "no results" (exit 1)
+        # told apart from "could not look" (exit 2), including a Python without FTS5, which
+        # must fail loudly because an empty screen reads as "nothing relevant"; and query text
+        # with quotes, operators and `*` that must never reach FTS5 as syntax.
+        run: bash tests/recall.test.sh
+
       - name: the context floor carries learned content, bounded
         # The floor was headings only. A session could then hold every title in the vault
         # and behave exactly like one that read nothing -- it knew what EXISTED and nothing
