@@ -56,8 +56,10 @@ context/ventures/ is a THIRD access pattern and it needs its own, because it is
 PARTITIONED where the other two are global. Any observed entry might apply to any
 task, so observed/ is indexed entry-by-entry. But venture context is scoped to one
 venture, and which venture a task touches is usually obvious from the task -- so
-the floor lists the ventures and the headings and table rows of their _index (not
-its prose, see venture_index()), and the worker opens the one that applies.
+the floor lists the ventures and reads their _index, and the worker opens the one
+that applies. The _index is read WHOLE, prose included: an operator puts the rules
+every venture session must see there (a pricing gate, a neutrality rule, a naming
+guard), usually as quoted lines, and a structure-only cut drops exactly those.
 Measured on a live vault that folder is 108,646 words, LARGER than observed/ and
 six times declared/; reading its headings alone costs ~7.8k tokens
 and reading it whole costs ~141k, so neither belongs at a floor every session pays.
@@ -253,33 +255,6 @@ def recent_slice(lines, n):
     return es, False, ["\n".join(e).rstrip() for e in newest(es, n)]
 
 
-def venture_index(lines):
-    """ventures/_index.md as the floor emits it: its headings and table rows, not its prose.
-
-    The folder is listed and indexed, never read whole (module docstring) -- but the _index
-    itself used to be emitted whole, and an operator's _index grows prose: measured on a live
-    vault, 10.7 KB of every floor. Its tables and headings are what the floor needs (which
-    ventures exist, one line each); the prose stays one Read away. An index with neither
-    tables nor headings has no structure to keep, so it is emitted whole, as before.
-    """
-    lines = list(lines)
-    while lines and not lines[-1].strip():
-        lines.pop()
-    # front matter is metadata, not prose: skip it rather than count it as omitted
-    body = lines
-    if lines and lines[0].strip() == "---":
-        end = next((k for k in range(1, len(lines)) if lines[k].strip() == "---"), None)
-        if end is not None:
-            body = lines[end + 1:]
-    keep = [l.rstrip() for l in body if l.lstrip().startswith(("#", "|"))]
-    if not keep:
-        return "\n".join(lines).rstrip()
-    dropped = sum(1 for l in body if l.strip() and not l.lstrip().startswith(("#", "|")))
-    if dropped:
-        keep.append("(index prose omitted: %d lines; open ventures/_index.md for it)" % dropped)
-    return "\n".join(keep)
-
-
 UNREADABLE = []   # files a listing returned but open() could not read -- see main()
 
 
@@ -473,7 +448,7 @@ def main(argv):
         vidx = read(os.path.join(vdir, "_index.md"))
         if vidx:
             w("")
-            w(venture_index(vidx))
+            w("\n".join(vidx).rstrip())
         for v in vents:
             files = sorted(f for f in os.listdir(os.path.join(vdir, v))
                            if f.endswith(".md"))

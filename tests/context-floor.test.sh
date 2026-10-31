@@ -366,26 +366,20 @@ $PYBIN "$H" --print "$IX" | grep -F '### FILE: notas.md' | grep 'RULE LIBRARY' >
   || ok "a ## entry titled 'Index …' does not make a ##-entry file a rule library"
 
 echo
-echo " ventures/_index.md -- its tables and headings, not its prose"
+echo " ventures/_index.md -- read whole, prose and quoted rules included"
 VX="$TMP/vx"; mkvault "$VX" 3 10
 VXD="$VX/vault/00 - notes/context/ventures"; mkdir -p "$VXD/acme"
 printf '# Acme\n' > "$VXD/acme/about_venture.md"
-{ printf -- '---\ntype: index\n---\n# Ventures\n\nvxprose one long paragraph\n\n## Acme\n\nvxprose two\n'
-  printf '| File | What |\n|---|---|\n| acme/about_venture.md | vxrow overview |\n\nvxprose three\n'; } > "$VXD/_index.md"
+{ printf -- '---\ntype: index\n---\n# Ventures\n\nvxprose one long paragraph\n\n## Acme\n\n'
+  printf '> vxrule No session quotes a hard price until pricing.md closes.\n\n'
+  printf '| File | What |\n|---|---|\n| acme/about_venture.md | vxrow overview |\n'; } > "$VXD/_index.md"
 VS="$($PYBIN "$H" --print "$VX" | awk '/^--- ventures\//{f=1} f')"
 printf '%s' "$VS" | grep -F 'vxrow overview' >/dev/null && printf '%s' "$VS" | grep -F '## Acme' >/dev/null \
   && ok "the index's table rows and headings are emitted" \
   || no "the index's structure was dropped" "the table is what says which ventures exist"
-printf '%s' "$VS" | grep -F 'vxprose' >/dev/null \
-  && no "the index's prose was emitted at the floor" "ventures/ is listed and indexed, never read whole -- 10.7 KB on a live vault" \
-  || ok "…its prose is not"
-printf '%s' "$VS" | grep -F '(index prose omitted: 3 lines; open ventures/_index.md for it)' >/dev/null \
-  && ok "…and the floor says how much it left out and where it is" \
-  || no "the omission is silent" "a cut nobody announces reads as complete"
-printf 'Just a paragraph of vxplain prose.\nAnd a second line.\n' > "$VXD/_index.md"
-$PYBIN "$H" --print "$VX" | grep -F 'And a second line.' >/dev/null \
-  && ok "control: an index with no tables or headings is emitted whole" \
-  || no "control: a prose-only index vanished" "with no structure to keep, dropping it leaves nothing"
+printf '%s' "$VS" | grep -F 'vxrule No session quotes a hard price' >/dev/null && printf '%s' "$VS" | grep -F 'vxprose one' >/dev/null \
+  && ok "…and its prose and quoted rules, which every venture session must see" \
+  || no "the index's prose or a quoted rule was cut from the floor" "rules like a pricing gate live there as quoted lines"
 
 echo
 printf -- '-- %d passed, %d failed --\n' "$PASS" "$FAIL"
