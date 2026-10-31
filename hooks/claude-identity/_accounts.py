@@ -187,7 +187,7 @@ def _lock():
     can all reach the first-use import at once, and a change is read-modify-write."""
     path = accounts_file() + ".lock"
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "a+") as f:
+    with open(path, "a+", encoding="utf-8") as f:
         try:
             import fcntl
         except ImportError:
