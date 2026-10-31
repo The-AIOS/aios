@@ -378,11 +378,18 @@ if command -v uv >/dev/null 2>&1; then
 else
   echo "  SKIP  uv run: uv not on PATH"
 fi
-# Opt-in: nothing wires it up.
-if grep -rn 'recall\.py' hooks/context-floor.py hooks/floor-at-start.py hooks/install-settings.py CLAUDE.md >/dev/null 2>&1; then
-  no "recall.py is referenced from the floor, a session hook or CLAUDE.md" "it is opt-in by contract"
+# Opt-in: nothing runs it. The floor may NAME it in one line of text, so sessions learn it
+# exists (a tool nobody knows about is never used), but no hook imports or calls it.
+if grep -rn 'recall' hooks/floor-at-start.py hooks/install-settings.py >/dev/null 2>&1 \
+   || grep -n 'recall' hooks/context-floor.py | grep -vE '^[0-9]+:[[:space:]]*(w\(|.uv run ~/aios/hooks/recall\.py|#)' | grep -q .; then
+  no "recall.py is called from the floor or a session hook" "it is opt-in by contract: named, never run"
 else
-  ok "opt-in: the floor, the session hooks and CLAUDE.md do not call it"
+  ok "opt-in: no hook imports or calls it"
+fi
+if $PYBIN hooks/context-floor.py --print "$V" 2>/dev/null | grep -F 'uv run ~/aios/hooks/recall.py "<words>"' >/dev/null; then
+  ok "the floor names recall.py once, where every session reads"
+else
+  no "the floor does not name recall.py" "a tool no session knows about is never used"
 fi
 if grep -nE 'split_entries' "$H" >/dev/null && ! grep -nE '^ENTRY *=|re\.compile\(r"\^\\#\{3\}' "$H" >/dev/null; then
   ok "the section rule lives only in the floor (imported, not copied)"

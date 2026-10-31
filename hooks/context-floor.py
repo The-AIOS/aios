@@ -387,6 +387,10 @@ def main(argv):
     w("=" * 72)
     w("MOST RECENT %d ENTRIES PER OBSERVED FILE  --  what the last sessions learned" % recent)
     w("(older entries are indexed by title in the map below; open any of them at any time)")
+    # Named, never called: recall stays opt-in (#247), but a tool no session knows about is
+    # never used, so the one place every session reads says it exists.
+    w('(to search every observed/ body by keyword: UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" '
+      'uv run ~/aios/hooks/recall.py "<words>")')
     w("=" * 72)
     for fn, lines in obs:
         es, is_lib, rec = recent_slice(lines, recent)
