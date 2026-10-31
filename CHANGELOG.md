@@ -91,6 +91,8 @@
 
 **`--list` tells the truth about the active account.** It reads the live credential for the account in use. The saved copy only moves on a swap or a capture, so it would report a healthy account as expired.
 
+**You can read who is available, by date.** On its weekly renewal date an account goes back to 0%, so a number read before that date stops meaning anything after it. `--list` now says so for each account, with its next renewal, and `claude-switch --availability` gives it as JSON. An expired login wins over any percentage. The dates are stored in `~/.aios/accounts-state.json`, so asking needs no access to a credential.
+
 **`claude-switch` comes with the wrappers,** on macOS, Linux and Windows, and resolves aliases from the list. `--order`, `--enable`, `--disable` and `--add` are new, and each change is logged to `~/.aios/accounts-log.jsonl`.
 
 ### What you need to do
@@ -100,7 +102,7 @@
 > - **State:** check whether `USER.md` has numbered lines under `## Anthropic accounts`, and whether `~/.aios/accounts.json` exists. Neither: this operator does not rotate accounts, so say nothing and skip the rest.
 > - **Act (automatic):** the first `claude-switch --list`, watcher tick or statusLine refresh imports the list, in order, and keeps the section's whole text in the file's `history`. `USER.md` is not written. Run `claude-switch --list` and show the result, then ask them to confirm the order. Aliases are imported; **plan and accounts outside the numbered list are not**, so an account kept in prose needs `claude-switch --add <email> --disabled --reason "..."`.
 > - **Ask:** *"Your account list now lives in `~/.aios/accounts.json`. The old section in `USER.md` is no longer read. Want me to replace it with one line pointing at `claude-switch --list`?"* It is their file, so the edit is theirs to approve. Say plainly that later edits to that section will have no effect. **If they use AIOS Glass or the AIOS App, recommend keeping the section for now:** the account-swap menu in both still reads it until those surfaces are updated, and it comes up empty without it.
-> - **Ask, if `claude-switch --list` shows an expired account in rotation:** tell them it was a silent trap until now, and offer `/login` then `claude-switch --capture`, or `claude-switch --disable <account>`.
+> - **Ask, if `claude-switch --list` shows an expired account in rotation:** tell them it was a silent trap until now, and offer the isolated renewal in `claude-switch --help`, not a `/login` in the current seat, or `claude-switch --disable <account>`.
 > - **Act (RESTART-CLASS, do LAST):** `install-wrappers.sh` / `.ps1` is re-run by this update and now also defines `claude-whoami` and `claude-switch`. A hand-written definition earlier in their rc file is shadowed by the managed one; an alias kept in it no longer matters, because aliases come from the list. **Open a new terminal** to pick it up.
 
 ## 2026-10-28 — Two machines that sync cleanly, work that finishes outside a session that closes, and sessions that read what they are handed

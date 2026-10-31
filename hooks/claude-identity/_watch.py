@@ -362,6 +362,7 @@ def record_state(email: str, cache: dict) -> None:
             "seven_day_pct": cache.get("seven_day_pct") or 0,
             "seven_day_resets_at": cache.get("seven_day_resets_at"),
         })
+        _accounts.record_weekly_renewal(email, cache.get("seven_day_resets_at"))
     except Exception as e:
         log(f"record_state({email}) failed: {type(e).__name__}: {e}")
 
@@ -376,11 +377,28 @@ def headroom(email: str, t5: int, t7: int) -> tuple:
     p = state_path(email)
     if not os.path.exists(p):
         return True, "no known state (assume fresh)"
-    try:
-        with open(p, encoding="utf-8") as f:
-            s = json.load(f)
-    except Exception:
+    s = _read_state(email)
+    if s is None:
         return True, "state unreadable (assume fresh)"
+    cap = _capped_window(s, t5, t7)
+    if cap:
+        label, pct, reset = cap
+        when = time.strftime("%H:%M", time.localtime(reset)) if reset else "unknown"
+        return False, f"{label} at {round(pct)}% until {when}"
+    return True, "under thresholds"
+
+
+def _read_state(email: str):
+    try:
+        with open(state_path(email), encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _capped_window(s: dict, t5: int, t7: int):
+    """(label, pct, reset) of the window still holding this account, or None. A reading
+    over the threshold says nothing once its window has rolled over."""
     now = time.time()
     for pct_key, reset_key, thr, label in (
         ("five_hour_pct", "five_hour_resets_at", t5, "5h"),
@@ -388,13 +406,101 @@ def headroom(email: str, t5: int, t7: int) -> tuple:
     ):
         pct = s.get(pct_key) or 0
         reset = s.get(reset_key)
-        if pct < thr:
+        if pct < thr or (reset and now > reset):
             continue
-        if reset and now > reset:
-            continue  # window rolled over — fresh again
-        when = time.strftime("%H:%M", time.localtime(reset)) if reset else "unknown"
-        return False, f"{label} at {round(pct)}% until {when}"
-    return True, "under thresholds"
+        return label, pct, reset
+    return None
+
+
+def _ago(ts: float) -> str:
+    secs = max(0, time.time() - ts)
+    if secs < 3600:
+        return f"{int(secs // 60)}m ago"
+    if secs < 172800:
+        return f"{int(secs // 3600)}h ago"
+    return f"{int(secs // 86400)}d ago"
+
+
+WEEK_SECS = 7 * 86400
+
+
+def _when(ts: float) -> str:
+    return time.strftime("%a %d/%m %H:%M", time.localtime(ts))
+
+
+def _next_renewal(anchor):
+    """The next weekly reset at or after now. Weeks are fixed: a window that reset on a
+    date resets on that date plus 7 days, whether or not the account was used."""
+    if not anchor:
+        return None
+    now = time.time()
+    return anchor if anchor > now else anchor + WEEK_SECS * (int((now - anchor) // WEEK_SECS) + 1)
+
+
+def availability(current: str) -> list:
+    """One row per account: whether it can take you now, and how to read its numbers.
+
+    A number is only true inside its window. On the renewal date the weekly usage goes
+    back to 0%, so 98% read before that date says nothing after it, and this reports
+    0%. Then the order of the checks: an expired login ends at a login screen whatever
+    the usage is, so it wins over a cap. Dates come from the stored state, then from
+    the last reading, so an account unused for weeks is still read correctly."""
+    t5, t7 = thresholds()
+    stored = _accounts.stored_state()
+    now = time.time()
+    rows = []
+    for a in _accounts.load()["accounts"]:
+        email = a["email"]
+        known = stored.get(email) or {}
+        reading = _read_state(email)
+        reading = reading if isinstance(reading, dict) else {}
+        if email == current:
+            # Its saved copy can be weeks old, so only a date from the live credential counts.
+            expires, source = (known.get("refresh_expires_at"), "live") if known.get("refresh_source") == "live" else (None, "")
+        else:
+            expires, source = _accounts.saved_refresh_expiry(email), "saved"
+            if expires is None and known.get("refresh_source") == "saved":
+                expires = known.get("refresh_expires_at")
+        anchor = reading.get("seven_day_resets_at") or known.get("weekly_renews_at")
+        renews = _next_renewal(anchor)
+        renewed = bool(anchor) and anchor <= now
+        pct7 = 0 if renewed else (reading.get("seven_day_pct") or 0)
+        five_reset = reading.get("five_hour_resets_at")
+        pct5 = 0 if five_reset and five_reset <= now else (reading.get("five_hour_pct") or 0)
+        usage = f"5h {round(pct5)}% · 7d {round(pct7)}%"
+        if renewed:
+            usage += f" (renewed {_when(anchor)})"
+        elif reading.get("recorded_at"):
+            usage += f", read {_ago(reading['recorded_at'])}"
+        if renews:
+            usage += f", renews {_when(renews)}"
+        cap = _capped_window(reading, t5, t7)
+        capped_until = None
+        if email == current:
+            state, detail = "active", usage
+        elif not restorable(email):
+            state, detail = "not-captured", "run claude-switch --capture while logged in to it"
+        elif expires is not None and expires < now:
+            state, detail = "expired", f"needs a new login first, see claude-switch --help; {usage}"
+        elif cap:
+            label, pct, capped_until = cap
+            back = "back to 0%" if label == "7d" else "window rolls"
+            state, detail = "capped", (f"{label} at {round(pct)}% until "
+                                       f"{_when(capped_until) if capped_until else 'unknown'}, then {back}")
+        elif reading.get("recorded_at") or anchor:
+            state, detail = "available", usage
+        else:
+            state, detail = "available", "no reading yet"
+        rows.append({
+            "email": email, "alias": a.get("alias", ""), "plan": a.get("plan", ""),
+            "rotation": a.get("rotation", True), "reason": a.get("reason", ""),
+            "state": state, "detail": detail, "capped_until": capped_until,
+            "five_hour_pct": pct5, "seven_day_pct": pct7, "seven_day_pct_read": reading.get("seven_day_pct"),
+            "weekly_renews_at": renews, "weekly_renewed_since_reading": renewed,
+            "refresh_expires_at": expires, "refresh_expires_source": source,
+            "reading_recorded_at": reading.get("recorded_at"),
+        })
+    return rows
 
 
 def pick_target(current: str, t5: int, t7: int) -> tuple:
@@ -1024,6 +1130,7 @@ def warn_once(warning: str) -> None:
 def record_health() -> None:
     state, detail = ("fail" if CRASHED else "ok"), LAST_LOG or "completed"
     try:
+        _accounts.sync_saved_expiry(_read_active_email())
         lost = _accounts.missing_list_problem()
         warning = lost or rotation_warning(_read_active_email())
         warn_once(warning)

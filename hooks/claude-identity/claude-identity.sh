@@ -416,6 +416,8 @@ print(("same " if own else "other ") + ",".join(sorted(set(twins))) if twins els
   fi
   printf '%s' "$blob" > "$dir/keychain.json"
   chmod 600 "$dir/keychain.json"
+  # Best effort: a date we could not store must not fail a capture or a swap.
+  printf '%s' "$blob" | accounts_py expiry --stdin --record "$email" >/dev/null 2>&1 || true
 
   $PY - <<PY
 import json
@@ -629,29 +631,31 @@ cmd_whoami() {
 # Where a credential stands. Informs, never blocks. For the ACTIVE account it reads
 # the LIVE credential, because the saved copy only moves on a swap or a capture: a
 # healthy account in use for weeks would otherwise read as expired. The blob goes
-# through stdin so it never appears in a process list, and only the date comes back.
+# through stdin so it never appears in a process list, and only the date comes back,
+# which is also stored so a later reading of availability needs no credential.
 expiry_note() {  # expiry_note <email> <current-email>
   local verdict blob
   if [ "$1" = "$2" ]; then
     blob=$(cred_read) || { printf '  %s' "${DIM}(live credential unreadable — expiry unknown)${RESET}"; return 0; }
-    verdict=$(printf '%s' "$blob" | accounts_py expiry --stdin) || verdict=unknown
+    verdict=$(printf '%s' "$blob" | accounts_py expiry --stdin --record "$1") || verdict=unknown
     blob=""
   else
     verdict=$(accounts_py expiry --email "$1") || verdict=unknown
   fi
   case "$verdict" in
-    expired\ *) printf '  %s' "${YELLOW}⚠ refresh token expired ${verdict#expired } — needs /login${RESET}" ;;
+    expired\ *) printf '  %s' "${YELLOW}⚠ refresh token expired ${verdict#expired }${RESET}" ;;
   esac
 }
 
 cmd_list() {
   local cur; cur=$(current_email)
-  local table; table=$(accounts_py table)
+  accounts_py sync-expiry "$cur"
+  local table; table=$(accounts_py availability --current "$cur" --table)
   [ -n "$table" ] || die "no accounts yet. Add them with: claude-switch --add <email> [--alias <name>]"
   echo "${BOLD}Accounts:${RESET}"
   local i=1
-  local email alias rotating plan reason
-  while IFS=$'\x1f' read -r email alias rotating plan reason; do
+  local email alias rotating plan reason avail
+  while IFS=$'\x1f' read -r email alias rotating plan reason avail; do
     [ -n "$email" ] || continue
     local marker=" "
     [ "$email" = "$cur" ] && marker="●"
@@ -669,6 +673,7 @@ cmd_list() {
     [ -z "$alias" ] || extras="$extras ${DIM}alias $alias${RESET}"
     [ -z "$plan" ] || extras="$extras ${DIM}$plan${RESET}"
     [ "$rotating" = 1 ] || extras="$extras ${DIM}not in rotation${reason:+: $reason}${RESET}"
+    [ -z "$avail" ] || extras="$extras ${DIM}— $avail${RESET}"
     printf "  %s %s. %-30s %s%s%s\n" "$marker" "$slot" "$email" "$saved" "$(expiry_note "$email" "$cur")" "$extras"
   done <<< "$table"
   echo ""
@@ -685,6 +690,7 @@ Usage:
   claude-switch {email|alias}      switch to a specific account
   claude-switch --capture          save current identity to ~/.claude/identities/
   claude-switch --list             show all accounts + saved state + expiry
+  claude-switch --availability     who can take you and why not, as JSON
   claude-switch --order a,b,c      reorder the rotation, showing where you would fall
   claude-switch --enable {account}   put an account in rotation
   claude-switch --disable {account} [--reason why]   keep it, out of rotation
@@ -697,6 +703,11 @@ First-time setup per account:
   1. Be logged into that Anthropic account in Claude Code (normal /login flow)
   2. Run: claude-switch --capture
   3. Repeat for each account in the list (claude-switch --add {email})
+
+To renew an account whose refresh token expired, without touching the current seat:
+  CLAUDE_CONFIG_DIR=~/.claude-acct-renew claude    # /login as that account, then /exit
+  CLAUDE_CONFIG_DIR=~/.claude-acct-renew claude-switch --capture
+  cp -Rp ~/.claude-acct-renew/identities/{email} ~/.claude/identities/
 
 Safety:
   - Swaps the credential blob ($(cred_source)) + .claude.json oauthAccount + userID
@@ -722,6 +733,12 @@ USAGE
   fi
 
   case "${1:-}" in
+    --availability)
+      local cur; cur=$(current_email 2>/dev/null) || cur=""
+      accounts_py sync-expiry "$cur"
+      accounts_py availability --current "$cur" --json
+      return 0
+      ;;
     --order|--enable|--disable|--add)
       [ -n "${2:-}" ] || die "$1 needs an argument. See: claude-switch --help"
       local verb="${1#--}" arg="$2" cur

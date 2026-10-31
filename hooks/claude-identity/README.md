@@ -263,6 +263,7 @@ If `quota-watch.log` still says `no cache yet — skip (is the Stop hook install
 | `claude-switch {email\|alias}` | Jump to a specific account |
 | `claude-switch --capture` | Save current identity |
 | `claude-switch --list` | Show all accounts, saved state and refresh-token expiry (the active account's is read from the live credential) |
+| `claude-switch --availability` | Who can take you and why not, as JSON, for a surface or a script. It needs no access to a credential once dates are stored |
 | `claude-switch --order a,b,c` | Reorder the rotation, showing where you would fall before and after |
 | `claude-switch --enable {account}` / `--disable {account} [--reason why]` | Put an account in or out of rotation, keeping its identity |
 | `claude-switch --add {email} [--alias a] [--plan p] [--disabled] [--reason why]` | Add an account |
@@ -355,6 +356,7 @@ Several things can ask for a swap at once: every open session's statusLine kicks
 | `~/.claude/identities/{email}/last-limits.json` | Last observed limits for that account — from the watcher, or from a token session | 600 |
 | `~/.claude/rate-limit-cache.json` | Latest quota snapshot from Stop hook | 600 |
 | `~/.aios/accounts.json` | The account list: order, alias, plan, in or out of rotation | 600 |
+| `~/.aios/accounts-state.json` | Each account's weekly renewal date and refresh-token expiry. Dates only | 600 |
 | `~/.aios/accounts-log.jsonl` | Append-only log of every change to it (import, order, enable, disable, add) | 644 |
 | `~/.claude/quota-rotation-warning.json` | The last warning about the next fallback, so it notifies once per change | 600 |
 | `~/.claude/quota-watch.log` | Watcher's per-tick decision log | 644 |
@@ -366,6 +368,8 @@ Several things can ask for a swap at once: every open session's statusLine kicks
 None of these should ever be committed — `~/.claude/` and `~/.aios/` are outside the vault by design.
 
 **The next fallback is checked on every tick.** If it has an expired refresh token, or has not been captured while others have, `~/.aios/health/quota-watch.json` reads `warn` and you get one notification, without waiting for a rotation to need it. A rotation skips that account in any case. A malformed list reads `fail`.
+
+**How to read an account's availability.** Every number has a date. On its **weekly renewal date** an account's usage goes back to 0%, so 98% read before that date says nothing after it, and `--list` and `--availability` report 0% with the date it renewed. Until then, a number over the threshold means **capped until the renewal**. An **expired refresh token** wins over all of that, because it ends at a login screen whatever the usage is. Renewal dates are stored per account in `~/.aios/accounts-state.json`, recorded while the account is active, and projected 7 days at a time after that, since a weekly window resets on its date whether or not the account was used. Refresh-token dates come from the saved copy for an account not in use, and from the live credential for the active one on `--list` and `--capture`, because the active account's saved copy can be weeks old.
 
 ## Troubleshooting
 

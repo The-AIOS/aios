@@ -31,12 +31,27 @@ stays away from a real list.
 Credentials: this module reads `refreshTokenExpiresAt` and nothing else, and never
 prints or logs a credential. A live credential arrives on stdin, never in argv.
 
+Two dates per account are stored in ~/.aios/accounts-state.json, so a reading of who is
+available needs no access to a credential: a surface, a session or a script can ask
+`availability --json`.
+
+  weekly_renews_at     when the weekly window resets and usage goes back to 0%. The key
+                       one for availability: a number read before this date means nothing
+                       after it. Recorded by the watcher from the active account's limits.
+  refresh_expires_at   when the login stops working. Saved copies keep it current for the
+                       accounts not in use. The active account's saved copy can be weeks
+                       old, so its date is only taken from the live credential.
+
 CLI (driven by claude-identity.sh):
     rotation                       emails in rotation, in order
     table                          email, alias, rotation, plan, reason (unit-separated)
     resolve NAME                   email for an alias or email
     next CURRENT                   the account a manual rotation lands on
-    expiry --email E | --stdin     "expired DATE" | "ok DATE" | "unknown"
+    expiry --email E | --stdin [--record E]
+                                   "expired DATE" | "ok DATE" | "unknown"
+    sync-expiry CURRENT            store the saved copies' dates
+    availability --current C [--json | --table]
+                                   who can take you, and why not
     order a,b,c --current C        reorder, showing where you would fall
     enable NAME --current C
     disable NAME [--reason R] --current C
@@ -75,6 +90,10 @@ class AccountsError(Exception):
 
 def accounts_file() -> str:
     return os.environ.get("AIOS_ACCOUNTS_FILE") or os.path.join(os.path.expanduser("~"), ".aios", "accounts.json")
+
+
+def state_file() -> str:
+    return os.path.splitext(accounts_file())[0] + "-state.json"
 
 
 def log_file() -> str:
@@ -335,8 +354,50 @@ def saved_problem(email: str) -> str:
     older credentials, and absence of evidence must not take one out of rotation."""
     ts = saved_refresh_expiry(email)
     if ts is not None and ts < time.time():
-        return f"refresh token expired {_day(ts)}, needs /login"
+        return f"refresh token expired {_day(ts)}, needs a new login"
     return ""
+
+
+def stored_state() -> dict:
+    """{email: {"weekly_renews_at", "refresh_expires_at", "refresh_source", ...}}. Dates
+    only, never a credential."""
+    try:
+        with open(state_file(), encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _store(email: str, **fields) -> None:
+    # Old mode writes nothing: USER_MD_PATH is how a test fixture points at its list,
+    # usually with the real HOME still in place.
+    if _legacy_user_md():
+        return
+    known = stored_state().get(email, {})
+    if all(known.get(k) == v for k, v in fields.items()):
+        return  # the watcher asks on every tick; most of the time nothing moved
+    with _lock():
+        data = stored_state()
+        data[email] = {**data.get(email, {}), **fields}
+        write_json_atomic(state_file(), data)
+
+
+def record_expiry(email: str, ts, source: str) -> None:
+    if ts is not None:
+        _store(email, refresh_expires_at=ts, refresh_source=source)
+
+
+def record_weekly_renewal(email: str, ts) -> None:
+    if isinstance(ts, (int, float)) and not isinstance(ts, bool) and ts > 0:
+        _store(email, weekly_renews_at=ts)
+
+
+def sync_saved_expiry(current: str) -> None:
+    """Store the saved copies' dates, leaving out the active account: its copy can be old."""
+    for a in load()["accounts"]:
+        if a["email"] != current:
+            record_expiry(a["email"], saved_refresh_expiry(a["email"]), "saved")
 
 
 def next_for_manual_rotation(current: str) -> tuple:
@@ -469,6 +530,12 @@ def _cli(argv: list) -> None:
     x = sub.add_parser("expiry")
     x.add_argument("--email")
     x.add_argument("--stdin", action="store_true")
+    x.add_argument("--record", default="")
+    sub.add_parser("sync-expiry").add_argument("current", nargs="?", default="")
+    v = sub.add_parser("availability")
+    v.add_argument("--current", default="")
+    v.add_argument("--json", action="store_true")
+    v.add_argument("--table", action="store_true")
     o = sub.add_parser("order")
     o.add_argument("names")
     o.add_argument("--current", default="")
@@ -507,7 +574,23 @@ def _cli(argv: list) -> None:
         print(target)
     elif args.cmd == "expiry":
         ts = blob_refresh_expiry(sys.stdin.read()) if args.stdin else saved_refresh_expiry(args.email or "")
+        if args.record:
+            record_expiry(args.record, ts, "live")
         print(expiry_verdict(ts))
+    elif args.cmd == "sync-expiry":
+        sync_saved_expiry(args.current)
+    elif args.cmd == "availability":
+        import _watch
+        rows = _watch.availability(args.current)
+        if args.json:
+            print(json.dumps(rows, indent=2, ensure_ascii=False))
+        elif args.table:
+            for r in rows:
+                print("\x1f".join([r["email"], r["alias"], "1" if r["rotation"] else "0",
+                                   r["plan"], " ".join(r["reason"].split()), r["detail"]]))
+        else:
+            for r in rows:
+                print(f'{r["email"]}: {r["state"]}{" — " + r["detail"] if r["detail"] else ""}')
     elif args.cmd == "order":
         cmd_order([n.strip() for n in args.names.split(",") if n.strip()], args.current)
     elif args.cmd == "enable":

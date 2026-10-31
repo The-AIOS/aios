@@ -311,7 +311,83 @@ PYEOF
 )"
 [ "$out" = two ] && ok "alias from the data file" || no "wrong label" "$out"
 
-echo "== 11. what ships =="
+echo "== 11. availability, and the stored expiry =="
+limits() {  # limits <email> <7d pct> <reset offset secs>
+  $PY - "$H/.claude/identities/$1/last-limits.json" "$2" "$3" <<'PYEOF'
+import json, sys, time
+now = time.time()
+json.dump({"recorded_at": int(now - 7200), "five_hour_pct": 1, "five_hour_resets_at": now + 3600,
+           "seven_day_pct": float(sys.argv[2]), "seven_day_resets_at": now + float(sys.argv[3])}, open(sys.argv[1], "w"))
+PYEOF
+}
+row() { $PY -c "import json,sys; r={x['email']:x for x in json.load(sys.stdin)}; print(r[sys.argv[1]][sys.argv[2]])" "$1" "$2"; }
+sandbox; three; seat "$A" "$((30 * DAY))"; capture "$A" "-$DAY"; capture "$B" "$DAY"; capture "$C" "$DAY"
+limits "$B" 99 "$DAY"; limits "$C" 99 "-$DAY"
+J="$(sw --availability 2>&1)"
+[ "$(printf '%s' "$J" | row "$A" state)" = active ] && ok "the seat reads active" || no "seat" "$J"
+[ "$(printf '%s' "$J" | row "$B" state)" = capped ] && ok "over the threshold, before its reset: capped" || no "not capped" "$J"
+has "and says until when" "until" "$(printf '%s' "$J" | row "$B" detail)"
+[ "$(printf '%s' "$J" | row "$C" state)" = available ] && ok "over the threshold, past its reset: available" || no "old number read as capped" "$J"
+[ "$(printf '%s' "$J" | row "$C" seven_day_pct)" = 0 ] && ok "and past its renewal date, it reads 0%" || no "kept the old number" "$J"
+has "and says when it renewed" "renewed" "$(printf '%s' "$J" | row "$C" detail)"
+want="$(printf '%s' "$J" | row "$C" weekly_renews_at)"
+$PY - "$want" "$H/.claude/identities/$C/last-limits.json" <<'PYEOF' && ok "its next renewal is the same date, a week on" || no "wrong next renewal" "$want"
+import json, sys, time
+next_, anchor = float(sys.argv[1]), json.load(open(sys.argv[2]))["seven_day_resets_at"]
+sys.exit(0 if abs((next_ - anchor) - 7 * 86400) < 2 and next_ > time.time() else 1)
+PYEOF
+$PY - "$H/.claude/identities/$C/last-limits.json" <<'PYEOF'
+import json, sys, time
+d = json.load(open(sys.argv[1])); d["seven_day_resets_at"] = time.time() - 30 * 86400; d["seven_day_pct"] = 80; json.dump(d, open(sys.argv[1], "w"))
+PYEOF
+J="$(sw --availability 2>&1)"
+$PY -c "import json,sys,time; r={x['email']:x for x in json.load(sys.stdin)}[sys.argv[1]]; sys.exit(0 if time.time() < r['weekly_renews_at'] <= time.time()+7*86400 and r['seven_day_pct']==0 else 1)" "$C" <<<"$J" && ok "weeks later, it still projects to the coming week" || no "projection off" "$J"
+limits "$C" 40 "$DAY"
+J="$(sw --availability 2>&1)"
+x="$(printf '%s' "$J" | row "$C" seven_day_pct)"; [ "${x%.0}" = 40 ] && ok "CONTROL: inside its window, the number stands" || no "zeroed a live number" "$J"
+has "with its renewal date" "renews" "$(printf '%s' "$J" | row "$C" detail)"
+has "--list shows the renewal per account" "renews" "$(sw --list 2>&1 | grep -F "$C")"
+limits "$C" 99 "-$DAY"
+has "--list says it per account" "until" "$(sw --list 2>&1 | grep -F "$B")"
+capture "$B" "-$DAY"
+J="$(sw --availability 2>&1)"
+[ "$(printf '%s' "$J" | row "$B" state)" = expired ] && ok "expired wins over capped" || no "capped hid an expired token" "$J"
+hasnt "--availability prints no token" "$SECRET" "$J"
+S="$H/.aios/accounts-state.json"
+[ -f "$S" ] && ok "dates are stored" || no "no store" ""
+hasnt "and the store holds no token" "$SECRET" "$(cat "$S")"
+[ "$(field "$S" 'd["'"$B"'"]["refresh_source"]')" = saved ] && ok "an idle account's date comes from its saved copy" || no "wrong source" "$(cat "$S")"
+sandbox; three; seat "$A" "$((30 * DAY))"; capture "$A" "-$DAY"; capture "$B" "$DAY"; capture "$C" "$DAY"
+J="$(sw --availability 2>&1)"; S="$H/.aios/accounts-state.json"
+[ "$(field "$S" '"refresh_expires_at" in d.get("'"$A"'", {})')" = False ] && ok "the active account's old saved copy is not stored" || no "stored a stale date" "$(cat "$S")"
+sw --list >/dev/null 2>&1
+[ "$(field "$S" 'd["'"$A"'"]["refresh_source"]')" = live ] && ok "--list stores the active account's live date" || no "live date not stored" "$(cat "$S")"
+J="$(sw --availability 2>&1)"
+[ "$(printf '%s' "$J" | row "$A" refresh_expires_source)" = live ] && ok "and availability reports it" || no "not reported" "$J"
+rm -f "$H/live.json" "$H/.claude/.credentials.json"
+J="$(sw --availability 2>&1)"
+[ "$(printf '%s' "$J" | row "$A" refresh_expires_source)" = live ] && ok "asking needs no access to a credential" || no "needed the credential" "$J"
+sandbox; three; capture "$A" "$DAY"; printf '{"oauthAccount":{"emailAddress":"%s"}}' "$A" > "$H/.claude.json"
+printf '## Anthropic accounts\n\n1. `%s`\n' "$C" > "$H/fixture.md"; rm -f "$H/.aios/accounts.json"
+USER_MD_PATH="$H/fixture.md" acc sync-expiry "$C"
+USER_MD_PATH="$H/fixture.md" acc expiry --email "$A" --record "$A" >/dev/null
+[ ! -f "$H/.aios/accounts-state.json" ] && ok "old mode stores nothing, so a fixture cannot touch a real store" || no "fixture wrote a store" ""
+
+sandbox; three; capture "$A" "$DAY"; capture "$B" "$DAY"; capture "$C" "$DAY"; seat "$A" "$DAY"
+$PY - "$H/.claude/rate-limit-cache.json" "$A" <<'PYEOF'
+import json, sys, time
+now = int(time.time())
+json.dump({"email": sys.argv[2], "captured_at": now, "five_hour_pct": 5, "five_hour_resets_at": now + 3600,
+           "seven_day_pct": 10, "seven_day_resets_at": now + 5 * 86400}, open(sys.argv[1], "w"))
+PYEOF
+env_run $PY "$WATCH" "$SH" >/dev/null 2>&1
+S="$H/.aios/accounts-state.json"
+[ "$(field "$S" 'd["'"$A"'"].get("weekly_renews_at", 0) > 0')" = True ] && ok "a tick stores the active account's renewal date" || no "not stored" "$(cat "$S" 2>&1)"
+rm -f "$H/.claude/identities/$A/last-limits.json"
+J="$(sw --availability 2>&1)"
+$PY -c "import json,sys,time; r={x['email']:x for x in json.load(sys.stdin)}[sys.argv[1]]; sys.exit(0 if r['weekly_renews_at'] and r['weekly_renews_at']>time.time() else 1)" "$A" <<<"$J" && ok "and it outlives the reading" || no "lost with the reading" "$J"
+
+echo "== 12. what ships =="
 hasnt "the example file parses as a valid list" "error" "$(AIOS_ACCOUNTS_FILE="$ROOT/hooks/claude-identity/accounts.example.json" $PY "$ACC" rotation 2>&1)"
 [ -z "$(cd "$ROOT" && git check-ignore hooks/claude-identity/_accounts.py 2>/dev/null)" ] && ok "_accounts.py is not git-ignored" || no "ignored" ""
 grep -q 'claude-switch()' "$ROOT/hooks/claude-identity/install-wrappers.sh" && ok "install-wrappers.sh defines claude-switch" || no "missing" ""
