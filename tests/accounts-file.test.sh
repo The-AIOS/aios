@@ -448,6 +448,11 @@ out="$(env_run $PY "$XACC" rotation)"
 [ -z "$out" ] && [ ! -f "$H/.aios/accounts.json" ] && ok "a lost list is not revived from USER.md's older section" || no "revived" "$out"
 env_run $PY "$XWATCH" "$XSH" >/dev/null 2>&1
 [ "$(field "$H/.aios/health/quota-watch.json" 'd["state"]')" = fail ] && ok "and health says so" || no "stayed quiet" "$(cat "$H/.aios/health/quota-watch.json")"
+has "and why USER.md was not used" "not re-imported" "$(field "$H/.aios/health/quota-watch.json" 'd["detail"]')"
+rm -f "$H/.aios/accounts-log.jsonl"; printf '# no list here\n' > "$ROOTX/USER.md"
+env_run $PY "$XWATCH" "$XSH" >/dev/null 2>&1
+hasnt "with no log, it does not claim there was a list" "this machine had one" "$(field "$H/.aios/health/quota-watch.json" 'd["detail"]')"
+has "and names what it found" "identities are captured" "$(field "$H/.aios/health/quota-watch.json" 'd["detail"]')"
 
 sandbox; hooks_copy
 printf '## Anthropic accounts\n\n1. `%s`\n2. %s — no backticks\n\n## Next\n' "$A" "$B" > "$ROOTX/USER.md"

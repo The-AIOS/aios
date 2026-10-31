@@ -305,11 +305,15 @@ def missing_list_problem() -> str:
                 captured += 1
     except OSError:
         pass
-    if not os.path.exists(log_file()) and captured < 2:
-        return ""
-    return (f"no account list: {accounts_file()} is missing or empty, and this machine had one, so "
-            "rotation is off. USER.md is not re-imported, since it may be older than the lost list. "
-            "Add them back with: claude-switch --add <email>")
+    if os.path.exists(log_file()):
+        return (f"no account list: {accounts_file()} is missing or empty, and this machine had one, so "
+                "rotation is off. USER.md is not re-imported, since it may be older than the lost list. "
+                "Add them back with: claude-switch --add <email>")
+    if captured >= 2:
+        return (f"no account list: {captured} identities are captured, but {accounts_file()} is missing or "
+                "empty and USER.md has no list to import, so rotation is off. "
+                "Add them with: claude-switch --add <email>")
+    return ""
 
 
 def rotation() -> list:
