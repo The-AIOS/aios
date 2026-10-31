@@ -421,6 +421,12 @@ limit_with_stored "$B" null "-$((3 * DAY))" "-60"
 J="$(sw --availability 2>&1)"; x="$(printf '%s' "$J" | row "$B" seven_day_pct)"
 [ "$(printf '%s' "$J" | row "$B" state)" = capped ] && [ "${x%.0}" = 99 ] && ok "a high reading taken AFTER the stored date stays capped, without contradicting itself" || no "lifted a real cap" "$J"
 hasnt "and the rotation does not pick it" "$B|" "$(pick "$A")"
+$PY - "$H/.claude/identities/$B/last-limits.json" <<'PYEOF'
+import json, sys, time
+json.dump({"seven_day_pct": 99, "five_hour_pct": 1}, open(sys.argv[1], "w"))
+PYEOF
+J="$(sw --availability 2>&1)"; x="$(printf '%s' "$J" | row "$B" seven_day_pct)"
+[ "$(printf '%s' "$J" | row "$B" state)" = capped ] && [ "${x%.0}" = 99 ] && ok "a reading with no dates at all stays capped, without contradicting itself" || no "contradiction" "$J"
 limits "$B" 10 "$DAY"; sw --disable two >/dev/null 2>&1
 J="$(sw --availability 2>&1)"
 [ "$(printf '%s' "$J" | row "$B" state)" = out-of-rotation ] && ok "an account out of rotation does not read as available" || no "read as available" "$J"

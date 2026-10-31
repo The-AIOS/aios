@@ -485,7 +485,7 @@ def availability(current: str) -> list:
         reset = reading.get("seven_day_resets_at")
         anchor = reset or _num(known.get("weekly_renews_at"))
         renews = _next_renewal(anchor)
-        renewed = bool(anchor) and anchor <= now and (bool(reset) or not reading.get("recorded_at"))
+        renewed = bool(reset) and reset <= now
         pct7 = 0 if renewed else (reading.get("seven_day_pct") or 0)
         five_reset = reading.get("five_hour_resets_at")
         pct5 = 0 if five_reset and five_reset <= now else (reading.get("five_hour_pct") or 0)
