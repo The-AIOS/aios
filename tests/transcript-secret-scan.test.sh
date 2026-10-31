@@ -51,7 +51,7 @@ grep -q "\.\.\.${KEY: -4}" "$rep" && ok "value masked to its last 4" || no "mask
 echo "── the value is never written or printed ──"
 leak=0
 for f in "$ST"/*; do grep -q "$KEY" "$f" 2>/dev/null && leak=1; grep -q "$AWS" "$f" 2>/dev/null && leak=1; done
-echo "$out" | grep -q "$KEY" && leak=1
+case "$out" in *"$KEY"*) leak=1 ;; esac
 [ "$leak" = "0" ] && ok "no secret in the state files or the output" || no "a secret value leaked"
 [ "$(ls -ld "$rep" | cut -c1-10)" = "-rw-------" ] && ok "report is private (600)" || no "report permissions"
 

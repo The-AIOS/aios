@@ -245,40 +245,59 @@ def _log(row: dict) -> None:
         f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def _unreadable_lines(text: str) -> list:
+    """Numbered lines in the section that look like an account but are not `email` in
+    backticks. A struck-through line is an account the operator already retired."""
+    return [line.strip() for line in text.splitlines()
+            if re.match(r"\s*\d+\.\s", line) and "@" in line and "~~" not in line
+            and not re.match(r"\s*\d+\.\s*`[^`]+`", line)]
+
+
 def _import_user_md() -> dict:
-    """Create the data file from USER.md, if USER.md has a list. Returns the data."""
-    with _lock():
-        if os.path.exists(accounts_file()):  # another process won the race
-            return _read_file()
-        # A log means this machine already had a list. USER.md may still carry its old
-        # section, and quietly reviving it would rotate to accounts since taken out.
-        # An empty list here is what missing_list_problem reports.
-        if os.path.exists(log_file()):
-            return {"version": SCHEMA_VERSION, "accounts": [], "history": []}
-        path = _user_md()
-        accounts, text = parse_user_md(path)
-        # A line that looks like an account and does not parse would drop that account
-        # for good: after this import, fixing the line in USER.md has no effect.
-        for line in text.splitlines():
-            # A struck-through line is an account the operator already retired.
-            if re.match(r"\s*\d+\.\s", line) and "@" in line and "~~" not in line \
-                    and not re.match(r"\s*\d+\.\s*`[^`]+`", line):
-                raise AccountsError(
-                    f"{path} has an account line the import cannot read: {line.strip()[:80]!r}. "
-                    "Write the email in backticks, as 1. `you@example.com`, or remove the line if that "
-                    "account is gone. Nothing was imported."
-                )
-        data = {"version": SCHEMA_VERSION, "accounts": accounts, "history": []}
-        if not accounts:
-            return data  # nothing to migrate: a new install, no file yet
-        data["history"].append({
-            "at": time.strftime("%Y-%m-%d"),
-            "note": "Imported from USER.md. The section's text at that moment:\n\n" + text.strip(),
-        })
+    """Create the data file from USER.md, if USER.md has a list. Returns the data.
+
+    Read first, lock only to write: an operator with one account (nothing to import) must
+    not get a lock file, a folder or a write on every whoami and statusLine. A write that
+    is refused, as in a sandboxed session, returns the list for this run and leaves the
+    import to the next run that can write: a traceback there broke whoami for everyone."""
+    if os.path.exists(accounts_file()):
+        return _read_file()
+    # A log means this machine already had a list. USER.md may still carry its old
+    # section, and quietly reviving it would rotate to accounts since taken out.
+    # An empty list here is what missing_list_problem reports.
+    if os.path.exists(log_file()):
+        return {"version": SCHEMA_VERSION, "accounts": [], "history": []}
+    path = _user_md()
+    accounts, text = parse_user_md(path)
+    data = {"version": SCHEMA_VERSION, "accounts": accounts, "history": []}
+    if not accounts:
+        return data  # nothing to migrate: a new install or one account, no file
+    skipped = _unreadable_lines(text)
+    # A line that looks like an account and does not parse would be dropped for good by an
+    # import (afterwards, fixing USER.md has no effect), so nothing is written while one
+    # exists. This run still uses the accounts it can read, as before the list moved:
+    # refusing outright switched off rotation, whoami and switch for one sloppy line.
+    if skipped:
+        for line in skipped:
+            print(f"claude-identity: {path} has an account line it cannot read: {line[:80]!r}. "
+                  "Write the email in backticks, as 1. `you@example.com`, or remove the line. "
+                  "The list is not imported until then; the readable accounts are used.", file=sys.stderr)
         validate(data, f"the list in {path}")
-        _write_file(data)
-        _log({"action": "import", "from": path, "order": [a["email"] for a in accounts]})
         return data
+    data["history"].append({
+        "at": time.strftime("%Y-%m-%d"),
+        "note": "Imported from USER.md. The section's text at that moment:\n\n" + text.strip(),
+    })
+    validate(data, f"the list in {path}")
+    try:
+        with _lock():
+            if os.path.exists(accounts_file()):  # another process won the race
+                return _read_file()
+            _write_file(data)
+            _log({"action": "import", "from": path, "order": [a["email"] for a in accounts]})
+    except OSError:
+        pass  # not writable here (a sandbox): use the list for this run, import next time
+    return data
 
 
 def load() -> dict:
@@ -331,7 +350,13 @@ def aliases() -> dict:
 def resolve(name: str, data: dict = None) -> str:
     """The email for an alias or email; an unknown email passes through, because a
     captured account does not have to be listed to be switched to by hand."""
-    for a in (data or load())["accounts"]:
+    try:
+        accts = (data or load())["accounts"]
+    except AccountsError:
+        if "@" in name:
+            return name  # a broken list must not block switching by email
+        raise
+    for a in accts:
         if name.lower() in (a["email"].lower(), a.get("alias", "").lower()):
             return a["email"]
     if "@" in name:
@@ -398,10 +423,13 @@ def _store(email: str, **fields) -> None:
     known = stored_state().get(email, {})
     if all(known.get(k) == v for k, v in fields.items()):
         return  # the watcher asks on every tick; most of the time nothing moved
-    with _lock():
-        data = stored_state()
-        data[email] = {**data.get(email, {}), **fields}
-        write_json_atomic(state_file(), data)
+    try:
+        with _lock():
+            data = stored_state()
+            data[email] = {**data.get(email, {}), **fields}
+            write_json_atomic(state_file(), data)
+    except OSError:
+        pass  # dates only, re-derived next time: a refused write (a sandbox) must not break the caller
 
 
 def record_expiry(email: str, ts, source: str) -> None:

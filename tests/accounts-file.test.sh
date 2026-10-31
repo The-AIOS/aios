@@ -457,8 +457,13 @@ has "and names what it found" "identities are captured" "$(field "$H/.aios/healt
 sandbox; hooks_copy
 printf '## Anthropic accounts\n\n1. `%s`\n2. %s — no backticks\n\n## Next\n' "$A" "$B" > "$ROOTX/USER.md"
 out="$(env_run $PY "$XACC" rotation 2>&1)"; rc=$?
-[ "$rc" -ne 0 ] && has "a line that cannot be read stops the import, and names it" "$B" "$out" || no "imported part of a list" "$out"
-[ ! -f "$H/.aios/accounts.json" ] && ok "and nothing is written" || no "wrote a partial list" ""
+[ "$rc" -eq 0 ] && has "a line that cannot be read is named, and the readable accounts still work" "$B" "$out" || no "an unreadable line stopped every command (rc=$rc)" "$out"
+has "…the readable account is in the rotation" "$A" "$out"
+[ ! -f "$H/.aios/accounts.json" ] && ok "and nothing is written, so fixing USER.md still takes effect" || no "wrote a partial list" ""
+printf '## Anthropic accounts\n\n1. `%s`\n2. `%s`\n\n## Next\n' "$A" "$B" > "$ROOTX/USER.md"
+env_run $PY "$XACC" rotation >/dev/null 2>&1
+[ -f "$H/.aios/accounts.json" ] && grep -qF "$B" "$H/.aios/accounts.json" && ok "once the line is fixed, the next run imports the whole list" || no "the fixed list was not imported" ""
+rm -f "$H/.aios/accounts.json" "$H/.aios/accounts-log.jsonl"   # the next case starts from no list
 printf '## Anthropic accounts\n\n1. `%s`\n2. ~~`%s`~~ retired\n' "$A" "$B" > "$ROOTX/USER.md"
 out="$(env_run $PY "$XACC" rotation 2>&1)"; rc=$?
 [ "$rc" = 0 ] && [ "$out" = "$A" ] && ok "a struck-through line is a retired account, not an unreadable one" || no "stopped on a retired line" "$out"
@@ -498,6 +503,27 @@ hasnt "the example file parses as a valid list" "error" "$(AIOS_ACCOUNTS_FILE="$
 [ -z "$(cd "$ROOT" && git check-ignore hooks/claude-identity/_accounts.py 2>/dev/null)" ] && ok "_accounts.py is not git-ignored" || no "ignored" ""
 grep -q 'claude-switch()' "$ROOT/hooks/claude-identity/install-wrappers.sh" && ok "install-wrappers.sh defines claude-switch" || no "missing" ""
 grep -q 'function claude-switch' "$ROOT/hooks/claude-identity/install-wrappers.ps1" && ok "install-wrappers.ps1 defines claude-switch" || no "missing" ""
+
+
+echo "── no list, no writes; a refused write is not a crash; a broken list does not block an email ──"
+sandbox; hooks_copy; rm -rf "$H/.aios"
+printf '# one account, no list\n' > "$ROOTX/USER.md"
+env_run $PY "$XACC" rotation >/dev/null 2>&1; rc=$?
+[ "$rc" = 0 ] && [ ! -e "$H/.aios" ] && ok "one account: reading the list creates no ~/.aios, no lock, no file" || no "a one-account read wrote to ~/.aios (rc=$rc)" "$(ls -la "$H/.aios" 2>&1)"
+sandbox; hooks_copy
+printf '## Anthropic accounts\n\n1. `%s`\n2. `%s`\n' "$A" "$B" > "$ROOTX/USER.md"
+chmod 555 "$H/.aios"
+out="$(env_run $PY "$XACC" rotation 2>&1)"; rc=$?
+chmod 755 "$H/.aios"
+[ "$rc" = 0 ] && has "an unwritable ~/.aios (a sandbox) still answers with the list, no traceback" "$A" "$out" || no "an unwritable ~/.aios crashed the read (rc=$rc)" "$out"
+hasnt "…and prints no traceback" "Traceback" "$out"
+env_run $PY "$XACC" rotation >/dev/null 2>&1
+[ -f "$H/.aios/accounts.json" ] && ok "…and the next run that can write imports it" || no "the list was never imported once writable" ""
+printf '{"version": 1, "accounts": [{"email": "%s", "bogus": 1}]}' "$A" > "$H/.aios/accounts.json"
+out="$(env_run $PY "$XACC" resolve "$B" 2>&1)"; rc=$?
+[ "$rc" = 0 ] && [ "$out" = "$B" ] && ok "a broken list does not block switching by email (the App and Glass call it)" || no "a broken list blocked switch <email> (rc=$rc)" "$out"
+out="$(env_run $PY "$XACC" resolve someone 2>&1)"; rc=$?
+[ "$rc" != 0 ] && ok "…while an alias still needs a readable list" || no "an alias resolved against a broken list" "$out"
 
 echo
 echo "-- $PASS passed, $FAIL failed --"

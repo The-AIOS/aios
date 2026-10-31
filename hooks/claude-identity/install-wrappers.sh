@@ -1079,6 +1079,9 @@ spawn-kill() {
 }
 # Account commands. The aliases and the rotation order live in ~/.aios/accounts.json and are
 # resolved by the script, so there is nothing per-operator to keep in sync here.
+# An alias of the same name would make the definition below a parse error in zsh and bash,
+# and nothing after it in the rc file would load. Remove any such alias first.
+unalias claude-whoami claude-switch 2>/dev/null
 claude-whoami() { "$HOME/aios/hooks/claude-identity/claude-identity.sh" whoami "$@"; }
 claude-switch() { "$HOME/aios/hooks/claude-identity/claude-identity.sh" switch "$@"; }
 
