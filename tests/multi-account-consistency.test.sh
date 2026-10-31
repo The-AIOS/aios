@@ -106,6 +106,9 @@ stub_tick() {  # $1 = stub stdout, $2 = stub exit code
     "$TMP/cfg/rate-limit-cache.json" "$A"
   printf '#!/bin/sh\necho "$AIOS_SWITCH_EXPECT_FROM $AIOS_SWITCH_EXPECT_GEN $*" >> "%s/calls"\necho "%s"\nexit %s\n' "$TMP" "$1" "$2" > "$TMP/stub.sh"
   chmod +x "$TMP/stub.sh"; rm -f "$TMP/calls"
+  # Past the confirmation gate: these cases are about what follows the decision to rotate.
+  python3 -c 'import json,sys,time;json.dump({"email":sys.argv[2],"metric":"5h","pct":99,"ts":int(time.time())-60},open(sys.argv[1],"w"))' \
+    "$TMP/cfg/quota-watch.armed.json" "$A"
   HOME="$TMP" CLAUDE_CONFIG_DIR="$TMP/cfg" USER_MD_PATH="$TMP/USER.md" python3 "$W" "$TMP/stub.sh"
 }
 stub_tick "✓ switched to $B" 0
@@ -149,8 +152,8 @@ exec /bin/cat "$@"
 SHIM
   chmod +x "$S/bin/uname" "$S/bin/cat"
   printf '{"oauthAccount":{"emailAddress":"%s"},"userID":"uid-a"}' "$A" > "$S/cfg/.claude.json"
-  printf '{"claudeAiOauth":{"accessToken":"tok-a"}}' > "$S/cfg/.credentials.json"
-  printf '{"claudeAiOauth":{"accessToken":"tok-b"}}' > "$S/cfg/identities/$B/keychain.json"
+  printf '{"claudeAiOauth":{"accessToken":"tok-a","refreshToken":"tok-a"}}' > "$S/cfg/.credentials.json"
+  printf '{"claudeAiOauth":{"accessToken":"tok-b","refreshToken":"tok-b"}}' > "$S/cfg/identities/$B/keychain.json"
   printf '{"emailAddress":"%s"}' "$B" > "$S/cfg/identities/$B/oauthAccount.json"
   echo uid-b > "$S/cfg/identities/$B/userID.txt"
   printf '## Anthropic accounts\n\n1. `%s`\n2. `%s`\n' "$A" "$B" > "$S/USER.md"

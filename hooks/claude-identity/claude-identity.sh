@@ -303,6 +303,49 @@ cred_read() {
   esac
 }
 
+# ---- is this blob actually USABLE, not merely well-formed? ----
+#
+# A credential blob can be perfect JSON and completely useless: `accessToken` and
+# `refreshToken` present as keys with empty-string values parse without a murmur.
+# Seen in use: such a snapshot sat for two days listed as saved, and each switch to
+# it restored it faithfully, with no error anywhere, down to a login screen.
+#
+# cred_write()'s guard asks "does this parse?", which fails toward GREEN. This asks
+# "does this carry tokens?" and fails toward RED. A false red costs one run and gets
+# investigated; a false green costs a logged-out account discovered days later.
+#
+# Deliberately NOT checked here: an expired refresh token. An operator may have a
+# reason to hold a stale snapshot, and a guard that blocks on it produces false reds,
+# which is how a guard gets loosened and stops catching the real thing.
+blob_token_state() {
+  # stdout: "ok" | "empty:accessToken[+refreshToken]" | "unparseable". Stdin only: a
+  # credential never goes in argv, where a process listing would show it.
+  $PY -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print("unparseable"); sys.exit(0)
+if not isinstance(d, dict):
+    print("unparseable"); sys.exit(0)
+oa = d.get("claudeAiOauth", d)
+if not isinstance(oa, dict):
+    print("unparseable"); sys.exit(0)
+missing = [k for k in ("accessToken", "refreshToken") if not str(oa.get(k) or "").strip()]
+print("empty:" + "+".join(missing) if missing else "ok")
+' 2>/dev/null || printf 'unparseable'
+}
+
+# The two failures are not the same fault and must not read alike: "unparseable" is
+# bytes that are not JSON at all, "empty:*" is perfect JSON carrying nothing usable.
+state_sentence() {
+  case "$1" in
+    unparseable) printf 'is malformed — not valid JSON' ;;
+    empty:*)     printf 'carries no tokens (%s)' "${1#empty:}" ;;
+    *)           printf 'failed validation (%s)' "$1" ;;
+  esac
+}
+
 cred_write() {
   local blob="$1"
   # Validate BEFORE the write, for EVERY backend. On any path a bad blob would REPLACE
@@ -368,6 +411,22 @@ capture_current() {
   local blob
   blob=$(cred_read) || \
     die "could not read $(cred_source). Is this account fully logged in to Claude Code?"
+
+  # This write replaces whatever snapshot $email already has, and a token-less
+  # credential over a good snapshot destroys the only working copy while reporting
+  # success. An explicit --capture refuses. A rotation goes on without saving: it is
+  # leaving this account, and stopping it would strand the seat on a credential that
+  # already does not work while a good account waits.
+  local state; state=$(printf '%s' "$blob" | blob_token_state)
+  if [ "$state" != "ok" ]; then
+    [ "$guard" = guard ] || {
+      echo "${YELLOW}warning:${RESET} the live credential $(state_sentence "$state"), so $email's saved identity was left as it is." >&2
+      return 0
+    }
+    die "refusing to capture $email: the live credential in $(cred_source) $(state_sentence "$state").
+  Capturing it would overwrite $dir/keychain.json -- possibly a good snapshot -- with an unusable one.
+  Log in as $email (/login in Claude Code), then run: claude-switch --capture"
+  fi
   # An explicit --capture never saves, under this email, a credential that is already
   # saved under ANOTHER one: it means the store read is not this account's (a wrong
   # Keychain item, an override left set), and saving it would make every later switch
@@ -463,6 +522,13 @@ if not isinstance(acct, dict) or str(acct.get("emailAddress", "")).lower() != em
 if not open(os.path.join(d, "userID.txt")).read().strip():
     sys.exit(1)
 PYEOF
+
+  # Tokens, not just JSON: a snapshot whose tokens are empty strings parses fine and
+  # logs you out on restore. Refuse before any write.
+  local state; state=$(blob_token_state < "$dir/keychain.json")
+  [ "$state" = "ok" ] || die "refusing to switch to $email: its saved snapshot $(state_sentence "$state").
+  Restoring $dir/keychain.json would log you out rather than switch you.
+  Staying on the current account. To repair: log in as $email (/login), then run: claude-switch --capture"
 
   # Finishing an interrupted swap? Then the live credential is not the
   # outgoing account's, so it is no rollback target, and the pending marker
@@ -649,8 +715,16 @@ cmd_list() {
     # hold last-limits.json for accounts it has only ever SEEN. Saved means
     # restorable, and restore dies without all three files — so test for those.
     local d="$IDENTITIES_DIR/$email"
-    [ -f "$d/keychain.json" ] && [ -f "$d/oauthAccount.json" ] && [ -f "$d/userID.txt" ] \
-      && saved="${GREEN}✓ saved${RESET}"
+    if [ -f "$d/keychain.json" ] && [ -f "$d/oauthAccount.json" ] && [ -f "$d/userID.txt" ]; then
+      # Report what the snapshot CONTAINS, so a dead one is visible here instead of
+      # at the login screen it causes.
+      local st; st=$(blob_token_state < "$d/keychain.json")
+      if [ "$st" = "ok" ]; then
+        saved="${GREEN}✓ saved${RESET}"
+      else
+        saved="${RED}✗ BROKEN — $(state_sentence "$st"); run --capture while logged in${RESET}"
+      fi
+    fi
     printf "  %s %d. %-30s %s\n" "$marker" "$i" "$email" "$saved"
     i=$(( i + 1 ))
   done <<< "$accts"

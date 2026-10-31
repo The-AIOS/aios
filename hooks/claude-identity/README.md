@@ -292,6 +292,8 @@ export CLAUDE_QUOTA_5H=98       # rotate when 5h pct >= this
 export CLAUDE_QUOTA_7D=98       # rotate when 7d pct >= this
 ```
 
+**One reading does not rotate.** The watcher needs the same account over the same threshold twice, at least 30 seconds apart, with nothing under it in between. A session that predates a swap can report the previous account's numbers under the new account's name for a while, and one such reading used to be enough to rotate. A launchd or systemd tick alone cannot confirm: it runs every 30 minutes, past the 5 minutes an arming stays valid. That is fine, because usage only grows while a session runs, and a running session evaluates far more often.
+
 ## Rotation behavior — topology-independent
 
 The watcher does **pure rotate-only**: when the current account hits its cap threshold, advance to the next account in USER.md's `## Anthropic accounts` list. Round-robin alternation. Works for any number of accounts (1, 2, N) and any number of machines (1, 2, N).
@@ -367,6 +369,7 @@ Several things can ask for a swap at once: every open session's statusLine kicks
 | `~/.claude/identities/{email}/userID.txt` | 64-char user ID | 600 |
 | `~/.claude/identities/{email}/last-limits.json` | Last observed limits for that account — from the watcher, or from a token session | 600 |
 | `~/.claude/rate-limit-cache.json` | Latest quota snapshot from Stop hook | 600 |
+| `~/.claude/quota-watch.armed.json` | The first reading over threshold, waiting for the second that confirms it | 600 |
 | `~/.claude/quota-watch.log` | Watcher's per-tick decision log | 644 |
 | `~/.claude/swap-log.jsonl` | Append-only log of every swap, automatic or manual | 644 |
 | `.switch-*.{lock,gen,pending}` (in `~/.claude/` on macOS, `$CLAUDE_CONFIG_DIR/.switch.*` elsewhere) | Switch lock, seat generation, interrupted-swap marker | 644 |

@@ -46,7 +46,7 @@ cache() {  # env assignments as args, then _cache.py on the payload
 field() { python3 -c 'import json,sys;print(json.load(open(sys.argv[1])).get(sys.argv[2]))' "$1" "$2" 2>/dev/null; }
 capture() {  # $1 = email, $2 = file to leave out ("" = none)
   mkdir -p "$TMP/cfg/identities/$1"
-  for f in $FILES; do [ "$f" = "${2:-}" ] || echo '{}' > "$TMP/cfg/identities/$1/$f"; done
+  for f in $FILES; do [ "$f" = "${2:-}" ] || echo '{"claudeAiOauth":{"accessToken":"t","refreshToken":"t"}}' > "$TMP/cfg/identities/$1/$f"; done
 }
 # Load a shipped module from its file and print one expression over it. The
 # expression is always a literal written in this file (never input), so eval is safe.
@@ -114,6 +114,8 @@ fresh
 printf '## Anthropic accounts\n\n1. `%s`\n2. `%s`\n' "$SEAT" "$TOK" > "$TMP/USER2.md"
 python3 -c 'import json,sys,time;json.dump({"email":"seat@example.com","captured_at":int(time.time()),"five_hour_pct":99,"seven_day_pct":1},open(sys.argv[1],"w"))' \
   "$TMP/cfg/rate-limit-cache.json"
+python3 -c 'import json,sys,time;json.dump({"email":"seat@example.com","metric":"5h","pct":99,"ts":int(time.time())-60},open(sys.argv[1],"w"))' \
+  "$TMP/cfg/quota-watch.armed.json"   # past the confirmation gate: this case is about what follows it
 HOME="$TMP" CLAUDE_CONFIG_DIR="$TMP/cfg" USER_MD_PATH="$TMP/USER2.md" python3 "$D/_watch.py" /nonexistent/claude-identity.sh
 grep -q "no alternative account is captured yet" "$TMP/cfg/quota-watch.log" 2>/dev/null && [ ! -e "$TMP/cfg/swap-log.jsonl" ] \
   && ok "logged as 'not captured', no declined-rotation record or alert" \

@@ -417,6 +417,67 @@ def headroom(email: str, t5: int, t7: int) -> tuple:
     return True, "under thresholds"
 
 
+# --- Confirmation gate -------------------------------------------------------
+# One reading over the threshold is not evidence. A session that was running when
+# a swap happened can keep reporting the PREVIOUS account's rate_limits, and the
+# cache files those numbers under the currently active email. Measured on a live
+# install: 18 such excursions in a day across four accounts, between ~2% and ~97%,
+# which cost two false rotations off accounts at 1-3% real usage.
+#
+# So a rotation needs the SAME account and the SAME metric over threshold on two
+# readings at least ARMED_MIN_GAP_SECS apart, with nothing under threshold between
+# them. Near a cap the statusLine evaluates every few seconds, so without the gap
+# the second reading could be the same stale session a moment later.
+ARMED_FILE = os.path.join(CONFIG_DIR, "quota-watch.armed.json")
+ARMED_MIN_GAP_SECS = 30  # the threshold leaves 2% of margin; this is cheap to wait
+ARMED_TTL_SECS = 300     # an arming older than this says nothing about now: re-arm
+
+
+def _armed_read() -> dict:
+    try:
+        with open(ARMED_FILE, encoding="utf-8") as f:
+            armed = json.load(f)
+        return armed if isinstance(armed, dict) else {}
+    except Exception:
+        return {}
+
+
+def disarm(why: str = "") -> None:
+    """Drop any pending arming. Called whenever the reading comes back under
+    threshold, and after a swap, so the next account starts clean."""
+    if not os.path.exists(ARMED_FILE):
+        return
+    try:
+        os.remove(ARMED_FILE)
+        if why:
+            log(f"gate disarmed ({why})")
+    except Exception as e:
+        log(f"disarm failed: {type(e).__name__}: {e}")
+
+
+def confirm_or_arm(email: str, metric: str, pct: float) -> bool:
+    """True when a second reading confirms the first; otherwise wait for one."""
+    prev = _armed_read()
+    now = time.time()
+    age = now - (prev.get("ts") or 0)
+    if prev.get("email") == email and prev.get("metric") == metric and 0 <= age <= ARMED_TTL_SECS:
+        if age < ARMED_MIN_GAP_SECS:
+            return False  # keep the first reading's clock; do not log every few seconds
+        log(f"gate confirmed — {metric} over threshold twice, {round(age)}s apart "
+            f"({round(prev.get('pct') or 0)}% then {round(pct)}%)")
+        disarm()
+        return True
+    try:
+        write_json_atomic(ARMED_FILE, {"email": email, "metric": metric, "pct": pct, "ts": int(now)})
+    except Exception as e:
+        # No second reading can ever confirm an arming that was not saved. Rotating on
+        # one reading risks a needless swap; never rotating rides the account into its cap.
+        log(f"arm failed, rotating on one reading: {type(e).__name__}: {e}")
+        return True
+    log(f"gate armed — {email} {metric} at {round(pct)}% (needs a second reading to rotate)")
+    return False
+
+
 def pick_target(current: str, t5: int, t7: int) -> tuple:
     """(email_or_None, reason). Preference is USER.md order, but an account is
     only a candidate if its cap window has actually rolled."""
@@ -846,14 +907,19 @@ def main(self_path: str) -> None:
         # the other.
         record_state(email, cache)
 
-        reason, action = None, None
+        reason, action, metric = None, None, None
         if pct5 >= t5:
-            reason, action = f"5h at {pct5}% (>= {t5}%)", "rotate"
+            reason, action, metric = f"5h at {pct5}% (>= {t5}%)", "rotate", "5h"
         elif pct7 >= t7:
-            reason, action = f"7d at {pct7}% (>= {t7}%)", "rotate"
+            reason, action, metric = f"7d at {pct7}% (>= {t7}%)", "rotate", "7d"
 
         if not action:
+            disarm("reading back under threshold")
             log(f"ok — {email} at 5h:{round(pct5)}% 7d:{round(pct7)}% (no swap)")
+            return
+
+        # One reading over threshold is not evidence — see ARMED_FILE above.
+        if not confirm_or_arm(email, metric, pct5 if metric == "5h" else pct7):
             return
 
         log(f"TRIGGER ({action}): {reason}")
@@ -911,6 +977,10 @@ def main(self_path: str) -> None:
             "seven_day_pct": pct7,
             "rc": r.returncode,
         })
+
+        # The gate belongs to the account we just left. Clear it so the
+        # incoming account cannot inherit an arming it never earned.
+        disarm("swapped")
 
         # After a successful swap: write a swap-notification marker that the
         # statusLine renderer (context-monitor.py) surfaces as a prominent

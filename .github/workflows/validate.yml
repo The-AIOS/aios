@@ -1016,6 +1016,7 @@ jobs:
           # not pass at all. Two lanes, or the guarantee is fiction.
           echo "uname: $(uname -s)"
           bash hooks/claude-identity/test-identity-cycle.sh
+          bash tests/identity-guards.test.sh
 
       - name: The suite REFUSES to run without the keychain override (safety gate)
         shell: bash
