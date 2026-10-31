@@ -66,49 +66,50 @@ Multi-account Claude Code identity manager + quota autopilot. One tool that:
 >    - **Two Windows caveats to state plainly when you run this:** `chmod 600` is a no-op on NTFS — the blob is protected by the user profile's ACL, the same protection Claude Code itself relies on, so nothing is weakened but nothing is added either. And a live two-account swap has not been run on Windows against real credentials; `test-identity-cycle.sh` covers the full cycle against a fabricated config dir, and `claude-switch` always writes `.claude.json.bak-claude-switch` before touching anything, so the first real rotation is a verification step rather than a leap.
 >    - If `uname -s` is none of `Darwin`, `Linux`, `MINGW*`/`MSYS*`/`CYGWIN*`, tell the user: *"This autopilot supports macOS, Linux and Windows. The scripts are in your repo but the scheduler isn't wired for your platform. Skipping setup."* Then **skip the rest of setup entirely**.
 >    - **Before touching anything on any platform, run `bash hooks/claude-identity/test-identity-cycle.sh`.** It exercises capture/switch/rotate/fail-closed against a throwaway config dir in ~2s and never reads the operator's real credentials. It is the cheapest way to know the tool works here before it is trusted with a live account.
-> 2. **≥ 2 Anthropic accounts.** This autopilot only brings value with multiple accounts in rotation. If step 1 (below) establishes the user has fewer than 2, **skip steps 2 through 7 entirely** — the scripts stay dormant in their repo until they configure ≥ 2 accounts in `USER.md`. Don't try to run capture, plist install, or statusLine wire on a single-account user.
+> 2. **≥ 2 Anthropic accounts.** This autopilot only brings value with multiple accounts in rotation. If step 1 (below) establishes the user has fewer than 2, **skip steps 2 through 7 entirely** — the scripts stay dormant in their repo until they configure ≥ 2 accounts with `claude-switch --add`. Don't try to run capture, plist install, or statusLine wire on a single-account user.
 
 Paths below assume the vault is at `~/aios`. If you cloned elsewhere, either symlink `~/aios → /your/path` or substitute the full path.
 
-### 1. Configure Anthropic accounts in USER.md (interactive)
+### 1. Configure Anthropic accounts (interactive)
 
-**State to detect:**
-- Read `~/aios/USER.md` (or wherever the user's `USER.md` lives — it's at the repo root of their local clone).
-- Look for `## Anthropic accounts (quota management)` section. Parse any existing `N. \`email\`` lines.
+The list lives in **`~/.aios/accounts.json`**, outside the vault, one per machine (identities are per machine too). `hooks/claude-identity/accounts.example.json` shows the shape. Position is rotation preference, and only `email` is required. A file that fails validation stops the tool with the reason: nothing rotates on a guess.
 
-**If the section already has ≥ 2 accounts:** show the list and ask: *"You already have {N} accounts configured: {list}. Add more, replace the list, or skip this step?"* Take action accordingly. If they say skip, move to step 2.
+**State to detect:** run `claude-switch --list`. An older install with a numbered `## Anthropic accounts` section in `USER.md` is imported on this first use, in order, with that section's text kept in the file's `history`. `USER.md` itself is never written, and once the file exists it is not read for accounts.
 
-**If the section is missing or has < 2 accounts:** ask the user, one question at a time:
+**If it already lists ≥ 2 accounts:** show them and ask: *"You already have {N} accounts configured: {list}. Add more, change the order, or skip this step?"* Take action accordingly. If they say skip, move to step 2.
+
+**If it lists < 2 accounts:** ask the user, one question at a time:
 
 1. *"Do you run multiple Anthropic accounts to manage the 5h/7d rate caps? (y/n)"*
-   - **If no →** the autopilot is dormant by design without ≥ 2 accounts. Tell the user: *"OK — skipping autopilot setup. The `hooks/claude-identity/` scripts are in your repo and stay inert until you add ≥ 2 accounts to USER.md. To activate later: re-run setup after you add a second account, or read this README to set it up by hand."* Then **stop processing setup entirely** — do NOT continue to step 2.
+   - **If no →** the autopilot is dormant by design without ≥ 2 accounts. Tell the user: *"OK — skipping autopilot setup. The `hooks/claude-identity/` scripts are in your repo and stay inert until you add ≥ 2 accounts with `claude-switch --add`."* Then stop the walkthrough.
    - **If yes →** continue with the next two questions.
 2. *"How many accounts do you want to register for rotation? (need at least 2 for the autopilot to be useful)"* — store as N. If the user answers `1` or `0` here, treat it as the "no" branch above.
-3. Loop `i` from 1 to N: *"Account {i} email:"* — collect each.
+3. Loop `i` from 1 to N: *"Account {i} email, and a short name for it if you want one:"* — collect each.
 
-**Then write the section into their USER.md.** `USER.md` lives at the repo root, **outside `vault/`** — so do NOT use `mcp__obsidian__patch_note` (the Obsidian MCP only works inside `vault/`). Use the `Edit` tool (read `USER.md`, find a unique anchor like the last line of the previous section, replace with that anchor + the new section). If `USER.md` doesn't exist, use `Write` to create it with the section. The exact content to insert:
+**Then add them, in order:**
 
-```markdown
-## Anthropic accounts (quota management)
-
-> `hooks/claude-identity/claude-identity.sh` parses the numbered list below as rotation slots. Order defines rotation. The parser requires backticks around each email — `N. \`email\``.
->
-> **Optional per line: `alias **short-name**`.** The statusline's `👤` chip and the
-> `🔄 from→to` swap banner render this instead of the email's local-part. Worth setting
-> when two accounts **share a local-part** — the same person on two providers, or one
-> Google address behind two separate Anthropic accounts — because the bare local-part
-> then renders both identically and the usage percentages become the only way to tell
-> them apart. Omit it and that account keeps its local-part, exactly as before.
-1. `{email_1}` — primary
-2. `{email_2}` — overflow · alias **{short_name_2}**
-{...etc for N accounts}
+```bash
+claude-switch --add {email_1} --alias {short_name_1}
+claude-switch --add {email_2}
 ```
 
-Confirm what was written: *"Added {N} accounts to USER.md → ## Anthropic accounts. Order defines rotation."*
+**The alias is optional, and worth setting** when two accounts **share a local-part** — the same person on two providers, or one Google address behind two separate Anthropic accounts — because the bare local-part then renders both identically in the statusline's `👤` chip and the `🔄 from→to` swap banner, and the usage percentages become the only way to tell them apart. It also works anywhere an account is named: `claude-switch work`. Omit it and that account keeps its local-part.
+
+Confirm what was written: *"Added {N} accounts. Order defines rotation."*
+
+**Changing it later** never needs an edit to a file, and each change shows where you would fall before and after it, because a reorder moves your fallback without a single error:
+
+```bash
+claude-switch --order work,overflow,spare          # must name every account in rotation
+claude-switch --disable spare --reason "why"       # keep the identity, leave the rotation
+claude-switch --enable spare
+```
+
+Every change is appended to `~/.aios/accounts-log.jsonl`.
 
 ### 2. Capture each account's identity (semi-manual — Keychain requires graphical context)
 
-**State to detect:** for each email in USER.md, check whether `~/.claude/identities/{email}/keychain.json`, `oauthAccount.json` and `userID.txt` all exist — `claude-identity.sh list` marks an account `✓ saved` only then. **The directory alone is not evidence:** the watcher creates it for every account it has merely observed, so an account that has it but lacks those files still needs capturing.
+**State to detect:** for each account in the list, check whether `~/.claude/identities/{email}/keychain.json`, `oauthAccount.json` and `userID.txt` all exist — `claude-identity.sh list` marks an account `✓ saved` only then. **The directory alone is not evidence:** the watcher creates it for every account it has merely observed, so an account that has it but lacks those files still needs capturing.
 
 **For each account already captured:** report *"✓ {email} already captured — skipping."*
 
@@ -133,26 +134,9 @@ Verify the capture succeeded with `claude-identity.sh list`. Repeat for each acc
 
 ### 3. Install shell aliases (interactive)
 
-**State to detect:** identify the user's shell:
-```bash
-echo $SHELL
-```
-Pick the matching rc file (`~/.zshrc` for zsh, `~/.bashrc` for bash). Read it. Check whether `claude-whoami` and `claude-switch` are already defined (`grep -E '^(claude-whoami|claude-switch)\(\)' {rcfile}`).
+`install-wrappers.sh` (Windows: `install-wrappers.ps1`) installs `claude-whoami` and `claude-switch` in the managed block of your shell rc, so they update with the framework. A hand-written definition earlier in the rc file is shadowed by it and can be deleted.
 
-**If both already present:** *"✓ shell aliases already installed."*
-
-**If missing:** ask *"Install `claude-whoami` and `claude-switch` aliases in {rcfile}? (y/n)"* — on yes, append the block below to the rc file. The rc file lives outside the vault — use `Bash` with a heredoc append (atomic, preserves existing content), NOT the Obsidian MCP:
-
-```bash
-cat >> ~/.zshrc <<'EOF'
-
-# claude-identity quota autopilot
-claude-whoami() { ~/aios/hooks/claude-identity/claude-identity.sh whoami; }
-claude-switch() { ~/aios/hooks/claude-identity/claude-identity.sh switch "$@"; }
-EOF
-```
-
-(Substitute `~/.bashrc` if the user is on bash.) Then tell the user: *"Run `source {rcfile}` (or open a new shell) to load them."*
+**State to detect:** `type claude-switch`. **If missing:** run the installer, then tell the user: *"Open a new shell (or `source` your rc file) to load them."*
 
 ### 4. Install the spawn wrapper (optional — for named worker sessions)
 
@@ -275,10 +259,13 @@ If `quota-watch.log` still says `no cache yet — skip (is the Stop hook install
 | Command | Purpose |
 |---|---|
 | `claude-whoami` | Current account + next in rotation |
-| `claude-switch` | Rotate to next account in USER.md (wraps) |
-| `claude-switch {email}` | Jump to a specific account |
+| `claude-switch` | Rotate to the next account in the list (wraps, skips expired) |
+| `claude-switch {email\|alias}` | Jump to a specific account |
 | `claude-switch --capture` | Save current identity |
-| `claude-switch --list` | Show all configured + saved state |
+| `claude-switch --list` | Show all accounts, saved state and refresh-token expiry (the active account's is read from the live credential) |
+| `claude-switch --order a,b,c` | Reorder the rotation, showing where you would fall before and after |
+| `claude-switch --enable {account}` / `--disable {account} [--reason why]` | Put an account in or out of rotation, keeping its identity |
+| `claude-switch --add {email} [--alias a] [--plan p] [--disabled] [--reason why]` | Add an account |
 | `claude-switch --help` | Swap-specific usage |
 | `claude-identity.sh cache` | Stop-hook entrypoint (reads stdin) |
 | `claude-identity.sh watch` | Launchd entrypoint (decides + swaps) |
@@ -294,7 +281,7 @@ export CLAUDE_QUOTA_7D=98       # rotate when 7d pct >= this
 
 ## Rotation behavior — topology-independent
 
-The watcher does **pure rotate-only**: when the current account hits its cap threshold, advance to the next account in USER.md's `## Anthropic accounts` list. Round-robin alternation. Works for any number of accounts (1, 2, N) and any number of machines (1, 2, N).
+The watcher does **pure rotate-only**: when the current account hits its cap threshold, advance to the first account in the list, in order, that is not the active one, is captured, has an unexpired refresh token, and has capacity. Round-robin alternation. Works for any number of accounts (1, 2, N) and any number of machines (1, 2, N).
 
 No "primary" / "come-home" semantics. Earlier versions returned to a preferred account when the current one fell below a lower threshold, but that logic assumed a specific user topology (≥2 accounts + a designated "home" account) that doesn't generalize. Removed 2026-04-23 after the come-home fired during active work with zero material benefit.
 
@@ -367,13 +354,18 @@ Several things can ask for a swap at once: every open session's statusLine kicks
 | `~/.claude/identities/{email}/userID.txt` | 64-char user ID | 600 |
 | `~/.claude/identities/{email}/last-limits.json` | Last observed limits for that account — from the watcher, or from a token session | 600 |
 | `~/.claude/rate-limit-cache.json` | Latest quota snapshot from Stop hook | 600 |
+| `~/.aios/accounts.json` | The account list: order, alias, plan, in or out of rotation | 600 |
+| `~/.aios/accounts-log.jsonl` | Append-only log of every change to it (import, order, enable, disable, add) | 644 |
+| `~/.claude/quota-rotation-warning.json` | The last warning about the next fallback, so it notifies once per change | 600 |
 | `~/.claude/quota-watch.log` | Watcher's per-tick decision log | 644 |
 | `~/.claude/swap-log.jsonl` | Append-only log of every swap, automatic or manual | 644 |
 | `.switch-*.{lock,gen,pending}` (in `~/.claude/` on macOS, `$CLAUDE_CONFIG_DIR/.switch.*` elsewhere) | Switch lock, seat generation, interrupted-swap marker | 644 |
 | `~/.claude/quota-watch.paused` | **Operator-written** — future expiry that suspends rotation; ignored once past, never deleted by the watcher | 644 |
 | `~/.claude.json.bak-claude-switch` | Rollback snapshot of last swap | 644 |
 
-None of these should ever be committed — `~/.claude/` is outside the vault by design.
+None of these should ever be committed — `~/.claude/` and `~/.aios/` are outside the vault by design.
+
+**The next fallback is checked on every tick.** If it has an expired refresh token, or has not been captured while others have, `~/.aios/health/quota-watch.json` reads `warn` and you get one notification, without waiting for a rotation to need it. A rotation skips that account in any case. A malformed list reads `fail`.
 
 ## Troubleshooting
 
@@ -437,3 +429,16 @@ For anyone building other "observe the statusline payload as a side effect" feat
 ### 6. Reload plist after edits
 
 `launchctl load` reads the plist ONCE. If you edit `StartInterval` or the command, you must `launchctl unload` then `launchctl load` again — reloading the file isn't enough. Use `launchctl kickstart -k gui/$(id -u)/com.{org}.claude-quota-watch` to force one immediate tick after reload for quick validation.
+
+### 7. A limit the watcher does not read still stops you
+
+The watcher evaluates exactly two windows, 5h and 7d, against its thresholds. The Usage panel can show more, such as a separate weekly limit for one model. That limit can run out with no rotation and no warning: the first signal is a rejected request, while the log keeps saying "ok, no swap". If you lean on such a model, watch that number yourself.
+
+### 8. Right after a swap, a reading may belong to the previous account
+
+For a few minutes after a rotation, a live session can report the OLD account's `rate_limits`, and they get filed under the NEW account's name. The tell is the **reset time**, which does not move with usage: if it matches the account you just left, the number is not this account's. Read it again a tick later before deciding anything from it. A high percentage is also not proof of a cap when its reset has already passed.
+
+### 9. The destination depends on where you are standing
+
+"The first account in the list is where you fall" is only true until you are on it. The target is the first account that is not the active one and can take you, so a reorder has to be read from the seat you are on, and an order that is right only because some account is capped until a known hour stops being right at that hour, silently. That is why `--order` prints the fallback before and after instead of leaving it to be worked out.
+

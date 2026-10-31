@@ -43,15 +43,15 @@
 # ============================================================================
 # All paths assume the vault is at ~/aios. Adjust if cloned elsewhere.
 #
-# Step 1 — shell aliases. Add to ~/.zshrc (or ~/.bashrc):
+# Step 1 — shell commands `claude-whoami` and `claude-switch`.
 #
-#   claude-whoami() { ~/aios/hooks/claude-identity/claude-identity.sh whoami; }
-#   claude-switch() { ~/aios/hooks/claude-identity/claude-identity.sh switch "$@"; }
+#   Installed by install-wrappers.sh / install-wrappers.ps1.
 #
-# Step 2 — populate USER.md → ## Anthropic accounts with a numbered list:
+# Step 2 — list the accounts, in rotation order. They live in ~/.aios/accounts.json,
+# outside the vault (see _accounts.py). An older USER.md list is imported on first use.
 #
-#   1. `primary@example.com` — optional label/context
-#   2. `overflow@example.com`
+#   claude-switch --add primary@example.com --alias work
+#   claude-switch --add overflow@example.com
 #
 # Step 3 — capture each identity once.
 #
@@ -128,10 +128,14 @@
 # ============================================================================
 # SUBCOMMANDS
 # ============================================================================
-#   whoami                 current account + next in USER.md rotation
+#   whoami                 current account + next in rotation
 #   list                   all configured + saved-state status
-#   switch                 rotate to next account in USER.md (wraps)
-#   switch {email}         jump to a specific account
+#   switch                 rotate to the next account (wraps, skips expired)
+#   switch {email|alias}   jump to a specific account
+#   switch --order a,b,c   reorder, showing where you would fall before and after
+#   switch --enable X      put an account in rotation
+#   switch --disable X     keep an account, out of rotation
+#   switch --add {email}   add an account
 #   switch --capture       save current identity to ~/.claude/identities/
 #   switch --list          alias for `list`
 #   switch --help          swap-specific usage
@@ -155,14 +159,13 @@
 #
 # Note (2026-04-23): come-home semantics removed for topology-independence.
 # The watcher now does pure rotate-only: when current account hits its cap,
-# advance to the next account in USER.md. Round-robin alternation across
+# advance to the next account in the list. Round-robin alternation across
 # however many accounts you list.
 #
 # ============================================================================
 
 set -euo pipefail
 
-USER_MD="${USER_MD_PATH:-$HOME/aios/USER.md}"
 # Claude Code relocates its whole config tree when CLAUDE_CONFIG_DIR is set, and
 # the safe way to add a second account leans on exactly that: log the new account
 # into an isolated config dir and `--capture` from there, so the live credentials
@@ -277,7 +280,7 @@ fi
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*)
     if command -v cygpath >/dev/null 2>&1; then
-      for _v in USER_MD CONFIG_DIR CLAUDE_JSON IDENTITIES_DIR CACHE_FILE WATCH_LOG SWAP_LOG CRED_FILE; do
+      for _v in CONFIG_DIR CLAUDE_JSON IDENTITIES_DIR CACHE_FILE WATCH_LOG SWAP_LOG CRED_FILE; do
         eval "$_v=\$(cygpath -m \"\$$_v\")"
       done
     fi
@@ -333,21 +336,11 @@ cred_write() {
   esac
 }
 
-# ---- parse USER.md for the ordered account list ----
-parse_accounts() {
-  [ -f "$USER_MD" ] || die "USER.md not found at $USER_MD (set USER_MD_PATH if elsewhere)"
-  awk '
-    /^## Anthropic accounts/ { in_sec = 1; next }
-    in_sec && /^## / { in_sec = 0 }
-    in_sec && /^[0-9]+\. `[^`]+`/ {
-      match($0, /`[^`]+`/)
-      if (RSTART > 0) {
-        email = substr($0, RSTART + 1, RLENGTH - 2)
-        print email
-      }
-    }
-  ' "$USER_MD"
-}
+# ---- the ordered account list ----
+# _accounts.py owns it. Under `set -e` a malformed list stops the caller here, with
+# the reason on stderr, rather than rotating on a guess.
+accounts_py() { $PY "$SELF_DIR/_accounts.py" "$@"; }
+parse_accounts() { accounts_py rotation; }
 
 current_email() {
   [ -f "$CLAUDE_JSON" ] || die "$CLAUDE_JSON not found"
@@ -606,16 +599,15 @@ cmd_whoami() {
   [ -n "$cur" ] || die "could not detect current account from $CLAUDE_JSON"
   local accts; accts=$(parse_accounts)
   # `grep -c .` EXITS 1 on zero matches, and under `set -e` a failing command
-  # substitution in an assignment aborts the function -- so an operator who has
-  # not yet added `## Anthropic accounts` to USER.md got exit 1 and NO output at
-  # all, silently, instead of the "not listed in USER.md" branch fifteen lines
-  # below that was written for exactly that case. `|| true` restores the intent.
+  # substitution in an assignment aborts the function -- so an operator with no
+  # accounts yet got exit 1 and NO output at all, silently, instead of the
+  # "not in rotation" branch below that was written for exactly that case.
+  # `|| true` restores the intent.
   local total; total=$(printf '%s\n' "$accts" | grep -c . || true)
   local idx; idx=$(printf '%s\n' "$accts" | awk -v c="$cur" '$0==c {print NR; exit}')
   local next=""
   if [ -n "$idx" ] && [ "$total" -gt 1 ]; then
-    local next_idx=$(( idx % total + 1 ))
-    next=$(printf '%s\n' "$accts" | sed -n "${next_idx}p")
+    next=$(accounts_py next "$cur" 2>/dev/null) || next=""
   fi
 
   echo "${BOLD}Currently:${RESET} ${GREEN}$cur${RESET}"
@@ -625,22 +617,41 @@ cmd_whoami() {
     echo "${YELLOW}this session runs on a token, not on the seat: ${AIOS_ACCOUNT_EMAIL:-account unknown (set AIOS_ACCOUNT_EMAIL)}${RESET}"
   fi
   if [ -n "$idx" ]; then
-    echo "${DIM}($idx of $total in USER.md rotation)${RESET}"
+    echo "${DIM}($idx of $total in rotation)${RESET}"
   else
-    echo "${YELLOW}(not listed in USER.md → ## Anthropic accounts — 'claude-switch --capture' will save it anyway)${RESET}"
+    echo "${YELLOW}(not in rotation — 'claude-switch --capture' will save it anyway; add it with 'claude-switch --add $cur')${RESET}"
   fi
   if [ -n "$next" ]; then
     echo "${BOLD}Next:${RESET}      ${BLUE}$next${RESET}   ${DIM}(claude-switch to rotate)${RESET}"
   fi
 }
 
+# Where a credential stands. Informs, never blocks. For the ACTIVE account it reads
+# the LIVE credential, because the saved copy only moves on a swap or a capture: a
+# healthy account in use for weeks would otherwise read as expired. The blob goes
+# through stdin so it never appears in a process list, and only the date comes back.
+expiry_note() {  # expiry_note <email> <current-email>
+  local verdict blob
+  if [ "$1" = "$2" ]; then
+    blob=$(cred_read) || { printf '  %s' "${DIM}(live credential unreadable — expiry unknown)${RESET}"; return 0; }
+    verdict=$(printf '%s' "$blob" | accounts_py expiry --stdin) || verdict=unknown
+    blob=""
+  else
+    verdict=$(accounts_py expiry --email "$1") || verdict=unknown
+  fi
+  case "$verdict" in
+    expired\ *) printf '  %s' "${YELLOW}⚠ refresh token expired ${verdict#expired } — needs /login${RESET}" ;;
+  esac
+}
+
 cmd_list() {
   local cur; cur=$(current_email)
-  local accts; accts=$(parse_accounts)
-  [ -n "$accts" ] || die "no accounts found in USER.md → ## Anthropic accounts"
-  echo "${BOLD}Accounts configured in USER.md:${RESET}"
+  local table; table=$(accounts_py table)
+  [ -n "$table" ] || die "no accounts yet. Add them with: claude-switch --add <email> [--alias <name>]"
+  echo "${BOLD}Accounts:${RESET}"
   local i=1
-  while IFS= read -r email; do
+  local email alias rotating plan reason
+  while IFS=$'\x1f' read -r email alias rotating plan reason; do
     [ -n "$email" ] || continue
     local marker=" "
     [ "$email" = "$cur" ] && marker="●"
@@ -649,13 +660,19 @@ cmd_list() {
     # hold last-limits.json for accounts it has only ever SEEN. Saved means
     # restorable, and restore dies without all three files — so test for those.
     local d="$IDENTITIES_DIR/$email"
-    [ -f "$d/keychain.json" ] && [ -f "$d/oauthAccount.json" ] && [ -f "$d/userID.txt" ] \
-      && saved="${GREEN}✓ saved${RESET}"
-    printf "  %s %d. %-30s %s\n" "$marker" "$i" "$email" "$saved"
-    i=$(( i + 1 ))
-  done <<< "$accts"
+    if [ -f "$d/keychain.json" ] && [ -f "$d/oauthAccount.json" ] && [ -f "$d/userID.txt" ]; then
+      saved="${GREEN}✓ saved${RESET}"
+    fi
+    local slot="-"
+    if [ "$rotating" = 1 ]; then slot="$i"; i=$(( i + 1 )); fi
+    local extras=""
+    [ -z "$alias" ] || extras="$extras ${DIM}alias $alias${RESET}"
+    [ -z "$plan" ] || extras="$extras ${DIM}$plan${RESET}"
+    [ "$rotating" = 1 ] || extras="$extras ${DIM}not in rotation${reason:+: $reason}${RESET}"
+    printf "  %s %s. %-30s %s%s%s\n" "$marker" "$slot" "$email" "$saved" "$(expiry_note "$email" "$cur")" "$extras"
+  done <<< "$table"
   echo ""
-  echo "${DIM}● = currently active · use 'claude-switch {email}' or bare 'claude-switch' to rotate${RESET}"
+  echo "${DIM}● = currently active · use 'claude-switch {email|alias}' or bare 'claude-switch' to rotate${RESET}"
 }
 
 cmd_switch() {
@@ -664,16 +681,22 @@ cmd_switch() {
 claude-switch — rotate or jump between Anthropic accounts.
 
 Usage:
-  claude-switch                    rotate to next account in USER.md list
-  claude-switch {email}            switch to a specific account
+  claude-switch                    rotate to the next account, past expired ones
+  claude-switch {email|alias}      switch to a specific account
   claude-switch --capture          save current identity to ~/.claude/identities/
-  claude-switch --list             show all configured + saved state
+  claude-switch --list             show all accounts + saved state + expiry
+  claude-switch --order a,b,c      reorder the rotation, showing where you would fall
+  claude-switch --enable {account}   put an account in rotation
+  claude-switch --disable {account} [--reason why]   keep it, out of rotation
+  claude-switch --add {email} [--alias a] [--plan p] [--disabled] [--reason why]
   claude-switch --help             this
+
+The list lives in ${AIOS_ACCOUNTS_FILE:-~/.aios/accounts.json}. Changes are logged beside it.
 
 First-time setup per account:
   1. Be logged into that Anthropic account in Claude Code (normal /login flow)
   2. Run: claude-switch --capture
-  3. Repeat for each account in USER.md → ## Anthropic accounts
+  3. Repeat for each account in the list (claude-switch --add {email})
 
 Safety:
   - Swaps the credential blob ($(cred_source)) + .claude.json oauthAccount + userID
@@ -698,7 +721,19 @@ USAGE
     return 0
   fi
 
+  case "${1:-}" in
+    --order|--enable|--disable|--add)
+      [ -n "${2:-}" ] || die "$1 needs an argument. See: claude-switch --help"
+      local verb="${1#--}" arg="$2" cur
+      shift 2
+      cur=$(current_email 2>/dev/null) || cur=""
+      accounts_py "$verb" "$arg" --current "$cur" "$@"
+      return 0
+      ;;
+  esac
+
   local target="${1:-}"
+  if [ -n "$target" ]; then target=$(accounts_py resolve "$target"); fi
   seat_lock
   local cur; cur=$(current_email)
   # The watcher decides from a sample of one seat and then asks for a swap. If
@@ -716,14 +751,9 @@ USAGE
   if [ -z "$target" ]; then
     local accts; accts=$(parse_accounts)
     local total; total=$(printf '%s\n' "$accts" | grep -c . || true)   # see cmd_whoami: exits 1 on zero
-    [ "$total" -ge 2 ] || die "need at least 2 accounts in USER.md to rotate (found $total)"
-    local idx; idx=$(printf '%s\n' "$accts" | awk -v c="$cur" '$0==c {print NR; exit}')
-    if [ -z "$idx" ]; then
-      target=$(printf '%s\n' "$accts" | sed -n '1p')
-    else
-      local next_idx=$(( idx % total + 1 ))
-      target=$(printf '%s\n' "$accts" | sed -n "${next_idx}p")
-    fi
+    [ "$total" -ge 2 ] || die "need at least 2 accounts in rotation (found $total). Add them with: claude-switch --add <email>"
+    target=$(accounts_py next "$cur")
+    [ -n "$target" ] || die "no account to rotate to: every other one has an expired refresh token. /login to one, then claude-switch --capture"
   fi
 
   # "Already on" is only true of a consistent seat. With a swap pending, the

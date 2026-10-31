@@ -133,11 +133,11 @@ has "whoami names B as next" "$B" "$out"
 
 echo "== 2. whoami with the account NOT listed in USER.md =="
 # Regression guard: `grep -c .` exits 1 on zero matches, and under `set -e` that
-# aborted the function before its own "not listed in USER.md" branch could print.
+# aborted the function before its own "not in rotation" branch could print.
 mkcfg "carol@example.com"
 out=$(run whoami 2>&1); rc=$?
 exp_exit "unlisted account still exits 0" 0 $rc
-has "explains it is unlisted" "not listed in USER.md" "$out"
+has "explains it is unlisted" "not in rotation" "$out"
 
 echo "== 3. list =="
 mkcfg "$A"

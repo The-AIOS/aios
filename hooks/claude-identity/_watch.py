@@ -9,7 +9,7 @@ if warranted. Called by the `watch` subcommand (launchd entrypoint).
 Design (2026-04-23): topology-independent rotate-only. Works for any
 number of accounts (1, 2, N) and any number of machines (1, 2, N). When
 the current account hits its rate-limit threshold, rotate to the next
-account in USER.md. Round-robin alternation. No "primary" / "come-home"
+account in the list. Round-robin alternation. No "primary" / "come-home"
 semantics — those assumed a specific user topology (≥2 accounts + a
 preferred "home" account) that doesn't generalize across teammates.
 
@@ -33,6 +33,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import _accounts  # noqa: E402
 from _fs import seat_generation, write_json_atomic  # noqa: E402
 
 # Text read from files (vault headings, request payloads, names) carries "→", "—" and
@@ -58,7 +59,6 @@ CACHE = os.path.join(CONFIG_DIR, "rate-limit-cache.json")
 LOG = os.path.join(CONFIG_DIR, "quota-watch.log")
 SWAP_LOG = os.path.join(CONFIG_DIR, "swap-log.jsonl")
 IDENTITIES = os.path.join(CONFIG_DIR, "identities")
-USER_MD = os.environ.get("USER_MD_PATH") or os.path.join(HOME, "aios", "USER.md")
 STALE_AFTER_SECS = 1800  # 30 min
 COOLDOWN_SECS = 900  # 15 min — prevent thrashing after a swap
 SEAT_BUSY = 75  # claude-identity.sh: another switch holds the seat lock, or the seat moved
@@ -310,7 +310,7 @@ def check_adoption(cache: dict) -> None:
 
 # ── where to rotate ─────────────────────────────────────────────────────────
 # Rotation used to be a bare `switch`, which advances one position in the
-# USER.md list and wraps. With exactly two accounts — the common case — that
+# account list and wraps. With exactly two accounts — the common case — that
 # means exhausting B rotates straight back to A, whose 5h window has not rolled
 # yet. The session lands on a dead account and then sits out the cooldown there,
 # which is worse than not rotating at all.
@@ -323,31 +323,11 @@ def check_adoption(cache: dict) -> None:
 
 
 def parse_accounts() -> list:
-    """Ordered account list from USER.md -> '## Anthropic accounts'.
+    """Accounts in rotation, in order. Position is preference, not a cycle.
 
-    Position is preference, not a cycle: #1 is home, the rest are overflow.
-    Same numbered-backtick format claude-identity.sh parses; kept in step with
-    it deliberately, because two parsers disagreeing about the account list is
-    the failure this file already fixed once for thresholds."""
-    out = []
-    try:
-        in_sec = False
-        with open(USER_MD, encoding="utf-8") as f:
-            for line in f:
-                if line.startswith("## Anthropic accounts"):
-                    in_sec = True
-                    continue
-                if in_sec and line.startswith("## "):
-                    break
-                if in_sec:
-                    m = re.match(r"\s*\d+\.\s*`([^`]+)`", line)
-                    if m:
-                        out.append(m.group(1))
-    except FileNotFoundError:
-        log(f"USER.md not found at {USER_MD} — cannot determine the account list")
-    except Exception as e:
-        log(f"could not parse accounts from {USER_MD}: {type(e).__name__}: {e}")
-    return out
+    Raises _accounts.AccountsError on a malformed list: main() reports that as a
+    crash, which is what makes health go red. See _accounts.py."""
+    return _accounts.rotation()
 
 
 def state_path(email: str) -> str:
@@ -418,13 +398,14 @@ def headroom(email: str, t5: int, t7: int) -> tuple:
 
 
 def pick_target(current: str, t5: int, t7: int) -> tuple:
-    """(email_or_None, reason). Preference is USER.md order, but an account is
-    only a candidate if its cap window has actually rolled."""
+    """(email_or_None, reason). Preference is list order, but an account is only a
+    candidate if switching to it would work and its cap window has actually rolled."""
     accts = parse_accounts()
     if len(accts) < 2:
-        return None, f"need >= 2 accounts in USER.md (found {len(accts)})"
+        return None, f"need >= 2 accounts in rotation (found {len(accts)})"
     blocked = []
     uncaptured = 0
+    expired = 0
     for email in accts:
         if email == current:
             continue
@@ -434,6 +415,13 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
             blocked.append(f"{email} (not captured)")
             uncaptured += 1
             continue
+        # Restorable, and it would still end at a login screen: exactly what
+        # rotation exists to avoid, with nobody there to log in.
+        problem = _accounts.saved_problem(email)
+        if problem:
+            blocked.append(f"{email} ({problem})")
+            expired += 1
+            continue
         ok, why = headroom(email, t5, t7)
         if ok:
             return email, why
@@ -442,7 +430,7 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
         # Nothing to rotate to until the operator captures an account. Not a
         # capacity verdict, and not worth a notification on every tick.
         return None, NOT_CAPTURED + ": " + "; ".join(blocked)
-    if uncaptured:
+    if uncaptured or expired:
         return None, "no usable alternative: " + "; ".join(blocked)
     return None, "all alternatives still capped: " + "; ".join(blocked)
 
@@ -939,7 +927,7 @@ def main(self_path: str) -> None:
         # the maintainer's call, not a side effect of this port.
         if r.returncode != 0:
             # Swap failed — most commonly because there's only one account in
-            # USER.md (rotation needs >= 2). Degrade quietly: no OS notification
+            # rotation (rotation needs >= 2). Degrade quietly: no OS notification
             # and no in-session banner, both of which would falsely claim a swap
             # happened. The failed attempt is already in the swap-log + the
             # "swap result: rc=..." line above. The session simply rides its own
@@ -993,7 +981,63 @@ def main(self_path: str) -> None:
 HEALTH_VALID_FOR = "90m"
 
 
+def rotation_warning(current: str) -> str:
+    """Why the next fallback would not work, or "". Asked on every tick, because the
+    moment rotation needs it is the worst moment to find out, and pick_target's
+    skipping it would otherwise hide the problem until the list ran out.
+
+    An account nobody has captured yet is only a problem when another one has been:
+    with none captured, this is a setup still in progress and rotation is simply off.
+
+    Saved copies only. The active account is left out on purpose: its saved copy can
+    be weeks old while the credential in use is fine, and this runs too often to read
+    the live one from the credential store."""
+    others = [e for e in parse_accounts() if e != current]
+    if not any(restorable(e) for e in others):
+        return ""
+    fallback = others[0]
+    problem = "not captured" if not restorable(fallback) else _accounts.saved_problem(fallback)
+    if not problem:
+        return ""
+    return f"next fallback {fallback}: {problem}"
+
+
+WARNING_FILE = os.path.join(CONFIG_DIR, "quota-rotation-warning.json")
+
+
+def warn_once(warning: str) -> None:
+    """Log and notify when the warning changes. The statusLine ticks every few
+    seconds near a cap, and an alarm repeated on each one gets switched off."""
+    try:
+        with open(WARNING_FILE, encoding="utf-8") as f:
+            last = json.load(f).get("warning", "")
+    except Exception:
+        last = ""
+    if warning == last:
+        return
+    write_json_atomic(WARNING_FILE, {"warning": warning, "ts": int(time.time())})
+    if warning:
+        log(f"WARNING — {warning}")
+        notify(warning)
+
+
 def record_health() -> None:
+    state, detail = ("fail" if CRASHED else "ok"), LAST_LOG or "completed"
+    try:
+        lost = _accounts.missing_list_problem()
+        warning = lost or rotation_warning(_read_active_email())
+        warn_once(warning)
+        if lost:
+            state, detail = "fail", lost
+        elif warning and state == "ok":
+            state, detail = "warn", warning
+    except _accounts.AccountsError as e:
+        # Checked here too, not only in pick_target: most ticks never reach it, and
+        # a list that broke today must not stay quiet until the day of the cap.
+        state, detail = "fail", str(e)
+        log(f"account list: {e}")
+    except Exception as e:
+        log(f"rotation check failed: {type(e).__name__}: {e}")
     try:
         import importlib.util
         here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -1002,7 +1046,7 @@ def record_health() -> None:
             return
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        mod.write("quota-watch", "fail" if CRASHED else "ok", HEALTH_VALID_FOR, LAST_LOG or "completed")
+        mod.write("quota-watch", state, HEALTH_VALID_FOR, detail)
     except Exception:
         pass  # health is a report about the watcher; it must never become a way to break it
 
