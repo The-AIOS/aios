@@ -210,7 +210,7 @@ A task the operator finished outside every session never reaches a session, so w
 
 - **Mail** (the bundled Google Workspace MCP, or whichever mail connector `USER.md` lists): search sent mail to the person or about the subject since the task's birth date, from its `from:` stamp or the first daily note that carries it. In Gmail: `in:sent to:{address} after:{YYYY/MM/DD}`, or `in:sent "{subject words}" after:{…}` when there is no address.
 - **Calendar**, for a schedule / invite / book task: an event created since the birth date whose guests include the person.
-- **No source connected, or the lookup fails** → change nothing, carry exactly as before. Never read a lookup that did not run as "not done", and never as "done".
+- **No source connected, or the lookup fails** → carry it, and mark it `unverified` in its tag: `_(carried ×N, unverified, from: …)_`. Never read a lookup that did not run as "not done", and never as "done": it may have been finished outside every session, and nothing here could check. The mark is dropped the first time a check does run.
 
 **A match closes the task as done outside a session.** Mark it `- [x] {task} _(done outside a session: {sent|scheduled} {YYYY-MM-DD HH:MM}, {source})_` in today's note, list it under `### Shipped`, and do not carry it. **No match** → it carries as before. **An ambiguous match** (same person, unrelated subject) → carry it, and add `possibly done: {what was found}` to the line so the operator can close it with a glance.
 
@@ -233,6 +233,8 @@ Before writing `### Carries forward`, scan each item crossing into tomorrow. **(
 ```
 
 Wait for the response. Then write `### Carries forward` with the updated tags applied. If the user picks `park` → move that carry to the relevant project note's Ideas section instead, and don't carry it forward. If the user doesn't respond (non-interactive close-day), keep carries untagged and let tomorrow's /today ask again — never silently tag.
+
+**An `unverified` carry is asked a different question.** At ×6 its count may be counting something already done, so do not offer the avoidance reasons first. Ask: *"{task} — I couldn't check whether you did this (no {mail|calendar} connected). Done already, or still open?"* **Done** → close it as done outside a session (`_(done outside a session: per operator, {date})_`). **Still open** → drop `unverified` and run the normal triage on it.
 
 **Don't ask for reasons below ×6.** A carry ×1-5 isn't a pattern yet; forcing a tag at ×2 is noise.
 
