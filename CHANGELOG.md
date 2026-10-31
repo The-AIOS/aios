@@ -119,6 +119,19 @@
 
 **Action required — none.** Applies on sync. Saved identities with real tokens behave as before. If `claude-switch --list` now shows one as `BROKEN`, it was already unusable: `claude-switch --help` shows how to renew it from a config dir of its own, without touching the current seat.
 
+## 2026-10-30 — Find an old lesson by what it says, not by what its title says
+
+`hash: `
+
+> **What you can now do.** Ask your vault what it has learned about a concept and get the lessons whose body says it, even when no title does. Action required — none: it runs only when you or a session calls it.
+
+**`hooks/recall.py` searches the bodies of `observed/`.** The context floor names every title and prints the newest few entries of each file, so an old lesson whose title does not name the concept was invisible to a session looking for the concept. `recall.py "build cache stale credentials"` returns the best matches as `path:line :: title` with a short excerpt, and the session opens the entry it points to. The floor is unchanged; this is the other half of index-then-open.
+
+- **It stays small and read-only.** It reads only `observed/`, indexes in memory for one run, and writes nothing, in the vault or anywhere else. Output has a hard cap that no flag can raise, and it says when it trimmed.
+- **It does not mistake "could not look" for "found nothing".** No `observed/` folder, a Python without SQLite FTS5, or a query with no words exits `2` with a message; a search that ran and matched nothing exits `1` and says how much it searched. A file it cannot read or decode is named in the output.
+- **Spanish and other inflected words work.** Words match by prefix, so `autoriza` finds `autorización`; `--exact` turns that off and `--all` requires every word.
+- **Run it:** `UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/recall.py "your words"`.
+
 ## 2026-10-28 — Two machines that sync cleanly, work that finishes outside a session that closes, and sessions that read what they are handed
 
 **🐜 The AIOS now has a home for humans. Ask, share what you built, meet other operators → https://discord.gg/f3rdxBTDMG**
