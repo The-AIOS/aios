@@ -73,6 +73,16 @@ json.dump({"email": sys.argv[2], "five_hour_pct": 1.0, "five_hour_resets_at": no
            "captured_at": now}, open(sys.argv[1], "w"))
 PY
 }
+at() {  # at <email> <7d pct> <seconds from now>: a sample with its own explicit time
+  $PY - "$H/.claude/rate-limit-cache.json" "$1" "$2" "$3" <<'PY'
+import json, sys, time
+now = int(time.time())
+json.dump({"email": sys.argv[2], "five_hour_pct": 1.0, "five_hour_resets_at": now + 3600,
+           "seven_day_pct": float(sys.argv[3]), "seven_day_resets_at": now + 86400,
+           "captured_at": now + int(sys.argv[4])}, open(sys.argv[1], "w"))
+PY
+  tick
+}
 tick() { env_run $PY "$WATCH" "$SH" >/dev/null 2>&1; }
 age_arming() {  # age_arming <seconds> [first-only]: as if the samples were that much older
   $PY - "$H/.claude/quota-watch.armed.json" "$1" "${2:-}" <<'PY'
@@ -109,7 +119,7 @@ reading "$A" 99; tick; [ "$(active)" = "$A" ] && ok "and the next high starts ov
 two; reading "$A" 99; tick; age_arming 31; reading "$A" 40; tick; reading "$A" 99; tick
 [ "$(active)" = "$A" ] && ok "over, under, over shortly after is not enough" || no "rotated on a phantom" "$(cat "$H/.claude/quota-watch.log")"
 age_arming 301 first; age_arming 5; reading "$A" 40; tick; reading "$A" 99; tick
-[ "$(active)" = "$B" ] && ok "highs and lows alternating for 5 minutes rotate, so a real cap is never stuck" || no "stuck at a real cap" "$(cat "$H/.claude/quota-watch.log")"
+[ "$(active)" = "$B" ] && ok "highs and lows alternating for 5 minutes rotate" || no "stuck at a real cap" "$(cat "$H/.claude/quota-watch.log")"
 
 two; reading "$A" 99; tick
 $PY - "$H/.claude/quota-watch.armed.json" "$B" <<'PY'
@@ -124,11 +134,33 @@ two; reading "$A" 99; tick; age_arming 301; reading "$A" 99; tick
 
 two; reading "$A" 99; tick; age_arming 31
 $PY - "$H/.claude/rate-limit-cache.json" <<'PY'
-import json, sys
-d = json.load(open(sys.argv[1])); d["seven_day_pct"] = 1.0; d["five_hour_pct"] = 99.0; json.dump(d, open(sys.argv[1], "w"))
+import json, sys, time
+d = json.load(open(sys.argv[1])); d["seven_day_pct"] = 1.0; d["five_hour_pct"] = 99.0; d["captured_at"] = int(time.time()); json.dump(d, open(sys.argv[1], "w"))
 PY
 tick
-[ "$(active)" = "$A" ] && ok "the same account over a different window does not confirm" || no "crossed metrics confirmed" ""
+[ "$(active)" = "$B" ] && ok "the other window over threshold confirms too: the account is over" || no "the wait restarted on a different window" "$(cat "$H/.claude/quota-watch.log")"
+
+two; at "$A" 99 -40; at "$A" 99 -21
+[ "$(active)" = "$A" ] && ok "two samples 19s apart do not confirm" || no "confirmed inside the gap" "$(cat "$H/.claude/quota-watch.log")"
+at "$A" 99 -9
+[ "$(active)" = "$B" ] && ok "a third at 31s from the first does" || no "did not confirm past the gap" "$(cat "$H/.claude/quota-watch.log")"
+
+# Two sessions disagreeing, from end to end, with no hand on the arming file.
+two; t=-300; rotated_at=""
+while [ "$t" -le -60 ]; do
+  at "$A" 99 "$t"; [ "$(active)" = "$A" ] || { rotated_at="$t"; break; }
+  at "$A" 5 "$((t + 30))"
+  t=$((t + 60))
+done
+[ -z "$rotated_at" ] && ok "highs and lows alternating do not rotate before 5 minutes" || no "rotated early, at $rotated_at" "$(cat "$H/.claude/quota-watch.log")"
+at "$A" 99 0
+[ "$(active)" = "$B" ] && ok "and do once they have lasted that long" || no "stuck past 5 minutes" "$(cat "$H/.claude/quota-watch.log")"
+
+two; at "$A" 99 -100; at "$A" 5 -90; at "$A" 99 -60; at "$A" 99 -20
+[ "$(active)" = "$A" ] && ok "once two sessions have disagreed, the longer wait holds through consecutive highs" || no "a low reading was forgotten" "$(cat "$H/.claude/quota-watch.log")"
+
+two; at "$A" 99 -600; at "$A" 5 -570; at "$A" 5 -470; at "$A" 99 -440; at "$A" 5 -410; at "$A" 5 -310; at "$A" 99 -280
+[ "$(active)" = "$A" ] && ok "highs over 2 minutes apart, with lows between, read as spikes" || no "rotated on spaced spikes" ""
 
 two; reading "$A" 99
 printf 'not json' > "$H/.claude/quota-watch.armed.json"; tick
@@ -172,6 +204,7 @@ hasnt "no token in the message" "$SECRET" "$out"
 [ -z "$(pending)" ] && ok "no interrupted-switch marker is left behind" || no "a refusal left a pending marker" "$(pending)"
 [ ! -f "$H/.claude.json.bak-claude-switch" ] && ok "and nothing was backed up, because nothing started" || no "refused after starting" ""
 has "the repair does not send a /login into this seat" "CLAUDE_CONFIG_DIR" "$out"
+has "and gives each account a config dir of its own" ".claude-acct-$B" "$out"
 for b in partial partial_rt blank; do
   capture "$B" "$($b)"; out="$(sw "$B" 2>&1)"; rc=$?
   [ "$rc" -ne 0 ] && [ "$(active)" = "$A" ] && ok "refused: $b" || no "restored: $b" "$out"
@@ -222,6 +255,27 @@ three; capture "$B" "$(good)"; over
 [ "$(active)" = "$B" ] && ok "CONTROL: a healthy one is chosen" || no "skipped a healthy account" "$(cat "$H/.claude/quota-watch.log")"
 three; capture "$B" "$(empty)"; capture "$C" "$(empty)"; over
 [ "$(active)" = "$A" ] && has "all broken: it stays, and says why" "no usable alternative" "$(cat "$H/.claude/quota-watch.log")" || no "wrong outcome" "$(cat "$H/.claude/quota-watch.log")"
+
+if [ "$(id -u)" != 0 ]; then
+  three; capture "$B" "$(good)"; chmod 000 "$H/.claude/identities/$B/keychain.json"; over
+  [ "$(active)" = "$C" ] && ok "so is one that cannot be read" || no "stuck on an unreadable snapshot" "$(cat "$H/.claude/quota-watch.log")"
+  chmod 600 "$H/.claude/identities/$B/keychain.json"
+fi
+
+echo "== 4d. while armed, a low reading reaches the gate =="
+CACHE_PY="$ROOT/hooks/claude-identity/_cache.py"
+render() {  # render <5h pct>: the real statusLine path, with the watcher kept out of the way
+  printf '{"rate_limits":{"five_hour":{"used_percentage":%s,"resets_at":2000000000},"seven_day":{"used_percentage":1,"resets_at":2000000000}}}' "$1" \
+    | env_run $PY "$CACHE_PY" >/dev/null 2>&1
+}
+marker_age() { $PY -c "import os,sys,time; print(int(time.time()-os.path.getmtime(sys.argv[1])))" "$H/.claude/watch-tick"; }
+old_marker() { : > "$H/.claude/watch-tick"; $PY -c "import os,sys,time; t=time.time()-10; os.utime(sys.argv[1],(t,t))" "$H/.claude/watch-tick"; }
+two; old_marker; render 5
+[ "$(marker_age)" -ge 9 ] && ok "CONTROL: nothing armed, a low render 10s after a kick stays quiet" || no "control kicked" "$(marker_age)"
+printf '{"email":"%s","metric":"7d","pct":99,"first_sample":1,"last_sample":1}' "$A" > "$H/.claude/quota-watch.armed.json"
+old_marker; render 5
+[ "$(marker_age)" -lt 9 ] && ok "armed, the same render kicks the watcher" || no "the low reading never reached the gate" "$(marker_age)"
+sleep 1
 
 echo "== 4c. a refusal during an interrupted switch tells the truth =="
 sandbox; capture "$A" "$(good)"; capture "$B" "$(empty)"; seat "$A" "$(good)"

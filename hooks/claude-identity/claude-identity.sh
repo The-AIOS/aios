@@ -339,10 +339,10 @@ state_sentence() {
 # the SAFETY note at the top of this file on what that does to the seat's refresh token.
 repair_hint() {  # repair_hint <email>
   cat <<HINT
-  To renew it without touching this seat, log in from an isolated config dir:
-    CLAUDE_CONFIG_DIR=~/.claude-acct-renew claude    # /login as $1, then /exit
-    CLAUDE_CONFIG_DIR=~/.claude-acct-renew claude-switch --capture
-    cp -Rp ~/.claude-acct-renew/identities/$1 "$HOME/.claude/identities/"
+  To renew it without touching this seat, log in from a config dir of its own:
+    CLAUDE_CONFIG_DIR=~/.claude-acct-$1 claude    # /login as $1, then /exit
+    CLAUDE_CONFIG_DIR=~/.claude-acct-$1 claude-switch --capture
+    cp -Rp ~/.claude-acct-$1/identities/$1 "$HOME/.claude/identities/"
 HINT
 }
 
@@ -757,10 +757,12 @@ First-time setup per account:
   2. Run: claude-switch --capture
   3. Repeat for each account in USER.md → ## Anthropic accounts
 
-To renew an account that --list shows as BROKEN, without touching the current seat:
-  CLAUDE_CONFIG_DIR=~/.claude-acct-renew claude    # /login as that account, then /exit
-  CLAUDE_CONFIG_DIR=~/.claude-acct-renew claude-switch --capture
-  cp -Rp ~/.claude-acct-renew/identities/{email} ~/.claude/identities/
+To renew an account that --list shows as BROKEN, without touching the current seat, use
+a config dir of its own (one per account: a /login in a dir already holding another
+account can revoke that account's token):
+  CLAUDE_CONFIG_DIR=~/.claude-acct-{email} claude    # /login as that account, then /exit
+  CLAUDE_CONFIG_DIR=~/.claude-acct-{email} claude-switch --capture
+  cp -Rp ~/.claude-acct-{email}/identities/{email} ~/.claude/identities/
 
 Safety:
   - Swaps the credential blob ($(cred_source)) + .claude.json oauthAccount + userID

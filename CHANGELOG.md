@@ -85,13 +85,13 @@
 
 > **What you can now do.** Trust that a rotation means the account really reached its cap, and that `--list` shows whether a saved account would actually work.
 
-**A rotation needs two readings.** A session from before a swap can report the previous account's numbers under the new one's name. One such reading was enough to rotate off an account with plenty left. It now takes the same account over the same threshold on two different samples, at least 30 seconds apart.
+**A rotation needs two readings.** A session from before a swap can report the previous account's numbers under the new one's name. One such reading was enough to rotate off an account with plenty left. It now takes the same account over a threshold on two different samples, at least 30 seconds apart, or 5 minutes when two sessions disagree.
 
 **An empty credential is refused.** A credential can be valid JSON with empty tokens. `--capture` used to save it over a good snapshot and report success, and a switch used to restore it and leave you at a login screen. `--capture` and switching to such a snapshot now stop with the reason. A rotation leaving such a credential goes on, and leaves the saved snapshot as it was. The watcher skips a broken snapshot and tries the next account.
 
 **`--list` reads what a snapshot contains.** "Saved" used to mean the files exist. A broken one now reads `BROKEN`, with what to do.
 
-**Action required — none.** Applies on sync. Saved identities with real tokens behave as before. If `claude-switch --list` now shows one as `BROKEN`, it was already unusable: `claude-switch --help` shows how to renew it from an isolated config dir, without touching the current seat.
+**Action required — none.** Applies on sync. Saved identities with real tokens behave as before. If `claude-switch --list` now shows one as `BROKEN`, it was already unusable: `claude-switch --help` shows how to renew it from a config dir of its own, without touching the current seat.
 
 ## 2026-10-28 — Two machines that sync cleanly, work that finishes outside a session that closes, and sessions that read what they are handed
 

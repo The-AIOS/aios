@@ -435,16 +435,20 @@ def headroom(email: str, t5: int, t7: int) -> tuple:
 # install: 18 such excursions in a day across four accounts, between ~2% and ~97%,
 # which cost two false rotations off accounts at 1-3% real usage.
 #
-# So a rotation needs the SAME account and the SAME metric over threshold on two
-# different samples at least ARMED_MIN_GAP_SECS apart. Time is the samples' own
+# So a rotation needs the SAME account over a threshold on two different samples at
+# least ARMED_MIN_GAP_SECS apart. Either window counts: a real cap on one window with an
+# old session reporting the other is still an account over threshold, and requiring the
+# same window would restart the wait on every render. Time is the samples' own
 # (`captured_at`): a watcher tick that re-reads an unchanged cache is not a reading.
 #
 # A reading under the threshold cannot simply cancel it, because two sessions can
 # report at once, and either one may be the stale one: a real cap with an old session
-# reporting low would alternate forever and never rotate. So an isolated spike is
-# dropped once ARMED_QUIET_SECS pass with no other, while highs that keep coming back
-# rotate after ARMED_SUSTAINED_SECS. A stale session that stays high that long costs
-# one needless swap, which is cheaper than riding a real cap with nothing happening.
+# reporting low would alternate forever and never rotate. So a spike is dropped once
+# ARMED_QUIET_SECS pass with no other high, while highs that keep coming back sooner
+# than that rotate after ARMED_SUSTAINED_SECS. A stale session that stays high that long
+# costs one needless swap, which is cheaper than riding a real cap with nothing
+# happening. Highs further apart than ARMED_QUIET_SECS, with lows between them, cannot
+# be told from repeated spikes and do not rotate.
 ARMED_FILE = os.path.join(CONFIG_DIR, "quota-watch.armed.json")
 ARMED_MIN_GAP_SECS = 30     # the threshold leaves 2% of margin; this is cheap to wait
 ARMED_QUIET_SECS = 120      # lows for this long, with no high: it was a spike
@@ -483,7 +487,7 @@ def confirm_or_arm(email: str, metric: str, pct: float, sampled_at: float) -> bo
     """True when another sample confirms the first; otherwise wait for one."""
     prev = _armed_read()
     first, last = _sample_time(prev, "first_sample"), _sample_time(prev, "last_sample")
-    if (prev.get("email") == email and prev.get("metric") == metric and first is not None
+    if (prev.get("email") == email and first is not None
             and last is not None and sampled_at - last <= ARMED_TTL_SECS):
         if sampled_at <= last:
             return False  # the same sample, read again
