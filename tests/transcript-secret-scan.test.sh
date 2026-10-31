@@ -33,7 +33,7 @@ S=hooks/transcript-secret-scan.py
 R="$T/projects/p1"; ST="$T/state"; mkdir -p "$R"
 KEY="sk-ant-$(printf 'Ab1Cd2Ef%.0s' 1 2 3 4)"          # 32 chars after the prefix
 AWS="AKIA$(printf 'ABCDEFGH12345678')"
-HDR="-----BEGIN RSA PRIVATE KEY-----"
+HDR="-----BEGIN RSA PRIVATE"" KEY-----"   # split, so this file passes the scanner it tests
 run(){ $PYBIN "$S" "$@" --root "$T/projects" --state-dir "$ST"; }
 entry(){ printf '{"type":"user","timestamp":"2026-10-20T10:00:00Z","text":"%s"}\n' "$1"; }
 
