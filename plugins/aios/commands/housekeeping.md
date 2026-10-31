@@ -438,7 +438,7 @@ Comprehensive integrity check of the two operating files that govern every sessi
 
 1. **Identity table — session names match real practice** — read `## Identity` table, cross-check against recent daily notes' "Agent work" entries and session reports. If a listed identity has zero sessions in 30+ days, flag for review.
 2. **Sources sections filled, not template placeholders** — verify `## Companies (mounted)`, `## Sources → Google accounts`, `## Sources → Communication`, `## Sources → Growth routines` have real values (not `{your-email}` / `{team-repo-url}` / etc).
-3. **Anthropic accounts rotation** — verify `## Anthropic accounts` has at least one real entry and the format is parseable by `claude-switch`.
+3. **Anthropic accounts rotation** — run `bash ~/aios/hooks/claude-identity/claude-identity.sh switch --list`: it fails with the reason if `~/.aios/accounts.json` is malformed. Flag any account in rotation with an expired refresh token.
 4. **Companies (mounted)** — once `/company` v2 ships: verify each row in `## Companies (mounted)` resolves to an actual venture folder + tracker file. Flag mismatches.
 5. **Command personalizations consistency** — for each `### /{command}` section under `## Command personalizations`, verify the command file exists in `commands/`. Flag orphan personalizations (command was deleted but personalization remains).
 6. **Growth routines source paths** — verify each routine's `Project:` wiki-link resolves to an existing project note.

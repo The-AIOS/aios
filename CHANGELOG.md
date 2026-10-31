@@ -79,6 +79,32 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-10-30 — Your account list is data, and rotation will not send you to a login screen
+
+`hash: `
+
+> **What you can now do.** Reorder your Anthropic accounts with one command and see where you would fall before and after. Take an account out of rotation and keep it. Know the moment your next fallback stops working, not the day you need it.
+
+**The list moved out of `USER.md`.** It was a numbered section read by three separate parsers, so a reworded line could drop an account with no error. It now lives in `~/.aios/accounts.json`, outside the vault, with order, alias, plan, and whether the account rotates. A malformed file stops the tool with the reason, and turns the watcher's health red. So does a list that has gone missing on a machine that had a rotation, and it is not revived from `USER.md`; a one-account install stays quiet.
+
+**An expired account is never a destination.** A refresh token that has expired ends at `/login`, which is what rotation exists to avoid. The watcher now skips such an account, and `~/.aios/health/quota-watch.json` reads `warn`, with one notification, as soon as the next fallback is expired or uncaptured.
+
+**`--list` tells the truth about the active account.** It reads the live credential for the account in use. The saved copy only moves on a swap or a capture, so it would report a healthy account as expired.
+
+**You can read who is available, by date.** On its weekly renewal date an account goes back to 0%, so a number read before that date stops meaning anything after it. `--list` now says so for each account, with its next renewal, and `claude-switch --availability` gives it as JSON. An expired login wins over any percentage. The dates are stored in `~/.aios/accounts-state.json`, so asking does not touch the credential store.
+
+**`claude-switch` comes with the wrappers,** on macOS, Linux and Windows, and resolves aliases from the list. `--order`, `--enable`, `--disable` and `--add` are new, and each change is logged to `~/.aios/accounts-log.jsonl`.
+
+### What you need to do
+
+> **For the teammate's Claude running `/aios:update`:**
+>
+> - **State:** check whether `USER.md` has numbered lines under `## Anthropic accounts`, and whether `~/.aios/accounts.json` exists. Neither: this operator does not rotate accounts, so say nothing and skip the rest.
+> - **Act (automatic):** the first `bash ~/aios/hooks/claude-identity/claude-identity.sh switch --list`, watcher tick or statusLine refresh imports the list, in order, and keeps the section's whole text in the file's `history`. `USER.md` is not written. A line that looks like an account and cannot be read stops the import, with the line named. Run that command and show the result, then ask them to confirm the order. Aliases are imported; **plan and accounts outside the numbered list are not**, so an account kept in prose needs `bash ~/aios/hooks/claude-identity/claude-identity.sh switch --add <email> --disabled --reason "..."`.
+> - **Ask:** *"Your account list now lives in `~/.aios/accounts.json`. The old section in `USER.md` is no longer read. Want me to replace it with one line pointing at `claude-switch --list`?"* It is their file, so the edit is theirs to approve. Say plainly that later edits to that section will have no effect. **If `~/.aios/surfaces/` shows they run AIOS Glass or the AIOS App, recommend keeping the section for now:** the account-swap menu in both still reads it until those surfaces are updated. It comes up empty without it, and it does not follow a later `--order`.
+> - **Ask, if that list shows an expired account in rotation:** tell them it was a silent trap until now, and offer the renewal from a config dir of its own, which `bash ~/aios/hooks/claude-identity/claude-identity.sh switch --help` prints, not a `/login` in the current seat. Or the same script with `switch --disable <account>`.
+> - **Act (RESTART-CLASS, do LAST):** `install-wrappers.sh` / `.ps1`, modified, is re-run by this update. It writes to their shell rc (`~/.zshrc` or `~/.bashrc`; on Windows, the PowerShell profile) and now also defines `claude-whoami` and `claude-switch`. A hand-written definition earlier in their rc file is shadowed by the managed one; an alias kept in it no longer matters, because aliases come from the list. **Open a new terminal** to pick it up.
+
 ## 2026-10-28 — Two machines that sync cleanly, work that finishes outside a session that closes, and sessions that read what they are handed
 
 **🐜 The AIOS now has a home for humans. Ask, share what you built, meet other operators → https://discord.gg/f3rdxBTDMG**

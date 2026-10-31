@@ -9,7 +9,7 @@ import os
 import tempfile
 
 
-def write_json_atomic(dst: str, data: dict) -> None:
+def write_json_atomic(dst: str, data: dict, ensure_ascii: bool = True) -> None:
     """Publish `data` at `dst` as a complete file, mode 0600, or not at all.
 
     A FIXED temp name (dst + ".tmp") is not atomic once there are two writers:
@@ -23,8 +23,8 @@ def write_json_atomic(dst: str, data: dict) -> None:
     os.makedirs(d, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=d, prefix="." + os.path.basename(dst) + ".", suffix=".tmp")
     try:
-        with os.fdopen(fd, "w") as f:
-            json.dump(data, f, indent=2)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=ensure_ascii)
         os.replace(tmp, dst)
     except BaseException:
         try:

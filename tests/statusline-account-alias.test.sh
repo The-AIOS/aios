@@ -90,16 +90,16 @@ printf 'garbage without a section\n\x00\xff binary-ish\n' > "$T/junk.md"
 [ "$(label "$T/USER.md" '')" = "?" ] && ok "empty email → '?' rather than a crash" || no "empty email not handled"
 
 echo "── it self-locates rather than hardcoding the install path ──"
-grep -q 'parents\[2\]' "$MOD" && ok "derives the repo root from __file__" \
+grep -q 'realpath(__file__)' hooks/claude-identity/_accounts.py && ok "derives the repo root from __file__" \
   || no "no self-locating default" "hardcoding ~/aios depends on the operator's symlink; CI forbids it in .py"
-sed 's/#.*//' "$MOD" | grep 'expanduser("~/aios' >/dev/null \
+sed 's/#.*//' "$MOD" hooks/claude-identity/_accounts.py | grep 'expanduser("~/aios' >/dev/null \
   && no "still hardcodes ~/aios in executable text" "Migration drift will fail" \
   || ok "no hardcoded ~/aios outside comments"
 
 echo "── the convention is documented where operators receive it ──"
 # USER.md is Tier-2 and NEVER syncs, so documenting only there would reach fresh
 # clones and no existing operator. The component README is Tier-1 and does sync.
-grep -q 'alias \*\*' hooks/claude-identity/README.md \
+grep -q 'alias' hooks/claude-identity/README.md && grep -q -- '--alias' hooks/claude-identity/README.md \
   && ok "documented in hooks/claude-identity/README.md (Tier-1, syncs)" \
   || no "convention undocumented" "a convention living only in its parser is folklore"
 
