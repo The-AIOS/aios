@@ -292,7 +292,7 @@ export CLAUDE_QUOTA_5H=98       # rotate when 5h pct >= this
 export CLAUDE_QUOTA_7D=98       # rotate when 7d pct >= this
 ```
 
-**One reading does not rotate.** The watcher needs the same account over the same threshold twice, at least 30 seconds apart, with nothing under it in between. A session that predates a swap can report the previous account's numbers under the new account's name for a while, and one such reading used to be enough to rotate. A launchd or systemd tick alone cannot confirm: it runs every 30 minutes, past the 5 minutes an arming stays valid. That is fine, because usage only grows while a session runs, and a running session evaluates far more often.
+**One reading does not rotate.** The watcher needs the same account over the same threshold on two different samples, at least 30 seconds apart. A session that predates a swap can report the previous account's numbers under the new account's name for a while, and one such reading used to be enough to rotate. A lone spike is dropped after 2 minutes of normal readings. If high and low readings keep alternating, because two sessions disagree, it rotates after 5 minutes: the stale one may be either, and a needless swap costs less than riding a real cap. A launchd or systemd tick alone cannot confirm: it runs every 30 minutes, past the 5 minutes an arming stays valid. That is fine, because usage only grows while a session runs, and a running session evaluates far more often.
 
 ## Rotation behavior — topology-independent
 

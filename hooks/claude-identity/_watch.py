@@ -33,7 +33,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _fs import seat_generation, write_json_atomic  # noqa: E402
+from _fs import blob_token_state, seat_generation, write_json_atomic  # noqa: E402
 
 # Text read from files (vault headings, request payloads, names) carries "→", "—" and
 # accents. On a Windows console stdout/stderr default to cp1252, so print() raises
@@ -368,6 +368,17 @@ def restorable(email: str) -> bool:
     return all(os.path.isfile(os.path.join(d, f)) for f in RESTORE_FILES)
 
 
+def snapshot_problem(email: str) -> str:
+    """Why `switch` would refuse this saved identity, or "". Without this, one broken
+    snapshot is chosen on every tick while a healthy account below it is never tried."""
+    try:
+        with open(os.path.join(IDENTITIES, email, "keychain.json"), encoding="utf-8") as f:
+            state = blob_token_state(f.read())
+    except (OSError, UnicodeDecodeError):
+        return "snapshot unreadable"
+    return "" if state == "ok" else f"snapshot unusable: {state}"
+
+
 def record_state(email: str, cache: dict) -> None:
     """Persist the active account's limits so that, once we have rotated away
     from it, we can still reason about when its window frees up."""
@@ -425,12 +436,20 @@ def headroom(email: str, t5: int, t7: int) -> tuple:
 # which cost two false rotations off accounts at 1-3% real usage.
 #
 # So a rotation needs the SAME account and the SAME metric over threshold on two
-# readings at least ARMED_MIN_GAP_SECS apart, with nothing under threshold between
-# them. Near a cap the statusLine evaluates every few seconds, so without the gap
-# the second reading could be the same stale session a moment later.
+# different samples at least ARMED_MIN_GAP_SECS apart. Time is the samples' own
+# (`captured_at`): a watcher tick that re-reads an unchanged cache is not a reading.
+#
+# A reading under the threshold cannot simply cancel it, because two sessions can
+# report at once, and either one may be the stale one: a real cap with an old session
+# reporting low would alternate forever and never rotate. So an isolated spike is
+# dropped once ARMED_QUIET_SECS pass with no other, while highs that keep coming back
+# rotate after ARMED_SUSTAINED_SECS. A stale session that stays high that long costs
+# one needless swap, which is cheaper than riding a real cap with nothing happening.
 ARMED_FILE = os.path.join(CONFIG_DIR, "quota-watch.armed.json")
-ARMED_MIN_GAP_SECS = 30  # the threshold leaves 2% of margin; this is cheap to wait
-ARMED_TTL_SECS = 300     # an arming older than this says nothing about now: re-arm
+ARMED_MIN_GAP_SECS = 30     # the threshold leaves 2% of margin; this is cheap to wait
+ARMED_QUIET_SECS = 120      # lows for this long, with no high: it was a spike
+ARMED_SUSTAINED_SECS = 300  # highs and lows alternating for this long: treat it as real
+ARMED_TTL_SECS = 300        # a high older than this says nothing about now: re-arm
 
 
 def _armed_read() -> dict:
@@ -455,20 +474,33 @@ def disarm(why: str = "") -> None:
         log(f"disarm failed: {type(e).__name__}: {e}")
 
 
-def confirm_or_arm(email: str, metric: str, pct: float) -> bool:
-    """True when a second reading confirms the first; otherwise wait for one."""
+def _sample_time(armed: dict, key: str):
+    v = armed.get(key)
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
+def confirm_or_arm(email: str, metric: str, pct: float, sampled_at: float) -> bool:
+    """True when another sample confirms the first; otherwise wait for one."""
     prev = _armed_read()
-    now = time.time()
-    age = now - (prev.get("ts") or 0)
-    if prev.get("email") == email and prev.get("metric") == metric and 0 <= age <= ARMED_TTL_SECS:
-        if age < ARMED_MIN_GAP_SECS:
-            return False  # keep the first reading's clock; do not log every few seconds
-        log(f"gate confirmed — {metric} over threshold twice, {round(age)}s apart "
-            f"({round(prev.get('pct') or 0)}% then {round(pct)}%)")
-        disarm()
-        return True
+    first, last = _sample_time(prev, "first_sample"), _sample_time(prev, "last_sample")
+    if (prev.get("email") == email and prev.get("metric") == metric and first is not None
+            and last is not None and sampled_at - last <= ARMED_TTL_SECS):
+        if sampled_at <= last:
+            return False  # the same sample, read again
+        needed = ARMED_SUSTAINED_SECS if prev.get("low_seen") else ARMED_MIN_GAP_SECS
+        if sampled_at - first >= needed:
+            log(f"gate confirmed — {metric} over threshold for {round(sampled_at - first)}s "
+                f"({round(prev.get('pct') or 0)}% then {round(pct)}%)")
+            disarm()
+            return True
+        try:
+            write_json_atomic(ARMED_FILE, {**prev, "last_sample": sampled_at})
+        except Exception as e:
+            log(f"arm update failed: {type(e).__name__}: {e}")
+        return False
     try:
-        write_json_atomic(ARMED_FILE, {"email": email, "metric": metric, "pct": pct, "ts": int(now)})
+        write_json_atomic(ARMED_FILE, {"email": email, "metric": metric, "pct": pct,
+                                       "first_sample": sampled_at, "last_sample": sampled_at})
     except Exception as e:
         # No second reading can ever confirm an arming that was not saved. Rotating on
         # one reading risks a needless swap; never rotating rides the account into its cap.
@@ -476,6 +508,21 @@ def confirm_or_arm(email: str, metric: str, pct: float) -> bool:
         return True
     log(f"gate armed — {email} {metric} at {round(pct)}% (needs a second reading to rotate)")
     return False
+
+
+def low_reading(sampled_at: float) -> None:
+    """A reading under threshold: see the gate's note on why this is not a plain cancel."""
+    prev = _armed_read()
+    if not prev:
+        return
+    last = _sample_time(prev, "last_sample")
+    if last is None or sampled_at - last > ARMED_QUIET_SECS:
+        disarm("reading back under threshold")
+    elif not prev.get("low_seen"):
+        try:
+            write_json_atomic(ARMED_FILE, {**prev, "low_seen": True})
+        except Exception as e:
+            log(f"arm update failed: {type(e).__name__}: {e}")
 
 
 def pick_target(current: str, t5: int, t7: int) -> tuple:
@@ -486,6 +533,7 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
         return None, f"need >= 2 accounts in USER.md (found {len(accts)})"
     blocked = []
     uncaptured = 0
+    broken = 0
     for email in accts:
         if email == current:
             continue
@@ -495,6 +543,11 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
             blocked.append(f"{email} (not captured)")
             uncaptured += 1
             continue
+        problem = snapshot_problem(email)
+        if problem:
+            blocked.append(f"{email} ({problem})")
+            broken += 1
+            continue
         ok, why = headroom(email, t5, t7)
         if ok:
             return email, why
@@ -503,7 +556,7 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
         # Nothing to rotate to until the operator captures an account. Not a
         # capacity verdict, and not worth a notification on every tick.
         return None, NOT_CAPTURED + ": " + "; ".join(blocked)
-    if uncaptured:
+    if uncaptured or broken:
         return None, "no usable alternative: " + "; ".join(blocked)
     return None, "all alternatives still capped: " + "; ".join(blocked)
 
@@ -914,12 +967,12 @@ def main(self_path: str) -> None:
             reason, action, metric = f"7d at {pct7}% (>= {t7}%)", "rotate", "7d"
 
         if not action:
-            disarm("reading back under threshold")
+            low_reading(cache.get("captured_at") or 0)
             log(f"ok — {email} at 5h:{round(pct5)}% 7d:{round(pct7)}% (no swap)")
             return
 
         # One reading over threshold is not evidence — see ARMED_FILE above.
-        if not confirm_or_arm(email, metric, pct5 if metric == "5h" else pct7):
+        if not confirm_or_arm(email, metric, pct5 if metric == "5h" else pct7, cache.get("captured_at") or 0):
             return
 
         log(f"TRIGGER ({action}): {reason}")

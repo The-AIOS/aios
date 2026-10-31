@@ -74,10 +74,12 @@ json.dump({"email": sys.argv[2], "five_hour_pct": 1.0, "five_hour_resets_at": no
 PY
 }
 tick() { env_run $PY "$WATCH" "$SH" >/dev/null 2>&1; }
-age_arming() {  # age_arming <seconds>: as if the first reading were that old
-  $PY - "$H/.claude/quota-watch.armed.json" "$1" <<'PY'
+age_arming() {  # age_arming <seconds> [first-only]: as if the samples were that much older
+  $PY - "$H/.claude/quota-watch.armed.json" "$1" "${2:-}" <<'PY'
 import json, sys
-d = json.load(open(sys.argv[1])); d["ts"] -= int(sys.argv[2]); json.dump(d, open(sys.argv[1], "w"))
+d = json.load(open(sys.argv[1])); d["first_sample"] -= int(sys.argv[2])
+if not sys.argv[3]: d["last_sample"] -= int(sys.argv[2])
+json.dump(d, open(sys.argv[1], "w"))
 PY
 }
 rotated() { grep -c 'TRIGGER' "$H/.claude/quota-watch.log" 2>/dev/null || true; }
@@ -95,10 +97,27 @@ age_arming 31; reading "$A" 99; tick
 has "and says so" "gate confirmed" "$(cat "$H/.claude/quota-watch.log")"
 [ ! -f "$H/.claude/quota-watch.armed.json" ] && ok "nothing armed is left for the next account" || no "arming inherited" ""
 
+two; reading "$A" 99; tick; age_arming 31 first; tick
+[ "$(active)" = "$A" ] && ok "the same sample read twice is one reading" || no "one sample counted as two" "$(cat "$H/.claude/quota-watch.log")"
+
 two; reading "$A" 99; tick; reading "$A" 40; tick
-[ ! -f "$H/.claude/quota-watch.armed.json" ] && ok "a normal reading disarms" || no "stayed armed" ""
-reading "$A" 99; tick; age_arming 31; reading "$A" 40; tick; reading "$A" 99; tick
-[ "$(active)" = "$A" ] && ok "over, under, over is a phantom, not a cap" || no "rotated on a phantom" ""
+[ -f "$H/.claude/quota-watch.armed.json" ] && ok "one normal reading does not cancel: either session may be the stale one" || no "disarmed at once" ""
+age_arming 121; reading "$A" 40; tick
+[ ! -f "$H/.claude/quota-watch.armed.json" ] && ok "two minutes of normal readings drop a lone spike" || no "stayed armed" ""
+reading "$A" 99; tick; [ "$(active)" = "$A" ] && ok "and the next high starts over" || no "rotated on a dropped spike" ""
+
+two; reading "$A" 99; tick; age_arming 31; reading "$A" 40; tick; reading "$A" 99; tick
+[ "$(active)" = "$A" ] && ok "over, under, over shortly after is not enough" || no "rotated on a phantom" "$(cat "$H/.claude/quota-watch.log")"
+age_arming 301 first; age_arming 5; reading "$A" 40; tick; reading "$A" 99; tick
+[ "$(active)" = "$B" ] && ok "highs and lows alternating for 5 minutes rotate, so a real cap is never stuck" || no "stuck at a real cap" "$(cat "$H/.claude/quota-watch.log")"
+
+two; reading "$A" 99; tick
+$PY - "$H/.claude/quota-watch.armed.json" "$B" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1])); d["email"] = sys.argv[2]; d["first_sample"] -= 60; d["last_sample"] -= 60; json.dump(d, open(sys.argv[1], "w"))
+PY
+reading "$A" 99; tick
+[ "$(active)" = "$A" ] && ok "an arming for another account does not confirm this one" || no "another account's arming confirmed" ""
 
 two; reading "$A" 99; tick; age_arming 301; reading "$A" 99; tick
 [ "$(active)" = "$A" ] && ok "an arming past its 5 minutes says nothing: re-arm" || no "stale arming confirmed" ""
@@ -121,10 +140,15 @@ spec = importlib.util.spec_from_file_location("w", sys.argv[1])
 w = importlib.util.module_from_spec(spec); spec.loader.exec_module(w)
 def boom(*a, **k): raise OSError("disk full")
 w.write_json_atomic = boom
-print(w.confirm_or_arm("a@example.com", "7d", 99.0))
+print(w.confirm_or_arm("a@example.com", "7d", 99.0, 1000))
 PY
 )"
 has "an arming that cannot be saved rotates, not never" "True" "$out"
+
+partial() { printf '{"claudeAiOauth":{"accessToken":"%s","refreshToken":""}}' "$SECRET"; }
+partial_rt() { printf '{"claudeAiOauth":{"accessToken":"","refreshToken":"%s"}}' "$SECRET"; }
+blank() { printf '{"claudeAiOauth":{"accessToken":"   ","refreshToken":"   "}}'; }
+pending() { ls "$H"/.claude/.switch*.pending "$H"/.claude/.switch.pending 2>/dev/null | head -1; }
 
 echo "== 2. --capture never saves a credential with no tokens =="
 sandbox; capture "$A" "$(good)"; seat "$A" "$(empty)"
@@ -145,6 +169,20 @@ out="$(sw "$B" 2>&1)"; rc=$?
 [ "$rc" -ne 0 ] && has "refused" "refusing to switch" "$out" || no "restored an empty snapshot" "$out"
 [ "$(active)" = "$A" ] && [ "$(cat "$H/live.json")" = "$live" ] && ok "the seat did not move" || no "seat changed" ""
 hasnt "no token in the message" "$SECRET" "$out"
+[ -z "$(pending)" ] && ok "no interrupted-switch marker is left behind" || no "a refusal left a pending marker" "$(pending)"
+[ ! -f "$H/.claude.json.bak-claude-switch" ] && ok "and nothing was backed up, because nothing started" || no "refused after starting" ""
+has "the repair does not send a /login into this seat" "CLAUDE_CONFIG_DIR" "$out"
+for b in partial partial_rt blank; do
+  capture "$B" "$($b)"; out="$(sw "$B" 2>&1)"; rc=$?
+  [ "$rc" -ne 0 ] && [ "$(active)" = "$A" ] && ok "refused: $b" || no "restored: $b" "$out"
+  hasnt "$b: no token in the message" "$SECRET" "$out"
+done
+printf '[1,2]' > "$H/.claude/identities/$B/keychain.json"; out="$(sw "$B" 2>&1)"; rc=$?
+[ "$rc" -ne 0 ] && [ "$(active)" = "$A" ] && ok "refused: JSON that is not an object" || no "restored a list" "$out"
+printf '{"claudeAiOauth":null}' > "$H/.claude/identities/$B/keychain.json"; out="$(sw "$B" 2>&1)"; rc=$?
+[ "$rc" -ne 0 ] && ok "refused: oauth null" || no "restored null" "$out"
+printf '{"accessToken":"x","refreshToken":"y"}' > "$H/.claude/identities/$B/keychain.json"
+env_run $PY -c "import sys; sys.path.insert(0, sys.argv[1]); from _fs import blob_token_state as b; print(b(sys.stdin.read()))" "$ROOT/hooks/claude-identity" < "$H/.claude/identities/$B/keychain.json" | grep -x ok >/dev/null && ok "the flat form is accepted" || no "flat form refused" ""
 capture "$B" "$(good)"
 sw "$B" >/dev/null 2>&1; [ "$(active)" = "$B" ] && ok "CONTROL: a real snapshot switches" || no "refused a real snapshot" ""
 
@@ -155,6 +193,44 @@ out="$(sw "$B" 2>&1)"; rc=$?
 [ "$rc" = 0 ] && [ "$(active)" = "$B" ] && ok "it goes on to the good account" || no "stranded on a dead credential" "$out"
 [ "$(cat "$H/.claude/identities/$A/keychain.json")" = "$before" ] && ok "and keeps the outgoing account's last good snapshot" || no "overwrote it" ""
 has "and says what it did not save" "left as it is" "$out"
+
+sandbox; capture "$A" "$(good)"; capture "$B" "$(good)"; seat "$A" "$(partial)"
+out="$(sw "$B" 2>&1)"; rc=$?
+[ "$rc" = 0 ] && [ "$(active)" = "$B" ] && ok "same for a credential with one token missing" || no "stranded" "$out"
+hasnt "and its warning prints no token" "$SECRET" "$out"
+sandbox; capture "$A" "$(good)"; seat "$A" "$(partial)"
+out="$(sw --capture 2>&1)"; rc=$?
+[ "$rc" -ne 0 ] && hasnt "a refused capture prints no token" "$SECRET" "$out" || no "captured a partial credential" "$out"
+
+echo "== 4b. the watcher goes around a broken snapshot =="
+C=third@example.com
+three() { sandbox; printf '## Anthropic accounts\n\n1. `%s`\n2. `%s`\n3. `%s`\n' "$A" "$B" "$C" > "$H/USER.md"; capture "$A" "$(good)"; capture "$C" "$(good)"; seat "$A" "$(good)"; }
+over() {  # a confirmed reading: armed a minute ago, and a new sample now
+  reading "$A" 99
+  $PY - "$H/.claude/quota-watch.armed.json" "$A" <<'PY'
+import json, sys, time
+t = int(time.time()) - 60
+json.dump({"email": sys.argv[2], "metric": "7d", "pct": 99, "first_sample": t, "last_sample": t}, open(sys.argv[1], "w"))
+PY
+  tick
+}
+three; capture "$B" "$(empty)"; over
+[ "$(active)" = "$C" ] && ok "an empty snapshot is passed over for the next healthy account" || no "stuck on a broken snapshot" "$(cat "$H/.claude/quota-watch.log")"
+three; capture "$B" "not json"; over
+[ "$(active)" = "$C" ] && ok "so is a malformed one" || no "stuck on a malformed snapshot" ""
+three; capture "$B" "$(good)"; over
+[ "$(active)" = "$B" ] && ok "CONTROL: a healthy one is chosen" || no "skipped a healthy account" "$(cat "$H/.claude/quota-watch.log")"
+three; capture "$B" "$(empty)"; capture "$C" "$(empty)"; over
+[ "$(active)" = "$A" ] && has "all broken: it stays, and says why" "no usable alternative" "$(cat "$H/.claude/quota-watch.log")" || no "wrong outcome" "$(cat "$H/.claude/quota-watch.log")"
+
+echo "== 4c. a refusal during an interrupted switch tells the truth =="
+sandbox; capture "$A" "$(good)"; capture "$B" "$(empty)"; seat "$A" "$(good)"
+P="$H/.claude/.switch-aios-guards-test.pending"; [ "$(uname -s)" = Darwin ] || P="$H/.claude/.switch.pending"
+printf '%s %s\n' "$A" "$B" > "$P"
+out="$(sw "$B" 2>&1)"; rc=$?
+[ "$rc" -ne 0 ] && has "it says the seat is inconsistent" "still unfinished" "$out" || no "refusal missing" "$out"
+hasnt "and does not claim to be staying" "Staying on the current account" "$out"
+[ -e "$P" ] && ok "the marker survives" || no "marker lost" ""
 
 echo "== 5. --list reads what a snapshot contains =="
 C=third@example.com D=fourth@example.com
@@ -170,6 +246,15 @@ hasnt "and not BROKEN" "BROKEN" "$(line "$C")"
 has "one missing files cannot be restored, so it is not saved" "not saved" "$(line "$D")"
 hasnt "no stray error from reading a missing file" "No such file" "$out"
 hasnt "no token printed" "$SECRET" "$out"
+capture "$B" "$(partial)"; out="$(env_run bash "$SH" list 2>&1)"
+has "a partial one is BROKEN" "BROKEN" "$(line "$B")"
+hasnt "and its line prints no token" "$SECRET" "$out"
+if [ "$(id -u)" != 0 ]; then
+  chmod 000 "$H/.claude/identities/$B/keychain.json"; out="$(env_run bash "$SH" list 2>&1)"; rc=$?
+  chmod 600 "$H/.claude/identities/$B/keychain.json"
+  [ "$rc" = 0 ] && has "an unreadable snapshot does not stop the list" "$C" "$out" || no "the list died" "$out"
+  has "and reads as such" "cannot be read" "$(line "$B")"
+fi
 
 echo
 echo "-- $PASS passed, $FAIL failed --"

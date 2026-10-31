@@ -114,7 +114,7 @@ fresh
 printf '## Anthropic accounts\n\n1. `%s`\n2. `%s`\n' "$SEAT" "$TOK" > "$TMP/USER2.md"
 python3 -c 'import json,sys,time;json.dump({"email":"seat@example.com","captured_at":int(time.time()),"five_hour_pct":99,"seven_day_pct":1},open(sys.argv[1],"w"))' \
   "$TMP/cfg/rate-limit-cache.json"
-python3 -c 'import json,sys,time;json.dump({"email":"seat@example.com","metric":"5h","pct":99,"ts":int(time.time())-60},open(sys.argv[1],"w"))' \
+python3 -c 'import json,sys,time;json.dump({"email":"seat@example.com","metric":"5h","pct":99,"first_sample":int(time.time())-60,"last_sample":int(time.time())-60},open(sys.argv[1],"w"))' \
   "$TMP/cfg/quota-watch.armed.json"   # past the confirmation gate: this case is about what follows it
 HOME="$TMP" CLAUDE_CONFIG_DIR="$TMP/cfg" USER_MD_PATH="$TMP/USER2.md" python3 "$D/_watch.py" /nonexistent/claude-identity.sh
 grep -q "no alternative account is captured yet" "$TMP/cfg/quota-watch.log" 2>/dev/null && [ ! -e "$TMP/cfg/swap-log.jsonl" ] \
