@@ -81,7 +81,7 @@
 
 ## 2026-10-31 — Account rotation that never lands on a login screen, a floor that no longer goes silent on a Mac, and old lessons you can search
 
-`hash: ` · [#245](https://github.com/The-AIOS/aios/pull/245) · [#247](https://github.com/The-AIOS/aios/pull/247) · [#251](https://github.com/The-AIOS/aios/pull/251) · [#254](https://github.com/The-AIOS/aios/pull/254) · [#255](https://github.com/The-AIOS/aios/pull/255)
+`hash: fd9014b · e1d1c6d · cdc1556 · 90f003e · fc447c8 · 84252c6 · 142074b · 960e0e1 · fd88955 · 80ee399 · 88fb90c · cc59873 · 2304854 · a1bc0e1` · [#245](https://github.com/The-AIOS/aios/pull/245) · [#247](https://github.com/The-AIOS/aios/pull/247) · [#251](https://github.com/The-AIOS/aios/pull/251) · [#254](https://github.com/The-AIOS/aios/pull/254) · [#255](https://github.com/The-AIOS/aios/pull/255)
 
 > **What you can now do.** Rotate between Anthropic accounts without one stale reading moving you, and without ever landing on a login screen. Reorder accounts with one command and see who is available, by date. Search every lesson your vault has learned by what it says. Find the API keys you once pasted into a session. Keep running the context floor on a Mac for months without it going quiet.
 
