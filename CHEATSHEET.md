@@ -377,8 +377,8 @@ Anthropic rate limits are per-account (5h sliding window + 7d budget). Multiple 
 ### Soft switch (when you're at the keyboard)
 
 ```bash
-claude-switch <email>     # jump directly to a specific account
-claude-switch             # rotate to next account in USER.md list
+claude-switch <account>   # jump directly to a specific account (email or alias)
+claude-switch             # rotate to the next account in the list
 ```
 
 You decide *when* the switch happens. No mid-conversation surprise. Use this when:
@@ -388,7 +388,7 @@ You decide *when* the switch happens. No mid-conversation surprise. Use this whe
 
 ### Auto-switch (when you're away)
 
-The watcher hook (`hooks/claude-identity/`) monitors quota usage. When the active account crosses ~95%, it auto-rotates to the next account in the USER.md list. Sessions resume on the new account; long-running work continues uninterrupted.
+The watcher hook (`hooks/claude-identity/`) monitors quota usage. When the active account crosses ~95%, it auto-rotates to the next account in the list. Sessions resume on the new account; long-running work continues uninterrupted.
 
 Beautiful when:
 - An overnight agent session is running and you're asleep
@@ -401,15 +401,13 @@ Anxiety-inducing when:
 
 ### Setup
 
-```yaml
-# In USER.md
-## Anthropic accounts
-1. `primary@example.com` — main account
-2. `overflow@example.com` — overflow account
-3. `agent@example.com` — overnight/agent account
+```bash
+claude-switch --add primary@example.com --alias work    # main account
+claude-switch --add overflow@example.com                # overflow account
+claude-switch --add agent@example.com --alias agent     # overnight/agent account
 ```
 
-Rotation order = list order. `claude-switch` (no args) walks the list. `claude-switch <email>` jumps to a specific entry.
+The list lives in `~/.aios/accounts.json`, outside the vault. Rotation order = list order. `claude-switch` (no args) walks the list, past any account with an expired refresh token. `claude-switch <email|alias>` jumps to a specific entry. `claude-switch --order "a,b,c"` reorders and shows where you would fall before and after; `--disable` and `--enable` take an account out of rotation and back.
 
 **Important:** no `claude.ai`-hosted MCPs on any account — they break on switch. Use bundled `mcps/*` only. See [CLAUDE.md](./CLAUDE.md) → § MCP Policy.
 

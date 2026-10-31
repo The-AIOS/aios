@@ -262,7 +262,7 @@ Beyond the docs above there's **AIOS Glass** — a docked IDE panel ([Open VSX](
 
 | Doc | Lives at | What it answers |
 |---|---|---|
-| **USER.md** | `~/aios/USER.md` | YOUR personalization layer. Identity (session names), Anthropic accounts, Companies (mounted), Sources (Google/Slack/GitHub), Command personalizations (override any `/aios:*` behavior per-command). This file is yours; never overwritten by `/aios:update`. |
+| **USER.md** | `~/aios/USER.md` | YOUR personalization layer. Identity (session names), Companies (mounted), Sources (Google/Slack/GitHub), Command personalizations (override any `/aios:*` behavior per-command). This file is yours; never overwritten by `/aios:update`. |
 | **INTENT.md** | `~/aios/INTENT.md` | The trust contract — autonomy levels (autonomous / draft / ask) per domain. As Claude learns you over time, you ratchet up the trust. |
 | **Declared context** | `vault/00 - notes/context/declared/` | What you tell Claude about yourself — `about_me`, `personal_voice`, `working_style`, `about_business`, optional `role-expectations` + `psychometric-profile`. |
 | **Observed context** | `vault/00 - notes/context/observed/` | What Claude has *learned* — `profile`, `patterns`, `preferences`, `growth`, `business`, `ecosystem`, `session-insights`, `antifragile`. Updated by Claude across sessions. This is the compound. |

@@ -1077,6 +1077,11 @@ spawn-kill() {
 
   echo "[ok] killed '$name' (PID $claude_pid, PGID $pgid, $tty)"
 }
+# Account commands. The aliases and the rotation order live in ~/.aios/accounts.json and are
+# resolved by the script, so there is nothing per-operator to keep in sync here.
+claude-whoami() { "$HOME/aios/hooks/claude-identity/claude-identity.sh" whoami "$@"; }
+claude-switch() { "$HOME/aios/hooks/claude-identity/claude-identity.sh" switch "$@"; }
+
 # ==== END claude-spawn-wrappers ====
 WRAPPER
 
