@@ -366,7 +366,7 @@ OUT="$(AIOS_ROOT="$V" $PYBIN "$H" cache 2>&1)"; RC=$?
 [ $RC -eq 0 ] && ok "\$AIOS_ROOT is honoured when --vault is absent" || no "\$AIOS_ROOT ignored (rc=$RC)" "$OUT"
 OUT="$(AIOS_ROOT="$TMP/no-such-vault" $PYBIN "$H" --vault "$V" cache 2>&1)"; RC=$?
 [ $RC -eq 0 ] && ok "--vault wins over \$AIOS_ROOT" || no "--vault did not override the environment (rc=$RC)" "$OUT"
-if grep -E 'hooks/recall\.py' hooks/_index.md | grep -F 'UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run' >/dev/null; then
+if grep -E 'hooks/recall\.py' hooks/_index.md | grep -F 'UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run' >/dev/null; then
   ok "hooks/_index.md documents the sandbox-safe uv invocation"
 else
   no "hooks/_index.md lacks the 'UV_CACHE_DIR=... uv run' invocation for recall.py"
