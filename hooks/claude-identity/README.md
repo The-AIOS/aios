@@ -263,7 +263,7 @@ If `quota-watch.log` still says `no cache yet — skip (is the Stop hook install
 | `claude-switch {email\|alias}` | Jump to a specific account |
 | `claude-switch --capture` | Save current identity |
 | `claude-switch --list` | Show all accounts, saved state and refresh-token expiry (the active account's is read from the live credential) |
-| `claude-switch --availability` | Who can take you and why not, as JSON, for a surface or a script. It needs no access to a credential once dates are stored |
+| `claude-switch --availability` | Who can take you and why not, as JSON, for a surface or a script. It does not touch the credential store, and reads only the dates |
 | `claude-switch --order a,b,c` | Reorder the rotation, showing where you would fall before and after |
 | `claude-switch --enable {account}` / `--disable {account} [--reason why]` | Put an account in or out of rotation, keeping its identity |
 | `claude-switch --add {email} [--alias a] [--plan p] [--disabled] [--reason why]` | Add an account |

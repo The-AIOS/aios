@@ -387,6 +387,45 @@ rm -f "$H/.claude/identities/$A/last-limits.json"
 J="$(sw --availability 2>&1)"
 $PY -c "import json,sys,time; r={x['email']:x for x in json.load(sys.stdin)}[sys.argv[1]]; sys.exit(0 if r['weekly_renews_at'] and r['weekly_renews_at']>time.time() else 1)" "$A" <<<"$J" && ok "and it outlives the reading" || no "lost with the reading" "$J"
 
+$PY - "$H/.claude/rate-limit-cache.json" "$A" <<'PYEOF'
+import json, sys, time
+now = int(time.time())
+json.dump({"email": sys.argv[2], "captured_at": now, "five_hour_pct": 5, "five_hour_resets_at": now + 3600,
+           "seven_day_pct": 10, "seven_day_resets_at": now + 2 * 86400}, open(sys.argv[1], "w"))
+PYEOF
+before="$(field "$S" 'd["'"$A"'"]["weekly_renews_at"]')"
+printf '{"ts":%s,"from":"x@example.com","action":"rotate","rc":0}\n' "$(( $(date +%s) - 5 ))" > "$H/.claude/swap-log.jsonl"
+env_run $PY "$WATCH" "$SH" >/dev/null 2>&1
+[ "$(field "$S" 'd["'"$A"'"]["weekly_renews_at"]')" = "$before" ] && ok "inside the post-swap cooldown a reading may be another account's: no date is stored" || no "stored a date during cooldown" "$(cat "$S")"
+rm -f "$H/.claude/swap-log.jsonl"
+limit_with_stored() {  # the reading's reset is $2 from now, the stored date is $3 from now
+  $PY - "$H/.claude/identities/$1/last-limits.json" "$S" "$1" "$2" "$3" <<'PYEOF'
+import json, sys, time
+now = time.time()
+r = None if sys.argv[4] == "null" else now + float(sys.argv[4])
+json.dump({"recorded_at": int(now - 60), "five_hour_pct": 1, "five_hour_resets_at": now + 3600, "seven_day_pct": 99,
+           "seven_day_resets_at": r}, open(sys.argv[1], "w"))
+d = json.load(open(sys.argv[2])); d.setdefault(sys.argv[3], {})["weekly_renews_at"] = now + float(sys.argv[5])
+json.dump(d, open(sys.argv[2], "w"))
+PYEOF
+}
+limit_with_stored "$B" "$DAY" "-$DAY"
+J="$(sw --availability 2>&1)"
+x="$(printf '%s' "$J" | row "$B" seven_day_pct)"
+[ "$(printf '%s' "$J" | row "$B" state)" = capped ] && [ "${x%.0}" = 99 ] && ok "the reading's own date beats the stored one" || no "stored date won" "$J"
+limit_with_stored "$B" null "-$DAY"
+J="$(sw --availability 2>&1)"
+[ "$(printf '%s' "$J" | row "$B" state)" = available ] && [ "$(printf '%s' "$J" | row "$B" seven_day_pct)" = 0 ] && ok "a reading with no reset takes the stored date, without contradicting itself" || no "capped until unknown" "$J"
+has "and the rotation agrees" "$B|" "$(pick "$A")"
+sw --disable two >/dev/null 2>&1
+J="$(sw --availability 2>&1)"
+[ "$(printf '%s' "$J" | row "$B" state)" = out-of-rotation ] && ok "an account out of rotation does not read as available" || no "read as available" "$J"
+sw --enable two >/dev/null 2>&1
+printf '{"%s":"not an object"}' "$B" > "$S"; printf '{"recorded_at":"x","seven_day_pct":"99","seven_day_resets_at":1e999,"five_hour_pct":null}' > "$H/.claude/identities/$B/last-limits.json"
+J="$(sw --availability 2>&1)"; rc=$?
+[ "$rc" = 0 ] && ok "odd values in the state and reading files do not stop --availability" || no "crashed" "$J"
+sw --list >/dev/null 2>&1 && ok "nor --list" || no "--list crashed" ""
+
 echo "== 12. what ships =="
 hasnt "the example file parses as a valid list" "error" "$(AIOS_ACCOUNTS_FILE="$ROOT/hooks/claude-identity/accounts.example.json" $PY "$ACC" rotation 2>&1)"
 [ -z "$(cd "$ROOT" && git check-ignore hooks/claude-identity/_accounts.py 2>/dev/null)" ] && ok "_accounts.py is not git-ignored" || no "ignored" ""

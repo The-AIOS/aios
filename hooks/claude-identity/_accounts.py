@@ -32,7 +32,7 @@ Credentials: this module reads `refreshTokenExpiresAt` and nothing else, and nev
 prints or logs a credential. A live credential arrives on stdin, never in argv.
 
 Two dates per account are stored in ~/.aios/accounts-state.json, so a reading of who is
-available needs no access to a credential: a surface, a session or a script can ask
+available never touches the credential store: a surface, a session or a script can ask
 `availability --json`.
 
   weekly_renews_at     when the weekly window resets and usage goes back to 0%. The key
@@ -364,7 +364,7 @@ def stored_state() -> dict:
     try:
         with open(state_file(), encoding="utf-8") as f:
             data = json.load(f)
-        return data if isinstance(data, dict) else {}
+        return {k: v for k, v in data.items() if isinstance(v, dict)} if isinstance(data, dict) else {}
     except (OSError, ValueError):
         return {}
 

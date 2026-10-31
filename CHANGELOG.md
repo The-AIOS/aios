@@ -91,7 +91,7 @@
 
 **`--list` tells the truth about the active account.** It reads the live credential for the account in use. The saved copy only moves on a swap or a capture, so it would report a healthy account as expired.
 
-**You can read who is available, by date.** On its weekly renewal date an account goes back to 0%, so a number read before that date stops meaning anything after it. `--list` now says so for each account, with its next renewal, and `claude-switch --availability` gives it as JSON. An expired login wins over any percentage. The dates are stored in `~/.aios/accounts-state.json`, so asking needs no access to a credential.
+**You can read who is available, by date.** On its weekly renewal date an account goes back to 0%, so a number read before that date stops meaning anything after it. `--list` now says so for each account, with its next renewal, and `claude-switch --availability` gives it as JSON. An expired login wins over any percentage. The dates are stored in `~/.aios/accounts-state.json`, so asking does not touch the credential store.
 
 **`claude-switch` comes with the wrappers,** on macOS, Linux and Windows, and resolves aliases from the list. `--order`, `--enable`, `--disable` and `--add` are new, and each change is logged to `~/.aios/accounts-log.jsonl`.
 

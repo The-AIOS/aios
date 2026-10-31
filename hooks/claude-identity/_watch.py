@@ -26,6 +26,7 @@ its caps. Not solved here. Escape hatch: `claude-identity.sh switch <email>`
 to force a specific account on a specific machine.
 """
 import json
+import math
 import os
 import re
 import subprocess
@@ -388,12 +389,29 @@ def headroom(email: str, t5: int, t7: int) -> tuple:
     return True, "under thresholds"
 
 
+def _num(v):
+    """A usable number, or None. These files can be edited by hand or carry an odd payload,
+    and a bad value must not stop a tick or a listing."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or abs(v) > 1e11:
+        return None
+    return v
+
+
 def _read_state(email: str):
+    """The account's last reading, with its weekly reset filled from the stored date
+    when the reading carries none, so every reader judges from the same date."""
     try:
         with open(state_path(email), encoding="utf-8") as f:
-            return json.load(f)
+            s = json.load(f)
     except Exception:
         return None
+    if not isinstance(s, dict):
+        return None
+    for key in ("five_hour_pct", "five_hour_resets_at", "seven_day_pct", "seven_day_resets_at", "recorded_at"):
+        s[key] = _num(s.get(key))
+    if not s["seven_day_resets_at"]:
+        s["seven_day_resets_at"] = _num((_accounts.stored_state().get(email) or {}).get("weekly_renews_at"))
+    return s
 
 
 def _capped_window(s: dict, t5: int, t7: int):
@@ -452,8 +470,7 @@ def availability(current: str) -> list:
     for a in _accounts.load()["accounts"]:
         email = a["email"]
         known = stored.get(email) or {}
-        reading = _read_state(email)
-        reading = reading if isinstance(reading, dict) else {}
+        reading = _read_state(email) or {}
         if email == current:
             # Its saved copy can be weeks old, so only a date from the live credential counts.
             expires, source = (known.get("refresh_expires_at"), "live") if known.get("refresh_source") == "live" else (None, "")
@@ -461,7 +478,7 @@ def availability(current: str) -> list:
             expires, source = _accounts.saved_refresh_expiry(email), "saved"
             if expires is None and known.get("refresh_source") == "saved":
                 expires = known.get("refresh_expires_at")
-        anchor = reading.get("seven_day_resets_at") or known.get("weekly_renews_at")
+        anchor = reading.get("seven_day_resets_at") or _num(known.get("weekly_renews_at"))
         renews = _next_renewal(anchor)
         renewed = bool(anchor) and anchor <= now
         pct7 = 0 if renewed else (reading.get("seven_day_pct") or 0)
@@ -487,6 +504,8 @@ def availability(current: str) -> list:
             back = "back to 0%" if label == "7d" else "window rolls"
             state, detail = "capped", (f"{label} at {round(pct)}% until "
                                        f"{_when(capped_until) if capped_until else 'unknown'}, then {back}")
+        elif not a.get("rotation", True):
+            state, detail = "out-of-rotation", usage   # usable by hand; the watcher never picks it
         elif reading.get("recorded_at") or anchor:
             state, detail = "available", usage
         else:
