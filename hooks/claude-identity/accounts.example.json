@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "accounts": [
+    {"email": "primary@example.com", "alias": "work", "plan": "max", "rotation": true},
+    {"email": "overflow@example.com", "alias": "overflow", "rotation": true},
+    {"email": "parked@example.com", "rotation": false, "reason": "kept for manual use, not rotated"}
+  ],
+  "history": [
+    {"at": "2026-01-31", "note": "Free text for you: why the order is what it is. Nothing reads it."}
+  ]
+}

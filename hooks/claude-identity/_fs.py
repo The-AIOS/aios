@@ -9,7 +9,7 @@ import os
 import tempfile
 
 
-def write_json_atomic(dst: str, data: dict) -> None:
+def write_json_atomic(dst: str, data: dict, ensure_ascii: bool = True) -> None:
     """Publish `data` at `dst` as a complete file, mode 0600, or not at all.
 
     A FIXED temp name (dst + ".tmp") is not atomic once there are two writers:
@@ -23,8 +23,8 @@ def write_json_atomic(dst: str, data: dict) -> None:
     os.makedirs(d, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=d, prefix="." + os.path.basename(dst) + ".", suffix=".tmp")
     try:
-        with os.fdopen(fd, "w") as f:
-            json.dump(data, f, indent=2)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=ensure_ascii)
         os.replace(tmp, dst)
     except BaseException:
         try:
@@ -32,6 +32,21 @@ def write_json_atomic(dst: str, data: dict) -> None:
         except OSError:
             pass
         raise
+
+
+def blob_token_state(text: str) -> str:
+    """"ok" | "empty:accessToken[+refreshToken]" | "unparseable". The one classifier:
+    claude-identity.sh asks it before writing, the watcher before choosing a target,
+    and two opinions about what a usable credential is would strand a rotation."""
+    try:
+        d = json.loads(text)
+    except ValueError:
+        return "unparseable"
+    oa = d.get("claudeAiOauth", d) if isinstance(d, dict) else None
+    if not isinstance(oa, dict):
+        return "unparseable"
+    missing = [k for k in ("accessToken", "refreshToken") if not str(oa.get(k) or "").strip()]
+    return "empty:" + "+".join(missing) if missing else "ok"
 
 
 def keychain_service() -> str:

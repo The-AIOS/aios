@@ -9,7 +9,7 @@ if warranted. Called by the `watch` subcommand (launchd entrypoint).
 Design (2026-04-23): topology-independent rotate-only. Works for any
 number of accounts (1, 2, N) and any number of machines (1, 2, N). When
 the current account hits its rate-limit threshold, rotate to the next
-account in USER.md. Round-robin alternation. No "primary" / "come-home"
+account in the list. Round-robin alternation. No "primary" / "come-home"
 semantics — those assumed a specific user topology (≥2 accounts + a
 preferred "home" account) that doesn't generalize across teammates.
 
@@ -26,6 +26,7 @@ its caps. Not solved here. Escape hatch: `claude-identity.sh switch <email>`
 to force a specific account on a specific machine.
 """
 import json
+import math
 import os
 import re
 import subprocess
@@ -33,7 +34,8 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _fs import seat_generation, write_json_atomic  # noqa: E402
+import _accounts  # noqa: E402
+from _fs import blob_token_state, seat_generation, write_json_atomic  # noqa: E402
 
 # Text read from files (vault headings, request payloads, names) carries "→", "—" and
 # accents. On a Windows console stdout/stderr default to cp1252, so print() raises
@@ -58,7 +60,6 @@ CACHE = os.path.join(CONFIG_DIR, "rate-limit-cache.json")
 LOG = os.path.join(CONFIG_DIR, "quota-watch.log")
 SWAP_LOG = os.path.join(CONFIG_DIR, "swap-log.jsonl")
 IDENTITIES = os.path.join(CONFIG_DIR, "identities")
-USER_MD = os.environ.get("USER_MD_PATH") or os.path.join(HOME, "aios", "USER.md")
 STALE_AFTER_SECS = 1800  # 30 min
 COOLDOWN_SECS = 900  # 15 min — prevent thrashing after a swap
 SEAT_BUSY = 75  # claude-identity.sh: another switch holds the seat lock, or the seat moved
@@ -310,7 +311,7 @@ def check_adoption(cache: dict) -> None:
 
 # ── where to rotate ─────────────────────────────────────────────────────────
 # Rotation used to be a bare `switch`, which advances one position in the
-# USER.md list and wraps. With exactly two accounts — the common case — that
+# account list and wraps. With exactly two accounts — the common case — that
 # means exhausting B rotates straight back to A, whose 5h window has not rolled
 # yet. The session lands on a dead account and then sits out the cooldown there,
 # which is worse than not rotating at all.
@@ -323,31 +324,11 @@ def check_adoption(cache: dict) -> None:
 
 
 def parse_accounts() -> list:
-    """Ordered account list from USER.md -> '## Anthropic accounts'.
+    """Accounts in rotation, in order. Position is preference, not a cycle.
 
-    Position is preference, not a cycle: #1 is home, the rest are overflow.
-    Same numbered-backtick format claude-identity.sh parses; kept in step with
-    it deliberately, because two parsers disagreeing about the account list is
-    the failure this file already fixed once for thresholds."""
-    out = []
-    try:
-        in_sec = False
-        with open(USER_MD, encoding="utf-8") as f:
-            for line in f:
-                if line.startswith("## Anthropic accounts"):
-                    in_sec = True
-                    continue
-                if in_sec and line.startswith("## "):
-                    break
-                if in_sec:
-                    m = re.match(r"\s*\d+\.\s*`([^`]+)`", line)
-                    if m:
-                        out.append(m.group(1))
-    except FileNotFoundError:
-        log(f"USER.md not found at {USER_MD} — cannot determine the account list")
-    except Exception as e:
-        log(f"could not parse accounts from {USER_MD}: {type(e).__name__}: {e}")
-    return out
+    Raises _accounts.AccountsError on a malformed list: main() reports that as a
+    crash, which is what makes health go red. See _accounts.py."""
+    return _accounts.rotation()
 
 
 def state_path(email: str) -> str:
@@ -368,6 +349,17 @@ def restorable(email: str) -> bool:
     return all(os.path.isfile(os.path.join(d, f)) for f in RESTORE_FILES)
 
 
+def snapshot_problem(email: str) -> str:
+    """Why `switch` would refuse this saved identity, or "". Without this, one broken
+    snapshot is chosen on every tick while a healthy account below it is never tried."""
+    try:
+        with open(os.path.join(IDENTITIES, email, "keychain.json"), encoding="utf-8") as f:
+            state = blob_token_state(f.read())
+    except (OSError, UnicodeDecodeError):
+        return "snapshot unreadable"
+    return "" if state == "ok" else f"snapshot unusable: {state}"
+
+
 def record_state(email: str, cache: dict) -> None:
     """Persist the active account's limits so that, once we have rotated away
     from it, we can still reason about when its window frees up."""
@@ -382,6 +374,7 @@ def record_state(email: str, cache: dict) -> None:
             "seven_day_pct": cache.get("seven_day_pct") or 0,
             "seven_day_resets_at": cache.get("seven_day_resets_at"),
         })
+        _accounts.record_weekly_renewal(email, cache.get("seven_day_resets_at"))
     except Exception as e:
         log(f"record_state({email}) failed: {type(e).__name__}: {e}")
 
@@ -396,11 +389,49 @@ def headroom(email: str, t5: int, t7: int) -> tuple:
     p = state_path(email)
     if not os.path.exists(p):
         return True, "no known state (assume fresh)"
+    s = _read_state(email)
+    if s is None:
+        return True, "state unreadable (assume fresh)"
+    cap = _capped_window(s, t5, t7)
+    if cap:
+        label, pct, reset = cap
+        when = time.strftime("%H:%M", time.localtime(reset)) if reset else "unknown"
+        return False, f"{label} at {round(pct)}% until {when}"
+    return True, "under thresholds"
+
+
+def _num(v):
+    """A usable number, or None. These files can be edited by hand or carry an odd payload,
+    and a bad value must not stop a tick or a listing."""
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or abs(v) > 1e11:
+        return None
+    return v
+
+
+def _read_state(email: str):
+    """The account's last reading, with its weekly reset filled from the stored date
+    when the reading carries none, so every reader judges from the same date."""
     try:
-        with open(p, encoding="utf-8") as f:
+        with open(state_path(email), encoding="utf-8") as f:
             s = json.load(f)
     except Exception:
-        return True, "state unreadable (assume fresh)"
+        return None
+    if not isinstance(s, dict):
+        return None
+    for key in ("five_hour_pct", "five_hour_resets_at", "seven_day_pct", "seven_day_resets_at", "recorded_at"):
+        s[key] = _num(s.get(key))
+    if not s["seven_day_resets_at"]:
+        # Only a date the reading was taken before can speak for it. One already past
+        # when this was read says nothing about a high number taken after it.
+        stored = _num((_accounts.stored_state().get(email) or {}).get("weekly_renews_at"))
+        if stored and s["recorded_at"] and s["recorded_at"] <= stored:
+            s["seven_day_resets_at"] = stored
+    return s
+
+
+def _capped_window(s: dict, t5: int, t7: int):
+    """(label, pct, reset) of the window still holding this account, or None. A reading
+    over the threshold says nothing once its window has rolled over."""
     now = time.time()
     for pct_key, reset_key, thr, label in (
         ("five_hour_pct", "five_hour_resets_at", t5, "5h"),
@@ -408,23 +439,217 @@ def headroom(email: str, t5: int, t7: int) -> tuple:
     ):
         pct = s.get(pct_key) or 0
         reset = s.get(reset_key)
-        if pct < thr:
+        if pct < thr or (reset and now > reset):
             continue
-        if reset and now > reset:
-            continue  # window rolled over — fresh again
-        when = time.strftime("%H:%M", time.localtime(reset)) if reset else "unknown"
-        return False, f"{label} at {round(pct)}% until {when}"
-    return True, "under thresholds"
+        return label, pct, reset
+    return None
+
+
+def _ago(ts: float) -> str:
+    secs = max(0, time.time() - ts)
+    if secs < 3600:
+        return f"{int(secs // 60)}m ago"
+    if secs < 172800:
+        return f"{int(secs // 3600)}h ago"
+    return f"{int(secs // 86400)}d ago"
+
+
+WEEK_SECS = 7 * 86400
+
+
+def _when(ts: float) -> str:
+    return time.strftime("%a %d/%m %H:%M", time.localtime(ts))
+
+
+def _next_renewal(anchor):
+    """The next weekly reset at or after now. Weeks are fixed: a window that reset on a
+    date resets on that date plus 7 days, whether or not the account was used."""
+    if not anchor:
+        return None
+    now = time.time()
+    return anchor if anchor > now else anchor + WEEK_SECS * (int((now - anchor) // WEEK_SECS) + 1)
+
+
+def availability(current: str) -> list:
+    """One row per account: whether it can take you now, and how to read its numbers.
+
+    A number is only true inside its window. On the renewal date the weekly usage goes
+    back to 0%, so 98% read before that date says nothing after it, and this reports
+    0%. Then the order of the checks: an expired login ends at a login screen whatever
+    the usage is, so it wins over a cap. Dates come from the stored state, then from
+    the last reading, so an account unused for weeks is still read correctly."""
+    t5, t7 = thresholds()
+    stored = _accounts.stored_state()
+    now = time.time()
+    rows = []
+    for a in _accounts.load()["accounts"]:
+        email = a["email"]
+        known = stored.get(email) or {}
+        reading = _read_state(email) or {}
+        if email == current:
+            # Its saved copy can be weeks old, so only a date from the live credential counts.
+            expires, source = (known.get("refresh_expires_at"), "live") if known.get("refresh_source") == "live" else (None, "")
+        else:
+            expires, source = _accounts.saved_refresh_expiry(email), "saved"
+            if expires is None and known.get("refresh_source") == "saved":
+                expires = known.get("refresh_expires_at")
+        reset = reading.get("seven_day_resets_at")
+        anchor = reset or _num(known.get("weekly_renews_at"))
+        renews = _next_renewal(anchor)
+        renewed = bool(reset) and reset <= now
+        pct7 = 0 if renewed else (reading.get("seven_day_pct") or 0)
+        five_reset = reading.get("five_hour_resets_at")
+        pct5 = 0 if five_reset and five_reset <= now else (reading.get("five_hour_pct") or 0)
+        usage = f"5h {round(pct5)}% · 7d {round(pct7)}%"
+        if renewed:
+            usage += f" (renewed {_when(anchor)})"
+        elif reading.get("recorded_at"):
+            usage += f", read {_ago(reading['recorded_at'])}"
+        if renews:
+            usage += f", renews {_when(renews)}"
+        cap = _capped_window(reading, t5, t7)
+        capped_until = None
+        if email == current:
+            state, detail = "active", usage
+        elif not restorable(email):
+            state, detail = "not-captured", "run claude-switch --capture while logged in to it"
+        elif expires is not None and expires < now:
+            state, detail = "expired", f"needs a new login first, see claude-switch --help; {usage}"
+        elif cap:
+            label, pct, capped_until = cap
+            back = "back to 0%" if label == "7d" else "window rolls"
+            state, detail = "capped", (f"{label} at {round(pct)}% until "
+                                       f"{_when(capped_until) if capped_until else 'unknown'}, then {back}")
+        elif not a.get("rotation", True):
+            state, detail = "out-of-rotation", usage   # usable by hand; the watcher never picks it
+        elif reading.get("recorded_at") or anchor:
+            state, detail = "available", usage
+        else:
+            state, detail = "available", "no reading yet"
+        rows.append({
+            "email": email, "alias": a.get("alias", ""), "plan": a.get("plan", ""),
+            "rotation": a.get("rotation", True), "reason": a.get("reason", ""),
+            "state": state, "detail": detail, "capped_until": capped_until,
+            "five_hour_pct": pct5, "seven_day_pct": pct7, "seven_day_pct_read": reading.get("seven_day_pct"),
+            "weekly_renews_at": renews, "weekly_renewed_since_reading": renewed,
+            "refresh_expires_at": expires, "refresh_expires_source": source,
+            "reading_recorded_at": reading.get("recorded_at"),
+        })
+    return rows
+
+
+# --- Confirmation gate -------------------------------------------------------
+# One reading over the threshold is not evidence. A session that was running when
+# a swap happened can keep reporting the PREVIOUS account's rate_limits, and the
+# cache files those numbers under the currently active email. Measured on a live
+# install: 18 such excursions in a day across four accounts, between ~2% and ~97%,
+# which cost two false rotations off accounts at 1-3% real usage.
+#
+# So a rotation needs the SAME account over a threshold on two different samples at
+# least ARMED_MIN_GAP_SECS apart. Either window counts: a real cap on one window with an
+# old session reporting the other is still an account over threshold, and requiring the
+# same window would restart the wait on every render. Time is the samples' own
+# (`captured_at`): a watcher tick that re-reads an unchanged cache is not a reading.
+#
+# A reading under the threshold cannot simply cancel it, because two sessions can
+# report at once, and either one may be the stale one: a real cap with an old session
+# reporting low would alternate forever and never rotate. So a spike is dropped once
+# ARMED_QUIET_SECS pass with no other high, while highs that keep coming back sooner
+# than that rotate after ARMED_SUSTAINED_SECS. A stale session that stays high that long
+# costs one needless swap, which is cheaper than riding a real cap with nothing
+# happening. Highs further apart than ARMED_QUIET_SECS, with lows between them, cannot
+# be told from repeated spikes and do not rotate.
+ARMED_FILE = os.path.join(CONFIG_DIR, "quota-watch.armed.json")
+ARMED_MIN_GAP_SECS = 30     # the threshold leaves 2% of margin; this is cheap to wait
+ARMED_QUIET_SECS = 120      # lows for this long, with no high: it was a spike
+ARMED_SUSTAINED_SECS = 300  # highs and lows alternating for this long: treat it as real
+ARMED_TTL_SECS = 300        # a high older than this says nothing about now: re-arm
+
+
+def _armed_read() -> dict:
+    try:
+        with open(ARMED_FILE, encoding="utf-8") as f:
+            armed = json.load(f)
+        return armed if isinstance(armed, dict) else {}
+    except Exception:
+        return {}
+
+
+def disarm(why: str = "") -> None:
+    """Drop any pending arming. Called whenever the reading comes back under
+    threshold, and after a swap, so the next account starts clean."""
+    if not os.path.exists(ARMED_FILE):
+        return
+    try:
+        os.remove(ARMED_FILE)
+        if why:
+            log(f"gate disarmed ({why})")
+    except Exception as e:
+        log(f"disarm failed: {type(e).__name__}: {e}")
+
+
+def _sample_time(armed: dict, key: str):
+    v = armed.get(key)
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
+def confirm_or_arm(email: str, metric: str, pct: float, sampled_at: float) -> bool:
+    """True when another sample confirms the first; otherwise wait for one."""
+    prev = _armed_read()
+    first, last = _sample_time(prev, "first_sample"), _sample_time(prev, "last_sample")
+    if (prev.get("email") == email and first is not None
+            and last is not None and sampled_at - last <= ARMED_TTL_SECS):
+        if sampled_at <= last:
+            return False  # the same sample, read again
+        needed = ARMED_SUSTAINED_SECS if prev.get("low_seen") else ARMED_MIN_GAP_SECS
+        if sampled_at - first >= needed:
+            log(f"gate confirmed — {metric} over threshold for {round(sampled_at - first)}s "
+                f"({round(prev.get('pct') or 0)}% then {round(pct)}%)")
+            disarm()
+            return True
+        try:
+            write_json_atomic(ARMED_FILE, {**prev, "last_sample": sampled_at})
+        except Exception as e:
+            log(f"arm update failed: {type(e).__name__}: {e}")
+        return False
+    try:
+        write_json_atomic(ARMED_FILE, {"email": email, "metric": metric, "pct": pct,
+                                       "first_sample": sampled_at, "last_sample": sampled_at})
+    except Exception as e:
+        # No second reading can ever confirm an arming that was not saved. Rotating on
+        # one reading risks a needless swap; never rotating rides the account into its cap.
+        log(f"arm failed, rotating on one reading: {type(e).__name__}: {e}")
+        return True
+    log(f"gate armed — {email} {metric} at {round(pct)}% (needs a second reading to rotate)")
+    return False
+
+
+def low_reading(sampled_at: float) -> None:
+    """A reading under threshold: see the gate's note on why this is not a plain cancel."""
+    prev = _armed_read()
+    if not prev:
+        return
+    last = _sample_time(prev, "last_sample")
+    if last is None or sampled_at - last > ARMED_QUIET_SECS:
+        disarm("reading back under threshold")
+    elif not prev.get("low_seen"):
+        try:
+            write_json_atomic(ARMED_FILE, {**prev, "low_seen": True})
+        except Exception as e:
+            log(f"arm update failed: {type(e).__name__}: {e}")
 
 
 def pick_target(current: str, t5: int, t7: int) -> tuple:
-    """(email_or_None, reason). Preference is USER.md order, but an account is
-    only a candidate if its cap window has actually rolled."""
+    """(email_or_None, reason). Preference is list order, but an account is only a
+    candidate if switching to it would work and its cap window has actually rolled."""
     accts = parse_accounts()
-    if len(accts) < 2:
-        return None, f"need >= 2 accounts in USER.md (found {len(accts)})"
+    # Counted without the active account: disabling it leaves one account, and that one
+    # is a perfectly good destination.
+    if not [e for e in accts if e != current]:
+        return None, f"need >= 2 accounts in rotation (found {len(accts)})"
     blocked = []
     uncaptured = 0
+    broken = 0
     for email in accts:
         if email == current:
             continue
@@ -434,6 +659,14 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
             blocked.append(f"{email} (not captured)")
             uncaptured += 1
             continue
+        # Restorable, and it would still end at a login screen: a snapshot with no tokens
+        # (#255) or one whose refresh token has expired (#254). Exactly what rotation
+        # exists to avoid, with nobody there to log in.
+        problem = snapshot_problem(email) or _accounts.saved_problem(email)
+        if problem:
+            blocked.append(f"{email} ({problem})")
+            broken += 1
+            continue
         ok, why = headroom(email, t5, t7)
         if ok:
             return email, why
@@ -442,7 +675,7 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
         # Nothing to rotate to until the operator captures an account. Not a
         # capacity verdict, and not worth a notification on every tick.
         return None, NOT_CAPTURED + ": " + "; ".join(blocked)
-    if uncaptured:
+    if uncaptured or broken:
         return None, "no usable alternative: " + "; ".join(blocked)
     return None, "all alternatives still capped: " + "; ".join(blocked)
 
@@ -846,14 +1079,19 @@ def main(self_path: str) -> None:
         # the other.
         record_state(email, cache)
 
-        reason, action = None, None
+        reason, action, metric = None, None, None
         if pct5 >= t5:
-            reason, action = f"5h at {pct5}% (>= {t5}%)", "rotate"
+            reason, action, metric = f"5h at {pct5}% (>= {t5}%)", "rotate", "5h"
         elif pct7 >= t7:
-            reason, action = f"7d at {pct7}% (>= {t7}%)", "rotate"
+            reason, action, metric = f"7d at {pct7}% (>= {t7}%)", "rotate", "7d"
 
         if not action:
+            low_reading(cache.get("captured_at") or 0)
             log(f"ok — {email} at 5h:{round(pct5)}% 7d:{round(pct7)}% (no swap)")
+            return
+
+        # One reading over threshold is not evidence — see ARMED_FILE above.
+        if not confirm_or_arm(email, metric, pct5 if metric == "5h" else pct7, cache.get("captured_at") or 0):
             return
 
         log(f"TRIGGER ({action}): {reason}")
@@ -912,6 +1150,10 @@ def main(self_path: str) -> None:
             "rc": r.returncode,
         })
 
+        # The gate belongs to the account we just left. Clear it so the
+        # incoming account cannot inherit an arming it never earned.
+        disarm("swapped")
+
         # After a successful swap: write a swap-notification marker that the
         # statusLine renderer (context-monitor.py) surfaces as a prominent
         # in-session banner ("🔄 swapped j→cc Nm ago — restart pre-swap
@@ -939,7 +1181,7 @@ def main(self_path: str) -> None:
         # the maintainer's call, not a side effect of this port.
         if r.returncode != 0:
             # Swap failed — most commonly because there's only one account in
-            # USER.md (rotation needs >= 2). Degrade quietly: no OS notification
+            # rotation (rotation needs >= 2). Degrade quietly: no OS notification
             # and no in-session banner, both of which would falsely claim a swap
             # happened. The failed attempt is already in the swap-log + the
             # "swap result: rc=..." line above. The session simply rides its own
@@ -993,7 +1235,65 @@ def main(self_path: str) -> None:
 HEALTH_VALID_FOR = "90m"
 
 
+def rotation_warning(current: str) -> str:
+    """Why the next fallback would not work, or "". Asked on every tick, because the
+    moment rotation needs it is the worst moment to find out, and pick_target's
+    skipping it would otherwise hide the problem until the list ran out.
+
+    An account nobody has captured yet is only a problem when another one has been:
+    with none captured, this is a setup still in progress and rotation is simply off.
+
+    Saved copies only. The active account is left out on purpose: its saved copy can
+    be weeks old while the credential in use is fine, and this runs too often to read
+    the live one from the credential store."""
+    others = [e for e in parse_accounts() if e != current]
+    if not any(restorable(e) for e in others):
+        return ""
+    fallback = others[0]
+    problem = "not captured" if not restorable(fallback) else _accounts.saved_problem(fallback)
+    if not problem:
+        return ""
+    return f"next fallback {fallback}: {problem}"
+
+
+WARNING_FILE = os.path.join(CONFIG_DIR, "quota-rotation-warning.json")
+
+
+def warn_once(warning: str) -> None:
+    """Log and notify when the warning changes. The statusLine ticks every few
+    seconds near a cap, and an alarm repeated on each one gets switched off."""
+    try:
+        with open(WARNING_FILE, encoding="utf-8") as f:
+            last = json.load(f).get("warning", "")
+    except Exception:
+        last = ""
+    if warning == last:
+        return
+    write_json_atomic(WARNING_FILE, {"warning": warning, "ts": int(time.time())})
+    if warning:
+        log(f"WARNING — {warning}")
+        notify(warning)
+
+
 def record_health() -> None:
+    state, detail = ("fail" if CRASHED else "ok"), LAST_LOG or "completed"
+    try:
+        _accounts.sync_saved_expiry(_read_active_email())
+        lost = _accounts.missing_list_problem()
+        warning = lost or rotation_warning(_read_active_email())
+        warn_once(warning)
+        if lost:
+            state, detail = "fail", lost
+        elif warning and state == "ok":
+            state, detail = "warn", warning
+    except _accounts.AccountsError as e:
+        # Checked here too, not only in pick_target: most ticks never reach it, and
+        # a list that broke today must not stay quiet until the day of the cap.
+        state, detail = "fail", str(e)
+        log(f"account list: {e}")
+        warn_once(str(e))
+    except Exception as e:
+        log(f"rotation check failed: {type(e).__name__}: {e}")
     try:
         import importlib.util
         here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -1002,7 +1302,7 @@ def record_health() -> None:
             return
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        mod.write("quota-watch", "fail" if CRASHED else "ok", HEALTH_VALID_FOR, LAST_LOG or "completed")
+        mod.write("quota-watch", state, HEALTH_VALID_FOR, detail)
     except Exception:
         pass  # health is a report about the watcher; it must never become a way to break it
 

@@ -409,6 +409,15 @@ _CALENDAR_FEED_SUFFIXES = (
 )
 
 
+def _skip_status(names):
+    """The Pipeline Status line for `Calendars to skip`, so the list the executor actually read
+    is visible. An operator who filled the line in a form the parser missed used to get an empty
+    list and no sign of it (#243): the skipped calendars' events just kept arriving."""
+    if not names:
+        return "ℹ️ calendars to skip: none listed in USER.md"
+    return f"ℹ️ calendars to skip: {len(names)} listed ({', '.join(names)})"
+
+
 def _calendar_ids(service, skip=()):
     """Every calendar the account can read, primary first, feeds excluded.
 
@@ -1039,6 +1048,8 @@ def run_pipeline(command_name):
                 status.append(f"⏭️ {source}: configured but not queried — {reason}")
             else:
                 status.append(f"⏭️ {source}: not configured")
+    if "calendar" in sources["configured"]:
+        status.append(_skip_status(sources["calendars_skip"]))
 
     elapsed = (datetime.now() - start_time).total_seconds()
 

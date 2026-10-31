@@ -34,6 +34,18 @@ echo "── the current command and CLAUDE.md ──"
 out=$(check "$ROOT/plugins/aios/commands/close-day.md" "$ROOT/CLAUDE.md")
 [ -z "$out" ] && ok "close-day checks carried outward actions first, and CLAUDE.md promises only that" || no "the out-of-session rule does not hold" "$out"
 
+echo "── an outward action nobody could check carries as unverified (#237) ──"
+uv=""
+grep -q '_(carried ×N, unverified, from: …)_' "$ROOT/plugins/aios/commands/close-day.md" || uv="$uv; close-day does not mark an unchecked outward action unverified"
+grep -q 'An `unverified` carry is asked a different question' "$ROOT/plugins/aios/commands/close-day.md" || uv="$uv; the ×6 triage reads an unverified carry as avoidance"
+grep -q '`unverified` carries' "$ROOT/plugins/aios/commands/today.md" || uv="$uv; /today flags unverified carries with ⚠️"
+[ -z "$uv" ] && ok "unverified carries are marked, asked 'done already?', and never flagged as avoidance" || no "the unverified carry rule does not hold" "${uv#; }"
+if git -C "$ROOT" cat-file -e v0.8.13:plugins/aios/commands/close-day.md 2>/dev/null; then
+  git -C "$ROOT" show v0.8.13:plugins/aios/commands/close-day.md | grep -q '_(carried ×N, unverified' \
+    && no "control: v0.8.13 already had the rule" "the check cannot see the change" \
+    || ok "control: v0.8.13 lacks it, so the check can see the change"
+fi
+
 echo "── control: v0.8.12 fails the same check ──"
 if git -C "$ROOT" cat-file -e v0.8.12:plugins/aios/commands/close-day.md 2>/dev/null; then
   T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT

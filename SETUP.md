@@ -719,7 +719,7 @@ If either hook silently failed: re-read the settings.json and confirm the `hooks
 
   > *"The agent is installed and watching. The account-capture step (login + Keychain identity capture per account) will run during your first `/today` — it's a deliberate task there so we don't interrupt this setup session. When that task fires, just say yes and I'll walk you through the per-account login dance safely, then swap back to your primary."*
 
-**The full capture walkthrough** is at `hooks/claude-identity/README.md` → `## Setup` — 7 interactive steps: configure accounts in USER.md, capture identities, verify cache writes, run a swap dry-run. That walkthrough is what fires from `/today` when the marker is present.
+**The full capture walkthrough** is at `hooks/claude-identity/README.md` → `## Setup` — 7 interactive steps: list your accounts, capture identities, verify cache writes, run a swap dry-run. That walkthrough is what fires from `/today` when the marker is present.
 
 Hard preconditions:
 - **macOS, Linux and Windows.** The credential store and the scheduler are both platform-detected: Keychain + launchd on macOS; on Linux, the plaintext credentials file Claude Code itself writes (mode 600) + a systemd **user** timer; on Windows, that same credentials file + a **Task Scheduler** task registered by `powershell -NoProfile -ExecutionPolicy Bypass -File hooks/claude-identity/install-quota-watch.ps1` (no elevation required). The spawn wrapper + universal hooks work on all three regardless.

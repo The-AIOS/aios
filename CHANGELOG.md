@@ -79,6 +79,37 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-10-31 — Account rotation that never lands on a login screen, a floor that no longer goes silent on a Mac, and old lessons you can search
+
+`hash: fd9014b · e1d1c6d · cdc1556 · 90f003e · fc447c8 · 84252c6 · 142074b · 960e0e1 · fd88955 · 80ee399 · 88fb90c · cc59873 · 2304854 · a1bc0e1` · [#245](https://github.com/The-AIOS/aios/pull/245) · [#247](https://github.com/The-AIOS/aios/pull/247) · [#251](https://github.com/The-AIOS/aios/pull/251) · [#254](https://github.com/The-AIOS/aios/pull/254) · [#255](https://github.com/The-AIOS/aios/pull/255)
+
+> **What you can now do.** Rotate between Anthropic accounts without one stale reading moving you, and without ever landing on a login screen. Reorder accounts with one command and see who is available, by date. Search every lesson your vault has learned by what it says. Find the API keys you once pasted into a session. Keep running the context floor on a Mac for months without it going quiet.
+
+**Account rotation you can trust** (#255, #254).
+- **A rotation needs two readings.** A session from before a swap can report the previous account's numbers under the new one's name, and one such reading used to rotate you off an account with plenty left. It now takes the same account over the threshold on two samples at least 30 seconds apart, or 5 minutes when two sessions disagree.
+- **A dead account is never a destination.** A snapshot with no tokens, or one whose refresh token has expired, is skipped, and the watcher warns as soon as your next fallback stops working. `--capture` refuses to save an empty credential over a good one.
+- **The list is data.** It moves from `USER.md` to `~/.aios/accounts.json`, one per machine, validated on load, and managed with `claude-switch --order`, `--enable`, `--disable` and `--add`, each change logged. `--list` shows each account's state, plan, whether it rotates, and its next weekly renewal: a 98% read before that date counts as 0% after it. `claude-switch --availability` gives the same as JSON.
+
+**The floor no longer goes silent on a Mac** (#253). `uv` kept its cache in `$TMPDIR`, which macOS empties file by file after about three days while keeping the folders, so `uv` later failed and every hook run through it, the floor included, printed nothing. The cache now lives in your vault's `.aios-run/uv-cache`, which is gitignored and writable from a sandboxed session.
+
+**Search old lessons by what they say** (#247). `hooks/recall.py "<words>"` searches the bodies of `observed/`, so a lesson whose title never names the concept is still found. It reads only `observed/`, writes nothing, and caps its output; words match by prefix, so `autoriza` finds `autorización`. Nothing runs it by itself: the floor names it in one line so sessions know it is there. Run: `UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/recall.py "your words"`.
+
+**Find the keys you pasted into a session** (#245). A key pasted into a chat stays in that transcript for as long as transcripts are kept. `hooks/transcript-secret-scan.py scan` lists each one with its kind, date, file and line and its last 4 characters, never the key itself, using the commit scanner's own pattern list. It never edits a transcript: the fix is to rotate the key, then `ack` it. The newer `AQ.` Gemini key shape is now caught by the commit scanner too.
+
+**Smaller changes.**
+- The floor reads each observed file at its own entry level, so a file written with `##` entries is split correctly (#251).
+- A carried reply, send or schedule that `/close-day` could not check against mail or the calendar carries as `unverified`, and at ×6 you are asked whether it is already done before any avoidance reason (#237).
+- `/collaborate` asks you to approve a share in your own words, naming the files and where they go, which is the form Claude Code's auto mode accepts (#211).
+- FORTRESS.md: a machine writes observed context when it actually worked with you; work is handed between machines over the spawn inbox (#248).
+- Pipeline Status shows the `Calendars to skip` list it read.
+
+**Action required** — check each first; do only what applies:
+1. **Only if `USER.md` has numbered lines under `## Anthropic accounts`:** run `bash ~/aios/hooks/claude-identity/claude-identity.sh switch --list` and show the result. That first run imports the list into `~/.aios/accounts.json`, in order, and never writes `USER.md`. Ask them to confirm the order. An account kept in prose outside the numbered list is not imported; add it with `switch --add <email> --disabled --reason "..."`. **Keep the `USER.md` section as it is in this release:** the AIOS App and Glass still read it for their account menus, which would come up empty without it. A later release will offer to replace it, once both read the new list.
+2. **Only if that list shows an expired account in rotation:** say it was a silent trap until now, and offer the renewal that `switch --help` prints (a login from a config dir of its own, never a `/login` in the current seat), or `switch --disable <account>`.
+3. **Optional:** offer to run `python3 ~/aios/hooks/transcript-secret-scan.py scan` once. The first run reads the whole transcript history on this machine and reports a backlog: rotate the live keys, then `ack` the dead ones.
+4. **The modified wrapper installer** is re-run by this update (`install-wrappers.sh`, or `.ps1` on Windows). It now also defines `claude-switch` and `claude-whoami`, and a hand-written definition of either earlier in the shell file is shadowed by the managed one.
+5. **Open a new terminal, and start a new Claude session**, last.
+
 ## 2026-10-28 — Two machines that sync cleanly, work that finishes outside a session that closes, and sessions that read what they are handed
 
 **🐜 The AIOS now has a home for humans. Ask, share what you built, meet other operators → https://discord.gg/f3rdxBTDMG**
