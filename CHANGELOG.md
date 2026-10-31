@@ -79,68 +79,36 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
-## 2026-10-30 — Your account list is data, and rotation will not send you to a login screen
+## 2026-10-31 — Account rotation that never lands on a login screen, a floor that no longer goes silent on a Mac, and old lessons you can search
 
-`hash: `
+`hash: ` · [#245](https://github.com/The-AIOS/aios/pull/245) · [#247](https://github.com/The-AIOS/aios/pull/247) · [#251](https://github.com/The-AIOS/aios/pull/251) · [#254](https://github.com/The-AIOS/aios/pull/254) · [#255](https://github.com/The-AIOS/aios/pull/255)
 
-> **What you can now do.** Reorder your Anthropic accounts with one command and see where you would fall before and after. Take an account out of rotation and keep it. Know the moment your next fallback stops working, not the day you need it.
+> **What you can now do.** Rotate between Anthropic accounts without one stale reading moving you, and without ever landing on a login screen. Reorder accounts with one command and see who is available, by date. Search every lesson your vault has learned by what it says. Find the API keys you once pasted into a session. Keep running the context floor on a Mac for months without it going quiet.
 
-**The list moved out of `USER.md`.** It was a numbered section read by three separate parsers, so a reworded line could drop an account with no error. It now lives in `~/.aios/accounts.json`, outside the vault, with order, alias, plan, and whether the account rotates. A malformed file stops the tool with the reason, and turns the watcher's health red. So does a list that has gone missing on a machine that had a rotation, and it is not revived from `USER.md`; a one-account install stays quiet.
+**Account rotation you can trust** (#255, #254).
+- **A rotation needs two readings.** A session from before a swap can report the previous account's numbers under the new one's name, and one such reading used to rotate you off an account with plenty left. It now takes the same account over the threshold on two samples at least 30 seconds apart, or 5 minutes when two sessions disagree.
+- **A dead account is never a destination.** A snapshot with no tokens, or one whose refresh token has expired, is skipped, and the watcher warns as soon as your next fallback stops working. `--capture` refuses to save an empty credential over a good one.
+- **The list is data.** It moves from `USER.md` to `~/.aios/accounts.json`, one per machine, validated on load, and managed with `claude-switch --order`, `--enable`, `--disable` and `--add`, each change logged. `--list` shows each account's state, plan, whether it rotates, and its next weekly renewal: a 98% read before that date counts as 0% after it. `claude-switch --availability` gives the same as JSON.
 
-**An expired account is never a destination.** A refresh token that has expired ends at `/login`, which is what rotation exists to avoid. The watcher now skips such an account, and `~/.aios/health/quota-watch.json` reads `warn`, with one notification, as soon as the next fallback is expired or uncaptured.
+**The floor no longer goes silent on a Mac** (#253). `uv` kept its cache in `$TMPDIR`, which macOS empties file by file after about three days while keeping the folders, so `uv` later failed and every hook run through it, the floor included, printed nothing. The cache now lives in your vault's `.aios-run/uv-cache`, which is gitignored and writable from a sandboxed session.
 
-**`--list` tells the truth about the active account.** It reads the live credential for the account in use. The saved copy only moves on a swap or a capture, so it would report a healthy account as expired.
+**Search old lessons by what they say** (#247). `hooks/recall.py "<words>"` searches the bodies of `observed/`, so a lesson whose title never names the concept is still found. It reads only `observed/`, writes nothing, and caps its output; words match by prefix, so `autoriza` finds `autorización`. Nothing runs it by itself: the floor names it in one line so sessions know it is there. Run: `UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/recall.py "your words"`.
 
-**You can read who is available, by date.** On its weekly renewal date an account goes back to 0%, so a number read before that date stops meaning anything after it. `--list` now says so for each account, with its next renewal, and `claude-switch --availability` gives it as JSON. An expired login wins over any percentage. The dates are stored in `~/.aios/accounts-state.json`, so asking does not touch the credential store.
+**Find the keys you pasted into a session** (#245). A key pasted into a chat stays in that transcript for as long as transcripts are kept. `hooks/transcript-secret-scan.py scan` lists each one with its kind, date, file and line and its last 4 characters, never the key itself, using the commit scanner's own pattern list. It never edits a transcript: the fix is to rotate the key, then `ack` it. The newer `AQ.` Gemini key shape is now caught by the commit scanner too.
 
-**`claude-switch` comes with the wrappers,** on macOS, Linux and Windows, and resolves aliases from the list. `--order`, `--enable`, `--disable` and `--add` are new, and each change is logged to `~/.aios/accounts-log.jsonl`.
+**Smaller changes.**
+- The floor reads each observed file at its own entry level, so a file written with `##` entries is split correctly (#251).
+- A carried reply, send or schedule that `/close-day` could not check against mail or the calendar carries as `unverified`, and at ×6 you are asked whether it is already done before any avoidance reason (#237).
+- `/collaborate` asks you to approve a share in your own words, naming the files and where they go, which is the form Claude Code's auto mode accepts (#211).
+- FORTRESS.md: a machine writes observed context when it actually worked with you; work is handed between machines over the spawn inbox (#248).
+- Pipeline Status shows the `Calendars to skip` list it read.
 
-### What you need to do
-
-> **For the teammate's Claude running `/aios:update`:**
->
-> - **State:** check whether `USER.md` has numbered lines under `## Anthropic accounts`, and whether `~/.aios/accounts.json` exists. Neither: this operator does not rotate accounts, so say nothing and skip the rest.
-> - **Act (automatic):** the first `bash ~/aios/hooks/claude-identity/claude-identity.sh switch --list`, watcher tick or statusLine refresh imports the list, in order, and keeps the section's whole text in the file's `history`. `USER.md` is not written. A line that looks like an account and cannot be read stops the import, with the line named. Run that command and show the result, then ask them to confirm the order. Aliases are imported; **plan and accounts outside the numbered list are not**, so an account kept in prose needs `bash ~/aios/hooks/claude-identity/claude-identity.sh switch --add <email> --disabled --reason "..."`.
-> - **Ask:** *"Your account list now lives in `~/.aios/accounts.json`. The old section in `USER.md` is no longer read. Want me to replace it with one line pointing at `claude-switch --list`?"* It is their file, so the edit is theirs to approve. Say plainly that later edits to that section will have no effect. **If `~/.aios/surfaces/` shows they run AIOS Glass or the AIOS App, recommend keeping the section for now:** the account-swap menu in both still reads it until those surfaces are updated. It comes up empty without it, and it does not follow a later `--order`.
-> - **Ask, if that list shows an expired account in rotation:** tell them it was a silent trap until now, and offer the renewal from a config dir of its own, which `bash ~/aios/hooks/claude-identity/claude-identity.sh switch --help` prints, not a `/login` in the current seat. Or the same script with `switch --disable <account>`.
-> - **Act (RESTART-CLASS, do LAST):** `install-wrappers.sh` / `.ps1`, modified, is re-run by this update. It writes to their shell rc (`~/.zshrc` or `~/.bashrc`; on Windows, the PowerShell profile) and now also defines `claude-whoami` and `claude-switch`. A hand-written definition earlier in their rc file is shadowed by the managed one; an alias kept in it no longer matters, because aliases come from the list. **Open a new terminal** to pick it up.
-
-## 2026-10-30 — One bad reading no longer rotates you, and an empty credential no longer logs you out
-
-`hash: `
-
-> **What you can now do.** Trust that a rotation means the account really reached its cap, and that `--list` shows whether a saved account would actually work.
-
-**A rotation needs two readings.** A session from before a swap can report the previous account's numbers under the new one's name. One such reading was enough to rotate off an account with plenty left. It now takes the same account over a threshold on two different samples, at least 30 seconds apart, or 5 minutes when two sessions disagree.
-
-**An empty credential is refused.** A credential can be valid JSON with empty tokens. `--capture` used to save it over a good snapshot and report success, and a switch used to restore it and leave you at a login screen. `--capture` and switching to such a snapshot now stop with the reason. A rotation leaving such a credential goes on, and leaves the saved snapshot as it was. The watcher skips a broken snapshot and tries the next account.
-
-**`--list` reads what a snapshot contains.** "Saved" used to mean the files exist. A broken one now reads `BROKEN`, with what to do.
-
-**Action required — none.** Applies on sync. Saved identities with real tokens behave as before. If `claude-switch --list` now shows one as `BROKEN`, it was already unusable: `claude-switch --help` shows how to renew it from a config dir of its own, without touching the current seat.
-
-## 2026-10-30 — Find an old lesson by what it says, not by what its title says
-
-`hash: `
-
-> **What you can now do.** Ask your vault what it has learned about a concept and get the lessons whose body says it, even when no title does. Action required — none: it runs only when you or a session calls it.
-
-**`hooks/recall.py` searches the bodies of `observed/`.** The context floor names every title and prints the newest few entries of each file, so an old lesson whose title does not name the concept was invisible to a session looking for the concept. `recall.py "build cache stale credentials"` returns the best matches as `path:line :: title` with a short excerpt, and the session opens the entry it points to. The floor is unchanged; this is the other half of index-then-open.
-
-- **It stays small and read-only.** It reads only `observed/`, indexes in memory for one run, and writes nothing, in the vault or anywhere else. Output has a hard cap that no flag can raise, and it says when it trimmed.
-- **It does not mistake "could not look" for "found nothing".** No `observed/` folder, a Python without SQLite FTS5, or a query with no words exits `2` with a message; a search that ran and matched nothing exits `1` and says how much it searched. A file it cannot read or decode is named in the output.
-- **Spanish and other inflected words work.** Words match by prefix, so `autoriza` finds `autorización`; `--exact` turns that off and `--all` requires every word.
-- **Run it:** `UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/recall.py "your words"`.
-
-## 2026-10-29 — Find the keys you pasted into your sessions
-
-`hash: `
-
-> **What you can now do.** Ask which API keys and tokens you ever pasted into a Claude Code session, and get where each one sits and its last 4 characters, never the key. Run it nightly and be told only when a new one appears.
-
-**Pasted keys are found, not forgotten** (#PR). A key pasted into a chat stays in that session's transcript for as long as transcripts are kept, and the commit scanner never reads them. `hooks/transcript-secret-scan.py scan` reads each transcript once, then only what was added, using the same pattern list as `hooks/git/secret-scan.sh`. Its report lists, per distinct value, the kind, the date, the file and line, and the last 4 characters; the key itself is never printed or stored. Matches glued into longer base64 text or attachment ids are skipped, and the newer `AQ.` Gemini key shape is now caught here and by the commit scanner. The fix is to rotate the key, and `ack ID` marks one done. A missing folder or an unreadable file makes the run say INCOMPLETE and exit non-zero, never a clean zero. `--notify "CMD"` runs your command once with a one-line summary when a new value appears.
-
-**Action required:** none. To use it, run `python3 hooks/transcript-secret-scan.py scan` once (the first run reads your whole history and reports a backlog; rotate the live keys, then `ack` the dead ones), and schedule the same command nightly with cron, launchd or Task Scheduler if you want it watched. Each machine scans only its own transcripts.
+**Action required** — check each first; do only what applies:
+1. **Only if `USER.md` has numbered lines under `## Anthropic accounts`:** run `bash ~/aios/hooks/claude-identity/claude-identity.sh switch --list` and show the result. That first run imports the list into `~/.aios/accounts.json`, in order, and never writes `USER.md`. Ask them to confirm the order. An account kept in prose outside the numbered list is not imported; add it with `switch --add <email> --disabled --reason "..."`. **Keep the `USER.md` section as it is in this release:** the AIOS App and Glass still read it for their account menus, which would come up empty without it. A later release will offer to replace it, once both read the new list.
+2. **Only if that list shows an expired account in rotation:** say it was a silent trap until now, and offer the renewal that `switch --help` prints (a login from a config dir of its own, never a `/login` in the current seat), or `switch --disable <account>`.
+3. **Optional:** offer to run `python3 ~/aios/hooks/transcript-secret-scan.py scan` once. The first run reads the whole transcript history on this machine and reports a backlog: rotate the live keys, then `ack` the dead ones.
+4. **The modified wrapper installer** is re-run by this update (`install-wrappers.sh`, or `.ps1` on Windows). It now also defines `claude-switch` and `claude-whoami`, and a hand-written definition of either earlier in the shell file is shadowed by the managed one.
+5. **Open a new terminal, and start a new Claude session**, last.
 
 ## 2026-10-28 — Two machines that sync cleanly, work that finishes outside a session that closes, and sessions that read what they are handed
 
