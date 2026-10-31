@@ -410,7 +410,11 @@ def _read_state(email: str):
     for key in ("five_hour_pct", "five_hour_resets_at", "seven_day_pct", "seven_day_resets_at", "recorded_at"):
         s[key] = _num(s.get(key))
     if not s["seven_day_resets_at"]:
-        s["seven_day_resets_at"] = _num((_accounts.stored_state().get(email) or {}).get("weekly_renews_at"))
+        # Only a date the reading was taken before can speak for it. One already past
+        # when this was read says nothing about a high number taken after it.
+        stored = _num((_accounts.stored_state().get(email) or {}).get("weekly_renews_at"))
+        if stored and s["recorded_at"] and s["recorded_at"] <= stored:
+            s["seven_day_resets_at"] = stored
     return s
 
 
@@ -478,9 +482,10 @@ def availability(current: str) -> list:
             expires, source = _accounts.saved_refresh_expiry(email), "saved"
             if expires is None and known.get("refresh_source") == "saved":
                 expires = known.get("refresh_expires_at")
-        anchor = reading.get("seven_day_resets_at") or _num(known.get("weekly_renews_at"))
+        reset = reading.get("seven_day_resets_at")
+        anchor = reset or _num(known.get("weekly_renews_at"))
         renews = _next_renewal(anchor)
-        renewed = bool(anchor) and anchor <= now
+        renewed = bool(anchor) and anchor <= now and (bool(reset) or not reading.get("recorded_at"))
         pct7 = 0 if renewed else (reading.get("seven_day_pct") or 0)
         five_reset = reading.get("five_hour_resets_at")
         pct5 = 0 if five_reset and five_reset <= now else (reading.get("five_hour_pct") or 0)

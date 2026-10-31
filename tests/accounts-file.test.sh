@@ -398,12 +398,12 @@ printf '{"ts":%s,"from":"x@example.com","action":"rotate","rc":0}\n' "$(( $(date
 env_run $PY "$WATCH" "$SH" >/dev/null 2>&1
 [ "$(field "$S" 'd["'"$A"'"]["weekly_renews_at"]')" = "$before" ] && ok "inside the post-swap cooldown a reading may be another account's: no date is stored" || no "stored a date during cooldown" "$(cat "$S")"
 rm -f "$H/.claude/swap-log.jsonl"
-limit_with_stored() {  # the reading's reset is $2 from now, the stored date is $3 from now
-  $PY - "$H/.claude/identities/$1/last-limits.json" "$S" "$1" "$2" "$3" <<'PYEOF'
+limit_with_stored() {  # the reading's reset is $2 from now, the stored date $3, the reading itself $4 (default a minute ago)
+  $PY - "$H/.claude/identities/$1/last-limits.json" "$S" "$1" "$2" "$3" "${4:--60}" <<'PYEOF'
 import json, sys, time
 now = time.time()
 r = None if sys.argv[4] == "null" else now + float(sys.argv[4])
-json.dump({"recorded_at": int(now - 60), "five_hour_pct": 1, "five_hour_resets_at": now + 3600, "seven_day_pct": 99,
+json.dump({"recorded_at": int(now + float(sys.argv[6])), "five_hour_pct": 1, "five_hour_resets_at": now + 3600, "seven_day_pct": 99,
            "seven_day_resets_at": r}, open(sys.argv[1], "w"))
 d = json.load(open(sys.argv[2])); d.setdefault(sys.argv[3], {})["weekly_renews_at"] = now + float(sys.argv[5])
 json.dump(d, open(sys.argv[2], "w"))
@@ -413,11 +413,15 @@ limit_with_stored "$B" "$DAY" "-$DAY"
 J="$(sw --availability 2>&1)"
 x="$(printf '%s' "$J" | row "$B" seven_day_pct)"
 [ "$(printf '%s' "$J" | row "$B" state)" = capped ] && [ "${x%.0}" = 99 ] && ok "the reading's own date beats the stored one" || no "stored date won" "$J"
-limit_with_stored "$B" null "-$DAY"
+limit_with_stored "$B" null "-$DAY" "-$((3 * DAY))"
 J="$(sw --availability 2>&1)"
-[ "$(printf '%s' "$J" | row "$B" state)" = available ] && [ "$(printf '%s' "$J" | row "$B" seven_day_pct)" = 0 ] && ok "a reading with no reset takes the stored date, without contradicting itself" || no "capped until unknown" "$J"
+[ "$(printf '%s' "$J" | row "$B" state)" = available ] && [ "$(printf '%s' "$J" | row "$B" seven_day_pct)" = 0 ] && ok "a reading with no reset, taken before the stored date, renewed with it" || no "capped until unknown" "$J"
 has "and the rotation agrees" "$B|" "$(pick "$A")"
-sw --disable two >/dev/null 2>&1
+limit_with_stored "$B" null "-$((3 * DAY))" "-60"
+J="$(sw --availability 2>&1)"; x="$(printf '%s' "$J" | row "$B" seven_day_pct)"
+[ "$(printf '%s' "$J" | row "$B" state)" = capped ] && [ "${x%.0}" = 99 ] && ok "a high reading taken AFTER the stored date stays capped, without contradicting itself" || no "lifted a real cap" "$J"
+hasnt "and the rotation does not pick it" "$B|" "$(pick "$A")"
+limits "$B" 10 "$DAY"; sw --disable two >/dev/null 2>&1
 J="$(sw --availability 2>&1)"
 [ "$(printf '%s' "$J" | row "$B" state)" = out-of-rotation ] && ok "an account out of rotation does not read as available" || no "read as available" "$J"
 sw --enable two >/dev/null 2>&1
