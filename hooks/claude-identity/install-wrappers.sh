@@ -454,7 +454,7 @@ delivered at session start (Hook E): INTENT.md, the titles of the newest entries
 every observed/ file, and the map. Its last section names the FULL floor file -- open it
 for depth whenever a title or the work points there. If there is no such block, run it:
 
-    UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/context-floor.py
+    UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-floor.py
 
 It WRITES the floor to a file and prints only a MAP. The map is not the floor: read the
 file it names, in parts, until its last line is "=== END OF FLOOR".

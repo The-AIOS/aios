@@ -67,11 +67,26 @@ grep -q 'Bash(uv run ~/aios/hooks/page-fit.py:\*)' plugins/aios/commands/learned
   && ok "exemption is scoped: learned.md pins its page-fit call in allowed-tools" \
   || sk "learned.md no longer pins page-fit — exemption unused there"
 
+# The cache must not live in $TMPDIR (#253). macOS deletes files there that go unread for
+# about three days and keeps their folders, so uv later trusts a half-deleted cache and
+# fails while installing, and the floor prints nothing. Every prescription a session reads
+# names the vault's own .aios-run/ instead. Tests that run uv under a fake HOME of their
+# own may keep a throwaway cache, so tests/ is not scanned.
+tmp_cache=$(grep -rnF 'TMPDIR:-/tmp}/uv-cache' CLAUDE.md AGENTS.md SETUP.md plugins agents hooks skills 2>/dev/null)
+if [ -z "$tmp_cache" ]; then
+  ok "no prescription puts the uv cache in \$TMPDIR (#253)"
+else
+  no "a prescription still puts the uv cache in \$TMPDIR, which macOS purges file by file (#253)" "$(printf '%s' "$tmp_cache" | head -3)"
+fi
+grep -qF 'UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-floor.py' CLAUDE.md \
+  && ok "CLAUDE.md prescribes the floor with the cache in .aios-run/" \
+  || no "CLAUDE.md's floor command does not use the .aios-run/ cache"
+
 TMP="$(mktemp -d)"; trap 'chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT
 
 # ── 2. mutant: the scan must catch the old shape ─────────────────────────────
 mkdir -p "$TMP/mut"
-sed 's|UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/context-rungs.py|uv run ~/aios/hooks/context-rungs.py|' \
+sed 's|UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-rungs.py|uv run ~/aios/hooks/context-rungs.py|' \
   plugins/aios/commands/housekeeping.md > "$TMP/mut/housekeeping.md"
 if cmp -s plugins/aios/commands/housekeeping.md "$TMP/mut/housekeeping.md"; then
   no "MUTANT: could not reproduce the old housekeeping line" "the prefixed context-rungs call is gone from the spec"

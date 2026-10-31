@@ -554,7 +554,7 @@ Scan every file in `context/declared/` and `context/observed/` for a **repeated 
 # like a clean result (CLAUDE.md § Identity & Greeting, step 4a). And the last line always
 # prints a count: an empty glob (wrong folder, unreadable vault) must look different from
 # "checked everything, found nothing".
-UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run - <<'PY'
+UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run - <<'PY'
 import re, glob, os
 os.chdir(os.path.expanduser("~/aios/vault/00 - notes/context"))
 files = sorted(glob.glob("*/*.md"))
@@ -881,7 +881,7 @@ Report as: *"`{file}:{line}` runs headless `Bash` {with no `--settings` file / w
 **Run the shipped detector — do not re-implement it:**
 
 ```bash
-UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/context-load-audit.py
+UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-load-audit.py
 ```
 
 **Why a hook and not a spec here.** The obvious implementation is wrong in one specific, reproducible way, and it was written that way once: a worker typically does `cd "<vault>/00 - notes/context/observed" && grep '^### ' antifragile.md …`, so matching only `context/(declared|observed)/<file>.md` misses every such read. That version reported three workers at zero who had in fact read the whole floor. **A check that under-reports is worse than none, because its clean answer gets trusted** — so the instrument is code with its own tests, and this bucket calls it.
@@ -906,7 +906,7 @@ UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/context-load-audit.p
 **Run the shipped measurement — do not eyeball the folders:**
 
 ```bash
-UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/context-rungs.py
+UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-rungs.py
 ```
 
 **What it reports.** The four rungs of the ladder in this vault — both `_index.md` (rung 0) · **the floor** (rung 1: every heading in both folders *plus the newest 5 `###` entries of every observed file*, which is exactly what `hooks/context-floor.py` writes) · all of `declared/` (rung 2) · everything (rung 3) — in words and estimated tokens, plus the `observed/`-to-`declared/` ratio, ending in a verdict.

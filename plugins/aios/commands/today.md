@@ -176,7 +176,7 @@ Fire ALL of these as direct parallel tool calls in **one single message**:
 - **Routine health — scheduled jobs that failed or went quiet** (`hooks/aios-health.py`, AI-173):
 
   ```bash
-  UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/aios-health.py report
+  UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/aios-health.py report
   ```
 
   It reads `~/.aios/health/`, one small file per scheduled job (the quota watcher today), and prints **one line per job that needs attention**: a failed or warning result, a job past its deadline (*"no result since {time}"*), a job installed but never completed, or an unreadable file. **Silent means every job is fine, and then you say nothing.** Put each line it prints into the plan as-is, under the system-health lines; do not reword *"no result since"* into *"did not run"*, because the file shows that a result is missing, not why.
@@ -184,7 +184,7 @@ Fire ALL of these as direct parallel tool calls in **one single message**:
 - **Observed-context staleness check (streak-independent backstop) — run the hook, do not compute it by hand:**
 
   ```bash
-  UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/observed-staleness.py
+  UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/observed-staleness.py
   ```
 
   It reads every `observed/*.md` file's own `updated:` stamp and prints what crossed its threshold — **21 days for aggregate Tier B files (`ecosystem.md`, `profile.md`), 30 days for the rest** — plus one line per file that has **no clock at all**, so the exemption is visible rather than assumed. Exit `0` nothing stale · `1` something crossed · `2` a file could not be measured (a missing or unparseable `updated:` is an error, never a healthy zero). Carry any flags into Message 2 to surface.
