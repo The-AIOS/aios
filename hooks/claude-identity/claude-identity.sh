@@ -704,10 +704,12 @@ First-time setup per account:
   2. Run: claude-switch --capture
   3. Repeat for each account in the list (claude-switch --add {email})
 
-To renew an account whose refresh token expired, without touching the current seat:
-  CLAUDE_CONFIG_DIR=~/.claude-acct-renew claude    # /login as that account, then /exit
-  CLAUDE_CONFIG_DIR=~/.claude-acct-renew claude-switch --capture
-  cp -Rp ~/.claude-acct-renew/identities/{email} ~/.claude/identities/
+To renew an account whose refresh token expired, without touching the current seat, use
+a config dir of its own (one per account: a /login in a dir already holding another
+account can revoke that account's token):
+  CLAUDE_CONFIG_DIR=~/.claude-acct-{email} claude    # /login as that account, then /exit
+  CLAUDE_CONFIG_DIR=~/.claude-acct-{email} claude-switch --capture
+  cp -Rp ~/.claude-acct-{email}/identities/{email} ~/.claude/identities/
 
 Safety:
   - Swaps the credential blob ($(cred_source)) + .claude.json oauthAccount + userID
