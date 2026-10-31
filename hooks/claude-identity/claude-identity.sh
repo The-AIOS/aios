@@ -691,7 +691,7 @@ Usage:
   claude-switch --capture          save current identity to ~/.claude/identities/
   claude-switch --list             show all accounts + saved state + expiry
   claude-switch --availability     who can take you and why not, as JSON
-  claude-switch --order a,b,c      reorder the rotation, showing where you would fall
+  claude-switch --order "a,b,c"    reorder the rotation, showing where you would fall
   claude-switch --enable {account}   put an account in rotation
   claude-switch --disable {account} [--reason why]   keep it, out of rotation
   claude-switch --add {email} [--alias a] [--plan p] [--disabled] [--reason why]
@@ -770,9 +770,9 @@ USAGE
   if [ -z "$target" ]; then
     local accts; accts=$(parse_accounts)
     local total; total=$(printf '%s\n' "$accts" | grep -c . || true)   # see cmd_whoami: exits 1 on zero
-    [ "$total" -ge 2 ] || die "need at least 2 accounts in rotation (found $total). Add them with: claude-switch --add <email>"
+    [ "$total" -ge 1 ] || die "no accounts in rotation. Add them with: claude-switch --add <email>"
     target=$(accounts_py next "$cur")
-    [ -n "$target" ] || die "no account to rotate to: every other one has an expired refresh token. /login to one, then claude-switch --capture"
+    [ -n "$target" ] || die "no account to rotate to: none other than this one is in rotation with a valid refresh token. See: claude-switch --help"
   fi
 
   # "Already on" is only true of a consistent seat. With a swap pending, the

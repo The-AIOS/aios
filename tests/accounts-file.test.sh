@@ -148,6 +148,7 @@ check_bad "duplicate email" "{\"version\":1,\"accounts\":[{\"email\":\"$A\"},{\"
 check_bad "alias colliding with another" "{\"version\":1,\"accounts\":[{\"email\":\"$A\",\"alias\":\"x\"},{\"email\":\"$B\",\"alias\":\"x\"}]}" "twice"
 check_bad "mistyped key" "{\"version\":1,\"accounts\":[{\"email\":\"$A\",\"rotaton\":false}]}" "unknown key"
 check_bad "rotation not a boolean" "{\"version\":1,\"accounts\":[{\"email\":\"$A\",\"rotation\":\"no\"}]}" "true or false"
+check_bad "alias that reads as a flag" "{\"version\":1,\"accounts\":[{\"email\":\"$A\",\"alias\":\"-x\"}]}" "alias"
 check_bad "not an email" '{"version":1,"accounts":[{"email":"nobody"}]}' "email"
 list_file '{"version":1,'
 env_run $PY "$WATCH" "$SH" >/dev/null 2>&1
@@ -435,6 +436,53 @@ printf '{"%s":"not an object"}' "$B" > "$S"; printf '{"recorded_at":"x","seven_d
 J="$(sw --availability 2>&1)"; rc=$?
 [ "$rc" = 0 ] && ok "odd values in the state and reading files do not stop --availability" || no "crashed" "$J"
 sw --list >/dev/null 2>&1 && ok "nor --list" || no "--list crashed" ""
+
+echo "== 11b. what a lost or unreadable list does =="
+hooks_copy() { ROOTX="$H/root"; mkdir -p "$ROOTX/hooks"; cp -R "$ROOT/hooks/claude-identity" "$ROOTX/hooks/"; cp "$ROOT/hooks/aios-health.py" "$ROOTX/hooks/" 2>/dev/null; XACC="$ROOTX/hooks/claude-identity/_accounts.py"; XWATCH="$ROOTX/hooks/claude-identity/_watch.py"; XSH="$ROOTX/hooks/claude-identity/claude-identity.sh"; }
+sandbox; hooks_copy; seat "$A" "$DAY"; capture "$A" "$DAY"; capture "$B" "$DAY"; capture "$C" "$DAY"
+printf '## Anthropic accounts\n\n1. `%s`\n2. `%s`\n3. `%s`\n' "$A" "$B" "$C" > "$ROOTX/USER.md"
+env_run $PY "$XACC" rotation >/dev/null
+env_run $PY "$XACC" disable "$B" --current "$A" >/dev/null
+rm -f "$H/.aios/accounts.json"
+out="$(env_run $PY "$XACC" rotation)"
+[ -z "$out" ] && [ ! -f "$H/.aios/accounts.json" ] && ok "a lost list is not revived from USER.md's older section" || no "revived" "$out"
+env_run $PY "$XWATCH" "$XSH" >/dev/null 2>&1
+[ "$(field "$H/.aios/health/quota-watch.json" 'd["state"]')" = fail ] && ok "and health says so" || no "stayed quiet" "$(cat "$H/.aios/health/quota-watch.json")"
+
+sandbox; hooks_copy
+printf '## Anthropic accounts\n\n1. `%s`\n2. %s — no backticks\n\n## Next\n' "$A" "$B" > "$ROOTX/USER.md"
+out="$(env_run $PY "$XACC" rotation 2>&1)"; rc=$?
+[ "$rc" -ne 0 ] && has "a line that cannot be read stops the import, and names it" "$B" "$out" || no "imported part of a list" "$out"
+[ ! -f "$H/.aios/accounts.json" ] && ok "and nothing is written" || no "wrote a partial list" ""
+printf '## Anthropic accounts\n\n1. `nobody`\n2. `%s`\n' "$A" > "$ROOTX/USER.md"
+out="$(env_run $PY "$XACC" rotation 2>&1)"; rc=$?
+[ "$rc" -ne 0 ] && [ ! -f "$H/.aios/accounts.json" ] && ok "a list that fails validation is not written" || no "wrote an invalid list" "$out"
+
+notifier() { for n in osascript notify-send; do printf '#!/bin/sh\necho x >> "%s/notified"\n' "$H" > "$H/bin/$n"; chmod +x "$H/bin/$n"; done; }
+notified() { [ -f "$H/notified" ] && grep -c x "$H/notified" || echo 0; }
+sandbox; three; seat "$A" "$DAY"; capture "$A" "$DAY"; capture "$B" "-$DAY"; capture "$C" "$DAY"; notifier
+AIOS_QUOTA_NOTIFY=1 env_run $PY "$WATCH" "$SH" >/dev/null 2>&1; AIOS_QUOTA_NOTIFY=1 env_run $PY "$WATCH" "$SH" >/dev/null 2>&1
+[ "$(notified)" = 1 ] && ok "a broken next fallback notifies once across ticks" || no "notified $(notified) times" ""
+sandbox; list_file '{"version":1,'; seat "$A" "$DAY"; notifier
+AIOS_QUOTA_NOTIFY=1 env_run $PY "$WATCH" "$SH" >/dev/null 2>&1; AIOS_QUOTA_NOTIFY=1 env_run $PY "$WATCH" "$SH" >/dev/null 2>&1
+[ "$(notified)" = 1 ] && ok "a malformed list notifies too, once" || no "notified $(notified) times" ""
+
+echo "== 11c. the commands' edges =="
+sandbox; list_file "{\"version\":1,\"accounts\":[{\"email\":\"$A\"},{\"email\":\"$B\"}]}"; seat "$A" "$DAY"; capture "$A" "$DAY"; capture "$B" "$DAY"
+sw --disable "$A" >/dev/null 2>&1
+has "disabling the active account of two leaves a destination" "$B|" "$(pick "$A")"
+[ "$(acc next "$A" 2>/dev/null)" = "$B" ] && ok "and a bare rotation finds it" || no "no destination" ""
+sw "$B" >/dev/null 2>&1
+out="$(sw 2>&1)"; rc=$?
+[ "$rc" -ne 0 ] && has "alone in rotation, a bare rotation says so" "no account to rotate to" "$out" || no "rotated to nothing" "$out"
+snap="$(cat "$H/.aios/accounts.json")"
+out="$(sw --add nope 2>&1)"; rc=$?
+[ "$rc" -ne 0 ] && [ "$(cat "$H/.aios/accounts.json")" = "$snap" ] && ok "--add with no real email is refused, and nothing written" || no "wrote an invalid list" "$out"
+for bad in -x a,b; do
+  out="$(sw --add "new-$bad@example.com" --alias "$bad" 2>&1)"; rc=$?
+  [ "$rc" -ne 0 ] && [ "$(cat "$H/.aios/accounts.json")" = "$snap" ] && ok "alias [$bad] is refused" || no "alias [$bad] accepted" "$out"
+done
+[ "$(acc resolve unlisted@example.com)" = "unlisted@example.com" ] && ok "a captured account not in the list can still be switched to by email" || no "refused" ""
 
 echo "== 12. what ships =="
 hasnt "the example file parses as a valid list" "error" "$(AIOS_ACCOUNTS_FILE="$ROOT/hooks/claude-identity/accounts.example.json" $PY "$ACC" rotation 2>&1)"

@@ -737,6 +737,11 @@ function Invoke-ClaudeIdentity {
             if (Test-Path $cand) { $bash = $cand; break }
         }
     }
+    if ($null -eq $bash) {
+        foreach ($cand in @("$env:ProgramFiles\Git\bin\bash.exe", "${env:ProgramFiles(x86)}\Git\bin\bash.exe")) {
+            if (Test-Path $cand) { $bash = $cand; break }
+        }
+    }
     if ($null -eq $bash) { Write-Host "Git Bash not found. Install Git for Windows." -ForegroundColor Red; return }
     & $bash "$HOME/aios/hooks/claude-identity/claude-identity.sh" @args
 }

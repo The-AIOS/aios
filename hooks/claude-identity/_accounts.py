@@ -250,8 +250,21 @@ def _import_user_md() -> dict:
     with _lock():
         if os.path.exists(accounts_file()):  # another process won the race
             return _read_file()
+        # A log means this machine already had a list. USER.md may still carry its old
+        # section, and quietly reviving it would rotate to accounts since taken out.
+        # An empty list here is what missing_list_problem reports.
+        if os.path.exists(log_file()):
+            return {"version": SCHEMA_VERSION, "accounts": [], "history": []}
         path = _user_md()
         accounts, text = parse_user_md(path)
+        # A line that looks like an account and does not parse would drop that account
+        # for good: after this import, fixing the line in USER.md has no effect.
+        for line in text.splitlines():
+            if re.match(r"\s*\d+\.\s", line) and "@" in line and not re.match(r"\s*\d+\.\s*`[^`]+`", line):
+                raise AccountsError(
+                    f"{path} has an account line the import cannot read: {line.strip()[:80]!r}. "
+                    "Write the email in backticks, as 1. `you@example.com`. Nothing was imported."
+                )
         data = {"version": SCHEMA_VERSION, "accounts": accounts, "history": []}
         if not accounts:
             return data  # nothing to migrate: a new install, no file yet

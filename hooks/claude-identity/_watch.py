@@ -531,7 +531,9 @@ def pick_target(current: str, t5: int, t7: int) -> tuple:
     """(email_or_None, reason). Preference is list order, but an account is only a
     candidate if switching to it would work and its cap window has actually rolled."""
     accts = parse_accounts()
-    if len(accts) < 2:
+    # Counted without the active account: disabling it leaves one account, and that one
+    # is a perfectly good destination.
+    if not [e for e in accts if e != current]:
         return None, f"need >= 2 accounts in rotation (found {len(accts)})"
     blocked = []
     uncaptured = 0
@@ -1167,6 +1169,7 @@ def record_health() -> None:
         # a list that broke today must not stay quiet until the day of the cap.
         state, detail = "fail", str(e)
         log(f"account list: {e}")
+        warn_once(str(e))
     except Exception as e:
         log(f"rotation check failed: {type(e).__name__}: {e}")
     try:

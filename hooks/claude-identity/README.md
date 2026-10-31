@@ -74,7 +74,7 @@ Paths below assume the vault is at `~/aios`. If you cloned elsewhere, either sym
 
 The list lives in **`~/.aios/accounts.json`**, outside the vault, one per machine (identities are per machine too). `hooks/claude-identity/accounts.example.json` shows the shape. Position is rotation preference, and only `email` is required. A file that fails validation stops the tool with the reason: nothing rotates on a guess.
 
-**State to detect:** run `claude-switch --list`. An older install with a numbered `## Anthropic accounts` section in `USER.md` is imported on this first use, in order, with that section's text kept in the file's `history`. `USER.md` itself is never written, and once the file exists it is not read for accounts.
+**State to detect:** run `bash ~/aios/hooks/claude-identity/claude-identity.sh switch --list`, since `claude-switch` itself only arrives in step 3. An older install with a numbered `## Anthropic accounts` section in `USER.md` is imported on this first use, in order, with that section's text kept in the file's `history`. `USER.md` itself is never written, and once the file exists it is not read for accounts.
 
 **If it already lists ≥ 2 accounts:** show them and ask: *"You already have {N} accounts configured: {list}. Add more, change the order, or skip this step?"* Take action accordingly. If they say skip, move to step 2.
 
@@ -89,8 +89,8 @@ The list lives in **`~/.aios/accounts.json`**, outside the vault, one per machin
 **Then add them, in order:**
 
 ```bash
-claude-switch --add {email_1} --alias {short_name_1}
-claude-switch --add {email_2}
+bash ~/aios/hooks/claude-identity/claude-identity.sh switch --add {email_1} --alias {short_name_1}
+bash ~/aios/hooks/claude-identity/claude-identity.sh switch --add {email_2}
 ```
 
 **The alias is optional, and worth setting** when two accounts **share a local-part** — the same person on two providers, or one Google address behind two separate Anthropic accounts — because the bare local-part then renders both identically in the statusline's `👤` chip and the `🔄 from→to` swap banner, and the usage percentages become the only way to tell them apart. It also works anywhere an account is named: `claude-switch work`. Omit it and that account keeps its local-part.
@@ -100,7 +100,7 @@ Confirm what was written: *"Added {N} accounts. Order defines rotation."*
 **Changing it later** never needs an edit to a file, and each change shows where you would fall before and after it, because a reorder moves your fallback without a single error:
 
 ```bash
-claude-switch --order work,overflow,spare          # must name every account in rotation
+claude-switch --order "work,overflow,spare"        # must name every account in rotation
 claude-switch --disable spare --reason "why"       # keep the identity, leave the rotation
 claude-switch --enable spare
 ```
@@ -113,24 +113,21 @@ Every change is appended to `~/.aios/accounts-log.jsonl`.
 
 **For each account already captured:** report *"✓ {email} already captured — skipping."*
 
-**For each missing account, explain to the user (Claude can't fully automate this):**
-> *"Capturing `{email}` requires you to be logged into that Anthropic account in this Claude Code session, because macOS Keychain access needs a graphical context. I can't automate the `/login`. The flow is:*
+**The account this session is logged in to** captures directly: `bash ~/aios/hooks/claude-identity/claude-identity.sh switch --capture`.
+
+**For each other missing account, explain to the user (Claude can't fully automate this):**
+> *"Capturing `{email}` needs a login I can't do for you, because macOS Keychain access needs a graphical context. Do it from a config dir of its own, not with `/login` in this session: a `/login` in a place already holding another account can revoke that account's token. In a new terminal:*
 >
-> 1. *Run `/login` and pick `{email}` (or sign in for the first time).*
-> 2. *Confirm here and I'll run `claude-identity.sh switch --capture` for you.*
-> 3. *macOS will prompt — click "Always Allow".*
+> 1. *`CLAUDE_CONFIG_DIR=~/.claude-acct-{email} claude`, then `/login` as `{email}`, then `/exit`.*
+> 2. *`CLAUDE_CONFIG_DIR=~/.claude-acct-{email} ~/aios/hooks/claude-identity/claude-identity.sh switch --capture`*
+> 3. *`cp -Rp ~/.claude-acct-{email}/identities/{email} ~/.claude/identities/`*
+> 4. *macOS will prompt — click "Always Allow".*
 >
-> *Want to do this now, or skip and capture all accounts manually later?"*
+> *Want to do this now, or skip and capture later?"*
 
-If user wants to skip: tell them they can run `~/aios/hooks/claude-identity/claude-identity.sh switch --capture` after each `/login` later. Move on.
+If the user skips: tell them `claude-switch --help` has these steps. Move on.
 
-If user goes through the flow: after each `/login` confirmation, run:
-```bash
-~/aios/hooks/claude-identity/claude-identity.sh switch --capture
-```
-Verify the capture succeeded with `claude-identity.sh list`. Repeat for each account.
-
-> **Note:** `/login` switches the active session, but the running Claude Code (this session) keeps its old token in memory and may behave inconsistently. Tell the user that's expected; the captures still land correctly because the Keychain rewrite is what matters.
+Verify each capture with `claude-identity.sh list`. Repeat for each account.
 
 ### 3. Install shell aliases (interactive)
 
@@ -138,24 +135,9 @@ Verify the capture succeeded with `claude-identity.sh list`. Repeat for each acc
 
 **State to detect:** `type claude-switch`. **If missing:** run the installer, then tell the user: *"Open a new shell (or `source` your rc file) to load them."*
 
-### 4. Install the spawn wrapper (optional — for named worker sessions)
+### 4. The spawn wrapper (optional — for named worker sessions)
 
-**State to detect:** check whether `spawn()` already exists in the user's rc file. The current spawn wrapper template is in the team repo's `CLAUDE.md` → "Spawning sessions" section.
-
-**If `spawn` is present and current:** skip silently.
-
-**If missing or outdated:** ask *"Install the spawn wrapper for named worker sessions (e.g. `spawn accountant`)? It auto-detects IDE (Antigravity / VS Code / Cursor) and falls back to Terminal.app. (y/n)"*
-
-On yes:
-1. Read the spawn wrapper template from the team repo's `CLAUDE.md` (or `/tmp/aios-update-check/CLAUDE.md` if running during `/aios:update`) — the section that contains the `spawn() {` function definition.
-2. Append it to the user's rc file via `Bash` heredoc:
-   ```bash
-   cat >> ~/.zshrc <<'WRAPPER'
-   {paste the spawn() function block here verbatim}
-   WRAPPER
-   ```
-   (Same caveat: rc file is outside the vault — use `Bash` heredoc append, not Obsidian MCP. Use `~/.bashrc` if the user is on bash.)
-3. Tell the user to `source` the rc file.
+**State to detect:** `type spawn`. The installer in step 3 also installs it. **If missing:** run that installer again.
 
 This is optional — `claude-identity` works fine without it; you just get a Terminal.app window after a swap-respawn instead of an IDE tab.
 
@@ -264,7 +246,7 @@ If `quota-watch.log` still says `no cache yet — skip (is the Stop hook install
 | `claude-switch --capture` | Save current identity |
 | `claude-switch --list` | Show all accounts, saved state and refresh-token expiry (the active account's is read from the live credential) |
 | `claude-switch --availability` | Who can take you and why not, as JSON, for a surface or a script. It does not touch the credential store, and reads only the dates |
-| `claude-switch --order a,b,c` | Reorder the rotation, showing where you would fall before and after |
+| `claude-switch --order "a,b,c"` | Reorder the rotation, showing where you would fall before and after |
 | `claude-switch --enable {account}` / `--disable {account} [--reason why]` | Put an account in or out of rotation, keeping its identity |
 | `claude-switch --add {email} [--alias a] [--plan p] [--disabled] [--reason why]` | Add an account |
 | `claude-switch --help` | Swap-specific usage |
@@ -367,7 +349,7 @@ Several things can ask for a swap at once: every open session's statusLine kicks
 
 None of these should ever be committed — `~/.claude/` and `~/.aios/` are outside the vault by design.
 
-**The next fallback is checked on every tick.** If it has an expired refresh token, or has not been captured while others have, `~/.aios/health/quota-watch.json` reads `warn` and you get one notification, without waiting for a rotation to need it. A rotation skips that account in any case. A malformed list reads `fail`.
+**The next fallback is checked on every tick.** If it has an expired refresh token, or has not been captured while others have, `~/.aios/health/quota-watch.json` reads `warn` and you get one notification, without waiting for a rotation to need it. A rotation skips that account in any case. A malformed list reads `fail`, also with one notification. So does a list that goes missing on a machine that had one: it is not re-imported from `USER.md`, whose section may be older than the list.
 
 **How to read an account's availability.** Every number has a date. On its **weekly renewal date** an account's usage goes back to 0%, so 98% read before that date says nothing after it, and `--list` and `--availability` report 0% with the date it renewed. Until then, a number over the threshold means **capped until the renewal**. An **expired refresh token** wins over all of that, because it ends at a login screen whatever the usage is. Renewal dates are stored per account in `~/.aios/accounts-state.json`, recorded while the account is active, and projected 7 days at a time after that, since a weekly window resets on its date whether or not the account was used. Refresh-token dates come from the saved copy for an account not in use, and from the live credential for the active one on `--list` and `--capture`, because the active account's saved copy can be weeks old.
 
