@@ -34,6 +34,21 @@ def write_json_atomic(dst: str, data: dict) -> None:
         raise
 
 
+def blob_token_state(text: str) -> str:
+    """"ok" | "empty:accessToken[+refreshToken]" | "unparseable". The one classifier:
+    claude-identity.sh asks it before writing, the watcher before choosing a target,
+    and two opinions about what a usable credential is would strand a rotation."""
+    try:
+        d = json.loads(text)
+    except ValueError:
+        return "unparseable"
+    oa = d.get("claudeAiOauth", d) if isinstance(d, dict) else None
+    if not isinstance(oa, dict):
+        return "unparseable"
+    missing = [k for k in ("accessToken", "refreshToken") if not str(oa.get(k) or "").strip()]
+    return "empty:" + "+".join(missing) if missing else "ok"
+
+
 def keychain_service() -> str:
     """The Keychain item Claude Code keeps the credential in -- the same name
     claude-identity.sh's keychain_service_default() derives. Measured against
