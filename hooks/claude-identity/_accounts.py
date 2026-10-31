@@ -260,10 +260,13 @@ def _import_user_md() -> dict:
         # A line that looks like an account and does not parse would drop that account
         # for good: after this import, fixing the line in USER.md has no effect.
         for line in text.splitlines():
-            if re.match(r"\s*\d+\.\s", line) and "@" in line and not re.match(r"\s*\d+\.\s*`[^`]+`", line):
+            # A struck-through line is an account the operator already retired.
+            if re.match(r"\s*\d+\.\s", line) and "@" in line and "~~" not in line \
+                    and not re.match(r"\s*\d+\.\s*`[^`]+`", line):
                 raise AccountsError(
                     f"{path} has an account line the import cannot read: {line.strip()[:80]!r}. "
-                    "Write the email in backticks, as 1. `you@example.com`. Nothing was imported."
+                    "Write the email in backticks, as 1. `you@example.com`, or remove the line if that "
+                    "account is gone. Nothing was imported."
                 )
         data = {"version": SCHEMA_VERSION, "accounts": accounts, "history": []}
         if not accounts:
@@ -304,8 +307,9 @@ def missing_list_problem() -> str:
         pass
     if not os.path.exists(log_file()) and captured < 2:
         return ""
-    return (f"no account list: {accounts_file()} is missing or empty and USER.md has none to import, "
-            "so rotation is off. Add them back with: claude-switch --add <email>")
+    return (f"no account list: {accounts_file()} is missing or empty, and this machine had one, so "
+            "rotation is off. USER.md is not re-imported, since it may be older than the lost list. "
+            "Add them back with: claude-switch --add <email>")
 
 
 def rotation() -> list:

@@ -454,6 +454,10 @@ printf '## Anthropic accounts\n\n1. `%s`\n2. %s — no backticks\n\n## Next\n' "
 out="$(env_run $PY "$XACC" rotation 2>&1)"; rc=$?
 [ "$rc" -ne 0 ] && has "a line that cannot be read stops the import, and names it" "$B" "$out" || no "imported part of a list" "$out"
 [ ! -f "$H/.aios/accounts.json" ] && ok "and nothing is written" || no "wrote a partial list" ""
+printf '## Anthropic accounts\n\n1. `%s`\n2. ~~`%s`~~ retired\n' "$A" "$B" > "$ROOTX/USER.md"
+out="$(env_run $PY "$XACC" rotation 2>&1)"; rc=$?
+[ "$rc" = 0 ] && [ "$out" = "$A" ] && ok "a struck-through line is a retired account, not an unreadable one" || no "stopped on a retired line" "$out"
+rm -f "$H/.aios/accounts.json" "$H/.aios/accounts-log.jsonl"
 printf '## Anthropic accounts\n\n1. `nobody`\n2. `%s`\n' "$A" > "$ROOTX/USER.md"
 out="$(env_run $PY "$XACC" rotation 2>&1)"; rc=$?
 [ "$rc" -ne 0 ] && [ ! -f "$H/.aios/accounts.json" ] && ok "a list that fails validation is not written" || no "wrote an invalid list" "$out"
