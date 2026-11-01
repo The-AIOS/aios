@@ -118,7 +118,7 @@ class Locked:
         os.makedirs(home, mode=0o700, exist_ok=True)
 
     def __enter__(self):
-        self.fh = open(self.path, "a")
+        self.fh = open(self.path, "a", encoding="utf-8")
         try:
             import fcntl
             fcntl.flock(self.fh, fcntl.LOCK_EX)
