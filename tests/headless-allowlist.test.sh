@@ -116,6 +116,18 @@ else
   # timeout is recorded and turned into a failure below, never a silent pass. The watchdog
   # polls instead of sleeping the full cap, so it never outlives the call it guards.
   LIVE_CAP="${AIOS_LIVE_TIMEOUT:-120}"; HUNG="${TMPDIR:-/tmp}/aios-live-hung.$$"; rm -f "$HUNG"
+  # Every live call writes a transcript into the operator's ~/.claude/projects, where it shows in
+  # their resume list and is copied by the transcript archive: run daily, these piled up by the
+  # hundred. A throwaway CLAUDE_CONFIG_DIR is not an option (it has no login, so the calls would
+  # fail). So the transcripts this run created are removed at the end, matched by the markers
+  # only this run's prompts and folders carry (each holds this shell's pid), never by folder or
+  # by time alone: the first calls run from the repo folder, beside the operator's real sessions.
+  PROJ="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
+  LIVE_MARK="${TMPDIR:-/tmp}/aios-live-start.$$"; : > "$LIVE_MARK"
+  run_transcripts(){ [ -d "$PROJ" ] || return 0
+    find "$PROJ" -name '*.jsonl' -newer "$LIVE_MARK" 2>/dev/null | while IFS= read -r t; do
+      grep -qF -e "aios-allowlist-canary.$$" -e "aios-inherit.$$" -e "aios-sbx.$$" "$t" 2>/dev/null && printf '%s\n' "$t"
+    done; }
   claude(){
     command claude "$@" & local pid=$!
     ( i=0; while kill -0 "$pid" 2>/dev/null; do
@@ -199,6 +211,19 @@ except Exception: print('')" 2>/dev/null)
        "an absent side effect from a killed call proves nothing; re-run when the network is healthy (first: $(head -1 "$HUNG"))"
   else ok "every live claude -p call returned within ${LIVE_CAP}s"; fi
   rm -f "$HUNG"
+  # Remove this run's transcripts (and each session's sidecar folder), then any project folder left
+  # empty. Only files carrying this run's markers are touched.
+  found=$(run_transcripts | grep -c .)
+  run_transcripts | while IFS= read -r t; do rm -f "$t"; rm -rf "${t%.jsonl}"; rmdir "$(dirname "$t")" 2>/dev/null; done
+  left=$(run_transcripts | grep -c .)
+  if [ "$found" -eq 0 ]; then
+    sk "transcript cleanup" "no transcript of this run was found in $PROJ, so the cleanup could not be shown to work"
+  elif [ "$left" -eq 0 ]; then
+    ok "the $found transcripts of this run's sessions were removed (none left in $PROJ)"
+  else
+    no "$left of $found transcripts of this run's sessions remain in $PROJ" "they pile up in the resume list and the transcript archive"
+  fi
+  rm -f "$LIVE_MARK"
 fi
 
 echo
