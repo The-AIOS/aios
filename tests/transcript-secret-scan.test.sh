@@ -33,7 +33,7 @@ S=hooks/transcript-secret-scan.py
 R="$T/projects/p1"; ST="$T/state"; mkdir -p "$R"
 KEY="sk-ant-$(printf 'Ab1Cd2Ef%.0s' 1 2 3 4)"          # 32 chars after the prefix
 AWS="AKIA$(printf 'ABCDEFGH12345678')"
-HDR="-----BEGIN RSA PRIVATE"" KEY-----"   # split, so this file passes the scanner it tests
+HDR="-----BEGIN RSA PRIVATE ""KEY-----"   # split so the commit scanner does not reject this file
 run(){ $PYBIN "$S" "$@" --root "$T/projects" --state-dir "$ST"; }
 entry(){ printf '{"type":"user","timestamp":"2026-10-20T10:00:00Z","text":"%s"}\n' "$1"; }
 
@@ -51,7 +51,7 @@ grep -q "\.\.\.${KEY: -4}" "$rep" && ok "value masked to its last 4" || no "mask
 echo "── the value is never written or printed ──"
 leak=0
 for f in "$ST"/*; do grep -q "$KEY" "$f" 2>/dev/null && leak=1; grep -q "$AWS" "$f" 2>/dev/null && leak=1; done
-case "$out" in *"$KEY"*) leak=1 ;; esac
+echo "$out" | grep "$KEY" >/dev/null && leak=1
 [ "$leak" = "0" ] && ok "no secret in the state files or the output" || no "a secret value leaked"
 [ "$(ls -ld "$rep" | cut -c1-10)" = "-rw-------" ] && ok "report is private (600)" || no "report permissions"
 
