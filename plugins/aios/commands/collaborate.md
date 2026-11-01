@@ -200,6 +200,7 @@ Present what will be created as a **numbered list** (NOT a wide markdown table �
 - **Anyone beyond the operator and the declared collaborators** → add the plan's ⚠️ line (item 2b below), naming each, and ask: *"Continue with this parent, or pick another?"* A space whose real audience is wider than its plan is the one outcome this check exists to prevent.
 - **A declared collaborator who already has access through the parent** → say *"{name} already has access through {parent} — no invitation email will go out"*, so nobody waits for an email that is never sent.
 - **Context moved (not copied) into the space** → it takes on the space's audience, inherited part included; say so on that item.
+- **Sharing vault content into a space, now or later** → before copying anything out of the vault, ask the operator to approve the batch **in their own words, naming the files and where they go** (*"share these 6 notes to the {space} Drive folder"*). Claude Code's auto mode blocks an upload of vault content unless the operator's own message names both, and it does not read approvals recorded in a file or a share log. Never ask for a bare "yes" here: the upload would be refused after the approval looked given (#211).
 - **The list cannot be read** (no permission to view sharing, tool missing) → say *"could not read who else can see {parent}"* on item 2b. Never print a plan that implies the audience is only the declared collaborators when that was not checked.
 
 **Format (terminal-friendly — short bolded items, indented detail):**

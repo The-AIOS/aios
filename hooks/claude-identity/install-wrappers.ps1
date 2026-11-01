@@ -463,7 +463,7 @@ function spawn {
       'every observed/ file, and the map. Its last section names the FULL floor file -- open it',
       'for depth whenever a title or the work points there. If there is no such block, run it:',
       '',
-      '    UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/context-floor.py',
+      '    UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-floor.py',
       '',
       'It WRITES the floor to a file and prints only a MAP. The map is not the floor: read the',
       'file it names, in parts, until its last line is "=== END OF FLOOR".',
@@ -724,6 +724,30 @@ function spawn-kill {
     Write-Host "[ok] killed '$Name' (PID $($claudeProc.ProcessId), parent $parentPid)"
     Write-Host "      Windows Terminal tab will remain open; close manually with Ctrl+Shift+W"
 }
+# Account commands. The aliases and the rotation order live in ~/.aios/accounts.json and are
+# resolved by the script. It is a bash script, so it runs under Git Bash: a bare `bash` here can
+# resolve to the WSL launcher in System32, which sees a different home and different credentials.
+function Invoke-ClaudeIdentity {
+    $bash = $null
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if ($null -ne $git) {
+        $root = Split-Path -Parent (Split-Path -Parent $git.Source)
+        foreach ($rel in @('bin\bash.exe', 'usr\bin\bash.exe')) {
+            $cand = Join-Path $root $rel
+            if (Test-Path $cand) { $bash = $cand; break }
+        }
+    }
+    if ($null -eq $bash) {
+        foreach ($cand in @("$env:ProgramFiles\Git\bin\bash.exe", "${env:ProgramFiles(x86)}\Git\bin\bash.exe")) {
+            if (Test-Path $cand) { $bash = $cand; break }
+        }
+    }
+    if ($null -eq $bash) { Write-Host "Git Bash not found. Install Git for Windows." -ForegroundColor Red; return }
+    & $bash "$HOME/aios/hooks/claude-identity/claude-identity.sh" @args
+}
+function claude-whoami { Invoke-ClaudeIdentity whoami @args }
+function claude-switch { Invoke-ClaudeIdentity switch @args }
+
 # ==== END claude-spawn-wrappers ====
 '@
 

@@ -65,7 +65,7 @@ PYEOF
 seed_state() {  # seed_state <email> <pct5> <resets_at_offset_secs>
   mkdir -p "$WORK/.claude/identities/$1"
   # A rotation target must be restorable, so the fixture is a CAPTURED account.
-  for f in keychain.json oauthAccount.json userID.txt; do echo '{}' > "$WORK/.claude/identities/$1/$f"; done
+  for f in keychain.json oauthAccount.json userID.txt; do echo '{"claudeAiOauth":{"accessToken":"t","refreshToken":"t"}}' > "$WORK/.claude/identities/$1/$f"; done
   $PYBIN - "$WORK/.claude/identities/$1/last-limits.json" "$2" "$3" <<'PYEOF'
 import json, sys, time
 json.dump({"email":"x","recorded_at":int(time.time()),

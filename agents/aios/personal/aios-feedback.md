@@ -106,7 +106,7 @@ Write the draft to `~/.aios/aios-feedback/draft.md`, never into the vault, then:
 
 ```bash
 D="$HOME/.aios/aios-feedback"; mkdir -p "$D"   # one fixed folder: $TMPDIR differs between sandboxed and unsandboxed calls
-UV_CACHE_DIR="${TMPDIR:-/tmp}/uv-cache" uv run ~/aios/hooks/issue-scrub.py "$D/draft.md" --out "$D/final.md"
+UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/issue-scrub.py "$D/draft.md" --out "$D/final.md"
 ```
 
 It replaces home paths with `~/…`; paths into `00 - notes` / `01 - calendar` / `02 - assets` / `03 - export` / `04 - backups`, vault wikilinks, and verbatim runs from `USER.md`, `INTENT.md` or `context/` with placeholders; and names it loads from the vault (session names, companies, ventures, clients, contacts, the operator's own name and email) with roles such as *the operator*, *a client*, *a company*. Emails, Slack and Drive links, Slack ids, phone numbers and token-shaped strings go too. Pass `--term "<name>"` for any person or organization mentioned in this session that the vault does not hold.

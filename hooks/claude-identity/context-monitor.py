@@ -8,7 +8,6 @@ cumulative monthly cost tracking, and people-equivalent productivity metric.
 import json
 import sys
 import os
-from pathlib import Path
 import re
 import subprocess
 import time
@@ -515,44 +514,20 @@ _ACCOUNT_ALIASES = None
 
 
 def _account_aliases():
-    """Operator-declared short names for Anthropic accounts, read from
-    USER.md → `## Anthropic accounts`. Convention, per numbered line:
+    """Operator-declared short names for Anthropic accounts, from _accounts.py.
 
-        1. `someone@example.com` — alias **work** · any other prose
-
-    Returns {email: alias}. Optional: a line without `alias **x**` simply
-    has no entry and falls back to the email's local-part. This exists
-    because two accounts can share a local-part (same person, two
-    providers), which made the bare local-part ambiguous in the bar."""
+    Returns {email: alias}. Optional: an account without one falls back to the
+    email's local-part. This exists because two accounts can share a local-part
+    (same person, two providers), which made the bare local-part ambiguous in the
+    bar. Imported here, not at the top: most refreshes never need it twice."""
     global _ACCOUNT_ALIASES
     if _ACCOUNT_ALIASES is not None:
         return _ACCOUNT_ALIASES
     aliases = {}
     try:
-        # SELF-LOCATE, do not hardcode ~/aios. This file lives at
-        # hooks/claude-identity/, so the repo root is two parents up. Hardcoding
-        # `~/aios` depends on the operator's symlink existing, and the shell
-        # sibling that does it (claude-identity.sh) is exempt only because the CI
-        # rule covers .py/.js/.ts and not .sh — an asymmetry, not a licence.
-        default_user_md = Path(__file__).resolve().parents[2] / "USER.md"
-        user_md = os.environ.get("USER_MD_PATH") or str(default_user_md)
-        in_sec = False
-        with open(user_md, encoding="utf-8") as f:
-            for line in f:
-                if line.startswith("## Anthropic accounts"):
-                    in_sec = True
-                    continue
-                if in_sec and line.startswith("## "):
-                    break
-                if not in_sec:
-                    continue
-                m = re.match(r"\s*\d+\.\s*`([^`]+)`(.*)$", line)
-                if not m:
-                    continue
-                email, rest = m.group(1), m.group(2)
-                a = re.search(r"alias\s+\*\*([^*]+)\*\*", rest)
-                if a:
-                    aliases[email] = a.group(1).strip()
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import _accounts
+        aliases = _accounts.aliases()
     except Exception:
         pass
     _ACCOUNT_ALIASES = aliases
@@ -560,7 +535,7 @@ def _account_aliases():
 
 
 def _account_label(email):
-    """Alias from USER.md if declared, else the local-part (before @)."""
+    """The account's alias if declared, else the local-part (before @)."""
     if not email:
         return "?"
     return _account_aliases().get(email) or email.split("@")[0]
@@ -568,10 +543,10 @@ def _account_label(email):
 
 def get_account_display():
     """Show the active Anthropic account so you can tell at a glance which
-    one you're on after an auto-swap. Uses the operator's alias from USER.md
+    one you're on after an auto-swap. Uses the operator's alias
     when declared (two accounts can share a local-part), else the local-part.
-    Cheap — reads ~/.claude.json once per statusline refresh; USER.md once
-    per process."""
+    Cheap — reads ~/.claude.json once per statusline refresh; the account
+    list once per process."""
     try:
         # A token-launched session (CLAUDE_CODE_OAUTH_TOKEN) is not on the seat
         # .claude.json names. Whoever launches it names the account in

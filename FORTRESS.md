@@ -379,32 +379,23 @@ if ! [ -f "$SESSION_FILE" ] || [ "$(jq -r '.status' "$SESSION_FILE")" != "connec
 fi
 ```
 
-#### Session recovery helpers (on the main)
+#### Session helpers (on the main)
 
-Add to the main's `~/.zshrc` or `~/.bashrc`:
+Starting, messaging, reopening and closing sessions on the mini all go through the **agent bus** (next section): a request file written into the mini's `~/.aios/spawn-inbox/`, fulfilled by the AIOS surface running there. No helper here starts `claude` itself, and none injects keystrokes. One shell function writes a request over the SSH trust you already have:
 
 ```bash
-# Restart an interrupted session on the mini
-restart-mini() {
-    ssh -i ~/.ssh/agent_fortress <agent_user>@mini \
-        "claude --remote-control --name <coordinator_name> --continue"
+# Write one bus request into the mini's inbox: spawn, send, kill or resume.
+mini-bus() {
+    local name=$1 json=$2
+    printf '%s\n' "$json" | ssh -i ~/.ssh/agent_fortress <agent_user>@mini \
+        "mkdir -p ~/.aios/spawn-inbox && cat > ~/.aios/spawn-inbox/$name.json"
 }
 
-# Spawn a new named worker on the mini
-mini-spawn() {
-    local session_name=$1
-    local task=$2
-    ssh -i ~/.ssh/agent_fortress <agent_user>@mini \
-        "osascript -e 'tell application \"Terminal\" to do script \"cd ~/aios && spawn $session_name\"'" &
-    echo "Session '$session_name' spawned on mini"
-}
-
-# Kill a worker on the mini (process-group kill, not single-PID)
-mini-kill() {
-    local session_name=$1
-    ssh -i ~/.ssh/agent_fortress <agent_user>@mini \
-        "pgrep -f 'claude.*--name $session_name' | xargs -I {} kill -KILL -- -\$(ps -o pgid= -p {} | tr -d ' ')"
-}
+# Examples
+mini-bus research '{"name":"research","task":"<first prompt>"}'                  # spawn
+mini-bus research-send '{"action":"send","name":"research","prompt":"<one line>"}'  # send
+mini-bus research-kill '{"action":"kill","name":"research"}'                       # close it
+mini-bus coordinator '{"action":"resume","name":"<coordinator_name>","prompt":"continue"}'  # reopen
 
 # Open a screen share to the mini (works over Tailscale)
 screen-mini() {
@@ -412,7 +403,7 @@ screen-mini() {
 }
 ```
 
-**Why `mini-kill` uses a process-group kill, not a single-PID kill:** the spawn wrapper runs the Claude session inside a parent zsh that lives in the spawned Terminal tab. That zsh is a respawn-loop body — if you SIGKILL only the named `claude` process, the loop respawns it within 60 seconds, defeating the kill. The negative-PGID `kill -KILL -- -PGID` form takes down the launcher zsh + claude + recovery prompt + any descendants in one syscall.
+**A request only runs if a surface is alive on the mini.** The inbox folder outlives the App or the IDE, so a request written while none is running sits unclaimed and nothing reports it. Check `~/.aios/surfaces/*.json` on the mini names a running pid before relying on it. A `kill` closes the whole session (the respawn loop included), which a single-process kill does not.
 
 ---
 
@@ -420,11 +411,12 @@ screen-mini() {
 
 Everything above describes **walls**. This section describes the door, because the two machines are not useful to each other unless work can cross between them, and the way it crosses is the part that decides whether the walls still hold.
 
-**Agents coordinate across machines by writing files, not by opening ports.** A JSON request dropped into `~/.aios/spawn-inbox/` on the far machine is picked up and fulfilled by whatever AIOS surface is running there. Three verbs, all of them just files:
+**Agents coordinate across machines by writing files, not by opening ports.** A JSON request dropped into `~/.aios/spawn-inbox/` on the far machine is picked up and fulfilled by whatever AIOS surface is running there. Four verbs, all of them just files:
 
 - **`spawn`** — `{"name":"<kebab>","task":"<first prompt>"}` opens a named worker session there
 - **`send`** — `{"action":"send","name":"<kebab>","prompt":"<one line>"}` delivers a prompt into a session already running
 - **`kill`** — `{"action":"kill","name":"<kebab>"}` retires one
+- **`resume`** — `{"action":"resume","name":"<kebab>","prompt":"<first prompt>"}` reopens a closed session with the context it earned
 
 The far machine's own surface fulfils the request natively. No keystroke injection, no remote-execution helper, and **no listener**.
 
@@ -462,36 +454,14 @@ This section is split into "if you're a Claude session running on the main" vs "
 
 You're running on the operator's primary computer. Your role is interactive partnership — help the operator with the work in front of them.
 
-**At session start (every session):**
+**At session start (every session):** follow `CLAUDE.md` § Mandatory First Action and § Identity & Greeting: `~/aios/hooks/whoami` for your identity, then the context floor, then what the work points at.
 
-1. Run `echo $CLAUDE_AGENT_NAME` — this is your identity. Compare to USER.md `## Identity` table.
-2. Read `~/aios/CLAUDE.md` end-to-end (it's small).
-3. Read the user's `USER.md` (the personalization surface) and `INTENT.md` (autonomy levels).
-4. Read declared context (`vault/00 - notes/context/declared/`) and observed context (`vault/00 - notes/context/observed/`).
-5. Greet the operator by name (read from `about_me.md` — never hardcode).
-6. Check if there's an unclosed previous daily note. If yes, `/close-day` it before proceeding.
+**During the session, when the operator asks for a worker:**
 
-**During the session, when the operator asks you to spawn a worker:**
+- **On the mini** (a long overnight task, a deep research run): write a bus request into the mini's inbox, with `mini-bus` above or the same file over your own transport. The mini's surface opens the worker there; it commits its result to the vault.
+- **On the main** (interactive, short-lived, needs the operator's screen): a request into the main's own `~/.aios/spawn-inbox/`, fulfilled by the App or Glass running here.
 
-If the worker should run **on the mini** (e.g., a long overnight task, a content-writer agent, a market-research deep-dive that takes hours), use the `mini-spawn` helper:
-
-```bash
-mini-spawn <worker-name> "<task description>"
-```
-
-This SSHes into the mini and launches the worker there. The mini handles it overnight; the operator wakes up to a committed result.
-
-If the worker should run **on the main** (interactive, short-lived, needs the operator's screen), use the local `spawn` wrapper:
-
-```bash
-spawn <worker-name> "<task description>"
-```
-
-This opens a new Terminal tab on the main with the worker session.
-
-**At session end:**
-
-Run `/close-day` or `/close-session` to capture what happened. Push the vault. The mini will pick up your work in its next pull.
+**At session end:** `/close-session` (or `/close-day`), then push the vault. The mini picks up your work in its next pull.
 
 ### Instructions for Mac mini (secondary) sessions
 
@@ -499,85 +469,33 @@ You're running on the agent host. Your role is to ship work autonomously, commit
 
 **At session start (every session):**
 
-1. Run `echo $CLAUDE_AGENT_NAME` — this is your identity (typically the coordinator name, e.g., the operator's choice for their mini's primary session).
-2. Pull the latest vault: `cd ~/aios && git pull origin main` (this gets the main's latest commits, including overnight queues set by the main).
-3. Read `CLAUDE.md`, `USER.md`, `INTENT.md`, declared/observed context — same as the main.
-4. Read the *latest* daily note (`vault/01 - calendar/{YYYY-MM}/`). Look for a `## Mini overnight (Handoff)` section — that's your work order for the shift.
-5. Greet the operator (if they're online via Remote Control) or proceed silently if it's an overnight cron-triggered run.
+1. Pull the latest vault: `cd ~/aios && git pull origin main`.
+2. Follow `CLAUDE.md` § Mandatory First Action: `~/aios/hooks/whoami`, then the floor.
+3. Your work arrives as the task of the bus request that opened you. If you were opened without one (a scheduled routine), read the latest daily note for what is queued.
 
-**Identity discipline:**
+**Identity discipline:** you are the mini's session, not the main's. Don't claim to be the operator's primary session.
 
-You are NOT the main computer's session. The operator works on the main with their own primary Claude identity. You are the mini's session — a different Claude instance with the same vault context but a different role. Don't claim to be the main's session. Don't write to observed context files — those are maintained by the main and are read-only for you. Coordination happens through the daily note's handoff sections, not through observed context.
+**Who writes observed context.** A machine writes observed context when it actually worked with the operator, because only an interaction gives it something to observe. When the operator works with you here (over Remote Control, a screen share, or at the mini itself), your session captures what it observed like any session does, and **the `/close-day` that runs on this machine routes it, as the single writer for that ritual.** A shift with nobody present has no one to observe: record its results, not observations about the operator.
 
 **During the shift:**
 
-- Pick the highest-priority item from the overnight queue
-- Execute it autonomously per `INTENT.md` autonomy levels
-- Commit progress incrementally (`git commit && git push`)
-- If you finish the queue, move to the standing orders block (vault hygiene, `_index.md` snapshot refresh, etc.)
-- If you hit a blocker that needs the operator's decision, write it to a `## Blocked` section in today's daily note and move to the next item
+- Execute the task per `INTENT.md` autonomy levels
+- Commit progress incrementally through `aios-commit`, then push
+- If you hit a blocker that needs the operator's decision, write it to a `## Blocked` section in today's daily note and stop that item
 
-**At shift end:**
-
-Run `/close-session` to write the results into the daily note's `## Mini overnight results` section (the section name should match whatever the team has standardized — check existing daily notes for the convention). Push the vault. The main picks up your work in its next morning pull.
+**At shift end:** `/close-session`. Its block in the daily note is the record the main reads in the morning (`/today` picks it up). Push the vault.
 
 ### Handoff protocol — main ↔ mini coordination
 
-The daily note is the coordination surface. Two sections handle the back-and-forth:
+**Work goes over the bus; the record lives in the daily note.** The main hands the mini a piece of work as a bus request (`spawn` with a task, or `send` to a session already running there), so each piece is addressed, tracked and either picked up or dead-lettered visibly. The mini's sessions record what happened in their `/close-session` blocks in the daily note, and the main's `/today` reads them the next morning: shipped items with their commit, drafts waiting for review, and anything under `## Blocked`.
 
-**In the previous day's daily note (written by the main at end of day):**
-
-```markdown
-## Mini overnight (Handoff)
-
-> Tasks for the mini to pick up tonight, priority-ordered. Each task has a clear "done" definition.
-
-1. [ ] <task description> — done when <verifiable condition> [ship/draft] _(project)_
-2. [ ] <task description> — done when <verifiable condition> [ship/draft] _(project)_
-3. [ ] <task description> — done when <verifiable condition> [ship/draft] _(project)_
-```
-
-Tags:
-- `[ship]` = the mini can ship this autonomously (commit, push, mark done)
-- `[draft]` = the mini drafts but waits for the main's review before declaring done
-
-**In the next morning's daily note (auto-imported by the main from the mini's `/close-session`):**
-
-```markdown
-## Mini overnight results
-
-> What the mini shipped, what's blocked, what needs review.
-
-- ✅ <completed task> — <one-line result + commit hash>
-- 📋 <drafted item> — needs operator review at <path/URL>
-- 🔴 <blocked item> — needs <specific input/decision>
-```
-
-The main reads this at morning start via `/today`. Items with `📋` get surfaced as morning-block review tasks; items with `🔴` get flagged in the carry-forward.
+Write each task with its own "done when", and say whether the mini may ship it or only draft it for review: the same distinction `INTENT.md` draws between autonomous and draft.
 
 ---
 
-## OVERNIGHT SHIFTS — autopilot pattern
+## OVERNIGHT SHIFTS
 
-If the operator goes to sleep, travels, or steps away for a stretch, the mini should still be productive. Three triggers keep the loop alive even without a manually-written handoff:
-
-1. **Operator-written queue** — the explicit `## Mini overnight (Handoff)` section in the latest daily note. Highest priority; mini follows it verbatim.
-2. **Auto-derived queue** — if the operator forgot to write a handoff, an orchestrator cron on the mini reads the latest daily note and derives a queue from: `## Carries forward` (top 3), `## Parking lot` (non-blocked items), active project to-dos, and the standing orders floor (vault hygiene).
-3. **Standing orders** — even if both above produce nothing, the mini always runs: `_index.md` snapshot refresh on touched projects, pull-act-push hygiene, observed-snapshot chain audit, broken-link check.
-
-Budget caps apply only to auto-derived queues (no destructive ops, no external messaging, no commits to repos the mini doesn't own). Operator-authored queues run with full autonomy per `INTENT.md`.
-
-To pause autopilot temporarily (e.g., a week off where you don't want the mini moving things around):
-
-```bash
-touch ~/.claude/monitors/autopilot-paused
-```
-
-To resume:
-
-```bash
-rm ~/.claude/monitors/autopilot-paused
-```
+Overnight work is bus requests sent before you stop (each a `spawn` with its task) plus any scheduled routines you set up on the mini. Nothing on the mini invents work of its own: a queue derived from your notes would act on things you never handed over. To keep the mini idle for a while, send it nothing.
 
 ---
 
@@ -636,7 +554,7 @@ claude --remote-control --name <coordinator_name>
 - [ ] `pmset` prevents system sleep on the mini (`sleep 0`, `disksleep 0`)
 - [ ] Tailscale mesh configured on both machines
 - [ ] Bridge monitor LaunchDaemon running on the mini
-- [ ] Recovery helpers (`restart-mini`, `mini-spawn`, `mini-kill`, `screen-mini`) in the main's `~/.zshrc`
+- [ ] `mini-bus` and `screen-mini` in the main's `~/.zshrc`, and an AIOS surface (App or Glass) running on the mini to fulfil requests
 - [ ] Intent framework document (`INTENT.md`) created and read at session start by both machines
 - [ ] Pre-travel recovery test passed (spawn/kill/restart without issues)
 
@@ -659,11 +577,10 @@ claude --remote-control --name <coordinator_name>
 - Test with `ping 192.168.x.x` from mini (should fail = good)
 - Test with `curl https://api.anthropic.com` from mini (should succeed = good)
 
-### "Mini didn't pick up overnight handoff"
-- Check `~/.claude/monitors/queue-orchestrator.log` on the mini — did the cron fire? Which daily note did it pick as latest?
-- Check `~/.claude/monitors/autopilot-paused` — is autopilot paused?
-- Check the latest daily note in `vault/01 - calendar/` — does it have a `## Close of Day` section? If not, the cron may have waited for the day to close.
-- `git log --all --oneline --since="2 days ago"` in the vault — what did the mini actually commit?
+### "The mini didn't pick up the work"
+- On the mini, is a surface alive? `~/.aios/surfaces/*.json` must name a running pid. A request written while none runs sits unclaimed in `~/.aios/spawn-inbox/`, and nothing reports it.
+- Is there a `<name>.json.undelivered` in the mini's inbox? That is a dead letter: its `_undelivered.reason` says why the work did not happen.
+- `git log --all --oneline --since="2 days ago"` in the vault: what did the mini actually commit?
 
 ---
 

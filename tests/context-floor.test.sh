@@ -315,5 +315,72 @@ fi
 chmod 644 "$D/observed/locked.md" 2>/dev/null
 
 echo
+echo " the entry level is the FILE's -- ## entries split as entries, not one giant block"
+# A file whose entries are `##` used to split at its first `###`: everything above it was
+# dropped as preamble and that one `###` carried the rest of the file. Measured on a live
+# vault: 22 `##` entries and one `###` put ~28 KB into the floor instead of 5 entries.
+mkvault "$TMP/lv" 3 10
+LV="$TMP/lv/vault/00 - notes/context/observed/negocio.md"
+{ printf '# Negocio\nintro prose\n'
+  for i in $(seq 1 22); do
+    printf '## Insight %s (2026-01-%02d)\nlvbody-%s-end\n' "$i" "$i" "$i"
+    [ "$i" -eq 3 ] && printf '### A sub-point of insight 3\nsub-body\n'
+  done; } > "$LV"
+F="$($PYBIN "$H" --print "$TMP/lv")"
+REC="$(printf '%s\n' "$F" | awk '/^### FILE: negocio\.md/{f=1;print;next} f&&/^### FILE: /{exit} f&&/^--- declared\//{exit} f')"
+printf '%s' "$REC" | grep -F '(22 entries total' >/dev/null \
+  && ok "a file of 22 ## entries and one ### is split into 22 entries" \
+  || no "the ## entries were not split" "$(printf '%s' "$REC" | head -n 1)"
+{ printf '%s' "$REC" | grep -F 'lvbody-22-end' >/dev/null && printf '%s' "$REC" | grep -F 'lvbody-18-end' >/dev/null; } \
+  && ok "…its 5 newest ## entries are emitted" \
+  || no "the newest ## entries are missing from the slice" "the last close-day's write never reaches the next session"
+printf '%s' "$REC" | grep -E 'lvbody-(4|17)-end' >/dev/null \
+  && no "older ## entries leaked into the slice" "one ### carried the whole tail of the file -- the slice is unbounded" \
+  || ok "…and nothing older: the slice stays bounded"
+printf '%s\n' "$F" | awk '/^--- observed\//{f=1} f' | grep -F '## Insight 1 (2026-01-01)' >/dev/null \
+  && ok "…while every ## entry title stays in the map" \
+  || no "a ## entry title is missing from the map" "older entries must stay indexed"
+$PYBIN "$H" --json "$TMP/lv" | $PYBIN -c "
+import json,sys
+o=[x for x in json.load(sys.stdin)['observed'] if x['file']=='negocio.md'][0]
+assert len(o['recent'])==5, len(o['recent'])
+assert all(t.startswith('## Insight ') for t in o['recent']), [t[:20] for t in o['recent']]
+" 2>/dev/null \
+  && ok "…and --json (which context-rungs and floor-at-start share) carries the same 5" \
+  || no "--json does not carry the ## entries" "rung 1's price and the emission would drift apart"
+# control: ## SECTIONS over >=3 ### entries keep the ### split -- sections are not entries
+CT="$TMP/ct"; mkvault "$CT" 3 10
+{ printf '# Patrones\n'
+  for s in 1 2 3 4; do printf '## Section %s\n' "$s"
+    for e in 1 2; do printf '### Item %s.%s (2026-02-%02d)\nctbody-%s-%s\n' "$s" "$e" "$((s*2+e))" "$s" "$e"; done; done; } \
+  > "$CT/vault/00 - notes/context/observed/patrones.md"
+$PYBIN "$H" --print "$CT" | grep -F '### FILE: patrones.md  (8 entries total' >/dev/null \
+  && ok "control: ## sections over ### entries still split at ### (8 entries, not 4 sections)" \
+  || no "control: a ### file was re-split at ##" "files that worked before must keep their split"
+# a ## ENTRY titled "Index ..." in a ##-entry file is an entry, not a rule-library marker (#150b)
+IX="$TMP/ix"; mkvault "$IX" 3 10
+printf '# Notas\n## Uno (2026-03-01)\na\n## Index refresh (2026-03-02)\nb\n## Tres (2026-03-03)\nc\n' \
+  > "$IX/vault/00 - notes/context/observed/notas.md"
+$PYBIN "$H" --print "$IX" | grep -F '### FILE: notas.md' | grep 'RULE LIBRARY' >/dev/null \
+  && no "a ## entry titled 'Index …' made a ##-entry file a rule library" "an entry title is not a section marker" \
+  || ok "a ## entry titled 'Index …' does not make a ##-entry file a rule library"
+
+echo
+echo " ventures/_index.md -- read whole, prose and quoted rules included"
+VX="$TMP/vx"; mkvault "$VX" 3 10
+VXD="$VX/vault/00 - notes/context/ventures"; mkdir -p "$VXD/acme"
+printf '# Acme\n' > "$VXD/acme/about_venture.md"
+{ printf -- '---\ntype: index\n---\n# Ventures\n\nvxprose one long paragraph\n\n## Acme\n\n'
+  printf '> vxrule No session quotes a hard price until pricing.md closes.\n\n'
+  printf '| File | What |\n|---|---|\n| acme/about_venture.md | vxrow overview |\n'; } > "$VXD/_index.md"
+VS="$($PYBIN "$H" --print "$VX" | awk '/^--- ventures\//{f=1} f')"
+printf '%s' "$VS" | grep -F 'vxrow overview' >/dev/null && printf '%s' "$VS" | grep -F '## Acme' >/dev/null \
+  && ok "the index's table rows and headings are emitted" \
+  || no "the index's structure was dropped" "the table is what says which ventures exist"
+printf '%s' "$VS" | grep -F 'vxrule No session quotes a hard price' >/dev/null && printf '%s' "$VS" | grep -F 'vxprose one' >/dev/null \
+  && ok "…and its prose and quoted rules, which every venture session must see" \
+  || no "the index's prose or a quoted rule was cut from the floor" "rules like a pricing gate live there as quoted lines"
+
+echo
 printf -- '-- %d passed, %d failed --\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

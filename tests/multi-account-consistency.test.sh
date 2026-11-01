@@ -99,13 +99,16 @@ echo "-- 5. the watcher only swaps through a switch that can refuse, and a refus
 # A stub stands in for claude-identity.sh: it records its call and answers as told.
 stub_tick() {  # $1 = stub stdout, $2 = stub exit code
   rm -rf "$TMP/cfg"; mkdir -p "$TMP/cfg/identities/$B"
-  for f in keychain.json oauthAccount.json userID.txt; do echo '{}' > "$TMP/cfg/identities/$B/$f"; done
+  for f in keychain.json oauthAccount.json userID.txt; do echo '{"claudeAiOauth":{"accessToken":"t","refreshToken":"t"}}' > "$TMP/cfg/identities/$B/$f"; done
   printf '{"oauthAccount":{"emailAddress":"%s"}}' "$A" > "$TMP/cfg/.claude.json"
   printf '## Anthropic accounts\n\n1. `%s`\n2. `%s`\n' "$A" "$B" > "$TMP/USER.md"
   python3 -c 'import json,sys,time;json.dump({"email":sys.argv[2],"captured_at":int(time.time()),"five_hour_pct":99,"seven_day_pct":1},open(sys.argv[1],"w"))' \
     "$TMP/cfg/rate-limit-cache.json" "$A"
   printf '#!/bin/sh\necho "$AIOS_SWITCH_EXPECT_FROM $AIOS_SWITCH_EXPECT_GEN $*" >> "%s/calls"\necho "%s"\nexit %s\n' "$TMP" "$1" "$2" > "$TMP/stub.sh"
   chmod +x "$TMP/stub.sh"; rm -f "$TMP/calls"
+  # Past the confirmation gate: these cases are about what follows the decision to rotate.
+  python3 -c 'import json,sys,time;json.dump({"email":sys.argv[2],"metric":"5h","pct":99,"first_sample":int(time.time())-60,"last_sample":int(time.time())-60},open(sys.argv[1],"w"))' \
+    "$TMP/cfg/quota-watch.armed.json" "$A"
   HOME="$TMP" CLAUDE_CONFIG_DIR="$TMP/cfg" USER_MD_PATH="$TMP/USER.md" python3 "$W" "$TMP/stub.sh"
 }
 stub_tick "✓ switched to $B" 0
@@ -149,8 +152,8 @@ exec /bin/cat "$@"
 SHIM
   chmod +x "$S/bin/uname" "$S/bin/cat"
   printf '{"oauthAccount":{"emailAddress":"%s"},"userID":"uid-a"}' "$A" > "$S/cfg/.claude.json"
-  printf '{"claudeAiOauth":{"accessToken":"tok-a"}}' > "$S/cfg/.credentials.json"
-  printf '{"claudeAiOauth":{"accessToken":"tok-b"}}' > "$S/cfg/identities/$B/keychain.json"
+  printf '{"claudeAiOauth":{"accessToken":"tok-a","refreshToken":"tok-a"}}' > "$S/cfg/.credentials.json"
+  printf '{"claudeAiOauth":{"accessToken":"tok-b","refreshToken":"tok-b"}}' > "$S/cfg/identities/$B/keychain.json"
   printf '{"emailAddress":"%s"}' "$B" > "$S/cfg/identities/$B/oauthAccount.json"
   echo uid-b > "$S/cfg/identities/$B/userID.txt"
   printf '## Anthropic accounts\n\n1. `%s`\n2. `%s`\n' "$A" "$B" > "$S/USER.md"

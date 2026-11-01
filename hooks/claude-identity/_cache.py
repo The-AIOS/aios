@@ -180,6 +180,11 @@ def kick_watcher(home: str, worst_pct: float = 0) -> None:
     up subprocesses. The interval tightens as usage approaches the cap."""
     tick_path = os.path.join(config_dir(home), "watch-tick")
     interval = tick_interval(worst_pct)
+    # While a rotation awaits confirmation, a low reading has to reach the gate too. Without
+    # this it waits out the slow interval, and a high render refreshes the marker first, so
+    # the watcher only ever sees the highs.
+    if os.path.exists(os.path.join(config_dir(home), "quota-watch.armed.json")):
+        interval = WATCH_TICK_SECS_HOT
     now = time.time()
     if os.path.exists(tick_path):
         try:

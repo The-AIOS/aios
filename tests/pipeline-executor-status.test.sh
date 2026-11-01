@@ -95,6 +95,22 @@ case "$OUT" in
   *) ok "canary: the message does NOT blame credentials" ;;
 esac
 
+echo "── the skip list the executor read is shown (#243) ──"
+SK=$($PYBIN -c '
+import importlib.util
+spec = importlib.util.spec_from_file_location("pe", "hooks/pipeline-executor.py")
+pe = importlib.util.module_from_spec(spec); spec.loader.exec_module(pe)
+print(pe._skip_status([]))
+print(pe._skip_status(["Feed Calendar", "Formula 1"]))
+')
+case "$SK" in
+  *"none listed"*"2 listed (Feed Calendar, Formula 1)"*) ok "an empty skip list says so, and a filled one names what it read" ;;
+  *) no "the skip-list status line is missing or wrong" "$SK" ;;
+esac
+grep -qF 'status.append(_skip_status(sources["calendars_skip"]))' "$EXEC" \
+  && ok "the line is added whenever Calendar is configured" \
+  || no "the skip-list line is never added to Pipeline Status"
+
 echo "── and the line is documented, so it cannot be silently unset from day one ──"
 grep -qF 'Google Tasks list' SETUP.md \
   && ok "SETUP.md tells the operator the list-ID line exists" \

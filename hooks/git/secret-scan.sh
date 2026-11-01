@@ -16,6 +16,7 @@ PATTERNS=(
   'AIza[0-9A-Za-z_-]{35}'                # Google API key
   'glpat-[A-Za-z0-9_-]{20,}'             # GitLab PAT
   'GOCSPX-[A-Za-z0-9_-]{20,}'            # Google OAuth client secret
+  'AQ\.[A-Za-z0-9_-]{30,}'               # Google/Gemini API key, newer AQ. shape
   '<string>[0-9a-f]{40}</string>'        # 40-hex token in a launchd plist
 )
 

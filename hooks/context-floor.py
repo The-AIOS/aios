@@ -57,8 +57,11 @@ PARTITIONED where the other two are global. Any observed entry might apply to an
 task, so observed/ is indexed entry-by-entry. But venture context is scoped to one
 venture, and which venture a task touches is usually obvious from the task -- so
 the floor lists the ventures and reads their _index, and the worker opens the one
-that applies. Measured on a live vault that folder is 108,646 words, LARGER than
-observed/ and six times declared/; reading its headings alone costs ~7.8k tokens
+that applies. The _index is read WHOLE, prose included: an operator puts the rules
+every venture session must see there (a pricing gate, a neutrality rule, a naming
+guard), usually as quoted lines, and a structure-only cut drops exactly those.
+Measured on a live vault that folder is 108,646 words, LARGER than observed/ and
+six times declared/; reading its headings alone costs ~7.8k tokens
 and reading it whole costs ~141k, so neither belongs at a floor every session pays.
 
 about_business.md does NOT substitute for it. On that same vault it is 1,086 words
@@ -75,6 +78,13 @@ allowed to do this" is a different question, and it applies to every session
 whatever it produces -- most sharply to the mechanical worker that is least likely
 to have read anything and most likely to commit, push, send or delete. A floor that
 omits it hands the largest blast radius to the least-contextualised session.
+
+ENTRIES ARE `###` OR `##`, DECIDED PER FILE
+-----------------------------------------
+An entry is a `###` heading in a file with at least three of them, else a `##` heading in a
+file with at least three of those, else a `###`. Hardcoding `###` split a `##`-entry file
+into one giant block (measured: ~28 KB of one floor where five entries were meant) and left
+its entries out of the slice. See entry_level().
 
 Every file in both folders is globbed. No filename is ever hardcoded -- operators
 rename these files, add their own, and write them in their own language.
@@ -140,11 +150,44 @@ def newest(blocks, n):
     return [b for _, _, b in dated[-n:]] if n else []
 
 
+# The ENTRY LEVEL is detected per file, never assumed. Most observed files write their entries
+# as `###` under `##` sections, but an operator may write a file whose entries ARE its `##`
+# headings. With the level hardcoded to `###`, such a file split wrong in both directions:
+# everything above its first `###` was preamble and dropped, and that one `###` swallowed the
+# rest of the file, every later `##` entry included. Measured on a live vault: one file with
+# 22 `##` entries and a single `###` put ~28 KB into every floor (its whole tail) instead of
+# its 5 newest entries, and its "5 newest" were one block.
+#
+# The rule: `###` when the file has at least ENTRY_MIN of them -- so every file with three or
+# more `###`, `##` sections and rule libraries included, keeps exactly its old split; else `##`
+# when it has at least ENTRY_MIN of those; else `###`, as before. A threshold, not a majority: a
+# file with a dozen `##` sections and 30 `###` entries is a `###` file, and a stray `###`
+# inside a `##`-entry file must not decide it.
+ENTRY_MIN = 3
+
+
+def _level_re(n):
+    return re.compile(r"^\#{%d}\s+\S" % n)
+
+
+ENTRY_BY_LEVEL = {2: _level_re(2), 3: ENTRY}
+
+
+def entry_level(lines):
+    """2 or 3: the heading level this file writes its entries at (see ENTRY_MIN above)."""
+    if sum(1 for l in lines if ENTRY_BY_LEVEL[3].match(l)) >= ENTRY_MIN:
+        return 3
+    if sum(1 for l in lines if ENTRY_BY_LEVEL[2].match(l)) >= ENTRY_MIN:
+        return 2
+    return 3
+
+
 def split_entries(lines):
-    """Return (preamble, [entry_blocks]) in file order. Append-ordered: newest last."""
+    """Return (preamble, [entry_blocks]) in file order, at the file's own entry level."""
+    entry = ENTRY_BY_LEVEL[entry_level(lines)]
     pre, out, cur = [], [], None
     for l in lines:
-        if ENTRY.match(l):
+        if entry.match(l):
             if cur is not None:
                 out.append(cur)
             cur = [l]
@@ -191,7 +234,12 @@ def recent_slice(lines, n):
     # four months ago binds as hard as one from this week, and the file's job is to
     # fire BEFORE the mistake. So emit its index instead of its newest bodies; every
     # title is already in the map above, which is what makes scanning it possible.
-    idx = [l for l in lines if INDEX_HEADING.match(l)]
+    # The marker must sit ABOVE the entry level (#150b): in a file whose entries are `##`, a
+    # `##` entry titled "... index ..." is an entry, not a section, so only `#` can mark it.
+    # For a `###` file this is `#`/`##`, exactly as before.
+    lvl_entry = entry_level(lines)
+    idx = [l for l in lines if INDEX_HEADING.match(l)
+           and len(l) - len(l.lstrip("#")) < lvl_entry]
     if idx:
         i = lines.index(idx[0])
         # The index is the SECTION the heading opens: everything up to the next heading at
@@ -339,6 +387,10 @@ def main(argv):
     w("=" * 72)
     w("MOST RECENT %d ENTRIES PER OBSERVED FILE  --  what the last sessions learned" % recent)
     w("(older entries are indexed by title in the map below; open any of them at any time)")
+    # Named, never called: recall stays opt-in (#247), but a tool no session knows about is
+    # never used, so the one place every session reads says it exists.
+    w('(to search every observed/ body by keyword: UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" '
+      'uv run ~/aios/hooks/recall.py "<words>")')
     w("=" * 72)
     for fn, lines in obs:
         es, is_lib, rec = recent_slice(lines, recent)
@@ -370,7 +422,7 @@ def main(argv):
         w("### FILE: %s  (%d entries total, showing the %d newest by date)"
           % (fn, len(es), len(rec)))
         if not es:
-            w("  (no ### entries -- this file is mapped by its headings above)")
+            w("  (no entries -- this file is mapped by its headings below)")
         for block in rec:
             w("")
             w(block)

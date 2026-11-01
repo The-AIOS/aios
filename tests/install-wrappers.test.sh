@@ -357,5 +357,20 @@ for sh in bash zsh; do
 done
 rm -rf "$tmp"
 
+
+# An alias of the same name made `claude-switch() {` a parse error, and nothing after it loaded.
+_al="$(mktemp -d)"
+{ printf "alias claude-switch='echo old'\nalias claude-whoami='echo old'\n"
+  sed -n '/^# Account commands\./,/^claude-switch()/p' hooks/claude-identity/install-wrappers.sh
+  printf 'echo AFTER-OK\n'; } > "$_al/rc"
+grep -q '^claude-switch()' "$_al/rc" || no "the managed claude-switch block was not found in the installer"
+for _sh in bash zsh; do
+  command -v "$_sh" >/dev/null 2>&1 || continue
+  _o="$($_sh -c "shopt -s expand_aliases 2>/dev/null; . '$_al/rc'" 2>&1)"
+  case "$_o" in *AFTER-OK*) ok "$_sh: an existing claude-switch alias does not stop the rc file loading" ;;
+                *) no "$_sh: an existing claude-switch alias broke the rc file: $_o" ;; esac
+done
+rm -rf "$_al"
+
 echo "── RESULT: $PASS passed, $FAIL failed  (${BASH_VERSION:+bash $BASH_VERSION}${ZSH_VERSION:+zsh $ZSH_VERSION}) ──"
 [ "$FAIL" = "0" ] || exit 1

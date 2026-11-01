@@ -53,4 +53,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:] or ["hooks/context-floor.py", "hooks/context-rungs.py"]))
+    sys.exit(main(sys.argv[1:] or ["hooks/context-floor.py", "hooks/context-rungs.py", "hooks/recall.py"]))

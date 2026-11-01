@@ -254,6 +254,6 @@ Write-Host "Verify now :  pwsh -File hooks/claude-identity/install-quota-watch.p
 Write-Host "Inspect    :  schtasks /Query /TN '$TaskName' /V /FO LIST"
 Write-Host "Remove     :  pwsh -File hooks/claude-identity/install-quota-watch.ps1 -Uninstall"
 Write-Host ""
-Write-Host "NOTE: rotation only fires once at least two accounts are listed in USER.md"
-Write-Host "      under '## Anthropic accounts' AND each has been captured with"
+Write-Host "NOTE: rotation only fires once at least two accounts are in the list"
+Write-Host "      ('claude-switch --add <email>') AND each has been captured with"
 Write-Host "      'claude-switch --capture'. Until then the watcher logs and does nothing."
