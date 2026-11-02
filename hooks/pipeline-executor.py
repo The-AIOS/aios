@@ -595,7 +595,7 @@ def _per_calendar_cap(time_min, time_max):
     return 50 if span_days <= 1 else min(250, 25 * span_days)
 
 
-def google_calendar_events(creds_path, email, time_min, time_max, detailed=False, skip=(), timezone_name="UTC", dated=False):
+def google_calendar_events(creds_path, email, time_min, time_max, detailed=False, skip=(), timezone_name="UTC", dated=False, also=()):
     """Fetch events from EVERY calendar on the account, merged and de-duplicated.
 
     `dated` prefixes each day with a `**YYYY-MM-DD (Weekday)**` header. It is off
@@ -604,16 +604,56 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
     say WHICH day, which is the one thing a lookahead exists to answer. A reader
     counting all-day rows to infer the date is one missing all-day event away
     from attributing a meeting to the wrong morning.
+
+    `also` is a list of `(label, creds_path, email)` for further accounts merged
+    into the SAME block. The lookahead uses it: a block labelled AUTHORITATIVE
+    that cannot see a second account makes every meeting living only there read
+    as "not in the calendar". All accounts share one de-duplication pass and the
+    primary is fetched first, so a meeting that invites two of the operator's
+    addresses appears once, as the primary's. One further account failing is an
+    error line in the block, never the whole lookahead.
     """
+    seen = {}
+    order = []
+    _collect_account_events(creds_path, email, None, time_min, time_max, skip, seen, order)
+    for label, extra_creds, extra_email in also:
+        try:
+            _collect_account_events(extra_creds, extra_email, label, time_min, time_max,
+                                    skip, seen, order)
+        except Exception as exc:
+            order.append((("~error", extra_email),
+                          f"- ⚠️ account '{label}' ({extra_email}) could not be read: {exc}"))
+
+    return _render_calendar(order, email, timezone_name, detailed=detailed, dated=dated,
+                            window=(_date_only(time_min), _date_only(time_max)))
+
+
+def _tag_further_account(label, email, cal_id, cal_name):
+    """Payload identity for a calendar read through a FURTHER account.
+
+    The id is namespaced (`{label}:{id}`) so it can never pass `_render_calendar`'s
+    "this is the primary's own calendar" test and render untagged; the name becomes
+    `{label}` for that account's own calendar and `{label} · {name}` for any other
+    calendar it can read, so `[DEV.F]` says which account, not just which calendar.
+    """
+    own = cal_id in (email, "primary")
+    return f"{label}:{cal_id}", (label if own else f"{label} · {cal_name}")
+
+
+def _collect_account_events(creds_path, email, label, time_min, time_max, skip, seen, order):
+    """Append one account's events to `order`, skipping any key already in `seen`.
+
+    `label` is None for the account the block belongs to, and the label of a
+    further account otherwise (see `_tag_further_account`)."""
     from googleapiclient.discovery import build
 
     creds = _load_google_creds(creds_path)
     service = build("calendar", "v3", credentials=creds, cache_discovery=False)
 
     per_cal_cap = _per_calendar_cap(time_min, time_max)
-    seen = {}
-    order = []
     for cal_id, cal_name in _calendar_ids(service, skip):
+        shown_id, shown_name = (cal_id, cal_name) if label is None else \
+            _tag_further_account(label, email, cal_id, cal_name)
         try:
             result = service.events().list(
                 calendarId=cal_id,
@@ -625,7 +665,7 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
             ).execute()
         except Exception as exc:
             # One unreadable calendar must not take the whole day's plan with it.
-            order.append((("~error", cal_id), f"- ⚠️ calendar '{cal_name}' could not be read: {exc}"))
+            order.append((("~error", shown_id), f"- ⚠️ calendar '{shown_name}' could not be read: {exc}"))
             continue
 
         for event in result.get("items", []):
@@ -633,10 +673,7 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
             if key in seen:
                 continue
             seen[key] = True
-            order.append((key, (cal_id, cal_name, event)))
-
-    return _render_calendar(order, email, timezone_name, detailed=detailed, dated=dated,
-                            window=(_date_only(time_min), _date_only(time_max)))
+            order.append((key, (shown_id, shown_name, event)))
 
 
 def _all_day_span(event):
@@ -1007,11 +1044,22 @@ def run_pipeline(command_name):
                 timezone_name=render_tz
             )
             # Lookahead — every command, not just close-day. See LOOKAHEAD_DAYS above.
+            # Every configured account, merged into ONE block: it is the block /today
+            # reconciles vault dates against, so a meeting that lives only on a second
+            # account must be in it — otherwise "no matching event" is the answer for
+            # every such meeting and a moved date goes unnoticed.
+            lookahead_also = []
+            if "calendar-personal" in sources["configured"] and creds_personal and creds_personal.exists():
+                lookahead_also.append(("personal", creds_personal, sources["google_email_personal"]))
+            for label, email in extra_accounts:
+                creds_extra = _extra_account_creds(label, email)
+                if creds_extra.exists():
+                    lookahead_also.append((label, creds_extra, email))
             futures["calendar_next_week"] = pool.submit(
                 google_calendar_events, creds_primary,
                 sources["google_email_primary"], time_min, time_max_week,
                 skip=sources["calendars_skip"], dated=True,
-                timezone_name=render_tz
+                timezone_name=render_tz, also=lookahead_also
             )
         if "calendar-personal" in sources["configured"] and creds_personal and creds_personal.exists():
             futures["calendar_personal"] = pool.submit(
@@ -1020,8 +1068,8 @@ def run_pipeline(command_name):
                 skip=sources["calendars_skip"],
                 timezone_name=render_tz
             )
-        # Further accounts: today's calendar only. The lookahead stays primary-only, as the
-        # Personal slot's does — /today documents that boundary.
+        # Further accounts: today's calendar as its own block (the lookahead above already
+        # merges them).
         for label, email in extra_accounts:
             creds_extra = _extra_account_creds(label, email)
             if creds_extra.exists():

@@ -30,6 +30,7 @@ fi
 #   * the per-calendar cap scales with the window instead of truncating at 50
 #   * the header the executor prints is the one today.md and close-day.md quote
 #   * the lookahead is no longer gated on close-day
+#   * the lookahead merges every configured account, de-duplicated and tagged
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -194,6 +195,66 @@ checks.append(("lookahead is not gated on close-day",
 checks.append(("lookahead is rendered dated",
                re.search(r'time_max_week,\s*\n[^)]*dated=True', src) is not None,
                "the lookahead call does not pass dated=True"))
+
+# 10. The lookahead merges every account into one block (fake Google, no network).
+#     Shared meetings appear once, as the primary's; further accounts' events are
+#     tagged with their label; one unreadable account is an error line, not a lost block.
+import types
+CALS = {
+    "P": [("me@example.com", True, "me@example.com")],
+    "Q": [("me@personal.example", True, "me@personal.example")],
+    "A": [("me@acme.example", True, "me@acme.example"), ("team@acme.example", False, "Team")],
+}
+EVENTS = {
+    "me@example.com": [ev("Board", "2026-09-24T10:00:00Z", "2026-09-24T11:00:00Z", uid="shared-1")],
+    "me@personal.example": [ev("Board", "2026-09-24T10:00:00Z", "2026-09-24T11:00:00Z", uid="shared-1"),
+                            ev("Dentist", "2026-09-25T08:00:00Z", "2026-09-25T09:00:00Z")],
+    "me@acme.example": [ev("Acme sync", "2026-09-26T15:00:00Z", "2026-09-26T16:00:00Z")],
+    "team@acme.example": [ev("Acme standup", "2026-09-27T12:00:00Z", "2026-09-27T12:15:00Z")],
+}
+class _X:
+    def __init__(self, v): self.v = v
+    def execute(self):
+        if isinstance(self.v, Exception): raise self.v
+        return self.v
+class _Svc:
+    def __init__(self, key): self.key = key
+    def calendarList(self):
+        cals = CALS[self.key]
+        return types.SimpleNamespace(list=lambda **k: _X({"items": [
+            {"id": i, "primary": prim, "summary": name} for i, prim, name in cals]}))
+    def events(self):
+        return types.SimpleNamespace(list=lambda calendarId, **k: _X({"items": EVENTS[calendarId]}))
+def _build(api, ver, credentials=None, cache_discovery=False):
+    if credentials == "BROKEN": raise RuntimeError("token expired")
+    return _Svc(credentials)
+disc = types.ModuleType("googleapiclient.discovery"); disc.build = _build
+sys.modules.setdefault("googleapiclient", types.ModuleType("googleapiclient"))
+sys.modules["googleapiclient.discovery"] = disc
+pe._load_google_creds = lambda path: path
+merged = pe.google_calendar_events(
+    "P", "me@example.com", "2026-09-24T00:00:00Z", "2026-10-07T23:59:59Z", dated=True,
+    timezone_name="UTC",
+    also=[("personal", "Q", "me@personal.example"), ("Acme.Labs", "A", "me@acme.example")])
+rows = [l for l in merged.split("\n") if l.startswith("- ")]
+eq("a meeting on two accounts appears once, untagged (the primary's)",
+   [r for r in rows if "Board" in r], ["- 10:00 – 11:00 — Board"])
+eq("a personal-only event is tagged [personal]",
+   [r for r in rows if "Dentist" in r], ["- 08:00 – 09:00 — Dentist  _[personal]_"])
+eq("a labelled account's own calendar is tagged with its label",
+   [r for r in rows if "Acme sync" in r], ["- 15:00 – 16:00 — Acme sync  _[Acme.Labs]_"])
+eq("a labelled account's other calendar names label and calendar",
+   [r for r in rows if "standup" in r], ["- 12:00 – 12:15 — Acme standup  _[Acme.Labs · Team]_"])
+partial = pe.google_calendar_events(
+    "P", "me@example.com", "2026-09-24T00:00:00Z", "2026-10-07T23:59:59Z", dated=True,
+    timezone_name="UTC", also=[("Acme.Labs", "BROKEN", "me@acme.example")])
+checks.append(("an unreadable further account is one error line; the primary still renders",
+               "account 'Acme.Labs' (me@acme.example) could not be read: token expired" in partial
+               and "Board" in partial, partial))
+checks.append(("the executor passes the further accounts to the lookahead",
+               "timezone_name=render_tz, also=lookahead_also" in src
+               and 'lookahead_also.append(("personal", creds_personal' in src,
+               "calendar_next_week is not given also=lookahead_also"))
 
 for label, good, detail in checks:
     print(("OK\t" if good else "NO\t") + label + ("" if good else "\t" + detail))
