@@ -62,6 +62,10 @@ SOURCES_PATH = AIOS_ROOT / "USER.md"
 # own these locations, so they do not move when the vault does.
 GOOGLE_CREDS_DIR_PRIMARY = Path.home() / ".google_workspace_mcp" / "credentials"
 GOOGLE_CREDS_DIR_PERSONAL = Path.home() / ".google_workspace_mcp" / "credentials-personal"
+# Any further account is declared with its own label — `- Google email (Acme.Labs): `…`` — and
+# its credentials live beside Personal's, in credentials-<slug>/ (see _account_slug). The
+# Personal slot is exactly this rule applied to the label "Personal", so it keeps its path.
+GOOGLE_CREDS_ROOT = Path.home() / ".google_workspace_mcp"
 SLACK_TOKENS_PATH = Path.home() / ".slack-mcp-tokens.json"
 LOG_PATH = AIOS_ROOT / "hooks" / "pipeline-executor.log"
 MAX_LOG_LINES = 500
@@ -229,6 +233,8 @@ def parse_sources():
         "configured": set(),
         "google_email_primary": None,
         "google_email_personal": None,
+        # Accounts beyond Primary and Personal, in declaration order: [(label, email)].
+        "google_accounts_extra": [],
         "google_tasks_list": None,
         "timezone": "UTC",  # Universal default — each user sets their timezone in USER.md
         # Whether that value came from USER.md or is the default above. Calendar QUERIES keep
@@ -337,12 +343,39 @@ def parse_sources():
                 raw = ",".join(re.findall(r'`([^`]*)`', raw))
             config["calendars_skip"] = [c.strip() for c in raw.split(",") if c.strip()]
 
+    # Accounts beyond the two named slots. Each is "- Google email (<Label>): `…`" and is
+    # queried only when "- Google Calendar (<Label>)" is also on an operator line — the same
+    # two-line contract Personal already has, so an address listed for reference (an old
+    # account, a destination-only alias) switches nothing on. First line per label wins,
+    # for the reason the scalar guard above gives. Read from operator lines only, so the
+    # template's italic placeholders declare nothing.
+    _extra_seen = set()
+    for line in _operator_lines(content):
+        m = re.match(r'- Google email \((?!(?i:personal)\))([^)]+)\): `(.+?)`', line)
+        if not m:
+            continue
+        label = m.group(1).strip()
+        if not label or label.lower() in _extra_seen:
+            continue
+        _extra_seen.add(label.lower())
+        if _mentions_enabled(content, f"Google Calendar ({label})"):
+            config["google_accounts_extra"].append((label, m.group(2)))
+
     # NOT widened to accept the template's italic form (`- *Timezone: …*`). The italics are
     # the placeholder marker on all four scalar lines, and a source may only be switched on
     # by something the operator typed: reading `- *Google email: `you@company.com`*` as
     # configured would send /today looking for credentials of an account that does not exist.
     config["timezone_configured"] = "timezone" in _scalar_parsed
     return config
+
+
+def _account_slug(label):
+    """Folder-safe form of an account label: "Acme.Labs" → "acme-labs", "Personal" → "personal"."""
+    return re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-") or "account"
+
+
+def _extra_account_creds(label, email):
+    return GOOGLE_CREDS_ROOT / f"credentials-{_account_slug(label)}" / f"{email}.json"
 
 
 def _tz_offset(timezone_name):
@@ -961,7 +994,8 @@ def run_pipeline(command_name):
     errors = {}
     futures = {}
 
-    with ThreadPoolExecutor(max_workers=7) as pool:
+    extra_accounts = sources.get("google_accounts_extra", [])
+    with ThreadPoolExecutor(max_workers=7 + len(extra_accounts)) as pool:
         creds_primary = GOOGLE_CREDS_DIR_PRIMARY / f"{sources['google_email_primary']}.json" if sources["google_email_primary"] else None
         creds_personal = GOOGLE_CREDS_DIR_PERSONAL / f"{sources['google_email_personal']}.json" if sources["google_email_personal"] else None
 
@@ -986,6 +1020,15 @@ def run_pipeline(command_name):
                 skip=sources["calendars_skip"],
                 timezone_name=render_tz
             )
+        # Further accounts: today's calendar only. The lookahead stays primary-only, as the
+        # Personal slot's does — /today documents that boundary.
+        for label, email in extra_accounts:
+            creds_extra = _extra_account_creds(label, email)
+            if creds_extra.exists():
+                futures[f"calendar_{_account_slug(label)}"] = pool.submit(
+                    google_calendar_events, creds_extra, email, time_min, time_max,
+                    skip=sources["calendars_skip"], timezone_name=render_tz
+                )
         if "tasks" in sources["configured"] and sources["google_tasks_list"] and creds_primary and creds_primary.exists():
             futures["tasks"] = pool.submit(
                 google_tasks_list, creds_primary,
@@ -1048,6 +1091,11 @@ def run_pipeline(command_name):
                 status.append(f"⏭️ {source}: configured but not queried — {reason}")
             else:
                 status.append(f"⏭️ {source}: not configured")
+    for label, email in extra_accounts:
+        key = f"calendar_{_account_slug(label)}"
+        if key not in futures:
+            status.append(f"⏭️ calendar ({label}): configured but not queried — credentials not found at "
+                          f"{_extra_account_creds(label, email)} — authorise this account, then place its token there")
     if "calendar" in sources["configured"]:
         status.append(_skip_status(sources["calendars_skip"]))
 
@@ -1084,6 +1132,17 @@ def run_pipeline(command_name):
         lines.extend([f"## Google Calendar — Personal ({sources['google_email_personal']})",
                        f"❌ FAILED: {errors['calendar_personal']}",
                        "Fix: re-authenticate Google Workspace Personal MCP — open a new session and call any `mcp__google-workspace-personal__*` tool.", ""])
+
+    # Further accounts, in the order USER.md declares them
+    for label, email in extra_accounts:
+        key = f"calendar_{_account_slug(label)}"
+        if key in results:
+            lines.extend([f"## Google Calendar — {label} ({email})", results[key], ""])
+        elif key in errors:
+            lines.extend([f"## Google Calendar — {label} ({email})",
+                           f"❌ FAILED: {errors[key]}",
+                           f"Fix: re-authenticate the {label} account and refresh its token in "
+                           f"{_extra_account_creds(label, email).parent}.", ""])
 
     # Tasks
     if "tasks" in results:

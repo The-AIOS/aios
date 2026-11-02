@@ -79,6 +79,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-02 — More than two Google accounts in your daily plan
+
+`hash: `
+
+> **What you can now do.** Put a third (or fourth) Google account's calendar in `/today` and `/close-day`: a second company, a side project, a personal Gmail next to a personal Workspace account.
+
+**Labelled accounts beyond Primary and Personal.** The planner had exactly two slots, so anyone working across more accounts had to choose which one stayed out of the plan. A further account is now two lines in `USER.md` → `### Google accounts`: `- Google email (<Label>): ` with the address in backticks, and `- Google Calendar (<Label>)`. Its token is read from `~/.google_workspace_mcp/credentials-<label>/<email>.json`, the same convention the Personal slot already used (`credentials-personal/`), so nothing about Primary or Personal moves. Its events arrive under `## Google Calendar — {Label}`, and a missing token is named in Pipeline Status with the path it looked for. An address listed without its calendar line switches nothing on, and the first line per label wins, as for the primary. The 14-day lookahead stays primary-only. `tests/pipeline-executor-config.test.sh` covers the parsing (TEST 8).
+
+> **What you need to do.** Nothing, unless you want a further account. If you do: authorise it with its own Google Workspace MCP connector, put (or link) its token at the path above, and add the two lines.
+
 ## 2026-10-31 — Account rotation that never lands on a login screen, a floor that no longer goes silent on a Mac, and old lessons you can search
 
 `hash: fd9014b · e1d1c6d · cdc1556 · 90f003e · fc447c8 · 84252c6 · 142074b · 960e0e1 · fd88955 · 80ee399 · 88fb90c · cc59873 · 2304854 · a1bc0e1` · [#245](https://github.com/The-AIOS/aios/pull/245) · [#247](https://github.com/The-AIOS/aios/pull/247) · [#251](https://github.com/The-AIOS/aios/pull/251) · [#254](https://github.com/The-AIOS/aios/pull/254) · [#255](https://github.com/The-AIOS/aios/pull/255)
