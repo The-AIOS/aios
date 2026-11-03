@@ -614,9 +614,10 @@ def get_swap_banner():
 EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 
 # Shown dim at the END of the line, so a pane too narrow for it loses these first.
-# Ctrl+J is the new-line key Claude Code binds by default in every terminal; Shift+Enter
-# only works after terminal setup, so it is not the one to teach here.
-KEY_HINTS = "ctrl+j new line · esc interrupt"
+# `\` then Enter is the new line Claude Code accepts in every terminal. Shift+Enter needs
+# terminal setup, and Ctrl+J is taken by VS Code-family editors on Windows and Linux (it
+# toggles the panel), which is where Glass runs.
+KEY_HINTS = "\\⏎ new line · esc interrupt"
 
 
 def get_effort_display(data):

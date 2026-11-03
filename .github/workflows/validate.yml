@@ -697,7 +697,7 @@ jobs:
           echo "OK: no personal vault content added"
 
       - name: No internal tracking keys in the framework's files
-        # A roadmap key (two letters, a dash, a number) comes from one operator's private roadmap: it means nothing to a
+        # A roadmap key (AI-, then a number) comes from one operator's private roadmap: it means nothing to a
         # contributor and points to a note nobody outside can open. Public text names issues
         # and PRs by number (CONTRIBUTING.md, "Before you open anything"). CHANGELOG.md is
         # exempt: its released entries are history, and rewriting them would mislead.

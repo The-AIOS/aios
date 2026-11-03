@@ -64,19 +64,21 @@ Use CONTRIBUTING § *Which repo?* and its *what you observed* table. Read it fro
 - A command's instructions, an agent, a skill, a hook, a template, a `CLAUDE.md` rule → **The-AIOS/aios** (canonical).
 - What the IDE panel shows or does → **The-AIOS/aios-glass**.
 - Install, first-run, updates, windows, packaging of the desktop app → **The-AIOS/aios-app**.
+- A page on the-aios.com → **The-AIOS/site**.
 - **A documented flag or field had no effect** → suspect the surface that *executes* it, not the doc that describes it. Check the launch args (`ps -p <pid> -o command=`) and the running behaviour before choosing.
 - Works in one surface and not the other → the surface that is wrong.
 - Unsure after all that → canonical, and say so in the body: *"Filing against canonical; maintainers route."*
 
-**The operator may name a different target**, such as a test repository for a demo, or a fork. Use it. Never silently replace it with the routed repo, and never silently replace the routed repo with it. Print both on one line: `Target: {owner/repo} (routing suggests {owner/repo} because …)`. If the target is not one of the three repos above, say so.
+**The operator may name a different target**, such as a test repository for a demo, or a fork. Use it. Never silently replace it with the routed repo, and never silently replace the routed repo with it. Print both on one line: `Target: {owner/repo} (routing suggests {owner/repo} because …)`. If the target is not one of the repos above, say so.
 
 Twins across repos (the same feature split into a writer half and a reader half) are linked, never merged.
 
-### Step 3: De-duplicate on three surfaces
+### Step 3: De-duplicate on four surfaces
 Search terms are the framework's own words (command names, hook names, error strings). Never use operator content: a search query also leaves the machine.
-1. **Issues:** `gh issue list --repo {target} --state all --search "<framework words>" --limit 20` on the target **and** on the routed sibling repo, because a misfiled twin lives on the other one. Open the plausible hits with `gh issue view`.
-2. **CHANGELOG:** grep `CHANGELOG.md` for the same words. Compare the entry's date with the `synced=` line of `.aios-update`. An entry **newer** than `synced=` means the fix exists and the operator has not pulled it: recommend `/aios:update` and do not file. An entry **older** than `synced=` that claims to fix this means a regression: file, and cite the entry.
-3. **Earlier drafts:** `vault/03 - export/aios-feedback/` for this operator's own unsent drafts.
+1. **Issues and PRs across the org:** `gh search issues "<framework words>" --owner The-AIOS --limit 20` and `gh search prs "<framework words>" --owner The-AIOS --limit 20`, open and closed, because a misfiled twin lives on another repo and a fix may already be an open PR. Open the plausible hits with `gh issue view` / `gh pr view`.
+2. **Work in flight:** `gh search issues --owner The-AIOS --label "status: in-progress" --state open`. A match means someone is building it: the verdict is a comment there, never a new issue (CONTRIBUTING § *Before you open anything*).
+3. **CHANGELOG:** grep `CHANGELOG.md` for the same words. Compare the entry's date with the `synced=` line of `.aios-update`. An entry **newer** than `synced=` means the fix exists and the operator has not pulled it: recommend `/aios:update` and do not file. An entry **older** than `synced=` that claims to fix this means a regression: file, and cite the entry.
+4. **Earlier drafts:** `vault/03 - export/aios-feedback/` for this operator's own unsent drafts.
 
 Verdict, one line: *new* · *twin exists (#N)* · *related, closed (cite it)* · *already fixed in an unpulled update*. **Related, closed** is a closed issue of the same class seen from another angle (the damage was fixed; this is about the guard, say): file a new issue and cite it in the body. For a twin, the default is a **comment on it carrying the new evidence** (new platform, new repro, a control), after the same confirmation as Step 6. Never a bare "+1".
 
@@ -85,7 +87,7 @@ Verdict, one line: *new* · *twin exists (#N)* · *related, closed (cite it)* ·
 
 `gh issue create` bypasses issue forms, so the body reproduces the form's fields as `###` headings, the way GitHub renders a form-filed issue. Use the target repo's own form when it has one: canonical ships `.github/ISSUE_TEMPLATE/operator_report.yml`; check the target with `gh api repos/{target}/contents/.github/ISSUE_TEMPLATE` (or, if it has none, the org's `.github` repo). Unknown target or no form → use the sections below.
 
-- **Title:** `type(scope): one line`, matching the repo's commit style (`fix(close-session): …`, `feat(spawn-inbox): …`, `docs(setup): …`).
+- **Title:** `Area: what changes`, per CONTRIBUTING § *Titles* (`/close-session: a second close duplicates the block`, `Spawn inbox: a send waits for the target to be idle`). No type prefix; the `type:` label carries that. Never an internal tracking key.
 - `### What kind of report is this?` · `### Where did you see it?`
 - `### What happened`: the command that ran and the framework's own output.
 - `### What you expected`

@@ -30,6 +30,9 @@ What blocks the offer, each with its reason:
     /Applications or ~/Applications, or Glass in an editor's extensions folder, where
     the newest version in each editor counts. A missing surface file alone proves
     nothing: it is absent whenever that surface is closed.
+  * an App that has been used on this machine (its user-data folder or ~/.aios/app.json
+    exists) but whose version nothing shows: on Windows and Linux a closed App leaves
+    no file with its version, so the operator is asked to open it once and check again
 """
 
 import argparse
@@ -40,7 +43,7 @@ import plistlib
 import re
 import sys
 
-NUMBERED = re.compile(r"\s*\d+\.\s*`[^`]+`")
+NUMBERED = re.compile(r"\s*\d+\.\s*`[^`\s]+@[^`\s]+`")
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import _accounts  # noqa: E402
@@ -106,11 +109,29 @@ def installed_versions():
     return found
 
 
+def app_used_here():
+    """Where the App has left a trace on this machine, whatever the OS ("" when none)."""
+    over = os.environ.get("AIOS_APP_DATA_DIRS")
+    if over is not None:
+        candidates = [d for d in over.split(os.pathsep) if d]
+    else:
+        h = _home()
+        candidates = [
+            os.path.join(h, ".aios", "app.json"),
+            os.path.join(h, "Library", "Application Support", "AIOS"),
+            os.path.join(os.environ.get("APPDATA") or os.path.join(h, "AppData", "Roaming"), "AIOS"),
+            os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.join(h, ".config"), "AIOS"),
+        ]
+    return next((c for c in candidates if os.path.exists(c)), "")
+
+
 def check(user_md):
     try:
         listed, _ = _accounts.parse_user_md(user_md)
     except _accounts.AccountsError as e:
         return {"offer": False, "reason": str(e), "missing": []}
+    # A numbered line that is not an address (`1. `claude-switch --add``) is a note, not an account.
+    listed = [a for a in listed if "@" in a["email"]]
     if not listed:
         return {"offer": False, "reason": "USER.md has no numbered accounts under ## Anthropic accounts: nothing to replace", "missing": []}
 
@@ -127,7 +148,13 @@ def check(user_md):
                 "reason": "these accounts are in USER.md but not in accounts.json, so replacing the section would lose them: "
                           + ", ".join(missing) + " (add each with `claude-switch --add <email>`)"}
 
-    for surface, installs in installed_versions().items():
+    found = installed_versions()
+    trace = app_used_here()
+    if trace and not found["app"]:
+        return {"offer": False, "missing": [],
+                "reason": f"the AIOS App has been used here ({trace}) but its version cannot be read while it is closed: "
+                          "open the App once, then run this check again"}
+    for surface, installs in found.items():
         need = MIN_VERSION[surface]
         for where, v in installs:
             if v is None:
@@ -141,7 +168,7 @@ def check(user_md):
 
 def _section(user_md):
     """(all lines, start index, the section's lines) for the accounts section."""
-    with open(user_md, encoding="utf-8") as f:
+    with open(user_md, encoding="utf-8", newline="") as f:
         lines = f.readlines()
     start = next(i for i, l in enumerate(lines) if l.startswith(_accounts.USER_MD_SECTION))
     end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
@@ -154,19 +181,19 @@ def replace(user_md, backup_dir):
         return verdict
     lines, start, sec = _section(user_md)
     os.makedirs(backup_dir, exist_ok=True)
-    with open(os.path.join(backup_dir, BACKUP_NAME), "w", encoding="utf-8") as f:
+    with open(os.path.join(backup_dir, BACKUP_NAME), "w", encoding="utf-8", newline="") as f:
         f.writelines(sec)
     kept, placed = [], False
     for line in sec:
         if NUMBERED.match(line):
             if not placed:
-                kept.append(POINTER)
+                kept.append(POINTER.rstrip("\n") + ("\r\n" if line.endswith("\r\n") else "\n"))
                 placed = True
             continue
         kept.append(line)
     new = lines[:start] + kept + lines[start + len(sec):]
     tmp = user_md + ".aios-tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
+    with open(tmp, "w", encoding="utf-8", newline="") as f:
         f.writelines(new)
     os.replace(tmp, user_md)
     return {"offer": True, "reason": "replaced the account list; the old section is in " + os.path.join(backup_dir, BACKUP_NAME),

@@ -54,7 +54,7 @@ J
 keep me
 M
 }
-run(){ env -u USER_MD_PATH AIOS_SURFACES_DIR="$T/m/surfaces" AIOS_APP_DIRS="$T/m/apps" \
+run(){ env -u USER_MD_PATH AIOS_SURFACES_DIR="$T/m/surfaces" AIOS_APP_DIRS="$T/m/apps" AIOS_APP_DATA_DIRS="${APPDATA_DIRS:-}" \
   AIOS_EXTENSIONS_HOME="$T/m/home" AIOS_ACCOUNTS_FILE="$T/m/accounts.json" \
   $PYBIN "$TOOL" "$@" --user-md "$T/m/USER.md"; }
 offer(){ run check | $PYBIN -c 'import json,sys; print(json.load(sys.stdin)["offer"])'; }
@@ -103,6 +103,28 @@ grep -q '^> My own note' "$T/m/USER.md" && grep -q '^\*\*Rules:\*\* keep this ru
 fresh; out=$(run check)
 case "$out" in *'"removes"'*'never automate it'*) ok "15. check names the exact lines replace would remove";;
   *) no "15." "$out";; esac
+
+fresh; rm -rf "$T/m/apps/AIOS.app" "$T/m/surfaces/app.json"; mkdir -p "$T/m/appdata/AIOS"
+APPDATA_DIRS="$T/m/appdata/AIOS"; out=$(run check); APPDATA_DIRS=""
+case "$out" in *'"offer": false'*'open the App once'*) ok "16. an App used here whose version nothing shows (closed, on Windows or Linux) → no offer";;
+  *) no "16." "$out";; esac
+
+fresh; printf '{"surface":"app","pid":1,"version":"0.14.0"}' > "$T/m/surfaces/app.json"; rm -rf "$T/m/apps/AIOS.app"; mkdir -p "$T/m/appdata/AIOS"
+APPDATA_DIRS="$T/m/appdata/AIOS"; r=$(offer); APPDATA_DIRS=""
+[ "$r" = True ] && ok "17. the same App with its version on record → offer" || no "17." "$r"
+
+fresh; "$PYBIN" - "$T/m/USER.md" <<'PY2'
+import sys; p=sys.argv[1]; s=open(p).read().replace("**Rules:** keep this rule.", "1. `claude-switch --add` is how I add one.")
+open(p,"w").write(s)
+PY2
+r=$(offer); [ "$r" = True ] && grep -q 'claude-switch --add. is how' "$T/m/USER.md" && ok "18. a numbered note that is not an address is not read as an account" || no "18." "$(run check)"
+run replace --backup-dir "$T/m/bk" >/dev/null
+grep -q 'claude-switch --add. is how' "$T/m/USER.md" && ok "19. and replace leaves that note in place" || no "19."
+
+fresh; "$PYBIN" -c 'import sys;p=sys.argv[1];d=open(p,newline="").read().replace("\n","\r\n");open(p,"w",newline="").write(d)' "$T/m/USER.md"
+run replace --backup-dir "$T/m/bk" >/dev/null
+lf=$("$PYBIN" -c 'import sys;d=open(sys.argv[1],"rb").read();print(d.count(b"\n")-d.count(b"\r\n"))' "$T/m/USER.md")
+[ "$lf" = 0 ] && ok "20. a CRLF USER.md keeps CRLF line endings, the pointer included" || no "20." "$lf bare LF line(s)"
 
 printf '\n-- %d passed, %d failed --\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

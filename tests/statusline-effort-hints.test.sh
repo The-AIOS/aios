@@ -5,7 +5,7 @@
 # WHY THIS EXISTS
 # Operators did not know the effort level a session runs at, or the keys for a new
 # line and for interrupting a turn. The status line now shows `[Model · effort]` and
-# ends with a dim `ctrl+j new line · esc interrupt`, in the style of Claude Code's own
+# ends with a dim `\⏎ new line · esc interrupt`, in the style of Claude Code's own
 # dim hints. (#263)
 #
 # WHAT IT HOLDS
@@ -52,7 +52,7 @@ for odd in '"effort":null' '"effort":{"level":42}' '"effort":"high"' '"effort":{
 done
 
 out=$(render "{$BASE,\"effort\":{\"level\":\"medium\"}}")
-case "$out" in *"ctrl+j new line · esc interrupt") ok "the key hints are the last segment";;
+case "$out" in *"\⏎ new line · esc interrupt") ok "the key hints are the last segment";;
   *) no "the key hints are the last segment" "$out";; esac
 
 case "$(render 'not json')" in *"[Claude]"*) ok "a broken payload still prints the fallback line";;
