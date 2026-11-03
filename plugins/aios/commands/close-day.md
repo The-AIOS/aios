@@ -360,7 +360,7 @@ If no session cascade is configured or nothing applies, skip silently.
 
 ## Calendar cross-check
 
-Use the pre-loaded calendar data: "Google Calendar — Primary" (today's events) and "Google Calendar — Next 14 days (AUTHORITATIVE — reconcile vault dates against this)" (for upcoming matches, grouped under one `**YYYY-MM-DD (Weekday)**` header per day). If a personal calendar is configured, its data appears as "Google Calendar — Personal". **Do not call `get_events` — the data is already loaded.**
+Use the pre-loaded calendar data: "Google Calendar — Primary" (today's events) and "Google Calendar — Next 14 days (AUTHORITATIVE — reconcile vault dates against this)" (for upcoming matches, grouped under one `**YYYY-MM-DD (Weekday)**` header per day). If a personal calendar is configured, its data appears as "Google Calendar — Personal", and each further labelled account as "Google Calendar — {Label}". **Do not call `get_events` — the data is already loaded.**
 
 Compare against the planned tasks in the daily note (Rhythm section + Parking lot + Carries forward).
 
