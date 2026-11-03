@@ -95,7 +95,7 @@ grep -q 'accounts.json' "$T/m/USER.md" && ! grep -q 'b@example.com' "$T/m/USER.m
   && ok "10. replace puts the pointer in place of the list" || no "10." "$(cat "$T/m/USER.md")"
 grep -q 'b@example.com' "$T/m/bk/USER.md-anthropic-accounts.md" \
   && ok "11. the old section is backed up first" || no "11."
-grep -q '^### /today' "$T/m/USER.md" && grep -q '^keep me' "$T/m/USER.md" && head -1 "$T/m/USER.md" | grep -q '^# USER' \
+grep -q '^### /today' "$T/m/USER.md" && grep -q '^keep me' "$T/m/USER.md" && head -1 "$T/m/USER.md" | grep '^# USER' >/dev/null \
   && ok "12. nothing outside the section changes" || no "12." "$(cat "$T/m/USER.md")"
 [ "$(offer)" = False ] && ok "13. once replaced, the offer does not come back" || no "13." "$(run check)"
 grep -q '^> My own note' "$T/m/USER.md" && grep -q '^\*\*Rules:\*\* keep this rule' "$T/m/USER.md" \
