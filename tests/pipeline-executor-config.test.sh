@@ -217,6 +217,17 @@ have "$(field '*EXAMPLE ONLY (Claude: ignore these):*
 ' google_accounts_extra)" "[]" \
   "8e. the template's italic placeholders declare no extra account"
 
+have "$(field '- Google email (Acme.Labs): `a@acme.example`
+- Google Calendar (Acme.Labs)
+- Google email (Acme Labs): `b@acme.example`
+- Google Calendar (Acme Labs)
+- Google email (Personal ): `p@example.com`
+- Google Calendar (Personal )
+' google_accounts_extra)" "[('Acme.Labs', 'a@acme.example')]" \
+  "8g. labels that share a folder (Acme.Labs / Acme Labs) or are Personal in disguise are read once"
+have "$(grep -c 'futures\[f"calendar_extra_' "$EXEC")" "1" \
+  "8h. a further account's result key is namespaced, so a label like Primary cannot overwrite the primary's"
+
 SLUGS="$($PYBIN - "$EXEC" <<'PY'
 import importlib.util, sys
 spec = importlib.util.spec_from_file_location("pipeline_executor", sys.argv[1])

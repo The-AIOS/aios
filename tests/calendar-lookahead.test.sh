@@ -251,6 +251,39 @@ partial = pe.google_calendar_events(
 checks.append(("an unreadable further account is one error line; the primary still renders",
                "account 'Acme.Labs' (me@acme.example) could not be read: token expired" in partial
                and "Board" in partial, partial))
+# 11. The same meeting seen through two accounts whose calendars report different offsets
+#     (+02:00 on one, Z on the other: the same instant) is still one meeting.
+EVENTS["me@example.com"].append(ev("Offsite", "2026-09-28T08:00:00Z", "2026-09-28T09:00:00Z", uid="shared-2"))
+EVENTS["me@personal.example"].append(ev("Offsite", "2026-09-28T10:00:00+02:00", "2026-09-28T11:00:00+02:00", uid="shared-2"))
+tz_merged = pe.google_calendar_events(
+    "P", "me@example.com", "2026-09-24T00:00:00Z", "2026-10-07T23:59:59Z", dated=True,
+    timezone_name="UTC", also=[("personal", "Q", "me@personal.example")])
+eq("a shared meeting in two offsets appears once",
+   len([l for l in tz_merged.split("\n") if "Offsite" in l]), 1)
+
+# 12. A further account that is slow is an error line inside the block, and the block still
+#     arrives well inside the executor's own timeout: the accounts are read side by side,
+#     so one slow token cannot take the primary's events down with it.
+import time as _t
+_real_build = disc.build
+def _slow_build(api, ver, credentials=None, cache_discovery=False):
+    if credentials == "SLOW":
+        _t.sleep(3)
+    return _real_build(api, ver, credentials=credentials, cache_discovery=cache_discovery)
+disc.build = _slow_build
+pe.ACCOUNT_FETCH_DEADLINE = 1
+CALS["SLOW"] = CALS["Q"]
+_t0 = _t.monotonic()
+slow = pe.google_calendar_events(
+    "P", "me@example.com", "2026-09-24T00:00:00Z", "2026-10-07T23:59:59Z", dated=True,
+    timezone_name="UTC", also=[("personal", "SLOW", "me@personal.example")])
+_took = _t.monotonic() - _t0
+disc.build = _real_build
+checks.append(("a slow further account is an error line, and the primary still renders",
+               "account 'personal' (me@personal.example) could not be read" in slow and "Board" in slow,
+               repr(slow[-240:])))
+checks.append(("the merged block does not wait for the slow account", _took < 2.5, f"took {_took:.1f}s"))
+
 checks.append(("the executor passes the further accounts to the lookahead",
                "timezone_name=render_tz, also=lookahead_also" in src
                and 'lookahead_also.append(("personal", creds_personal' in src,

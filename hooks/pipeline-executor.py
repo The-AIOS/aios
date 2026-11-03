@@ -22,15 +22,17 @@ to avoid ~200ms startup cost when they're not needed.
 """
 
 import sys
+import time
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeout
 
 # Fix Windows encoding — cp1252 doesn't support emojis in output
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 from zoneinfo import ZoneInfo
@@ -355,9 +357,12 @@ def parse_sources():
         if not m:
             continue
         label = m.group(1).strip()
-        if not label or label.lower() in _extra_seen:
+        # Keyed by the folder the token lives in, not the label as typed: "Acme.Labs" and
+        # "Acme Labs" share credentials-acme-labs/, and "Personal " is the Personal slot.
+        slug = _account_slug(label)
+        if not label or slug == "personal" or slug in _extra_seen:
             continue
-        _extra_seen.add(label.lower())
+        _extra_seen.add(slug)
         if _mentions_enabled(content, f"Google Calendar ({label})"):
             config["google_accounts_extra"].append((label, m.group(2)))
 
@@ -497,9 +502,28 @@ def _event_key(event):
     covers events that arrive without an iCalUID at all.
     """
     start = event.get("start", {})
-    when = start.get("dateTime") or start.get("date") or ""
+    when = _instant_key(start.get("dateTime")) or start.get("date") or ""
     uid = event.get("iCalUID")
     return ("uid", uid, when) if uid else ("fallback", event.get("summary", ""), when)
+
+
+def _instant_key(value):
+    """A `dateTime` as one UTC string, so the same instant compares equal across calendars.
+
+    Each calendar answers in its own offset: the work calendar may say `10:00:00+02:00`
+    and a personal Gmail `08:00:00Z` for the one shared meeting. Compared as strings they
+    differ, and a merged block shows the meeting twice. An unparseable value is returned
+    unchanged, which is how it compared before.
+    """
+    if not value:
+        return value
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return value
+    if parsed.tzinfo is None:
+        return value
+    return parsed.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _event_instant(value, timezone_name):
@@ -613,19 +637,56 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
     addresses appears once, as the primary's. One further account failing is an
     error line in the block, never the whole lookahead.
     """
+    window = (_date_only(time_min), _date_only(time_max))
+    if not also:
+        return _render_calendar(_account_events(creds_path, email, None, time_min, time_max, skip),
+                                email, timezone_name, detailed=detailed, dated=dated, window=window)
+
+    # Each account is read in its own thread, under one shared deadline that sits inside the
+    # executor's own timeout for this block. Read one after another, a single slow token made
+    # the whole block miss that timeout, so the primary's events were lost with it. A further
+    # account that is slow or fails becomes one line in the block. The primary still raises:
+    # a lookahead without the primary would read as an empty calendar, not as a failure.
+    accounts = [(None, creds_path, email)] + list(also)
+    pool = ThreadPoolExecutor(max_workers=len(accounts))
+    futs = [pool.submit(_account_events, c, e, l, time_min, time_max, skip) for l, c, e in accounts]
+    pool.shutdown(wait=False)
+    deadline = time.monotonic() + ACCOUNT_FETCH_DEADLINE
     seen = {}
     order = []
-    _collect_account_events(creds_path, email, None, time_min, time_max, skip, seen, order)
-    for label, extra_creds, extra_email in also:
+    for (label, _creds, acct_email), fut in zip(accounts, futs):
         try:
-            _collect_account_events(extra_creds, extra_email, label, time_min, time_max,
-                                    skip, seen, order)
+            part = fut.result(timeout=max(0.0, deadline - time.monotonic()))
         except Exception as exc:
-            order.append((("~error", extra_email),
-                          f"- ⚠️ account '{label}' ({extra_email}) could not be read: {exc}"))
+            if label is None:
+                raise
+            why = "no answer in time" if isinstance(exc, FuturesTimeout) else exc
+            order.append((("~error", f"{label}:{acct_email}"),
+                          f"- ⚠️ account '{label}' ({acct_email}) could not be read: {why}"))
+            continue
+        # Primary first, so a meeting that invites two of the operator's addresses is kept
+        # as the primary's and the later copies are dropped.
+        for key, payload in part:
+            if key[0] != "~error":
+                if key in seen:
+                    continue
+                seen[key] = True
+            order.append((key, payload))
 
     return _render_calendar(order, email, timezone_name, detailed=detailed, dated=dated,
                             window=(_date_only(time_min), _date_only(time_max)))
+
+
+# Inside the executor's 15 s timeout for a calendar block, so a slow further account is
+# reported as one line instead of failing the block.
+ACCOUNT_FETCH_DEADLINE = 12
+
+
+def _account_events(creds_path, email, label, time_min, time_max, skip):
+    """One account's `(key, payload)` list, de-duplicated within that account."""
+    seen, order = {}, []
+    _collect_account_events(creds_path, email, label, time_min, time_max, skip, seen, order)
+    return order
 
 
 def _tag_further_account(label, email, cal_id, cal_name):
@@ -1073,7 +1134,7 @@ def run_pipeline(command_name):
         for label, email in extra_accounts:
             creds_extra = _extra_account_creds(label, email)
             if creds_extra.exists():
-                futures[f"calendar_{_account_slug(label)}"] = pool.submit(
+                futures[f"calendar_extra_{_account_slug(label)}"] = pool.submit(
                     google_calendar_events, creds_extra, email, time_min, time_max,
                     skip=sources["calendars_skip"], timezone_name=render_tz
                 )
@@ -1140,7 +1201,7 @@ def run_pipeline(command_name):
             else:
                 status.append(f"⏭️ {source}: not configured")
     for label, email in extra_accounts:
-        key = f"calendar_{_account_slug(label)}"
+        key = f"calendar_extra_{_account_slug(label)}"
         if key not in futures:
             status.append(f"⏭️ calendar ({label}): configured but not queried — credentials not found at "
                           f"{_extra_account_creds(label, email)} — authorise this account, then place its token there")
@@ -1183,7 +1244,7 @@ def run_pipeline(command_name):
 
     # Further accounts, in the order USER.md declares them
     for label, email in extra_accounts:
-        key = f"calendar_{_account_slug(label)}"
+        key = f"calendar_extra_{_account_slug(label)}"
         if key in results:
             lines.extend([f"## Google Calendar — {label} ({email})", results[key], ""])
         elif key in errors:
