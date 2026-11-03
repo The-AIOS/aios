@@ -175,5 +175,72 @@ have "$(field '- *Calendars to skip: `Formula 1, Holidays in Spain`*
 ' calendars_skip)" "[]" \
   "7d. the template's italic placeholder is not read as configured"
 
+# ---------------------------------------------------------------------------
+# TEST 8 — accounts beyond Primary and Personal. Each is "- Google email (<Label>)" and is
+# queried only when "- Google Calendar (<Label>)" is on an operator line too, so an
+# address kept for reference switches nothing on.
+# ---------------------------------------------------------------------------
+THREE='## Sources
+
+### Google accounts
+
+*Primary:*
+- Google email: `work@example.com`
+- Google Calendar — via Google Workspace MCP
+
+*Personal:*
+- Google email (Personal): `me@example.com`
+- Google Calendar (Personal) — merged into daily plan
+
+*Second company:*
+- Google email (Acme.Labs): `me@acme.example`
+- Google Calendar (Acme.Labs) — merged into daily plan
+- Google email (Acme.Labs): `later@acme.example`
+
+*Archive:*
+- Google email (Old job): `old@example.com`
+'
+have "$(field "$THREE" google_accounts_extra)" "[('Acme.Labs', 'me@acme.example')]" \
+  "8. a labelled third account is read; first line per label wins; no calendar line = off"
+have "$(field "$THREE" google_email_primary)" "work@example.com" \
+  "8b. the primary is untouched by labelled accounts"
+have "$(field "$THREE" google_email_personal)" "me@example.com" \
+  "8c. Personal keeps its own slot and is not repeated as an extra"
+have "$(field '- Google email (personal): `me@example.com`
+- Google Calendar (personal)
+' google_accounts_extra)" "[]" \
+  "8d. Personal in any case never becomes an extra account"
+have "$(field '*EXAMPLE ONLY (Claude: ignore these):*
+
+- *Google email (Team): `team@example.com`*
+- *Google Calendar (Team) — merged*
+' google_accounts_extra)" "[]" \
+  "8e. the template's italic placeholders declare no extra account"
+
+have "$(field '- Google email (Acme.Labs): `a@acme.example`
+- Google Calendar (Acme.Labs)
+- Google email (Acme Labs): `b@acme.example`
+- Google Calendar (Acme Labs)
+- Google email (Personal ): `p@example.com`
+- Google Calendar (Personal )
+' google_accounts_extra)" "[('Acme.Labs', 'a@acme.example')]" \
+  "8g. labels that share a folder (Acme.Labs / Acme Labs) or are Personal in disguise are read once"
+have "$(grep -c 'futures\[f"calendar_extra_' "$EXEC")" "1" \
+  "8h. a further account's result key is namespaced, so a label like Primary cannot overwrite the primary's"
+
+SLUGS="$($PYBIN - "$EXEC" <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("pipeline_executor", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+print(mod._account_slug("Acme.Labs"), mod._account_slug("Personal"),
+      mod._extra_account_creds("Side Project", "a@b.c").relative_to(mod.GOOGLE_CREDS_ROOT))
+print(mod._extra_account_creds("Personal", "x@y.z").parent == mod.GOOGLE_CREDS_DIR_PERSONAL)
+PY
+)"
+have "$SLUGS" "acme-labs personal credentials-side-project/a@b.c.json
+True" \
+  "8f. credentials live in credentials-<slug>/, and Personal's slug is its existing folder"
+
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

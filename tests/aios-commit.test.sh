@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regression test for the AIOS commit primitives — aios-commit, aios-note-append, secret-scan.
-# Locks the correctness properties hand-verified during the AI-2 build so a future edit can't
+# Locks the correctness properties hand-verified when they were built so a future edit can't
 # silently regress them (the --cached no-op bug is the canonical example: it only surfaced on a
 # real, always-dirty vault, never on a clean dry-run). Canonical-only (not synced to operator
 # vaults); run in CI by .github/workflows/validate.yml and manually via:  bash tests/aios-commit.test.sh

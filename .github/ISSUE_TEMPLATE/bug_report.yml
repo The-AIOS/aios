@@ -1,12 +1,12 @@
 name: Bug report
 description: Something in the framework isn't behaving as documented
-title: "[bug]: "
-labels: ["bug", "triage"]
+title: "<area>: "
+labels: ["type: fix"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report. Before you start: search [existing issues](https://github.com/The-AIOS/aios/issues) so we don't double up.
+        Thanks for taking the time to report. Before you start: search open and recently closed [issues](https://github.com/search?q=org%3AThe-AIOS&type=issues) and [pull requests](https://github.com/search?q=org%3AThe-AIOS&type=pullrequests) across the org, and the [work in flight](https://github.com/search?q=org%3AThe-AIOS+is%3Aopen+label%3A%22status%3A+in-progress%22&type=issues) so we don't double up.
 
   - type: input
     id: aios-version

@@ -26,7 +26,7 @@ You're the executor — the human reads alongside, you do the heavy lifting. Seq
 Set up my AI-OS from https://github.com/The-AIOS/aios
 ```
 
-Claude reads [SETUP.md](./SETUP.md), clones the framework, and then talks you through the rest — a guided conversation rather than an install. You are asked for your name and little else before you see it work; the connectors (calendar, Slack, repos) are offered afterwards, once you have something to connect them to.
+Claude first offers the [AIOS App](https://github.com/The-AIOS/aios-app/releases/latest), the simplest way to run it: a desktop app for macOS, Windows and Linux that installs Claude Code and the toolchain with you. Prefer the terminal? Say so, and Claude reads [SETUP.md](./SETUP.md), clones the framework, and then talks you through the rest — a guided conversation rather than an install. You are asked for your name and little else before you see it work; the connectors (calendar, Slack, repos) are offered afterwards, once you have something to connect them to.
 
 **Don't have Claude Code yet?** → [SETUP.md → Prerequisites](./SETUP.md#prerequisites) for OS-specific install (~5-20 min). Then come back and run the line above.
 

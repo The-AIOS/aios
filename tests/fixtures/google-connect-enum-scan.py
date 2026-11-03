@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Find docs that re-enumerate the Google APIs an operator must enable (AI-126).
+"""Find docs that re-enumerate the Google APIs an operator must enable.
 
 The API set is derived from connector.json's --permissions. Any doc that also
 lists it is a second copy, and the copies drifted: one sent operators to enable

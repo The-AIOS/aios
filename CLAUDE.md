@@ -348,7 +348,7 @@ When the operator asks *"where is X documented?"* — route by role, don't read 
 
 **Plus 2 operator-owned files** Claude reads every session: [`USER.md`](./USER.md) (identity, sources, command overrides) + [`INTENT.md`](./INTENT.md) (trust contract — autonomy per domain).
 
-**Plus contribution/governance:** [`CONTRIBUTING.md`](./CONTRIBUTING.md) (repo root) — how to give work back to the framework: the two flavors (non-technical signal via Issue/email/Discussion · technical PR — canonical or company-distributed), the `custom/`-first rule, personal-hygiene, licensing. Trigger: *"How do I contribute / extend / upstream this?"*
+**Plus contribution/governance:** [`CONTRIBUTING.md`](./CONTRIBUTING.md) — giving work back: which repo, the two flavors, `custom/` first, hygiene, licensing. **Before opening any issue or PR, search open and recently closed ones across The-AIOS org plus the `status: in-progress` work; on a match, comment there instead.** Trigger: *"How do I contribute / upstream this?"*
 
 **Plus 3 reference docs** (linked from the above; route to them on demand):
 - [`AGENTS.md`](./AGENTS.md) — the **portable operating contract** for non-Claude tools that read the `AGENTS.md` convention (Codex/Cursor/Aider). A derived subset of *this* file; `CLAUDE.md` wins on conflict. Trigger: *"does my other AI tool follow these rules?"*

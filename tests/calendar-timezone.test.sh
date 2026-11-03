@@ -111,11 +111,11 @@ eq("an absent line is NOT configured (and queries keep UTC)", (cfg["timezone"], 
 cfg = parsed("## Sources\n### General\n- *Timezone: `America/Your_Timezone`*\n")
 eq("the template's italic placeholder is NOT read as configured", cfg.get("timezone_configured"), False)
 
-# 10. The three calendar RENDER calls use the configured-or-None value; the Slack recap
+# 10. The four calendar RENDER calls (primary, lookahead, personal, each labelled account) use the configured-or-None value; the Slack recap
 #     and the query window keep the raw value. (Source-level: the wiring, not behaviour —
 #     behaviour is checks 8-9.)
 checks.append(("calendar render calls use render_tz, not the raw default",
-               src.count("timezone_name=render_tz") == 3 and 'timezone_name=sources["timezone"]' not in src,
+               src.count("timezone_name=render_tz") == 4 and 'timezone_name=sources["timezone"]' not in src,
                "a render call still passes the UTC default straight through"))
 
 for label, good, detail in checks:

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# The daily note's section order — `## Close of Day` stays last (AI-126 bundle)
+# The daily note's section order — `## Close of Day` stays last
 #
 # Reported 2026-09-09: two `--auto` close blocks "landed BELOW Close of Day".
 # The reported cause was `aios-note-append --before` failing to find its marker.

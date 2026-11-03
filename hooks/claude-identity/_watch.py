@@ -153,7 +153,7 @@ def recently_swapped() -> tuple[bool, int]:
     return elapsed < COOLDOWN_SECS, elapsed
 
 
-# The last line logged and whether the run crashed: the health file records them (AI-173).
+# The last line logged and whether the run crashed: the health file records them.
 LAST_LOG = ""
 CRASHED = False
 
@@ -1230,7 +1230,7 @@ def main(self_path: str) -> None:
 
 
 # A completed run records its verdict in ~/.aios/health/quota-watch.json (hooks/aios-health.py,
-# AI-173). Due again within 90 min: the scheduler runs this every 30 min, and the statusLine runs
+# ). Due again within 90 min: the scheduler runs this every 30 min, and the statusLine runs
 # it whenever a session is active, so only a watcher that has really stopped goes past it.
 HEALTH_VALID_FOR = "90m"
 

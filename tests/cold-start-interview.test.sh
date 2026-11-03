@@ -18,11 +18,11 @@ fi
 
 # tests/cold-start-interview.test.sh
 #
-# Guards AI-122's acceptance criteria for /aios:cold-start-interview.
+# Guards the first-run acceptance criteria for /aios:cold-start-interview.
 #
 # WHY A TEST AND NOT A REVIEW
 # ---------------------------
-# AI-122 re-times friction out of first-run without removing capability. Both halves of that are
+# The first-run rework re-times friction out of first-run without removing capability. Both halves of that are
 # regressible by a single well-meaning edit:
 #
 #   · someone re-adds a connector question to Step 1 because it "belongs with the other identity

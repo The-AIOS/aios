@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/aios-health.test.sh
 #
-# hooks/aios-health.py is routine health (AI-173, contract from #171): one small file per scheduled
+# hooks/aios-health.py is routine health (contract from #171): one small file per scheduled
 # job, written at the END of a completed run, with a deadline. A job that fails is reported; a job
 # that stops running is reported too, because its deadline passes with nothing written. This proves
 # both, plus the reader's rules (silent when fine, unreadable files reported, never "didn't run"),

@@ -17,7 +17,7 @@ if [ -z "$PYBIN" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# connector.json — the manifest contract (AI-122, Front A · C1-C5)
+# connector.json — the manifest contract (C1-C5)
 #
 # The AIOS App reads mcps/*/connector.json to build its Connectors card and ships
 # NO copy of any register command. That is the whole contract: mcps/ is the single
@@ -33,7 +33,7 @@ fi
 #     manifest to registration, so a connected service reads as unconnected.
 #   - "MCP" in an operator-facing string: the word the whole change removes.
 #   - a folder with no server pretending it has one: the App would write a
-#     registration that fails at first use, which is the failure class AI-122 exists
+#     registration that fails at first use, which is the failure class this contract exists
 #     to remove rather than relocate.
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail

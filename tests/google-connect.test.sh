@@ -17,7 +17,7 @@ if [ -z "$PYBIN" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# connect.sh — the Google connector's one-command setup (AI-126)
+# connect.sh — the Google connector's one-command setup
 #
 # The thing worth asserting is the DERIVATION, not the happy path. Before this
 # script, the set of Google APIs an operator had to enable was written down in

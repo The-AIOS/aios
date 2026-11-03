@@ -201,7 +201,7 @@ record_decline() {
 
 # ── The star write ────────────────────────────────────────────────────────────────────
 # PUT /user/starred/{owner}/{repo} → 204. Verified to work under the ordinary `repo` scope
-# that AI-52's onboarding already establishes, so accepting costs one keystroke and never a
+# that onboarding already establishes, so accepting costs one keystroke and never a
 # browser round-trip. It is idempotent: PUTting an already-starred repo is a no-op 204.
 #
 # Reports every repo individually and exits non-zero if ANY failed, so the caller can never

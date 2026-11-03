@@ -6,6 +6,31 @@ You don't have to write code — or open a pull request — to contribute. There
 
 ---
 
+## Before you open anything: is it already in flight?
+
+Sessions working for different operators often find the same problem in the same week. A second issue or PR for work already under way splits the conversation, and one of the two pieces of work gets thrown away. So before opening anything, in any of the AIOS repos:
+
+1. **Search open and recently closed issues and PRs across the org**: [issues](https://github.com/search?q=org%3AThe-AIOS&type=issues) and [pull requests](https://github.com/search?q=org%3AThe-AIOS&type=pullrequests), with two or three words from what you saw. Closed matters: it may already be fixed in a release you haven't pulled.
+2. **Check the work in flight**: [issues labelled `status: in-progress`](https://github.com/search?q=org%3AThe-AIOS+is%3Aopen+label%3A%22status%3A+in-progress%22&type=issues) and [open pull requests](https://github.com/search?q=org%3AThe-AIOS+is%3Aopen&type=pullrequests). The labels are the only status record, so there is no separate status file to read or keep current.
+3. **If something matches, comment there instead**: what you observed, your setup, your draft or your branch. That is a contribution in its own right, and it lands where the work is already happening.
+4. **Nothing matches?** Pick the repo (§ [Which repo?](#which-repo--four-repos-and-the-question-that-actually-routes-you)), title it (§ Titles, below), and open it.
+
+**Name issues and PRs by number, never by an internal tracking key.** A key like `XX-123` from someone's private roadmap means nothing to anyone else and points to a note nobody outside can open. Keep them out of titles, commit messages, PR descriptions, comments and code.
+
+### Titles
+
+An issue title reads **`Area: what changes`**: about 70 characters, never over 90.
+
+- **Area** is the surface, command or file a reader recognises: `Status line:`, `/close-day:`, `Setup:`.
+- After the colon, a **feature** states what is true when it's done; a **bug** states what goes wrong as the user sees it. The cause goes in the body.
+- **No type prefixes** (`[bug]`, `feat:`, `RFC:`, `Proposal:`): the `type:` label carries that. Conventional Commits stay where they belong, in commit messages and PR titles.
+- No internal keys or names. Backticks only around something a person would type.
+- **One issue, one change.** A title that needs "and" is usually two issues.
+
+The issue forms prefill `<area>: ` for you.
+
+---
+
 ## The one rule that protects everyone: `custom/` first
 
 Before any contribution question, learn this: the framework ships **canonical infrastructure** — commands, agents, skills, hooks, MCPs, templates — that is byte-identical for every operator and overwritten on every `/aios:update`. The thing that makes the framework *yours* is the **extension layer**, and it lives in `custom/`.
@@ -29,17 +54,20 @@ Most things should stay in `custom/`. The bar for shipping something beyond your
 
 ---
 
-## Which repo? — three repos, and the question that actually routes you
+## Which repo? — four repos, and the question that actually routes you
 
-The AIOS ships from **three public repos**, and every one of them takes contributions the same way: **fork → branch → pull request** (the commands, and the one accident to avoid, are in § The contribution dance below).
+The AIOS ships from **four public repos**, and every one of them takes contributions the same way: **fork → branch → pull request** (the commands, and the one accident to avoid, are in § The contribution dance below).
 
 | Repo | Owns | You're here if… |
 |---|---|---|
 | **[The-AIOS/aios](https://github.com/The-AIOS/aios)** (canonical) | The framework: commands, agents, skills, hooks, MCPs, templates, and the docs you're reading | Your change is to a `/aios:` command, an agent, a skill, a hook, a template, or a rule in `CLAUDE.md` |
 | **[The-AIOS/aios-glass](https://github.com/The-AIOS/aios-glass)** | The IDE surface — the panel, its controls, the in-editor session experience | Your change is to what the panel shows or does |
 | **[The-AIOS/aios-app](https://github.com/The-AIOS/aios-app)** | The desktop app — installer, first-run, the explorer, viewers, session panes | Your change is to the app's windows, setup flow, or packaging |
+| **[The-AIOS/site](https://github.com/The-AIOS/site)** | The public website, the-aios.com | Your change is to a page on the site: wording, a broken link, the online manual |
 
-Both surface repos carry their own `CONTRIBUTING.md` with their setup, gates and house style — **read theirs once you know you're in the right place.** This section's only job is getting you to the right door, not through it.
+**Touches both the App and Glass?** Open it once, in the repo where you saw it, and say in the body that the other surface likely has it too. They are two separate codebases implementing one protocol, so the fix lands as one PR in each, and the maintainers link the two. **Touches a surface and the framework** (a command's spec and the panel that runs it)? Open it in canonical; the surface work is linked from there.
+
+The App and Glass each carry their own `CONTRIBUTING.md` with their setup, gates and house style — **read theirs once you know you're in the right place.** They point back here for the shared rules (searching first, titles, what happens after you open a PR), which are written once, in this file. This section's only job is getting you to the right door, not through it.
 
 > **⚠️ "Extension" means two unrelated things in this document, and the collision is worth one sentence.** Above, *"the extension layer"* means **`custom/`** — your own agents and skills inside a vault. **AIOS Glass is also an extension** — an IDE extension, a separate repo, nothing to do with `custom/`. When this file says *extension layer*, it always means `custom/`.
 
@@ -260,12 +288,45 @@ The notification GitHub sends says only *"PR run failed"* and links to the run. 
 ### Before-you-open-a-PR checklist
 CI (`.github/workflows/validate.yml`) covers repo structure, manifests, frontmatter, personalization + credential guards, migration drift, capability counts, skill resolution, and the commit-primitives regression suite — on ubuntu **and** under bash 3.2 on macOS. It's a floor, not a substitute: most of what matters here is a spec executed by Claude at runtime, so review stays human and the discipline stays author-run. Before opening a PR, confirm:
 
+- [ ] You searched open and recently closed issues and PRs across the org, and nothing already covers it (§ Before you open anything).
+- [ ] The description says `Closes #N` for the issue it resolves (the PR template asks).
 - [ ] It lives in the right home (`custom/` / `<company>/` / canonical) for who needs it.
 - [ ] Zero operator data anywhere in the diff (see § Personal hygiene). Grep your own diff.
 - [ ] Indexes updated (`*_index.md` for the layer you touched) and any stated counts bumped.
 - [ ] For commands: synced across the 3 runtime locations.
 - [ ] For git/file/shared-state changes: a 2-parallel-actor test, with output.
 - [ ] `CHANGELOG.md` entry added (see below).
+
+---
+
+## What happens after you open a PR
+
+Every pull request goes through the same five passes, in this order, so you know what's coming and what each one is for.
+
+1. **Triage.** Is it in the right repo, is it a duplicate of work already in flight, and is it linked to its issue (`Closes #N` in the description)? A wrong-repo PR gets pointed to the right door. A duplicate gets the reply below.
+2. **CI.** `.github/workflows/validate.yml` here; the App and Glass list their own gates in their `CONTRIBUTING.md`. A red check is yours to fix, and § [When a check fails](#when-a-check-fails-read-the-run-summary--not-the-log) says where to look first.
+3. **Value check.** Does the change keep the vault at the centre, and does everyone need it? A setup only one person needs belongs in `custom/` (§ [`custom/` first](#the-one-rule-that-protects-everyone-custom-first)), however good it is. This is the pass most often misread as a judgment of quality. It isn't one.
+4. **Maintainer review.** "Changes requested" means specific things to change before it can merge, not a rejection: push to the same branch and the review continues. **A decline always comes with its reason**, and usually with where the idea can live instead.
+5. **Merge and credit.** Your PR merges as yours. If a maintainer adds fixes, they land as separate commits on top rather than rewritten into yours. It ships in the next release, and you're credited in the release notes.
+
+### The label lifecycle
+
+| Label | Means |
+|---|---|
+| `status: idea` | Being discussed. Not ready to build; the design questions come first. |
+| `help wanted` | **Ready to build, and nobody's on it.** Comment that you're taking it to claim it. |
+| `good first issue` | Small and self-contained, a good place to start. |
+| `status: in-progress` | Someone is on it. The maintainer moves a claimed issue here and `help wanted` comes off. Want to help? Join them in the issue. |
+| `status: blocked` | Waiting on something the issue names. |
+| `duplicate-in-flight` | The same work is already being built elsewhere, and the two are linked. |
+
+Then your draft PR says `Closes #N`, and merging it closes the issue.
+
+### The duplicate reply (for maintainers)
+
+A duplicate is never a bare close. It usually means the problem is real and two people found it, which is good news. Adapt this, label the issue `duplicate-in-flight`, then close it:
+
+> Thank you for this. It's real, and it's already being built in #N, so I've linked the two and am closing this one to keep the work in one place. What you found would help there: [the specific detail, test case or approach from this one]. If your work shapes the fix, you're credited in the release notes.
 
 ---
 

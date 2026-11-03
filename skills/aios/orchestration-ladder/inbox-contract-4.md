@@ -71,7 +71,7 @@ person at a terminal and an agent writing a request get the same worker. Both wr
 (`install-wrappers.sh` / `.ps1`: `-Effort`, `-Advisor`), so a surface that spawns through the
 wrapper can honour both fields and stamp contract 4 once it does.
 
-## Amendment AI-205 — a send waits for its target's next idle
+## Amendment — a send waits for its target's next idle
 
 A `send` is never typed into a session that is mid-turn (the text would be dropped), and it used to
 dead-letter after a 30-minute hold while the target stayed busy. Under this amendment:

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# The bus verb set is documented TWICE — the two copies must agree (AI-150)
+# The bus verb set is documented TWICE — the two copies must agree
 #
 # Canonical states the spawn-inbox verbs in exactly two places: CLAUDE.md
 # § Spawning Sessions, which every session loads at startup, and the

@@ -22,15 +22,17 @@ to avoid ~200ms startup cost when they're not needed.
 """
 
 import sys
+import time
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeout
 
 # Fix Windows encoding — cp1252 doesn't support emojis in output
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
 from zoneinfo import ZoneInfo
@@ -62,6 +64,10 @@ SOURCES_PATH = AIOS_ROOT / "USER.md"
 # own these locations, so they do not move when the vault does.
 GOOGLE_CREDS_DIR_PRIMARY = Path.home() / ".google_workspace_mcp" / "credentials"
 GOOGLE_CREDS_DIR_PERSONAL = Path.home() / ".google_workspace_mcp" / "credentials-personal"
+# Any further account is declared with its own label — `- Google email (Acme.Labs): `…`` — and
+# its credentials live beside Personal's, in credentials-<slug>/ (see _account_slug). The
+# Personal slot is exactly this rule applied to the label "Personal", so it keeps its path.
+GOOGLE_CREDS_ROOT = Path.home() / ".google_workspace_mcp"
 SLACK_TOKENS_PATH = Path.home() / ".slack-mcp-tokens.json"
 LOG_PATH = AIOS_ROOT / "hooks" / "pipeline-executor.log"
 MAX_LOG_LINES = 500
@@ -229,6 +235,8 @@ def parse_sources():
         "configured": set(),
         "google_email_primary": None,
         "google_email_personal": None,
+        # Accounts beyond Primary and Personal, in declaration order: [(label, email)].
+        "google_accounts_extra": [],
         "google_tasks_list": None,
         "timezone": "UTC",  # Universal default — each user sets their timezone in USER.md
         # Whether that value came from USER.md or is the default above. Calendar QUERIES keep
@@ -337,12 +345,42 @@ def parse_sources():
                 raw = ",".join(re.findall(r'`([^`]*)`', raw))
             config["calendars_skip"] = [c.strip() for c in raw.split(",") if c.strip()]
 
+    # Accounts beyond the two named slots. Each is "- Google email (<Label>): `…`" and is
+    # queried only when "- Google Calendar (<Label>)" is also on an operator line — the same
+    # two-line contract Personal already has, so an address listed for reference (an old
+    # account, a destination-only alias) switches nothing on. First line per label wins,
+    # for the reason the scalar guard above gives. Read from operator lines only, so the
+    # template's italic placeholders declare nothing.
+    _extra_seen = set()
+    for line in _operator_lines(content):
+        m = re.match(r'- Google email \((?!(?i:personal)\))([^)]+)\): `(.+?)`', line)
+        if not m:
+            continue
+        label = m.group(1).strip()
+        # Keyed by the folder the token lives in, not the label as typed: "Acme.Labs" and
+        # "Acme Labs" share credentials-acme-labs/, and "Personal " is the Personal slot.
+        slug = _account_slug(label)
+        if not label or slug == "personal" or slug in _extra_seen:
+            continue
+        _extra_seen.add(slug)
+        if _mentions_enabled(content, f"Google Calendar ({label})"):
+            config["google_accounts_extra"].append((label, m.group(2)))
+
     # NOT widened to accept the template's italic form (`- *Timezone: …*`). The italics are
     # the placeholder marker on all four scalar lines, and a source may only be switched on
     # by something the operator typed: reading `- *Google email: `you@company.com`*` as
     # configured would send /today looking for credentials of an account that does not exist.
     config["timezone_configured"] = "timezone" in _scalar_parsed
     return config
+
+
+def _account_slug(label):
+    """Folder-safe form of an account label: "Acme.Labs" → "acme-labs", "Personal" → "personal"."""
+    return re.sub(r"[^a-z0-9]+", "-", label.lower()).strip("-") or "account"
+
+
+def _extra_account_creds(label, email):
+    return GOOGLE_CREDS_ROOT / f"credentials-{_account_slug(label)}" / f"{email}.json"
 
 
 def _tz_offset(timezone_name):
@@ -464,9 +502,28 @@ def _event_key(event):
     covers events that arrive without an iCalUID at all.
     """
     start = event.get("start", {})
-    when = start.get("dateTime") or start.get("date") or ""
+    when = _instant_key(start.get("dateTime")) or start.get("date") or ""
     uid = event.get("iCalUID")
     return ("uid", uid, when) if uid else ("fallback", event.get("summary", ""), when)
+
+
+def _instant_key(value):
+    """A `dateTime` as one UTC string, so the same instant compares equal across calendars.
+
+    Each calendar answers in its own offset: the work calendar may say `10:00:00+02:00`
+    and a personal Gmail `08:00:00Z` for the one shared meeting. Compared as strings they
+    differ, and a merged block shows the meeting twice. An unparseable value is returned
+    unchanged, which is how it compared before.
+    """
+    if not value:
+        return value
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return value
+    if parsed.tzinfo is None:
+        return value
+    return parsed.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _event_instant(value, timezone_name):
@@ -562,7 +619,7 @@ def _per_calendar_cap(time_min, time_max):
     return 50 if span_days <= 1 else min(250, 25 * span_days)
 
 
-def google_calendar_events(creds_path, email, time_min, time_max, detailed=False, skip=(), timezone_name="UTC", dated=False):
+def google_calendar_events(creds_path, email, time_min, time_max, detailed=False, skip=(), timezone_name="UTC", dated=False, also=()):
     """Fetch events from EVERY calendar on the account, merged and de-duplicated.
 
     `dated` prefixes each day with a `**YYYY-MM-DD (Weekday)**` header. It is off
@@ -571,16 +628,93 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
     say WHICH day, which is the one thing a lookahead exists to answer. A reader
     counting all-day rows to infer the date is one missing all-day event away
     from attributing a meeting to the wrong morning.
+
+    `also` is a list of `(label, creds_path, email)` for further accounts merged
+    into the SAME block. The lookahead uses it: a block labelled AUTHORITATIVE
+    that cannot see a second account makes every meeting living only there read
+    as "not in the calendar". All accounts share one de-duplication pass and the
+    primary is fetched first, so a meeting that invites two of the operator's
+    addresses appears once, as the primary's. One further account failing is an
+    error line in the block, never the whole lookahead.
     """
+    window = (_date_only(time_min), _date_only(time_max))
+    if not also:
+        return _render_calendar(_account_events(creds_path, email, None, time_min, time_max, skip),
+                                email, timezone_name, detailed=detailed, dated=dated, window=window)
+
+    # Each account is read in its own thread, under one shared deadline that sits inside the
+    # executor's own timeout for this block. Read one after another, a single slow token made
+    # the whole block miss that timeout, so the primary's events were lost with it. A further
+    # account that is slow or fails becomes one line in the block. The primary still raises:
+    # a lookahead without the primary would read as an empty calendar, not as a failure.
+    accounts = [(None, creds_path, email)] + list(also)
+    pool = ThreadPoolExecutor(max_workers=len(accounts))
+    futs = [pool.submit(_account_events, c, e, l, time_min, time_max, skip) for l, c, e in accounts]
+    pool.shutdown(wait=False)
+    deadline = time.monotonic() + ACCOUNT_FETCH_DEADLINE
+    seen = {}
+    order = []
+    for (label, _creds, acct_email), fut in zip(accounts, futs):
+        try:
+            part = fut.result(timeout=max(0.0, deadline - time.monotonic()))
+        except Exception as exc:
+            if label is None:
+                raise
+            why = "no answer in time" if isinstance(exc, FuturesTimeout) else exc
+            order.append((("~error", f"{label}:{acct_email}"),
+                          f"- ⚠️ account '{label}' ({acct_email}) could not be read: {why}"))
+            continue
+        # Primary first, so a meeting that invites two of the operator's addresses is kept
+        # as the primary's and the later copies are dropped.
+        for key, payload in part:
+            if key[0] != "~error":
+                if key in seen:
+                    continue
+                seen[key] = True
+            order.append((key, payload))
+
+    return _render_calendar(order, email, timezone_name, detailed=detailed, dated=dated,
+                            window=(_date_only(time_min), _date_only(time_max)))
+
+
+# Inside the executor's 15 s timeout for a calendar block, so a slow further account is
+# reported as one line instead of failing the block.
+ACCOUNT_FETCH_DEADLINE = 12
+
+
+def _account_events(creds_path, email, label, time_min, time_max, skip):
+    """One account's `(key, payload)` list, de-duplicated within that account."""
+    seen, order = {}, []
+    _collect_account_events(creds_path, email, label, time_min, time_max, skip, seen, order)
+    return order
+
+
+def _tag_further_account(label, email, cal_id, cal_name):
+    """Payload identity for a calendar read through a FURTHER account.
+
+    The id is namespaced (`{label}:{id}`) so it can never pass `_render_calendar`'s
+    "this is the primary's own calendar" test and render untagged; the name becomes
+    `{label}` for that account's own calendar and `{label} · {name}` for any other
+    calendar it can read, so `[DEV.F]` says which account, not just which calendar.
+    """
+    own = cal_id in (email, "primary")
+    return f"{label}:{cal_id}", (label if own else f"{label} · {cal_name}")
+
+
+def _collect_account_events(creds_path, email, label, time_min, time_max, skip, seen, order):
+    """Append one account's events to `order`, skipping any key already in `seen`.
+
+    `label` is None for the account the block belongs to, and the label of a
+    further account otherwise (see `_tag_further_account`)."""
     from googleapiclient.discovery import build
 
     creds = _load_google_creds(creds_path)
     service = build("calendar", "v3", credentials=creds, cache_discovery=False)
 
     per_cal_cap = _per_calendar_cap(time_min, time_max)
-    seen = {}
-    order = []
     for cal_id, cal_name in _calendar_ids(service, skip):
+        shown_id, shown_name = (cal_id, cal_name) if label is None else \
+            _tag_further_account(label, email, cal_id, cal_name)
         try:
             result = service.events().list(
                 calendarId=cal_id,
@@ -592,7 +726,7 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
             ).execute()
         except Exception as exc:
             # One unreadable calendar must not take the whole day's plan with it.
-            order.append((("~error", cal_id), f"- ⚠️ calendar '{cal_name}' could not be read: {exc}"))
+            order.append((("~error", shown_id), f"- ⚠️ calendar '{shown_name}' could not be read: {exc}"))
             continue
 
         for event in result.get("items", []):
@@ -600,10 +734,7 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
             if key in seen:
                 continue
             seen[key] = True
-            order.append((key, (cal_id, cal_name, event)))
-
-    return _render_calendar(order, email, timezone_name, detailed=detailed, dated=dated,
-                            window=(_date_only(time_min), _date_only(time_max)))
+            order.append((key, (shown_id, shown_name, event)))
 
 
 def _all_day_span(event):
@@ -961,7 +1092,8 @@ def run_pipeline(command_name):
     errors = {}
     futures = {}
 
-    with ThreadPoolExecutor(max_workers=7) as pool:
+    extra_accounts = sources.get("google_accounts_extra", [])
+    with ThreadPoolExecutor(max_workers=7 + len(extra_accounts)) as pool:
         creds_primary = GOOGLE_CREDS_DIR_PRIMARY / f"{sources['google_email_primary']}.json" if sources["google_email_primary"] else None
         creds_personal = GOOGLE_CREDS_DIR_PERSONAL / f"{sources['google_email_personal']}.json" if sources["google_email_personal"] else None
 
@@ -973,11 +1105,22 @@ def run_pipeline(command_name):
                 timezone_name=render_tz
             )
             # Lookahead — every command, not just close-day. See LOOKAHEAD_DAYS above.
+            # Every configured account, merged into ONE block: it is the block /today
+            # reconciles vault dates against, so a meeting that lives only on a second
+            # account must be in it — otherwise "no matching event" is the answer for
+            # every such meeting and a moved date goes unnoticed.
+            lookahead_also = []
+            if "calendar-personal" in sources["configured"] and creds_personal and creds_personal.exists():
+                lookahead_also.append(("personal", creds_personal, sources["google_email_personal"]))
+            for label, email in extra_accounts:
+                creds_extra = _extra_account_creds(label, email)
+                if creds_extra.exists():
+                    lookahead_also.append((label, creds_extra, email))
             futures["calendar_next_week"] = pool.submit(
                 google_calendar_events, creds_primary,
                 sources["google_email_primary"], time_min, time_max_week,
                 skip=sources["calendars_skip"], dated=True,
-                timezone_name=render_tz
+                timezone_name=render_tz, also=lookahead_also
             )
         if "calendar-personal" in sources["configured"] and creds_personal and creds_personal.exists():
             futures["calendar_personal"] = pool.submit(
@@ -986,6 +1129,15 @@ def run_pipeline(command_name):
                 skip=sources["calendars_skip"],
                 timezone_name=render_tz
             )
+        # Further accounts: today's calendar as its own block (the lookahead above already
+        # merges them).
+        for label, email in extra_accounts:
+            creds_extra = _extra_account_creds(label, email)
+            if creds_extra.exists():
+                futures[f"calendar_extra_{_account_slug(label)}"] = pool.submit(
+                    google_calendar_events, creds_extra, email, time_min, time_max,
+                    skip=sources["calendars_skip"], timezone_name=render_tz
+                )
         if "tasks" in sources["configured"] and sources["google_tasks_list"] and creds_primary and creds_primary.exists():
             futures["tasks"] = pool.submit(
                 google_tasks_list, creds_primary,
@@ -1048,6 +1200,11 @@ def run_pipeline(command_name):
                 status.append(f"⏭️ {source}: configured but not queried — {reason}")
             else:
                 status.append(f"⏭️ {source}: not configured")
+    for label, email in extra_accounts:
+        key = f"calendar_extra_{_account_slug(label)}"
+        if key not in futures:
+            status.append(f"⏭️ calendar ({label}): configured but not queried — credentials not found at "
+                          f"{_extra_account_creds(label, email)} — authorise this account, then place its token there")
     if "calendar" in sources["configured"]:
         status.append(_skip_status(sources["calendars_skip"]))
 
@@ -1084,6 +1241,17 @@ def run_pipeline(command_name):
         lines.extend([f"## Google Calendar — Personal ({sources['google_email_personal']})",
                        f"❌ FAILED: {errors['calendar_personal']}",
                        "Fix: re-authenticate Google Workspace Personal MCP — open a new session and call any `mcp__google-workspace-personal__*` tool.", ""])
+
+    # Further accounts, in the order USER.md declares them
+    for label, email in extra_accounts:
+        key = f"calendar_extra_{_account_slug(label)}"
+        if key in results:
+            lines.extend([f"## Google Calendar — {label} ({email})", results[key], ""])
+        elif key in errors:
+            lines.extend([f"## Google Calendar — {label} ({email})",
+                           f"❌ FAILED: {errors[key]}",
+                           f"Fix: re-authenticate the {label} account and refresh its token in "
+                           f"{_extra_account_creds(label, email).parent}.", ""])
 
     # Tasks
     if "tasks" in results:

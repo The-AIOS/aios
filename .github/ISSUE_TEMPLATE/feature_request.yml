@@ -1,14 +1,14 @@
 name: Feature request
 description: Propose a new bundled command, agent, skill, MCP, or framework capability
-title: "[feat]: "
-labels: ["enhancement", "triage"]
+title: "<area>: "
+labels: ["type: feat"]
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for thinking out loud. A few framing rules before you submit:
 
-        - **Custom/ first.** Most "I want X" requests belong in your own fork's `custom/` subfolder (see [CONTRIBUTING.md](../blob/main/.github/CONTRIBUTING.md)). Only propose bundled additions when the capability would benefit *every* operator.
+        - **Custom/ first.** Most "I want X" requests belong in your own fork's `custom/` subfolder (see [CONTRIBUTING.md](https://github.com/The-AIOS/aios/blob/main/CONTRIBUTING.md)). Only propose bundled additions when the capability would benefit *every* operator.
         - **Real use case beats clever idea.** Describe the workflow that needs this, not just the abstract feature.
 
   - type: dropdown

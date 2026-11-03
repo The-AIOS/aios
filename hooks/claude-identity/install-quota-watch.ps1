@@ -227,7 +227,7 @@ if (-not (Test-TaskPresent)) {
   exit 1
 }
 
-# Register the routine's health check as pending (hooks/aios-health.py, AI-173): a watcher that
+# Register the routine's health check as pending (hooks/aios-health.py): a watcher that
 # never completes a run then shows as overdue in /today instead of staying invisible. Written
 # here in PowerShell, so registration does not depend on a Python being on PATH.
 try {
