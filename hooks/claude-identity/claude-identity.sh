@@ -107,7 +107,7 @@
 #   cp ~/aios/hooks/claude-identity/aios-claude-quota-watch.timer   ~/.config/systemd/user/
 #   systemctl --user daemon-reload
 #   systemctl --user enable --now aios-claude-quota-watch.timer
-#   python3 ~/aios/hooks/aios-health.py write quota-watch pending --valid-for 45m   # health check (AI-173)
+#   python3 ~/aios/hooks/aios-health.py write quota-watch pending --valid-for 45m   # health check
 #   # headless box? `loginctl enable-linger $USER` so the timer survives logout
 #
 # Windows (Task Scheduler — no elevation needed):

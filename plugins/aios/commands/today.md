@@ -173,7 +173,7 @@ Fire ALL of these as direct parallel tool calls in **one single message**:
 **Observed context — all in the same parallel batch, but use `limit:50` per file:**
 - `growth.md`, `profile.md`, `patterns.md`, `session-insights.md`, `ecosystem.md`, `business.md`, `vault-routine.md`
 - /today only needs the latest observations, not full history. If a file's key content is truncated, do a second targeted read for the missing section.
-- **Routine health — scheduled jobs that failed or went quiet** (`hooks/aios-health.py`, AI-173):
+- **Routine health — scheduled jobs that failed or went quiet** (`hooks/aios-health.py`):
 
   ```bash
   UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/aios-health.py report

@@ -696,6 +696,21 @@ jobs:
           fi
           echo "OK: no personal vault content added"
 
+      - name: No internal tracking keys in the framework's files
+        # A roadmap key (two letters, a dash, a number) comes from one operator's private roadmap: it means nothing to a
+        # contributor and points to a note nobody outside can open. Public text names issues
+        # and PRs by number (CONTRIBUTING.md, "Before you open anything"). CHANGELOG.md is
+        # exempt: its released entries are history, and rewriting them would mislead.
+        # git grep needs -P here: with -E, \b matches nothing.
+        run: |
+          HITS=$(git grep -nP '\bAI-\d{1,4}\b' -- ':!CHANGELOG.md' || true)
+          if [ -n "$HITS" ]; then
+            echo "::error::Internal tracking keys found. Name the issue or PR (#123) instead, or drop the key and keep the sentence:"
+            echo "$HITS" | sed 's/^/  - /'
+            exit 1
+          fi
+          echo "OK: no internal tracking keys"
+
       - name: USER.md + INTENT.md still template-shaped (EXAMPLE ONLY markers present)
         run: |
           set -e
@@ -1208,7 +1223,7 @@ jobs:
         run: bash tests/update-dual-owned-rules.test.sh
 
       - name: the snapshot archiver survives concurrent writers
-        # AI-102's whole point. The suite injects a realistic decide-to-write window into a
+        # This is the suite's whole point. The suite injects a realistic decide-to-write window into a
         # locked and an unlocked copy and races six writers through each: the unlocked control
         # must LOSE data, or the locked result proves nothing. A first version of that test had
         # no injected window, the control passed too, and it would have certified the lock on a
@@ -1240,7 +1255,7 @@ jobs:
         run: bash tests/star-check.test.sh
 
       - name: first-run friction stayed removed and every destination still exists
-        # AI-122 Front A. The regression to fear is not a bug, it is a tidy-up: a later
+        # The regression to fear is not a bug, it is a tidy-up: a later
         # session reads a negated step ("do NOT invoke the connectors pass here") as dead
         # weight and deletes it, and re-timing silently becomes removal. So the suite
         # asserts BOTH halves — the friction is gone AND each moved capability's new owner
@@ -1583,7 +1598,7 @@ jobs:
         run: bash tests/note-append-create-if-missing.test.sh
 
       - name: routine health — a job that fails or stops running is reported
-        # hooks/aios-health.py (AI-173): one file per scheduled job with a deadline. A job that
+        # hooks/aios-health.py: one file per scheduled job with a deadline. A job that
         # stops running writes nothing, so it can only be caught by its deadline passing; the
         # suite proves overdue, never-run, failed and unreadable files are all reported, and a
         # healthy one is silent.
@@ -1771,7 +1786,7 @@ jobs:
 
       - name: the Google connector's API set derives from one manifest
         # The set of Google APIs an operator must enable existed in SIX places before
-        # AI-126 -- connector.json's --permissions, SETUP.md's prose, the setup doc's
+        # connector.json's --permissions, SETUP.md's prose, the setup doc's
         # blockquote, TROUBLESHOOTING's service->API mapping, the oauth template's
         # scopes array, and the folder README -- and they had drifted apart: one sent
         # people to enable a Chat API nothing requests, another omitted Gmail, contacts
@@ -1940,7 +1955,7 @@ jobs:
         run: bash tests/page-fit.test.sh
 
       - name: every bundled connector carries a manifest the App can read
-        # AI-122 Front A. The AIOS App builds its Connectors card from
+        # The AIOS App builds its Connectors card from
         # mcps/*/connector.json and ships NO copy of any register command, so a
         # missing or malformed manifest does not degrade the card — it removes a
         # connector from existence, silently. The criteria asserted are the silent

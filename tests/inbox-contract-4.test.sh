@@ -38,7 +38,7 @@ while IFS= read -r line; do
   k="${line%% *}"; v="${line#* }"
   [ "$v" = ok ] && ok "$k agrees" || no "$k" "$v"
 done <<< "$out"
-echo "── AI-205 queue fixture: every case passes a reference implementation of the amendment ──"
+echo "── queue fixture: every case passes a reference implementation of the amendment ──"
 cat > "$T/queue.py" <<'PY'
 import json, re, sys
 d = json.load(open(sys.argv[1], encoding="utf-8")); CEIL = 24 * 3600 * 1000; STAMP = 2 * 60 * 1000
@@ -66,8 +66,8 @@ for c in d["cases"]:
 print("QUEUE", "ok" if not bad and len(d["cases"]) >= 13 else "; ".join(bad) or "too few cases")
 PY
 line=$($PYBIN "$T/queue.py" "$D/inbox-queue.conformance.json"); v="${line#* }"
-[ "$v" = ok ] && ok "all AI-205 queue cases pass the reference" || no "queue fixture" "$v"
-grep -F 'AI-205' "$D/inbox-contract-4.md" >/dev/null && ok "the contract text references AI-205" || no "contract does not reference AI-205"
+[ "$v" = ok ] && ok "all queue cases pass the reference" || no "queue fixture" "$v"
+grep -F '## Amendment — a send waits' "$D/inbox-contract-4.md" >/dev/null && ok "the contract text carries the queue amendment" || no "contract does not carry the queue amendment"
 
 echo "── RESULT: $PASS passed, $FAIL failed ──"
 [ "$FAIL" = 0 ] && [ "$PASS" -ge 7 ]

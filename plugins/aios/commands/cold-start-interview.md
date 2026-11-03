@@ -480,7 +480,7 @@ No questions asked at this step. Operator just acknowledges + moves to Step 6.
 
 ### Steps 6 + 7 — moved, not removed → see **Step 11 (connectors)**
 
-> **This is the heart of `AI-122`.** MCP setup and the Stitch question used to live here, on the
+> **This is the heart of the first-run rework.** MCP setup and the Stitch question used to live here, on the
 > critical path, *before the operator had seen a single thing work*. Step 6 opened by **defining the
 > word "MCP"** — which is the tell: if a step has to explain its own vocabulary before it can ask its
 > question, it is in the wrong place in the conversation.

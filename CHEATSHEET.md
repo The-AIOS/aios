@@ -80,7 +80,7 @@ commands is not a prerequisite for using this.
 > **Why say this at all.** Every row below is a shell command, and the operator most likely to open
 > this file is the one who just installed the App and has never typed `cd`. Opening their
 > quick-reference with `cd ~/aios && claude` teaches them the AIOS is a terminal product that
-> happens to have an app — which is backwards, and is the same friction `AI-122` removed from the
+> happens to have an app — which is backwards, and is the same friction the first-run rework removed from the
 > setup flow. The commands are not going anywhere; they are just no longer the first thing.
 
 ### Just say it — the phrasebook
