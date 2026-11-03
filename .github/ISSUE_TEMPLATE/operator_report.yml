@@ -1,6 +1,6 @@
 name: Operator report
 description: You hit something while USING the AIOS — a bug, a papercut, a doc that said one thing while the system did another, a missing case. No code needed.
-title: "fix(<scope>): "
+title: "<area>: "
 body:
   - type: markdown
     attributes:

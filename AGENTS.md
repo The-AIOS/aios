@@ -62,6 +62,10 @@ Every note uses `[[wiki-links]]` for project names, context files, and ventures 
 - **Never commit secrets.** Ship `.template` files and `.gitignore` the reals. If push-protection fires, reset and re-commit clean — never bypass.
 - Commit/push only when the operator asks. If on the default branch, branch first.
 
+## Contributing back to the framework
+
+Before opening an issue or PR in any The-AIOS repo: search open **and recently closed** issues and PRs across the org, and check the work in flight (issues labelled `status: in-progress`, and open PRs). If something matches, comment there instead of opening a second one. Title issues `Area: what changes`; name issues and PRs by number, never by an internal tracking key. Which repo, titles and what happens after a PR opens: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
 ## Ship-time truth-flip
 
 Every tracked item has exactly one **truth surface** that answers "is this done?" — usually its project note. The session that ships an item updates that surface **in the same session**, not later. Derived surfaces (daily notes, dashboards, indexes) only *reference* the truth surface — they never accumulate competing status.
