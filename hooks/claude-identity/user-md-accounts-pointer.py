@@ -48,6 +48,10 @@ NUMBERED = re.compile(r"\s*\d+\.\s*`[^`\s]+@[^`\s]+`")
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import _accounts  # noqa: E402
 
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 MIN_VERSION = {"app": (0, 14, 0), "glass": (0, 5, 14)}
 
 POINTER = (
