@@ -1582,6 +1582,13 @@ jobs:
         # pane truncates them first. (#263)
         run: bash tests/statusline-effort-hints.test.sh
 
+      - name: USER.md's accounts section is replaced only when every installed surface reads the new list
+        # An App older than 0.14.0 or a Glass older than 0.5.14 still builds its account
+        # menu from the section, and a closed surface leaves no ~/.aios/surfaces file, so
+        # the install folders are read too. An account missing from accounts.json blocks
+        # the offer rather than being dropped. (#262)
+        run: bash tests/user-md-accounts-pointer.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,

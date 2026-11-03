@@ -175,6 +175,8 @@ If user is not ready: tell them they can configure manually later by pasting one
 
 **Sub-decision — which renderer to use:**
 
+The bundled status line also shows the session's effort level beside the model (`[Opus 5.5 · high]`, from the payload's `effort.level`; absent when the model has no effort setting) and ends with a dim `ctrl+j new line · esc interrupt`.
+
 - **No existing statusLine →** use the bundled `context-monitor.py` automatically. It's richer than Claude Code's default: shows context %, 5h/7d rate limits with countdown, active account local-part (so you see `j` vs `cc` after a swap), git branch + change count, and color-coded warnings as you approach limits. Run the **default snippet** below.
 - **Existing statusLine present →** show it to the user (`d["statusLine"]["command"]` from `~/.claude/settings.json`) and ask: *"You already have a statusLine wired. Want to (1) replace it with the bundled `context-monitor.py` (richer — context %, 5h/7d, active account, git status, color-coded warnings), or (2) keep yours and just add the cache writer in parallel?"*
   - **(1) Replace →** run the **replace snippet** below (forces `context-monitor.py` as the renderer).
