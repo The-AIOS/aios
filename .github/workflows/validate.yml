@@ -1589,6 +1589,12 @@ jobs:
         # the offer rather than being dropped. (#262)
         run: bash tests/user-md-accounts-pointer.test.sh
 
+      - name: SETUP.md offers the AIOS App once to someone who arrives from a terminal
+        # The site leads with the App; the file a session follows must agree. The offer
+        # comes before any prerequisite check, choosing the App stops before cloning, and
+        # it is asked once. (#280)
+        run: bash tests/setup-app-offer.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,

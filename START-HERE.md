@@ -63,6 +63,7 @@ Set up my AI-OS from https://github.com/The-AIOS/aios
 ```
 
 Claude reads `SETUP.md` and handles the rest:
+- Offers the AIOS App once, as the simplest way to run the AIOS. Choose it and setup continues inside the App; choose the terminal and it carries on here.
 - Clones the AIOS framework to `~/aios` (if you haven't yet)
 - Installs MCPs, plugins, and CLI tools (auto-detects what's already installed)
 - Creates **your** private GitHub repo for personal content and switches `origin` to it
