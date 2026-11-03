@@ -198,6 +198,14 @@ APIS="$(derive_apis)" || die "could not derive the API list from connector.json"
 API_COUNT="$(printf '%s\n' "$APIS" | grep -c .)"
 
 # ── preflight ────────────────────────────────────────────────────────────────
+# --finish makes no gcloud call: it validates a downloaded JSON, copies it, and
+# prints a command. Requiring gcloud there turned away exactly the operator the
+# by-hand console path exists for -- someone who never installed the SDK, or who
+# is wiring a second machine to a project created on the first -- and sent them
+# to install an SDK the step never touches. connect and --verify still need it.
+ACCOUNT=""
+ACCOUNT_KIND=""
+if [ "$MODE" != finish ]; then
 command -v gcloud >/dev/null 2>&1 || die \
   "gcloud is not installed — this script needs it to create the project and enable APIs." \
   "Nothing has been created, so you are not half-configured.
@@ -224,6 +232,7 @@ case "$DOMAIN" in
   gmail.com|googlemail.com) ACCOUNT_KIND=consumer ;;
   *)                        ACCOUNT_KIND=workspace ;;
 esac
+fi
 
 # ── finish: install the downloaded client, then print the registration ───────
 if [ "$MODE" = finish ]; then

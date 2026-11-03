@@ -455,6 +455,27 @@ printf '%s' "$OUTPUT" | grep -- '--permissions' >/dev/null \
   && ok "the printed registration carries the manifest's permissions" \
   || no "printed registration has no --permissions — it is not manifest-derived"
 
+echo "── 9b. --finish needs no gcloud ──"
+# --finish only reads a JSON file and copies it. It used to sit behind the gcloud
+# preflight, so an operator wiring a second machine to an existing project, or one
+# who followed the by-hand console path, was told to install an SDK the step never
+# calls. Run it on the same gcloud-less PATH section 4 built.
+OUTPUT="$(PATH="$NOGC" GOOGLE_WORKSPACE_CRED_DIR="$TMP/creds-nogc" "$BASH_BIN" "$SCRIPT" \
+  --finish --project-id p1 --client "$TMP/good.json" 2>&1)"; RC=$?
+if [ "$RC" -ne 0 ]; then
+  no "--finish refused with no gcloud on PATH" "$OUTPUT"
+elif [ -f "$TMP/creds-nogc/client_secret.json" ]; then
+  ok "--finish installs the client with no gcloud on PATH"
+else
+  no "--finish exited 0 but wrote no credential file" "$OUTPUT"
+fi
+# and its validation still runs there -- skipping the preflight must not skip the checks
+OUTPUT="$(PATH="$NOGC" GOOGLE_WORKSPACE_CRED_DIR="$TMP/creds-nogc2" "$BASH_BIN" "$SCRIPT" \
+  --finish --project-id p1 --client "$TMP/web.json" 2>&1)"; RC=$?
+{ [ "$RC" -ne 0 ] && printf '%s' "$OUTPUT" | grep -i 'desktop' >/dev/null; } \
+  && ok "--finish without gcloud still rejects a Web client" \
+  || no "--finish without gcloud accepted a Web client" "$OUTPUT"
+
 echo "── 10. --verify reports missing APIs, and says what cannot be checked ──"
 BIN="$TMP/ver"; mk_gcloud "$BIN" authed ""
 export GCLOUD_LOG="$TMP/ver.log"; : > "$GCLOUD_LOG"; export STUB_DOMAIN=gmail.com
