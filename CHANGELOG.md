@@ -81,7 +81,7 @@
 
 ## 2026-11-02 — Contributions that land once, every Google account in your plan, and the effort level in your status line
 
-`hash: 487424b · 6cd808d · 6981a74 · effa4af · e152b19 · 718cb03 · 1972b6a · c7edecd` · [#257](https://github.com/The-AIOS/aios/issues/257) · [#262](https://github.com/The-AIOS/aios/issues/262) · [#263](https://github.com/The-AIOS/aios/issues/263) · [#276](https://github.com/The-AIOS/aios/pull/276) · [#277](https://github.com/The-AIOS/aios/pull/277) · [#278](https://github.com/The-AIOS/aios/issues/278)
+`hash: 487424b · 6cd808d · 6981a74 · effa4af · e152b19 · 718cb03 · 1972b6a · c7edecd · 756bbfb · d6b1812 · 1b5978f` · [#257](https://github.com/The-AIOS/aios/issues/257) · [#262](https://github.com/The-AIOS/aios/issues/262) · [#263](https://github.com/The-AIOS/aios/issues/263) · [#276](https://github.com/The-AIOS/aios/pull/276) · [#277](https://github.com/The-AIOS/aios/pull/277) · [#278](https://github.com/The-AIOS/aios/issues/278) · [#280](https://github.com/The-AIOS/aios/issues/280)
 
 > **What you can now do.** Put a third or fourth Google account's calendar in `/today` and `/close-day`, with the 14-day lookahead reading every account. See the session's effort level beside the model in the status line. Retire `USER.md`'s old account list once your App and Glass read the new one. And when you give something back to the framework, your session searches for work already in flight before it opens anything.
 
@@ -94,6 +94,7 @@
 **The effort level in your status line** (#263). The bundled status line reads `[Opus 5.5 · high]` when Claude Code reports an effort level, and the model alone when it does not. It ends with a dim `\⏎ new line · esc interrupt` (a backslash, then Enter, is a new line in every terminal), last, so a narrow pane cuts it first.
 
 **Smaller changes.**
+- Someone who starts setup from a terminal is offered the AIOS App first, once, before any prerequisite check; choosing it stops before cloning, since the App does that itself (#280).
 - The headless allowlist test removes the transcripts of the sessions it starts, instead of leaving them in `~/.claude/projects` and the transcript archive.
 
 **Action required** — check each first; do only what applies:
