@@ -41,8 +41,12 @@ J
 
 ## Anthropic accounts
 
-1. `a@example.com` alias **work**
+> My own note about these accounts.
+
+1. `a@example.com` alias **work** — the main one, never automate it
 2. `b@example.com`
+
+**Rules:** keep this rule.
 
 ## Command personalizations
 
@@ -94,6 +98,11 @@ grep -q 'b@example.com' "$T/m/bk/USER.md-anthropic-accounts.md" \
 grep -q '^### /today' "$T/m/USER.md" && grep -q '^keep me' "$T/m/USER.md" && head -1 "$T/m/USER.md" | grep -q '^# USER' \
   && ok "12. nothing outside the section changes" || no "12." "$(cat "$T/m/USER.md")"
 [ "$(offer)" = False ] && ok "13. once replaced, the offer does not come back" || no "13." "$(run check)"
+grep -q '^> My own note' "$T/m/USER.md" && grep -q '^\*\*Rules:\*\* keep this rule' "$T/m/USER.md" \
+  && ok "14. the operator's own notes in the section stay; only the numbered list goes" || no "14." "$(cat "$T/m/USER.md")"
+fresh; out=$(run check)
+case "$out" in *'"removes"'*'never automate it'*) ok "15. check names the exact lines replace would remove";;
+  *) no "15." "$out";; esac
 
 printf '\n-- %d passed, %d failed --\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

@@ -14,8 +14,11 @@ enough.
 It never writes. `/aios:update` asks the operator only when `offer` is true.
 
 `replace` runs the same check, refuses unless it passes, copies the old section to
-DIR/USER.md-anthropic-accounts.md, then replaces the section's body with the pointer.
-Nothing outside that section changes.
+DIR/USER.md-anthropic-accounts.md, then replaces the numbered account lines with the
+pointer. Everything else, in the section and outside it, stays as the operator wrote
+it: the section often carries their own notes and rules, which are theirs to keep.
+`check` lists the lines `replace` would remove, under "removes", so they can be shown
+before anyone says yes.
 
 What blocks the offer, each with its reason:
   * the section has no numbered accounts (absent, or already the pointer)
@@ -36,6 +39,8 @@ import os
 import plistlib
 import re
 import sys
+
+NUMBERED = re.compile(r"\s*\d+\.\s*`[^`]+`")
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import _accounts  # noqa: E402
@@ -130,26 +135,42 @@ def check(user_md):
             if v < need:
                 return {"offer": False, "missing": [],
                         "reason": f"{surface} {_fmt(v)} at {where} still reads the section; it needs {_fmt(need)} or newer"}
-    return {"offer": True, "reason": "every installed surface reads accounts.json", "missing": []}
+    return {"offer": True, "reason": "every installed surface reads accounts.json", "missing": [],
+            "removes": [l.rstrip("\n") for l in _section(user_md)[2] if NUMBERED.match(l)]}
+
+
+def _section(user_md):
+    """(all lines, start index, the section's lines) for the accounts section."""
+    with open(user_md, encoding="utf-8") as f:
+        lines = f.readlines()
+    start = next(i for i, l in enumerate(lines) if l.startswith(_accounts.USER_MD_SECTION))
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+    return lines, start, lines[start:end]
 
 
 def replace(user_md, backup_dir):
     verdict = check(user_md)
     if not verdict["offer"]:
         return verdict
-    with open(user_md, encoding="utf-8") as f:
-        lines = f.readlines()
-    start = next(i for i, l in enumerate(lines) if l.startswith(_accounts.USER_MD_SECTION))
-    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("## ")), len(lines))
+    lines, start, sec = _section(user_md)
     os.makedirs(backup_dir, exist_ok=True)
     with open(os.path.join(backup_dir, BACKUP_NAME), "w", encoding="utf-8") as f:
-        f.writelines(lines[start:end])
-    new = lines[:start + 1] + ["\n", POINTER, "\n"] + lines[end:]
+        f.writelines(sec)
+    kept, placed = [], False
+    for line in sec:
+        if NUMBERED.match(line):
+            if not placed:
+                kept.append(POINTER)
+                placed = True
+            continue
+        kept.append(line)
+    new = lines[:start] + kept + lines[start + len(sec):]
     tmp = user_md + ".aios-tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         f.writelines(new)
     os.replace(tmp, user_md)
-    return {"offer": True, "reason": "replaced; the old section is in " + os.path.join(backup_dir, BACKUP_NAME), "missing": []}
+    return {"offer": True, "reason": "replaced the account list; the old section is in " + os.path.join(backup_dir, BACKUP_NAME),
+            "missing": [], "removes": verdict["removes"]}
 
 
 def main():
