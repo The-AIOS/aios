@@ -1576,6 +1576,12 @@ jobs:
         # only there would reach fresh clones and no existing operator.
         run: bash tests/statusline-account-alias.test.sh
 
+      - name: the status line shows effort and the key hints, and never an invented level
+        # Effort comes from the payload's documented effort.level; absent or unrecognised
+        # renders the model alone, as before. The hints are the last segment so a narrow
+        # pane truncates them first. (#263)
+        run: bash tests/statusline-effort-hints.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,

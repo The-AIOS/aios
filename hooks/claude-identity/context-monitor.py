@@ -608,6 +608,28 @@ def get_swap_banner():
         return ""
 
 
+# Effort levels Claude Code documents for the payload's `effort.level`. Anything else is
+# rendered as nothing: this runs on every prompt, and a field we do not recognise must
+# not put text on the line that nobody can act on.
+EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
+
+# Shown dim at the END of the line, so a pane too narrow for it loses these first.
+# Ctrl+J is the new-line key Claude Code binds by default in every terminal; Shift+Enter
+# only works after terminal setup, so it is not the one to teach here.
+KEY_HINTS = "ctrl+j new line · esc interrupt"
+
+
+def get_effort_display(data):
+    """` · high` when the payload carries a known `effort.level`, else "".
+
+    The field is absent when the model does not support effort, and then the model
+    renders alone, exactly as before: never an invented level.
+    """
+    effort = data.get("effort")
+    level = effort.get("level") if isinstance(effort, dict) else None
+    return f" · {level}" if level in EFFORT_LEVELS else ""
+
+
 def main():
     # Force UTF-8 stdout so emoji render on Windows (where the default
     # console code page is cp1252 and json/print would crash on 📁🌿🟢).
@@ -655,7 +677,7 @@ def main():
         git_status = get_git_status()
 
         # Shorten model name: "Opus 4.6 (1M context)" → "Opus 4.6 (1M)"
-        model_name = model_name.replace(" context", "")
+        model_name = model_name.replace(" context", "") + get_effort_display(data)
 
         # Model color based on context usage
         if context_info:
@@ -679,6 +701,7 @@ def main():
             # f"{people_display}"  # people-equivalent metric hidden — enable if you want it back
             f"{rate_display}"
             f"{account_display}"
+            f" \033[90m|\033[0m \033[2m{KEY_HINTS}\033[0m"
         )
 
         print(status_line)
