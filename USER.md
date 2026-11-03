@@ -77,7 +77,7 @@ ssh my-server "osascript -e 'tell application \"Terminal\" to do script \"cd ~/a
 
 ### Google accounts
 
-> The pipeline executor reads a primary (work) account, an optional personal one, and any further accounts you label yourself. Each needs its own OAuth credentials (setup creates the first two). A further account is two lines, `- Google email (<Label>): ` + the address and `- Google Calendar (<Label>)`, and its token goes in `~/.google_workspace_mcp/credentials-<label>/<email>.json` (label lowercased, dots and spaces as `-`). Its calendar joins today's plan; the 14-day lookahead stays primary-only.
+> The pipeline executor reads a primary (work) account, an optional personal one, and any further accounts you label yourself. Each needs its own OAuth credentials (setup creates the first two). A further account is two lines, `- Google email (<Label>): ` + the address and `- Google Calendar (<Label>)`, and its token goes in `~/.google_workspace_mcp/credentials-<label>/<email>.json` (label lowercased, dots and spaces as `-`). Its calendar joins today's plan and the 14-day lookahead, like the personal account's.
 
 *EXAMPLE ONLY (Claude: ignore these) — replace with yours:*
 
