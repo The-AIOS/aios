@@ -120,6 +120,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `orchestration-ladder` | `skills/aios/` | "Should this be one agent, a parallel fan-out, or a workflow?" |
 | `right-context` | `skills/aios/` | "How much of the operator's context does this task actually need?" |
 | `watch-video` | `skills/aios/` | "Watch this video / listen to this recording and tell me…" — comprehension only; `/aios:ingest` is the filing path |
+| `boards` | `skills/aios/` | "Put this on my sidebar" — build, update or remove a static card in the AIOS App's sidebar (`~/.aios/boards/<name>/index.html`, App 0.15.0+) |
 | `systematic-debugging` | `skills/superpowers/` | "Help me debug this systematically" |
 | `test-driven-development` | `skills/superpowers/` | "Let's write tests first" |
 | `code-review-excellence` | marketplace plugin | "Review this code thoroughly" — install via `/plugin install code-review@claude-plugins-official` |
@@ -180,7 +181,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `pci-compliance` | `skills/aios/` | "Audit this for PCI compliance" |
 | `security-audit` | `skills/cloudflare/` | "Security-review this codebase" (guidance); "Run a full security audit" (full run, fans out subagents) |
 
-**Source folders:** `skills/aios/` (AIOS-built — 31 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/cloudflare/` (vendored from `cloudflare/security-audit-skill` — 1 skill) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 57. Browse `skills/_index.md` for the full registry.
+**Source folders:** `skills/aios/` (AIOS-built — 32 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/cloudflare/` (vendored from `cloudflare/security-audit-skill` — 1 skill) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 58. Browse `skills/_index.md` for the full registry.
 
 **Marketplace skills** (NOT in `skills/`, install via `/plugin install`): `canvas-design`/`docx`/`pdf`/`pptx`/`xlsx` (via `document-skills` plugin) · `code-review-excellence` (via `code-review@claude-plugins-official`) · `defuddle` (via Anthropic skills marketplace) · `superpowers` full marketplace (`obra/superpowers-marketplace`).
 
