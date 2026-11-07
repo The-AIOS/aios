@@ -476,6 +476,31 @@ OUTPUT="$(PATH="$NOGC" GOOGLE_WORKSPACE_CRED_DIR="$TMP/creds-nogc2" "$BASH_BIN" 
   && ok "--finish without gcloud still rejects a Web client" \
   || no "--finish without gcloud accepted a Web client" "$OUTPUT"
 
+echo "── 9c. --finish asks about the test user it cannot check (#285) ──"
+# Google offers no API to read the consent screen's test-user list, so a missed
+# "add as Test user" click passes every check here and fails later, after consent,
+# as an unexplained 403 access_denied. --finish cannot verify it, so it must ask:
+# whenever the account is consumer, or unknown. A Workspace account (Internal) has
+# no test-user list and must not be asked.
+grep -E '^(consumer|workspace) [^ ]+@[^ ]+$' "$TMP/drvcreds/.aios-account" >/dev/null 2>&1 \
+  && ok "the connect run records the account it set up" \
+  || no "the connect run records no account, so --finish cannot name it"
+mkdir -p "$TMP/creds-tu1" && printf 'consumer me@gmail.com\n' > "$TMP/creds-tu1/.aios-account"
+OUTPUT="$(GOOGLE_WORKSPACE_CRED_DIR="$TMP/creds-tu1" PATH="$NOGC" "$BASH_BIN" "$SCRIPT" --finish --project-id p1 --client "$TMP/good.json" 2>&1)"
+{ printf '%s' "$OUTPUT" | grep 'me@gmail.com' >/dev/null && printf '%s' "$OUTPUT" | grep 'Test users' >/dev/null \
+  && printf '%s' "$OUTPUT" | grep '403' >/dev/null && printf '%s' "$OUTPUT" | grep '^AIOS_TEST_USER_CHECK=me@gmail.com$' >/dev/null; } \
+  && ok "a consumer account: --finish names it, the Test users list and the 403, with a stable line" \
+  || no "a consumer account: --finish does not ask about the test user" "$OUTPUT"
+mkdir -p "$TMP/creds-tu2" && printf 'workspace me@example.com\n' > "$TMP/creds-tu2/.aios-account"
+OUTPUT="$(GOOGLE_WORKSPACE_CRED_DIR="$TMP/creds-tu2" PATH="$NOGC" "$BASH_BIN" "$SCRIPT" --finish --project-id p1 --client "$TMP/good.json" 2>&1)"
+printf '%s' "$OUTPUT" | grep 'AIOS_TEST_USER_CHECK' >/dev/null \
+  && no "a Workspace account is asked about a test-user list it does not have" "$OUTPUT" \
+  || ok "a Workspace account (Internal) is not asked about test users"
+OUTPUT="$(GOOGLE_WORKSPACE_CRED_DIR="$TMP/creds-tu3" PATH="$NOGC" "$BASH_BIN" "$SCRIPT" --finish --project-id p1 --client "$TMP/good.json" 2>&1)"
+printf '%s' "$OUTPUT" | grep '^AIOS_TEST_USER_CHECK=unknown$' >/dev/null \
+  && ok "no recorded account (a second machine, the by-hand path): it still asks" \
+  || no "no recorded account: --finish does not ask about the test user" "$OUTPUT"
+
 echo "── 10. --verify reports missing APIs, and says what cannot be checked ──"
 BIN="$TMP/ver"; mk_gcloud "$BIN" authed ""
 export GCLOUD_LOG="$TMP/ver.log"; : > "$GCLOUD_LOG"; export STUB_DOMAIN=gmail.com

@@ -303,6 +303,22 @@ PY
     say "✓ client installed at $CRED_DIR/client_secret.json (0600, machine-local, never in the vault)"
   fi
   say "✓ Desktop client, and it belongs to $PROJECT_ID"
+  # The one click no check here can see. Google offers no API to read the consent
+  # screen's test-user list, so a consumer account left off it passes every step of
+  # setup and fails later, after consent, as `403 access_denied` naming nothing. So
+  # ask, every time the account is consumer or unknown (a second machine, the by-hand
+  # path). A Workspace account uses Internal and has no such list.
+  REC_KIND=""; REC_ACCOUNT=""
+  [ -f "$CRED_DIR/.aios-account" ] && read -r REC_KIND REC_ACCOUNT < "$CRED_DIR/.aios-account"
+  if [ "$REC_KIND" != workspace ]; then
+    say ""
+    b "One step Google cannot confirm for you"
+    say "Is ${REC_ACCOUNT:-the Google account you will sign in with} on the Test users list?"
+    say "  https://console.cloud.google.com/auth/audience?project=$PROJECT_ID → Test users"
+    say "If it is not, setup still finishes, and the first Gmail or Drive call fails after"
+    say "consent with \`Error 403: access_denied\`. Adding it takes effect at once."
+    printf 'AIOS_TEST_USER_CHECK=%s\n' "${REC_ACCOUNT:-unknown}"
+  fi
   say ""
   b "Register the connector"
   say "Run /aios:mcps-setup and pick Google Workspace, or register it directly:"
@@ -394,6 +410,9 @@ fi
 printf 'AIOS_PROJECT_ID=%s\n' "$PROJECT_ID"
 if [ "$DRY_RUN" = 0 ]; then
   mkdir -p "$CRED_DIR" && printf '%s\n' "$PROJECT_ID" > "$CRED_DIR/.aios-project"
+  # The account this project was set up for, and its kind: --finish uses it to ask
+  # about the one click it cannot check (a consumer account's test-user entry).
+  [ -n "$ACCOUNT" ] && printf '%s %s\n' "${ACCOUNT_KIND:-consumer}" "$ACCOUNT" > "$CRED_DIR/.aios-account"
 fi
 
 if [ "$DRY_RUN" = 1 ]; then
