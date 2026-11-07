@@ -81,7 +81,7 @@
 
 ## 2026-11-07 — `aios-commit` works by its short name
 
-`hash: ` · PR pending
+`hash: ` · [#290](https://github.com/The-AIOS/aios/issues/290) · [#291](https://github.com/The-AIOS/aios/pull/291)
 
 > **What you can now do.** Commit with plain `aios-commit`, the short name the git-hooks installer puts on your PATH, instead of being refused every time.
 
