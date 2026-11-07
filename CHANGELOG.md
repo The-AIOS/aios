@@ -87,9 +87,11 @@
 
 **Boards, and the skill that teaches them.** The AIOS App 0.15.0 shows one sidebar card per `~/.aios/boards/<name>/index.html`, with an optional `board.json` for a title and how long the page stays fresh (`valid_for`, in seconds). The viewer is locked down: no scripts, no network, and only HTML, CSS, images and fonts from the board's own folder. Until now that contract lived only in the App's repository, so no session could build a board without being walked through it. The new `boards` skill carries it: the contract, an atomic writer (write a temporary file, then rename it, so the App never reads half a page), sizing for a column about 280 px wide in both themes, and how to update, rename, hide and remove a board. Glass does not show boards.
 
+**Workers that open inside a tab group.** A spawn or resume request can now carry `"group":"<name>"`, and the AIOS App 0.15.0 opens the worker's tab in the tab group with that name, creating it when none has it. A coordinator that asks for three workers in `"Release"` gets them side by side in one group, instead of three loose tabs to sort by hand. `CLAUDE.md` § Spawning Sessions and the `orchestration-ladder` skill now name the field. It is advisory: an unusable value is ignored and logged, never refused; Glass, which has no tab groups, hands such a request to the App when the App is running; and an older App or Glass simply ignores the field. No contract change, so the inbox stamp is unchanged.
+
 **Action required** — check each first; do only what applies:
 1. **One new skill (`boards`) is registered** by `skills/setup.sh`, which `/aios:update` runs when a bundled skill changes. Nothing to approve beyond that script's usual run.
-2. **Only if the operator runs the AIOS App:** say once that boards need App 0.15.0 or later, and that they can ask any session for one.
+2. **Only if the operator runs the AIOS App:** say once that boards need App 0.15.0 or later, and that they can ask any session for one. Mention in the same line that a session can now open its workers inside a tab group.
 3. **Start a new Claude session**, last, so the skill loads.
 
 ## 2026-11-02 — Contributions that land once, every Google account in your plan, and the effort level in your status line
