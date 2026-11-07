@@ -81,7 +81,7 @@
 
 ## 2026-11-06 — Your own cards in the App's sidebar, Google setup that catches the missed click, and rotation that does not wait forever
 
-`hash: 9667e1d · 918b9aa · 34086db · 70ad67d · e052659 · e759fe2 · d1dd288 · a54ea13 · be41dea` · [#281](https://github.com/The-AIOS/aios/issues/281) · [#282](https://github.com/The-AIOS/aios/pull/282) · [#283](https://github.com/The-AIOS/aios/issues/283) · [#285](https://github.com/The-AIOS/aios/issues/285) · [#286](https://github.com/The-AIOS/aios/pull/286) · [#287](https://github.com/The-AIOS/aios/pull/287) · [#288](https://github.com/The-AIOS/aios/pull/288) · AIOS App 0.15.0
+`hash: 9667e1d · 918b9aa · 34086db · 70ad67d · e052659 · e759fe2 · d1dd288 · a54ea13 · be41dea · 0b079bb` · [#281](https://github.com/The-AIOS/aios/issues/281) · [#282](https://github.com/The-AIOS/aios/pull/282) · [#283](https://github.com/The-AIOS/aios/issues/283) · [#285](https://github.com/The-AIOS/aios/issues/285) · [#286](https://github.com/The-AIOS/aios/pull/286) · [#287](https://github.com/The-AIOS/aios/pull/287) · [#288](https://github.com/The-AIOS/aios/pull/288) · AIOS App 0.15.0
 
 > **What you can now do.** Ask any session for a board ("put my inbox queue on the sidebar") and it knows how to build one: a static page your own tooling writes, shown as a card in the AIOS App 0.15.0 sidebar. It updates when the file changes, dims when the writer stops, and goes away when you delete its folder. Finish wiring Google Workspace on a machine without the Google Cloud SDK, and get asked about the one setup click no check can see. Rotate off an account near its cap even when only one session is running.
 
