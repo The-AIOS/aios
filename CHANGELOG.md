@@ -79,6 +79,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-07 — `aios-commit` works by its short name
+
+`hash: ` · PR pending
+
+> **What you can now do.** Commit with plain `aios-commit`, the short name the git-hooks installer puts on your PATH, instead of being refused every time.
+
+**The short name no longer refuses every commit.** `hooks/install-git-hooks.sh` links `~/.local/bin/aios-commit` to the hook, and the hook looked for its secret scanner beside the name it was called by. Through the link that is `~/.local/bin/git/secret-scan.sh`, which does not exist, so the scanner lookup failed closed and every commit made by the short name was refused with *"secret scanner not found"*. Calling the full path worked, which hid it. The hook now follows the link, through chains and relative targets, to its real folder before looking. It is written for bash 3.2, which has neither `readlink -f` nor `realpath`. The scanner still blocks a token, and still refuses when it is genuinely missing. `tests/commit-scan-fail-closed.test.sh` covers it (section 5), including the old behaviour reproduced.
+
+**Action required** — none. The fix arrives with the hook itself.
+
 ## 2026-11-06 — Your own cards in the App's sidebar, Google setup that catches the missed click, and rotation that does not wait forever
 
 `hash: 9667e1d · 918b9aa · 34086db · 70ad67d · e052659 · e759fe2 · d1dd288 · a54ea13 · be41dea · 0b079bb` · [#281](https://github.com/The-AIOS/aios/issues/281) · [#282](https://github.com/The-AIOS/aios/pull/282) · [#283](https://github.com/The-AIOS/aios/issues/283) · [#285](https://github.com/The-AIOS/aios/issues/285) · [#286](https://github.com/The-AIOS/aios/pull/286) · [#287](https://github.com/The-AIOS/aios/pull/287) · [#288](https://github.com/The-AIOS/aios/pull/288) · AIOS App 0.15.0
