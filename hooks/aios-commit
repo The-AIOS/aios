@@ -383,7 +383,16 @@ fi
 # token pasted into `-m` used to go straight in. A scanner that is missing FAILS CLOSED — the old
 # `[ -x "$SCAN" ] &&` made "no scanner" and "clean" the same outcome. It runs through `bash`, so a
 # checkout that lost the +x bit (a Windows clone, a zip) still scans instead of refusing forever.
-SCAN="$(cd "$(dirname "$0")" && pwd)/git/secret-scan.sh"
+# Resolve $0 through symlinks first: install-git-hooks.sh links ~/.local/bin/aios-commit here, and a
+# bare `dirname "$0"` then looked for the scanner in ~/.local/bin/git/ and refused every commit made
+# by the short name. A readlink loop, not `readlink -f`/`realpath` — bash 3.2 + older macOS lack both.
+_SELF="$0"
+while [ -L "$_SELF" ]; do
+  _LDIR="$(cd -P "$(dirname "$_SELF")" && pwd)"
+  _SELF="$(readlink "$_SELF")"
+  case "$_SELF" in /*) ;; *) _SELF="$_LDIR/$_SELF" ;; esac
+done
+SCAN="$(cd -P "$(dirname "$_SELF")" && pwd)/git/secret-scan.sh"
 [ -f "$SCAN" ] || die "secret scanner not found at $SCAN — refusing to commit unscanned"
 MSGF=$(mktemp "${TMPDIR:-/tmp}/aios-commit-msg.XXXXXX") || die "cannot create a temp file for the message scan"
 printf '%s\n' "$MSG" > "$MSGF"

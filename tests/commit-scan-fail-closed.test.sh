@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/commit-scan-fail-closed.test.sh
 #
-# Four ways a commit went through with a check that never ran, each reproduced against the
+# Five ways a commit went through, or was refused, because a check never ran properly, each reproduced against the
 # previous code (fetched with `git show` from the commit this branch starts at) and then
 # refused by the current one:
 #   1. aios-commit scanned the files but not the commit MESSAGE — a token in `-m` went in.
@@ -142,6 +142,32 @@ E=$(mktemp -d "${TMPDIR:-/tmp}/csfc-empty.XXXXXX"); git -C "$E" init -q; mkdir -
 ( cd "$E" && GIT_CONFIG_COUNT=3 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false GIT_CONFIG_KEY_1=user.name GIT_CONFIG_VALUE_1=test GIT_CONFIG_KEY_2=user.email GIT_CONFIG_VALUE_2=test@example.com "$ROOT/hooks/aios-commit" --vault --no-push -m first >/dev/null 2>&1 )
 [ "$(git -C "$E" rev-list --count HEAD 2>/dev/null)" = 1 ] && ok "--vault makes the first commit in a repo with no commits yet" || no "--vault refused the first commit of an empty repo" "the sweep read a failed 'git diff HEAD' as a failed measurement"
 rm -rf "$E"
+
+# ---------------------------------------------------------------------------------------------
+# 5. called through a symlink (install-git-hooks.sh links ~/.local/bin/aios-commit), the scanner
+#    is still found: a bare `dirname "$0"` looked beside the LINK and refused every commit.
+#    Its own pin: the defect needs the fail-closed scanner lookup, which BASE predates.
+# ---------------------------------------------------------------------------------------------
+SYMBASE=${SYMLINK_BASE_REF:-dcf1e2b327a755fe017822593a3b4d694c7438f3}
+HAVE_OLD5=0
+if git -C "$ROOT" cat-file -e "$SYMBASE:hooks/aios-commit" 2>/dev/null; then
+  rm -rf "$TMP/old5"; mkhooks "$TMP/old5" "$SYMBASE"
+  cmp -s "$TMP/old5/aios-commit" "$TMP/new/aios-commit" || HAVE_OLD5=1
+fi
+for v in old5 new; do
+  [ "$v" = old5 ] && [ "$HAVE_OLD5" = 0 ] && continue
+  B="$TMP/bin5-$v"; mkdir -p "$B/sub"
+  ln -s "$TMP/$v/aios-commit" "$B/sub/aios-commit-abs"          # absolute target
+  ( cd "$B" && ln -s sub/aios-commit-abs aios-commit )            # relative link to a link
+  R="$TMP/r5-$v"; newrepo "$R"; echo clean > "$R/f"
+  ( cd "$R" && "$B/aios-commit" --no-push -m "x" -- f >/dev/null 2>&1 ); n=$(commits "$R")
+  if [ "$v" = old5 ]; then [ "$n" = 1 ] && ok "5o. OLD: through a symlink, a clean commit was refused (the defect, reproduced)" || no "5o. old code unexpectedly committed through the symlink"
+  else [ "$n" = 2 ] && ok "5n. NEW: through a chained symlink, a clean commit goes in" || no "5n. a clean commit through the symlink was refused"; fi
+done
+R="$TMP/r5t"; newrepo "$R"; printf '%s\n' "$TOKEN" > "$R/f"
+( cd "$R" && "$TMP/bin5-new/aios-commit" --no-push -m "x" -- f >/dev/null 2>&1 ); [ "$(commits "$R")" = 1 ] && ok "5t. …and the scanner it finds still blocks a token" || no "5t. a token went in through the symlink"
+
 [ "$HAVE_OLD" = 1 ] || printf '  skip  old-code reproductions: the pinned pre-change commit is not in this checkout, or its hooks equal the current ones (set BASE_REF to run them)\n'
+[ "$HAVE_OLD5" = 1 ] || printf '  skip  5o: the pinned pre-fix commit is not in this checkout, or its aios-commit equals the current one (set SYMLINK_BASE_REF to run it)\n'
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1
