@@ -1600,6 +1600,11 @@ jobs:
         # file and print "Converted", so /aios:ingest ingested nothing. (#283)
         run: bash tests/markitdown-convert-empty.test.sh
 
+      - name: a lone reading near the cap rotates after 5 minutes, and a contradiction cancels it
+        # With one session or nobody at the keyboard, no second reading ever arrives and
+        # the two-readings gate waited forever. (#281)
+        run: bash tests/quota-lone-reading.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,
