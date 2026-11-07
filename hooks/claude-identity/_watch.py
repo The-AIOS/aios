@@ -569,7 +569,8 @@ ARMED_TTL_SECS = 300        # a high older than this says nothing about now: re-
 # forever while the account ran into its cap. So the SAME reading, at or above
 # LONE_READING_PCT, that has stood for LONE_READING_SECS by the clock with no low reading
 # since, rotates. A low reading in that window (low_seen) is a contradiction and keeps
-# the gate waiting, so the stale-session protection above still holds.
+# the gate waiting, so the stale-session protection above still holds. And it stays off for
+# STALE_AFTER_SECS after a real swap, when a lone high is most likely a stale session.
 LONE_READING_PCT = 98
 LONE_READING_SECS = 300
 
@@ -611,8 +612,22 @@ def confirm_or_arm(email: str, metric: str, pct: float, sampled_at: float) -> bo
             # The same sample, read again: not a second reading. Unless it has stood
             # alone long enough, near the cap, with nothing contradicting it.
             armed_at = _sample_time(prev, "armed_at")
+            if armed_at is None:
+                # Armed by a version without this fallback: start its clock now, rather
+                # than leaving the one operator stuck near the cap at update time stuck.
+                try:
+                    write_json_atomic(ARMED_FILE, {**prev, "armed_at": time.time()})
+                except Exception as e:
+                    log(f"arm update failed: {type(e).__name__}: {e}")
+                return False
+            # Not within STALE_AFTER_SECS of a real swap: right after one, the likeliest
+            # lone high is a session that predates it, still reporting the account it
+            # left (it was over the threshold, which is why the swap happened).
+            swap = last_actual_swap()
+            if swap and time.time() - (swap.get("ts") or 0) < STALE_AFTER_SECS:
+                return False
             if (min(prev.get("pct") or 0, pct) >= LONE_READING_PCT and not prev.get("low_seen")
-                    and armed_at is not None and time.time() - armed_at >= LONE_READING_SECS):
+                    and time.time() - armed_at >= LONE_READING_SECS):
                 log(f"gate confirmed — a lone {metric} reading at {round(pct)}% stood "
                     f"{round(time.time() - armed_at)}s with nothing contradicting it")
                 disarm()

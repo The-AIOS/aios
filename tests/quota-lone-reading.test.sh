@@ -15,6 +15,8 @@
 #   * before 5 minutes it does not
 #   * a contradicting low reading in the window cancels the fallback
 #   * a lone reading under 98% keeps waiting for a second reading (the normal gate)
+#   * within 30 minutes of a real swap, a lone high is treated as a stale session
+#   * an arming saved before this change gets its clock stamped instead of never firing
 #   * CONTROL: two distinct readings still confirm the normal way
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
@@ -64,6 +66,24 @@ check("a lone reading under 98% keeps waiting for a second one", w.confirm_or_ar
 fresh()
 w.confirm_or_arm(A, "7d", 99.0, 5000)
 check("CONTROL: a second distinct reading 30 s later confirms the normal way", w.confirm_or_arm(A, "7d", 99.0, 5031), True)
+
+import json
+fresh()
+with open(w.SWAP_LOG, "w", encoding="utf-8") as f:
+    f.write(json.dumps({"action": "rotate", "rc": 0, "ts": clock[0] - 60}) + "\n")
+w.confirm_or_arm(A, "7d", 99.0, 5000)
+clock[0] += 400
+check("within 30 min of a swap, a lone high (likely a stale session) does not rotate",
+      w.confirm_or_arm(A, "7d", 99.0, 5000), False)
+os.remove(w.SWAP_LOG)
+
+fresh()
+w.write_json_atomic(w.ARMED_FILE, {"email": A, "metric": "7d", "pct": 99.0, "first_sample": 5000, "last_sample": 5000})
+check("an arming saved by the previous version (no armed_at) does not rotate at once",
+      w.confirm_or_arm(A, "7d", 99.0, 5000), False)
+clock[0] += 301
+check("but it gets the clock stamped, and rotates 5 minutes later",
+      w.confirm_or_arm(A, "7d", 99.0, 5000), True)
 
 print(f"\n-- {P} passed, {F} failed --")
 sys.exit(1 if F else 0)

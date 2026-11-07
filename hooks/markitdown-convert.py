@@ -43,6 +43,10 @@ def main():
     # printing "Converted" let /aios:ingest go on to ingest nothing while looking
     # successful (#283). Exit 2, write no file, and say what to try instead.
     if not text.strip():
+        # /aios:ingest converts to one fixed path, so a file left there by an earlier
+        # run would be read as this source. Remove it: no file is the honest result.
+        if output_file and os.path.exists(output_file):
+            os.remove(output_file)
         print(f"No text extracted from {input_file}: nothing was written.\n"
               "  A scanned or image-only PDF has no text layer, so there is nothing to convert.\n"
               "  Read the file directly (Claude can read PDFs and images), or run OCR first.",

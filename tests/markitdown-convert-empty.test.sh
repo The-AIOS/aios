@@ -41,6 +41,10 @@ rm -f "$T/out.md"; conv ""; rc=$?
 grep -i 'no text' "$T/stderr" >/dev/null && ok "and says why on stderr" || no "no reason on stderr" "$(cat "$T/stderr")"
 grep 'Converted:' "$T/stdout" >/dev/null && no "it still prints 'Converted:'" || ok "and does not print 'Converted:'"
 
+printf 'the PREVIOUS source\n' > "$T/out.md"; conv ""; rc=$?
+[ "$rc" -ne 0 ] && [ ! -e "$T/out.md" ] && ok "a stale file from an earlier run at the same path is removed, not left to be read" \
+  || no "the previous run's output survives an empty conversion" "$(cat "$T/out.md" 2>/dev/null)"
+
 rm -f "$T/out.md"; conv "$(printf '  \n\t\n')"; rc=$?
 [ "$rc" -ne 0 ] && [ ! -e "$T/out.md" ] && ok "whitespace only counts as empty" || no "whitespace-only text was accepted"
 

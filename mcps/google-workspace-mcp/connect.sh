@@ -412,7 +412,16 @@ if [ "$DRY_RUN" = 0 ]; then
   mkdir -p "$CRED_DIR" && printf '%s\n' "$PROJECT_ID" > "$CRED_DIR/.aios-project"
   # The account this project was set up for, and its kind: --finish uses it to ask
   # about the one click it cannot check (a consumer account's test-user entry).
-  [ -n "$ACCOUNT" ] && printf '%s %s\n' "${ACCOUNT_KIND:-consumer}" "$ACCOUNT" > "$CRED_DIR/.aios-account"
+  # Only a project whose parent is an organization can use Internal, which has no
+  # test-user list. A non-Gmail address is not proof of that: a personal Google account
+  # can use any address, and a project can sit outside its owner's org. So record
+  # `workspace` only on that evidence, and `consumer` (ask) otherwise.
+  REC_KIND=consumer
+  if [ "$ACCOUNT_KIND" = workspace ] && \
+     [ "$(gcloud projects describe "$PROJECT_ID" --format='value(parent.type)' 2>/dev/null)" = organization ]; then
+    REC_KIND=workspace
+  fi
+  [ -n "$ACCOUNT" ] && printf '%s %s\n' "$REC_KIND" "$ACCOUNT" > "$CRED_DIR/.aios-account"
 fi
 
 if [ "$DRY_RUN" = 1 ]; then
