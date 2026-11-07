@@ -198,6 +198,14 @@ APIS="$(derive_apis)" || die "could not derive the API list from connector.json"
 API_COUNT="$(printf '%s\n' "$APIS" | grep -c .)"
 
 # ── preflight ────────────────────────────────────────────────────────────────
+# --finish makes no gcloud call: it validates a downloaded JSON, copies it, and
+# prints a command. Requiring gcloud there turned away exactly the operator the
+# by-hand console path exists for -- someone who never installed the SDK, or who
+# is wiring a second machine to a project created on the first -- and sent them
+# to install an SDK the step never touches. connect and --verify still need it.
+ACCOUNT=""
+ACCOUNT_KIND=""
+if [ "$MODE" != finish ]; then
 command -v gcloud >/dev/null 2>&1 || die \
   "gcloud is not installed — this script needs it to create the project and enable APIs." \
   "Nothing has been created, so you are not half-configured.
@@ -224,6 +232,7 @@ case "$DOMAIN" in
   gmail.com|googlemail.com) ACCOUNT_KIND=consumer ;;
   *)                        ACCOUNT_KIND=workspace ;;
 esac
+fi
 
 # ── finish: install the downloaded client, then print the registration ───────
 if [ "$MODE" = finish ]; then
@@ -294,6 +303,22 @@ PY
     say "✓ client installed at $CRED_DIR/client_secret.json (0600, machine-local, never in the vault)"
   fi
   say "✓ Desktop client, and it belongs to $PROJECT_ID"
+  # The one click no check here can see. Google offers no API to read the consent
+  # screen's test-user list, so a consumer account left off it passes every step of
+  # setup and fails later, after consent, as `403 access_denied` naming nothing. So
+  # ask, every time the account is consumer or unknown (a second machine, the by-hand
+  # path). A Workspace account uses Internal and has no such list.
+  REC_KIND=""; REC_ACCOUNT=""
+  [ -f "$CRED_DIR/.aios-account" ] && read -r REC_KIND REC_ACCOUNT < "$CRED_DIR/.aios-account"
+  if [ "$REC_KIND" != workspace ]; then
+    say ""
+    b "One step Google cannot confirm for you"
+    say "Is ${REC_ACCOUNT:-the Google account you will sign in with} on the Test users list?"
+    say "  https://console.cloud.google.com/auth/audience?project=$PROJECT_ID → Test users"
+    say "If it is not, setup still finishes, and the first Gmail or Drive call fails after"
+    say "consent with \`Error 403: access_denied\`. Adding it takes effect at once."
+    printf 'AIOS_TEST_USER_CHECK=%s\n' "${REC_ACCOUNT:-unknown}"
+  fi
   say ""
   b "Register the connector"
   say "Run /aios:mcps-setup and pick Google Workspace, or register it directly:"
@@ -385,6 +410,18 @@ fi
 printf 'AIOS_PROJECT_ID=%s\n' "$PROJECT_ID"
 if [ "$DRY_RUN" = 0 ]; then
   mkdir -p "$CRED_DIR" && printf '%s\n' "$PROJECT_ID" > "$CRED_DIR/.aios-project"
+  # The account this project was set up for, and its kind: --finish uses it to ask
+  # about the one click it cannot check (a consumer account's test-user entry).
+  # Only a project whose parent is an organization can use Internal, which has no
+  # test-user list. A non-Gmail address is not proof of that: a personal Google account
+  # can use any address, and a project can sit outside its owner's org. So record
+  # `workspace` only on that evidence, and `consumer` (ask) otherwise.
+  REC_KIND=consumer
+  if [ "$ACCOUNT_KIND" = workspace ] && \
+     [ "$(gcloud projects describe "$PROJECT_ID" --format='value(parent.type)' 2>/dev/null)" = organization ]; then
+    REC_KIND=workspace
+  fi
+  [ -n "$ACCOUNT" ] && printf '%s %s\n' "$REC_KIND" "$ACCOUNT" > "$CRED_DIR/.aios-account"
 fi
 
 if [ "$DRY_RUN" = 1 ]; then

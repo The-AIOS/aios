@@ -564,6 +564,15 @@ ARMED_MIN_GAP_SECS = 30     # the threshold leaves 2% of margin; this is cheap t
 ARMED_QUIET_SECS = 120      # lows for this long, with no high: it was a spike
 ARMED_SUSTAINED_SECS = 300  # highs and lows alternating for this long: treat it as real
 ARMED_TTL_SECS = 300        # a high older than this says nothing about now: re-arm
+# The lone-reading fallback (#281). With one session running, or nobody at the keyboard,
+# no second reading ever comes: each tick re-reads the same sample, and the gate waited
+# forever while the account ran into its cap. So the SAME reading, at or above
+# LONE_READING_PCT, that has stood for LONE_READING_SECS by the clock with no low reading
+# since, rotates. A low reading in that window (low_seen) is a contradiction and keeps
+# the gate waiting, so the stale-session protection above still holds. And it stays off for
+# STALE_AFTER_SECS after a real swap, when a lone high is most likely a stale session.
+LONE_READING_PCT = 98
+LONE_READING_SECS = 300
 
 
 def _armed_read() -> dict:
@@ -600,7 +609,30 @@ def confirm_or_arm(email: str, metric: str, pct: float, sampled_at: float) -> bo
     if (prev.get("email") == email and first is not None
             and last is not None and sampled_at - last <= ARMED_TTL_SECS):
         if sampled_at <= last:
-            return False  # the same sample, read again
+            # The same sample, read again: not a second reading. Unless it has stood
+            # alone long enough, near the cap, with nothing contradicting it.
+            armed_at = _sample_time(prev, "armed_at")
+            if armed_at is None:
+                # Armed by a version without this fallback: start its clock now, rather
+                # than leaving the one operator stuck near the cap at update time stuck.
+                try:
+                    write_json_atomic(ARMED_FILE, {**prev, "armed_at": time.time()})
+                except Exception as e:
+                    log(f"arm update failed: {type(e).__name__}: {e}")
+                return False
+            # Not within STALE_AFTER_SECS of a real swap: right after one, the likeliest
+            # lone high is a session that predates it, still reporting the account it
+            # left (it was over the threshold, which is why the swap happened).
+            swap = last_actual_swap()
+            if swap and time.time() - (swap.get("ts") or 0) < STALE_AFTER_SECS:
+                return False
+            if (min(prev.get("pct") or 0, pct) >= LONE_READING_PCT and not prev.get("low_seen")
+                    and time.time() - armed_at >= LONE_READING_SECS):
+                log(f"gate confirmed — a lone {metric} reading at {round(pct)}% stood "
+                    f"{round(time.time() - armed_at)}s with nothing contradicting it")
+                disarm()
+                return True
+            return False
         needed = ARMED_SUSTAINED_SECS if prev.get("low_seen") else ARMED_MIN_GAP_SECS
         if sampled_at - first >= needed:
             log(f"gate confirmed — {metric} over threshold for {round(sampled_at - first)}s "
@@ -614,7 +646,8 @@ def confirm_or_arm(email: str, metric: str, pct: float, sampled_at: float) -> bo
         return False
     try:
         write_json_atomic(ARMED_FILE, {"email": email, "metric": metric, "pct": pct,
-                                       "first_sample": sampled_at, "last_sample": sampled_at})
+                                       "first_sample": sampled_at, "last_sample": sampled_at,
+                                       "armed_at": time.time()})
     except Exception as e:
         # No second reading can ever confirm an arming that was not saved. Rotating on
         # one reading risks a needless swap; never rotating rides the account into its cap.

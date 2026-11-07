@@ -40,6 +40,9 @@ For non-markdown files, convert first using the MarkItDown wrapper:
 ```bash
 python3 ~/aios/hooks/markitdown-convert.py <input_file> /tmp/ingest-source.md
 ```
+
+**A non-zero exit means no text came out: stop, and never ingest an empty file.** The script exits 2 with *"No text extracted"* when the source has no text layer (a scanned or image-only PDF is the usual case). Read the file directly instead (PDFs and images can be read as they are), or ask the operator for a text version.
+
 Then read the converted markdown. Supported formats: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), images (with OCR), audio (with transcription), HTML, CSV, JSON, XML, ZIP, YouTube URLs, EPUB.
 
 **Routing by source type:**
