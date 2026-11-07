@@ -315,6 +315,7 @@ Every pull request goes through the same five passes, in this order, so you know
 |---|---|
 | `status: idea` | Being discussed. Not ready to build; the design questions come first. |
 | `help wanted` | **Ready to build, and nobody's on it.** Comment that you're taking it to claim it. |
+| `p1: next release` | **Planned by the maintainers for the next release, and not open to claim.** It sits in that release's milestone and never carries `help wanted`. Ideas and test cases are welcome on the issue. |
 | `good first issue` | Small and self-contained, a good place to start. |
 | `status: in-progress` | Someone is on it. The maintainer moves a claimed issue here and `help wanted` comes off. Want to help? Join them in the issue. |
 | `status: blocked` | Waiting on something the issue names. |
