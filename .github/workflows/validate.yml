@@ -1595,6 +1595,11 @@ jobs:
         # it is asked once. (#280)
         run: bash tests/setup-app-offer.test.sh
 
+      - name: an empty MarkItDown conversion fails instead of reporting success
+        # A scanned, image-only PDF yields no text; the script used to write an empty
+        # file and print "Converted", so /aios:ingest ingested nothing. (#283)
+        run: bash tests/markitdown-convert-empty.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,
