@@ -79,6 +79,19 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-06 — Your own cards in the App's sidebar
+
+`hash: ` · AIOS App 0.15.0
+
+> **What you can now do.** Ask any session for a board ("put my inbox queue on the sidebar") and it knows how to build one: a static page your own tooling writes, shown as a card in the AIOS App 0.15.0 sidebar. It updates when the file changes, dims when the writer stops, and goes away when you delete its folder.
+
+**Boards, and the skill that teaches them.** The AIOS App 0.15.0 shows one sidebar card per `~/.aios/boards/<name>/index.html`, with an optional `board.json` for a title and how long the page stays fresh (`valid_for`, in seconds). The viewer is locked down: no scripts, no network, and only HTML, CSS, images and fonts from the board's own folder. Until now that contract lived only in the App's repository, so no session could build a board without being walked through it. The new `boards` skill carries it: the contract, an atomic writer (write a temporary file, then rename it, so the App never reads half a page), sizing for a column about 280 px wide in both themes, and how to update, rename, hide and remove a board. Glass does not show boards.
+
+**Action required** — check each first; do only what applies:
+1. **One new skill (`boards`) is registered** by `skills/setup.sh`, which `/aios:update` runs when a bundled skill changes. Nothing to approve beyond that script's usual run.
+2. **Only if the operator runs the AIOS App:** say once that boards need App 0.15.0 or later, and that they can ask any session for one.
+3. **Start a new Claude session**, last, so the skill loads.
+
 ## 2026-11-02 — Contributions that land once, every Google account in your plan, and the effort level in your status line
 
 `hash: 487424b · 6cd808d · 6981a74 · effa4af · e152b19 · 718cb03 · 1972b6a · c7edecd · 756bbfb · d6b1812 · 1b5978f` · [#257](https://github.com/The-AIOS/aios/issues/257) · [#262](https://github.com/The-AIOS/aios/issues/262) · [#263](https://github.com/The-AIOS/aios/issues/263) · [#276](https://github.com/The-AIOS/aios/pull/276) · [#277](https://github.com/The-AIOS/aios/pull/277) · [#278](https://github.com/The-AIOS/aios/issues/278) · [#280](https://github.com/The-AIOS/aios/issues/280)

@@ -1,7 +1,7 @@
 ---
 tags: [skills, index, ai-os]
 created: '2026-03-20'
-updated: '2026-09-04'
+updated: '2026-11-06'
 ---
 # Skills — Source-grouped Registry
 
@@ -17,7 +17,7 @@ updated: '2026-09-04'
 
 | Folder | What | Upstream | License |
 |---|---|---|---|
-| [`skills/aios/`](./aios/) | AIOS-bundled skills (26) — high-signal coding/Obsidian/meta/systems after the 2026-05-21 audit. See "What got pruned" below for what was removed. | This framework | GPL-2.0-or-later |
+| [`skills/aios/`](./aios/) | AIOS-bundled skills (32) — high-signal coding/Obsidian/meta/systems after the 2026-05-21 audit. See "What got pruned" below for what was removed. | This framework | GPL-2.0-or-later |
 | [`skills/anthropic/`](./anthropic/) | Anthropic's example skills (11) — skill-creator, claude-api, mcp-builder, frontend-design, theme-factory, doc-coauthoring, internal-comms, web-artifacts-builder, webapp-testing, algorithmic-art, slack-gif-creator | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
 | [`skills/superpowers/`](./superpowers/) | Core software-engineering workflows (14) — TDD, debugging, code review, plans, brainstorming, worktrees, subagent dispatching | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
 | [`skills/cloudflare/`](./cloudflare/) | Source-code security audit (1) — `security-audit`: reconnaissance, attack-class playbooks, an evidence bar, a coverage ledger, and validators for its findings. Wired to the `security-engineer` agent; guidance by default, a full audit only when asked | [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) | MIT |
@@ -102,6 +102,7 @@ Core software-engineering disciplines, vendored at v6.4.1 (14 of its 15 skills; 
 - `orchestration-ladder` — the agent → parallel → workflow decision lens; picks the right orchestration primitive (single agent, parallel fan-out, or a deterministic workflow) for a task's shape
 - `watch-video` — actually watch/listen to a video or recording and hold it in context (routes the `transcribe.py` + `video-watch.py` hooks, which have no semantic match of their own); a quick comprehension action, **not** filing — `/aios:ingest` remains the path for turning a source into a permanent note
 - `motion-lab` — make motion that renders to video or GIF (a loop, a sting, a title card, a launch or explainer film, a deck component as a clip): every frame a pure function of t, direction given as numbers (the eight-line template, easings, springs as damping ratio, beat grid), and a render → look → fix loop measured by `hooks/motion-render.py` + `hooks/motion-check.py`. Not for reading someone else's video (`watch-video`)
+- `boards` — build, update and remove a sidebar card in the AIOS App (0.15.0+): one static `index.html` per folder under `~/.aios/boards/`, an optional `board.json` (title, `valid_for` seconds), a locked-down viewer (no scripts, no network, same-folder assets only), an atomic writer, and sizing for a ~280 px column. Glass does not show boards
 - `prompt-engineering-patterns` — production LLM prompting
 - `data-presentation` — storytelling + dashboard design (consolidated)
 - `infographic-builder` — turn a structured doc (ingest, role report, weekly learnings) into a self-contained HTML one-pager; brand-first theming with [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) as the fallback library
