@@ -97,6 +97,16 @@
 3. **Only if `USER.md`'s Identity table has two or more rows AND no line in it starts with `> **On several computers:**`:** ask once, inline: *"Your USER.md lists {N} primary identities. Add the short note that explains how each computer picks its own?"* On yes, make one surgical insert: copy the `> **On several computers:** …` paragraph from this repo's `USER.md` into the operator's Identity section, as its own `>` paragraph right above the table (after a blank `>` line, as the template has it). Change nothing else in the file: no rewrite, no reordering, no other section touched. Then say once that each computer chooses its primary in the AIOS App under **Settings › Primary identity on this computer**. On no, skip; it is never asked again for this entry.
 4. **Start a new Claude session**, last, so the skill loads.
 
+## 2026-11-03 — Finishing the Google connector no longer asks for gcloud
+
+`hash: `
+
+> **What you can now do.** Finish wiring Google Workspace on a machine without the Google Cloud SDK, including a second machine joining a project you created on the first.
+
+**`connect.sh --finish` runs without gcloud.** The finishing step only validates the client JSON you downloaded, copies it outside the vault, and prints the registration command. It makes no gcloud call, but it sat behind the script's gcloud preflight, so anyone who followed the by-hand console path, or who was connecting a second machine to an existing project, was told to install an SDK the step never uses. It now skips that preflight. Its two checks, a Desktop client and one belonging to the right project, still run. Creating a project and `--verify` still require gcloud and refuse exactly as before. `tests/google-connect.test.sh` covers it (section 9b).
+
+**Action required:** none.
+
 ## 2026-11-02 — Contributions that land once, every Google account in your plan, and the effort level in your status line
 
 `hash: 487424b · 6cd808d · 6981a74 · effa4af · e152b19 · 718cb03 · 1972b6a · c7edecd · 756bbfb · d6b1812 · 1b5978f` · [#257](https://github.com/The-AIOS/aios/issues/257) · [#262](https://github.com/The-AIOS/aios/issues/262) · [#263](https://github.com/The-AIOS/aios/issues/263) · [#276](https://github.com/The-AIOS/aios/pull/276) · [#277](https://github.com/The-AIOS/aios/pull/277) · [#278](https://github.com/The-AIOS/aios/issues/278) · [#280](https://github.com/The-AIOS/aios/issues/280)
