@@ -89,10 +89,13 @@
 
 **Workers that open inside a tab group.** A spawn or resume request can now carry `"group":"<name>"`, and the AIOS App 0.15.0 opens the worker's tab in the tab group with that name, creating it when none has it. A coordinator that asks for three workers in `"Release"` gets them side by side in one group, instead of three loose tabs to sort by hand. `CLAUDE.md` § Spawning Sessions and the `orchestration-ladder` skill now name the field. It is advisory: an unusable value is ignored and logged, never refused; Glass, which has no tab groups, hands such a request to the App when the App is running; and an older App or Glass simply ignores the field. No contract change, so the inbox stamp is unchanged.
 
+**One vault, several computers: each picks its primary.** `USER.md`'s Identity table can hold one row per computer's primary session, but the vault syncs, so every computer launched the first row: the laptop and the always-on machine both offered the same identity. The AIOS App 0.15.0 adds **Settings › Primary identity on this computer** when the table has two or more rows; the choice is stored on that computer only (`~/.aios/app.json`), and AIOS Glass 0.5.16 reads the same choice. With no choice, the first row stays the primary. `USER.md`'s template now explains the pattern.
+
 **Action required** — check each first; do only what applies:
 1. **One new skill (`boards`) is registered** by `skills/setup.sh`, which `/aios:update` runs when a bundled skill changes. Nothing to approve beyond that script's usual run.
 2. **Only if the operator runs the AIOS App:** say once that boards need App 0.15.0 or later, and that they can ask any session for one. Mention in the same line that a session can now open its workers inside a tab group.
-3. **Start a new Claude session**, last, so the skill loads.
+3. **Only if `USER.md`'s Identity table has two or more rows AND no line in it starts with `> **On several computers:**`:** ask once, inline: *"Your USER.md lists {N} primary identities. Add the short note that explains how each computer picks its own?"* On yes, make one surgical insert: copy the `> **On several computers:** …` paragraph from this repo's `USER.md` into the operator's Identity section, as its own `>` paragraph right above the table (after a blank `>` line, as the template has it). Change nothing else in the file: no rewrite, no reordering, no other section touched. Then say once that each computer chooses its primary in the AIOS App under **Settings › Primary identity on this computer**. On no, skip; it is never asked again for this entry.
+4. **Start a new Claude session**, last, so the skill loads.
 
 ## 2026-11-02 — Contributions that land once, every Google account in your plan, and the effort level in your status line
 

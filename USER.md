@@ -11,6 +11,8 @@
 > Named sessions you use regularly. When you start Claude with `spawn my-name`, Claude matches `$CLAUDE_AGENT_NAME` against this table to know who you are and how to greet you. Names not listed here are treated as spawned workers (agents).
 >
 > **Why this matters:** If you always launch Claude as `buddy`, adding it here means Claude greets you personally instead of treating you as a generic worker session.
+>
+> **On several computers:** add one row per computer's primary session (say, `buddy` on the laptop and `ops` on an always-on machine). This file syncs with the vault, so the first row is every computer's default; in the AIOS App, each computer picks its own under **Settings › Primary identity on this computer**, and that choice stays on that computer. AIOS Glass follows the same choice.
 
 *EXAMPLE ONLY (Claude: ignore these) — replace with yours:*
 
