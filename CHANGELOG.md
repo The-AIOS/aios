@@ -79,6 +79,17 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-09 — The same character in every picture
+
+`hash: 1a16d39` · [#293](https://github.com/The-AIOS/aios/issues/293)
+
+> **What you can now do.** Ask for several pictures of one character (an avatar in different moods, a mascot across a deck, a recurring illustration) and get the same character every time: give the image tool the picture you approved, and describe only what changes.
+
+**Reference images for Nano Banana** (#293). `generate_image` read only words, so each call was a fresh interpretation and a character drawn twice drifted: a different head, different eyes, small marks appearing and vanishing. Describing it more precisely helped little and often overcorrected. The tool now takes an optional `reference_images` list, up to three local PNG, JPEG or WebP files, sent to Gemini 2.5 Flash Image before the prompt, so the prompt can say *"the same character as in the reference image; keep the face, eyes and colours exactly the same; now working at a laptop"*. Tested on five mood portraits of one character: text alone changed the face every time; with the approved portrait as reference, four of five came back as the same character on the first try. Without the parameter a call is exactly what it was. Missing files and other file types are refused, and nothing is fetched from a URL. The README has the prompting pattern; `tests/nano-banana-reference.test.py` checks what the server sends, offline, in CI.
+
+**Action required** — check first; do only what applies:
+1. **Only if the operator has the Nano Banana MCP registered:** the server file changed, and a running server keeps the old code. Say once: *"Reconnect the image tool to use reference images: type `/mcp` and reconnect nano-banana."* No new installer, no new dependency, nothing else to run.
+
 ## 2026-11-06 — Your own cards in the App's sidebar, Google setup that catches the missed click, and rotation that does not wait forever
 
 `hash: 9667e1d · 918b9aa · 34086db · 70ad67d · e052659 · e759fe2 · d1dd288 · a54ea13 · be41dea · 0b079bb` · [#281](https://github.com/The-AIOS/aios/issues/281) · [#282](https://github.com/The-AIOS/aios/pull/282) · [#283](https://github.com/The-AIOS/aios/issues/283) · [#285](https://github.com/The-AIOS/aios/issues/285) · [#286](https://github.com/The-AIOS/aios/pull/286) · [#287](https://github.com/The-AIOS/aios/pull/287) · [#288](https://github.com/The-AIOS/aios/pull/288) · AIOS App 0.15.0
