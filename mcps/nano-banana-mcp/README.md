@@ -4,11 +4,29 @@ Bundled MCP for generating images with Google's Gemini 2.5 Flash Image (a.k.a. "
 
 ## What it does
 
-Single tool: `generate_image(prompt, output_path?, aspect_ratio?)` — generates an image from a text prompt, saves to disk, returns the path.
+Single tool: `generate_image(prompt, output_path?, aspect_ratio?, reference_images?)` — generates an image from a text prompt, optionally looking at up to three reference images, saves to disk, returns the path.
 
 - **Model:** `gemini-2.5-flash-image` (Nano Banana, released Aug 2025)
 - **Aspect ratios:** `1:1`, `16:9`, `9:16`, `4:3`, `3:4`
 - **Output:** PNG, saved to `output_path` (default: `~/aios/vault/02 - assets/generated/{timestamp}.png`)
+
+## Keeping a character the same: `reference_images`
+
+A text prompt is a fresh interpretation every time, so a character you generate twice drifts: the head shape, the eyes, small marks. When you need the same character in several pictures (a portrait in different moods, a mascot in several scenes), pass the approved picture as a reference and describe only what changes:
+
+```
+generate_image(
+  prompt="The same character as in the reference image: keep the face, eyes, colours and outfit "
+         "exactly the same. Change only the pose: now working at a laptop. "
+         "Same framing and background. No text.",
+  reference_images=["~/path/to/approved-portrait.png"],
+)
+```
+
+- Up to three local PNG, JPEG or WebP files, sent to the model before the prompt. Nothing is fetched from a URL.
+- Name what must stay ("keep the face, eyes and colours exactly the same") and what changes; name small details that tend to multiply ("ONE antenna rod"), and the angle ("the same three-quarter view").
+- Still compare each result with the reference: it holds the character far better than words alone, not perfectly.
+- Without `reference_images` the call is exactly what it was before.
 
 ## Setup
 
