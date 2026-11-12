@@ -23,6 +23,8 @@ Periodic care of the vault as it grows. Produces a review packet across **every 
 
 `/housekeeping` is spatial. It reorganizes what already exists.
 
+**`--placement` mode: a small, regular sweep for misplaced files.** `/aios:housekeeping --placement` runs Phase 0 and only **Bucket 21** (file placement, the vault grammar and the context-reach checks) and **Bucket 25** (spawned-output placement), with the same proposal packet and approval flow, and never moves anything on its own. It writes the usual log, with `- mode: placement` in its Summary. It exists because placement drift is what costs a session its context, and in a full run it sits inside a long packet that runs rarely. `/aios:today` offers it once the newest housekeeping log is 14 days old or more; a full run counts as a sweep.
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /housekeeping` for any user overrides. Apply them to the buckets below.
@@ -670,6 +672,16 @@ Audits the vault against the **File Placement Router** (CLAUDE.md § IV) *and* t
 - **Alias-less renames** → notes whose git history shows a rename but whose frontmatter has no `aliases:` for the old basename, while inbound `[[old-name]]` links still exist (grammar § 5). Propose adding the alias.
 - **Basename collisions** → two linked notes sharing a basename, making `[[name]]` ambiguous (grammar § 5).
 - **Roadmap-layer graduation signals (grammar § 7)** → the vault may have outgrown per-note tracking. Check the four signals: project notes repeatedly flagging the line-count ladder because they carry *prioritized cross-project backlogs* (not history); the same initiative's tasks fragmented across 3+ project notes with no surface owning priority; carries bouncing between notes; cross-everything questions no file can answer. **2+ signals firing → surface the recommendation**: instantiate `templates/aios/roadmap-template.md` (one file first; family maps only when that file grows heavy), wire each participating project note's `Roadmap` row, keys per the truth-flip contract. This is the framework's existing opt-in layer — the bucket's job is noticing *when it's worth offering*, never installing it. Adoption is entirely the operator's call, and "not yet" is a fine answer that shouldn't be re-proposed for 30+ days.
+
+**Scan — context reach (what a session can actually find).** A session finds things through the context floor (`hooks/context-floor.py`), the `_index.md` files and wiki-links. A file none of those reach is, for the AIOS, a file that does not exist. Each finding names the file, the proposed home and the rule behind it:
+
+- **Unreachable files** → a note under `vault/` that no `_index.md` lists and no other note links to (skip `01 - calendar/`, `00 - notes/logs/` and `04 - backups/`, which are reached by date or by tools). Propose a home and the index line, or a link from the note it belongs with.
+- **Duplicates** → the same content, or the same topic written twice, in two places. Name the one to keep (the one the indexes and links already point at) and propose merging the other into it.
+- **Context weight** → large files or binaries (PDFs, images, exports) inside the folders sessions read at start: `context/declared/`, `context/observed/`, `context/ventures/`. Propose `02 - assets/` for raw inputs, `03 - export/` for deliverables, leaving a one-line pointer behind if a note relies on it.
+- **Stranded operator statements** → a preference, a decision or a fact about the operator written in passing in a daily note that belongs in a context file (`preferences.md`, `working_style.md`, a project note's Decisions Log). Quote the line and propose where it belongs; never copy it without a yes.
+- **Loose files** → files at a folder's top level beside an existing subfolder for their kind (a deck beside `decks/`, an invoice beside `invoices/`). Propose the move into it.
+
+**A declined finding is not proposed again** unless the file changed since: the log's `## Declined` section lists each one with the file's date, and the next run skips it.
 
 **Propose-only — never auto-move.** Placement and structure are semantic judgment; the operator approves each move. On approval: `git mv`, update wiki-links pointing at the old path (grep first), update affected `_index.md` files — and for anything beyond a handful of files, execute via the **`vault-migrations`** skill (dry-run → inventory-verify → write), never ad-hoc.
 

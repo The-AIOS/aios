@@ -1639,6 +1639,10 @@ jobs:
         # vault-routine.md has no staleness clock, and nothing replaced it. (#266)
         run: bash tests/close-day-routine-detectors.test.sh
 
+      - name: housekeeping has a --placement sweep with context-reach checks, offered by /today
+        # Placement drift costs a session its context; in a full run it sat inside a long, rare packet. (#300)
+        run: bash tests/housekeeping-placement-mode.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,
