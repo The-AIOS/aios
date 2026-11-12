@@ -1611,6 +1611,10 @@ jobs:
         # the two-readings gate waited forever. (#281)
         run: bash tests/quota-lone-reading.test.sh
 
+      - name: /aios:ingest works in a folder of its own per run, never a fixed /tmp path
+        # Two ingests at once shared /tmp/ingest-source.md, so one could file the other's source. (#297)
+        run: bash tests/ingest-temp-paths.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,
