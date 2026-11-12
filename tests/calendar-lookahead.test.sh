@@ -31,6 +31,8 @@ fi
 #   * the header the executor prints is the one today.md and close-day.md quote
 #   * the lookahead is no longer gated on close-day
 #   * the lookahead merges every configured account, de-duplicated and tagged
+#   * a calendar is read once, under its own account, even when another
+#     configured account subscribes to it
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -283,6 +285,41 @@ checks.append(("a slow further account is an error line, and the primary still r
                "account 'personal' (me@personal.example) could not be read" in slow and "Board" in slow,
                repr(slow[-240:])))
 checks.append(("the merged block does not wait for the slow account", _took < 2.5, f"took {_took:.1f}s"))
+
+# 13. An account that subscribes to another configured account's own calendar (to see
+#     everything in one place) does not repeat that account's meetings in its own block:
+#     each calendar is read once, under the account it belongs to. Matched by id, in any
+#     case, whatever the subscriber renamed it to.
+EVENTS["me@example.com"].append(ev("Payroll", "2026-09-24T13:00:00Z", "2026-09-24T14:00:00Z"))
+EVENTS["Me@Example.com"] = EVENTS["me@example.com"]
+EVENTS["family@group.example"] = [ev("Recital", "2026-09-24T18:00:00Z", "2026-09-24T19:00:00Z")]
+CALS["QSUB"] = [("me@personal.example", True, "me@personal.example"),
+                ("Me@Example.com", False, "Work (renamed)"),
+                ("family@group.example", False, "Family")]
+CALS["PSUB"] = CALS["P"] + [("me@personal.example", False, "me@personal.example")]
+BOTH = frozenset({"me@example.com", "me@personal.example"})
+DAY = ("2026-09-24T00:00:00Z", "2026-09-24T23:59:59Z")
+sub_day = pe.google_calendar_events("QSUB", "me@personal.example", *DAY,
+                                    timezone_name="UTC", read_accounts=BOTH)
+checks.append(("a subscribed copy of another read account's calendar is skipped",
+               "Payroll" not in sub_day, repr(sub_day)))
+checks.append(("the subscriber keeps a calendar no read account owns",
+               "Recital" in sub_day, repr(sub_day)))
+alone = pe.google_calendar_events("QSUB", "me@personal.example", *DAY, timezone_name="UTC",
+                                  read_accounts=frozenset({"me@personal.example"}))
+checks.append(("an account this run does not read stays visible through its subscriber",
+               "Payroll" in alone, repr(alone)))
+own = pe.google_calendar_events("P", "me@example.com", *DAY, timezone_name="UTC",
+                                read_accounts=BOTH)
+checks.append(("an account's own calendar is never skipped", "Payroll" in own, repr(own)))
+look = pe.google_calendar_events(
+    "PSUB", "me@example.com", "2026-09-24T00:00:00Z", "2026-10-07T23:59:59Z", dated=True,
+    timezone_name="UTC", also=[("personal", "Q", "me@personal.example")], read_accounts=BOTH)
+eq("in the lookahead, a subscribed account's event keeps its own account's tag",
+   [r for r in look.split("\n") if "Dentist" in r], ["- 08:00 – 09:00 — Dentist  _[personal]_"])
+checks.append(("the executor passes the accounts it reads to every calendar block",
+               src.count("read_accounts=read_accounts") == 4,
+               f"found {src.count('read_accounts=read_accounts')}, want 4"))
 
 checks.append(("the executor passes the further accounts to the lookahead",
                "timezone_name=render_tz, also=lookahead_also" in src

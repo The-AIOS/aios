@@ -100,6 +100,16 @@
 **Action required** — check first; do only what applies:
 1. **Only if the operator has the Nano Banana MCP registered:** the server file changed, and a running server keeps the old code. Say once: *"Reconnect the image tool to use reference images: type `/mcp` and reconnect nano-banana."* No new installer, no new dependency, nothing else to run.
 
+## 2026-11-09 — A calendar you subscribe to from another of your accounts is listed once
+
+`hash: `
+
+> **What you can now do.** Keep every calendar in view from one Google account, by subscribing there to your other accounts' calendars, without your daily plan listing their meetings twice.
+
+**Each account's calendar is read once, under its own account.** With two or more Google accounts in `USER.md`, an account that subscribed to another's calendar repeated that account's meetings in its own block of `/today` and `/close-day`: once under the account they belong to, and again under the one that subscribes. The skip list could not help. The subscribed copy has the same id as the original and usually the same name, and renaming it from the subscribing account renames the original too, so skipping it by name emptied the other account's block. The executor now knows which accounts it reads, and each account skips any calendar whose id is another of them. An account the run does not read (not configured, or no token on disk) is still shown through whichever account can see it. The 14-day lookahead already listed a shared meeting once; there, a subscribed account's events now carry their own account's tag. `tests/calendar-lookahead.test.sh` covers it.
+
+**What you need to do.** Nothing. If you worked around this with a rule under `### /today` or `### /close-day` in `USER.md` that ignores those copies, you can delete the rule.
+
 ## 2026-11-06 — Your own cards in the App's sidebar, Google setup that catches the missed click, and rotation that does not wait forever
 
 `hash: 9667e1d · 918b9aa · 34086db · 70ad67d · e052659 · e759fe2 · d1dd288 · a54ea13 · be41dea · 0b079bb` · [#281](https://github.com/The-AIOS/aios/issues/281) · [#282](https://github.com/The-AIOS/aios/pull/282) · [#283](https://github.com/The-AIOS/aios/issues/283) · [#285](https://github.com/The-AIOS/aios/issues/285) · [#286](https://github.com/The-AIOS/aios/pull/286) · [#287](https://github.com/The-AIOS/aios/pull/287) · [#288](https://github.com/The-AIOS/aios/pull/288) · AIOS App 0.15.0
