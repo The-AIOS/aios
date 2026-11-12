@@ -1635,6 +1635,10 @@ jobs:
         # The issue path already did; a built fix went straight to the PR. (#259)
         run: bash tests/contribution-pr-search.test.sh
 
+      - name: /close-day notices when the operator's rhythm changed, and stays silent when it did not
+        # vault-routine.md has no staleness clock, and nothing replaced it. (#266)
+        run: bash tests/close-day-routine-detectors.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,

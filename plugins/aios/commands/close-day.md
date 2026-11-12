@@ -625,6 +625,17 @@ Candidates:
 - `preferences.md` — new working preference discovered (tool, format, communication style)
 - `vault-routine.md` — cadence adjustment needed (e.g., a command was too frequent/infrequent, a routine isn't landing)
 
+**Routine change check (`vault-routine.md`, every close-day).** `vault-routine.md` is restated in place and has no staleness clock (`restated: true`), so nothing else notices when the rhythm it describes stops being true. Run these six detectors over files the daily loop already writes (the last 14 days of daily notes, the weekly plans, the session blocks), each against what `vault-routine.md` says. **If none fires, say nothing about the routine.**
+
+1. **Adherence shift.** A ritual the file says runs on a cadence (daily `/today`, a weekly `/7plan`, a growth routine) happened on less than half, or clearly more, of the days it should have in the last 14.
+2. **New calendar instrument.** A recurring event or block that started in the last 14 days and shapes the working rhythm (a weekly review, a sprint ritual, a standing session) that the file does not mention.
+3. **Broken Monday anchor.** Two weeks in a row whose days have daily notes but no `{year}-W{week}-plan.md`. A week with no daily notes at all is a vacation, not a broken anchor: it never fires.
+4. **Gap.** Three or more days in a row with no daily note, after a stretch the file describes as daily. Report it once, as a question about the rhythm, never as a lapse.
+5. **Fan-in change.** The number of session blocks feeding one day's close changed by half or more against the 14 days before (one session a day became four, or the reverse).
+6. **Unused command.** A command whose own trigger (the suggestion tables in `/aios:today`'s Command Discovery Engine) fired at least twice in 14 days, and that never ran. A command whose trigger never fired is not unused: it never fires.
+
+When one fires, name it in one line with its evidence and offer to rewrite the affected line of `vault-routine.md`. **"Still accurate" is a valid answer**: write nothing and finish the close. After either answer, set `routine-checked: {today}` in the file's frontmatter and don't raise the same detector again for 7 days. These are written instructions only; no script.
+
 ### Tier A routing enforcement (Reinforced session-insights → target files, autonomous)
 
 **Why this step exists:** the session-insights lifecycle is *Emerging → Reinforced → Routed (to target file) → removed from buffer*. The buffer canibalizes target files when Reinforced entries linger with `Route to:` tags but the routing step never executes — a real vault was found with Reinforced entries sitting for weeks, each already marked ready to route, because nothing ever performed the routing step. Same failure mode as Tier B drift; different layer.
