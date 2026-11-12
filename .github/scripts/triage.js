@@ -17,15 +17,24 @@ const STOP = new Set(('a an and are as at be but by can do does for from has hav
   'my no not of on or so that the their them then there this to too was we what when where which who why ' +
   'will with you your after before still only now one every each more less than when while about').split(' '));
 
-// What-you-observed signals, from CONTRIBUTING § Which repo?. Each word is weak alone; a
-// suggestion needs two signals for another repo and more than the current one has.
+// What-you-observed signals, from CONTRIBUTING § Which repo?, matched as whole words or
+// phrases (never inside another word: "pane" must not match "panel", nor "window"
+// "Windows"). Each is weak alone; a suggestion needs two signals for another repo and
+// more than the current repo has. Generic words ("install", "window") are left out on
+// purpose: core issues use them as often as App issues do.
 const SIGNALS = {
-  'aios-app': ['install', 'installer', 'first-run', 'setup window', 'window', 'packaging', '.dmg', '.exe',
-               'appimage', 'the app', 'aios app', 'desktop app', 'sidebar', 'tab group', 'chat view', 'pane'],
-  'aios-glass': ['glass', 'panel', 'extension', 'vs code', 'vscode', 'antigravity', 'cursor', 'open vsx', 'status bar item'],
+  'aios-app': ['installer', 'first-run', 'setup window', 'packaging', 'dmg', 'exe', 'appimage', 'the app',
+               'aios app', 'desktop app', 'sidebar', 'tab group', 'chat view', 'session pane', 'menu bar'],
+  'aios-glass': ['glass', 'panel', 'vs code', 'vscode', 'antigravity', 'cursor', 'open vsx', 'ide extension'],
   'site': ['the-aios.com', 'website', 'web site', 'landing page', 'llms.txt', 'the site'],
-  'aios': ['/aios:', 'command', 'agent', 'skill', 'hook', 'template', 'claude.md', 'changelog', 'vault', 'user.md'],
+  'aios': ['/aios:', 'command', 'agent', 'skill', 'hook', 'hooks', 'template', 'claude.md', 'changelog', 'vault',
+           'user.md', 'intent.md', 'mcp', 'spawn', 'setup.md', 'windows', 'aios-commit', 'context floor'],
 };
+
+function hasWord(text, phrase) {
+  const esc = phrase.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+  return new RegExp(`(^|[^a-z0-9-])${esc}($|[^a-z0-9-])`, 'i').test(text);
+}
 
 function keywords(title) {
   return [...new Set(String(title || '').toLowerCase()
@@ -35,10 +44,16 @@ function keywords(title) {
 }
 
 function scores(text) {
-  const t = ` ${String(text || '').toLowerCase()} `;
+  const t = String(text || '').toLowerCase();
   const out = {};
-  for (const [repo, words] of Object.entries(SIGNALS)) out[repo] = words.filter(w => t.includes(w)).length;
+  for (const [repo, words] of Object.entries(SIGNALS)) out[repo] = words.filter(w => hasWord(t, w)).length;
   return out;
+}
+
+// A matched issue's title goes into a public comment: neutralise mentions and markup so
+// quoting it can never ping anyone or break the comment.
+function safeTitle(t) {
+  return String(t || '').replace(/[`<>]/g, '').replace(/@/g, '@\u200b').slice(0, 120);
 }
 
 function suggestRepo(text, currentRepo) {
@@ -56,7 +71,7 @@ function buildComment({ matches, suggestion }) {
   const lines = [MARKER, 'Thanks for opening this. An automatic first look, to help it land in the right place:', ''];
   if (matches.length) {
     lines.push('**Possibly related, already open or recently closed:**');
-    for (const m of matches) lines.push(`- ${m.repo}#${m.number} ${m.title}${m.state === 'closed' ? ' (closed)' : ''}`);
+    for (const m of matches) lines.push(`- ${m.repo}#${m.number} ${safeTitle(m.title)}${m.state === 'closed' ? ' (closed)' : ''}`);
     lines.push('', `If one of these is the same thing, a comment there keeps the work in one place. Also see the [work in flight](${IN_FLIGHT}).`);
   }
   if (suggestion) {
@@ -76,7 +91,14 @@ async function run({ github, context, core }) {
   let matches = [];
   if (words.length >= 2) {
     const q = `org:${ORG} ${words.join(' ')} in:title`;
-    const res = await github.rest.search.issuesAndPullRequests({ q, per_page: 10 });
+    let res;
+    try {
+      res = await github.rest.search.issuesAndPullRequests({ q, per_page: 10 });
+    } catch (e) {
+      // A search the API rejects must never fail the check on a stranger's issue or PR.
+      core.info(`search failed (${e.status || ''} ${e.message}); staying quiet`);
+      return;
+    }
     matches = res.data.items
       .filter(i => i.number !== item.number || !i.repository_url.endsWith(`/${repo}`))
       .slice(0, 5)
@@ -97,4 +119,4 @@ async function run({ github, context, core }) {
   await github.rest.issues.createComment({ ...context.repo, issue_number: item.number, body });
 }
 
-module.exports = { keywords, scores, suggestRepo, buildComment, run, MARKER };
+module.exports = { keywords, scores, suggestRepo, buildComment, safeTitle, run, MARKER };

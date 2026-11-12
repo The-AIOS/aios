@@ -47,6 +47,13 @@ rm -rf "$T/r"; mk cl 'n=$(cat "$0.count" 2>/dev/null || echo 0); n=$((n+1)); ech
 AIOS_AUDIT_MAX_DIFF=3000 AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $S run --base HEAD~3 --head HEAD --out "$T/r" >"$T/log" 2>&1; rc=$?
 [ $rc -ne 0 ] && grep -F 'claude audit says BLOCK' "$T/log" >/dev/null && ok "one blocking part blocks the whole release" || no "a BLOCK in one part was lost" "$(cat "$T/log")"
 
+git clone -q . "$T/vaultlike" 2>/dev/null; cp "$S" "$T/vaultlike/$S"; touch "$T/vaultlike/.aios-update"
+AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN "$T/vaultlike/$S" run --base HEAD~1 --head HEAD --out "$T/rv" >"$T/log" 2>&1; rc=$?
+[ $rc -ne 0 ] && grep -F '.aios-update' "$T/log" >/dev/null && [ ! -e "$T/rv/outside.md" ] && ok "it refuses to run in an operator's vault, before sending anything" || no "it ran in a vault" "$(cat "$T/log")"
+rm -f "$T/vaultlike/.aios-update"
+AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN "$T/vaultlike/$S" run --base HEAD~1 --head HEAD --out "$T/rv" >"$T/log" 2>&1; rc=$?
+[ $rc -ne 0 ] && grep -F 'not The-AIOS/aios' "$T/log" >/dev/null && ok "it refuses any repo whose origin is not The-AIOS/aios" || no "it ran outside the public repo" "$(cat "$T/log")"
+
 rm -rf "$T/r"; $PYBIN $S check --out "$T/r" >"$T/log" 2>&1; rc=$?
 [ $rc -ne 0 ] && grep -F 'no outside audit report' "$T/log" >/dev/null && ok "check with no reports at all blocks" || no "check passed with no reports"
 printf '\n-- %d passed, %d failed --\n' "$PASS" "$FAIL"

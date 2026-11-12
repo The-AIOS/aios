@@ -661,21 +661,34 @@ def confirm_or_arm(email: str, metric: str, pct: float, sampled_at: float) -> bo
 # With every account near its cap and nobody at the keyboard, the lone-reading path can
 # confirm every few minutes, find nowhere to rotate, and decline again. Each decline used
 # to write a row and notify, so an unchanged state sent a notification every 5 minutes.
-# A small marker names the account whose stretch is under way; repeats for it only log.
-# The stretch ends when a reading drops under the threshold or a swap happens.
+# A small marker names the stretch under way: the account, the window that is capped (5h
+# or 7d) and the kind of reason. Repeats of that same stretch only log. Anything that is
+# news notifies again: the 5h cap turning into the 7d one (a lock of days, not hours), or
+# the reason changing (say, from "all alternatives still capped" to "no usable
+# alternative", which needs a login). The stretch ends when a reading drops under the
+# threshold or a swap happens, and in any case after DECLINE_STRETCH_SECS, so a marker
+# left by a crash cannot silence an account for days.
 DECLINED_FILE = os.path.join(CONFIG_DIR, "quota-watch.declined.json")
+DECLINE_STRETCH_SECS = 6 * 3600
 
 
-def decline_is_new(email: str) -> bool:
-    """True the first time a decline is seen for this account in the current stretch."""
+def _decline_key(email: str, metric: str, why: str) -> str:
+    kind = re.sub(r"\d+", "#", (why or "").split(":", 1)[0]).strip()
+    return f"{email}|{metric}|{kind}"
+
+
+def decline_is_new(email: str, metric: str = "", why: str = "") -> bool:
+    """True the first time this stretch (account, capped window, kind of reason) is seen."""
+    key = _decline_key(email, metric, why)
     try:
         with open(DECLINED_FILE, encoding="utf-8") as f:
-            if (json.load(f) or {}).get("email") == email:
-                return False
+            prev = json.load(f) or {}
+        if prev.get("key") == key and time.time() - (prev.get("since") or 0) < DECLINE_STRETCH_SECS:
+            return False
     except Exception:
         pass
     try:
-        write_json_atomic(DECLINED_FILE, {"email": email, "since": int(time.time())})
+        write_json_atomic(DECLINED_FILE, {"key": key, "email": email, "since": int(time.time())})
     except Exception as e:
         log(f"decline marker not saved: {type(e).__name__}: {e}")
     return True
@@ -1172,7 +1185,7 @@ def main(self_path: str) -> None:
             return
         if not target:
             log(f"NO ROTATION — {why}. Staying on {email}; its window rolls on its own.")
-            if not decline_is_new(email):
+            if not decline_is_new(email, metric, why):
                 log("same capped stretch: no new row, no new notification")
                 return
             append_swap_log({

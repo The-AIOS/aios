@@ -514,7 +514,7 @@ These take priority when the vault signals something specific:
 | Big decision mentioned in daily note or project | `/challenge` |
 | Content/writing task in today's plan | `/ghost` |
 | `/housekeeping` triggers (any of): 15th of month · parking-lot carries >15 · active projects >12 · 3+ snapshots stale >14 days · project-hygiene nudge fired 3+/wk · orphaned notes or broken wiki-links | `/housekeeping` |
-| Newest `00 - notes/logs/command-logs/housekeeping-*.md` is 14+ days old (a full run counts) | `/aios:housekeeping --placement` (one line; silent otherwise) |
+| Newest `00 - notes/logs/command-logs/housekeeping-*.md` is 14+ days old (a full run counts); with no log yet, only once the vault's first daily note is 14+ days old | `/aios:housekeeping --placement` (one line; silent otherwise) |
 | Role log has 2+ weeks of entries | `/role-report` |
 | 1st of the month + previous month has uncompacted logs | `/compact` |
 | Any mounted-company tracker >7 days stale | `/aios:company --sync {name}` (or `--sync-all`) |

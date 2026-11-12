@@ -24,6 +24,7 @@ hits=$(grep -n '/tmp/ingest-' "$F" || true)
 grep 'mktemp -d' "$F" >/dev/null && ok "each run makes its own folder with mktemp -d" || no "no per-run folder is created"
 grep -F '"$INGEST_DIR/source.md"' "$F" >/dev/null && ok "the conversion writes into the run's folder" || no "the conversion does not use the run's folder"
 grep -F '"$INGEST_DIR/transcript.txt"' "$F" >/dev/null && ok "the transcript goes into the run's folder" || no "the transcript does not use the run's folder"
-grep -F 'rm -rf "$INGEST_DIR"' "$F" >/dev/null && ok "the folder is removed when the ingest is done" || no "the run's folder is never removed"
+grep -F 'remove that folder with `rm -rf`' "$F" >/dev/null && ok "the folder is removed when the ingest is done" || no "the run's folder is never removed"
+grep -F 'does not carry over' "$F" >/dev/null && ok "it warns that the variable does not survive between tool calls" || no "no warning that each tool call starts a fresh shell"
 printf '\n-- %d passed, %d failed --\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

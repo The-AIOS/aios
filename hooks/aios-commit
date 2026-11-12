@@ -386,8 +386,9 @@ fi
 # Resolve $0 through symlinks first: install-git-hooks.sh links ~/.local/bin/aios-commit here, and a
 # bare `dirname "$0"` then looked for the scanner in ~/.local/bin/git/ and refused every commit made
 # by the short name. A readlink loop, not `readlink -f`/`realpath` — bash 3.2 + older macOS lack both.
-_SELF="$0"
-while [ -L "$_SELF" ]; do
+_SELF="$0"; _HOPS=0
+while [ -L "$_SELF" ] && [ "$_HOPS" -lt 40 ]; do
+  _HOPS=$((_HOPS+1))
   _LDIR="$(cd -P "$(dirname "$_SELF")" && pwd)"
   _SELF="$(readlink "$_SELF")"
   case "$_SELF" in /*) ;; *) _SELF="$_LDIR/$_SELF" ;; esac

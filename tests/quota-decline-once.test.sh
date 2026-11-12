@@ -38,13 +38,24 @@ has = hasattr(w, "decline_is_new") and hasattr(w, "end_decline_stretch")
 check("the watcher has a decline-stretch marker", has, True)
 if has:
     A, B = "a@example.com", "b@example.com"
+    capped = "all alternatives still capped: b (5h 99%)"
     w.end_decline_stretch()
-    check("the first decline for an account is new (notify)", w.decline_is_new(A), True)
-    check("a second decline for the same account is not", w.decline_is_new(A), False)
-    check("nor a third", w.decline_is_new(A), False)
-    check("a decline for a different account is new", w.decline_is_new(B), True)
+    check("the first decline for an account is new (notify)", w.decline_is_new(A, "5h", capped), True)
+    check("a second decline for the same stretch is not, even as the numbers move",
+          w.decline_is_new(A, "5h", "all alternatives still capped: b (5h 97%)"), False)
+    check("nor a third", w.decline_is_new(A, "5h", capped), False)
+    check("the 5h cap turning into the 7d one is news", w.decline_is_new(A, "7d", capped), True)
+    check("the reason changing (no usable alternative: a login is needed) is news",
+          w.decline_is_new(A, "7d", "no usable alternative: b (token expired)"), True)
+    check("a decline for a different account is new", w.decline_is_new(B, "5h", capped), True)
     w.end_decline_stretch()
-    check("after the stretch ends, the next decline notifies again", w.decline_is_new(B), True)
+    check("after the stretch ends, the next decline notifies again", w.decline_is_new(B, "5h", capped), True)
+    import time as _t
+    real = _t.time
+    w.time.time = lambda: real() + w.DECLINE_STRETCH_SECS + 5
+    check("a stretch older than its limit notifies again (a crash cannot silence it for days)",
+          w.decline_is_new(B, "5h", capped), True)
+    w.time.time = real
 src = inspect.getsource(w)
 i = src.find('"action": "declined"')
 check("the decline path asks the marker before logging and notifying",

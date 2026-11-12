@@ -57,6 +57,22 @@ def sh(cmd, **kw):
     return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=900, **kw)
 
 
+def guard_public_repo():
+    """Refuse anywhere but a clone of the public framework repo.
+
+    The diff goes to a third party. Run from an operator's live vault (a tree carrying
+    `.aios-update`), origin/main...HEAD would include their notes, USER.md and INTENT.md,
+    and their observed context would leave the machine. So this refuses unless the tree is
+    a clone of The-AIOS/aios, and never runs where `.aios-update` exists."""
+    if (ROOT / ".aios-update").exists():
+        sys.exit("release-audit: this tree carries .aios-update, so it is an operator's vault. "
+                 "Its diff would send private notes to a third party. Run it in a clone of The-AIOS/aios.")
+    url = sh(["git", "-C", str(ROOT), "remote", "get-url", "origin"]).stdout.strip().lower()
+    if not re.search(r"github\.com[:/]the-aios/aios(\.git)?$", url):
+        sys.exit(f"release-audit: origin is {url or 'not set'}, not The-AIOS/aios. "
+                 "The diff goes to a third party, so this only runs in a clone of the public framework repo.")
+
+
 def diff_chunks(base, head):
     """The release diff in chunks no larger than MAX_DIFF, split at file boundaries.
 
@@ -118,6 +134,7 @@ def run_claude(brief_path):
 
 
 def cmd_run(a):
+    guard_public_repo()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     chunks = diff_chunks(a.base, a.head)

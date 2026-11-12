@@ -675,13 +675,13 @@ Audits the vault against the **File Placement Router** (CLAUDE.md § IV) *and* t
 
 **Scan — context reach (what a session can actually find).** A session finds things through the context floor (`hooks/context-floor.py`), the `_index.md` files and wiki-links. A file none of those reach is, for the AIOS, a file that does not exist. Each finding names the file, the proposed home and the rule behind it:
 
-- **Unreachable files** → a note under `vault/` that no `_index.md` lists and no other note links to (skip `01 - calendar/`, `00 - notes/logs/` and `04 - backups/`, which are reached by date or by tools). Propose a home and the index line, or a link from the note it belongs with.
+- **Unreachable files** → a note inside an indexed folder (one with an `_index.md`) that its index does not list and no other note links to. Folders without an index (`01 - calendar/`, `00 - notes/logs/`, `04 - backups/`, and any room that has not grown one) are reached by date, by tools or by search, and are not scanned. Propose a home and the index line, or a link from the note it belongs with.
 - **Duplicates** → the same content, or the same topic written twice, in two places. Name the one to keep (the one the indexes and links already point at) and propose merging the other into it.
-- **Context weight** → large files or binaries (PDFs, images, exports) inside the folders sessions read at start: `context/declared/`, `context/observed/`, `context/ventures/`. Propose `02 - assets/` for raw inputs, `03 - export/` for deliverables, leaving a one-line pointer behind if a note relies on it.
+- **Context weight** → large files or binaries (PDFs, images, exports) inside the folders sessions read at start: `context/declared/`, `context/observed/`, `context/ventures/`. **Skip any venture folder synced from a company** (listed under `USER.md` → `## Companies (mounted)`): the next `/aios:company --sync` would put the file back, so propose the move in the company's own repo instead. Propose `02 - assets/` for raw inputs, `03 - export/` for deliverables, leaving a one-line pointer behind if a note relies on it.
 - **Stranded operator statements** → a preference, a decision or a fact about the operator written in passing in a daily note that belongs in a context file (`preferences.md`, `working_style.md`, a project note's Decisions Log). Quote the line and propose where it belongs; never copy it without a yes.
 - **Loose files** → files at a folder's top level beside an existing subfolder for their kind (a deck beside `decks/`, an invoice beside `invoices/`). Propose the move into it.
 
-**A declined finding is not proposed again** unless the file changed since: the log's `## Declined` section lists each one with the file's date, and the next run skips it.
+**A declined finding is not proposed again** unless the file changed since: the log's `## Declined` section lists each one with the file's date, and the next run skips it. A *deferred* finding (`## Deferred`) is proposed again.
 
 **Propose-only — never auto-move.** Placement and structure are semantic judgment; the operator approves each move. On approval: `git mv`, update wiki-links pointing at the old path (grep first), update affected `_index.md` files — and for anything beyond a handful of files, execute via the **`vault-migrations`** skill (dry-run → inventory-verify → write), never ad-hoc.
 
@@ -1062,7 +1062,10 @@ Write a log to `00 - notes/logs/command-logs/housekeeping-{YYYY-MM-DD}.md` with:
 ## Applied
 {Per-bucket list of what actually happened — each entry includes the target, the change, the reason}
 
-## Declined / Deferred
+## Declined
+- {proposal} — {file path} (file dated {YYYY-MM-DD}): {one-line reason}
+
+## Deferred
 {Proposals the user skipped — valuable to keep as a record of "we considered this and decided not to"}
 
 ## Next candidates

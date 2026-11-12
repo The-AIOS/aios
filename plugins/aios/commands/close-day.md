@@ -634,7 +634,7 @@ Candidates:
 5. **Fan-in change.** The number of session blocks feeding one day's close changed by half or more against the 14 days before (one session a day became four, or the reverse).
 6. **Unused command.** A command whose own trigger (the suggestion tables in `/aios:today`'s Command Discovery Engine) fired at least twice in 14 days, and that never ran. A command whose trigger never fired is not unused: it never fires.
 
-When one fires, name it in one line with its evidence and offer to rewrite the affected line of `vault-routine.md`. **"Still accurate" is a valid answer**: write nothing and finish the close. After either answer, set `routine-checked: {today}` in the file's frontmatter and don't raise the same detector again for 7 days. These are written instructions only; no script.
+When one fires, name it in one line with its evidence and offer to rewrite the affected line of `vault-routine.md`. **"Still accurate" is a valid answer**: write nothing and finish the close. After either answer, record it in the file's frontmatter as `routine-checked-{detector}: {today}` (for example `routine-checked-gap: 2026-11-11`) and don't raise that detector again for 7 days; the others are unaffected. A rewrite follows the usual rule for observed files (snapshot first, then set `updated:`); recording a check alone is not a content change and does not. These are written instructions only; no script.
 
 ### Tier A routing enforcement (Reinforced session-insights → target files, autonomous)
 

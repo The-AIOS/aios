@@ -22,12 +22,15 @@ out=$(node -e '
 const t = require("./.github/scripts/triage.js");
 const r = [];
 r.push(JSON.stringify(t.keywords("aios-commit: the short name on PATH refuses every commit")));
-r.push(String(t.suggestRepo("Windows installer: the setup window never finishes installing", "aios")));
+r.push(String(t.suggestRepo("Windows installer: the setup window never finishes, the .dmg and the AppImage too", "aios")));
 r.push(String(t.suggestRepo("/aios:today skips a command when the hook fails", "aios")));
 r.push(String(t.suggestRepo("Glass panel: the extension status bar item is missing in VS Code", "aios")));
 r.push(JSON.stringify(t.buildComment({ matches: [], suggestion: null })));
 const c = t.buildComment({ matches: [{repo:"aios",number:290,title:"x",state:"open"}], suggestion: "aios-app" });
 r.push(String(c.includes(t.MARKER) && c.includes("aios#290") && c.includes("The-AIOS/aios-app") && c.includes("never closes")));
+r.push(String(t.suggestRepo("install-git-hooks.ps1 fails on Windows when the hook folder is missing", "aios")));
+r.push(JSON.stringify(t.scores("Glass panel shows nothing")["aios-app"]));
+r.push(String(t.safeTitle("ping @someone `x`").includes("@someone")));
 console.log(r.join("\n"));')
 L(){ printf '%s\n' "$out" | sed -n "${1}p"; }
 [ "$(L 1)" = '["aios-commit","short","name","path","refuses","commit"]' ] && ok "a title becomes its search words" || no "keywords" "$(L 1)"
@@ -36,6 +39,10 @@ L(){ printf '%s\n' "$out" | sed -n "${1}p"; }
 [ "$(L 4)" = "aios-glass" ] && ok "a panel/extension problem suggests aios-glass" || no "glass routing" "$(L 4)"
 [ "$(L 5)" = '""' ] && ok "nothing matched means no comment at all" || no "empty comment" "$(L 5)"
 [ "$(L 6)" = "true" ] && ok "the comment carries its marker, the match, the suggestion and the promise" || no "comment content" "$(L 6)"
+[ "$(L 7)" = "null" ] && ok "a Windows hook installer issue is not sent to the App" || no "a core Windows issue is misrouted" "$(L 7)"
+[ "$(L 8)" = "0" ] && ok "'panel' does not count as the App's 'pane'" || no "substring matching is back" "$(L 8)"
+[ "$(L 9)" = "false" ] && ok "a quoted title cannot ping anyone" || no "a matched title can @-mention" "$(L 9)"
+grep -F 'staying quiet' "$S" | grep -F 'search failed' >/dev/null && ok "a rejected search stays quiet instead of failing the check" || no "a search error can fail the job"
 forbidden=$(grep -nvE '^[[:space:]]*//' "$S" | grep -E "issues\.(update|lock|addLabels|removeLabel|setLabels|removeAllLabels|addAssignees)|pulls\.(update|merge)|transfer|state: *['\"]closed|closeIssue" || true)
 [ -z "$forbidden" ] && ok "the script makes no call that closes, labels, edits or transfers" || no "forbidden calls in the script" "$forbidden"
 grep -E '^\s+types: \[opened\]' "$W" | wc -l | grep -q 2 && ok "it runs only when an issue or PR is opened" || no "it runs on more than 'opened'"

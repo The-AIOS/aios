@@ -38,10 +38,10 @@ The user provides one of:
 **File conversion (MarkItDown):**
 For non-markdown files, convert first using the MarkItDown wrapper. **Work in a folder of this run's own**, never a fixed path: two ingests at once (two sessions, or a session and a scheduled job) would otherwise write and read the same file, and one could file the other's source while everything looked normal.
 ```bash
-INGEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/aios-ingest.XXXXXX")   # once per ingest; reuse it below
+INGEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/aios-ingest.XXXXXX") && echo "$INGEST_DIR"   # once per ingest
 python3 ~/aios/hooks/markitdown-convert.py <input_file> "$INGEST_DIR/source.md"
 ```
-When the ingest is filed, remove the folder: `rm -rf "$INGEST_DIR"`.
+**Each tool call starts a fresh shell, so `$INGEST_DIR` does not carry over.** Note the path the first call printed and write it out literally in every later step (the transcript steps below, the read, the cleanup). When the ingest is filed, remove that folder with `rm -rf` and its literal path.
 
 **A non-zero exit means no text came out: stop, and never ingest an empty file.** The script exits 2 with *"No text extracted"* when the source has no text layer (a scanned or image-only PDF is the usual case). Read the file directly instead (PDFs and images can be read as they are), or ask the operator for a text version.
 
