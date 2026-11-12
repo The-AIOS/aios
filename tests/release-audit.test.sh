@@ -17,15 +17,17 @@ ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 S=.github/scripts/release-audit.py
-mk(){ printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s/%s.args"\ncat >/dev/null\n%s\n' "$T" "$1" "$2" > "$T/$1"; chmod +x "$T/$1"; }
+mk(){ printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s/%s.args"\npwd >> "%s/%s.cwd"\nfor a in "$@"; do case "$a" in *settings.json) cat "$a" >> "%s/%s.settings";; esac; done\ncat >/dev/null\n%s\n' "$T" "$1" "$T" "$1" "$T" "$1" "$2" > "$T/$1"; chmod +x "$T/$1"; }
 run(){ AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $S run --base HEAD~1 --head HEAD --out "$T/r" >"$T/log" 2>&1; }
 
 mk out 'echo "fine"; echo "VERDICT: PASS"'; mk cl 'echo "fine"; echo "VERDICT: PASS"'
 run; rc=$?
 [ $rc -eq 0 ] && ok "both PASS → the release may be cut" || no "both PASS but blocked" "$(cat "$T/log")"
 [ -f "$T/r/outside.md" ] && [ -f "$T/r/claude.md" ] && [ -f "$T/r/brief.md" ] && ok "both reports and the brief are saved" || no "reports missing"
-grep -F -- '--tools  --setting-sources user,project --strict-mcp-config --permission-mode default' "$T/cl.args" >/dev/null \
-  && ok "the Claude audit runs with no tools, no local settings and no MCP servers" || no "the Claude audit is not contained" "$(cat "$T/cl.args")"
+grep -E -- '--tools  --setting-sources user --settings [^ ]+settings.json --strict-mcp-config --permission-mode default' "$T/cl.args" >/dev/null \
+  && ok "the Claude audit runs with no tools, no MCP servers and no project settings layer" || no "the Claude audit is not contained" "$(cat "$T/cl.args")"
+grep -F '"disableAllHooks": true' "$T/cl.settings" >/dev/null && ok "every hook is disabled for the Claude audit" || no "hooks are not disabled" "$(cat "$T/cl.settings" 2>&1)"
+case "$(head -1 "$T/cl.cwd")" in "$PWD"*) no "the Claude audit runs inside the repo" "$(head -1 "$T/cl.cwd")";; *release-audit-*) ok "the Claude audit runs from an empty temporary folder";; *) no "unexpected working folder" "$(head -1 "$T/cl.cwd")";; esac
 grep -F 'who gets hurt' "$T/r/brief.md" >/dev/null && grep -F -- '--- DIFF ---' "$T/r/brief.md" >/dev/null && ok "the brief asks who gets hurt and carries the diff" || no "the brief is wrong"
 
 rm -rf "$T/r"; mk cl 'echo "VERDICT: BLOCK"'; run; rc=$?
@@ -35,7 +37,15 @@ rm -rf "$T/r"; mk out 'echo "no key: create ~/.config/aios-secrets/openrouter.en
 [ $rc -ne 0 ] && grep -F 'NOT RUN' "$T/r/outside.md" >/dev/null && ok "no outside key → the report says NOT RUN and the release is blocked" || no "a missing outside audit passed" "$(cat "$T/log")"
 
 rm -rf "$T/r"; mk out 'echo "looks ok"'; mk cl 'echo "VERDICT: PASS"'; run; rc=$?
-[ $rc -ne 0 ] && grep -F 'no VERDICT line' "$T/log" >/dev/null && ok "an answer with no VERDICT line blocks" || no "a report with no verdict passed" "$(cat "$T/log")"
+[ $rc -ne 0 ] && grep -F 'did not run or gave no verdict' "$T/r/outside.md" >/dev/null && ok "an answer with no VERDICT line blocks, and the report says why" || no "a report with no verdict passed" "$(cat "$T/log")"
+
+rm -rf "$T/r"; : > "$T/cl.args"; mk out 'echo "VERDICT: PASS"'; mk cl 'echo "VERDICT: PASS"'
+AIOS_AUDIT_MAX_DIFF=3000 AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $S run --base HEAD~3 --head HEAD --out "$T/r" >"$T/log" 2>&1; rc=$?
+n=$(ls "$T/r"/brief-*.md 2>/dev/null | wc -l | tr -d ' ')
+[ $rc -eq 0 ] && [ "$n" -gt 1 ] && ok "a diff over the limit is split into $n parts, each reviewed, never truncated" || no "a large diff was not split" "rc=$rc parts=$n $(cat "$T/log")"
+rm -rf "$T/r"; mk cl 'n=$(cat "$0.count" 2>/dev/null || echo 0); n=$((n+1)); echo $n > "$0.count"; [ $n -eq 2 ] && echo "VERDICT: BLOCK" || echo "VERDICT: PASS"'
+AIOS_AUDIT_MAX_DIFF=3000 AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $S run --base HEAD~3 --head HEAD --out "$T/r" >"$T/log" 2>&1; rc=$?
+[ $rc -ne 0 ] && grep -F 'claude audit says BLOCK' "$T/log" >/dev/null && ok "one blocking part blocks the whole release" || no "a BLOCK in one part was lost" "$(cat "$T/log")"
 
 rm -rf "$T/r"; $PYBIN $S check --out "$T/r" >"$T/log" 2>&1; rc=$?
 [ $rc -ne 0 ] && grep -F 'no outside audit report' "$T/log" >/dev/null && ok "check with no reports at all blocks" || no "check passed with no reports"

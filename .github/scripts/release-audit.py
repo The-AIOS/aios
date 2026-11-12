@@ -27,14 +27,16 @@ THE GATE
 Maintainer tooling: it lives under .github/ and never reaches an operator's vault.
 """
 import argparse
+import json
 import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-MAX_DIFF = 180_000  # characters; a larger release is audited on its first part, and says so
+MAX_DIFF = int(os.environ.get("AIOS_AUDIT_MAX_DIFF", "180000"))  # characters per chunk
 VERDICT = re.compile(r"^VERDICT:\s*(PASS|BLOCK)\b", re.M)
 
 BRIEF = """You are auditing a release of an open-source framework that runs inside its users'
@@ -55,15 +57,30 @@ def sh(cmd, **kw):
     return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=900, **kw)
 
 
-def diff_text(base, head):
+def diff_chunks(base, head):
+    """The release diff in chunks no larger than MAX_DIFF, split at file boundaries.
+
+    Never truncated: a release audited on part of its diff could pass on the part nobody
+    read. Every chunk goes to both reviewers, and the release passes only if every chunk
+    does. A single file larger than the limit is split by lines, and says so."""
     r = sh(["git", "-C", str(ROOT), "diff", f"{base}...{head}", "--", ".", ":(exclude)CHANGELOG.md"])
     if r.returncode != 0:
         sys.exit(f"release-audit: git diff failed: {r.stderr.strip()}")
-    d = r.stdout
-    note = ""
-    if len(d) > MAX_DIFF:
-        d, note = d[:MAX_DIFF], f"\n[diff truncated to its first {MAX_DIFF} characters]\n"
-    return d + note
+    files = re.split(r"(?m)^(?=diff --git )", r.stdout)
+    chunks, cur = [], ""
+    for f in (x for x in files if x):
+        while len(f) > MAX_DIFF:
+            cut = f.rfind("\n", 0, MAX_DIFF) + 1 or MAX_DIFF
+            if cur:
+                chunks.append(cur); cur = ""
+            chunks.append(f[:cut] + "\n[this file continues in the next part]\n")
+            f = f[cut:]
+        if len(cur) + len(f) > MAX_DIFF and cur:
+            chunks.append(cur); cur = ""
+        cur += f
+    if cur or not chunks:
+        chunks.append(cur)
+    return chunks
 
 
 def verdict(text):
@@ -84,11 +101,17 @@ def run_outside(brief_path):
 
 
 def run_claude(brief_path):
+    # Read-only and context-free: no tools, no MCP servers, no project settings layer (a
+    # repo's own .claude/ could carry hooks), every hook disabled, and run from an empty
+    # folder so nothing local is picked up.
     cmd = os.environ.get("AIOS_AUDIT_CLAUDE", "claude").split()
     prompt = "Audit the release described on stdin, exactly as it instructs."
-    r = sh(cmd + ["-p", prompt, "--tools", "", "--setting-sources", "user,project",
-                  "--strict-mcp-config", "--permission-mode", "default"],
-           input=Path(brief_path).read_text(encoding="utf-8"))
+    with tempfile.TemporaryDirectory(prefix="release-audit-") as empty:
+        settings = Path(empty) / "settings.json"
+        settings.write_text(json.dumps({"disableAllHooks": True}), encoding="utf-8")
+        r = sh(cmd + ["-p", prompt, "--tools", "", "--setting-sources", "user", "--settings", str(settings),
+                      "--strict-mcp-config", "--permission-mode", "default"],
+               input=Path(brief_path).read_text(encoding="utf-8"), cwd=empty)
     if r.returncode != 0:
         return f"NOT RUN: the fresh-context Claude audit failed.\n{(r.stderr or r.stdout).strip()}\nVERDICT: NOT RUN\n"
     return r.stdout
@@ -97,12 +120,25 @@ def run_claude(brief_path):
 def cmd_run(a):
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    brief = out / "brief.md"
-    brief.write_text(BRIEF + "\n\n--- DIFF ---\n" + diff_text(a.base, a.head), encoding="utf-8")
-    for name, fn in (("outside", run_outside), ("claude", run_claude)):
-        text = fn(brief)
+    chunks = diff_chunks(a.base, a.head)
+    reports = {"outside": [], "claude": []}
+    for i, chunk in enumerate(chunks, 1):
+        part = f" (part {i} of {len(chunks)})" if len(chunks) > 1 else ""
+        brief = out / (f"brief-{i}.md" if len(chunks) > 1 else "brief.md")
+        brief.write_text(BRIEF + f"\n\n--- DIFF{part} ---\n" + chunk, encoding="utf-8")
+        for name, fn in (("outside", run_outside), ("claude", run_claude)):
+            reports[name].append((part, fn(brief)))
+    for name, parts in reports.items():
+        # One report per reviewer; its last line is the release verdict: PASS only if
+        # every part passed.
+        worst = "PASS" if all(verdict(t) == "PASS" for _, t in parts) else \
+            next(verdict(t) for _, t in parts if verdict(t) != "PASS")
+        text = "\n\n".join(f"## Report{p}\n\n{t.strip()}" for p, t in parts)
+        text += f"\n\nVERDICT: {worst if worst in ('PASS', 'BLOCK') else 'BLOCK'}\n"
+        if worst not in ("PASS", "BLOCK"):
+            text = text.replace("VERDICT: BLOCK\n", "A part did not run or gave no verdict: blocked.\nVERDICT: BLOCK\n")
         (out / f"{name}.md").write_text(text, encoding="utf-8")
-        print(f"{name}: {verdict(text)}  ({out / (name + '.md')})")
+        print(f"{name}: {verdict(text)}  ({out / (name + '.md')}, {len(parts)} part(s))")
     return cmd_check(a)
 
 
