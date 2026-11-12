@@ -1619,6 +1619,10 @@ jobs:
         # With every account capped and the machine idle, each decline used to log and notify. (#298)
         run: bash tests/quota-decline-once.test.sh
 
+      - name: the boards skill documents board.json's icon key, with names the App draws
+        # App 0.15.1 added icon; the skill must teach it, and never suggest a name the App ignores. (#296)
+        run: bash tests/boards-skill-icon.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,
