@@ -81,7 +81,7 @@
 
 ## 2026-11-12 — Your vault's rules come first inside your vault
 
-`hash: pending` · [#302](https://github.com/The-AIOS/aios/issues/302)
+`hash: dca4569` · [#302](https://github.com/The-AIOS/aios/issues/302)
 
 > **What you can now do.** Keep personal defaults in your global Claude instructions without them overriding your vault. Inside the vault, the vault's contract wins; everywhere else, your global file applies on its own.
 
