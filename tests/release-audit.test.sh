@@ -16,7 +16,14 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
-S=.github/scripts/release-audit.py
+# A small repo of its own, so the test never depends on this checkout's history (CI clones
+# shallow) or on its origin (a fork's would differ): the script, a few commits, and an
+# origin that names the public framework repo.
+F="$T/fixture"; mkdir -p "$F/.github/scripts" "$F/docs"; cp .github/scripts/release-audit.py "$F/.github/scripts/"
+g(){ git -C "$F" -c user.name=t -c user.email=t@t -c commit.gpgsign=false "$@"; }
+g init -q; g remote add origin https://github.com/The-AIOS/aios.git; g add -A; g commit -qm base
+for i in 1 2 3; do for j in 1 2 3; do seq 1 400 | sed "s/^/line $i.$j /" > "$F/docs/f$i$j.txt"; done; g add -A; g commit -qm "change $i"; done
+S="$F/.github/scripts/release-audit.py"
 mk(){ printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s/%s.args"\npwd >> "%s/%s.cwd"\nfor a in "$@"; do case "$a" in *settings.json) cat "$a" >> "%s/%s.settings";; esac; done\ncat >/dev/null\n%s\n' "$T" "$1" "$T" "$1" "$T" "$1" "$2" > "$T/$1"; chmod +x "$T/$1"; }
 run(){ AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $S run --base HEAD~1 --head HEAD --out "$T/r" >"$T/log" 2>&1; }
 
@@ -47,11 +54,11 @@ rm -rf "$T/r"; mk cl 'n=$(cat "$0.count" 2>/dev/null || echo 0); n=$((n+1)); ech
 AIOS_AUDIT_MAX_DIFF=3000 AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $S run --base HEAD~3 --head HEAD --out "$T/r" >"$T/log" 2>&1; rc=$?
 [ $rc -ne 0 ] && grep -F 'claude audit says BLOCK' "$T/log" >/dev/null && ok "one blocking part blocks the whole release" || no "a BLOCK in one part was lost" "$(cat "$T/log")"
 
-git clone -q . "$T/vaultlike" 2>/dev/null; cp "$S" "$T/vaultlike/$S"; touch "$T/vaultlike/.aios-update"
-AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN "$T/vaultlike/$S" run --base HEAD~1 --head HEAD --out "$T/rv" >"$T/log" 2>&1; rc=$?
+git clone -q "$F" "$T/vaultlike" 2>/dev/null; git -C "$T/vaultlike" remote set-url origin https://github.com/The-AIOS/aios.git; touch "$T/vaultlike/.aios-update"
+AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN "$T/vaultlike/.github/scripts/release-audit.py" run --base HEAD~1 --head HEAD --out "$T/rv" >"$T/log" 2>&1; rc=$?
 [ $rc -ne 0 ] && grep -F '.aios-update' "$T/log" >/dev/null && [ ! -e "$T/rv/outside.md" ] && ok "it refuses to run in an operator's vault, before sending anything" || no "it ran in a vault" "$(cat "$T/log")"
-rm -f "$T/vaultlike/.aios-update"
-AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN "$T/vaultlike/$S" run --base HEAD~1 --head HEAD --out "$T/rv" >"$T/log" 2>&1; rc=$?
+rm -f "$T/vaultlike/.aios-update"; git -C "$T/vaultlike" remote set-url origin https://example.com/someone/fork.git
+AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN "$T/vaultlike/.github/scripts/release-audit.py" run --base HEAD~1 --head HEAD --out "$T/rv" >"$T/log" 2>&1; rc=$?
 [ $rc -ne 0 ] && grep -F 'not The-AIOS/aios' "$T/log" >/dev/null && ok "it refuses any repo whose origin is not The-AIOS/aios" || no "it ran outside the public repo" "$(cat "$T/log")"
 
 rm -rf "$T/r"; $PYBIN $S check --out "$T/r" >"$T/log" 2>&1; rc=$?
