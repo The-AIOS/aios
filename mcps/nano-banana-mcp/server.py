@@ -36,6 +36,7 @@ def generate_image(
     prompt: str,
     output_path: str | None = None,
     aspect_ratio: str = "1:1",
+    reference_images: list[str] | None = None,
 ) -> dict:
     """Generate an image from a text prompt using Gemini 2.5 Flash Image (Nano Banana).
 
@@ -43,6 +44,11 @@ def generate_image(
         prompt: Natural-language description of the desired image.
         output_path: Where to save the PNG. Defaults to your vault's 02 - assets/generated/{timestamp}.png
         aspect_ratio: One of "1:1", "16:9", "9:16", "4:3", "3:4". Default "1:1".
+        reference_images: Optional local image paths (PNG/JPEG/WebP, up to 3) the model
+            should look at, e.g. an approved character portrait, so a new pose keeps the same
+            face, colours and proportions. The prompt then describes the change ("the same
+            character, now working at a laptop"). Without it the model only has the words,
+            and a character drifts between images.
 
     Returns:
         Dict with keys: path (str), prompt (str), aspect_ratio (str), size_bytes (int).
@@ -54,9 +60,21 @@ def generate_image(
         DEFAULT_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         output_path = str(DEFAULT_OUTPUT_DIR / f"{datetime.now().strftime('%Y%m%d-%H%M%S')}.png")
 
+    contents: list = []
+    for ref in (reference_images or [])[:3]:
+        rp = Path(ref).expanduser()
+        if not rp.is_file():
+            raise ValueError(f"reference image not found: {ref}")
+        mime = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                ".webp": "image/webp"}.get(rp.suffix.lower())
+        if not mime:
+            raise ValueError(f"reference image must be PNG, JPEG or WebP: {ref}")
+        contents.append(types.Part.from_bytes(data=rp.read_bytes(), mime_type=mime))
+    contents.append(prompt)
+
     response = client.models.generate_content(
         model="gemini-2.5-flash-image",
-        contents=prompt,
+        contents=contents,
         config=types.GenerateContentConfig(
             response_modalities=["IMAGE"],
             image_config=types.ImageConfig(aspect_ratio=aspect_ratio),
@@ -72,6 +90,7 @@ def generate_image(
                 "path": str(out),
                 "prompt": prompt,
                 "aspect_ratio": aspect_ratio,
+                "reference_images": list(reference_images or [])[:3],
                 "size_bytes": out.stat().st_size,
             }
 

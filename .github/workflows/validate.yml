@@ -111,6 +111,12 @@ jobs:
         # The stamp lands at step 5 and routing runs at 6-10: a run cut in between must not read as a duplicate and skip observed-context routing forever.
         run: bash tests/close-session-resume.test.sh
 
+      - name: nano-banana sends reference images before the prompt, and only local image files
+        # Offline: google.genai and mcp are stand-ins that record the request. A call without
+        # references must still send the prompt alone; against the server before the
+        # parameter existed, the reference cases fail.
+        run: python3 tests/nano-banana-reference.test.py
+
       - name: CLAUDE.md integrity — § references resolve, pinned literals present
         run: |
           set -e

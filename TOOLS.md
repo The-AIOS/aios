@@ -200,7 +200,7 @@ The 10 bundled MCP servers — each connects Claude to a real tool you use. Auto
 | **NotebookLM** | Create notebooks, add sources, generate audio summaries + study guides + briefing docs. Full programmatic API beyond what NotebookLM UI exposes | Long-form research synthesis, podcast-style audio from your written corpus | Google OAuth |
 | **Stitch** | AI-native UI screen generation from text prompts + DESIGN.md tokens. Apply design systems, create projects, list screens, edit. Pairs with `design-md-author` agent | UI/UX work where you want Claude to author DESIGN.md once then generate matching screens on demand | `STITCH_API_KEY` (from Stitch settings) |
 | **Playwright** | Browser automation: navigate, click, fill, screenshot, scrape. Use sparingly — heavy ops | Auto-publish flows (LinkedIn, X), end-to-end testing, scraping a site that has no API | None (browser binary) |
-| **Nano Banana** | Gemini-based image generation. Cover images, illustrations, brand-fit visuals | Used by `deck-builder` for slide imagery; useful for any agent that needs custom visuals | Google API key |
+| **Nano Banana** | Gemini-based image generation. Cover images, illustrations, brand-fit visuals; pass `reference_images` to keep one character the same across pictures | Used by `deck-builder` for slide imagery; useful for any agent that needs custom visuals | Google API key |
 | **PDF Generator** | Markdown → HTML (with inline CSS) → Chrome headless → PDF. Branded reports per design tokens | Powers `/aios:weekly-learnings`, `/aios:learned`, `/aios:role-report` branded exports | None (Chrome binary) |
 | **Spotify DJ** | Playback control + search + current track + queue management | Lifestyle — no AIOS command depends on it. Music while you work, via Claude | OAuth |
 
