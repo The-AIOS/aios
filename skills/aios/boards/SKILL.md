@@ -22,6 +22,7 @@ A **board** is the sidebar's `custom/` slot. The App lists the folders under `~/
 - **Optional `board.json`** beside it: `{ "title": "Inbox queue", "valid_for": 600 }`.
   - `title` replaces the folder name on the card.
   - `valid_for` is in **seconds** (default `3600`). Unknown keys are ignored.
+  - `icon` (App 0.15.1+) picks the card header's icon from the App's own icon set: `{ "title": "Inbox queue", "valid_for": 600, "icon": "inbox" }`. Names that suit boards: `chart`, `inbox`, `calendar`, `users`, `rocket`, `megaphone`, `shield`, `brain`, `note`, `building`, `star`, `stack`. The full list is in the App's [`docs/rfcs/sidebar-boards.md`](https://github.com/The-AIOS/aios-app/blob/main/docs/rfcs/sidebar-boards.md). It is a name made of letters only, never a path, a URL or SVG. An unknown name, a wrong type or no key keeps the default board glyph, with no error line, and an App older than 0.15.1 ignores the key, so a board using it never breaks.
   - A malformed `board.json` shows an error line on the card; the board still renders. Fix the file rather than delete it.
 - **Static only.** The viewer is locked down, and each rule below is enforced in more than one place, so do not try to work around it:
   - **No scripts.** `<script>`, inline handlers and `javascript:` never run.
@@ -61,7 +62,7 @@ A **board** is the sidebar's `custom/` slot. The App lists the folders under `~/
    with os.fdopen(fd, "w", encoding="utf-8") as f:
        f.write(page)
    os.replace(tmp, board / "index.html")                                    # atomic on one filesystem
-   (board / "board.json").write_text(json.dumps({"title": "Status", "valid_for": 600}))
+   (board / "board.json").write_text(json.dumps({"title": "Status", "valid_for": 600, "icon": "chart"}))
    ```
 
    Escape every value that comes from data (`html.escape`). A board is rendered as HTML, and text pulled from an issue, an email or a file can carry markup.

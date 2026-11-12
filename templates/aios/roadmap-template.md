@@ -14,7 +14,7 @@ aliases: []
 
 > **What this is:** the to-do SOURCE OF TRUTH for one big multi-project push — every open item on ONE prioritized surface, each with a **stable key**. Use this when a push spans several project notes and you need one view; for normal work, your project notes are already the truth surface and you don't need this file.
 >
-> **THE KEY SYSTEM.** Pick a short prefix per lane/family (2–4 caps — `grep` the vault first so prefixes don't collide with an existing roadmap). **Keys are identity; list order is priority** — reorder rows freely, never renumber a key; new items append at the lane's next `n`. This is how you, daily notes, and `/7plan` refer to the work — cite keys, never re-copy items.
+> **THE KEY SYSTEM.** Pick a short prefix per lane/family (2–4 caps — `grep` the vault first so prefixes don't collide with an existing roadmap). **Keys are identity; list order is priority** — reorder rows freely, never renumber a key; new items append at the lane's next `n`. **Before adding a key, check `INTENT.md` → `## Explicitly NOT doing`:** an item that matches a parked entry gets a key only after the operator un-parks it, which means removing that line from `INTENT.md`; otherwise `/aios:today` drops it from every day while the roadmap still lists it. This is how you, daily notes, and `/7plan` refer to the work — cite keys, never re-copy items.
 >
 > **THE ANTI-RE-DRIFT RULE (ship-time truth-flip — CLAUDE.md § Discipline).** The session that ships an item flips its key to ✅ here — and appends the `ledger:` row if one is declared — *in that same session*. `/close-day` reconciles as the backstop. Daily notes and weekly plans only reference keys; they never grow competing to-do lists.
 >

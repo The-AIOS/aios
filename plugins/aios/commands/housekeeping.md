@@ -23,6 +23,8 @@ Periodic care of the vault as it grows. Produces a review packet across **every 
 
 `/housekeeping` is spatial. It reorganizes what already exists.
 
+**`--placement` mode: a small, regular sweep for misplaced files.** `/aios:housekeeping --placement` runs Phase 0 and only **Bucket 21** (file placement, the vault grammar and the context-reach checks) and **Bucket 25** (spawned-output placement), with the same proposal packet and approval flow, and never moves anything on its own. It writes the usual log, with `- mode: placement` in its Summary. It exists because placement drift is what costs a session its context, and in a full run it sits inside a long packet that runs rarely. `/aios:today` offers it once the newest housekeeping log is 14 days old or more; a full run counts as a sweep.
+
 ## Steps
 
 > **Before executing:** Read `USER.md` → `## Command personalizations` → `### /housekeeping` for any user overrides. Apply them to the buckets below.
@@ -155,7 +157,7 @@ Read `INTENT.md` and propose:
 - **Autonomy-level demotion candidates** — same scan but for domains currently `autonomous`: if actions were frequently rewritten / cancelled / corrected → propose **demote level** with specific examples.
 - **Venture overrides** — are there new ventures in `00 - notes/context/ventures/*/` that aren't yet in `## Venture-level overrides`? Propose **add override section** with a starter template.
 - **Tradeoff rules** — are new tradeoff decisions showing up in close-day decision journals that aren't yet encoded in `## Global tradeoff rules` or venture-level tradeoff rules? Propose **add rule**.
-- **Explicitly NOT doing** — for each parked item, scan daily notes + session-insights for any recent mention. If a parked item has been mentioned / revisited / worked on in the last 30 days → propose **reactivate or reaffirm** (the user either changed their mind or should confirm the park).
+- **Explicitly NOT doing** — for each parked item, scan daily notes + session-insights for any recent mention. If a parked item has been mentioned / revisited / worked on in the last 30 days → propose **reactivate or reaffirm** (the user either changed their mind or should confirm the park). **Also check every live roadmap** (frontmatter `type: roadmap`, `status: live`; never a copy under `logs/`, which Bucket 23 explains) for an open key whose subject matches a parked entry, using the same matching as `/aios:today`'s *INTENT.md parked items check*. Each one is work on the roadmap that `/today` will never carry: propose **un-park or kill** (un-park = remove the line from `INTENT.md`; kill = mark the key ❌ with the reason).
 - **Escalation triggers** — check if any trigger in the andon-cord table has fired in the last week but didn't produce the documented response (e.g., carry ×6+ didn't force a decision). Propose **review trigger logic** or **add context for exceptions**.
 - **Anti-values** — any anti-value being violated in recent patterns (per `session-insights.md` or `patterns.md`)? Surface it as a growth-edge proposal, route to `growth.md`.
 
@@ -671,6 +673,16 @@ Audits the vault against the **File Placement Router** (CLAUDE.md § IV) *and* t
 - **Basename collisions** → two linked notes sharing a basename, making `[[name]]` ambiguous (grammar § 5).
 - **Roadmap-layer graduation signals (grammar § 7)** → the vault may have outgrown per-note tracking. Check the four signals: project notes repeatedly flagging the line-count ladder because they carry *prioritized cross-project backlogs* (not history); the same initiative's tasks fragmented across 3+ project notes with no surface owning priority; carries bouncing between notes; cross-everything questions no file can answer. **2+ signals firing → surface the recommendation**: instantiate `templates/aios/roadmap-template.md` (one file first; family maps only when that file grows heavy), wire each participating project note's `Roadmap` row, keys per the truth-flip contract. This is the framework's existing opt-in layer — the bucket's job is noticing *when it's worth offering*, never installing it. Adoption is entirely the operator's call, and "not yet" is a fine answer that shouldn't be re-proposed for 30+ days.
 
+**Scan — context reach (what a session can actually find).** A session finds things through the context floor (`hooks/context-floor.py`), the `_index.md` files and wiki-links. A file none of those reach is, for the AIOS, a file that does not exist. Each finding names the file, the proposed home and the rule behind it:
+
+- **Unreachable files** → a note inside an indexed folder (one with an `_index.md`) that its index does not list and no other note links to. Folders without an index (`01 - calendar/`, `00 - notes/logs/`, `04 - backups/`, and any room that has not grown one) are reached by date, by tools or by search, and are not scanned. Propose a home and the index line, or a link from the note it belongs with.
+- **Duplicates** → the same content, or the same topic written twice, in two places. Name the one to keep (the one the indexes and links already point at) and propose merging the other into it.
+- **Context weight** → large files or binaries (PDFs, images, exports) inside the folders sessions read at start: `context/declared/`, `context/observed/`, `context/ventures/`. **Skip any venture folder synced from a company** (listed under `USER.md` → `## Companies (mounted)`): the next `/aios:company --sync` would put the file back, so propose the move in the company's own repo instead. Propose `02 - assets/` for raw inputs, `03 - export/` for deliverables, leaving a one-line pointer behind if a note relies on it.
+- **Stranded operator statements** → a preference, a decision or a fact about the operator written in passing in a daily note that belongs in a context file (`preferences.md`, `working_style.md`, a project note's Decisions Log). Quote the line and propose where it belongs; never copy it without a yes.
+- **Loose files** → files at a folder's top level beside an existing subfolder for their kind (a deck beside `decks/`, an invoice beside `invoices/`). Propose the move into it.
+
+**A declined finding is not proposed again** unless the file changed since: the log's `## Declined` section lists each one with the file's date, and the next run skips it. A *deferred* finding (`## Deferred`) is proposed again.
+
 **Propose-only — never auto-move.** Placement and structure are semantic judgment; the operator approves each move. On approval: `git mv`, update wiki-links pointing at the old path (grep first), update affected `_index.md` files — and for anything beyond a handful of files, execute via the **`vault-migrations`** skill (dry-run → inventory-verify → write), never ad-hoc.
 
 **Why this bucket exists:** placement drift is invisible until retrieval fails — the file exists but nobody finds it because it lives where it was *born*, not where it'll be *asked for*. Caught 2026-06-04 in the reference vault: a strategy-rich conference capture filed in `logs/` next to a machine-written bridge beacon — same folder, opposite species. The grammar half was added 2026-09-06 after a reference vault's full structure pass surfaced the drift classes the router alone never catches (mixed retirement names, record-species archives, alias-less renames) — the router fires at file *birth*; these accumulate as structure *evolves*. The router + grammar are the forward mechanism; this bucket is the periodic backstop.
@@ -1050,7 +1062,10 @@ Write a log to `00 - notes/logs/command-logs/housekeeping-{YYYY-MM-DD}.md` with:
 ## Applied
 {Per-bucket list of what actually happened — each entry includes the target, the change, the reason}
 
-## Declined / Deferred
+## Declined
+- {proposal} — {file path} (file dated {YYYY-MM-DD}): {one-line reason}
+
+## Deferred
 {Proposals the user skipped — valuable to keep as a record of "we considered this and decided not to"}
 
 ## Next candidates

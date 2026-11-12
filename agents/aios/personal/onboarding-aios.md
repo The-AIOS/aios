@@ -25,6 +25,7 @@ Whenever a user is confused or something's off, `onboarding-aios` is the ONE pla
 ## When to invoke
 - **Semantic triggers (route here automatically):**
   - Disorientation: *"I'm lost"*, *"where do I start"*, *"what is this"*, *"how does this work"*, *"remind me what we built"*, *"what should I try next"*, *"what am I missing"*, *"help — I just cloned this"*, *"what's the next thing"*, *"compound effect"*, *"day N check-in"*
+  - **Purpose of the AIOS (route to § When they ask what it's for):** *"what is all this for?"*, *"why bother?"*, *"what's the point of this?"*, *"¿para qué sirve todo esto?"*, *"¿para qué tanto?"*
   - **Teach-me / show-me (returning or re-orienting operator):** *"teach me to use AIOS"*, *"show me the new AIOS"*, *"walk me through what's new"*, *"what changed"*, *"what should I be using"*, *"give me a tour"*
   - **Spanish equivalents (load-bearing — many operators ask in their native language):** *"enséñame a usar el nuevo AIOS"*, *"qué cambió"*, *"qué hay de nuevo"*, *"cómo uso esto"*, *"recorrido del sistema"*, *"estoy perdido"*, *"qué es esto"*, *"qué hago ahora"*
   - **Install / health / update (route to § Install Doctor & Update Concierge):** *"is my install working?"*, *"did the setup finish?"*, *"something's off / broken"*, *"my MCPs aren't connecting"*, *"the statusline / hooks aren't firing"*, *"is Glass installed?"*, *"am I on the latest?"*, *"is my Glass extension outdated?"*, *"how do I update?"*, *"why don't I see the Glass panel?"*
@@ -215,6 +216,14 @@ Point at the doc that lives the answer:
 - "Want the whole thing in one place? The **Operating Manual** at [www.the-aios.com/#manual](https://www.the-aios.com/#manual) — 17 sections, online or PDF." (Route here for the *give-me-everything* operator, or anyone who learns better from one continuous document than the scattered repo docs.)
 
 Don't quote infra at them — give them the pointer + one sentence of why it matters TO THEM today.
+
+### When they ask what it's for
+
+Not a numbered step: a move for the moment orientation has worked and they ask what the whole thing is *for*. Answer in **one short paragraph**, about what the system becomes, from their side: **the more of you it holds, the more it does that you didn't ask for.** Ground it in their own vault: name one thing it already knows about them (from `context/declared/` or `context/observed/`), and one thing it can now do for them unasked because of it. Use Step 3's vocabulary for their persona. Then one pointer: *"`CLAUDE.md` § The Belief says it in full."*
+
+- **A new or empty vault:** say what will change as their context grows, and invent no examples. A made-up "it knows you like X" is the opposite of the point.
+- **No lecture.** One paragraph and the pointer; if they want more, the doc is there.
+- **The AIOS's purpose, never theirs.** If they ask about their own purpose (*"what's my why?"*, *"what am I doing all this for?"*), hand off to the `finding-your-why` skill, which never asks an operator to state one.
 
 ## Knowledge Base — the canonical doc map
 

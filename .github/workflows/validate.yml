@@ -111,6 +111,12 @@ jobs:
         # The stamp lands at step 5 and routing runs at 6-10: a run cut in between must not read as a duplicate and skip observed-context routing forever.
         run: bash tests/close-session-resume.test.sh
 
+      - name: nano-banana sends reference images before the prompt, and only local image files
+        # Offline: google.genai and mcp are stand-ins that record the request. A call without
+        # references must still send the prompt alone; against the server before the
+        # parameter existed, the reference cases fail.
+        run: python3 tests/nano-banana-reference.test.py
+
       - name: CLAUDE.md integrity — § references resolve, pinned literals present
         run: |
           set -e
@@ -1604,6 +1610,51 @@ jobs:
         # With one session or nobody at the keyboard, no second reading ever arrives and
         # the two-readings gate waited forever. (#281)
         run: bash tests/quota-lone-reading.test.sh
+
+      - name: /aios:ingest works in a folder of its own per run, never a fixed /tmp path
+        # Two ingests at once shared /tmp/ingest-source.md, so one could file the other's source. (#297)
+        run: bash tests/ingest-temp-paths.test.sh
+
+      - name: rotation notifies once per capped stretch, not every 5 minutes
+        # With every account capped and the machine idle, each decline used to log and notify. (#298)
+        run: bash tests/quota-decline-once.test.sh
+
+      - name: the boards skill documents board.json's icon key, with names the App draws
+        # App 0.15.1 added icon; the skill must teach it, and never suggest a name the App ignores. (#296)
+        run: bash tests/boards-skill-icon.test.sh
+
+      - name: onboarding-aios answers what the AIOS is for, and hands a personal purpose to finding-your-why
+        # Newcomers asked what it is all for the moment orientation worked; the agent had no move. (#270)
+        run: bash tests/onboarding-aios-why.test.sh
+
+      - name: a roadmap key is not minted for parked work, and housekeeping flags any that were
+        # /today drops parked items, so a key for one sat on the roadmap and was never carried. (#268)
+        run: bash tests/roadmap-parked-check.test.sh
+
+      - name: a session searches and routes before it opens a PR, not only an issue
+        # The issue path already did; a built fix went straight to the PR. (#259)
+        run: bash tests/contribution-pr-search.test.sh
+
+      - name: /close-day notices when the operator's rhythm changed, and stays silent when it did not
+        # vault-routine.md has no staleness clock, and nothing replaced it. (#266)
+        run: bash tests/close-day-routine-detectors.test.sh
+
+      - name: housekeeping has a --placement sweep with context-reach checks, offered by /today
+        # Placement drift costs a session its context; in a full run it sat inside a long, rare packet. (#300)
+        run: bash tests/housekeeping-placement-mode.test.sh
+
+      - name: a fresh clone delivers every script its docs tell operators to run
+        # Every other gate asks whether the repo agrees with itself; this one asks what a new
+        # operator receives. Found on writing it: a shipped doc told operators to run tests/. (#267)
+        run: bash tests/fresh-clone-payload.test.sh
+
+      - name: the triage Action only comments, starts in dry-run, and never runs a PR's code
+        # It sees strangers' issues and PRs with this repo's token, so its limits are tested. (#260)
+        run: bash tests/triage-action.test.sh
+
+      - name: two independent audits gate a release, and an audit that did not run never passes
+        # A Claude-reviewed release is also audited from outside the Claude family. (#267)
+        run: bash tests/release-audit.test.sh
 
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so

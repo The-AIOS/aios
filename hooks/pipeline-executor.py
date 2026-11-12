@@ -456,7 +456,7 @@ def _skip_status(names):
     return f"ℹ️ calendars to skip: {len(names)} listed ({', '.join(names)})"
 
 
-def _calendar_ids(service, skip=()):
+def _calendar_ids(service, skip=(), elsewhere=()):
     """Every calendar the account can read, primary first, feeds excluded.
 
     Reading only `primary` was the original behaviour and it is silently lossy:
@@ -464,8 +464,17 @@ def _calendar_ids(service, skip=()):
     lives on any of them is invisible to the daily plan. Invisible-but-real is
     the worst failure mode a planner can have — it does not look like an error,
     it looks like a free afternoon.
+
+    `elsewhere` holds the addresses of the OTHER accounts this run reads. A calendar
+    whose id is one of them is that account's own calendar, shared with or subscribed
+    to from this one. It is already read under its own account, so reading it here as
+    well printed each of its meetings twice, once in each account's block. Matched by
+    id, never by name: an account's own calendar is usually named after its address,
+    and renaming the copy from the subscribing account renames the original too, so no
+    entry in the skip list can tell the two apart.
     """
     skip_lower = {s.lower() for s in skip}
+    elsewhere_lower = {e.lower() for e in elsewhere}
     ids, primary = [], None
     page_token = None
     while True:
@@ -476,6 +485,8 @@ def _calendar_ids(service, skip=()):
                 continue
             name = cal.get("summaryOverride") or cal.get("summary") or cal_id
             if name.lower() in skip_lower or cal_id.lower() in skip_lower:
+                continue
+            if not cal.get("primary") and cal_id.lower() in elsewhere_lower:
                 continue
             entry = (cal_id, name)
             if cal.get("primary"):
@@ -619,7 +630,7 @@ def _per_calendar_cap(time_min, time_max):
     return 50 if span_days <= 1 else min(250, 25 * span_days)
 
 
-def google_calendar_events(creds_path, email, time_min, time_max, detailed=False, skip=(), timezone_name="UTC", dated=False, also=()):
+def google_calendar_events(creds_path, email, time_min, time_max, detailed=False, skip=(), timezone_name="UTC", dated=False, also=(), read_accounts=()):
     """Fetch events from EVERY calendar on the account, merged and de-duplicated.
 
     `dated` prefixes each day with a `**YYYY-MM-DD (Weekday)**` header. It is off
@@ -636,10 +647,16 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
     primary is fetched first, so a meeting that invites two of the operator's
     addresses appears once, as the primary's. One further account failing is an
     error line in the block, never the whole lookahead.
+
+    `read_accounts` is every address this run reads a calendar for. Each account
+    skips the others' own calendars (see `_calendar_ids`), so a meeting already
+    listed under its own account is not listed again under one that only
+    subscribes to that calendar.
     """
     window = (_date_only(time_min), _date_only(time_max))
     if not also:
-        return _render_calendar(_account_events(creds_path, email, None, time_min, time_max, skip),
+        return _render_calendar(_account_events(creds_path, email, None, time_min, time_max, skip,
+                                                read_accounts),
                                 email, timezone_name, detailed=detailed, dated=dated, window=window)
 
     # Each account is read in its own thread, under one shared deadline that sits inside the
@@ -649,7 +666,8 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
     # a lookahead without the primary would read as an empty calendar, not as a failure.
     accounts = [(None, creds_path, email)] + list(also)
     pool = ThreadPoolExecutor(max_workers=len(accounts))
-    futs = [pool.submit(_account_events, c, e, l, time_min, time_max, skip) for l, c, e in accounts]
+    futs = [pool.submit(_account_events, c, e, l, time_min, time_max, skip, read_accounts)
+            for l, c, e in accounts]
     pool.shutdown(wait=False)
     deadline = time.monotonic() + ACCOUNT_FETCH_DEADLINE
     seen = {}
@@ -682,10 +700,11 @@ def google_calendar_events(creds_path, email, time_min, time_max, detailed=False
 ACCOUNT_FETCH_DEADLINE = 12
 
 
-def _account_events(creds_path, email, label, time_min, time_max, skip):
+def _account_events(creds_path, email, label, time_min, time_max, skip, read_accounts=()):
     """One account's `(key, payload)` list, de-duplicated within that account."""
     seen, order = {}, []
-    _collect_account_events(creds_path, email, label, time_min, time_max, skip, seen, order)
+    _collect_account_events(creds_path, email, label, time_min, time_max, skip, seen, order,
+                            read_accounts)
     return order
 
 
@@ -701,18 +720,21 @@ def _tag_further_account(label, email, cal_id, cal_name):
     return f"{label}:{cal_id}", (label if own else f"{label} · {cal_name}")
 
 
-def _collect_account_events(creds_path, email, label, time_min, time_max, skip, seen, order):
+def _collect_account_events(creds_path, email, label, time_min, time_max, skip, seen, order,
+                            read_accounts=()):
     """Append one account's events to `order`, skipping any key already in `seen`.
 
     `label` is None for the account the block belongs to, and the label of a
-    further account otherwise (see `_tag_further_account`)."""
+    further account otherwise (see `_tag_further_account`). `read_accounts` is
+    every address this run reads; the others' own calendars are skipped here."""
     from googleapiclient.discovery import build
 
     creds = _load_google_creds(creds_path)
     service = build("calendar", "v3", credentials=creds, cache_discovery=False)
 
     per_cal_cap = _per_calendar_cap(time_min, time_max)
-    for cal_id, cal_name in _calendar_ids(service, skip):
+    elsewhere = {a.lower() for a in read_accounts} - {email.lower()}
+    for cal_id, cal_name in _calendar_ids(service, skip, elsewhere):
         shown_id, shown_name = (cal_id, cal_name) if label is None else \
             _tag_further_account(label, email, cal_id, cal_name)
         try:
@@ -1097,12 +1119,30 @@ def run_pipeline(command_name):
         creds_primary = GOOGLE_CREDS_DIR_PRIMARY / f"{sources['google_email_primary']}.json" if sources["google_email_primary"] else None
         creds_personal = GOOGLE_CREDS_DIR_PERSONAL / f"{sources['google_email_personal']}.json" if sources["google_email_personal"] else None
 
-        if "calendar" in sources["configured"] and creds_primary and creds_primary.exists():
+        # Which accounts this run reads a calendar for, decided once: the same three tests
+        # gate each account's own block, the lookahead, and the set below.
+        read_primary = "calendar" in sources["configured"] and creds_primary and creds_primary.exists()
+        read_personal = ("calendar-personal" in sources["configured"]
+                         and creds_personal and creds_personal.exists())
+        read_extra = [(label, email, _extra_account_creds(label, email))
+                      for label, email in extra_accounts]
+        read_extra = [(label, email, creds) for label, email, creds in read_extra if creds.exists()]
+        # Every address this run reads. Each account skips the others' own calendars (see
+        # _calendar_ids), so an account that subscribes to another's calendar to see everything
+        # in one place does not repeat that account's meetings in its own block. An account
+        # left out here (not configured, or no token on disk) is not read, so its calendar is
+        # still shown through any account that can see it.
+        read_accounts = frozenset(
+            ([sources["google_email_primary"]] if read_primary else [])
+            + ([sources["google_email_personal"]] if read_personal else [])
+            + [email for _label, email, _creds in read_extra])
+
+        if read_primary:
             futures["calendar_primary"] = pool.submit(
                 google_calendar_events, creds_primary,
                 sources["google_email_primary"], time_min, time_max,
                 detailed=is_close_day, skip=sources["calendars_skip"],
-                timezone_name=render_tz
+                timezone_name=render_tz, read_accounts=read_accounts
             )
             # Lookahead — every command, not just close-day. See LOOKAHEAD_DAYS above.
             # Every configured account, merged into ONE block: it is the block /today
@@ -1110,34 +1150,31 @@ def run_pipeline(command_name):
             # account must be in it — otherwise "no matching event" is the answer for
             # every such meeting and a moved date goes unnoticed.
             lookahead_also = []
-            if "calendar-personal" in sources["configured"] and creds_personal and creds_personal.exists():
+            if read_personal:
                 lookahead_also.append(("personal", creds_personal, sources["google_email_personal"]))
-            for label, email in extra_accounts:
-                creds_extra = _extra_account_creds(label, email)
-                if creds_extra.exists():
-                    lookahead_also.append((label, creds_extra, email))
+            for label, email, creds_extra in read_extra:
+                lookahead_also.append((label, creds_extra, email))
             futures["calendar_next_week"] = pool.submit(
                 google_calendar_events, creds_primary,
                 sources["google_email_primary"], time_min, time_max_week,
                 skip=sources["calendars_skip"], dated=True,
-                timezone_name=render_tz, also=lookahead_also
+                timezone_name=render_tz, also=lookahead_also, read_accounts=read_accounts
             )
-        if "calendar-personal" in sources["configured"] and creds_personal and creds_personal.exists():
+        if read_personal:
             futures["calendar_personal"] = pool.submit(
                 google_calendar_events, creds_personal,
                 sources["google_email_personal"], time_min, time_max,
                 skip=sources["calendars_skip"],
-                timezone_name=render_tz
+                timezone_name=render_tz, read_accounts=read_accounts
             )
         # Further accounts: today's calendar as its own block (the lookahead above already
         # merges them).
-        for label, email in extra_accounts:
-            creds_extra = _extra_account_creds(label, email)
-            if creds_extra.exists():
-                futures[f"calendar_extra_{_account_slug(label)}"] = pool.submit(
-                    google_calendar_events, creds_extra, email, time_min, time_max,
-                    skip=sources["calendars_skip"], timezone_name=render_tz
-                )
+        for label, email, creds_extra in read_extra:
+            futures[f"calendar_extra_{_account_slug(label)}"] = pool.submit(
+                google_calendar_events, creds_extra, email, time_min, time_max,
+                skip=sources["calendars_skip"], timezone_name=render_tz,
+                read_accounts=read_accounts
+            )
         if "tasks" in sources["configured"] and sources["google_tasks_list"] and creds_primary and creds_primary.exists():
             futures["tasks"] = pool.submit(
                 google_tasks_list, creds_primary,
