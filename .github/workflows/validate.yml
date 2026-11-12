@@ -1648,6 +1648,10 @@ jobs:
         # operator receives. Found on writing it: a shipped doc told operators to run tests/. (#267)
         run: bash tests/fresh-clone-payload.test.sh
 
+      - name: the triage Action only comments, starts in dry-run, and never runs a PR's code
+        # It sees strangers' issues and PRs with this repo's token, so its limits are tested. (#260)
+        run: bash tests/triage-action.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,

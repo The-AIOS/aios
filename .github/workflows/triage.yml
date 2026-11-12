@@ -1,0 +1,41 @@
+name: triage
+
+# A first look at every new issue and PR (#260): likely duplicates across the org, the
+# work in flight, and a transfer suggestion for an issue that looks like it belongs in
+# another repo. It ONLY comments, and starts in dry-run: findings go to the job summary
+# until the repo variable TRIAGE_MODE is set to "comment".
+#
+# Safety: pull_request_target runs with this repo's token, so this job never checks out
+# or runs the PR's code; it checks out the BASE repo only, to read .github/scripts/triage.js.
+# The token can comment; the script never closes, labels, edits or transfers (a token
+# cannot transfer at all). tests/triage-action.test.sh guards both.
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  first-look:
+    if: github.event.repository.fork != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+      - uses: actions/github-script@v7
+        env:
+          TRIAGE_MODE: ${{ vars.TRIAGE_MODE }}
+        with:
+          script: |
+            const triage = require('./.github/scripts/triage.js');
+            await triage.run({ github, context, core });
