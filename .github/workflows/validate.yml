@@ -1627,6 +1627,10 @@ jobs:
         # Newcomers asked what it is all for the moment orientation worked; the agent had no move. (#270)
         run: bash tests/onboarding-aios-why.test.sh
 
+      - name: a roadmap key is not minted for parked work, and housekeeping flags any that were
+        # /today drops parked items, so a key for one sat on the roadmap and was never carried. (#268)
+        run: bash tests/roadmap-parked-check.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,
