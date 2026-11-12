@@ -22,7 +22,7 @@ grep -E '^\s*- `icon`' "$F" >/dev/null && ok "the board.json bullet documents ic
 grep -i 'default board glyph' "$F" >/dev/null && ok "an unknown name keeps the default glyph" || no "the fallback is not described"
 grep -E 'older than 0\.15\.1' "$F" >/dev/null && ok "an older App ignores it" || no "older-App behaviour not stated"
 grep -F '"icon":' "$F" | grep -F 'write_text' >/dev/null && ok "the writer example writes an icon" || no "the writer example has no icon"
-sug=$(grep -E 'Names that suit boards' "$F" | grep -oE '`[a-zA-Z]+`' | tr -d '`')
+sug=$(grep -E 'Names that suit boards' "$F" | sed -E 's/.*Names that suit boards: ([^.]*)\..*/\1/' | grep -oE '`[a-zA-Z]+`' | tr -d '`')
 [ -n "$sug" ] && ok "the skill suggests some names" || no "no suggested names found"
 bad=""; for n in $sug; do case " $APP_ICONS " in *" $n "*) ;; *) bad="$bad $n";; esac; done
 [ -z "$bad" ] && ok "every suggested name is one the App draws" || no "names the App does not draw:$bad"
