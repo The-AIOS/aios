@@ -1623,6 +1623,10 @@ jobs:
         # App 0.15.1 added icon; the skill must teach it, and never suggest a name the App ignores. (#296)
         run: bash tests/boards-skill-icon.test.sh
 
+      - name: the global CLAUDE.md pointer is one shared block, offered by setup and update, and carries nothing personal
+        # A global preference overrode the vault contract in vault sessions; the pointer must stay generic. (#302)
+        run: bash tests/global-claude-pointer.test.sh
+
       - name: onboarding-aios answers what the AIOS is for, and hands a personal purpose to finding-your-why
         # Newcomers asked what it is all for the moment orientation worked; the agent had no move. (#270)
         run: bash tests/onboarding-aios-why.test.sh

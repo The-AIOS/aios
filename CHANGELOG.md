@@ -79,6 +79,18 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-12 — Your vault's rules come first inside your vault
+
+`hash: pending` · [#302](https://github.com/The-AIOS/aios/issues/302)
+
+> **What you can now do.** Keep personal defaults in your global Claude instructions without them overriding your vault. Inside the vault, the vault's contract wins; everywhere else, your global file applies on its own.
+
+**Which instructions win** (#302). Claude Code loads `~/.claude/CLAUDE.md`, your global instructions, in every session on the machine, and in a vault session it loads the vault's `CLAUDE.md` beside it. Nothing said which one wins. A preference written in the global file before AIOS, such as a fixed reply language, quietly overrode the vault's contract inside the vault: reported by an operator whose English message got a Spanish reply. And outside the vault, nothing pointed a session to the AIOS contract when the task did act on the vault or on your behalf. A short "Operating system" block at the top of the global file now says both. It is a pointer, not an import: an `@import` would load the whole vault contract into every session in every folder. The block, and the rules for adding it, live in `templates/aios/global-claude-pointer.md`; setup (`/aios:cold-start-interview` Step 3.5) offers it to new operators, and the action below offers it to you. `tests/global-claude-pointer.test.sh` checks the block stays free of anyone's personal rules.
+
+**Action required** — check each first; do only what applies:
+1. **Only if `~/.claude/CLAUDE.md` does not contain the line `<!-- aios:operating-system -->`:** follow `templates/aios/global-claude-pointer.md`. Show the operator the block and ask once: *"Add three lines at the top of your global Claude instructions, so that inside your vault the vault's rules come first and everywhere else your global file stands on its own? Nothing else in it changes."* **Recommended: yes**, because without it a global preference can override the vault's contract in vault sessions. On yes, create the file if there is none, or insert the block under its first heading and change nothing else; write it with the Edit or Write tool, not from Bash. On no, skip it.
+2. **Start a new Claude session**, last, so the updated setup command loads.
+
 ## 2026-11-11 — Files in the right place, contributions that land once, and fixes from contributors
 
 `hash: 207bb3d · 1a16d39 · dbdde0a · 39ea44c · 14b68ec · fbb6605 · 42ad12b · 2e4b7af · a4e1488 · c3a316d · ad62970 · 8898475 · 035fff3 · e2fcfb9 · da92686` · [#259](https://github.com/The-AIOS/aios/issues/259) · [#260](https://github.com/The-AIOS/aios/issues/260) · [#266](https://github.com/The-AIOS/aios/issues/266) · [#267](https://github.com/The-AIOS/aios/issues/267) · [#268](https://github.com/The-AIOS/aios/issues/268) · [#270](https://github.com/The-AIOS/aios/issues/270) · [#290](https://github.com/The-AIOS/aios/issues/290) · [#291](https://github.com/The-AIOS/aios/pull/291) · [#293](https://github.com/The-AIOS/aios/issues/293) · [#294](https://github.com/The-AIOS/aios/pull/294) · [#295](https://github.com/The-AIOS/aios/pull/295) · [#296](https://github.com/The-AIOS/aios/issues/296) · [#297](https://github.com/The-AIOS/aios/issues/297) · [#298](https://github.com/The-AIOS/aios/issues/298) · [#300](https://github.com/The-AIOS/aios/issues/300)

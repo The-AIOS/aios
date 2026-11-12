@@ -24,7 +24,7 @@ A guided conversation — ~5 minutes to working, deeper setup on request — tha
 
 ## When to use
 
-Immediately after the first clone of an AIOS vault — turns the freshly-cloned template into the operator's personalized vault. A guided conversation, not a form. Opens by offering a **~5-minute Core** (identity, declared context, a light INTENT.md, then the operator's first `/today`) or the **full tour** (Core plus a walk through the agents that already shipped, companies and shared workspaces, the AIOS Glass panel for a code editor, and a guided orientation). Core runs Steps 0-3, **8 silently**, 10, 11 — Step 10 fires the first `/today`, Step 11 then offers connectors one service at a time. Depth Steps 4, 5, 8.5, 9 are offered on request, at any point, including weeks later. Nothing is removed; the timing moved. Run once; re-runnable to revisit any section.
+Immediately after the first clone of an AIOS vault — turns the freshly-cloned template into the operator's personalized vault. A guided conversation, not a form. Opens by offering a **~5-minute Core** (identity, declared context, a light INTENT.md, then the operator's first `/today`) or the **full tour** (Core plus a walk through the agents that already shipped, companies and shared workspaces, the AIOS Glass panel for a code editor, and a guided orientation). Core runs Steps 0-3, 3.5 (one yes/no about the global instructions file), **8 silently**, 10, 11 — Step 10 fires the first `/today`, Step 11 then offers connectors one service at a time. Depth Steps 4, 5, 8.5, 9 are offered on request, at any point, including weeks later. Nothing is removed; the timing moved. Run once; re-runnable to revisit any section.
 
 
 ## Detection
@@ -274,7 +274,7 @@ WAIT for their answer.
 
 | Tier | Steps | Feels like |
 |---|---|---|
-| **Core** (default) | Pre-step → 0 → **1 (trimmed)** → 2 → **3-light** → **8 (silent)** → 10 → **11 (connectors)** | ~5 minutes of questions, then the system working on their real day |
+| **Core** (default) | Pre-step → 0 → **1 (trimmed)** → 2 → **3-light** → **3.5 (one question)** → **8 (silent)** → 10 → **11 (connectors)** | ~5 minutes of questions, then the system working on their real day |
 | **Depth** (on request, any time) | Core **plus** 4 · 5 · 8.5 · 9 | The full orientation walk |
 
 > **Why Step 8 is in Core and Steps 8.5 / 9 are not — the line is "do the operator's hands have to move?", not importance.** Step 8 declares in its own text that *"plugins are NOT optional in cold-start"* and installs a recommended set **without asking**, so parking it behind an opt-in tier did not defer it — it **deleted it** for every operator who chose the quick start, which is the exact failure this whole change exists to avoid. It needs nothing from the operator, so it belongs in Core, silently, like the vault-bridge registration in the Pre-step.
@@ -437,6 +437,26 @@ INTENT.md is the highest-leverage file for compounding trust.
 3. **Focus priorities** — *"The four AIOS pillars are Creation / Amplify / Knowledge / Superhuman. Want to customize the framing?"* Default is fine for most operators.
 
 Don't try to fill out venture-level overrides yet — those come once the operator has mounted at least one company (Step 5).
+
+### Step 3.5 — Your global instructions file (one question, both tiers)
+
+Claude Code loads `~/.claude/CLAUDE.md`, the operator's **global** instructions, in every session on the
+machine, and in a vault session it loads the vault's `CLAUDE.md` beside it. Nothing tells a session which
+one wins, so a preference written there before AIOS (a fixed reply language, a format) can quietly override
+the contract they just set up in Step 3. Follow `templates/aios/global-claude-pointer.md`: check for its
+marker line, and if it is absent ask once, in plain words:
+
+```
+One small thing outside your vault. Claude has a global instructions
+file that applies in every folder. I'd like to add three lines at the
+top saying that inside your vault, the vault's rules come first, and
+everywhere else your global file stands on its own. Nothing else in it
+changes. Add them?
+```
+
+Recommend yes. On yes, act exactly as the template says (create the file when there is none; otherwise
+insert the block under its first heading and change nothing else; write with the Edit or Write tool). On
+no, move on and do not ask again during setup. Then go to Step 4.
 
 ### Step 4 — Agent bundles (informational — all 6 ship by default)
 
