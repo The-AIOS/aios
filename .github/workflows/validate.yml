@@ -1652,6 +1652,10 @@ jobs:
         # It sees strangers' issues and PRs with this repo's token, so its limits are tested. (#260)
         run: bash tests/triage-action.test.sh
 
+      - name: two independent audits gate a release, and an audit that did not run never passes
+        # A Claude-reviewed release is also audited from outside the Claude family. (#267)
+        run: bash tests/release-audit.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,

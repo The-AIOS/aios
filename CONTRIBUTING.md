@@ -302,13 +302,14 @@ CI (`.github/workflows/validate.yml`) covers repo structure, manifests, frontmat
 
 ## What happens after you open a PR
 
-Every pull request goes through the same five passes, in this order, so you know what's coming and what each one is for.
+Every pull request goes through the same six passes, in this order, so you know what's coming and what each one is for.
 
 1. **Triage.** Is it in the right repo, is it a duplicate of work already in flight, and is it linked to its issue (`Closes #N` in the description)? A wrong-repo PR gets pointed to the right door. A duplicate gets the reply below.
 2. **CI.** `.github/workflows/validate.yml` here; the App and Glass list their own gates in their `CONTRIBUTING.md`. A red check is yours to fix, and § [When a check fails](#when-a-check-fails-read-the-run-summary--not-the-log) says where to look first.
 3. **Value check.** Does the change keep the vault at the centre, and does everyone need it? A setup only one person needs belongs in `custom/` (§ [`custom/` first](#the-one-rule-that-protects-everyone-custom-first)), however good it is. This is the pass most often misread as a judgment of quality. It isn't one.
 4. **Maintainer review.** "Changes requested" means specific things to change before it can merge, not a rejection: push to the same branch and the review continues. **A decline always comes with its reason**, and usually with where the idea can live instead.
-5. **Merge and credit.** Your PR merges as yours. If a maintainer adds fixes, they land as separate commits on top rather than rewritten into yours. It ships in the next release, and you're credited in the release notes.
+5. **Release audits.** Before a release is cut, a maintainer runs two independent, read-only audits of its diff with `.github/scripts/release-audit.py`: one by a model from outside the Claude family, one by a fresh Claude session. Either can block it, and an audit that could not run blocks too.
+6. **Merge and credit.** Your PR merges as yours. If a maintainer adds fixes, they land as separate commits on top rather than rewritten into yours. It ships in the next release, and you're credited in the release notes.
 
 ### The label lifecycle
 
