@@ -18,6 +18,7 @@ version (`npx -y @jtalk22/slack-mcp@5.0.0`), which makes the vendored files what
 
 Bump deliberately, and vet the release first: it acts as you.
 
+<!-- maintainers: run in a canonical checkout -->
 ```bash
 npm view @jtalk22/slack-mcp version                      # what is current
 cd "$(mktemp -d)" && npm pack @jtalk22/slack-mcp@<ver> && tar xzf *.tgz   # the exact published files
