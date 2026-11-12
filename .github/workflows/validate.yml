@@ -1631,6 +1631,10 @@ jobs:
         # /today drops parked items, so a key for one sat on the roadmap and was never carried. (#268)
         run: bash tests/roadmap-parked-check.test.sh
 
+      - name: a session searches and routes before it opens a PR, not only an issue
+        # The issue path already did; a built fix went straight to the PR. (#259)
+        run: bash tests/contribution-pr-search.test.sh
+
       - name: a note-append marker anchors to the start of a line
         # `--before "## Close of Day"` used to match with a bare index($0,marker), so
         # ANY line quoting the marker became an insertion anchor. A daily note is prose,

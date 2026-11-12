@@ -139,6 +139,7 @@ Then work the § Before-you-open-a-PR checklist, and watch CI on the PR.
 The sequence is the same, plus one hard precondition and one habit:
 
 - **Before the first push, run `git remote -v` and check for `.aios-update`.** A tree carrying that file is the operator's live vault — do not create a branch there, and do not push from it. Set up a contribution clone instead, per above. A session cannot un-publish an operator's observed context once it is in an open PR.
+- **Before drafting the PR, search and route**, exactly as for an issue: open and recently closed issues and PRs across the org plus the work in flight (§ *Before you open anything*), and the target repo by § *Which repo?*. Show the operator what matched. A match already in flight means joining it instead of opening a second PR.
 - **`gh pr create` is an outward-facing action** — confirm with the operator before opening it, the same as any send. Everything up to the push is reversible; the PR is public.
 
 ---
