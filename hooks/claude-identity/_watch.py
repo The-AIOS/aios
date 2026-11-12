@@ -657,8 +657,42 @@ def confirm_or_arm(email: str, metric: str, pct: float, sampled_at: float) -> bo
     return False
 
 
+# --- One notification per capped stretch (#298) -------------------------------
+# With every account near its cap and nobody at the keyboard, the lone-reading path can
+# confirm every few minutes, find nowhere to rotate, and decline again. Each decline used
+# to write a row and notify, so an unchanged state sent a notification every 5 minutes.
+# A small marker names the account whose stretch is under way; repeats for it only log.
+# The stretch ends when a reading drops under the threshold or a swap happens.
+DECLINED_FILE = os.path.join(CONFIG_DIR, "quota-watch.declined.json")
+
+
+def decline_is_new(email: str) -> bool:
+    """True the first time a decline is seen for this account in the current stretch."""
+    try:
+        with open(DECLINED_FILE, encoding="utf-8") as f:
+            if (json.load(f) or {}).get("email") == email:
+                return False
+    except Exception:
+        pass
+    try:
+        write_json_atomic(DECLINED_FILE, {"email": email, "since": int(time.time())})
+    except Exception as e:
+        log(f"decline marker not saved: {type(e).__name__}: {e}")
+    return True
+
+
+def end_decline_stretch() -> None:
+    try:
+        os.remove(DECLINED_FILE)
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        log(f"decline marker not removed: {type(e).__name__}: {e}")
+
+
 def low_reading(sampled_at: float) -> None:
     """A reading under threshold: see the gate's note on why this is not a plain cancel."""
+    end_decline_stretch()
     prev = _armed_read()
     if not prev:
         return
@@ -1138,6 +1172,9 @@ def main(self_path: str) -> None:
             return
         if not target:
             log(f"NO ROTATION — {why}. Staying on {email}; its window rolls on its own.")
+            if not decline_is_new(email):
+                log("same capped stretch: no new row, no new notification")
+                return
             append_swap_log({
                 "ts": int(time.time()),
                 "from": email,
@@ -1186,6 +1223,7 @@ def main(self_path: str) -> None:
         # The gate belongs to the account we just left. Clear it so the
         # incoming account cannot inherit an arming it never earned.
         disarm("swapped")
+        end_decline_stretch()
 
         # After a successful swap: write a swap-notification marker that the
         # statusLine renderer (context-monitor.py) surfaces as a prominent
