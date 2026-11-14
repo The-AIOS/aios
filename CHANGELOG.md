@@ -89,7 +89,7 @@
 
 ## 2026-11-13 — Sessions wear the right hat for their name and their project
 
-`hash: 1a88208 · eeaef1c · c5b7d3e · e3d9e1b · ee3d584 · 630668d · 9633f9b · 5cf46ef · 5a99e1e` · [#299](https://github.com/The-AIOS/aios/issues/299) · [#307](https://github.com/The-AIOS/aios/issues/307) · [#292](https://github.com/The-AIOS/aios/issues/292) · [#303](https://github.com/The-AIOS/aios/issues/303) · [#271](https://github.com/The-AIOS/aios/issues/271) · [#304](https://github.com/The-AIOS/aios/issues/304) · [#306](https://github.com/The-AIOS/aios/issues/306) · [#310](https://github.com/The-AIOS/aios/issues/310)
+`hash: 1a88208 · eeaef1c · c5b7d3e · e3d9e1b · ee3d584 · 630668d · 9633f9b · 5cf46ef · 5a99e1e · 5bfe91f · b3c56d6` · [#299](https://github.com/The-AIOS/aios/issues/299) · [#307](https://github.com/The-AIOS/aios/issues/307) · [#292](https://github.com/The-AIOS/aios/issues/292) · [#303](https://github.com/The-AIOS/aios/issues/303) · [#271](https://github.com/The-AIOS/aios/issues/271) · [#304](https://github.com/The-AIOS/aios/issues/304) · [#306](https://github.com/The-AIOS/aios/issues/306) · [#310](https://github.com/The-AIOS/aios/issues/310)
 
 > **What you can now do.** Name a session after what it is for, and it puts on the right expertise. `accountant-acme` and `acme-consultant` wear the accountant and the consultant. A session named after a project wears that project's hats. When a request fits one of your agents, or the work turns to another agent's field, the session suggests it in one line and wears it or opens it only when you say yes. Sessions of one kind sit together in the resume list.
 
