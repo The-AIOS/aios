@@ -81,11 +81,13 @@
 
 ## 2026-11-13 — Sessions wear the right hat for their name and their project
 
-`hash: 1a88208` · [#307](https://github.com/The-AIOS/aios/issues/307)
+`hash: 1a88208` · [#307](https://github.com/The-AIOS/aios/issues/307) · [#310](https://github.com/The-AIOS/aios/issues/310)
 
 > **What you can now do.** Name a session after what it is for, and it puts on the right expertise. `accountant-acme` and `acme-consultant` wear the accountant and the consultant. A session named after a project wears that project's hats, and changes hat when the work changes. Sessions of one kind sit together in the resume list.
 
 **Hats** (#307). A session name used to find its agent only when it was exactly the agent's name, then by a guess from the name alone. So `acme-accountant` depended on the guess, and a session named after a repo got no agent at all, though its work needs several. CLAUDE.md § Identity step 2 now tries, in order: the exact name; an agent's name, or a kind word it declares in `aliases:` (`deck`, `writer`, `review`), at the start of the name or else at the end; a project note the name or its first word points to, through the note's name or its own `aliases:`, wearing the note's new `Hats` row; and last, the name together with the session's first task. The session says which hat it chose and why, and loads another with `/aios:agent` when the work turns. New names are suggested role first (`{hat-or-kind}-{subject}`, or `{project}-{subject}`), so sessions of one kind sort together. `templates/aios/project-template.md` has the `Hats` row; `tests/session-hats.test.sh` keeps the rule and the examples in step.
+
+**Smaller change.** The `karpathy-coding` skill now credits the MIT project it was adapted from, and `LICENSE-AUDIT.md` lists it (#310).
 
 **Action required** — check each first; do only what applies:
 1. **Only if active project notes in `vault/00 - notes/projects/` (frontmatter `status: active`; skip `_index.md`) have no `| Hats |` row in their Current State table:** draft one for each, from `agents/_index.md` (and `agents/custom/_index.md`): two to four agents that fit the note's work, the default first, as wikilinks (`| Hats | [[aios-builder]] (default) · [[code-reviewer]] |`). Also read the session names in use (the last `agent-name` record of each transcript in `~/.claude/projects/*/*.jsonl`). A name that matches no agent and clearly belongs to one project, by its first word or its first task, becomes a proposed entry in that note's `aliases:`. Show every draft together and ask once: *"Give your projects their hats, so sessions named after them load the right expertise?"* **Recommended: yes.** Without it, sessions named after your projects keep running without an agent. On yes, insert each row directly above the table's `Orient` row (or as its last row), add the aliases, change nothing else, set `updated:` to today, and commit only those notes. On no, skip it.

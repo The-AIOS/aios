@@ -68,3 +68,5 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+
+*Adapted from [multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) (`skills/karpathy-guidelines`), MIT as its README states, which derives these guidelines from Andrej Karpathy's observations on LLM coding pitfalls.*

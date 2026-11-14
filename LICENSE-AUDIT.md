@@ -46,6 +46,7 @@ Vendored open-source work ships under **its own** upstream license, preserved in
 | Subtree | Origin | License | Attribution / provenance |
 |---|---|---|---|
 | `skills/aios/` | This framework | GPL-2.0-or-later | — |
+| `skills/aios/karpathy-coding/` | [multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) | **MIT** (declared in its README; no LICENSE file upstream) | Adapted text; credited at the end of its `SKILL.md`. The one exception to `skills/aios/` being GPL |
 | `skills/anthropic/` | [anthropics/skills](https://github.com/anthropics/skills) | **Apache-2.0** | Per-skill `LICENSE.txt` in each folder; `.upstream-sync` records HEAD |
 | `skills/superpowers/` | [obra/superpowers](https://github.com/obra/superpowers) | **MIT** | `.upstream-sync` records HEAD |
 | `skills/cloudflare/` | [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) | **MIT** | Upstream `LICENSE` at `skills/cloudflare/LICENSE`; `.upstream-sync` + `.upstream-manifest` pin every file |

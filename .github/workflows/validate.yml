@@ -1631,6 +1631,10 @@ jobs:
         # Names matched only exactly, then by a guess; project sessions got no hat. (#307)
         run: bash tests/session-hats.test.sh
 
+      - name: third-party text inside skills/aios keeps its credit and license
+        # karpathy-coding was adapted MIT text with no credit, listed as GPL. (#310)
+        run: bash tests/third-party-credits.test.sh
+
       - name: onboarding-aios answers what the AIOS is for, and hands a personal purpose to finding-your-why
         # Newcomers asked what it is all for the moment orientation worked; the agent had no move. (#270)
         run: bash tests/onboarding-aios-why.test.sh
