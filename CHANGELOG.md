@@ -55,35 +55,7 @@
 
 > ## Releases → entries
 >
-> Entries are **date-keyed**; releases are **tagged in git**. A release contains every entry dated up to its tag, back to the previous release. **What you actually have is the hash in `.aios-update`** — a vault normally sits *between* releases, and `/aios:update` works off that hash, never off a version number.
->
-> - **Unreleased** — entries after `2026-11-11` (they become v0.8.18 when it is tagged)
-> - **[v0.8.17](https://github.com/The-AIOS/aios/releases/tag/v0.8.17)** · `2026-11-11` — covers `2026-11-11`
-> - **[v0.8.16](https://github.com/The-AIOS/aios/releases/tag/v0.8.16)** · `2026-11-06` — covers `2026-11-06`
-> - **[v0.8.15](https://github.com/The-AIOS/aios/releases/tag/v0.8.15)** · `2026-11-02` — covers `2026-11-02`
-> - **[v0.8.14](https://github.com/The-AIOS/aios/releases/tag/v0.8.14)** · `2026-11-01` — covers `2026-10-31`
-> - **[v0.8.13](https://github.com/The-AIOS/aios/releases/tag/v0.8.13)** · `2026-10-28` — covers `2026-10-28`
-> - **[v0.8.12](https://github.com/The-AIOS/aios/releases/tag/v0.8.12)** · `2026-10-16` — covers `2026-10-16`
-> - **[v0.8.11](https://github.com/The-AIOS/aios/releases/tag/v0.8.11)** · `2026-10-12` — covers `2026-10-12`
-> - **[v0.8.10](https://github.com/The-AIOS/aios/releases/tag/v0.8.10)** · `2026-10-11` — patch
-> - **[v0.8.9](https://github.com/The-AIOS/aios/releases/tag/v0.8.9)** · `2026-10-11` — covers `2026-10-11`
-> - **[v0.8.8](https://github.com/The-AIOS/aios/releases/tag/v0.8.8)** · `2026-10-04` — covers `2026-10-04`
-> - **[v0.8.7](https://github.com/The-AIOS/aios/releases/tag/v0.8.7)** · `2026-10-02` — covers `2026-10-02`
-> - **[v0.8.6](https://github.com/The-AIOS/aios/releases/tag/v0.8.6)** · `2026-09-29` — covers `2026-09-29`
-> - **[v0.8.5](https://github.com/The-AIOS/aios/releases/tag/v0.8.5)** · `2026-09-25` — covers `2026-09-25`
-> - **[v0.8.4](https://github.com/The-AIOS/aios/releases/tag/v0.8.4)** · `2026-09-24` — covers `2026-09-24`
-> - **[v0.8.3](https://github.com/The-AIOS/aios/releases/tag/v0.8.3)** · `2026-09-23` — covers `2026-09-23`
-> - **[v0.8.2](https://github.com/The-AIOS/aios/releases/tag/v0.8.2)** · `2026-09-22` — patch
-> - **[v0.8.1](https://github.com/The-AIOS/aios/releases/tag/v0.8.1)** · `2026-09-22` — patch
-> - **[v0.8.0](https://github.com/The-AIOS/aios/releases/tag/v0.8.0)** · `2026-09-22` — covers `2026-09-14` → `2026-09-22`
-> - **[v0.7.1](https://github.com/The-AIOS/aios/releases/tag/v0.7.1)** · `2026-09-13` — patch
-> - **[v0.7.0](https://github.com/The-AIOS/aios/releases/tag/v0.7.0)** · `2026-09-13` — covers `2026-09-05` → `2026-09-13`
-> - **[v0.6.2](https://github.com/The-AIOS/aios/releases/tag/v0.6.2)** · `2026-09-04` — patch
-> - **[v0.6.1](https://github.com/The-AIOS/aios/releases/tag/v0.6.1)** · `2026-09-04` — patch
-> - **[v0.6.0](https://github.com/The-AIOS/aios/releases/tag/v0.6.0)** · `2026-09-04` — covers `2026-08-13` → `2026-09-04`
-> - **[v0.5.0](https://github.com/The-AIOS/aios/releases/tag/v0.5.0)** · `2026-08-12` — covers `2026-07-26` → `2026-08-12`
-> - **[v0.4.0](https://github.com/The-AIOS/aios/releases/tag/v0.4.0)** · `2026-07-25` — covers `2026-05-26` → `2026-07-25`
-> - **[v0.2.0](https://github.com/The-AIOS/aios/releases/tag/v0.2.0)** · `2026-05-25` · **[v0.1.0](https://github.com/The-AIOS/aios/releases/tag/v0.1.0)** · `2026-05-21`
+> Entries are **date-keyed**; releases are **tagged in git**. A release contains every entry dated up to its tag, back to the previous release. **What you actually have is the hash in `.aios-update`**: a vault normally sits *between* releases, and `/aios:update` works off that hash, never off a version number. Every release, with its date, is on the [GitHub Releases page](https://github.com/The-AIOS/aios/releases).
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
