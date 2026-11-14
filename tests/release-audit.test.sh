@@ -84,5 +84,18 @@ grep -qF 'UPSTREAM DOC CHANGE' "$T/rf/brief.md" && grep -qF 'NOT proven' "$T/rf/
 AIOS_AUDIT_PIN_CHECK=true AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $VS run --all --base HEAD~1 --head HEAD --out "$T/ra" >"$T/log" 2>&1
 grep -qF 'UPSTREAM DOC CHANGE' "$T/ra/brief.md" && ok "--all audits proven vendored folders in full" || no "--all still left files out"
 
+# Pinned models, overridable, and each report names the model that answered.
+rm -rf "$T/r"; : > "$T/out.args"; : > "$T/cl.args"
+mk out 'echo "{\"provider\": \"openrouter\", \"model\": \"google/gemini-4-argon\", \"usage\": {\"cost\": 0.25}, \"text\": \"fine\\nVERDICT: PASS\"}"'; mk cl 'echo "VERDICT: PASS"'
+run; rc=$?
+grep -qF -- '--json --model google/gemini-4-argon' "$T/out.args" && ok "the outside audit asks for its pinned model, as JSON" || no "outside model not pinned" "$(cat "$T/out.args")"
+grep -qF 'outside audit cost: US$0.25 over 1 call(s)' "$T/log" && ok "the run prints what the outside audit cost" || no "no cost line" "$(cat "$T/log")"
+grep -qF -- '--model claude-opus-5-5' "$T/cl.args" && ok "the Claude audit runs its pinned model, not the machine's default" || no "Claude model not pinned" "$(cat "$T/cl.args")"
+[ $rc -eq 0 ] && grep -qF 'Model: google/gemini-4-argon via openrouter' "$T/r/outside.md" && grep -qF 'Model: claude-opus-5-5' "$T/r/claude.md" \
+  && ok "each report names the model that answered" || no "reports do not name their model" "$(head -5 "$T/r/outside.md")"
+rm -rf "$T/r"; : > "$T/out.args"
+AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $S run --outside-model openai/gpt-5.6-sol --base HEAD~1 --head HEAD --out "$T/r" >"$T/log" 2>&1
+grep -qF -- '--model openai/gpt-5.6-sol' "$T/out.args" && ok "--outside-model overrides the pinned model" || no "the override was ignored"
+
 printf '\n-- %d passed, %d failed --\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

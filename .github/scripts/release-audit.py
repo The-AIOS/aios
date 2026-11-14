@@ -27,6 +27,12 @@ WHAT IS SENT
     SKILL.md inside those folders are always sent: a SKILL.md is behaviour. The brief, both reports and left-out.txt name what was left
     out. --all sends everything.
 
+MODELS AND COST
+    Each reviewer runs a pinned model (OUTSIDE_MODEL, CLAUDE_MODEL below; --outside-model and
+    --claude-model override), so the gate does not change with a machine's defaults. Every
+    report names the model that answered, and a run prints what the outside audit cost when
+    the provider reports it.
+
 THE GATE
     `check` exits 0 only when both reports exist and each ends in `VERDICT: PASS`.
     No outside key configured -> the outside report says NOT RUN and `check` blocks: an
@@ -45,6 +51,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MAX_DIFF = int(os.environ.get("AIOS_AUDIT_MAX_DIFF", "180000"))  # characters per chunk
+# Pinned, so the gate is the same on every machine instead of whatever each one defaults to.
+# Chosen 2026-11-14 from OpenRouter's live model list: the outside family's flagship
+# reasoning model, and Claude's. Override with --outside-model / --claude-model or the env.
+OUTSIDE_MODEL = os.environ.get("AIOS_AUDIT_OUTSIDE_MODEL", "google/gemini-4-argon")
+CLAUDE_MODEL = os.environ.get("AIOS_AUDIT_CLAUDE_MODEL", "claude-opus-5-5")
+COSTS = []  # US$ per outside call, when the provider reports it (OpenRouter does)
 VERDICT = re.compile(r"^VERDICT:\s*(PASS|BLOCK)\b", re.M)
 
 BRIEF = """You are auditing a release of an open-source framework that runs inside its users'
@@ -160,19 +172,29 @@ def verdict(text):
     return m[-1] if m else "NONE"
 
 
-def run_outside(brief_path):
+def run_outside(brief_path, model=None):
+    """-> (report text, model that answered). The bridge's --json names the model that
+    actually answered, which differs from the one asked for when it falls back."""
     cmd = os.environ.get("AIOS_AUDIT_OUTSIDE")
     cmd = cmd.split() if cmd else [sys.executable, str(ROOT / "hooks" / "openrouter.py")]
-    r = sh(cmd + ["--prompt-file", str(brief_path)])
+    model = model or OUTSIDE_MODEL
+    r = sh(cmd + ["--prompt-file", str(brief_path), "--json", "--model", model])
     if r.returncode != 0:
         return ("NOT RUN: the outside-family audit did not run.\n"
                 f"{(r.stderr or r.stdout).strip()}\n\n"
                 "Configure an OpenRouter or Gemini key (hooks/openrouter.py --check says which),"
-                " then run again. VERDICT: NOT RUN\n")
-    return r.stdout
+                " then run again. VERDICT: NOT RUN\n"), model
+    try:
+        d = json.loads(r.stdout)
+        cost = (d.get("usage") or {}).get("cost")
+        if isinstance(cost, (int, float)):
+            COSTS.append(cost)
+        return d.get("text", ""), "%s via %s" % (d.get("model") or model, d.get("provider") or "?")
+    except ValueError:
+        return r.stdout, model
 
 
-def run_claude(brief_path):
+def run_claude(brief_path, model=None):
     # Read-only and context-free: no tools, no MCP servers, no project settings layer (a
     # repo's own .claude/ could carry hooks), every hook disabled, and run from an empty
     # folder so nothing local is picked up.
@@ -181,12 +203,13 @@ def run_claude(brief_path):
     with tempfile.TemporaryDirectory(prefix="release-audit-") as empty:
         settings = Path(empty) / "settings.json"
         settings.write_text(json.dumps({"disableAllHooks": True}), encoding="utf-8")
-        r = sh(cmd + ["-p", prompt, "--tools", "", "--setting-sources", "user", "--settings", str(settings),
+        model = model or CLAUDE_MODEL
+        r = sh(cmd + ["-p", prompt, "--model", model, "--tools", "", "--setting-sources", "user", "--settings", str(settings),
                       "--strict-mcp-config", "--permission-mode", "default"],
                input=Path(brief_path).read_text(encoding="utf-8"), cwd=empty)
     if r.returncode != 0:
-        return f"NOT RUN: the fresh-context Claude audit failed.\n{(r.stderr or r.stdout).strip()}\nVERDICT: NOT RUN\n"
-    return r.stdout
+        return f"NOT RUN: the fresh-context Claude audit failed.\n{(r.stderr or r.stdout).strip()}\nVERDICT: NOT RUN\n", model
+    return r.stdout, model
 
 
 def cmd_run(a):
@@ -207,14 +230,16 @@ def cmd_run(a):
         part = f" (part {i} of {len(chunks)})" if len(chunks) > 1 else ""
         brief = out / (f"brief-{i}.md" if len(chunks) > 1 else "brief.md")
         brief.write_text(BRIEF + scope + f"\n\n--- DIFF{part} ---\n" + chunk, encoding="utf-8")
-        for name, fn in (("outside", run_outside), ("claude", run_claude)):
-            reports[name].append((part, fn(brief)))
+        for name, fn, model in (("outside", run_outside, getattr(a, "outside_model", None)),
+                                ("claude", run_claude, getattr(a, "claude_model", None))):
+            text, used = fn(brief, model)
+            reports[name].append((part, text, used))
     for name, parts in reports.items():
         # One report per reviewer; its last line is the release verdict: PASS only if
         # every part passed.
-        worst = "PASS" if all(verdict(t) == "PASS" for _, t in parts) else \
-            next(verdict(t) for _, t in parts if verdict(t) != "PASS")
-        text = "\n\n".join(f"## Report{p}\n\n{t.strip()}" for p, t in parts)
+        worst = "PASS" if all(verdict(t) == "PASS" for _, t, _m in parts) else \
+            next(verdict(t) for _, t, _m in parts if verdict(t) != "PASS")
+        text = "\n\n".join(f"## Report{p}\n\nModel: {m}\n\n{t.strip()}" for p, t, m in parts)
         if notes:
             text = "Scope: " + "; ".join(notes) + "\n\n" + text
         text += f"\n\nVERDICT: {worst if worst in ('PASS', 'BLOCK') else 'BLOCK'}\n"
@@ -222,6 +247,8 @@ def cmd_run(a):
             text = text.replace("VERDICT: BLOCK\n", "A part did not run or gave no verdict: blocked.\nVERDICT: BLOCK\n")
         (out / f"{name}.md").write_text(text, encoding="utf-8")
         print(f"{name}: {verdict(text)}  ({out / (name + '.md')}, {len(parts)} part(s))")
+    if COSTS:
+        print("outside audit cost: US$%.2f over %d call(s)" % (sum(COSTS), len(COSTS)))
     return cmd_check(a)
 
 
@@ -250,6 +277,8 @@ def main():
     r.add_argument("--head", default="HEAD")
     r.add_argument("--out", required=True)
     r.add_argument("--all", action="store_true", help="audit vendored folders in full, even when proven")
+    r.add_argument("--outside-model", help="model id for the outside-family audit (default %s)" % OUTSIDE_MODEL)
+    r.add_argument("--claude-model", help="model id for the Claude audit (default %s)" % CLAUDE_MODEL)
     c = sub.add_parser("check")
     c.add_argument("--out", required=True)
     a = ap.parse_args()
