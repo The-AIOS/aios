@@ -52,7 +52,7 @@ A session's name decides which agent it wears (its **hat**). CLAUDE.md § Identi
 2. **In the name** → an agent's name, or one of its `aliases:` (kind words), at the start of the session name, else at the end.
    - `accountant-acme` → [[accountant]] · `acme-consultant` → [[consultant]] · `deck-launch` → [[deck-builder]] (alias `deck`)
 3. **Project** → the name, or its first word, is a project note's name (with or without its category prefix) or one of its `aliases:`. The session wears the default from that note's `Hats` row, or another hat from the row that fits its task.
-4. **Purpose** → match the name **and the first task** against this table (and `custom/_index.md`): names, purposes, domains, keywords.
+4. **Fuzzy** → match the name **and the first task** against this table (and `custom/_index.md`): names, purposes, domains, keywords.
    - `bookkeeper` → [[accountant]] · `contract-reviewer` → [[lawyer]] · `strategist` → [[consultant]]
 5. **None** → general-purpose worker with the session name as role context.
 

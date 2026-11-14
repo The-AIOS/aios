@@ -19,10 +19,10 @@ claude = open("CLAUDE.md", encoding="utf-8").read()
 
 # 1. Identity step 2 lists the five rungs, in this order, inside § Identity & Greeting.
 ident = claude.split("## Identity & Greeting", 1)[-1].split("\n## ", 1)[0]
-rungs = ["**Exact:**", "**In the name:**", "**Project:**", "**Purpose:**", "**None:**"]
+rungs = ["**Exact:**", "**In the name:**", "**Project:**", "**Fuzzy:**", "**None:**"]
 pos = [ident.find(r) for r in rungs]
 check("Identity has all five rungs", all(p >= 0 for p in pos))
-check("the rungs are in order: exact, in the name, project, purpose, none", all(p >= 0 for p in pos) and pos == sorted(pos))
+check("the rungs are in order: exact, in the name, project, fuzzy, none", all(p >= 0 for p in pos) and pos == sorted(pos))
 check("the project rung reads the note's Hats row and aliases", "`Hats`" in ident and "`aliases:`" in ident)
 check("the session says which hat, and changes hat with /aios:agent", "which hat" in ident and "/aios:agent {name}" in ident)
 check("Spawning Sessions asks for role-first names", "**Name it role-first:**" in claude and "{hat-or-kind}-{subject}" in claude)
