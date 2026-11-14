@@ -119,8 +119,9 @@ else
     BASE="$(git -C "$F/clone" rev-parse HEAD)"
     cp "$F/clone/skills/x/"*.md "$F/home/aios/skills/x/"; printf 'orig\nmy own note\n' > "$F/home/aios/skills/x/edited.md"
     ( cd "$F/clone" && git rm -q skills/x/untouched.md skills/x/edited.md && git -c user.email=t@t -c user.name=t commit -qm B ) >/dev/null
-    { printf 'FILES=(skills/x/untouched.md skills/x/edited.md skills/x/stays.md)\n'
-      sed -e "s|^CLONE=\"/tmp/aios-update-check\"; V=\"\$HOME/aios\"; S=\"{stored_hash}\"$|CLONE=\"$F/clone\"; V=\"$F/home/aios\"; S=\"$BASE\"|" "$D/body.sh"; } > "$F/run.sh"
+    # Step 2 saves its list to the clone's .git (each tool call is a fresh shell); seed it the same way.
+    printf 'skills/x/untouched.md\nskills/x/edited.md\nskills/x/stays.md\n' > "$F/clone/.git/aios-update-files"
+    { sed -e "s|^CLONE=\"/tmp/aios-update-check\"; V=\"\$HOME/aios\"; S=\"{stored_hash}\"$|CLONE=\"$F/clone\"; V=\"$F/home/aios\"; S=\"$BASE\"|" "$D/body.sh"; } > "$F/run.sh"
     if ! grep -qF "CLONE=\"$F/clone\"" "$F/run.sh"; then no "harness: could not retarget Step 3.4" "the CLONE=/V=/S= line changed shape"; continue; fi
     out="$(HOME="$F/home" "$sh" "$F/run.sh" 2>&1)"
     n="$(basename "$sh")"

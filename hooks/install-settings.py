@@ -147,6 +147,24 @@ def old_status_forms(root):
     return forms
 
 
+OLD_ABS = re.compile(r"^bash -c 'tee >\((/\S+)/hooks/claude-identity/claude-identity\.sh cache > /dev/null\) \| "
+                     r"(python3|python) (/\S+)/hooks/claude-identity/context-monitor\.py'$")
+
+
+def upgraded_status(cur, root, new_form):
+    """The one-program line that replaces `cur`, or None when `cur` is not a line AIOS wrote.
+    Exact old forms take the standard replacement. The macOS/Linux form written by hand with an
+    absolute, unquoted root also counts, but only when both paths are the same root and it
+    resolves to this framework; the replacement then keeps that root, so it still runs."""
+    if cur in old_status_forms(root):
+        return new_form
+    m = OLD_ABS.match(cur)
+    if m and m.group(1) == m.group(3) and os.path.realpath(m.group(1)) == os.path.realpath(root):
+        mon = "%s/hooks/claude-identity/context-monitor.py" % m.group(1)
+        return "[ ! -f %s ] || %s %s" % (mon, m.group(2), mon)
+    return None
+
+
 def signature(cmd):
     """What identifies a hook regardless of how its interpreter or path is spelled."""
     for key in ("inject-datetime", "floor-at-start.py", "model-switch-log.py", "guard-venture-mount.py",
@@ -241,14 +259,19 @@ def main():
                     upgrades.append((wanted[signature(cmd)], hk))
     status_add = "statusLine" not in settings
     status_note = None
-    status_upgrade = False
+    status_upgrade = None
     if not status_add:
         cur = str(settings["statusLine"].get("command", "")).strip()
         flat = cur.replace('"', "")
         # The form AIOS itself wrote before #292: bash + tee + claude-identity.sh cache + context-monitor.py,
-        # two programs per render. Only those exact strings are ours to replace; anything else is the operator's.
-        if cur in old_status_forms(ROOT):
-            status_upgrade = True
+        # two programs per render. Only those forms are ours to replace; anything else is the operator's.
+        status_upgrade = upgraded_status(cur, ROOT, status)
+        if status_upgrade:
+            pass
+        elif "claude-identity.sh cache" in flat and "context-monitor.py" in flat and "tee" in flat:
+            status_note = ("your status line still runs two programs per refresh (tee + claude-identity.sh cache); "
+                           "it is left as it is because it is not a form AIOS wrote. context-monitor.py now writes "
+                           "the cache itself, so the one-program form in SETUP §10 does the same with less work")
         elif "claude-identity.sh cache" not in flat and "context-monitor.py" not in flat:
             status_note = ("you already have your own status line, so it is left as it is -- the usage cache the "
                            "App, Glass and the quota autopilot read is not fed until it also runs "
@@ -313,7 +336,7 @@ def main():
     if status_add:
         settings["statusLine"] = {"type": "command", "command": status}
     elif status_upgrade:
-        settings["statusLine"]["command"] = status
+        settings["statusLine"]["command"] = status_upgrade
     for _, hk in upgrades:
         hk["command"] = guard(str(hk["command"]))
     if retention_add:

@@ -189,6 +189,15 @@ $PYBIN -c 'import json,sys; json.dump({"statusLine":{"type":"command","command":
 AIOS_WIN_PYTHON="py -3" AIOS_ROOT="C:/Users/x/aios" $PYBIN "$H" --settings "$S" --platform windows --apply >/dev/null
 grep -q '|| py -3 \\"C:/Users/x/aios/hooks/claude-identity/context-monitor.py\\""' "$S" && ! grep -q tee "$S" \
   && ok "the old Windows form (quoted paths, py -3) is replaced too" || no "old Windows form not replaced" "$(cat "$S")"
+ABS="bash -c 'tee >($T/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | python3 $T/aios/hooks/claude-identity/context-monitor.py'"
+$PYBIN -c 'import json,sys; json.dump({"statusLine":{"type":"command","command":sys.argv[2]}}, open(sys.argv[1],"w"))' "$S" "$ABS"
+run --platform posix --apply >/dev/null
+[ "$($PYBIN -c 'import json,sys; print(json.load(open(sys.argv[1]))["statusLine"]["command"])' "$S")" = "[ ! -f $T/aios/hooks/claude-identity/context-monitor.py ] || python3 $T/aios/hooks/claude-identity/context-monitor.py" ] \
+  && ok "a hand-written absolute-root form of this framework is upgraded, keeping its own root" || no "absolute-root form not upgraded" "$(cat "$S")"
+OTHER="bash -c 'tee >(/opt/fork/hooks/claude-identity/claude-identity.sh cache > /dev/null) | python3 /opt/fork/hooks/claude-identity/context-monitor.py'"
+$PYBIN -c 'import json,sys; json.dump({"statusLine":{"type":"command","command":sys.argv[2]}}, open(sys.argv[1],"w"))' "$S" "$OTHER"
+out=$(run --platform posix --apply)
+grep -q '/opt/fork/' "$S" && case "$out" in *"! note  B"*"two programs"*) ok "another root is kept, and the summary says it still runs two programs" ;; *) no "no note for a leftover two-program line" "$out" ;; esac || no "a line for another root was replaced"
 CUSTOM="bash -c 'tee >(\$HOME/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | my-own-monitor'"
 $PYBIN -c 'import json,sys; json.dump({"statusLine":{"type":"command","command":sys.argv[2]}}, open(sys.argv[1],"w"))' "$S" "$CUSTOM"
 cp "$S" "$T/custom.json"; out=$(run --platform posix --apply)

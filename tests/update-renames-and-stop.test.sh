@@ -5,6 +5,8 @@
 #      in every vault. The diff must carry --no-renames.
 #   2. Step 1.5 streamed the CHANGELOG up to "$STOP_HEADER", a variable nothing defined, so the
 #      block could not run as written. It must define it: the first entry whose hashes are ALL synced.
+# Plus three a second dry run found: Step 1.5 never set CLONE, Steps 3/3.4 read a FILES array
+# nothing defined, and the cache-sync loops abort zsh when no cache exists.
 # Runs Step 1.5's block from update.md, under bash and zsh, against a fixture repo.
 # Usage: bash tests/update-renames-and-stop.test.sh [repo-root]. Written for bash 3.2.
 set -u
@@ -17,6 +19,11 @@ echo "update-renames-and-stop"
 
 grep -q 'diff --no-renames {stored_hash}..HEAD --name-only' "$U" && ok "Step 2's file list turns rename detection off" || no "Step 2 lists renames by their new path only"
 
+# Found by the second dry run: each tool call is a fresh shell, so state must not live in variables.
+grep -q '| tee "$CLONE/.git/aios-update-files"' "$U" && ok "Step 2 saves its file list where Step 3 can read it" || no "Step 2's list lives only in the shell that printed it"
+! grep -q '"${FILES\[@\]}"' "$U" && ok "no step reads a FILES array nothing defines" || no "a step still reads \${FILES[@]}"
+sed -n '/^CLONE="\/tmp\/aios-update-check"   # each tool call/,/^STOP_HEADER=/p' "$U" | grep -q STOP_HEADER && ok "Step 1.5 sets CLONE itself" || no "Step 1.5 relies on CLONE from another call"
+! grep -qE 'for d in "\$HOME"/\.claude/plugins/cache/the-aios/aios/\*/commands/' "$U" && ok "no cache loop aborts zsh on an unmatched glob" || no "a cache loop still globs (zsh aborts when there is no cache)"
 T=$(mktemp -d "${TMPDIR:-/tmp}/urs.XXXXXX")
 R="$T/repo"; mkdir -p "$R"
 g(){ git -C "$R" -c user.name=t -c user.email=t@example.com "$@" >/dev/null 2>&1; }
