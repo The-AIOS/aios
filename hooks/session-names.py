@@ -75,14 +75,38 @@ def scan(path):
     return name, prompt or ""
 
 
+def _norm(path):
+    return os.path.normcase(os.path.realpath(path)).lower() if sys.platform == "darwin" else os.path.normcase(os.path.realpath(path))
+
+
+def brief_dir_ok(folder):
+    """True when folder is exactly the run folder, a handoff-* folder directly inside it, or the
+    system temp folder itself (never a subfolder of temp, and never the inbox payload folder)."""
+    import tempfile
+    f = _norm(folder)
+    run = _norm(os.path.join(os.path.expanduser("~"), ".aios", "run"))
+    temps = {_norm(tempfile.gettempdir())}
+    if os.name != "nt":
+        temps |= {_norm("/tmp")}
+    if f == run or f in temps:
+        return True
+    return _norm(os.path.dirname(f)) == run and os.path.basename(f).startswith("handoff-")
+
+
 def brief_of(prompt):
     m = POINTER.match(prompt)
     if not m:
         return ""
-    # Only a spawn brief, by name: a path in a transcript is untrusted, and must not be able to
-    # point this at any other file on the machine.
+    # Only a spawn brief: a path in a transcript is untrusted, and must not be able to point this
+    # at any other file on the machine. Allowlist, not denylist: the name must look like a brief,
+    # its folder must be exactly one of the places surfaces write briefs, and it must be ours.
     target = os.path.realpath(os.path.expanduser(m.group(1)))
-    if not BRIEF_FILE.match(os.path.basename(target)) or "bus-payloads" in target.split(os.sep):
+    if not BRIEF_FILE.match(os.path.basename(target)) or not brief_dir_ok(os.path.dirname(target)):
+        return ""
+    try:
+        if hasattr(os, "getuid") and os.stat(target).st_uid != os.getuid():
+            return ""
+    except OSError:
         return ""
     try:
         with open(target, encoding="utf-8", errors="replace") as fh:
