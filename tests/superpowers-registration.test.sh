@@ -70,5 +70,17 @@ H7=$(mktemp -d "${TMPDIR:-/tmp}/sp7.XXXXXX"); plugin "$H7" official project
 run "$H7" >/dev/null; [ -L "$H7/.claude/skills/$SP" ] && ok "a project-only install does not suppress the bundled copy" || no "a project-only install left no Superpowers"
 printf '%s' "$(run "$(mktemp -d "${TMPDIR:-/tmp}/sp8.XXXXXX")")" | grep -q 'run this script again: it removes these links' && ok "after linking, it says to re-run setup if the plugin is installed later" || no "no re-run note after linking"
 
+# 8. A relocated config folder (CLAUDE_CONFIG_DIR) is where the plugin records are read.
+H9=$(mktemp -d "${TMPDIR:-/tmp}/sp9.XXXXXX"); mkdir -p "$H9/cfg/plugins"
+printf '{"version":2,"plugins":{"superpowers@official":[{"scope":"user"}]}}\n' > "$H9/cfg/plugins/installed_plugins.json"
+HOME="$H9" CLAUDE_CONFIG_DIR="$H9/cfg" bash "$SETUP" </dev/null >/dev/null 2>&1
+[ ! -e "$H9/.claude/skills/$SP" ] && ok "a plugin recorded under CLAUDE_CONFIG_DIR is seen" || no "CLAUDE_CONFIG_DIR ignored: the bundled copy was linked beside the plugin"
+
+# 9. After the vault moved, our old link is broken; with the plugin installed it is recognised and removed.
+H10=$(mktemp -d "${TMPDIR:-/tmp}/sp10.XXXXXX"); mkdir -p "$H10/.claude/skills"
+ln -s "/old/vault/skills/superpowers/$SP" "$H10/.claude/skills/$SP"; plugin "$H10" official
+run "$H10" >/dev/null
+[ ! -L "$H10/.claude/skills/$SP" ] && ok "a broken link from before a vault move is recognised as ours and removed" || no "a stale link from a moved vault stayed"
+
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

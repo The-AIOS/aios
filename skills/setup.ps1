@@ -19,15 +19,16 @@ Write-Host ""
 
 # Active, not merely installed (see setup.sh): a user-wide "superpowers@<marketplace>"
 # install that settings.json has not disabled, read by parsing the JSON, never by matching text.
+$cfg = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $HOME ".claude" }
 $spPlugin = $false
 try {
-  $inst = Get-Content -Raw -LiteralPath (Join-Path $HOME ".claude\plugins\installed_plugins.json") -ErrorAction Stop | ConvertFrom-Json
+  $inst = Get-Content -Raw -LiteralPath (Join-Path $cfg "plugins\installed_plugins.json") -ErrorAction Stop | ConvertFrom-Json
   $enabled = $null
-  try { $enabled = (Get-Content -Raw -LiteralPath (Join-Path $HOME ".claude\settings.json") -ErrorAction Stop | ConvertFrom-Json).enabledPlugins } catch { }
+  try { $enabled = (Get-Content -Raw -LiteralPath (Join-Path $cfg "settings.json") -ErrorAction Stop | ConvertFrom-Json).enabledPlugins } catch { }
   foreach ($p in $inst.plugins.PSObject.Properties) {
     if (-not $p.Name.StartsWith('superpowers@')) { continue }
     if ($enabled -and ($enabled.PSObject.Properties.Name -contains $p.Name) -and ($enabled.($p.Name) -eq $false)) { continue }
-    if (@($p.Value | Where-Object { $_.scope -eq 'user' }).Count -gt 0) { $spPlugin = $true }
+    if (@($p.Value | Where-Object { -not $_.scope -or $_.scope -eq 'user' }).Count -gt 0) { $spPlugin = $true }
   }
 } catch { $spPlugin = $false }
 $unlinked = 0
@@ -44,11 +45,15 @@ if ($spPlugin) { $skipSources += 'superpowers' }
 if ($spPlugin) {
   Get-ChildItem -Path (Join-Path $ScriptDir 'superpowers') -Directory -ErrorAction SilentlyContinue | ForEach-Object {
     $t = Join-Path $Dest $_.Name
-    if (Test-Path -LiteralPath $t) {
-      $item = Get-Item -LiteralPath $t -Force
+    # Get-Item, not Test-Path: Test-Path is false for a broken junction, which is the case to catch.
+    $item = Get-Item -LiteralPath $t -Force -ErrorAction SilentlyContinue
+    if ($item) {
       $tgt = @($item.Target)[0]
-      if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -and $tgt -and
-          ([IO.Path]::GetFullPath($tgt).TrimEnd('\') -eq [IO.Path]::GetFullPath($_.FullName).TrimEnd('\'))) {
+      # Ours: it points at the bundled copy, or (after the vault moved) at a missing path that
+      # still ends in skills\superpowers\<name>.
+      $ours = $tgt -and (([IO.Path]::GetFullPath($tgt).TrimEnd('\') -eq [IO.Path]::GetFullPath($_.FullName).TrimEnd('\')) -or
+              ((-not (Test-Path -LiteralPath $tgt)) -and ($tgt -replace '/', '\') -like ("*\skills\superpowers\" + $_.Name)))
+      if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -and $ours) {
         $item.Delete()
         Write-Host "  - unlinked (its plugin provides it): $($_.Name)"
         $unlinked++

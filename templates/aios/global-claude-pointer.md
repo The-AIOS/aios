@@ -20,9 +20,10 @@ description: 'The Operating system block for the operator''s global ~/.claude/CL
 > **Who adds it.** `/aios:cold-start-interview` (Step 3.5, after `INTENT.md`) and `/aios:update` (the
 > CHANGELOG action item) offer it once. Both follow the same rules:
 >
-> 1. **State.** If `~/.claude/CLAUDE.md` already has an `## Operating system` section without the marker,
->    it was written by hand: offer only to add the marker line above it, and stop. If it contains the
->    marker line `<!-- aios:operating-system -->`, the
+> 1. **State.** If `~/.claude/CLAUDE.md` already has an `## Operating system` section (with or without
+>    the marker), compare its bullets with the block below: offer to add the marker line if it is missing,
+>    and any of the block's bullets the section lacks, and change nothing else. If it contains the marker
+>    line `<!-- aios:operating-system -->` and every bullet of the block, the
 >    block is already there: say nothing and stop.
 > 2. **Ask, once.** The file lives outside the vault, so it is never written without a yes. Show the block,
 >    and say both directions: inside the vault the vault's contract outranks this file, so a stricter rule

@@ -53,12 +53,14 @@ echo ""
 # Parsed, not grepped: a user-wide install ("scope": "user") that settings.json has not
 # disabled. A disabled plugin, or one installed for another project only, provides nothing
 # here, and counting it would leave this vault with no Superpowers at all.
-sp_plugin=$(python3 - "$HOME" <<'PY' 2>/dev/null || echo 0
+# (Setup itself never installs the Superpowers plugin: the cold-start interview's plugin set
+# does not include it. So a fresh install gets the bundled copy, with nothing to double.)
+sp_plugin=$(python3 - "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" <<'PY' 2>/dev/null || echo 0
 import json, os, sys
-home = sys.argv[1]
+cfg = sys.argv[1]
 def load(*p):
     try:
-        with open(os.path.join(home, ".claude", *p), encoding="utf-8") as f:
+        with open(os.path.join(cfg, *p), encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return {}
@@ -90,7 +92,11 @@ for skill_md in "$SCRIPT_DIR"/*/*/SKILL.md; do
   # exactly that link (it points at the bundled copy). Never a plain folder, never data.
   if [ "$source_dir" = superpowers ] && [ "$sp_plugin" -eq 1 ]; then
     # Compared as resolved paths, so a link made before the vault moved is still recognised.
-    if [ -L "$DEST/$name" ] && [ "$(cd "$DEST/$name" 2>/dev/null && pwd -P)" = "$(cd "$skill_dir" && pwd -P)" ]; then
+    # Ours: it resolves to the bundled copy, or (after the vault moved) it is a broken link
+    # whose target still ends in skills/superpowers/<name>.
+    lt=""; [ -L "$DEST/$name" ] && lt=$(readlink "$DEST/$name")
+    if [ -L "$DEST/$name" ] && { [ "$(cd "$DEST/$name" 2>/dev/null && pwd -P)" = "$(cd "$skill_dir" && pwd -P)" ] \
+         || { [ ! -e "$DEST/$name" ] && case "$lt" in */skills/superpowers/"$name") true ;; *) false ;; esac; }; }; then
       rm "$DEST/$name" && { echo "  - unlinked (its plugin provides it): $name"; unlinked=$((unlinked + 1)); }
     elif [ -d "$DEST/$name" ] && [ ! -L "$DEST/$name" ]; then
       stale="$stale $name"; echo "  ! old copy, left as it is: $name"
