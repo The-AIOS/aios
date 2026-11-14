@@ -54,7 +54,7 @@ The spawn-inbox is not spawn-only: it is a **command bus with three verbs**, and
 
 **Naming a worker.** A name does two jobs: the operator finds the session again in the resume list, and the session finds its hat (CLAUDE.md § Identity step 2). So propose it **role first**, and let the operator change it:
 - `{hat-or-kind}-{subject}`: an agent's name or one of its `aliases:` first (`accountant-acme`, `deck-launch`, `review-auth`), so sessions of one kind sort together and the hat is found without guessing.
-- `{project}-{subject}`, when the work belongs to one project note: the session wears that note's `Hats`. Prefer the note's name without its category prefix, or one of its `aliases:`.
+- `{project}-{subject}`, when the work belongs to one project note: the session wears that note's `Hats`. Prefer the note's name without its category prefix, or one of its `aliases:`; a multi-word project name works (`philosopher-oracle-fix`). An agent name or kind word anywhere at the start or end wins over the project, so `acme-review` wears the code reviewer, not the project's hats.
 - Lowercase, at most three words, no dates. A person's name only when that person is the subject.
 - **Reusing a name continues that session** (`resume` resolves the latest name), so a new effort gets a new subject. A rename keeps the first word, or the session loses its hat when it is resumed.
 - Nothing fits → keep the harness's adjective-animal name.

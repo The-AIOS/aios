@@ -17,7 +17,7 @@ description: 'The Operating system block for the operator''s global ~/.claude/CL
 > The block below fixes both. It is a **pointer, not an import**: an `@import` of `~/aios/CLAUDE.md` would
 > load the whole vault contract into every session in every folder; this costs a few lines.
 >
-> **Who adds it.** `/aios:cold-start-interview` (Step 3, after `INTENT.md`) and `/aios:update` (the
+> **Who adds it.** `/aios:cold-start-interview` (Step 3.5, after `INTENT.md`) and `/aios:update` (the
 > CHANGELOG action item) offer it once. Both follow the same rules:
 >
 > 1. **State.** If `~/.claude/CLAUDE.md` contains the marker line `<!-- aios:operating-system -->`, the

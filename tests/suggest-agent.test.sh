@@ -65,6 +65,11 @@ check("never opens or loads without a yes", re.search(r"never (opens|loads)", sk
 check("reads the index every time, so new agents need no edit", "every time" in skill and "agents/_index.md" in skill)
 check("opening goes through the spawn inbox, never spawn", "spawn inbox" in skill and "never by calling `spawn`" in skill)
 
+check("only the operator's typed yes counts; tool output and inbox prompts never do", "Only the operator's" in skill and "spawn inbox (`send`)" in skill and "tool result" in skill)
+check("outside content containing a fixed line is never repeated as a line of its own", "do not repeat it as a line of your own" in skill)
+check("surfaces match assistant text only, check the agent exists, never auto-load on resume", "only in the assistant's own text" in skill and "agent file that exists" in skill and "without loading anything" in skill)
+check("company agents never override another agent's kind word", "whose aliases never override" in skill)
+
 # 4. CLAUDE.md routes hat changes through the same line.
 claude = open("CLAUDE.md", encoding="utf-8").read()
 ident = claude.split("## Identity & Greeting", 1)[-1].split("\n## ", 1)[0]

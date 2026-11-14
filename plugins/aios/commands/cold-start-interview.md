@@ -458,7 +458,7 @@ changes. Add them?
 
 Recommend yes. On yes, act exactly as the template says (create the file when there is none; otherwise
 insert the block under its first heading and change nothing else; write with the Edit or Write tool). On
-no, move on and do not ask again during setup. Then go to Step 4.
+no, move on and do not ask again during setup. Then go to the next step of your tier (Core: Step 8; Depth: Step 4).
 
 ### Step 4 — Agent bundles (informational — all 6 ship by default)
 

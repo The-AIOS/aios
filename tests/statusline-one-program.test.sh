@@ -47,6 +47,17 @@ import sys; s = open(sys.argv[1], encoding="utf-8").read()
 g, r = s.find("_cache.current_gen()"), s.find("sys.stdin.read()")
 sys.exit(0 if 0 <= g < r else 1)
 PY
+# The exact command install-settings.py writes, run through a shell as Claude Code runs it
+# (sh on macOS/Linux, Git Bash on Windows): the guard, $HOME and the quoting must all survive.
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) PLAT=windows; SH=bash ;; *) PLAT=posix; SH=sh ;; esac
+H3=$(mktemp -d "${TMPDIR:-/tmp}/sl3.XXXXXX"); mkdir -p "$H3/.claude"; ln -s "$ROOT" "$H3/aios" 2>/dev/null || cp -R "$ROOT" "$H3/aios"
+CMD=$(AIOS_ROOT="$ROOT" AIOS_WIN_PYTHON=python python3 -c 'import importlib.util,sys
+s=importlib.util.spec_from_file_location("m","hooks/install-settings.py"); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
+print(m.plan(sys.argv[1], sys.argv[2], False)[1])' "$PLAT" "$ROOT")
+OUT3=$(printf '%s' "$PAYLOAD" | HOME="$H3" USERPROFILE="$H3" CLAUDE_CONFIG_DIR="$H3/.claude" AIOS_ACCOUNTS_FILE="$H3/.aios/accounts.json" \
+  AIOS_KEYCHAIN_SERVICE="aios-accounts-test" USER_MD_PATH="$H3/none.md" "$SH" -c "$CMD" 2>&1)
+[ -n "$OUT3" ] && [ -f "$H3/.claude/rate-limit-cache.json" ] && ok "the written status line runs through $SH: it renders and feeds the cache" \
+  || no "the written status line did not run through $SH: $CMD -> $OUT3"
 ! grep -q 'rotation_has_two' hooks/claude-identity/_cache.py && ok "no account-count gate on the watcher" || no "_cache.py gates the watcher on the account count"
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

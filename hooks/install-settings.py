@@ -22,7 +22,8 @@ USAGE
   install-settings.py --apply      back up settings.json, merge, write, read back and verify
 
 Merge rules: a hook already present (matched by its script, however it is spelled) is left alone;
-an existing statusLine is never replaced (the summary says so, because hook B feeds the quota cache);
+an existing statusLine is kept (the summary says so, because hook B feeds the usage cache), except the
+exact two-program form AIOS itself wrote before #292, which becomes the one-program form ("~ update B");
 every other key in the file is kept byte for byte in meaning. A symlinked settings.json stays a
 link: the file it points to is backed up and updated. Exit 0 ok · 1 the file is not valid JSON, or is
 JSON of a shape this cannot merge into (e.g. "statusLine": null, a hooks event that is not a list),

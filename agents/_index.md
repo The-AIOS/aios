@@ -51,14 +51,14 @@ A session's name decides which agent it wears (its **hat**). CLAUDE.md § Identi
 1. **Exact** → `agents/**/{name}.md`. `custom/` overrides bundled; the wrapper warns when two bundles ship the same name.
 2. **In the name** → an agent's name, or one of its `aliases:` (kind words), at the start of the session name, else at the end.
    - `accountant-acme` → [[accountant]] · `acme-consultant` → [[consultant]] · `deck-launch` → [[deck-builder]] (alias `deck`)
-3. **Project** → the whole name, else its first word, is a project note's name (with or without its category prefix) or one of its `aliases:`. The session wears the default from that note's `Hats` row, or another hat from the row that fits its task. A note with no `Hats` row sends the match on to the next rung.
+3. **Project** → the whole name, else its longest leading part (`philosopher-oracle-fix` → `philosopher-oracle`), is a project note's name (with or without its category prefix) or one of its `aliases:`. The session wears the default from that note's `Hats` row, or another hat from the row that fits its task. A note with no `Hats` row sends the match on to the next rung.
 4. **Fuzzy** → match the name **and the first task** against this table (and `custom/_index.md`): names, purposes, domains, keywords.
    - `bookkeeper` → [[accountant]] · `contract-reviewer` → [[lawyer]] · `strategist` → [[consultant]]
 5. **None** → general-purpose worker with the session name as role context.
 
 The session says which hat it chose and why, so the operator can correct it, and writes the fixed line `Wearing agent: {name}.` whenever it puts a hat on. When the work turns to another agent's field, or a session with no hat gets a request one agent clearly fits, it suggests that agent in the `suggest-agent` skill's one fixed line and wears it (`/aios:agent {name}`) or opens it as its own session only on the operator's yes.
 
-**`aliases:` on an agent** are kind words a session name may lead with (`deck`, `writer`, `review`). Each word belongs to one agent only; `tests/session-hats.test.sh` checks that.
+**`aliases:` on an agent** are kind words a session name may lead with (`deck`, `writer`, `review`). Precedence on a clash: `custom/`, then bundled `aios/`, then a company's synced `agents/<company>/`, whose aliases never override a word another agent already answers to. Each bundled word belongs to one agent only; `tests/session-hats.test.sh` checks that.
 
 **`archetype:` tags** (e.g. `archetype: maintainer`) mark an agent's *posture* — the [[../skills/aios/team-archetypes/SKILL|five product archetypes]] (Prototyper / Builder / Sweeper / Grower / Maintainer) — **orthogonally to its domain capability**. One agent can carry several (it shifts posture by project stage). They make *"who's my Builder / Maintainer?"* resolvable and let `/7plan` + `/emerge` check the deployed mix matches the project's lifecycle stage (not `/today` — daily routing is tactical, stage→mix is strategic). They are a *lens layered on top of* the domain bundles — never a reason to rename or restructure agents.
 
