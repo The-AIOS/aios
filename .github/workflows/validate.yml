@@ -1655,6 +1655,10 @@ jobs:
         # Superpowers was skipped unconditionally, so machines without the plugin ran stale copies. (#313)
         run: bash tests/superpowers-registration.test.sh
 
+      - name: the model bridge hands over to the next provider when one is out of credits or rate-limited
+        # The release audit failed on one exhausted provider while another was configured.
+        run: bash tests/openrouter-fallback.test.sh
+
       - name: the status line is one program that feeds the usage cache, and one account starts no watcher
         # Two programs per render lagged typing on Windows; one account kicked a useless watcher. (#292)
         run: bash tests/statusline-one-program.test.sh
