@@ -65,7 +65,8 @@ def load(*p):
 enabled = (load("settings.json").get("enabledPlugins") or {})
 plugins = (load("plugins", "installed_plugins.json").get("plugins") or {})
 active = any(k.startswith("superpowers@") and enabled.get(k) is not False
-             and any(isinstance(e, dict) and e.get("scope") == "user" for e in (v or []))
+             and any(isinstance(e, dict) and e.get("scope", "user") == "user"
+                     for e in (v if isinstance(v, list) else [v]))
              for k, v in plugins.items())
 print(1 if active else 0)
 PY

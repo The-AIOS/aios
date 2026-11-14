@@ -46,6 +46,10 @@ check("a provider-specific model id is not sent to the next provider", calls == 
 rc, out, err = run(["--prompt", "hi"], no_credits, capped)
 check("every provider exhausted: fails, naming each", rc == 1 and "every configured provider" in err and "openrouter (HTTP 402" in err and "gemini (HTTP 429" in err)
 
+blip = RuntimeError("HTTP 429 from https://openrouter.ai/api/v1/chat/completions\n{\"error\":{\"message\":\"Rate limit exceeded, retry in 2s\"}}")
+rc, out, err = run(["--prompt", "hi"], blip, "from gemini")
+check("a momentary rate limit does not send the prompt to another provider", rc == 1 and calls == [("openrouter", None)])
+
 rc, out, err = run(["--prompt", "hi"], bad_key, "from gemini")
 check("a bad key is reported, never retried elsewhere", rc == 1 and calls == [("openrouter", None)] and "HTTP 401" in err)
 

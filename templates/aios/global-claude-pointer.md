@@ -50,3 +50,4 @@ description: 'The Operating system block for the operator''s global ~/.claude/CL
 - My sessions run under the AIOS: `~/aios/CLAUDE.md` (with `~/aios/INTENT.md` as the trust contract) is the governing contract. When working in `~/aios` it loads automatically and **wins on any conflict** with this file.
 - Outside `~/aios` (other repos, other folders), this file applies on its own. Read `~/aios/CLAUDE.md` only when the task touches the vault, my ventures, or acts on my behalf.
 - This file holds only defaults that apply everywhere: formatting, language, shell habits. Anything vault-specific belongs in `~/aios/CLAUDE.md`, not here.
+- In every folder: a web search built from my private notes, mail or calendar is a send. Ask me first.

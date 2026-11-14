@@ -169,10 +169,11 @@ def configured_providers(force=None):
     return out
 
 
-# Out of credits, over a spend cap, or rate-limited: the provider is fine but cannot serve
-# this call now, so the next configured one is tried. Anything else (a bad key, a bad
-# request, a refusal) is reported as is: retrying elsewhere would hide a real problem.
-EXHAUSTED = re.compile(r"^HTTP (402|429)\b|RESOURCE_EXHAUSTED|insufficient[_ ]credits|requires more credits|spend(ing)? cap", re.I | re.M)
+# Out of credits or over a spending cap: the provider cannot serve this call, so the next
+# configured one is tried. A plain rate limit (a 429 without those words) is a momentary
+# blip and is NOT a reason to send the prompt to another company. Anything else (a bad
+# key, a bad request, a refusal) is reported as is: retrying elsewhere would hide it.
+EXHAUSTED = re.compile(r"^HTTP 402\b|RESOURCE_EXHAUSTED|insufficient[_ ]credits|requires more credits|spend(ing)?[ _]cap|quota", re.I | re.M)
 
 
 def is_exhausted(err):

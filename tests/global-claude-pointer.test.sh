@@ -19,7 +19,8 @@ check "marker stands on its own line exactly once in the template" '[ "$(grep -c
 # The block: from the marker to the end of the file.
 BLOCK=$( [ -f "$T" ] && awk -v m="$MARK" 'f{print} $0==m{f=1}' "$T" )
 check "block has the Operating system heading" 'printf "%s\n" "$BLOCK" | grep -qx "## Operating system"'
-check "block has exactly three bullets" '[ "$(printf "%s\n" "$BLOCK" | grep -c "^- ")" = 3 ]'
+check "block has exactly four bullets" '[ "$(printf "%s\n" "$BLOCK" | grep -c "^- ")" = 4 ]'
+check "block carries the private web-search rule into every folder" 'printf "%s\n" "$BLOCK" | grep -qF "a web search built from my private notes, mail or calendar is a send"'
 check "block says the vault contract wins inside the vault" 'printf "%s\n" "$BLOCK" | grep -qF "wins on any conflict"'
 check "block names INTENT.md as the trust contract" 'printf "%s\n" "$BLOCK" | grep -qF "INTENT.md"'
 check "block is a pointer, not an import" '! printf "%s\n" "$BLOCK" | grep -q "^@"'
