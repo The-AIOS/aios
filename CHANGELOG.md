@@ -61,7 +61,7 @@
 
 ## 2026-11-13 — Sessions wear the right hat for their name and their project
 
-`hash: 1a88208 · 2b08c28` · [#299](https://github.com/The-AIOS/aios/issues/299) · [#307](https://github.com/The-AIOS/aios/issues/307) · [#292](https://github.com/The-AIOS/aios/issues/292) · [#303](https://github.com/The-AIOS/aios/issues/303) · [#271](https://github.com/The-AIOS/aios/issues/271) · [#304](https://github.com/The-AIOS/aios/issues/304) · [#306](https://github.com/The-AIOS/aios/issues/306) · [#313](https://github.com/The-AIOS/aios/issues/313) · [#310](https://github.com/The-AIOS/aios/issues/310)
+`hash: 1a88208 · 85fe234` · [#299](https://github.com/The-AIOS/aios/issues/299) · [#307](https://github.com/The-AIOS/aios/issues/307) · [#292](https://github.com/The-AIOS/aios/issues/292) · [#303](https://github.com/The-AIOS/aios/issues/303) · [#271](https://github.com/The-AIOS/aios/issues/271) · [#304](https://github.com/The-AIOS/aios/issues/304) · [#306](https://github.com/The-AIOS/aios/issues/306) · [#313](https://github.com/The-AIOS/aios/issues/313) · [#310](https://github.com/The-AIOS/aios/issues/310)
 
 > **What you can now do.** Name a session after what it is for, and it puts on the right expertise. `accountant-acme` and `acme-consultant` wear the accountant and the consultant. A session named after a project wears that project's hats. When a request fits one of your agents, or the work turns to another agent's field, the session puts that agent on and tells you in one line; say "open" to give it its own session or "no" to take it off. Sessions of one kind sit together in the resume list.
 
