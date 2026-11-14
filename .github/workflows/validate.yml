@@ -1639,6 +1639,10 @@ jobs:
         # Each run wrote its own search, so densities of the same writing jumped 0.66 -> 2.88. (#271)
         run: bash tests/voice-gate-finder.test.sh
 
+      - name: the status line is one program that feeds the usage cache, and one account starts no watcher
+        # Two programs per render lagged typing on Windows; one account kicked a useless watcher. (#292)
+        run: bash tests/statusline-one-program.test.sh
+
       - name: liveness checks never end the process they check
         # On Windows os.kill(pid, 0) is TerminateProcess; _resume.py used it. (#303)
         run: bash tests/pid-liveness.test.sh
@@ -2320,6 +2324,10 @@ jobs:
       - name: liveness checks never end the process they check, on real Windows (#303)
         shell: bash
         run: bash tests/pid-liveness.test.sh
+
+      - name: the one-program status line writes the usage cache on real Windows (#292)
+        shell: bash
+        run: bash tests/statusline-one-program.test.sh
 
       - name: The derivation survives it
         shell: bash

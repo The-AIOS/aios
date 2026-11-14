@@ -902,15 +902,14 @@ PYEOF
 # to standalone scripts; heredocs hijacked stdin).
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# `cache` reads stdin (the statusline input, wrapped via tee) and writes
-# rate-limit-cache.json. Claude Code's Stop hook payload does NOT include
-# rate_limits — only the statusline does. So we piggyback on the statusline:
-# see settings.json  "statusLine.command": "tee >(... cache) | real-statusline"
-# which updates the cache on every statusline refresh (several times per
-# second during active use).
+# `cache` reads stdin (a statusline payload) and writes rate-limit-cache.json.
+# Claude Code's Stop hook payload does NOT include rate_limits; only the
+# statusline does. Since #292 the status line itself (context-monitor.py) writes
+# the cache in its own process, so this subcommand is kept for status lines an
+# operator composed themselves (`tee >(... cache) | their-own-line`).
 #
-# We DO NOT chain into watch from here — statusline fires far too often for
-# that to be cheap. The launchd agent polls watch every 60s independently.
+# _cache.py does start the watcher, at most every 30 seconds and only when two or
+# more accounts are in rotation; the launchd/scheduled task also polls it.
 cmd_cache() {
   $PY "$SELF_DIR/_cache.py"
 }

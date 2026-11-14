@@ -96,8 +96,8 @@ def plan(platform, root, venture_guard):
         ]
         if venture_guard:
             rows.append(("C", "PreToolUse", "Edit|Write|MultiEdit|NotebookEdit", h("guard-venture-mount.py"), 10))
-        status = ("bash -c 'tee >(\"%s/hooks/claude-identity/claude-identity.sh\" cache > /dev/null) | "
-                  "%s \"%s/hooks/claude-identity/context-monitor.py\"'" % (r, py, r))
+        # One program per render (#292): context-monitor.py also writes the rate-limit cache.
+        status = '%s "%s/hooks/claude-identity/context-monitor.py"' % (py, r)
     else:
         rows = [
             ("A", "UserPromptSubmit", None, "bash ~/aios/hooks/inject-datetime.sh", None),
@@ -110,10 +110,9 @@ def plan(platform, root, venture_guard):
         if venture_guard:
             rows.append(("C", "PreToolUse", "Edit|Write|MultiEdit|NotebookEdit",
                          "python3 ~/aios/hooks/guard-venture-mount.py", 10))
-        status = ("bash -c 'tee >($HOME/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | "
-                  "python3 $HOME/aios/hooks/claude-identity/context-monitor.py'")
+        status = "python3 $HOME/aios/hooks/claude-identity/context-monitor.py"
     rows = [(k, ev, mt, guard(cmd), to) for k, ev, mt, cmd, to in rows]
-    return rows, status
+    return rows, guard(status)
 
 
 WHAT = {
@@ -128,6 +127,9 @@ WHAT = {
           "session you want to reopen or learn from is gone a month later"),
 }
 RETENTION_DAYS = 3650
+# The status line AIOS wrote before #292 (quotes removed before matching), on any root and interpreter.
+OLD_STATUS = re.compile(r"^bash -c 'tee >\((?:\$HOME/aios|\S+?)/hooks/claude-identity/claude-identity\.sh cache > /dev/null\) \| "
+                        r"\S+(?: -3)? (?:\$HOME/aios|\S+?)/hooks/claude-identity/context-monitor\.py'$")
 
 
 def signature(cmd):
@@ -224,10 +226,18 @@ def main():
                     upgrades.append((wanted[signature(cmd)], hk))
     status_add = "statusLine" not in settings
     status_note = None
-    # Quotes stripped: the Windows form quotes the script path (claude-identity.sh" cache).
-    if not status_add and "claude-identity.sh cache" not in str(settings["statusLine"].get("command", "")).replace('"', ""):
-        status_note = ("you already have your own status line, so it is left as it is -- the quota autopilot's "
-                       "cache (hook B) will not be fed until it also runs claude-identity.sh cache (SETUP §10)")
+    status_upgrade = False
+    if not status_add:
+        cur = str(settings["statusLine"].get("command", ""))
+        flat = cur.replace('"', "")
+        # The form AIOS itself wrote before #292: bash + tee + claude-identity.sh cache + context-monitor.py,
+        # two programs per render. Only that exact shape is ours to replace; anything else is the operator's.
+        if OLD_STATUS.match(flat):
+            status_upgrade = True
+        elif "claude-identity.sh cache" not in flat and "context-monitor.py" not in flat:
+            status_note = ("you already have your own status line, so it is left as it is -- the usage cache the "
+                           "App, Glass and the quota autopilot read is not fed until it also runs "
+                           "hooks/claude-identity/context-monitor.py (SETUP §10)")
 
     # R: only when the key is absent. A value the operator chose, even a short one, is theirs.
     retention_add = "cleanupPeriodDays" not in settings
@@ -251,7 +261,9 @@ def main():
     for key, *_ in keeps:
         if key not in shown:
             print("  = keep  %s  already set up" % key); shown.add(key)
-    if not status_add and not status_note:
+    if status_upgrade:
+        print("  ~ update B  the status line becomes one program instead of two, so typing does not lag on Windows")
+    elif not status_add and not status_note:
         print("  = keep  B  already set up")
     if status_note:
         print("  ! note  B  " + status_note)
@@ -267,7 +279,7 @@ def main():
         print("  = keep  R  already set up")
     print("  Everything else in the file is kept.")
 
-    if not adds and not status_add and not upgrades and not retention_add:
+    if not adds and not status_add and not status_upgrade and not upgrades and not retention_add:
         print("Nothing to change.")
         return 0
     if not a.apply:
@@ -285,6 +297,8 @@ def main():
         hooks.setdefault(event, []).append(group)
     if status_add:
         settings["statusLine"] = {"type": "command", "command": status}
+    elif status_upgrade:
+        settings["statusLine"]["command"] = status
     for _, hk in upgrades:
         hk["command"] = guard(str(hk["command"]))
     if retention_add:

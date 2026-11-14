@@ -56,7 +56,29 @@ def config_dir(home: str) -> str:
     return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(home, ".claude")
 
 
+def current_gen():
+    """The seat generation, read BEFORE the payload (see update). None when unreadable."""
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from _fs import seat_generation
+        return seat_generation()
+    except Exception:
+        return None
+
+
 def main():
+    gen = current_gen()
+    try:
+        payload = sys.stdin.read()
+    except Exception:
+        return
+    update(payload, gen)
+
+
+def update(payload: str, gen=None) -> None:
+    """Write the seat's rate-limit sample from one status-line payload, and kick the watcher.
+    context-monitor.py calls this in its own process, so the status line is one program (#292).
+    Callers pass the generation they read BEFORE reading the payload."""
     home = os.path.expanduser("~")
     cfg = config_dir(home)
     cache_path = os.path.join(cfg, "rate-limit-cache.json")
@@ -72,13 +94,10 @@ def main():
     # account's email with a fresh timestamp.
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from _fs import seat_generation, write_json_atomic
-    gen = seat_generation()
+    if gen is None:
+        gen = seat_generation()
 
-    try:
-        payload = sys.stdin.read()
-    except Exception:
-        return
-    if not payload.strip():
+    if not (payload or "").strip():
         return
 
     try:
@@ -174,6 +193,16 @@ def tick_interval(worst_pct: float) -> int:
     return WATCH_TICK_SECS_HOT if pct >= HOT_ZONE_PCT else WATCH_TICK_SECS
 
 
+def rotation_has_two() -> bool:
+    """True when two or more accounts are in rotation. Unknown -> True: keep watching."""
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import _accounts
+        return len(_accounts.rotation()) >= 2
+    except Exception:
+        return True
+
+
 def kick_watcher(home: str, worst_pct: float = 0) -> None:
     """Spawn _watch.py in the background if enough time has elapsed since the
     last kick. Touches a tick marker so subsequent statusLine renders don't pile
@@ -192,6 +221,11 @@ def kick_watcher(home: str, worst_pct: float = 0) -> None:
                 return
         except OSError:
             pass
+
+    # One account: there is nothing to rotate to, so the watcher has no work. Starting it
+    # anyway cost a process and a log line every 30 seconds on single-account machines (#292).
+    if not rotation_has_two():
+        return
 
     self_dir = os.path.dirname(os.path.abspath(__file__))
     watcher = os.path.join(self_dir, "_watch.py")

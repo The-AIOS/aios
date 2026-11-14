@@ -556,13 +556,13 @@ Add to `~/.claude/settings.json`:
 
 Windows operators: see **On Windows** at the end of this section.
 
-**Hook B — `claude-identity` statusLine** (writes the rate-limit cache on every Claude turn — feeds the fast-path quota detector used by the autopilot in §11, and powers the context-monitor status display). Add to `~/.claude/settings.json`:
+**Hook B — `claude-identity` statusLine** (shows context use and quota at the bottom of the terminal, and writes the rate-limit cache the AIOS App, Glass and the §11 autopilot read, in one program per render). Add to `~/.claude/settings.json`:
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "bash -c 'tee >($HOME/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | python3 $HOME/aios/hooks/claude-identity/context-monitor.py'"
+    "command": "[ ! -f $HOME/aios/hooks/claude-identity/context-monitor.py ] || python3 $HOME/aios/hooks/claude-identity/context-monitor.py"
   }
 }
 ```
@@ -674,12 +674,12 @@ Write **absolute paths with forward slashes** (resolve them once with `cygpath -
   },
   "statusLine": {
     "type": "command",
-    "command": "bash -c 'tee >(\"C:/Users/<you>/aios/hooks/claude-identity/claude-identity.sh\" cache > /dev/null) | python \"C:/Users/<you>/aios/hooks/claude-identity/context-monitor.py\"'"
+    "command": "[ ! -f \"C:/Users/<you>/aios/hooks/claude-identity/context-monitor.py\" ] || python \"C:/Users/<you>/aios/hooks/claude-identity/context-monitor.py\""
   }
 }
 ```
 
-The `statusLine` keeps its `bash -c` form (Claude Code on Windows runs commands through Git Bash), with the same absolute path as the hooks instead of `$HOME/aios`, so it still works when the framework lives somewhere else, and the interpreter the probe printed.
+The `statusLine` is one program (behind the same missing-file guard as the hooks), with the same absolute path as the hooks instead of `$HOME/aios`, so it still works when the framework lives somewhere else, and the interpreter the probe printed. It used to be `bash -c 'tee >(…claude-identity.sh cache …) | python …context-monitor.py'`: two programs and a bash start on every render, which costs seconds on Windows and made typing lag. `install-settings.py` replaces that exact old form for you; a status line you wrote yourself is left alone.
 
 **Verify hooks A + B fired:** open a fresh Claude Code session, type *"what's today's date?"* — Claude should reply with the actual current date (proves the UserPromptSubmit hook ran). Check the statusLine at the bottom of the terminal — it should show context usage + quota state (proves the statusLine command ran).
 
