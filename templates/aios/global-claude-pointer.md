@@ -20,9 +20,13 @@ description: 'The Operating system block for the operator''s global ~/.claude/CL
 > **Who adds it.** `/aios:cold-start-interview` (Step 3.5, after `INTENT.md`) and `/aios:update` (the
 > CHANGELOG action item) offer it once. Both follow the same rules:
 >
-> 1. **State.** If `~/.claude/CLAUDE.md` contains the marker line `<!-- aios:operating-system -->`, the
+> 1. **State.** If `~/.claude/CLAUDE.md` already has an `## Operating system` section without the marker,
+>    it was written by hand: offer only to add the marker line above it, and stop. If it contains the
+>    marker line `<!-- aios:operating-system -->`, the
 >    block is already there: say nothing and stop.
-> 2. **Ask, once.** The file lives outside the vault, so it is never written without a yes. Show the block.
+> 2. **Ask, once.** The file lives outside the vault, so it is never written without a yes. Show the block,
+>    and say both directions: inside the vault the vault's contract outranks this file, so a stricter rule
+>    kept here (say, never sending without asking) belongs in `~/aios/INTENT.md` if it should hold there.
 >    Recommend yes: without it, a global preference can override the vault's contract in vault sessions.
 > 3. **Act.**
 >    - No global file: create `~/.claude/CLAUDE.md` holding a `# Global Instructions` heading and the block.

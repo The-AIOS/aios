@@ -23,6 +23,8 @@ for folder, repo, url in rows:
     check("%s exists" % skill, bool(text))
     check("%s links its origin %s" % (skill, url), url in text)
     check("%s names its license" % skill, re.search(r"\bMIT\b|Apache|BSD|ISC|GPL", text) is not None)
+    lic = os.path.join(folder, "LICENSE")
+    check("%s carries the license notice" % lic, os.path.isfile(lic) and "Permission is hereby granted" in open(lic, encoding="utf-8").read())
 print("%d passed, %d failed" % (ok, fail))
 sys.exit(1 if fail else 0)
 PY

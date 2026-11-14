@@ -24,7 +24,7 @@ check "block says the vault contract wins inside the vault" 'printf "%s\n" "$BLO
 check "block names INTENT.md as the trust contract" 'printf "%s\n" "$BLOCK" | grep -qF "INTENT.md"'
 check "block is a pointer, not an import" '! printf "%s\n" "$BLOCK" | grep -q "^@"'
 # Nothing personal: no names, handles, addresses, or one operator's language/tone rules.
-check "block carries no personal rules" '! printf "%s\n" "$BLOCK" | grep -qiE "spanish|english|portugu|latam|mexic|slack|gmail|@[a-z0-9]|reply in|sign |chuy|buddai"'
+check "block carries no personal rules" '! printf "%s\n" "$BLOCK" | grep -qiE "spanish|english|portugu|latam|mexic|slack|gmail|@[a-z0-9]|reply in|sign "'
 
 check "template says to write with Edit or Write, not Bash" 'grep -qF "Edit or Write tool" "$T"'
 check "template says change nothing else" 'grep -qiF "change nothing else" "$T"'

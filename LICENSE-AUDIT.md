@@ -46,13 +46,13 @@ Vendored open-source work ships under **its own** upstream license, preserved in
 | Subtree | Origin | License | Attribution / provenance |
 |---|---|---|---|
 | `skills/aios/` | This framework | GPL-2.0-or-later | — |
-| `skills/aios/karpathy-coding/` | [multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) | **MIT** (declared in its README; no LICENSE file upstream) | Adapted text; credited at the end of its `SKILL.md`. The one exception to `skills/aios/` being GPL |
+| `skills/aios/karpathy-coding/` | [multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) | **MIT** (declared in its README; no LICENSE file upstream) | Adapted text; credited at the end of its `SKILL.md`, with the MIT notice in its folder's `LICENSE`. The one exception to `skills/aios/` being GPL |
 | `skills/anthropic/` | [anthropics/skills](https://github.com/anthropics/skills) | **Apache-2.0** | Per-skill `LICENSE.txt` in each folder; `.upstream-sync` records HEAD |
 | `skills/superpowers/` | [obra/superpowers](https://github.com/obra/superpowers) | **MIT** | `.upstream-sync` records HEAD |
 | `skills/cloudflare/` | [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) | **MIT** | Upstream `LICENSE` at `skills/cloudflare/LICENSE`; `.upstream-sync` + `.upstream-manifest` pin every file |
 | `skills/custom/` | Operator | Operator's choice | Survives `/aios:update`; operator owns |
 
-> **Anthropic skills not vendored** (per `skills/anthropic/.upstream-sync`): `docx`, `pdf`, `pptx`, `xlsx` became **Apache-2.0** upstream on 2026-11-06 (`2c5958e`), so they may now be redistributed, but at about 3.6 MB together they stay on the plugin route: operators get them via the `document-skills@anthropic-agent-skills` plugin, not from this repo. `brand-guidelines` (Anthropic-specific) and `canvas-design` (Apache-2.0 but 5.5 MB of fonts) are likewise plugin-only. **Before vendoring any of them, read its `LICENSE.txt` at the hash you pin.**
+> **Anthropic skills not vendored** (per `skills/anthropic/.upstream-sync`): `docx`, `pdf`, `pptx`, `xlsx` became **Apache-2.0** upstream on 2026-11-06 (`2c5958e`, per each folder's `skills/<name>/LICENSE.txt` at that commit in anthropics/skills), so they may now be redistributed, but at about 3.6 MB together they stay on the plugin route: operators get them via the `document-skills@anthropic-agent-skills` plugin, not from this repo. `brand-guidelines` (Anthropic-specific) and `canvas-design` (Apache-2.0 but 5.5 MB of fonts) are likewise plugin-only. **Before vendoring any of them, read its `LICENSE.txt` at the hash you pin.**
 
 ### MCPs (per `mcps/_index.md`)
 

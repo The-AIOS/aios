@@ -210,7 +210,8 @@ if "context-monitor.py" in existing or "claude-identity.sh cache" in existing:
     print("already feeds the cache; nothing changed")
 else:
     cache_cmd = os.path.expanduser("~/aios/hooks/claude-identity/claude-identity.sh") + " cache"
-    d["statusLine"]["command"] = f"bash -c 'tee >({cache_cmd} > /dev/null) | ({existing})'"
+    inner = f"tee >({cache_cmd} > /dev/null) | ({existing})"
+    d["statusLine"]["command"] = "bash -c '" + inner.replace("'", "'\\''") + "'"   # survives quotes in yours
     with open(p, "w") as f:
         json.dump(d, f, indent=2)
     print("statusLine wired:", d["statusLine"]["command"])

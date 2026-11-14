@@ -95,7 +95,10 @@ that matters:
 ENTRY=$(python3 - <<'PY'
 import json, os, glob, subprocess, sys
 sys.path.insert(0, os.path.expanduser("~/aios/hooks/claude-identity"))
-from _fs import pid_alive               # never os.kill(pid, 0): on Windows that ends the process
+try:
+    from _fs import pid_alive           # never os.kill(pid, 0): on Windows that ends the process
+except Exception:
+    pid_alive = lambda pid: True        # no helper: trust the announcement rather than fail detection
 def parent(pid):
     r = subprocess.run(["ps","-o","ppid=","-p",str(pid)], capture_output=True, text=True)
     return int(r.stdout) if r.stdout.strip() else 0

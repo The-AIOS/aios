@@ -555,7 +555,7 @@ a=$(h_file "$LOCAL_MD") && b=$(h_file "$CLONE/plugins/aios/commands/update.md") 
 4. **Load the new spec by READING IT, not by re-invoking the skill.** `Read` the just-applied `$HOME/aios/plugins/aios/commands/update.md` and follow *that* for the rest of this run, treating `AIOS_UPDATE_REINVOKED=1` as set.
 
    > **Why not `Skill(aios:update)`:** a skill already loaded in the current session is **not re-read from disk** — the harness answers *"already loaded above; instructions unchanged"* and the run silently continues on the OLD spec, which is the precise failure this step exists to prevent. Verified 2026-07-27. `Skill()` re-invocation only picks up a new spec in a *fresh* session, so it cannot be the mechanism. Reading the file is unconditional and works in-session.
-5. **Continue this run under the new spec** (do not exit expecting an inner run to do the work). If for any reason the new spec cannot be read, finish the sync under the current spec and tell the operator to re-run `/aios:update` in a **fresh session** — **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working — to pick up the new logic — the update still lands either way.
+5. **Continue this run under the new spec** (do not exit expecting an inner run to do the work), **starting with Step 2's block run again under it**: an older spec may not have saved the file list Steps 3 and 3.4 read, and they refuse to run without it. If for any reason the new spec cannot be read, finish the sync under the current spec and tell the operator to re-run `/aios:update` in a **fresh session** — **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working — to pick up the new logic — the update still lands either way.
 
 Report to operator at the end: *"`/aios:update` self-updated and continued under the new spec — {summary of what this run then processed}."* No operator action required. **Do not describe an "inner run" or a hand-off** — there is neither; one run applied the new spec and kept going. Wording that implies a second run makes a stalled sync look like a completed one, since the reader assumes something else finished the job.
 
@@ -574,7 +574,9 @@ Report to operator at the end: *"`/aios:update` self-updated and continued under
 > **Use this loop (portable across bash and zsh):**
 >
 > ```bash
-> cat "${CLONE:-/tmp/aios-update-check}/.git/aios-update-files" | while IFS= read -r f; do
+> L="${CLONE:-/tmp/aios-update-check}/.git/aios-update-files"
+> [ -f "$L" ] || { echo "FATAL: Step 2's saved list is missing. Run Step 2's block (it saves the list), then this step again." >&2; exit 1; }
+> cat "$L" | while IFS= read -r f; do
 >   [ -z "$f" ] && continue
 >   # … per-file logic below …
 > done
@@ -692,7 +694,9 @@ For each changed Tier 1 file:
              local h; h=$(LC_ALL=C tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
    h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1; _have_sha || return 1
             local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | LC_ALL=C tr -d '\r' | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
-   cat "${CLONE:-/tmp/aios-update-check}/.git/aios-update-files" | while IFS= read -r f; do
+   L="$CLONE/.git/aios-update-files"
+   [ -f "$L" ] || { echo "FATAL: Step 2's saved list is missing. Run Step 2's block (it saves the list), then this step again." >&2; exit 1; }
+   cat "$L" | while IFS= read -r f; do
      [ -n "$f" ] || continue
      [ -e "$CLONE/$f" ] && continue            # still in canonical — not a deletion
      [ -e "$V/$f" ] || continue                # already gone locally
