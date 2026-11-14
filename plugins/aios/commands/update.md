@@ -329,7 +329,19 @@ If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git
 # Newest-first slice: everything ABOVE the first fully-synced entry.
 # Print entry-by-entry and stop; never load the tail. Evaluate the hash line with the
 # ANY-hash rule below -- this is a cheaper READ of the same decision, never a different one.
-awk '/^## [0-9]{4}-[0-9]{2}-[0-9]{2}/{n++} n>0' "$CLONE/CHANGELOG.md" |   awk -v stop="$STOP_HEADER" '$0==stop{exit} {print}'
+# STOP_HEADER: the "## YYYY-MM-DD" header of the first entry whose hashes are ALL ancestors of
+# the stored hash. An entry with no resolvable hash never stops the scan. Empty -> nothing is
+# fully synced, and § "A tracker with no usable baseline" applies. Pipes, never `for x in $LIST`:
+# zsh does not word-split an unquoted expansion.
+STOP_HEADER=$(awk '/^## [0-9]{4}-[0-9]{2}-[0-9]{2}/{h=$0; next} h!="" && /^`hash: /{print h; print $0; h=""}' "$CLONE/CHANGELOG.md" |
+  while IFS= read -r head && IFS= read -r hl; do
+    hashes=$(printf '%s\n' "$hl" | sed -E 's/^`hash: //; s/`.*//' | tr -s ' \302\267' '\n' | grep -E '^[0-9a-f]{7,40}$')
+    [ -n "$hashes" ] || continue
+    unsynced=$(printf '%s\n' "$hashes" | while IFS= read -r c; do
+      git -C "$CLONE" merge-base --is-ancestor "$c" "{stored_hash}" 2>/dev/null || echo x; done | grep -c x)
+    if [ "$unsynced" = 0 ]; then printf '%s\n' "$head"; break; fi
+  done)
+awk '/^## [0-9]{4}-[0-9]{2}-[0-9]{2}/{n++} n>0' "$CLONE/CHANGELOG.md" | awk -v stop="$STOP_HEADER" 'stop!="" && $0==stop{exit} {print}'
 ```
 
 > ⚠️ **Two ways to get this wrong, and both are worse than reading the whole file.**
@@ -477,7 +489,10 @@ done
 # the files anyway — so the sync still landed while THIS step's report was wrong,
 # which is the worst combination: correct outcome, false account of it.
 # Bash 3.2 (macOS system bash) and zsh both handle `"${arr[@]}"` correctly.
-git -C "$CLONE" diff {stored_hash}..HEAD --name-only -- \
+# --no-renames: git reports a renamed file by its NEW path only, so the old path would never reach
+# Step 3.4's deletion pass and the stale copy would stay in the vault forever (measured in a
+# release dry run: five files a vendored upstream moved into references/ were left behind).
+git -C "$CLONE" diff --no-renames {stored_hash}..HEAD --name-only -- \
   "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
   "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "AGENTS.md" "EXTENSION-MAP.md" "LICENSE-AUDIT.md" \
   "LICENSE" "NOTICE" "FORTRESS.md" "MODEL-ROUTING.md" "SECURITY.md" "GLOSSARY.md" ".gitignore" \

@@ -100,12 +100,17 @@ def pid_alive(pid: int) -> bool:
         return False
     if os.name == "nt":
         import ctypes
-        k32 = ctypes.windll.kernel32
+        from ctypes import wintypes
+        # use_last_error: GetLastError() read through windll can return a stale code; and a HANDLE
+        # restype, or a 64-bit handle is truncated to the default c_int.
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.OpenProcess.restype = wintypes.HANDLE
+        k32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
         h = k32.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
         if not h:
-            return k32.GetLastError() == 5         # ERROR_ACCESS_DENIED: exists, not ours
+            return ctypes.get_last_error() == 5    # ERROR_ACCESS_DENIED: exists, not ours
         try:
-            code = ctypes.c_ulong()
+            code = wintypes.DWORD()
             return bool(k32.GetExitCodeProcess(h, ctypes.byref(code))) and code.value == 259  # STILL_ACTIVE
         finally:
             k32.CloseHandle(h)

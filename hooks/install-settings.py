@@ -127,9 +127,23 @@ WHAT = {
           "session you want to reopen or learn from is gone a month later"),
 }
 RETENTION_DAYS = 3650
-# The status line AIOS wrote before #292 (quotes removed before matching), on any root and interpreter.
-OLD_STATUS = re.compile(r"^bash -c 'tee >\((?:\$HOME/aios|\S+?)/hooks/claude-identity/claude-identity\.sh cache > /dev/null\) \| "
-                        r"\S+(?: -3)? (?:\$HOME/aios|\S+?)/hooks/claude-identity/context-monitor\.py'$")
+
+
+def old_status_forms(root):
+    """The exact status lines AIOS wrote before #292, for this machine's root and the interpreters
+    the installer itself would have written. Exact strings, not a pattern: a line the operator
+    changed in any way (another interpreter, a fork's path) is theirs and is never replaced, and a
+    root with spaces in it still matches."""
+    r = root.replace("\\", "/")
+    pys = {"python3", "python", "py -3"}
+    if os.environ.get("AIOS_WIN_PYTHON"):
+        pys.add(os.environ["AIOS_WIN_PYTHON"])
+    forms = {"bash -c 'tee >($HOME/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | "
+             "python3 $HOME/aios/hooks/claude-identity/context-monitor.py'"}
+    for py in pys:
+        forms.add("bash -c 'tee >(\"%s/hooks/claude-identity/claude-identity.sh\" cache > /dev/null) | "
+                  "%s \"%s/hooks/claude-identity/context-monitor.py\"'" % (r, py, r))
+    return forms
 
 
 def signature(cmd):
@@ -228,11 +242,11 @@ def main():
     status_note = None
     status_upgrade = False
     if not status_add:
-        cur = str(settings["statusLine"].get("command", ""))
+        cur = str(settings["statusLine"].get("command", "")).strip()
         flat = cur.replace('"', "")
         # The form AIOS itself wrote before #292: bash + tee + claude-identity.sh cache + context-monitor.py,
-        # two programs per render. Only that exact shape is ours to replace; anything else is the operator's.
-        if OLD_STATUS.match(flat):
+        # two programs per render. Only those exact strings are ours to replace; anything else is the operator's.
+        if cur in old_status_forms(ROOT):
             status_upgrade = True
         elif "claude-identity.sh cache" not in flat and "context-monitor.py" not in flat:
             status_note = ("you already have your own status line, so it is left as it is -- the usage cache the "

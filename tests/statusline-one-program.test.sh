@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The status line is one program (#292). context-monitor.py alone must write the rate-limit cache
-# that the AIOS App, Glass and the quota autopilot read, and must start the quota watcher only when
-# two or more accounts are in rotation: with one, there is nothing to rotate to, and starting it
-# cost a process and a log line every 30 seconds. Usage: bash tests/statusline-one-program.test.sh
+# that the AIOS App, Glass and the quota autopilot read,
+# and must keep starting the watcher on every machine: besides rotating it reconnects Remote
+# Control after a /login and warns when the account list is lost. Usage: bash tests/statusline-one-program.test.sh
 # [repo-root]. Written for bash 3.2.
 set -u
 ROOT="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
@@ -34,7 +34,7 @@ C="$H1/.claude/rate-limit-cache.json"
 [ -f "$C" ] && ok "the status line alone writes the rate-limit cache" || no "no cache written by context-monitor.py"
 [ -f "$C" ] && python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d["five_hour_pct"]==41 and d["seven_day_pct"]==12 else 1)' "$C" \
   && ok "the cache carries the payload's 5-hour and weekly numbers" || no "cache numbers wrong"
-[ ! -f "$H1/.claude/watch-tick" ] && ok "one account: the watcher is not started" || no "one account still kicked the watcher"
+[ -f "$H1/.claude/watch-tick" ] && ok "one account: the watcher still starts (Remote Control reconnect, lost-list warning)" || no "one account: the watcher was not started"
 
 H2=$(mktemp -d "${TMPDIR:-/tmp}/sl2.XXXXXX"); mkdir -p "$H2/.claude"
 accounts "$H2" one@example.com two@example.com
@@ -47,6 +47,6 @@ import sys; s = open(sys.argv[1], encoding="utf-8").read()
 g, r = s.find("_cache.current_gen()"), s.find("sys.stdin.read()")
 sys.exit(0 if 0 <= g < r else 1)
 PY
-grep -q 'def rotation_has_two' hooks/claude-identity/_cache.py && ok "_cache.py gates the watcher on two accounts" || no "no rotation gate in _cache.py"
+! grep -q 'rotation_has_two' hooks/claude-identity/_cache.py && ok "no account-count gate on the watcher" || no "_cache.py gates the watcher on the account count"
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

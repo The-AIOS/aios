@@ -42,10 +42,14 @@ let's dive in, a testament to code that is never counted
 The word “pivotal” in curly quotes is being discussed, not used.
 EOF
 
+printf 'It\342\200\231s not a tool, it\342\200\231s a partner.\n\nHere\342\200\231s the thing about it.\n' > "$T/curly.md"
 count(){ python3 "$F" "$1" --json | python3 -c 'import json,sys; print(json.load(sys.stdin)["results"][0]["candidates"])'; }
 [ "$(count "$T/tells.md")" = 6 ] && ok "sample with six known tells counts exactly 6" || no "sample count: got $(count "$T/tells.md"), want 6"
 [ "$(count "$T/clean.md")" = 0 ] && ok "clean text counts 0" || no "clean text: got $(count "$T/clean.md")"
 [ "$(count "$T/quoted.md")" = 0 ] && ok "quotes, code spans, fences and blockquotes count 0" || no "quoted/code text: got $(count "$T/quoted.md")"
+[ "$(count "$T/curly.md")" = 2 ] && ok "curly apostrophes (it’s, here’s) match like straight ones" || no "curly apostrophes: got $(count "$T/curly.md"), want 2"
+python3 "$F" "$T/curly.md" --json | python3 -c 'import json,sys; sys.exit(0 if json.load(sys.stdin)["results"][0]["words"]==12 else 1)' \
+  && ok "a word with a curly apostrophe counts once" || no "curly-apostrophe words split in two"
 python3 "$F" "$T/tells.md" > "$T/a"; python3 "$F" "$T/tells.md" > "$T/b"
 cmp -s "$T/a" "$T/b" && ok "two runs print the same output" || no "two runs differ"
 head -1 "$T/a" | grep -qE '^voice-gate finder v[0-9]+ \(patterns [0-9a-f]{8}\)$' && ok "the first line names the version and the pattern hash" || no "version line: $(head -1 "$T/a")"

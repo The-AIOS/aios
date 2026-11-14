@@ -1643,6 +1643,10 @@ jobs:
         # Agents were invisible to the model unless the operator already knew a name. (#299)
         run: bash tests/suggest-agent.test.sh
 
+      - name: /aios:update removes files canonical moved, and its changelog scan stops where it should
+        # Renames hid old paths from the deletion pass; Step 1.5 used an undefined $STOP_HEADER. (v0.8.18 dry run)
+        run: bash tests/update-renames-and-stop.test.sh
+
       - name: the status line is one program that feeds the usage cache, and one account starts no watcher
         # Two programs per render lagged typing on Windows; one account kicked a useless watcher. (#292)
         run: bash tests/statusline-one-program.test.sh

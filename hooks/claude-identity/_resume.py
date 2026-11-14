@@ -757,6 +757,13 @@ def main() -> None:
             skipped.append(f"{pid} — dead")
             continue
 
+        # Windows (#303): the stop below is os.kill(pid, 15), which there is TerminateProcess, and the
+        # reopen path is macOS-only (ps -E, AppleScript), so a stopped session never came back. A live
+        # session adopts the swapped account on its next request anyway, so leave it running.
+        if os.name == "nt":
+            skipped.append(f"{pid} — Windows: left running; it adopts the new account on its next request")
+            continue
+
         # Pull session name in priority order:
         # 1. CLAUDE_AGENT_NAME env (canonical, spawn-wrapper-set)
         # 2. name field in session JSON (Claude Code 2.1.121+ writes it)

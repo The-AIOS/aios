@@ -908,8 +908,8 @@ SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 # the cache in its own process, so this subcommand is kept for status lines an
 # operator composed themselves (`tee >(... cache) | their-own-line`).
 #
-# _cache.py does start the watcher, at most every 30 seconds and only when two or
-# more accounts are in rotation; the launchd/scheduled task also polls it.
+# _cache.py does start the watcher, at most every 30 seconds (it rotates accounts and
+# reconnects Remote Control after a /login); the launchd/scheduled task also polls it.
 cmd_cache() {
   $PY "$SELF_DIR/_cache.py"
 }

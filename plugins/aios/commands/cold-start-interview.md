@@ -82,7 +82,7 @@ is its authority) and it must be used as written, because the two shortcuts both
 that matters:
 
 - **A surface file's presence proves nothing** — it stays on disk after the surface exits, so it must be
-  liveness-checked (`os.kill(pid, 0)`). Measured on a live machine 2026-08-27: `glass.json` was present
+  liveness-checked (`_fs.pid_alive`, never signal 0, which ends the process on Windows). Measured on a live machine 2026-08-27: `glass.json` was present
   with a **dead** pid while the App was genuinely running. A presence check would have reported "IDE" to
   an operator sitting in the App.
 - **An install path proves less** — `/Applications/AIOS.app` existing says the operator *owns* the App,
@@ -93,7 +93,9 @@ that matters:
 
 ```bash
 ENTRY=$(python3 - <<'PY'
-import json, os, glob, subprocess
+import json, os, glob, subprocess, sys
+sys.path.insert(0, os.path.expanduser("~/aios/hooks/claude-identity"))
+from _fs import pid_alive               # never os.kill(pid, 0): on Windows that ends the process
 def parent(pid):
     r = subprocess.run(["ps","-o","ppid=","-p",str(pid)], capture_output=True, text=True)
     return int(r.stdout) if r.stdout.strip() else 0
@@ -101,8 +103,8 @@ live = {}
 for f in glob.glob(os.path.expanduser("~/.aios/surfaces/*.json")):
     try:
         d = json.load(open(f))
-        os.kill(d["pid"], 0)          # announced but dead => not running
-        live[d["pid"]] = d["surface"]
+        if pid_alive(int(d["pid"])):  # announced but dead => not running
+            live[d["pid"]] = d["surface"]
     except Exception:
         pass
 p = os.getpid()

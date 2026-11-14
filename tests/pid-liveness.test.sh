@@ -31,26 +31,46 @@ for base in ("hooks", "mcps", "plugins", "skills"):
                 code = line.split("#", 1)[0]
                 if probe.search(code) and '"""' not in line and p != ALLOWED:
                     hits.append("%s:%d" % (p, n))
+# Fenced code in Markdown counts too: a command file's snippet is run as written (#303 review).
+for base in ("plugins", "skills", "hooks"):
+    for d, _, files in os.walk(base):
+        if ".venv" in d or "node_modules" in d: continue
+        for f in files:
+            if not f.endswith(".md"): continue
+            p = os.path.join(d, f); fence = False
+            for n, line in enumerate(open(p, encoding="utf-8", errors="ignore"), 1):
+                if line.lstrip().startswith("```"): fence = not fence; continue
+                if fence and probe.search(line.split("#", 1)[0]):
+                    hits.append("%s:%d" % (p, n))
 check("no signal-0 probe outside %s%s" % (ALLOWED, (" (found: " + ", ".join(hits) + ")") if hits else ""), not hits)
 
 # 2. Behaviour: on a faked Windows, the checks never call os.kill and still answer.
 sys.path.insert(0, os.path.join("hooks", "claude-identity"))
 calls = []
 real_kill, real_name = os.kill, os.name
+class Fn:
+    def __init__(self, f): self.f = f
+    def __call__(self, *a): return self.f(*a)
 class K32:
-    def OpenProcess(self, access, inherit, pid): return 7 if pid == 4242 else 0
-    def GetLastError(self): return 87
-    def GetExitCodeProcess(self, h, ref): ref._obj.value = 259; return 1
-    def CloseHandle(self, h): return 1
+    def __init__(self):
+        self.OpenProcess = Fn(lambda access, inherit, pid: 7 if pid == 4242 else 0)
+        self.GetExitCodeProcess = Fn(lambda h, ref: (setattr(ref._obj, "value", 259), 1)[1])
+        self.CloseHandle = Fn(lambda h: 1)
+class Num:
+    def __init__(self, *a): self.value = 0
 fake = types.ModuleType("ctypes")
+fake.WinDLL = lambda name, use_last_error=False: K32()
 fake.windll = types.SimpleNamespace(kernel32=K32())
-class ULong:
-    def __init__(self): self.value = 0
-fake.c_ulong = ULong
+fake.get_last_error = lambda: 87
+fake.c_ulong = Num
 fake.byref = lambda o: types.SimpleNamespace(_obj=o)
+wt = types.ModuleType("ctypes.wintypes")
+wt.HANDLE = wt.DWORD = wt.BOOL = Num
+fake.wintypes = wt
 try:
     import _fs, _resume
     sys.modules["ctypes"] = fake
+    sys.modules["ctypes.wintypes"] = wt
     os.kill = lambda *a: calls.append(a)
     os.name = "nt"
     alive = _resume.is_pid_alive(4242)
@@ -59,10 +79,14 @@ try:
 finally:
     os.kill, os.name = real_kill, real_name
     sys.modules.pop("ctypes", None)
+    sys.modules.pop("ctypes.wintypes", None)
 check("_resume.is_pid_alive never calls os.kill on Windows", not calls)
 check("a running process reads alive, a missing one dead", alive is True and dead is False and alive2 is True)
 watch = open(os.path.join("hooks", "claude-identity", "_watch.py"), encoding="utf-8").read()
 check("_watch.py uses the shared check", "pid_alive as _pid_alive" in watch and "def _pid_alive" not in watch)
+src = open(os.path.join("hooks", "claude-identity", "_resume.py"), encoding="utf-8").read()
+g, k = src.find('if os.name == "nt":'), src.find("os.kill(pid, 15)  # SIGTERM")
+check("on Windows _resume.py leaves live sessions running instead of stopping them", 0 <= g < k)
 check("on macOS/Linux the shared check still sees this process", getattr(_fs, "pid_alive", lambda p: None)(os.getpid()) is True)
 # 3. On real Windows (the CI lane), asking about a live child must not end it.
 if os.name == "nt":

@@ -12,6 +12,7 @@ Never counted: front matter, fenced code, inline code spans, blockquotes and tex
 marks (the skill: quoted material is never evidence). Words are counted over the prose that is
 left once front matter and code are removed.
 """
+import bisect
 import hashlib
 import json
 import re
@@ -21,19 +22,19 @@ if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
-VERSION = "1"
+VERSION = "2"  # 2: curly apostrophes (’) match like straight ones; words like it’s count once
 
 # (id, category, regex). Case-insensitive. Edit a pattern -> bump VERSION; the pattern hash
 # printed beside it changes on its own, so an unbumped edit is still visible.
 PATTERNS = [
     ("negation-pivot", "structural",
-     r"\b(?:it'?s|it is|this is|that'?s|that is|was|is)\s+(?:not|never)\s+(?:just\s+|only\s+|about\s+)?[^.;:!?\n]{1,60}?(?:[,;]|\s[—–-]{1,2})\s*(?:it'?s|it is|but|this is|that'?s)\b"),
+     r"\b(?:it['’]?s|it is|this is|that['’]?s|that is|was|is)\s+(?:not|never)\s+(?:just\s+|only\s+|about\s+)?[^.;:!?\n]{1,60}?(?:[,;]|\s[—–-]{1,2})\s*(?:it['’]?s|it is|but|this is|that['’]?s)\b"),
     ("negation-pivot", "structural",
-     r"\b(?:was|is)\s+never\s+[^.!?\n]{1,60}[.!?]\s+(?:it'?s|it is|it was)\b"),
-    ("objection-unraised", "structural", r"\b(?:i'?m not saying|to be clear,|let me be clear)"),
+     r"\b(?:was|is)\s+never\s+[^.!?\n]{1,60}[.!?]\s+(?:it['’]?s|it is|it was)\b"),
+    ("objection-unraised", "structural", r"\b(?:i['’]?m not saying|to be clear,|let me be clear)"),
     ("announced-transition", "rhetorical",
-     r"\b(?:let'?s dive in|let'?s dive into|here'?s what you need to know|without further ado|let'?s break (?:it|this) down)"),
-    ("fake-candid-opener", "rhetorical", r"(?:^|(?<=[.!?]\s))(?:honestly\?|look,|here'?s the thing)"),
+     r"\b(?:let['’]?s dive in|let['’]?s dive into|here['’]?s what you need to know|without further ado|let['’]?s break (?:it|this) down)"),
+    ("fake-candid-opener", "rhetorical", r"(?:^|(?<=[.!?]\s))(?:honestly\?|look,|here['’]?s the thing)"),
     ("manufactured-depth", "rhetorical", r"\b(?:at its core|the real question is|what really matters)"),
     ("formulaic-aphorism", "rhetorical", r"\bis the (?:language|currency|architecture|grammar) of\b"),
     ("inflated-significance", "rhetorical", r"\b(?:a testament to|stands as a testament|pivotal moment|a turning point)"),
@@ -71,18 +72,22 @@ def prose_of(text):
 def scan(path):
     text = open(path, encoding="utf-8", errors="replace").read()
     words_text, match_text = prose_of(text)
-    n_words = len(re.findall(r"[A-Za-zÀ-ɏ]+(?:'[A-Za-z]+)?", words_text))
+    n_words = len(re.findall(r"[A-Za-zÀ-ɏ]+(?:['’][A-Za-z]+)?", words_text))
     starts = [0] + [m.end() for m in re.finditer(r"\n\s*\n", match_text)]
+    newlines = [i for i, ch in enumerate(match_text) if ch == "\n"]
+    norm = text.replace("\r\n", "\n")   # same length and positions as match_text
     hits, seen = [], set()
     for pid, cat, rx in COMPILED:
         for m in rx.finditer(match_text):
             if (m.start(), pid) in seen:
                 continue
             seen.add((m.start(), pid))
-            line = match_text.count("\n", 0, m.start()) + 1
-            col = m.start() - (match_text.rfind("\n", 0, m.start()) + 1) + 1
-            para = sum(1 for s in starts if s <= m.start())
-            snippet = " ".join(text.replace("\r\n", "\n")[m.start():m.end()].split())[:80]
+            # Lookups, never rescans: a long draft can carry tens of thousands of candidates.
+            nl = bisect.bisect_left(newlines, m.start())
+            line = nl + 1
+            col = m.start() - (newlines[nl - 1] + 1 if nl else 0) + 1
+            para = bisect.bisect_right(starts, m.start())
+            snippet = " ".join(norm[m.start():m.end()].split())[:80]
             hits.append({"line": line, "col": col, "paragraph": para, "pattern": pid,
                          "category": cat, "text": snippet})
     hits.sort(key=lambda h: (h["line"], h["col"], h["pattern"]))

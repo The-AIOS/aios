@@ -193,16 +193,6 @@ def tick_interval(worst_pct: float) -> int:
     return WATCH_TICK_SECS_HOT if pct >= HOT_ZONE_PCT else WATCH_TICK_SECS
 
 
-def rotation_has_two() -> bool:
-    """True when two or more accounts are in rotation. Unknown -> True: keep watching."""
-    try:
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        import _accounts
-        return len(_accounts.rotation()) >= 2
-    except Exception:
-        return True
-
-
 def kick_watcher(home: str, worst_pct: float = 0) -> None:
     """Spawn _watch.py in the background if enough time has elapsed since the
     last kick. Touches a tick marker so subsequent statusLine renders don't pile
@@ -221,11 +211,6 @@ def kick_watcher(home: str, worst_pct: float = 0) -> None:
                 return
         except OSError:
             pass
-
-    # One account: there is nothing to rotate to, so the watcher has no work. Starting it
-    # anyway cost a process and a log line every 30 seconds on single-account machines (#292).
-    if not rotation_has_two():
-        return
 
     self_dir = os.path.dirname(os.path.abspath(__file__))
     watcher = os.path.join(self_dir, "_watch.py")
