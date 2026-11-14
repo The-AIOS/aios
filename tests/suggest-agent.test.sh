@@ -70,6 +70,8 @@ check("a separate session opens only on the operator's 'open'", "Opens a separat
 check("no agent is named none (the take-off line stays unambiguous)", not glob.glob("agents/**/none.md", recursive=True))
 intent = open("INTENT.md", encoding="utf-8").read()
 check("the shipped INTENT.md carries the Wearing agents (hats) row", "| *Wearing agents (hats)* | *autonomous* |" in intent)
+cl = open("CHANGELOG.md", encoding="utf-8").read()
+check("the CHANGELOG adds the row to an existing INTENT.md once, changing nothing else", "has no *Wearing agents (hats)* row" in cl and "| Wearing agents (hats) | autonomous |" in cl and "matching the table's style, and change nothing else" in cl)
 check("reads the index every time, so new agents need no edit", "every time" in skill and "agents/_index.md" in skill)
 check("opening goes through the spawn inbox, never spawn", "spawn inbox" in skill and "never by calling `spawn`" in skill)
 
