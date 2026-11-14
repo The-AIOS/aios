@@ -19,6 +19,14 @@ READ-ONLY BY CONSTRUCTION
     openrouter.py, which has no tools at all. The diff of a public repository is public,
     so sending it to a third party exposes nothing; never point this at a private repo.
 
+WHAT IS SENT
+    The release diff minus CHANGELOG.md, and minus the docs of any vendored folder this
+    release touches that is PROVEN byte for byte against its upstream (vendored-pins
+    --upstream). Those are upstream's files, unmodified; re-reading them was most of a
+    release's audit time and its findings were upstream's choices. Scripts inside those
+    folders are always sent. The brief, both reports and left-out.txt name what was left
+    out. --all sends everything.
+
 THE GATE
     `check` exits 0 only when both reports exist and each ends in `VERDICT: PASS`.
     No outside key configured -> the outside report says NOT RUN and `check` blocks: an
@@ -73,13 +81,58 @@ def guard_public_repo():
                  "The diff goes to a third party, so this only runs in a clone of the public framework repo.")
 
 
-def diff_chunks(base, head):
+SCRIPT_EXT = (".py", ".sh", ".bash", ".js", ".mjs", ".cjs", ".ts", ".ps1", ".rb", ".pl", ".cmd", ".bat")
+
+
+def is_script(path, head):
+    """True for a file that runs: a script extension, or committed with the exec bit."""
+    if path.lower().endswith(SCRIPT_EXT):
+        return True
+    r = sh(["git", "-C", str(ROOT), "ls-tree", head, "--", path])
+    return r.stdout.startswith("100755")
+
+
+def proven_vendored(base, head, audit_all=False):
+    """(left_out_paths, notes) for vendored folders this release touches.
+
+    A vendored folder (one carrying .upstream-sync) holds upstream's files byte for byte.
+    Two models re-reading upstream's docs on every pin refresh is most of an audit's time,
+    and its findings are upstream's choices, which a re-vendor cannot change. So when the
+    folder is PROVEN against its upstream (tests/vendored-pins.test.sh --upstream), its
+    non-script files are left out; its scripts are always read. Not proven: nothing is left
+    out. --all leaves nothing out."""
+    if audit_all:
+        return [], []
+    changed = sh(["git", "-C", str(ROOT), "diff", "--no-renames", "--name-only", f"{base}...{head}"]).stdout.split("\n")
+    syncs = sh(["git", "-C", str(ROOT), "ls-tree", "-r", "--name-only", head]).stdout.split("\n")
+    folders = sorted({os.path.dirname(f) for f in syncs if f.endswith("/.upstream-sync")})
+    checker = os.environ.get("AIOS_AUDIT_PIN_CHECK")
+    checker = checker.split() if checker else ["bash", str(ROOT / "tests" / "vendored-pins.test.sh"), "--upstream"]
+    left_out, notes = [], []
+    for d in folders:
+        mine = [f for f in changed if f.startswith(d + "/")]
+        if not mine:
+            continue
+        r = sh(checker + [d], cwd=str(ROOT))
+        if r.returncode != 0:
+            notes.append(f"{d}: NOT proven against its upstream, so audited in full")
+            continue
+        skip = [f for f in mine if not is_script(f, head) and not f.endswith((".upstream-sync", ".upstream-manifest"))]
+        left_out += skip
+        notes.append(f"{d}: proven byte for byte against its upstream; {len(skip)} non-script file(s) left out, "
+                     f"{len(mine) - len(skip)} script or record file(s) audited")
+    return left_out, notes
+
+
+def diff_chunks(base, head, left_out=()):
     """The release diff in chunks no larger than MAX_DIFF, split at file boundaries.
 
     Never truncated: a release audited on part of its diff could pass on the part nobody
     read. Every chunk goes to both reviewers, and the release passes only if every chunk
-    does. A single file larger than the limit is split by lines, and says so."""
-    r = sh(["git", "-C", str(ROOT), "diff", f"{base}...{head}", "--", ".", ":(exclude)CHANGELOG.md"])
+    does. A single file larger than the limit is split by lines, and says so. The only
+    files not sent are `left_out`: proven vendored docs, named in the brief and reports."""
+    spec = [".", ":(exclude)CHANGELOG.md"] + [f":(exclude,literal){p}" for p in left_out]
+    r = sh(["git", "-C", str(ROOT), "diff", f"{base}...{head}", "--"] + spec)
     if r.returncode != 0:
         sys.exit(f"release-audit: git diff failed: {r.stderr.strip()}")
     files = re.split(r"(?m)^(?=diff --git )", r.stdout)
@@ -137,12 +190,20 @@ def cmd_run(a):
     guard_public_repo()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    chunks = diff_chunks(a.base, a.head)
+    left_out, notes = proven_vendored(a.base, a.head, getattr(a, "all", False))
+    chunks = diff_chunks(a.base, a.head, left_out)
+    scope = ""
+    if notes:
+        scope = ("\n\nScope of this audit. Vendored upstream folders in this release:\n- " + "\n- ".join(notes) +
+                 "\nFiles left out are upstream's own, unmodified; judge only what is shown.")
+        (out / "left-out.txt").write_text("\n".join(notes + [""] + left_out) + "\n", encoding="utf-8")
+        for n in notes:
+            print("scope: " + n)
     reports = {"outside": [], "claude": []}
     for i, chunk in enumerate(chunks, 1):
         part = f" (part {i} of {len(chunks)})" if len(chunks) > 1 else ""
         brief = out / (f"brief-{i}.md" if len(chunks) > 1 else "brief.md")
-        brief.write_text(BRIEF + f"\n\n--- DIFF{part} ---\n" + chunk, encoding="utf-8")
+        brief.write_text(BRIEF + scope + f"\n\n--- DIFF{part} ---\n" + chunk, encoding="utf-8")
         for name, fn in (("outside", run_outside), ("claude", run_claude)):
             reports[name].append((part, fn(brief)))
     for name, parts in reports.items():
@@ -151,6 +212,8 @@ def cmd_run(a):
         worst = "PASS" if all(verdict(t) == "PASS" for _, t in parts) else \
             next(verdict(t) for _, t in parts if verdict(t) != "PASS")
         text = "\n\n".join(f"## Report{p}\n\n{t.strip()}" for p, t in parts)
+        if notes:
+            text = "Scope: " + "; ".join(notes) + "\n\n" + text
         text += f"\n\nVERDICT: {worst if worst in ('PASS', 'BLOCK') else 'BLOCK'}\n"
         if worst not in ("PASS", "BLOCK"):
             text = text.replace("VERDICT: BLOCK\n", "A part did not run or gave no verdict: blocked.\nVERDICT: BLOCK\n")
@@ -183,6 +246,7 @@ def main():
     r.add_argument("--base", default="origin/main")
     r.add_argument("--head", default="HEAD")
     r.add_argument("--out", required=True)
+    r.add_argument("--all", action="store_true", help="audit vendored folders in full, even when proven")
     c = sub.add_parser("check")
     c.add_argument("--out", required=True)
     a = ap.parse_args()

@@ -63,5 +63,25 @@ AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN "$T/vaultlike/.gith
 
 rm -rf "$T/r"; $PYBIN $S check --out "$T/r" >"$T/log" 2>&1; rc=$?
 [ $rc -ne 0 ] && grep -F 'no outside audit report' "$T/log" >/dev/null && ok "check with no reports at all blocks" || no "check passed with no reports"
+# Vendored folders proven against their upstream: docs left out, scripts still read, scope named.
+V="$T/vend"; mkdir -p "$V/.github/scripts" "$V/skills/up"; cp .github/scripts/release-audit.py "$V/.github/scripts/"
+gv(){ git -C "$V" -c user.name=t -c user.email=t@t -c commit.gpgsign=false "$@"; }
+gv init -q; gv remote add origin https://github.com/The-AIOS/aios.git
+printf 'repo=x\nhash=abc\n' > "$V/skills/up/.upstream-sync"; echo old > "$V/skills/up/guide.md"; gv add -A; gv commit -qm base
+echo "UPSTREAM DOC CHANGE" > "$V/skills/up/guide.md"; printf 'print("UPSTREAM SCRIPT")\n' > "$V/skills/up/run.py"; echo "OUR CODE" > "$V/ours.md"
+gv add -A; gv commit -qm release
+VS="$V/.github/scripts/release-audit.py"
+mk out 'echo "VERDICT: PASS"'; mk cl 'echo "VERDICT: PASS"'
+AIOS_AUDIT_PIN_CHECK=true AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $VS run --base HEAD~1 --head HEAD --out "$T/rp" >"$T/log" 2>&1; rc=$?
+B="$T/rp/brief.md"
+[ $rc -eq 0 ] && grep -qF 'OUR CODE' "$B" && ! grep -qF 'UPSTREAM DOC CHANGE' "$B" && ok "a proven vendored folder's docs are left out; our own code is sent" || no "proven docs were sent or our code was not" "$(cat "$T/log")"
+grep -qF 'UPSTREAM SCRIPT' "$B" && ok "a script inside a proven vendored folder is still audited" || no "a vendored script was left out"
+grep -qF 'skills/up: proven byte for byte' "$B" && grep -qF 'skills/up: proven' "$T/rp/outside.md" && grep -qF 'skills/up/guide.md' "$T/rp/left-out.txt" \
+  && ok "the brief, the reports and left-out.txt name what was left out" || no "the scope is not named"
+AIOS_AUDIT_PIN_CHECK=false AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $VS run --base HEAD~1 --head HEAD --out "$T/rf" >"$T/log" 2>&1
+grep -qF 'UPSTREAM DOC CHANGE' "$T/rf/brief.md" && grep -qF 'NOT proven' "$T/rf/brief.md" && ok "a vendored folder that fails its proof is audited in full" || no "an unproven folder's docs were left out"
+AIOS_AUDIT_PIN_CHECK=true AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $VS run --all --base HEAD~1 --head HEAD --out "$T/ra" >"$T/log" 2>&1
+grep -qF 'UPSTREAM DOC CHANGE' "$T/ra/brief.md" && ok "--all audits proven vendored folders in full" || no "--all still left files out"
+
 printf '\n-- %d passed, %d failed --\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
