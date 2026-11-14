@@ -39,7 +39,7 @@ If `USER.md` exists, read it. It contains:
 2. **Find your hat** (the agent you wear). First match wins:
    - **Exact:** `agents/**/{name}.md` (`agents/custom/` overrides bundled). Probe with `find agents -ipath "*/{name}.md" -print -quit 2>/dev/null`, which exits 0 on a miss; a miss is normal.
    - **In the name:** an agent's name or one of its `aliases:` at the start of the name (`accountant-acme`), else at the end (`acme-consultant`).
-   - **Project:** the name, or its first word, names a project note (with or without its category prefix) or one of its `aliases:` → wear its `Hats` default, or another hat from that row your task fits better.
+   - **Project:** the name (else its first word) names a project note (with or without its category prefix) or one of its `aliases:` → wear its `Hats` default, or another hat from that row your task fits better.
    - **Fuzzy:** match the name and your first task against `agents/_index.md` (+ `agents/custom/_index.md`): names, purposes, keywords.
    - **None:** general-purpose worker, session name as role context.
 

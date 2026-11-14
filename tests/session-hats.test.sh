@@ -24,6 +24,7 @@ pos = [ident.find(r) for r in rungs]
 check("Identity has all five rungs", all(p >= 0 for p in pos))
 check("the rungs are in order: exact, in the name, project, fuzzy, none", all(p >= 0 for p in pos) and pos == sorted(pos))
 check("the project rung reads the note's Hats row and aliases", "`Hats`" in ident and "`aliases:`" in ident)
+check("the project rung tries the whole name before its first word", "the name (else its first word)" in ident)
 check("the session says which hat, and changes hat with /aios:agent", "which hat" in ident and "/aios:agent {name}" in ident)
 check("Spawning Sessions asks for role-first names", "**Name it role-first:**" in claude and "{hat-or-kind}-{subject}" in claude)
 check("the Current State field list names Hats", re.search(r"Current State table contains\*\* \(\d+ fields\): `Hats`", claude) is not None)
@@ -82,7 +83,7 @@ check("agent template offers aliases:", "aliases:" in open("templates/aios/agent
 
 # 5. Existing vaults are offered the row by the CHANGELOG, by state.
 cl = open("CHANGELOG.md", encoding="utf-8").read()
-check("the CHANGELOG offers Hats rows to existing project notes", "`| Hats |`" in cl and "status: active" in cl)
+check("the CHANGELOG offers Hats rows to existing project notes", "no `Hats` row" in cl and "begins with `active`" in cl and "the whole name, then its first word" in cl)
 
 print("%d passed, %d failed" % (ok, fail))
 sys.exit(1 if fail else 0)
