@@ -81,7 +81,7 @@
 
 ## 2026-11-13 — Sessions wear the right hat for their name and their project
 
-`hash: 1a88208 · eeaef1c` · [#307](https://github.com/The-AIOS/aios/issues/307) · [#303](https://github.com/The-AIOS/aios/issues/303) · [#310](https://github.com/The-AIOS/aios/issues/310)
+`hash: 1a88208 · eeaef1c · c5b7d3e` · [#307](https://github.com/The-AIOS/aios/issues/307) · [#303](https://github.com/The-AIOS/aios/issues/303) · [#310](https://github.com/The-AIOS/aios/issues/310)
 
 > **What you can now do.** Name a session after what it is for, and it puts on the right expertise. `accountant-acme` and `acme-consultant` wear the accountant and the consultant. A session named after a project wears that project's hats, and changes hat when the work changes. Sessions of one kind sit together in the resume list.
 
