@@ -89,6 +89,13 @@ claude = open("CLAUDE.md", encoding="utf-8").read()
 ident = claude.split("## Identity & Greeting", 1)[-1].split("\n## ", 1)[0]
 check("CLAUDE.md § Identity sends hat changes through suggest-agent", "suggest-agent" in ident)
 check("CLAUDE.md's greeting writes the wearing line", "wearing line" in ident)
+# Live probes (v0.8.18) showed sessions pick the right hat but never open the skill, so a line
+# defined only there was never written: CLAUDE.md must carry it literally, and send hat changes
+# to the skill by name even when a skill also fits (the probe's invoice request went to a skill).
+check("CLAUDE.md spells the wearing line out, not only by pointer", "`Wearing agent: <name>.`" in ident and "`Wearing agent: none.`" in ident)
+check("CLAUDE.md loads suggest-agent for hat changes, even when a skill fits", "load the `suggest-agent` skill" in ident and "even when a skill also fits" in ident)
+desc = skill.split("description:", 1)[1].split("\n", 1)[0]
+check("the skill's trigger does not tell a session to skip it when a skill fits", "NOT for skills" not in desc and "no reason to skip" in desc)
 check("the skills index lists it", "`suggest-agent`" in open("skills/_index.md", encoding="utf-8").read())
 print("%d passed, %d failed" % (ok, fail))
 sys.exit(1 if fail else 0)

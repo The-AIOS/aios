@@ -31,7 +31,9 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 # The ratchet. Raise it DELIBERATELY, in the PR that needs the room, never to get green.
-CEILING=94559
+CEILING=94643
+# +84 (v0.8.18 follow-up): the wearing line spelled out in § Identity step 2. Live probes showed
+# sessions never open suggest-agent at start, so a line defined only there was never written.
 # +59 (v0.8.18): one privacy rule every vault needs, beside "Never send": a web search built
 # from private notes is a send. Superpowers 7's brainstorming searches the web unprompted.
 
