@@ -31,7 +31,9 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 # The ratchet. Raise it DELIBERATELY, in the PR that needs the room, never to get green.
-CEILING=94500
+CEILING=94559
+# +59 (v0.8.18): one privacy rule every vault needs, beside "Never send": a web search built
+# from private notes is a send. Superpowers 7's brainstorming searches the web unprompted.
 
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }

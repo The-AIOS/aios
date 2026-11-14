@@ -37,7 +37,7 @@ printf '%s' "$out" | grep -q "old copy, left as it is: $SP" && printf '%s' "$out
   && ok "the stale copy is named, with what to do" || no "stale copy not reported: $out"
 [ -L "$H2/.claude/skills/$AI" ] && ok "other sources still register beside a stale copy" || no "$AI not linked beside a stale copy"
 
-plugin(){ mkdir -p "$1/.claude/plugins"; printf '{"version":2,"plugins":{"superpowers@%s":[{"scope":"user"}]}}\n' "$2" > "$1/.claude/plugins/installed_plugins.json"; }
+plugin(){ mkdir -p "$1/.claude/plugins"; printf '{"version":2,"plugins":{"superpowers@%s":[{"scope":"%s"}]}}\n' "$2" "${3:-user}" >"$1/.claude/plugins/installed_plugins.json"; }
 
 # 4. Plugin installed (from any marketplace): the bundled Superpowers is not linked; other sources still are.
 H3=$(mktemp -d "${TMPDIR:-/tmp}/sp3.XXXXXX"); plugin "$H3" claude-plugins-official
@@ -61,6 +61,14 @@ plugin "$H5" superpowers-marketplace; out=$(run "$H5")
 [ "$(cat "$H5/.claude/skills/$OTHER/SKILL.md" 2>/dev/null)" = mine ] && ok "a plain folder is never removed, even with the plugin installed" || no "a plain folder was removed"
 [ -L "$H5/.claude/skills/$AI" ] && ok "other sources' links are untouched" || no "another source's link was removed"
 printf '%s' "$out" | grep -q 'removed [0-9]* earlier link' && ok "it says how many earlier links it removed" || no "no note about removed links"
+
+# 7. Installed but not active here: a disabled plugin, or one installed for another project only, provides
+#    nothing, so the bundled copy is linked (never left with no Superpowers at all).
+H6=$(mktemp -d "${TMPDIR:-/tmp}/sp6.XXXXXX"); plugin "$H6" official; printf '{"enabledPlugins":{"superpowers@official":false}}\n' > "$H6/.claude/settings.json"
+run "$H6" >/dev/null; [ -L "$H6/.claude/skills/$SP" ] && ok "a disabled plugin does not suppress the bundled copy" || no "a disabled plugin left no Superpowers"
+H7=$(mktemp -d "${TMPDIR:-/tmp}/sp7.XXXXXX"); plugin "$H7" official project
+run "$H7" >/dev/null; [ -L "$H7/.claude/skills/$SP" ] && ok "a project-only install does not suppress the bundled copy" || no "a project-only install left no Superpowers"
+printf '%s' "$(run "$(mktemp -d "${TMPDIR:-/tmp}/sp8.XXXXXX")")" | grep -q 'run this script again: it removes these links' && ok "after linking, it says to re-run setup if the plugin is installed later" || no "no re-run note after linking"
 
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

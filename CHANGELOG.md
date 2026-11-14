@@ -104,6 +104,7 @@
 - **Superpowers 7.0.2** (#304, #313). The bundled copy of the 14 engineering skills moves from 6.4.1 to 7.0.2 (setup now registers it whenever no Superpowers plugin is installed): brainstorming was rebuilt to draw out what you want before proposing anything,; subagent-driven development works in the repository it runs in, not the one the plan file sits in; a debugging example no longer prints the secret it checks for. Plans still run continuously, and your `INTENT.md` ask and escalate items still stop them. Upstream's hooks stay out.
 - **Fresher Anthropic skills** (#306). `claude-api` and `mcp-builder` now match Anthropic's current versions: new Managed Agents guides and examples, and a second Node reference for MCP. Anthropic moved its Office skills (`docx`, `pdf`, `pptx`, `xlsx`) to Apache 2.0, and the docs no longer call them proprietary; they still come from the `document-skills` plugin. Nothing to do.
 - **`/aios:update` removes files the framework moved** (found in this release's dry run). When the framework renamed or moved a file, the old copy stayed in your vault, because the update only saw the new path. It now sees both, so the old copy is removed like any deleted file. 
+- Sessions ask before running a web search built from your private notes, mail or calendar.
 - The model bridge falls back to Gemini when OpenRouter is out of credits.
 - The `karpathy-coding` skill now credits the MIT project it was adapted from, and `LICENSE-AUDIT.md` lists it (#310).
 

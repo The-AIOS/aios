@@ -50,8 +50,28 @@ echo ""
 # (any "superpowers@<marketplace>" entry), never from which marketplaces exist: a
 # marketplace can be added with the plugin never installed, and the plugin can come from
 # a marketplace with any name. Checked here, at runtime, never assumed.
-sp_plugin=0
-grep -q '"superpowers@' "$HOME/.claude/plugins/installed_plugins.json" 2>/dev/null && sp_plugin=1
+# Parsed, not grepped: a user-wide install ("scope": "user") that settings.json has not
+# disabled. A disabled plugin, or one installed for another project only, provides nothing
+# here, and counting it would leave this vault with no Superpowers at all.
+sp_plugin=$(python3 - "$HOME" <<'PY' 2>/dev/null || echo 0
+import json, os, sys
+home = sys.argv[1]
+def load(*p):
+    try:
+        with open(os.path.join(home, ".claude", *p), encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+enabled = (load("settings.json").get("enabledPlugins") or {})
+plugins = (load("plugins", "installed_plugins.json").get("plugins") or {})
+active = any(k.startswith("superpowers@") and enabled.get(k) is not False
+             and any(isinstance(e, dict) and e.get("scope") == "user" for e in (v or []))
+             for k, v in plugins.items())
+print(1 if active else 0)
+PY
+)
+[ "$sp_plugin" = 1 ] || sp_plugin=0
+sp_linked=0
 unlinked=0
 
 linked=0
@@ -68,8 +88,11 @@ for skill_md in "$SCRIPT_DIR"/*/*/SKILL.md; do
   # this script made earlier, before the plugin arrived, would now double it: remove
   # exactly that link (it points at the bundled copy). Never a plain folder, never data.
   if [ "$source_dir" = superpowers ] && [ "$sp_plugin" -eq 1 ]; then
-    if [ -L "$DEST/$name" ] && [ "$(readlink "$DEST/$name")" = "$skill_dir" ]; then
+    # Compared as resolved paths, so a link made before the vault moved is still recognised.
+    if [ -L "$DEST/$name" ] && [ "$(cd "$DEST/$name" 2>/dev/null && pwd -P)" = "$(cd "$skill_dir" && pwd -P)" ]; then
       rm "$DEST/$name" && { echo "  - unlinked (its plugin provides it): $name"; unlinked=$((unlinked + 1)); }
+    elif [ -d "$DEST/$name" ] && [ ! -L "$DEST/$name" ]; then
+      stale="$stale $name"; echo "  ! old copy, left as it is: $name"
     fi
     skipped_sources="$skipped_sources $name"; continue
   fi
@@ -90,6 +113,7 @@ for skill_md in "$SCRIPT_DIR"/*/*/SKILL.md; do
   if ln -s "$skill_dir" "$target"; then
     echo "  ✓ linked: $name  ($source_dir)"
     linked=$((linked + 1))
+    [ "$source_dir" = superpowers ] && sp_linked=$((sp_linked + 1))
   else
     echo "  ✗ failed: $name"
   fi
@@ -120,6 +144,11 @@ if [ "$sp_plugin" -eq 1 ]; then
   echo ""
   extra=""; [ "$unlinked" -gt 0 ] && extra=" (removed $unlinked earlier link(s))"
   echo "ℹ️  Superpowers comes from its installed plugin, so the bundled copy is not linked$extra."
+fi
+if [ "$sp_linked" -gt 0 ]; then
+  echo ""
+  echo "ℹ️  Linked the bundled Superpowers ($sp_linked skills). If you later install the Superpowers plugin,"
+  echo "    run this script again: it removes these links so the skills are not doubled."
 fi
 if [ -n "$stale" ]; then
   n_stale=$(echo $stale | wc -w | tr -d ' ')
