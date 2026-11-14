@@ -1635,6 +1635,10 @@ jobs:
         # karpathy-coding was adapted MIT text with no credit, listed as GPL. (#310)
         run: bash tests/third-party-credits.test.sh
 
+      - name: voice-gate's candidate finder is one versioned script with a fixed count on a known sample
+        # Each run wrote its own search, so densities of the same writing jumped 0.66 -> 2.88. (#271)
+        run: bash tests/voice-gate-finder.test.sh
+
       - name: liveness checks never end the process they check
         # On Windows os.kill(pid, 0) is TerminateProcess; _resume.py used it. (#303)
         run: bash tests/pid-liveness.test.sh

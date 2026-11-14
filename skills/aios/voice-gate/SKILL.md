@@ -34,7 +34,7 @@ Do not carry a number in from outside. Establish what *this* writer's prose actu
 1. Read `vault/00 - notes/context/declared/personal_voice.md` — the operator's declared register, signature constructions, and any explicitly protected moves.
 2. Read `vault/00 - notes/context/observed/preferences.md` for recorded writing corrections.
 3. Sample their **published** work — the pieces they stand behind. Five to ten thousand words gives a stable number.
-4. Compute tells per 1,000 words, and record the count of paragraph bursts separately.
+4. Compute tells per 1,000 words, and record the count of paragraph bursts separately. Start from the bundled finder (Step 2), and record its version line beside the baseline.
 
 **Below 5,000 published words for the surface being scored, there is no baseline — refuse the density score and say so.** That is the lower end of step 3, and it is a floor, not a suggestion. A fresh install has no published corpus at all, and every way around that gap is worse than admitting it: a density figure over too few words is noise that reads as a measurement, and a number carried in from elsewhere is the outside baseline this step forbids. So the report says, in its first line, *"no baseline yet for {surface}: {N} words published, 5,000 needed"* — and then **still reports everything that does not need a baseline**: every exposed-zone instance, quoted, and every burst. The positional bar and the burst rule are absolute, so a draft can fail them on day one. What it cannot do on day one is be called *above* or *below* a norm that does not exist yet.
 
@@ -54,9 +54,11 @@ If the operator has supplied a writing sample, it overrides every default in thi
 
 > ⚠️ **Any mechanical pattern pass is a CANDIDATE-FINDER, never the verdict — the walk is the instrument.** A regex under-counts in both of its usual directions: a pivot lands on any subject, not only the one shape a pattern was written for, and punctuation hides inside quotes, code spans and links where a naive scan either skips it or counts it twice. A conservative pass can score a live draft **zero** on a page a careful read finds several tells in. Use a pattern pass to point at candidates and to make a long draft tractable; never report its output as the score, and never let a clean automated pass stand in for reading the piece.
 
+**Use the bundled finder, never one written for the run:** `python3 ~/aios/skills/aios/voice-gate/finder.py <draft.md>` (add `--json` for structured output). Its first line names its version and a hash of its patterns. A pass rewritten each run finds different candidates, so the same published writing scored 0.66, then 0.75, then 2.88 tells per thousand words, and the last jump came from the search, not the writing. Two densities can be compared only when the same finder version produced their candidates. It skips front matter, code, blockquotes and quoted text, which are never evidence. Then walk the draft: confirm or drop each candidate, and add what no pattern catches.
+
 Walk the draft and mark each instance with its **pattern**, **position zone**, and **paragraph**. Then report:
 
-- Density per 1,000 words, next to the baseline **for this surface** — name which surface baseline was used, and when it was last derived. **No baseline for this surface (Step 1's floor) → print the refusal line in place of the density and the drift, never a zero.**
+- Density per 1,000 words, next to the baseline **for this surface** — name which surface baseline was used, when it was last derived, and the finder version behind each number (a baseline taken with another version is flagged, not compared). **No baseline for this surface (Step 1's floor) → print the refusal line in place of the density and the drift, never a zero.**
 - Every paragraph containing two or more (the burst list).
 - Every instance in an exposed zone, quoted in full — this is the section the operator actually reads.
 - Drift: is this draft above or below their own norm, and by how much.

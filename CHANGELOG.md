@@ -81,7 +81,7 @@
 
 ## 2026-11-13 — Sessions wear the right hat for their name and their project
 
-`hash: 1a88208 · eeaef1c · c5b7d3e · e3d9e1b` · [#307](https://github.com/The-AIOS/aios/issues/307) · [#303](https://github.com/The-AIOS/aios/issues/303) · [#306](https://github.com/The-AIOS/aios/issues/306) · [#310](https://github.com/The-AIOS/aios/issues/310)
+`hash: 1a88208 · eeaef1c · c5b7d3e · e3d9e1b` · [#307](https://github.com/The-AIOS/aios/issues/307) · [#303](https://github.com/The-AIOS/aios/issues/303) · [#271](https://github.com/The-AIOS/aios/issues/271) · [#306](https://github.com/The-AIOS/aios/issues/306) · [#310](https://github.com/The-AIOS/aios/issues/310)
 
 > **What you can now do.** Name a session after what it is for, and it puts on the right expertise. `accountant-acme` and `acme-consultant` wear the accountant and the consultant. A session named after a project wears that project's hats, and changes hat when the work changes. Sessions of one kind sit together in the resume list.
 
@@ -89,6 +89,7 @@
 
 **Smaller changes.**
 - **Windows: account rotation no longer closes your sessions** (#303). With automatic respawn on (`CLAUDE_AUTOSWAP_RESPAWN=1`), a switch checked which sessions were alive with a call that, on Windows, ends the process it asks about, so every session it looked at closed. It now uses the same safe check the quota watcher already used. Nothing to do: the next switch picks it up.
+- **voice-gate scores you can compare** (#271). The skill's first pass for AI-writing habits is now one bundled script, `skills/aios/voice-gate/finder.py`, instead of a search each run wrote for itself; one writer's published work had scored 0.66, then 0.75, then 2.88 per thousand words across three runs, from the search alone. The report names the finder version beside the density, and two numbers are compared only when the same version produced them. Nothing to do.
 - **Fresher Anthropic skills** (#306). `claude-api` and `mcp-builder` now match Anthropic's current versions: new Managed Agents quickstarts and onboarding guides, a migration guide for preserved thinking, and a second Node server reference for MCP. Anthropic moved its Office skills (`docx`, `pdf`, `pptx`, `xlsx`) to Apache 2.0, and the docs no longer call them proprietary; they still come from the `document-skills` plugin, which keeps them current. Nothing to do.
 - The `karpathy-coding` skill now credits the MIT project it was adapted from, and `LICENSE-AUDIT.md` lists it (#310).
 
