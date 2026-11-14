@@ -3,12 +3,13 @@
 # symlinks because they do NOT require admin / Developer Mode. Idempotent.
 # Usage:  pwsh skills/setup.ps1
 #
-# Mirrors skills/setup.sh: registers every source EXCEPT superpowers/
-# (marketplace-provided). anthropic/ is registered: its skills are NOT provided by
-# a marketplace, and skipping them left every agent that declares one without it
-# (see setup.sh's header). Skips any name already present in
-# ~/.claude/skills. Skills register standalone -- they do not touch the `aios`
-# commands plugin. Restart Claude Code to pick up new links.
+# Mirrors skills/setup.sh: registers every source. superpowers/ is skipped only when
+# a Superpowers plugin is installed (it provides those skills; linking the bundled
+# copy would double them), checked at runtime (#313). anthropic/ is registered: no
+# marketplace provides it (see setup.sh's header). Skips any name already present in
+# ~/.claude/skills, and reports a plain-folder Superpowers copy as stale instead of
+# touching it. Skills register standalone -- they do not touch the `aios` commands
+# plugin. Restart Claude Code to pick up new links.
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Dest = Join-Path $HOME ".claude\skills"
@@ -16,20 +17,33 @@ New-Item -ItemType Directory -Force -Path $Dest | Out-Null
 Write-Host "Registering AIOS skills into $Dest ..."
 Write-Host ""
 
+$plugins = Join-Path $HOME ".claude\plugins"
+$spPlugin = @(Get-ChildItem -Path (Join-Path $plugins "marketplaces"), (Join-Path $plugins "cache") -Directory -Filter '*superpowers*' -ErrorAction SilentlyContinue).Count -gt 0
+
 $linked = 0
 $skipped = 0
-$skipSources = @('superpowers')
+$stale = @()
+$skipSources = @()
+if ($spPlugin) { $skipSources += 'superpowers' }
 
 Get-ChildItem -Path $ScriptDir -Directory |
   Where-Object { $skipSources -notcontains $_.Name } |
   ForEach-Object {
+    $sourceName = $_.Name
     Get-ChildItem -Path $_.FullName -Directory | ForEach-Object {
       $skillDir = $_.FullName
       if (Test-Path (Join-Path $skillDir 'SKILL.md')) {
         $name = $_.Name
         $target = Join-Path $Dest $name
         if (Test-Path $target) {
-          Write-Host "  - skip (already registered): $name"
+          $item = Get-Item -LiteralPath $target -Force
+          if ($sourceName -eq 'superpowers' -and -not ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            $stale += $name
+            Write-Host "  ! old copy, left as it is: $name"
+          }
+          else {
+            Write-Host "  - skip (already registered): $name"
+          }
           $skipped++
         }
         else {
@@ -44,3 +58,12 @@ Get-ChildItem -Path $ScriptDir -Directory |
 Write-Host ""
 Write-Host "Done - linked $linked, skipped $skipped."
 Write-Host "Restart Claude Code to load newly-registered skills."
+if ($spPlugin) {
+  Write-Host ""
+  Write-Host "Superpowers comes from its installed plugin; the bundled copy was not linked."
+}
+if ($stale.Count -gt 0) {
+  Write-Host ""
+  Write-Host "$($stale.Count) Superpowers skill(s) in $Dest are plain folders: old copies that never update."
+  Write-Host "  /aios:update offers to archive them. By hand: move them out of $Dest, then run this again."
+}

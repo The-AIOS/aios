@@ -15,11 +15,15 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ✓ %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  ✗ %s\n      %s\n' "$1" "${2:-}"; }
 SH="${SETUP_SH:-skills/setup.sh}"; PS="${SETUP_PS1:-skills/setup.ps1}"
-sh_skip=$(sed -nE 's/^[[:space:]]*([a-z|]+)\)[[:space:]]*skipped_sources=.*/\1/p' "$SH" | tr '|' '\n' | sort | tr '\n' ' ')
-# tr -d '\r': .ps1 is checked out CRLF by design (.gitattributes), so on Linux CI the name ended in \r
-ps_skip=$(tr -d '\r' < "$PS" | sed -nE "s/^\\\$skipSources = @\((.*)\)/\1/p" | tr -d "' " | tr ',' '\n' | sort | tr '\n' ' ')
-[ -n "$sh_skip" ] && [ -n "$ps_skip" ] || { no "could not read a skip list" "sh='$sh_skip' ps1='$ps_skip' — the check proves nothing"; }
-[ "$sh_skip" = "$ps_skip" ] && ok "both registrars skip: $sh_skip" || no "setup.sh skips '$sh_skip', setup.ps1 skips '$ps_skip'" "one platform's agents silently lose skills"
-case " $ps_skip " in *" anthropic "*) no "setup.ps1 still skips anthropic/" "no marketplace provides those skills";; *) ok "anthropic/ is registered on Windows";; esac
+# Since #313 neither registrar has a fixed skip list: both skip superpowers/ only when a
+# Superpowers plugin is installed, and both register anthropic/. Check the rule, per script.
+sh_plugin=$(grep -c 'plugins/marketplaces/\*superpowers\*' "$SH")
+ps_plugin=$(tr -d '\r' < "$PS" | grep -c "Filter '\*superpowers\*'")
+[ "$sh_plugin" -ge 1 ] && [ "$ps_plugin" -ge 1 ] && ok "both registrars skip superpowers/ only when a Superpowers plugin is installed" \
+  || no "the plugin check is missing" "setup.sh=$sh_plugin setup.ps1=$ps_plugin"
+grep -qE "^[[:space:]]*superpowers\)[[:space:]]*skipped_sources=" "$SH" && no "setup.sh still skips superpowers/ unconditionally" "a machine without the plugin gets no Superpowers" || ok "setup.sh has no unconditional superpowers skip"
+tr -d '\r' < "$PS" | grep -q "^\$skipSources = @('superpowers')" && no "setup.ps1 still skips superpowers/ unconditionally" "" || ok "setup.ps1 has no unconditional superpowers skip"
+grep -q 'old copy, left as it is' "$SH" && tr -d '\r' < "$PS" | grep -q 'old copy, left as it is' && ok "both report a plain-folder Superpowers copy as stale" || no "a stale copy is not reported on one platform" ""
+tr -d '\r' < "$PS" | grep -qi "skipSources = @('anthropic" && no "setup.ps1 skips anthropic/" "no marketplace provides those skills" || ok "anthropic/ is registered on Windows"
 printf '\n  %s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

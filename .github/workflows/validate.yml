@@ -1651,6 +1651,10 @@ jobs:
         # Transcripts hold untrusted text; the update must never read them directly. (#307 security review)
         run: bash tests/session-names.test.sh
 
+      - name: setup registers the bundled Superpowers unless its plugin is installed, and never touches an old copy
+        # Superpowers was skipped unconditionally, so machines without the plugin ran stale copies. (#313)
+        run: bash tests/superpowers-registration.test.sh
+
       - name: the status line is one program that feeds the usage cache, and one account starts no watcher
         # Two programs per render lagged typing on Windows; one account kicked a useless watcher. (#292)
         run: bash tests/statusline-one-program.test.sh
