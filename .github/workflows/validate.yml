@@ -1639,6 +1639,10 @@ jobs:
         # Each run wrote its own search, so densities of the same writing jumped 0.66 -> 2.88. (#271)
         run: bash tests/voice-gate-finder.test.sh
 
+      - name: suggest-agent suggests one agent in a line the App parses, and every agent is in the index
+        # Agents were invisible to the model unless the operator already knew a name. (#299)
+        run: bash tests/suggest-agent.test.sh
+
       - name: the status line is one program that feeds the usage cache, and one account starts no watcher
         # Two programs per render lagged typing on Windows; one account kicked a useless watcher. (#292)
         run: bash tests/statusline-one-program.test.sh
