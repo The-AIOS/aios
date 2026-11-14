@@ -52,7 +52,7 @@ Vendored open-source work ships under **its own** upstream license, preserved in
 | `skills/cloudflare/` | [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) | **MIT** | Upstream `LICENSE` at `skills/cloudflare/LICENSE`; `.upstream-sync` + `.upstream-manifest` pin every file |
 | `skills/custom/` | Operator | Operator's choice | Survives `/aios:update`; operator owns |
 
-> **Anthropic skills not vendored** (per `skills/anthropic/.upstream-sync`): `docx`, `pdf`, `pptx`, `xlsx` are **proprietary** (redistribution prohibited) — operators get them via the `document-skills@anthropic-agent-skills` plugin, not from this repo. `brand-guidelines` (Anthropic-specific) and `canvas-design` (Apache-2.0 but 5.5 MB of fonts) are likewise plugin-only, not vendored. **The proprietary skills are the one place "don't redistribute" bites — never copy them into this tree.**
+> **Anthropic skills not vendored** (per `skills/anthropic/.upstream-sync`): `docx`, `pdf`, `pptx`, `xlsx` became **Apache-2.0** upstream on 2026-11-06 (`2c5958e`), so they may now be redistributed, but at about 3.6 MB together they stay on the plugin route: operators get them via the `document-skills@anthropic-agent-skills` plugin, not from this repo. `brand-guidelines` (Anthropic-specific) and `canvas-design` (Apache-2.0 but 5.5 MB of fonts) are likewise plugin-only. **Before vendoring any of them, read its `LICENSE.txt` at the hash you pin.**
 
 ### MCPs (per `mcps/_index.md`)
 
@@ -98,7 +98,7 @@ Infra a company ships to operators who mount it (via `/aios:company --sync`) lan
 
 - [ ] `LICENSE`, `NOTICE`, `marketplace.json`, and `plugin.json` all still say GPL-2.0-or-later.
 - [ ] Every vendored subtree still has its in-folder upstream `LICENSE` + `.upstream-sync`.
-- [ ] No proprietary Anthropic skill (`docx`/`pdf`/`pptx`/`xlsx`/`brand-guidelines`/`canvas-design`) has been copied into `skills/anthropic/`.
+- [ ] Every skill in `skills/anthropic/` carries its upstream `LICENSE.txt`, and a plugin-only skill (`docx`/`pdf`/`pptx`/`xlsx`/`brand-guidelines`/`canvas-design`) is never copied in without its license checked at the pinned hash and `.upstream-sync` updated.
 - [ ] No new upstream added that is GPL-2.0-incompatible.
 - [x] `The-AIOS/company-template` license confirmed and recorded in §4 — **GPL-2.0-or-later, verified 2026-07-30** (`LICENSE` byte-identical to this repo's). Permanently answered; the live check is the next line.
 - [ ] The **template/company split** is still enforced: `company-template` ships `.aios-template-repo` + a role-aware LICENSE check, and `/aios:company --create` still renames `LICENSE` → `LICENSE-TEMPLATE`. A scaffolded company repo must never carry the framework's GPL at its root (§4).

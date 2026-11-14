@@ -25,7 +25,7 @@ updated: '2026-11-06'
 
 > **Note on skills available via Anthropic's plugin route** — operators get these via Claude Code's plugin marketplace: `claude plugin install document-skills@anthropic-agent-skills` (already enabled in this framework's default `~/.claude/settings.json`):
 >
-> - **`docx`, `pdf`, `pptx`, `xlsx`** — *not* vendored here because Anthropic ships them under a proprietary license that prohibits redistribution.
+> - **`docx`, `pdf`, `pptx`, `xlsx`** — *not* vendored here. Apache 2.0 since November 2026 (upstream `2c5958e`), but about 3.6 MB together; the plugin keeps them current without growing the framework.
 > - **`canvas-design`** — Apache 2.0 but ships with 5.5 MB of curated fonts (81 font files for poster/design variety). Not bundled by us to keep the framework lean (would have added ~29% to repo size); operators who need it get full quality via the plugin.
 
 ---
