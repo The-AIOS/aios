@@ -300,7 +300,7 @@ def main():
         if key not in shown:
             print("  = keep  %s  already set up" % key); shown.add(key)
     if status_upgrade:
-        print("  ~ update B  the status line becomes one program instead of two, so typing does not lag on Windows")
+        print("  ~ update B  the status line becomes one program instead of two (less work per refresh; on Windows, no typing lag)")
     elif not status_add and not status_note:
         print("  = keep  B  already set up")
     if status_note:

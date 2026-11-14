@@ -198,7 +198,7 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   done
   MANIFEST=""
   [ -n "$PY" ] && MANIFEST=$($PY -c "import json;print(json.load(open('$HOME/aios/plugins/aios/.claude-plugin/plugin.json'))['version'])" 2>/dev/null)
-  CACHED=$(for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/; do [ -d "$d" ] && basename "$d"; done | tr '\n' ' ')
+  CACHED=$(find "$HOME/.claude/plugins/cache/the-aios/aios" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | while IFS= read -r d; do basename "$d"; done | tr '\n' ' ')
   # Report + prescribe the re-resolve. Do NOT copy the manifest and do NOT delete a directory.
   ```
 
@@ -555,7 +555,7 @@ a=$(h_file "$LOCAL_MD") && b=$(h_file "$CLONE/plugins/aios/commands/update.md") 
 4. **Load the new spec by READING IT, not by re-invoking the skill.** `Read` the just-applied `$HOME/aios/plugins/aios/commands/update.md` and follow *that* for the rest of this run, treating `AIOS_UPDATE_REINVOKED=1` as set.
 
    > **Why not `Skill(aios:update)`:** a skill already loaded in the current session is **not re-read from disk** — the harness answers *"already loaded above; instructions unchanged"* and the run silently continues on the OLD spec, which is the precise failure this step exists to prevent. Verified 2026-07-27. `Skill()` re-invocation only picks up a new spec in a *fresh* session, so it cannot be the mechanism. Reading the file is unconditional and works in-session.
-5. **Continue this run under the new spec** (do not exit expecting an inner run to do the work), **starting with Step 2's block run again under it**: an older spec may not have saved the file list Steps 3 and 3.4 read, and they refuse to run without it. If for any reason the new spec cannot be read, finish the sync under the current spec and tell the operator to re-run `/aios:update` in a **fresh session** — **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working — to pick up the new logic — the update still lands either way.
+5. **Continue this run under the new spec** (do not exit expecting an inner run to do the work), **starting again at Step 1.5 under it, then Step 2's block run again**: an older spec's changelog step may have shown only part of the new entries (one could not run as written), so they are read again with the fixed one; and it may not have saved the file list Steps 3 and 3.4 read, which they refuse to run without. If for any reason the new spec cannot be read, finish the sync under the current spec and tell the operator to re-run `/aios:update` in a **fresh session** — **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working — to pick up the new logic — the update still lands either way.
 
 Report to operator at the end: *"`/aios:update` self-updated and continued under the new spec — {summary of what this run then processed}."* No operator action required. **Do not describe an "inner run" or a hand-off** — there is neither; one run applied the new spec and kept going. Wording that implies a second run makes a stalled sync look like a completed one, since the reader assumes something else finished the job.
 

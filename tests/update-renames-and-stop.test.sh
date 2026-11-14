@@ -25,7 +25,8 @@ grep -q '| tee "$CLONE/.git/aios-update-files"' "$U" && ok "Step 2 saves its fil
 sed -n '/^CLONE="\/tmp\/aios-update-check"   # each tool call/,/^STOP_HEADER=/p' "$U" | grep -q STOP_HEADER && ok "Step 1.5 sets CLONE itself" || no "Step 1.5 relies on CLONE from another call"
 ! grep -qE 'for d in "\$HOME"/\.claude/plugins/cache/the-aios/aios/\*/commands/' "$U" && ok "no cache loop aborts zsh on an unmatched glob" || no "a cache loop still globs (zsh aborts when there is no cache)"
 [ "$(grep -c "Step 2's saved list is missing" "$U")" -ge 2 ] && ok "Steps 3 and 3.4 refuse to run on a missing list instead of applying nothing" || no "a step reads the saved list without checking it exists"
-grep -q "starting with Step 2's block run again under it" "$U" && ok "after a self-update, Step 2 runs again under the new spec" || no "a self-update continues without re-running Step 2 (the old spec saved no list)"
+grep -q "starting again at Step 1.5 under it, then Step 2's block run again" "$U" && ok "after a self-update, the changelog (1.5) and the file list (2) are redone under the new spec" || no "a self-update resumes past the changelog step (the old one showed only part of the entries)"
+! grep -qE 'for d in "\$HOME"/\.claude/plugins/cache/[^ ]*\*' "$U" && ok "no cache lookup loops over a glob (zsh aborts on no match)" || no "a cache lookup still loops over a glob"
 T=$(mktemp -d "${TMPDIR:-/tmp}/urs.XXXXXX")
 R="$T/repo"; mkdir -p "$R"
 g(){ git -C "$R" -c user.name=t -c user.email=t@example.com "$@" >/dev/null 2>&1; }
