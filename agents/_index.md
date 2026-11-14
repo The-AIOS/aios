@@ -4,7 +4,7 @@ tags:
   - index
   - moc
 created: '2026-05-21'
-updated: '2026-09-04'
+updated: '2026-11-13'
 ---
 # Agents — Top-Level Registry
 
@@ -46,17 +46,19 @@ Organized into **7 bundles by purpose**. Install only the bundles you need.
 
 ## Agent matching
 
-When a session starts with a name that doesn't have an exact match, the spawn wrapper + CLAUDE.md perform **glob + fuzzy matching:**
+A session's name decides which agent it wears (its **hat**). CLAUDE.md § Identity step 2 is the rule; first match wins:
 
-1. **Exact match** → `agents/**/{name}.md` glob — first match wins. Both bundle agents and `custom/` agents resolve.
-   - Conflict rule: if two bundles ship an agent with the same name, the wrapper warns and lists matches. `custom/` always takes precedence over bundled (operator overrides).
-2. **Semantic match** → scan this registry table (and `custom/_index.md` if it exists). Compare session name against agent names, purposes, domains, and match keywords. Pick the closest match if confidence is high.
-   - `bookkeeper` → matches [[accountant]] (finance domain, bookkeeping keywords)
-   - `contract-reviewer` → matches [[lawyer]] (legal domain, contract/NDA keywords)
-   - `strategist` → matches [[consultant]] (strategy domain, advisory keywords)
-3. **No match** → general-purpose worker with session name as role context.
+1. **Exact** → `agents/**/{name}.md`. `custom/` overrides bundled; the wrapper warns when two bundles ship the same name.
+2. **In the name** → an agent's name, or one of its `aliases:` (kind words), at the start of the session name, else at the end.
+   - `accountant-acme` → [[accountant]] · `acme-consultant` → [[consultant]] · `deck-launch` → [[deck-builder]] (alias `deck`)
+3. **Project** → the name, or its first word, is a project note's name (with or without its category prefix) or one of its `aliases:`. The session wears the default from that note's `Hats` row, or another hat from the row that fits its task.
+4. **Purpose** → match the name **and the first task** against this table (and `custom/_index.md`): names, purposes, domains, keywords.
+   - `bookkeeper` → [[accountant]] · `contract-reviewer` → [[lawyer]] · `strategist` → [[consultant]]
+5. **None** → general-purpose worker with the session name as role context.
 
-When a fuzzy match is used, the session tells the user which agent was matched and why, so they can correct if wrong.
+The session says which hat it chose and why, so the operator can correct it. When the work turns, it says so in one line and wears another with `/aios:agent {name}`.
+
+**`aliases:` on an agent** are kind words a session name may lead with (`deck`, `writer`, `review`). Each word belongs to one agent only; `tests/session-hats.test.sh` checks that.
 
 **`archetype:` tags** (e.g. `archetype: maintainer`) mark an agent's *posture* — the [[../skills/aios/team-archetypes/SKILL|five product archetypes]] (Prototyper / Builder / Sweeper / Grower / Maintainer) — **orthogonally to its domain capability**. One agent can carry several (it shifts posture by project stage). They make *"who's my Builder / Maintainer?"* resolvable and let `/7plan` + `/emerge` check the deployed mix matches the project's lifecycle stage (not `/today` — daily routing is tactical, stage→mix is strategic). They are a *lens layered on top of* the domain bundles — never a reason to rename or restructure agents.
 

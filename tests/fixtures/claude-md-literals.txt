@@ -51,7 +51,6 @@ agent-name
 agents/**/{name}.md
 agents/_index.md
 agents/custom/_index.md
-agents/custom/{name}.md
 aios-commit --vault
 aios-spawn-inbox: contract N
 antifragile.md
@@ -65,7 +64,6 @@ claude
 claude --remote-control
 claude -p
 CLAUDE_MODEL
-code-review
 collision <dest>
 context/ventures/
 cp
@@ -93,7 +91,6 @@ INTENT.md
 judgment
 kill
 lawyer
-ls agents/**/{name}.md
 method
 MODEL-ROUTING.md
 name
@@ -131,7 +128,6 @@ spawn --model <id> {name} "{task}"
 spawn --profile {name} {worker} "{task}"
 spawn <name> "<task>"
 spawn <name> …
-spawn accountant "Help me analyze Q1 financials"
 spawn-kill
 spawn-kill {name}
 status
@@ -150,7 +146,6 @@ vault/00 - notes/reflections/_inbox/
 ventures/
 vscode.createTerminal
 Write
-writing
 {"action":"kill","name":"<kebab>"}
 {"action":"resume","name":"<kebab>","prompt":"<first prompt>"}
 {"action":"send","name":"<kebab>","prompt":"<one line>"}
@@ -169,3 +164,10 @@ writing
 ~/.claude/sessions/*.json
 ~/.zshrc
 ~/aios
+accountant-acme
+deck-launch
+aliases:
+Hats
+/aios:agent {name}
+{hat-or-kind}-{subject}
+{project}-{subject}

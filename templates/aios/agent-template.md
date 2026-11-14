@@ -1,6 +1,7 @@
 ---
 name: '{{agent-name}}'
 description: 'Use when {{trigger condition}}. {{One-sentence purpose}}.'
+aliases: []          # optional kind words a session name may lead with, e.g. [deck]; unique across agents
 tools: '*'
 tags:
   - agent

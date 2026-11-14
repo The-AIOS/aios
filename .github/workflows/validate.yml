@@ -1627,6 +1627,10 @@ jobs:
         # A global preference overrode the vault contract in vault sessions; the pointer must stay generic. (#302)
         run: bash tests/global-claude-pointer.test.sh
 
+      - name: session hats — names find their agent in five rungs, aliases are unique, the Hats row is offered
+        # Names matched only exactly, then by a guess; project sessions got no hat. (#307)
+        run: bash tests/session-hats.test.sh
+
       - name: onboarding-aios answers what the AIOS is for, and hands a personal purpose to finding-your-why
         # Newcomers asked what it is all for the moment orientation worked; the agent had no move. (#270)
         run: bash tests/onboarding-aios-why.test.sh
