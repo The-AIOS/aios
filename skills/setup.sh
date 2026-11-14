@@ -4,11 +4,15 @@
 # superpowers/anthropic skills load). Run once after cloning, or after
 # /aios:update adds a new skill. Idempotent. Usage: bash skills/setup.sh
 #
-# Registers skills/<source>/<skill>/ for every source EXCEPT `superpowers/`,
-# which IS reliably provided via a Claude Code marketplace, so linking the
-# vendored mirror would double it. Skips any name already present in
-# ~/.claude/skills (re-run safe; never clobbers a marketplace- or hand-installed
-# skill).
+# Registers skills/<source>/<skill>/ for every source. `superpowers/` is the one
+# conditional source (#313): when a Superpowers plugin is installed it provides those
+# skills (namespaced, outside ~/.claude/skills), so the bundled copy is skipped to avoid
+# doubling them; when none is installed, the bundled, pinned copy is registered like any
+# other source. That used to be an unconditional skip on the premise that a marketplace
+# always provides Superpowers, and on a machine without the plugin it left sessions on
+# whatever old copies sat in ~/.claude/skills. Skips any name already present in
+# ~/.claude/skills (re-run safe; never clobbers a marketplace- or hand-installed skill),
+# and names a plain-folder Superpowers copy as stale rather than touching it.
 #
 # `anthropic/` USED TO BE EXCLUDED HERE ON THE SAME PREMISE, AND THE PREMISE WAS
 # FALSE. One sentence — "those are provided via Claude Code marketplaces" —
@@ -27,10 +31,10 @@
 # any day — the kind of thing you only find by measuring rather than by hitting
 # an error.
 #
-# The presence check below is what would have caught it without anyone noticing an
-# agent underperform, and it stays regardless of which sources are excluded: it
-# asserts the assumption instead of trusting it, so if superpowers' premise ever
-# stops holding, this script says so on the next run.
+# The lesson stands for superpowers too: an exclusion must rest on a premise the script
+# CHECKS at runtime. So the bundled Superpowers is skipped only when a Superpowers
+# plugin is actually installed (checked below), and a plain-folder copy shadowing a
+# bundled name is reported instead of passing for "registered".
 #
 # Skills register as standalone skills-dir entries — they do NOT touch the
 # `aios` commands plugin. Restart Claude Code sessions to pick up new links.
@@ -41,25 +45,74 @@ mkdir -p "$DEST"
 echo "Registering AIOS skills into $DEST ..."
 echo ""
 
+# Is a Superpowers plugin INSTALLED? Then it provides those skills, and linking the
+# bundled copy would double them. Read from Claude Code's own record of installed plugins
+# (any "superpowers@<marketplace>" entry), never from which marketplaces exist: a
+# marketplace can be added with the plugin never installed, and the plugin can come from
+# a marketplace with any name. Checked here, at runtime, never assumed.
+# Parsed, not grepped: a user-wide install ("scope": "user") that settings.json has not
+# disabled. A disabled plugin, or one installed for another project only, provides nothing
+# here, and counting it would leave this vault with no Superpowers at all.
+# (Setup itself never installs the Superpowers plugin: the cold-start interview's plugin set
+# does not include it. So a fresh install gets the bundled copy, with nothing to double.)
+sp_plugin=$(python3 - "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" <<'PY' 2>/dev/null || echo 0
+import json, os, sys
+cfg = sys.argv[1]
+def load(*p):
+    try:
+        with open(os.path.join(cfg, *p), encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+enabled = (load("settings.json").get("enabledPlugins") or {})
+plugins = (load("plugins", "installed_plugins.json").get("plugins") or {})
+active = any(k.startswith("superpowers@") and enabled.get(k) is not False
+             and any(isinstance(e, dict) and e.get("scope", "user") == "user"
+                     for e in (v if isinstance(v, list) else [v]))
+             for k, v in plugins.items())
+print(1 if active else 0)
+PY
+)
+[ "$sp_plugin" = 1 ] || sp_plugin=0
+sp_linked=0
+unlinked=0
+
 linked=0
 skipped=0
 skipped_sources=""
+stale=""
 for skill_md in "$SCRIPT_DIR"/*/*/SKILL.md; do
   [ -e "$skill_md" ] || continue
   skill_dir="$(dirname "$skill_md")"
   source_dir="$(basename "$(dirname "$skill_dir")")"
   name="$(basename "$skill_dir")"
 
-  # Marketplace-provided sources — skip (avoid duplicating installed skills).
-  # ONLY superpowers: its premise is measured true. See the header for why
-  # anthropic was removed from this list.
-  case "$source_dir" in
-    superpowers) skipped_sources="$skipped_sources $name"; continue ;;
-  esac
+  # A Superpowers plugin provides these skills when installed (see the header). A link
+  # this script made earlier, before the plugin arrived, would now double it: remove
+  # exactly that link (it points at the bundled copy). Never a plain folder, never data.
+  if [ "$source_dir" = superpowers ] && [ "$sp_plugin" -eq 1 ]; then
+    # Compared as resolved paths, so a link made before the vault moved is still recognised.
+    # Ours: it resolves to the bundled copy, or (after the vault moved) it is a broken link
+    # whose target still ends in skills/superpowers/<name>.
+    lt=""; [ -L "$DEST/$name" ] && lt=$(readlink "$DEST/$name")
+    if [ -L "$DEST/$name" ] && { [ "$(cd "$DEST/$name" 2>/dev/null && pwd -P)" = "$(cd "$skill_dir" && pwd -P)" ] \
+         || { [ ! -e "$DEST/$name" ] && case "$lt" in */skills/superpowers/"$name") true ;; *) false ;; esac; }; }; then
+      rm "$DEST/$name" && { echo "  - unlinked (its plugin provides it): $name"; unlinked=$((unlinked + 1)); }
+    elif [ -d "$DEST/$name" ] && [ ! -L "$DEST/$name" ]; then
+      stale="$stale $name"; echo "  ! old copy, left as it is: $name"
+    fi
+    skipped_sources="$skipped_sources $name"; continue
+  fi
 
   target="$DEST/$name"
   if [ -e "$target" ] || [ -L "$target" ]; then
-    echo "  • skip (already registered): $name"
+    # A plain folder under a bundled Superpowers name is an old copy that never updates.
+    if [ "$source_dir" = superpowers ] && [ -d "$target" ] && [ ! -L "$target" ]; then
+      stale="$stale $name"
+      echo "  ! old copy, left as it is: $name"
+    else
+      echo "  • skip (already registered): $name"
+    fi
     skipped=$((skipped + 1))
     continue
   fi
@@ -67,6 +120,7 @@ for skill_md in "$SCRIPT_DIR"/*/*/SKILL.md; do
   if ln -s "$skill_dir" "$target"; then
     echo "  ✓ linked: $name  ($source_dir)"
     linked=$((linked + 1))
+    [ "$source_dir" = superpowers ] && sp_linked=$((sp_linked + 1))
   else
     echo "  ✗ failed: $name"
   fi
@@ -88,53 +142,24 @@ echo "Restart Claude Code sessions to load newly-registered skills."
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Presence check — assert the exclusion premise instead of trusting it.
-#
-# Every source skipped above is skipped because it is *believed* to arrive from a
-# marketplace. That belief is a claim about the operator's machine, and it was
-# wrong once, silently, for months. So verify it: for each skipped skill, is the
-# name actually in ~/.claude/skills? If not, the skill this script declined to
-# register is not there by any other route either, and anything declaring it gets
-# nothing.
-#
-# This check is deliberately independent of WHICH sources are excluded. It costs
-# one stat per skipped name and it is the only thing standing between a false
-# premise and an agent that quietly underperforms.
+# Superpowers report (#313). The source is skipped only when a plugin provides it, a
+# premise checked above rather than assumed, so the only thing left to report is the
+# case nothing else catches: plain-folder copies under the bundled names, which shadow
+# the bundled version and never update.
 # ─────────────────────────────────────────────────────────────────────────────
-absent=""
-for name in $skipped_sources; do
-  [ -e "$DEST/$name" ] || absent="$absent $name"
-done
-
-if [ -n "$absent" ]; then
-  n_absent=$(echo $absent | wc -w | tr -d ' ')
-  # Is the marketplace that provides them installed YET? This script runs early in
-  # setup — before the interview's plugins step installs the superpowers
-  # marketplace — so on a fresh machine these skills are legitimately "not here
-  # yet" rather than missing. Distinguishing the two is the whole difference
-  # between a check worth reading and a wall of text a first-timer learns to skip.
-  mkt_installed=0
-  for m in "$HOME"/.claude/plugins/marketplaces/*superpowers*/ \
-           "$HOME"/.claude/plugins/cache/*superpowers*/; do
-    [ -d "$m" ] && { mkt_installed=1; break; }
-  done
-
+if [ "$sp_plugin" -eq 1 ]; then
   echo ""
-  if [ "$mkt_installed" -eq 1 ]; then
-    # The marketplace IS installed and the skills still are not there. That is the
-    # real defect: the premise is false on this machine, right now.
-    echo "⚠️  $n_absent skill(s) skipped on the assumption a marketplace provides them, but"
-    echo "    they are NOT in $DEST — and the marketplace IS installed:"
-    for n in $absent; do echo "     · $n"; done
-    echo ""
-    echo "   Anything declaring one of these receives nothing — no error, just silence."
-    echo "   Drop that source from the exclusion list in this script so it registers"
-    echo "   like any other. (This is exactly how anthropic/ was found.)"
-  else
-    # Expected on a fresh install. State it once, quietly, and do not enumerate.
-    echo "ℹ️  $n_absent skill(s) come from a marketplace that is not installed yet —"
-    echo "    the cold-start interview installs it at its plugins step. Nothing to do."
-    echo "    If they are still absent after that, re-run this script: it will say so"
-    echo "    loudly, because at that point the assumption really is broken."
-  fi
+  extra=""; [ "$unlinked" -gt 0 ] && extra=" (removed $unlinked earlier link(s))"
+  echo "ℹ️  Superpowers comes from its installed plugin, so the bundled copy is not linked$extra."
+fi
+if [ "$sp_linked" -gt 0 ]; then
+  echo ""
+  echo "ℹ️  Linked the bundled Superpowers ($sp_linked skills). If you later install the Superpowers plugin,"
+  echo "    run this script again: it removes these links so the skills are not doubled."
+fi
+if [ -n "$stale" ]; then
+  n_stale=$(echo $stale | wc -w | tr -d ' ')
+  echo ""
+  echo "⚠️  $n_stale Superpowers skill(s) in $DEST are plain folders: old copies that never update."
+  echo "    /aios:update offers to archive them. By hand: move them out of $DEST, then run this again."
 fi

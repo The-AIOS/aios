@@ -403,7 +403,9 @@ printf '%s\n' "$S8" | grep -E '/plugin (marketplace add|install)|⭐' >/dev/null
 PRE=$(awk '/^### Pre-step/,/^### Step 0/' "$F")
 
 # 7a — the liveness check is the whole difference between detection and a guess.
-printf '%s\n' "$PRE" | grep -F 'os.kill(d["pid"], 0)' >/dev/null \
+# Through _fs.pid_alive: os.kill(pid, 0) is TerminateProcess on Windows (#303), so it would
+# end the very surface it checks.
+printf '%s\n' "$PRE" | grep -F 'if pid_alive(int(d["pid"]))' >/dev/null \
   && ok "surface detection liveness-checks the announced pid" \
   || no "surface detection does not liveness-check" "a surface file outlives its process; glass.json was measured present-and-dead"
 

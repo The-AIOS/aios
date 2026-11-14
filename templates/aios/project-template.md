@@ -13,7 +13,8 @@ exempt-line-check: false       # true for catalogs, reference docs, and APPEND-O
                                # line-check has cried wolf for a week
 path: ''
 stack: []
-aliases: []
+aliases: []                    # other names this project answers to, e.g. a session name
+                               # like [acme-site]; CLAUDE.md § Identity step 2 matches them
 ---
 # {{title}}
 
@@ -37,6 +38,7 @@ aliases: []
 | Status | Active / Archived / Idea |
 | Venture | [[venture-a]], venture-b (links to venture folders) |
 | Stakeholders | founders, sales-team (groups from venture Stakeholders table) |
+| Hats | [[agent-a]] (default) · [[agent-b]] — agents a session on this project wears; pick them from `agents/_index.md` |
 | Orient | One sentence — what this is and what Claude should know first |
 
 ## Overview

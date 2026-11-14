@@ -641,7 +641,23 @@ def main():
         pass
 
     try:
-        data = json.load(sys.stdin)
+        # Feed the rate-limit cache from this same process (#292): the App, Glass and the quota
+        # autopilot read it, and a second program per render was what made Windows lag. The seat
+        # generation is read BEFORE the payload, so a sample that straddles a swap is discarded.
+        _cache, gen = None, None
+        try:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            import _cache
+            gen = _cache.current_gen()
+        except Exception:
+            _cache = None
+        raw = sys.stdin.read()
+        if _cache is not None:
+            try:
+                _cache.update(raw, gen)
+            except Exception:
+                pass
+        data = json.loads(raw)
         model_name = data.get("model", {}).get("display_name", "Claude")
         workspace = data.get("workspace", {})
         transcript_path = data.get("transcript_path", "")

@@ -56,7 +56,7 @@ body = s.split(marker, 1)[1].split('```json', 1)[1].split('```', 1)[0]
 cfg = json.loads(body)
 cmds = [h['command'] for ev in cfg['hooks'].values() for g in ev for h in g['hooks']] + [cfg['statusLine']['command']]
 bad = [c for c in cmds if 'python3' in c or 'pwsh ' in c]
-need = ['inject-datetime', 'guard-venture-mount', 'claude-identity.sh" cache', 'provenance.py" --prompt', 'provenance.py" --tool', 'bus_log.py" --hook', 'floor-at-start.py"', 'model-switch-log.py"']
+need = ['inject-datetime', 'guard-venture-mount', 'context-monitor.py"', 'provenance.py" --prompt', 'provenance.py" --tool', 'bus_log.py" --hook', 'floor-at-start.py"', 'model-switch-log.py"']
 missing = [n for n in need if not any(n in c for c in cmds)]
 sys.exit(1 if bad or missing else 0)
 PY

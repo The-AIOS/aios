@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# The status line is one program (#292). context-monitor.py alone must write the rate-limit cache
+# that the AIOS App, Glass and the quota autopilot read,
+# and must keep starting the watcher on every machine: besides rotating it reconnects Remote
+# Control after a /login and warns when the account list is lost. Usage: bash tests/statusline-one-program.test.sh
+# [repo-root]. Written for bash 3.2.
+set -u
+ROOT="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
+cd "$ROOT" || exit 1
+export AIOS_QUOTA_NOTIFY=0   # never a desktop banner from a test (watch-notify-isolation)
+M="hooks/claude-identity/context-monitor.py"
+pass=0; fail=0
+ok(){ pass=$((pass+1)); echo "  ok   $1"; }
+no(){ fail=$((fail+1)); echo "  FAIL $1"; }
+echo "statusline-one-program"
+PAYLOAD='{"model":{"display_name":"Claude"},"workspace":{"current_dir":"/tmp"},"rate_limits":{"five_hour":{"used_percentage":41,"resets_at":1},"seven_day":{"used_percentage":12,"resets_at":2}}}'
+
+render(){  # $1 = home dir; renders once with an isolated HOME and config dir
+  printf '%s' "$PAYLOAD" | HOME="$1" USERPROFILE="$1" CLAUDE_CONFIG_DIR="$1/.claude" \
+    AIOS_ACCOUNTS_FILE="$1/.aios/accounts.json" AIOS_KEYCHAIN_SERVICE="aios-accounts-test" USER_MD_PATH="$1/none.md" python3 "$M" >/dev/null 2>&1
+}
+accounts(){  # $1 = home, $2.. = emails in rotation
+  h="$1"; shift; mkdir -p "$h/.aios"
+  python3 - "$h/.aios/accounts.json" "$@" <<'PY'
+import json, sys
+json.dump({"version": 1, "accounts": [{"email": e} for e in sys.argv[2:]]}, open(sys.argv[1], "w"))
+PY
+}
+
+H1=$(mktemp -d "${TMPDIR:-/tmp}/sl1.XXXXXX"); mkdir -p "$H1/.claude"
+accounts "$H1" one@example.com
+render "$H1"
+C="$H1/.claude/rate-limit-cache.json"
+[ -f "$C" ] && ok "the status line alone writes the rate-limit cache" || no "no cache written by context-monitor.py"
+[ -f "$C" ] && python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if d["five_hour_pct"]==41 and d["seven_day_pct"]==12 else 1)' "$C" \
+  && ok "the cache carries the payload's 5-hour and weekly numbers" || no "cache numbers wrong"
+[ -f "$H1/.claude/watch-tick" ] && ok "one account: the watcher still starts (Remote Control reconnect, lost-list warning)" || no "one account: the watcher was not started"
+
+H2=$(mktemp -d "${TMPDIR:-/tmp}/sl2.XXXXXX"); mkdir -p "$H2/.claude"
+accounts "$H2" one@example.com two@example.com
+render "$H2"
+[ -f "$H2/.claude/watch-tick" ] && ok "two accounts: the watcher is started" || no "two accounts did not kick the watcher"
+sleep 1   # let the detached watcher start and settle before the temp home is left behind
+
+python3 - "$M" <<'PY' && ok "the status line reads the seat generation before the payload" || no "generation read after the payload: a sample straddling a swap would pass"
+import sys; s = open(sys.argv[1], encoding="utf-8").read()
+g, r = s.find("_cache.current_gen()"), s.find("sys.stdin.read()")
+sys.exit(0 if 0 <= g < r else 1)
+PY
+# The exact command install-settings.py writes, run through a shell as Claude Code runs it
+# (sh on macOS/Linux, Git Bash on Windows): the guard, $HOME and the quoting must all survive.
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) PLAT=windows; SH=bash ;; *) PLAT=posix; SH=sh ;; esac
+H3=$(mktemp -d "${TMPDIR:-/tmp}/sl3.XXXXXX"); mkdir -p "$H3/.claude"; ln -s "$ROOT" "$H3/aios" 2>/dev/null || cp -R "$ROOT" "$H3/aios"
+CMD=$(AIOS_ROOT="$ROOT" AIOS_WIN_PYTHON=python python3 -c 'import importlib.util,sys
+s=importlib.util.spec_from_file_location("m","hooks/install-settings.py"); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
+print(m.plan(sys.argv[1], sys.argv[2], False)[1])' "$PLAT" "$ROOT")
+OUT3=$(printf '%s' "$PAYLOAD" | HOME="$H3" USERPROFILE="$H3" CLAUDE_CONFIG_DIR="$H3/.claude" AIOS_ACCOUNTS_FILE="$H3/.aios/accounts.json" \
+  AIOS_KEYCHAIN_SERVICE="aios-accounts-test" USER_MD_PATH="$H3/none.md" "$SH" -c "$CMD" 2>&1)
+[ -n "$OUT3" ] && [ -f "$H3/.claude/rate-limit-cache.json" ] && ok "the written status line runs through $SH: it renders and feeds the cache" \
+  || no "the written status line did not run through $SH: $CMD -> $OUT3"
+! grep -q 'rotation_has_two' hooks/claude-identity/_cache.py && ok "no account-count gate on the watcher" || no "_cache.py gates the watcher on the account count"
+echo "$pass passed, $fail failed"
+[ "$fail" -eq 0 ]

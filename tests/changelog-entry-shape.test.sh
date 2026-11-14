@@ -79,6 +79,12 @@ else
   printf '  ok   hash value not required here (open PR: empty is the correct pre-merge state)\n'; PASS=$((PASS+1))
 fi
 
+# At most two hashes. Commits that reach main together give /aios:update the same answer, so a
+# long list adds nothing but words to an entry every operator reads (CONTRIBUTING.md).
+n=$(printf '%s' "$hline" | sed -E 's/^`hash:([^`]*)`.*/\1/' | awk -F'·' '{c=0; for(i=1;i<=NF;i++){e=$i; gsub(/^[ \t]+|[ \t]+$/,"",e); if(e!="") c++} print c}')
+[ "${n:-0}" -le 2 ] && ok "the newest entry cites at most two hashes (${n:-0})" \
+  || no "the newest entry cites $n hashes" "cite the squash-merge commit, or a release branch's first and last commits (CONTRIBUTING.md)"
+
 echo "-- 3. the closing rule is stated where entries are written, and is satisfiable without CI --"
 # WHY THE SECOND HALF. The rule was first drafted as "names the deterministic CHECK that catches
 # its class" -- and `tests/` + `.github/` are Tier-0: they NEVER reach an operator vault, while

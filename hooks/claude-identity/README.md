@@ -15,7 +15,7 @@ Multi-account Claude Code identity manager + quota autopilot. One tool that:
 └─────────┬─────────┘
           │ rate_limits in internal state
           ▼
-┌───────────────────┐       bash -c 'tee >(...) | ctx-monitor.py'
+┌───────────────────┐       python3 context-monitor.py (renders AND writes the cache)
 │    statusLine     │──────────┬──────────────────────────┐
 │  fires on every   │          │                          │
 │     refresh       │          ▼                          ▼
@@ -177,51 +177,50 @@ If user is not ready: tell them they can configure manually later by pasting one
 
 The bundled status line also shows the session's effort level beside the model (`[Opus 5.5 · high]`, from the payload's `effort.level`; absent when the model has no effort setting) and ends with a dim `\⏎ new line · esc interrupt` (a backslash, then Enter, is a new line in every terminal).
 
-- **No existing statusLine →** use the bundled `context-monitor.py` automatically. It's richer than Claude Code's default: shows context %, 5h/7d rate limits with countdown, active account local-part (so you see `j` vs `cc` after a swap), git branch + change count, and color-coded warnings as you approach limits. Run the **default snippet** below.
-- **Existing statusLine present →** show it to the user (`d["statusLine"]["command"]` from `~/.claude/settings.json`) and ask: *"You already have a statusLine wired. Want to (1) replace it with the bundled `context-monitor.py` (richer — context %, 5h/7d, active account, git status, color-coded warnings), or (2) keep yours and just add the cache writer in parallel?"*
-  - **(1) Replace →** run the **replace snippet** below (forces `context-monitor.py` as the renderer).
-  - **(2) Keep →** run the **default snippet** below (preserves theirs, just wraps with `tee` so the cache writer also receives stdin).
+Since v0.8.18 the bundled `context-monitor.py` **writes the usage cache itself**, in the same process: one program per refresh, which is what keeps typing from lagging on Windows. So:
 
-**Default snippet** (preserves any existing statusLine, falls back to `context-monitor.py` if none):
+- **`statusLine.command` already runs `context-monitor.py`** (setup's `install-settings.py` writes it) → **already wired; nothing to do.** Do not wrap it in `tee`: the cache is written once already, and wrapping the guarded form (`[ ! -f … ] || python3 …`) in a pipe starves it of input.
+- **No statusLine →** run `python3 ~/aios/hooks/install-settings.py` (it shows what it will change), then the same with `--apply`. It writes the one-program status line.
+- **A statusLine of your own →** show it to the user and ask: *"Want to (1) replace it with the bundled one (context %, 5h/7d, active account, git status, color-coded warnings), or (2) keep yours and add the cache writer beside it?"*
+  - **(1) Replace →** the **replace snippet** below.
+  - **(2) Keep →** the **keep snippet** below. It wraps theirs in a subshell, so a status line containing `||` or `&&` still receives the input.
+
+**Replace snippet** (the bundled renderer, which also writes the cache):
 ```bash
 python3 - <<'PY'
 import json, os
 p = os.path.expanduser("~/.claude/settings.json")
 d = json.load(open(p)) if os.path.exists(p) else {}
-cache_cmd = os.path.expanduser("~/aios/hooks/claude-identity/claude-identity.sh") + " cache"
-default_statusline = "python3 " + os.path.expanduser("~/aios/hooks/claude-identity/context-monitor.py")
-existing = d.get("statusLine", {}).get("command", "") or default_statusline
-d["statusLine"] = {
-    "type": "command",
-    "command": f"bash -c 'tee >({cache_cmd} > /dev/null) | {existing}'"
-}
+mon = os.path.expanduser("~/aios/hooks/claude-identity/context-monitor.py")
+d["statusLine"] = {"type": "command", "command": f"[ ! -f {mon} ] || python3 {mon}"}
 with open(p, "w") as f:
     json.dump(d, f, indent=2)
 print("statusLine wired:", d["statusLine"]["command"])
 PY
 ```
 
-**Replace snippet** (forces the bundled `context-monitor.py` as the renderer, regardless of existing statusLine):
+**Keep snippet** (your renderer stays; the cache writer runs beside it):
 ```bash
 python3 - <<'PY'
 import json, os
 p = os.path.expanduser("~/.claude/settings.json")
-d = json.load(open(p)) if os.path.exists(p) else {}
-cache_cmd = os.path.expanduser("~/aios/hooks/claude-identity/claude-identity.sh") + " cache"
-default_statusline = "python3 " + os.path.expanduser("~/aios/hooks/claude-identity/context-monitor.py")
-d["statusLine"] = {
-    "type": "command",
-    "command": f"bash -c 'tee >({cache_cmd} > /dev/null) | {default_statusline}'"
-}
-with open(p, "w") as f:
-    json.dump(d, f, indent=2)
-print("statusLine wired:", d["statusLine"]["command"])
+d = json.load(open(p))
+existing = d["statusLine"]["command"]
+if "context-monitor.py" in existing or "claude-identity.sh cache" in existing:
+    print("already feeds the cache; nothing changed")
+else:
+    cache_cmd = os.path.expanduser("~/aios/hooks/claude-identity/claude-identity.sh") + " cache"
+    inner = f"tee >({cache_cmd} > /dev/null) | ({existing})"
+    d["statusLine"]["command"] = "bash -c '" + inner.replace("'", "'\\''") + "'"   # survives quotes in yours
+    with open(p, "w") as f:
+        json.dump(d, f, indent=2)
+    print("statusLine wired:", d["statusLine"]["command"])
 PY
 ```
 
 Then say: *"Done. statusLine is wired. Now: close this Claude Code session and relaunch. Once you're back, run step 7 manually to verify everything is healthy. Setup is complete after that."*
 
-> **Why `bash -c`:** Claude Code runs the statusLine command directly via `execve`, not through a shell. Process substitution (`>(...)`) is bash-only, so the wrapper is required. Also: `~` does NOT expand — the snippet uses `os.path.expanduser` to write absolute paths.
+> **Why the keep snippet uses `bash -c`:** process substitution (`>(...)`) is a bash feature, and `sh` may not be bash. `~` is written out as an absolute path by `os.path.expanduser`, so the line works whatever the shell.
 
 ### 7. Verify (manual — runs after Claude Code relaunch)
 
@@ -234,7 +233,7 @@ cat ~/.claude/rate-limit-cache.json                        # 5h/7d snapshot — 
 tail -3 ~/.claude/quota-watch.log                          # 1-min cadence ticks
 ```
 
-If `quota-watch.log` still says `no cache yet — skip (is the Stop hook installed?)`, the statusLine wiring (step 6) didn't take. Re-check `~/.claude/settings.json` `.statusLine.command` for the `tee >(...)` wrapper, and confirm Claude Code was actually restarted (a single CTRL-D often isn't enough — the parent terminal needs a fresh `claude` invocation).
+If `quota-watch.log` still says `no cache yet — skip (is the Stop hook installed?)`, the statusLine wiring (step 6) didn't take. Re-check `~/.claude/settings.json` `.statusLine.command`: it should run `context-monitor.py` (which writes the cache), or your own line inside the keep snippet's `tee >(… cache)` wrapper. Then confirm Claude Code was actually restarted (a single CTRL-D often isn't enough — the parent terminal needs a fresh `claude` invocation).
 
 ---
 
@@ -389,13 +388,13 @@ hook_event_name, stop_hook_active, last_assistant_message
 ```
 No `rate_limits`. Likely the same for `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Notification`, etc. — hooks are designed for message/tool metadata, not session rate state. If you're building ANYTHING that needs `rate_limits`, you MUST piggyback on the statusLine (the only Claude Code surface that gets it).
 
-### 2. Claude Code does NOT expand `~` in command strings
+### 2. Write `$HOME` or an absolute path, not `~`, in command strings
 
-Any command written as `~/path/to/thing` in `settings.json` (under `hooks` or `statusLine`) will silently fail — Claude Code hands the string to `execve` directly, not through a shell that would expand tilde. Always use absolute paths (`/Users/YOU/...`) or a Python one-liner with `os.path.expanduser()` that writes the absolute path into the JSON.
+Claude Code runs `hooks` and `statusLine` commands through a POSIX shell (`sh` on macOS and Linux, Git Bash on Windows): that is why the bundled forms can use `$HOME` and the `[ ! -f FILE ] || CMD` missing-file guard. A `~` is still the fragile choice, because it expands only at the start of a word and not inside quotes. Use `$HOME/...` or an absolute path; on Windows, the absolute path `install-settings.py` writes.
 
-### 3. Claude Code does NOT run commands through bash
+### 3. The shell is `sh`, not necessarily `bash`
 
-The statusLine/hook command is `execve`d directly, not `bash -c`-wrapped. Bash-only features like process substitution (`>(...)`), `$(...)` command substitution, heredocs, and arrays DO NOT work unless you explicitly wrap the whole thing in `bash -c '...'`. If your statusline is coming out blank, this is probably why.
+Bash-only features such as process substitution (`>(...)`) and arrays need an explicit `bash -c '...'` wrapper, which is why the keep snippet in step 6 uses one. If your own status line comes out blank, check for bash-only syntax outside such a wrapper.
 
 ### 4. A running session adopts a swapped credential on its NEXT API request
 

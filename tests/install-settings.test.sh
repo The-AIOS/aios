@@ -34,7 +34,7 @@ h=d["hooks"]; cmds=json.dumps(h)
 need=["inject-datetime.sh","provenance.py --prompt","bus_log.py --hook","provenance.py --tool","floor-at-start.py","model-switch-log.py"]
 assert all(n in cmds for n in need), cmds
 assert d["model"]=="x" and d["permissions"]["allow"]==["Bash(ls:*)"]
-assert "claude-identity.sh cache" in d["statusLine"]["command"]
+assert d["statusLine"]["command"].endswith("context-monitor.py") and "tee" not in d["statusLine"]["command"]  # one program (#292)
 assert "guard-venture-mount" not in cmds  # no company mounted
 PY
 ls "$T"/settings.json.bak-aios-* >/dev/null 2>&1 && ok "the previous file was backed up" || no "no backup written"
@@ -175,6 +175,34 @@ case "$out" in *"! note  R"*"your setting, left as it is"*) ok "an operator's 30
   && ok "an operator's own value stays 30 after --apply" || no "the operator's retention was overridden"
 out=$(run --platform posix)
 case "$out" in *"= keep  R"*|*"! note  R"*) ok "a later run does not offer R again" ;; *) no "R offered twice" "$out" ;; esac
+
+echo "── B: the two-program status line AIOS wrote before #292 becomes one program; anything else is kept ──"
+OLDP="bash -c 'tee >(\$HOME/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | python3 \$HOME/aios/hooks/claude-identity/context-monitor.py'"
+$PYBIN -c 'import json,sys; json.dump({"statusLine":{"type":"command","command":sys.argv[2]}}, open(sys.argv[1],"w"))' "$S" "$OLDP"
+out=$(run --platform posix)
+case "$out" in *"~ update B"*) ok "the old macOS/Linux form is offered as an update" ;; *) no "old posix form not recognised" "$out" ;; esac
+run --platform posix --apply >/dev/null
+[ "$($PYBIN -c 'import json,sys; print(json.load(open(sys.argv[1]))["statusLine"]["command"])' "$S")" = '[ ! -f $HOME/aios/hooks/claude-identity/context-monitor.py ] || python3 $HOME/aios/hooks/claude-identity/context-monitor.py' ] \
+  && ok "--apply replaces it with the one-program form" || no "old posix form not replaced" "$(cat "$S")"
+OLDW='bash -c '"'"'tee >("C:/Users/x/aios/hooks/claude-identity/claude-identity.sh" cache > /dev/null) | py -3 "C:/Users/x/aios/hooks/claude-identity/context-monitor.py"'"'"
+$PYBIN -c 'import json,sys; json.dump({"statusLine":{"type":"command","command":sys.argv[2]}}, open(sys.argv[1],"w"))' "$S" "$OLDW"
+AIOS_WIN_PYTHON="py -3" AIOS_ROOT="C:/Users/x/aios" $PYBIN "$H" --settings "$S" --platform windows --apply >/dev/null
+grep -q '|| py -3 \\"C:/Users/x/aios/hooks/claude-identity/context-monitor.py\\""' "$S" && ! grep -q tee "$S" \
+  && ok "the old Windows form (quoted paths, py -3) is replaced too" || no "old Windows form not replaced" "$(cat "$S")"
+ABS="bash -c 'tee >($T/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | python3 $T/aios/hooks/claude-identity/context-monitor.py'"
+$PYBIN -c 'import json,sys; json.dump({"statusLine":{"type":"command","command":sys.argv[2]}}, open(sys.argv[1],"w"))' "$S" "$ABS"
+run --platform posix --apply >/dev/null
+[ "$($PYBIN -c 'import json,sys; print(json.load(open(sys.argv[1]))["statusLine"]["command"])' "$S")" = "[ ! -f $T/aios/hooks/claude-identity/context-monitor.py ] || python3 $T/aios/hooks/claude-identity/context-monitor.py" ] \
+  && ok "a hand-written absolute-root form of this framework is upgraded, keeping its own root" || no "absolute-root form not upgraded" "$(cat "$S")"
+OTHER="bash -c 'tee >(/opt/fork/hooks/claude-identity/claude-identity.sh cache > /dev/null) | python3 /opt/fork/hooks/claude-identity/context-monitor.py'"
+$PYBIN -c 'import json,sys; json.dump({"statusLine":{"type":"command","command":sys.argv[2]}}, open(sys.argv[1],"w"))' "$S" "$OTHER"
+out=$(run --platform posix --apply)
+grep -q '/opt/fork/' "$S" && case "$out" in *"! note  B"*"two programs"*) ok "another root is kept, and the summary says it still runs two programs" ;; *) no "no note for a leftover two-program line" "$out" ;; esac || no "a line for another root was replaced"
+CUSTOM="bash -c 'tee >(\$HOME/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | my-own-monitor'"
+$PYBIN -c 'import json,sys; json.dump({"statusLine":{"type":"command","command":sys.argv[2]}}, open(sys.argv[1],"w"))' "$S" "$CUSTOM"
+cp "$S" "$T/custom.json"; out=$(run --platform posix --apply)
+cmp -s "$S" "$T/custom.json" >/dev/null 2>&1 || grep -q 'my-own-monitor' "$S"
+grep -q 'my-own-monitor' "$S" && case "$out" in *"~ update B"*) no "a custom line that feeds the cache was offered as an update" ;; *) ok "a custom status line that feeds the cache is kept, unflagged" ;; esac || no "custom line replaced"
 
 echo "── RESULT: $PASS passed, $FAIL failed ──"
 [ "$FAIL" = 0 ]

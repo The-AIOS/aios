@@ -167,7 +167,7 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   ```
   Same idempotency. (Hard-coding `pwsh` fails the install on a stock machine — surfaced by a Windows operator 2026-05-27.)
 - **Any `hooks/claude-identity/install-*.sh` / `install-*.ps1` updated** (current + future installers in that path) → auto-run by the same rule, under the same platform guard (`.sh` on non-Windows, `.ps1` on Windows).
-- **`hooks/install-settings.py` updated** → run it **without** `--apply` first (`python3 ~/aios/hooks/install-settings.py`; on Windows the interpreter SETUP §10's probe picks) and read the operator what it prints: `+ add` lines are hooks this release wires, `~ guard` lines wrap an existing AIOS hook so a missing hook file is skipped instead of blocking every prompt. If it lists anything, run it again with `--apply` under the execution-disclosure protocol (it writes only `~/.claude/settings.json` and a backup beside it, never anything else); if it says *Nothing to change*, say nothing. This is how installs made before a hook change get migrated without a hand edit.
+- **`hooks/install-settings.py` updated** → run it **without** `--apply` first (`python3 ~/aios/hooks/install-settings.py`; on Windows the interpreter SETUP §10's probe picks) and read the operator what it prints: `+ add` lines are hooks this release wires, `~ guard` lines wrap an existing AIOS hook so a missing hook file is skipped instead of blocking every prompt, `~ update B` replaces the two-program status line AIOS used to write with the one-program form (a status line the operator wrote is never touched). If it lists anything, run it again with `--apply` under the execution-disclosure protocol (it writes only `~/.claude/settings.json` and a backup beside it, never anything else); if it says *Nothing to change*, say nothing. This is how installs made before a hook change get migrated without a hand edit.
 - **`hooks/install-git-hooks.sh` / `.ps1` updated, OR any `hooks/git/*` changed** → run the git-hooks installer, platform-guarded exactly like the wrapper installer (`bash $HOME/aios/hooks/install-git-hooks.sh` on macOS/Linux; on Windows `pwsh -File $HOME/aios/hooks/install-git-hooks.ps1`, falling back to `powershell -File …`). Idempotent. Report anything it says it normalized.
 
   **Note the gate includes the hooks themselves, not only the installer** — a hook that is merely *copied* by Step 3 is not installed. It is a state-producer twice over: it sets `core.hooksPath` (per-machine, never version-controlled), and it **normalizes the hook scripts' line endings and exec bits**, which is the only surface that reaches an operator for that. `.gitattributes` carries the `text eol=lf` rule and cannot do the job: it is Tier-0, so it never syncs to a vault, and a fork's copy freezes at fork time. On Windows the difference is not cosmetic — `core.autocrlf=true` rewrites the hooks to CRLF on checkout, the shebang then fails to resolve (`env: bash\r`, exit 127), and git reads that as a refusal, so the operator cannot commit or push at all.
@@ -179,7 +179,8 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   # GitHub-source only — directory-source has no marketplace dir (reads ~/aios in place). Guard → no-op on directory-source.
   mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp "$HOME"/aios/plugins/aios/commands/*.md "$mp/"
   # cache path is VERSION-AGNOSTIC — glob the installed version dir (never hard-pin a version; the plugin bumps but this string outlives the bump). Guard handles the no-match case.
-  for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp "$HOME"/aios/plugins/aios/commands/*.md "$d"; done
+  # find, not a glob: zsh aborts the whole block on an unmatched glob (no cache yet), bash does not.
+  find "$HOME/.claude/plugins/cache/the-aios/aios" -mindepth 2 -maxdepth 2 -type d -name commands 2>/dev/null | while IFS= read -r d; do cp "$HOME"/aios/plugins/aios/commands/*.md "$d/"; done
   ```
 
   **Then check cache/manifest version parity — and understand that the sync above is what CAUSES the drift.** The loop copies `commands/*.md` and nothing else, so `.claude-plugin/plugin.json` inside the cache is **never** updated. The cache **directory is named for the version in that manifest**, so a manifest that never advances means a directory name that never advances: every version bump reproduces the mismatch, and it does not heal on its own. Measured 2026-08-13 on a live install — 25 of 26 cache files identical to their vault source, the 26th being that manifest, cache reading `0.4.0` while the vault read `0.5.0`. This was first reported as a harmless artifact of a missed re-resolve; it is the opposite — a recurring consequence of an incomplete sync.
@@ -197,7 +198,7 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   done
   MANIFEST=""
   [ -n "$PY" ] && MANIFEST=$($PY -c "import json;print(json.load(open('$HOME/aios/plugins/aios/.claude-plugin/plugin.json'))['version'])" 2>/dev/null)
-  CACHED=$(for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/; do [ -d "$d" ] && basename "$d"; done | tr '\n' ' ')
+  CACHED=$(find "$HOME/.claude/plugins/cache/the-aios/aios" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | while IFS= read -r d; do basename "$d"; done | tr '\n' ' ')
   # Report + prescribe the re-resolve. Do NOT copy the manifest and do NOT delete a directory.
   ```
 
@@ -329,7 +330,20 @@ If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git
 # Newest-first slice: everything ABOVE the first fully-synced entry.
 # Print entry-by-entry and stop; never load the tail. Evaluate the hash line with the
 # ANY-hash rule below -- this is a cheaper READ of the same decision, never a different one.
-awk '/^## [0-9]{4}-[0-9]{2}-[0-9]{2}/{n++} n>0' "$CLONE/CHANGELOG.md" |   awk -v stop="$STOP_HEADER" '$0==stop{exit} {print}'
+CLONE="/tmp/aios-update-check"   # each tool call is a fresh shell: set it here, as Steps 2-3.4 do
+# STOP_HEADER: the "## YYYY-MM-DD" header of the first entry whose hashes are ALL ancestors of
+# the stored hash. An entry with no resolvable hash never stops the scan. Empty -> nothing is
+# fully synced, and § "A tracker with no usable baseline" applies. Pipes, never `for x in $LIST`:
+# zsh does not word-split an unquoted expansion.
+STOP_HEADER=$(awk '/^## [0-9]{4}-[0-9]{2}-[0-9]{2}/{h=$0; next} h!="" && /^`hash: /{print h; print $0; h=""}' "$CLONE/CHANGELOG.md" |
+  while IFS= read -r head && IFS= read -r hl; do
+    hashes=$(printf '%s\n' "$hl" | sed -E 's/^`hash: //; s/`.*//' | tr -s ' \302\267' '\n' | grep -E '^[0-9a-f]{7,40}$')
+    [ -n "$hashes" ] || continue
+    unsynced=$(printf '%s\n' "$hashes" | while IFS= read -r c; do
+      git -C "$CLONE" merge-base --is-ancestor "$c" "{stored_hash}" 2>/dev/null || echo x; done | grep -c x)
+    if [ "$unsynced" = 0 ]; then printf '%s\n' "$head"; break; fi
+  done)
+awk '/^## [0-9]{4}-[0-9]{2}-[0-9]{2}/{n++} n>0' "$CLONE/CHANGELOG.md" | awk -v stop="$STOP_HEADER" 'stop!="" && $0==stop{exit} {print}'
 ```
 
 > ⚠️ **Two ways to get this wrong, and both are worse than reading the whole file.**
@@ -477,12 +491,18 @@ done
 # the files anyway — so the sync still landed while THIS step's report was wrong,
 # which is the worst combination: correct outcome, false account of it.
 # Bash 3.2 (macOS system bash) and zsh both handle `"${arr[@]}"` correctly.
-git -C "$CLONE" diff {stored_hash}..HEAD --name-only -- \
+# --no-renames: git reports a renamed file by its NEW path only, so the old path would never reach
+# Step 3.4's deletion pass and the stale copy would stay in the vault forever (measured in a
+# release dry run: five files a vendored upstream moved into references/ were left behind).
+git -C "$CLONE" diff --no-renames {stored_hash}..HEAD --name-only -- \
   "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
   "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "AGENTS.md" "EXTENSION-MAP.md" "LICENSE-AUDIT.md" \
   "LICENSE" "NOTICE" "FORTRESS.md" "MODEL-ROUTING.md" "SECURITY.md" "GLOSSARY.md" ".gitignore" \
   "${LAYERS[@]}" "vault/.obsidian/" \
-  ':(exclude)*/custom/**' ':(exclude)*/custom'
+  ':(exclude)*/custom/**' ':(exclude)*/custom' | tee "$CLONE/.git/aios-update-files"
+# The list is SAVED, not only printed: every tool call is a fresh shell, so a variable set here
+# is gone by Step 3. Steps 3 and 3.4 read this file (it lives in the clone's .git, so it never
+# reaches the vault and goes when the clone does).
 ```
 
 > ⚠️ **The `custom/` exclusion is not tidiness — without it this step hands you Tier-2 paths to overwrite.** Every `{layer}/custom/` is on the hard denylist at the top of this file, and Step 6.5's reconcile already filters `/custom(/|: )`. This diff was the one place that did **not**, so it listed operator-owned files as "changed Tier-1" and the apply loop dutifully overwrote them. **Measured on a live vault, 2026-08-27:** canonical edited its seed `mcps/custom/_index.md`; the operator's copy of that file carried the registry row and notes for a **real custom MCP they had built**; the three-way compare correctly classified it *"both sides moved"*, backed it up, and overwrote — and the operator's row was gone from the live file. The backup did its job and nothing was destroyed, but backups are **not auto-restored**, so the default outcome was silent loss of their own content.
@@ -529,13 +549,13 @@ a=$(h_file "$LOCAL_MD") && b=$(h_file "$CLONE/plugins/aios/commands/update.md") 
    ```bash
    mp="$HOME/.claude/plugins/marketplaces/the-aios/plugins/aios/commands"; [ -d "$mp" ] && cp "$HOME"/aios/plugins/aios/commands/update.md "$mp/update.md"
    # cache path VERSION-AGNOSTIC — glob the installed version dir (was hard-pinned 0.1.0)
-   for d in "$HOME"/.claude/plugins/cache/the-aios/aios/*/commands/; do [ -d "$d" ] && cp "$HOME"/aios/plugins/aios/commands/update.md "$d"; done
+   find "$HOME/.claude/plugins/cache/the-aios/aios" -mindepth 2 -maxdepth 2 -type d -name commands 2>/dev/null | while IFS= read -r d; do cp "$HOME"/aios/plugins/aios/commands/update.md "$d/"; done
    ```
 3. **KEEP the temp clone. Do NOT delete it here.** This step used to end with `rm -rf /tmp/aios-update-check`, justified as *"the re-invoke will re-clone fresh"* — and that justification died when items 4–5 replaced re-invocation with read-the-file-and-continue. There is no inner run to re-clone: **this** run continues, and Step 6.5's precondition asserts the clone exists and **exits FATAL without advancing the tracker** when it doesn't. So obeying the old line aborts the sync at the reconcile, on the one run where `update.md` itself changed — which is precisely the run that can least afford to stop half-applied. The clone is deleted once, at the end of Step 7, as on every other run.
 4. **Load the new spec by READING IT, not by re-invoking the skill.** `Read` the just-applied `$HOME/aios/plugins/aios/commands/update.md` and follow *that* for the rest of this run, treating `AIOS_UPDATE_REINVOKED=1` as set.
 
    > **Why not `Skill(aios:update)`:** a skill already loaded in the current session is **not re-read from disk** — the harness answers *"already loaded above; instructions unchanged"* and the run silently continues on the OLD spec, which is the precise failure this step exists to prevent. Verified 2026-07-27. `Skill()` re-invocation only picks up a new spec in a *fresh* session, so it cannot be the mechanism. Reading the file is unconditional and works in-session.
-5. **Continue this run under the new spec** (do not exit expecting an inner run to do the work). If for any reason the new spec cannot be read, finish the sync under the current spec and tell the operator to re-run `/aios:update` in a **fresh session** — **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working — to pick up the new logic — the update still lands either way.
+5. **Continue this run under the new spec** (do not exit expecting an inner run to do the work), **starting again at Step 1.5 under it, then Step 2's block run again**: an older spec's changelog step may have shown only part of the new entries (one could not run as written), so they are read again with the fixed one; and it may not have saved the file list Steps 3 and 3.4 read, which they refuse to run without. If for any reason the new spec cannot be read, finish the sync under the current spec and tell the operator to re-run `/aios:update` in a **fresh session** — **start a new Claude session** (`/exit` then `claude` again, or *Close the Session* and a new tab in the AIOS App). **Only the session** — the app, the terminal window and the editor can all stay open, and sessions already running keep working — to pick up the new logic — the update still lands either way.
 
 Report to operator at the end: *"`/aios:update` self-updated and continued under the new spec — {summary of what this run then processed}."* No operator action required. **Do not describe an "inner run" or a hand-off** — there is neither; one run applied the new spec and kept going. Wording that implies a second run makes a stalled sync look like a completed one, since the reader assumes something else finished the job.
 
@@ -554,7 +574,9 @@ Report to operator at the end: *"`/aios:update` self-updated and continued under
 > **Use this loop (portable across bash and zsh):**
 >
 > ```bash
-> printf '%s\n' "${FILES[@]}" | while IFS= read -r f; do
+> L="${CLONE:-/tmp/aios-update-check}/.git/aios-update-files"
+> [ -f "$L" ] || { echo "FATAL: Step 2's saved list is missing. Run Step 2's block (it saves the list), then this step again." >&2; exit 1; }
+> cat "$L" | while IFS= read -r f; do
 >   [ -z "$f" ] && continue
 >   # … per-file logic below …
 > done
@@ -672,7 +694,9 @@ For each changed Tier 1 file:
              local h; h=$(LC_ALL=C tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
    h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1; _have_sha || return 1
             local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | LC_ALL=C tr -d '\r' | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
-   printf '%s\n' "${FILES[@]}" | while IFS= read -r f; do
+   L="$CLONE/.git/aios-update-files"
+   [ -f "$L" ] || { echo "FATAL: Step 2's saved list is missing. Run Step 2's block (it saves the list), then this step again." >&2; exit 1; }
+   cat "$L" | while IFS= read -r f; do
      [ -n "$f" ] || continue
      [ -e "$CLONE/$f" ] && continue            # still in canonical — not a deletion
      [ -e "$V/$f" ] || continue                # already gone locally

@@ -185,11 +185,11 @@ POST_SWAP_WAIT_SECS = 3
 
 
 def is_pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-        return True
-    except OSError:
-        return False
+    """Side-effect-free liveness (#303). On Windows os.kill(pid, 0) is TerminateProcess, so
+    this delegates to the one shared check in _fs.py, which _watch.py uses too."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from _fs import pid_alive
+    return pid_alive(pid)
 
 
 def env_var_from_pid(pid: int, key: str) -> str:
@@ -755,6 +755,13 @@ def main() -> None:
         if not is_pid_alive(pid):
             # Stale session file — Claude Code cleans these up on its own usually
             skipped.append(f"{pid} — dead")
+            continue
+
+        # Windows (#303): the stop below is os.kill(pid, 15), which there is TerminateProcess, and the
+        # reopen path is macOS-only (ps -E, AppleScript), so a stopped session never came back. A live
+        # session adopts the swapped account on its next request anyway, so leave it running.
+        if os.name == "nt":
+            skipped.append(f"{pid} — Windows: left running; it adopts the new account on its next request")
             continue
 
         # Pull session name in priority order:

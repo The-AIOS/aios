@@ -22,7 +22,8 @@ USAGE
   install-settings.py --apply      back up settings.json, merge, write, read back and verify
 
 Merge rules: a hook already present (matched by its script, however it is spelled) is left alone;
-an existing statusLine is never replaced (the summary says so, because hook B feeds the quota cache);
+an existing statusLine is kept (the summary says so, because hook B feeds the usage cache), except the
+exact two-program form AIOS itself wrote before #292, which becomes the one-program form ("~ update B");
 every other key in the file is kept byte for byte in meaning. A symlinked settings.json stays a
 link: the file it points to is backed up and updated. Exit 0 ok · 1 the file is not valid JSON, or is
 JSON of a shape this cannot merge into (e.g. "statusLine": null, a hooks event that is not a list),
@@ -96,8 +97,8 @@ def plan(platform, root, venture_guard):
         ]
         if venture_guard:
             rows.append(("C", "PreToolUse", "Edit|Write|MultiEdit|NotebookEdit", h("guard-venture-mount.py"), 10))
-        status = ("bash -c 'tee >(\"%s/hooks/claude-identity/claude-identity.sh\" cache > /dev/null) | "
-                  "%s \"%s/hooks/claude-identity/context-monitor.py\"'" % (r, py, r))
+        # One program per render (#292): context-monitor.py also writes the rate-limit cache.
+        status = '%s "%s/hooks/claude-identity/context-monitor.py"' % (py, r)
     else:
         rows = [
             ("A", "UserPromptSubmit", None, "bash ~/aios/hooks/inject-datetime.sh", None),
@@ -110,10 +111,9 @@ def plan(platform, root, venture_guard):
         if venture_guard:
             rows.append(("C", "PreToolUse", "Edit|Write|MultiEdit|NotebookEdit",
                          "python3 ~/aios/hooks/guard-venture-mount.py", 10))
-        status = ("bash -c 'tee >($HOME/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | "
-                  "python3 $HOME/aios/hooks/claude-identity/context-monitor.py'")
+        status = "python3 $HOME/aios/hooks/claude-identity/context-monitor.py"
     rows = [(k, ev, mt, guard(cmd), to) for k, ev, mt, cmd, to in rows]
-    return rows, status
+    return rows, guard(status)
 
 
 WHAT = {
@@ -128,6 +128,41 @@ WHAT = {
           "session you want to reopen or learn from is gone a month later"),
 }
 RETENTION_DAYS = 3650
+
+
+def old_status_forms(root):
+    """The exact status lines AIOS wrote before #292, for this machine's root and the interpreters
+    the installer itself would have written. Exact strings, not a pattern: a line the operator
+    changed in any way (another interpreter, a fork's path) is theirs and is never replaced, and a
+    root with spaces in it still matches."""
+    r = root.replace("\\", "/")
+    pys = {"python3", "python", "py -3"}
+    if os.environ.get("AIOS_WIN_PYTHON"):
+        pys.add(os.environ["AIOS_WIN_PYTHON"])
+    forms = {"bash -c 'tee >($HOME/aios/hooks/claude-identity/claude-identity.sh cache > /dev/null) | "
+             "python3 $HOME/aios/hooks/claude-identity/context-monitor.py'"}
+    for py in pys:
+        forms.add("bash -c 'tee >(\"%s/hooks/claude-identity/claude-identity.sh\" cache > /dev/null) | "
+                  "%s \"%s/hooks/claude-identity/context-monitor.py\"'" % (r, py, r))
+    return forms
+
+
+OLD_ABS = re.compile(r"^bash -c 'tee >\((/\S+)/hooks/claude-identity/claude-identity\.sh cache > /dev/null\) \| "
+                     r"(python3|python) (/\S+)/hooks/claude-identity/context-monitor\.py'$")
+
+
+def upgraded_status(cur, root, new_form):
+    """The one-program line that replaces `cur`, or None when `cur` is not a line AIOS wrote.
+    Exact old forms take the standard replacement. The macOS/Linux form written by hand with an
+    absolute, unquoted root also counts, but only when both paths are the same root and it
+    resolves to this framework; the replacement then keeps that root, so it still runs."""
+    if cur in old_status_forms(root):
+        return new_form
+    m = OLD_ABS.match(cur)
+    if m and m.group(1) == m.group(3) and os.path.realpath(m.group(1)) == os.path.realpath(root):
+        mon = "%s/hooks/claude-identity/context-monitor.py" % m.group(1)
+        return "[ ! -f %s ] || %s %s" % (mon, m.group(2), mon)
+    return None
 
 
 def signature(cmd):
@@ -224,10 +259,23 @@ def main():
                     upgrades.append((wanted[signature(cmd)], hk))
     status_add = "statusLine" not in settings
     status_note = None
-    # Quotes stripped: the Windows form quotes the script path (claude-identity.sh" cache).
-    if not status_add and "claude-identity.sh cache" not in str(settings["statusLine"].get("command", "")).replace('"', ""):
-        status_note = ("you already have your own status line, so it is left as it is -- the quota autopilot's "
-                       "cache (hook B) will not be fed until it also runs claude-identity.sh cache (SETUP §10)")
+    status_upgrade = None
+    if not status_add:
+        cur = str(settings["statusLine"].get("command", "")).strip()
+        flat = cur.replace('"', "")
+        # The form AIOS itself wrote before #292: bash + tee + claude-identity.sh cache + context-monitor.py,
+        # two programs per render. Only those forms are ours to replace; anything else is the operator's.
+        status_upgrade = upgraded_status(cur, ROOT, status)
+        if status_upgrade:
+            pass
+        elif "claude-identity.sh cache" in flat and "context-monitor.py" in flat and "tee" in flat:
+            status_note = ("your status line still runs two programs per refresh (tee + claude-identity.sh cache); "
+                           "it is left as it is because it is not a form AIOS wrote. context-monitor.py now writes "
+                           "the cache itself, so the one-program form in SETUP §10 does the same with less work")
+        elif "claude-identity.sh cache" not in flat and "context-monitor.py" not in flat:
+            status_note = ("you already have your own status line, so it is left as it is -- the usage cache the "
+                           "App, Glass and the quota autopilot read is not fed until it also runs "
+                           "hooks/claude-identity/context-monitor.py (SETUP §10)")
 
     # R: only when the key is absent. A value the operator chose, even a short one, is theirs.
     retention_add = "cleanupPeriodDays" not in settings
@@ -251,7 +299,9 @@ def main():
     for key, *_ in keeps:
         if key not in shown:
             print("  = keep  %s  already set up" % key); shown.add(key)
-    if not status_add and not status_note:
+    if status_upgrade:
+        print("  ~ update B  the status line becomes one program instead of two (less work per refresh; on Windows, no typing lag)")
+    elif not status_add and not status_note:
         print("  = keep  B  already set up")
     if status_note:
         print("  ! note  B  " + status_note)
@@ -267,7 +317,7 @@ def main():
         print("  = keep  R  already set up")
     print("  Everything else in the file is kept.")
 
-    if not adds and not status_add and not upgrades and not retention_add:
+    if not adds and not status_add and not status_upgrade and not upgrades and not retention_add:
         print("Nothing to change.")
         return 0
     if not a.apply:
@@ -285,6 +335,8 @@ def main():
         hooks.setdefault(event, []).append(group)
     if status_add:
         settings["statusLine"] = {"type": "command", "command": status}
+    elif status_upgrade:
+        settings["statusLine"]["command"] = status_upgrade
     for _, hk in upgrades:
         hk["command"] = guard(str(hk["command"]))
     if retention_add:

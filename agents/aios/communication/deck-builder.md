@@ -2,6 +2,7 @@
 name: deck-builder
 description: 'Use when task involves deck or similar. Build presentations end-to-end via 6-phase AIOS process'
 keywords: slides, presentation, pitch deck, keynote, google slides, board deck, investor pitch, workshop
+aliases: [deck]
 tools: '*'
 tags:
   - agent

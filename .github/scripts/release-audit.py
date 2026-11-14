@@ -19,6 +19,20 @@ READ-ONLY BY CONSTRUCTION
     openrouter.py, which has no tools at all. The diff of a public repository is public,
     so sending it to a third party exposes nothing; never point this at a private repo.
 
+WHAT IS SENT
+    The release diff minus CHANGELOG.md, and minus the docs of any vendored folder this
+    release touches that is PROVEN byte for byte against its upstream (vendored-pins
+    --upstream). Those are upstream's files, unmodified; re-reading them was most of a
+    release's audit time and its findings were upstream's choices. Scripts and every
+    SKILL.md inside those folders are always sent: a SKILL.md is behaviour. The brief, both reports and left-out.txt name what was left
+    out. --all sends everything.
+
+MODELS AND COST
+    Each reviewer runs a pinned model (OUTSIDE_MODEL, CLAUDE_MODEL below; --outside-model and
+    --claude-model override), so the gate does not change with a machine's defaults. Every
+    report names the model that answered, and a run prints what the outside audit cost when
+    the provider reports it.
+
 THE GATE
     `check` exits 0 only when both reports exist and each ends in `VERDICT: PASS`.
     No outside key configured -> the outside report says NOT RUN and `check` blocks: an
@@ -37,6 +51,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 MAX_DIFF = int(os.environ.get("AIOS_AUDIT_MAX_DIFF", "180000"))  # characters per chunk
+# Pinned, so the gate is the same on every machine instead of whatever each one defaults to.
+# Chosen 2026-11-14 from OpenRouter's live model list: the outside family's flagship
+# reasoning model, and Claude's. Override with --outside-model / --claude-model or the env.
+OUTSIDE_MODEL = os.environ.get("AIOS_AUDIT_OUTSIDE_MODEL", "google/gemini-4-argon")
+CLAUDE_MODEL = os.environ.get("AIOS_AUDIT_CLAUDE_MODEL", "claude-opus-5-5")
+COSTS = []  # US$ per outside call, when the provider reports it (OpenRouter does)
 VERDICT = re.compile(r"^VERDICT:\s*(PASS|BLOCK)\b", re.M)
 
 BRIEF = """You are auditing a release of an open-source framework that runs inside its users'
@@ -73,13 +93,61 @@ def guard_public_repo():
                  "The diff goes to a third party, so this only runs in a clone of the public framework repo.")
 
 
-def diff_chunks(base, head):
+SCRIPT_EXT = (".py", ".sh", ".bash", ".js", ".mjs", ".cjs", ".ts", ".ps1", ".rb", ".pl", ".cmd", ".bat")
+
+
+def is_script(path, head):
+    """True for a file that runs: a script extension, or committed with the exec bit."""
+    if path.lower().endswith(SCRIPT_EXT):
+        return True
+    r = sh(["git", "-C", str(ROOT), "ls-tree", head, "--", path])
+    return r.stdout.startswith("100755")
+
+
+def proven_vendored(base, head, audit_all=False):
+    """(left_out_paths, notes) for vendored folders this release touches.
+
+    A vendored folder (one carrying .upstream-sync) holds upstream's files byte for byte.
+    Two models re-reading upstream's docs on every pin refresh is most of an audit's time,
+    and its findings are upstream's choices, which a re-vendor cannot change. So when the
+    folder is PROVEN against its upstream (tests/vendored-pins.test.sh --upstream), its
+    reference files are left out; its scripts and every SKILL.md (instructions the model
+    follows, so behaviour) are always read. Not proven: nothing is left
+    out. --all leaves nothing out."""
+    if audit_all:
+        return [], []
+    changed = sh(["git", "-C", str(ROOT), "diff", "--no-renames", "--name-only", f"{base}...{head}"]).stdout.split("\n")
+    syncs = sh(["git", "-C", str(ROOT), "ls-tree", "-r", "--name-only", head]).stdout.split("\n")
+    folders = sorted({os.path.dirname(f) for f in syncs if f.endswith("/.upstream-sync")})
+    checker = os.environ.get("AIOS_AUDIT_PIN_CHECK")
+    checker = checker.split() if checker else ["bash", str(ROOT / "tests" / "vendored-pins.test.sh"), "--upstream"]
+    left_out, notes = [], []
+    for d in folders:
+        mine = [f for f in changed if f.startswith(d + "/")]
+        if not mine:
+            continue
+        r = sh(checker + [d], cwd=str(ROOT))
+        if r.returncode != 0:
+            notes.append(f"{d}: NOT proven against its upstream, so audited in full")
+            continue
+        # A SKILL.md is behaviour, not reference: the model follows it, so it is always read.
+        skip = [f for f in mine if not is_script(f, head) and os.path.basename(f) != "SKILL.md"
+                and not f.endswith((".upstream-sync", ".upstream-manifest"))]
+        left_out += skip
+        notes.append(f"{d}: proven byte for byte against its upstream; {len(skip)} reference file(s) left out, "
+                     f"{len(mine) - len(skip)} SKILL.md, script or record file(s) audited")
+    return left_out, notes
+
+
+def diff_chunks(base, head, left_out=()):
     """The release diff in chunks no larger than MAX_DIFF, split at file boundaries.
 
     Never truncated: a release audited on part of its diff could pass on the part nobody
     read. Every chunk goes to both reviewers, and the release passes only if every chunk
-    does. A single file larger than the limit is split by lines, and says so."""
-    r = sh(["git", "-C", str(ROOT), "diff", f"{base}...{head}", "--", ".", ":(exclude)CHANGELOG.md"])
+    does. A single file larger than the limit is split by lines, and says so. The only
+    files not sent are `left_out`: proven vendored docs, named in the brief and reports."""
+    spec = [".", ":(exclude)CHANGELOG.md"] + [f":(exclude,literal){p}" for p in left_out]
+    r = sh(["git", "-C", str(ROOT), "diff", f"{base}...{head}", "--"] + spec)
     if r.returncode != 0:
         sys.exit(f"release-audit: git diff failed: {r.stderr.strip()}")
     files = re.split(r"(?m)^(?=diff --git )", r.stdout)
@@ -104,19 +172,29 @@ def verdict(text):
     return m[-1] if m else "NONE"
 
 
-def run_outside(brief_path):
+def run_outside(brief_path, model=None):
+    """-> (report text, model that answered). The bridge's --json names the model that
+    actually answered, which differs from the one asked for when it falls back."""
     cmd = os.environ.get("AIOS_AUDIT_OUTSIDE")
     cmd = cmd.split() if cmd else [sys.executable, str(ROOT / "hooks" / "openrouter.py")]
-    r = sh(cmd + ["--prompt-file", str(brief_path)])
+    model = model or OUTSIDE_MODEL
+    r = sh(cmd + ["--prompt-file", str(brief_path), "--json", "--model", model])
     if r.returncode != 0:
         return ("NOT RUN: the outside-family audit did not run.\n"
                 f"{(r.stderr or r.stdout).strip()}\n\n"
                 "Configure an OpenRouter or Gemini key (hooks/openrouter.py --check says which),"
-                " then run again. VERDICT: NOT RUN\n")
-    return r.stdout
+                " then run again. VERDICT: NOT RUN\n"), model
+    try:
+        d = json.loads(r.stdout)
+        cost = (d.get("usage") or {}).get("cost")
+        if isinstance(cost, (int, float)):
+            COSTS.append(cost)
+        return d.get("text", ""), "%s via %s" % (d.get("model") or model, d.get("provider") or "?")
+    except ValueError:
+        return r.stdout, model
 
 
-def run_claude(brief_path):
+def run_claude(brief_path, model=None):
     # Read-only and context-free: no tools, no MCP servers, no project settings layer (a
     # repo's own .claude/ could carry hooks), every hook disabled, and run from an empty
     # folder so nothing local is picked up.
@@ -125,37 +203,52 @@ def run_claude(brief_path):
     with tempfile.TemporaryDirectory(prefix="release-audit-") as empty:
         settings = Path(empty) / "settings.json"
         settings.write_text(json.dumps({"disableAllHooks": True}), encoding="utf-8")
-        r = sh(cmd + ["-p", prompt, "--tools", "", "--setting-sources", "user", "--settings", str(settings),
+        model = model or CLAUDE_MODEL
+        r = sh(cmd + ["-p", prompt, "--model", model, "--tools", "", "--setting-sources", "user", "--settings", str(settings),
                       "--strict-mcp-config", "--permission-mode", "default"],
                input=Path(brief_path).read_text(encoding="utf-8"), cwd=empty)
     if r.returncode != 0:
-        return f"NOT RUN: the fresh-context Claude audit failed.\n{(r.stderr or r.stdout).strip()}\nVERDICT: NOT RUN\n"
-    return r.stdout
+        return f"NOT RUN: the fresh-context Claude audit failed.\n{(r.stderr or r.stdout).strip()}\nVERDICT: NOT RUN\n", model
+    return r.stdout, model
 
 
 def cmd_run(a):
     guard_public_repo()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    chunks = diff_chunks(a.base, a.head)
+    left_out, notes = proven_vendored(a.base, a.head, getattr(a, "all", False))
+    chunks = diff_chunks(a.base, a.head, left_out)
+    scope = ""
+    if notes:
+        scope = ("\n\nScope of this audit. Vendored upstream folders in this release:\n- " + "\n- ".join(notes) +
+                 "\nFiles left out are upstream's own, unmodified; judge only what is shown.")
+        (out / "left-out.txt").write_text("\n".join(notes + [""] + left_out) + "\n", encoding="utf-8")
+        for n in notes:
+            print("scope: " + n)
     reports = {"outside": [], "claude": []}
     for i, chunk in enumerate(chunks, 1):
         part = f" (part {i} of {len(chunks)})" if len(chunks) > 1 else ""
         brief = out / (f"brief-{i}.md" if len(chunks) > 1 else "brief.md")
-        brief.write_text(BRIEF + f"\n\n--- DIFF{part} ---\n" + chunk, encoding="utf-8")
-        for name, fn in (("outside", run_outside), ("claude", run_claude)):
-            reports[name].append((part, fn(brief)))
+        brief.write_text(BRIEF + scope + f"\n\n--- DIFF{part} ---\n" + chunk, encoding="utf-8")
+        for name, fn, model in (("outside", run_outside, getattr(a, "outside_model", None)),
+                                ("claude", run_claude, getattr(a, "claude_model", None))):
+            text, used = fn(brief, model)
+            reports[name].append((part, text, used))
     for name, parts in reports.items():
         # One report per reviewer; its last line is the release verdict: PASS only if
         # every part passed.
-        worst = "PASS" if all(verdict(t) == "PASS" for _, t in parts) else \
-            next(verdict(t) for _, t in parts if verdict(t) != "PASS")
-        text = "\n\n".join(f"## Report{p}\n\n{t.strip()}" for p, t in parts)
+        worst = "PASS" if all(verdict(t) == "PASS" for _, t, _m in parts) else \
+            next(verdict(t) for _, t, _m in parts if verdict(t) != "PASS")
+        text = "\n\n".join(f"## Report{p}\n\nModel: {m}\n\n{t.strip()}" for p, t, m in parts)
+        if notes:
+            text = "Scope: " + "; ".join(notes) + "\n\n" + text
         text += f"\n\nVERDICT: {worst if worst in ('PASS', 'BLOCK') else 'BLOCK'}\n"
         if worst not in ("PASS", "BLOCK"):
             text = text.replace("VERDICT: BLOCK\n", "A part did not run or gave no verdict: blocked.\nVERDICT: BLOCK\n")
         (out / f"{name}.md").write_text(text, encoding="utf-8")
         print(f"{name}: {verdict(text)}  ({out / (name + '.md')}, {len(parts)} part(s))")
+    if COSTS:
+        print("outside audit cost: US$%.2f over %d call(s)" % (sum(COSTS), len(COSTS)))
     return cmd_check(a)
 
 
@@ -183,6 +276,9 @@ def main():
     r.add_argument("--base", default="origin/main")
     r.add_argument("--head", default="HEAD")
     r.add_argument("--out", required=True)
+    r.add_argument("--all", action="store_true", help="audit vendored folders in full, even when proven")
+    r.add_argument("--outside-model", help="model id for the outside-family audit (default %s)" % OUTSIDE_MODEL)
+    r.add_argument("--claude-model", help="model id for the Claude audit (default %s)" % CLAUDE_MODEL)
     c = sub.add_parser("check")
     c.add_argument("--out", required=True)
     a = ap.parse_args()

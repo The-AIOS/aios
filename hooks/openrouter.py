@@ -42,6 +42,11 @@ PROVIDER RESOLUTION — OpenRouter first, Gemini second, then stop
        locations. Never a silent no-op: a scorer that quietly returns
        nothing reads exactly like a scorer that found nothing wrong.
 
+    When both are configured and the first is out of credits, over a spend cap
+    or rate-limited (HTTP 402/429), the next one is tried, and the hand-over is
+    printed. When every one is exhausted, the error names each. Any other
+    failure is reported as is, and --provider forces one with no fallback.
+
     Keys are read from ~/.config/aios-secrets/{openrouter,gemini}.env
     (KEY=value, one per line), then from the environment. The file is
     preferred so a key never has to live in a shell rc.
@@ -63,6 +68,7 @@ routine on a fresh machine.
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.request
@@ -149,6 +155,29 @@ def resolve_provider(force=None):
         if force == "gemini":
             return None, None
     return None, None
+
+
+def configured_providers(force=None):
+    """-> [(provider, key)] in order. Forced: just that one. Otherwise every provider with a
+    key, OpenRouter first, so an exhausted one can hand over to the next."""
+    order = [force] if force else ["openrouter", "gemini"]
+    out = []
+    for p in order:
+        k = find_key("OPENROUTER_API_KEY", "openrouter") if p == "openrouter" else find_key("GEMINI_API_KEY", "gemini")
+        if k:
+            out.append((p, k))
+    return out
+
+
+# Out of credits or over a spending cap: the provider cannot serve this call, so the next
+# configured one is tried. A plain rate limit (a 429 without those words) is a momentary
+# blip and is NOT a reason to send the prompt to another company. Anything else (a bad
+# key, a bad request, a refusal) is reported as is: retrying elsewhere would hide it.
+EXHAUSTED = re.compile(r"^HTTP 402\b|RESOURCE_EXHAUSTED|insufficient[_ ]credits|requires more credits|spend(ing)?[ _]cap|quota", re.I | re.M)
+
+
+def is_exhausted(err):
+    return bool(EXHAUSTED.search(str(err)))
 
 
 def unconfigured_message(force=None):
@@ -309,11 +338,27 @@ def main():
     if a.system_file:
         system = Path(a.system_file).read_text(encoding="utf-8")
 
-    try:
-        fn = call_openrouter if provider == "openrouter" else call_gemini
-        text, model_used, usage = fn(key, a.model, prompt, system)
-    except RuntimeError as e:
-        print(f"openrouter.py: {provider} call failed — {e}", file=sys.stderr)
+    # OpenRouter first, then Gemini: a provider that is out of credits or rate-limited hands
+    # over to the next configured one; when every one is exhausted, say so for each.
+    tried = []
+    text = None
+    for provider, key in configured_providers(a.provider):
+        try:
+            fn = call_openrouter if provider == "openrouter" else call_gemini
+            # A model id is provider-specific: pass it only to the first provider tried.
+            text, model_used, usage = fn(key, a.model if not tried else None, prompt, system)
+            break
+        except RuntimeError as e:
+            if not is_exhausted(e):
+                print(f"openrouter.py: {provider} call failed — {e}", file=sys.stderr)
+                return 1
+            first = str(e).splitlines()[0]
+            tried.append(f"{provider} ({first})")
+            print(f"openrouter.py: {provider} is out of credits or rate-limited ({first}); trying the next provider",
+                  file=sys.stderr)
+    if text is None:
+        print("openrouter.py: every configured provider is out of credits or rate-limited: " + "; ".join(tried),
+              file=sys.stderr)
         return 1
 
     if not text.strip():

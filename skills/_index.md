@@ -1,7 +1,7 @@
 ---
 tags: [skills, index, ai-os]
 created: '2026-03-20'
-updated: '2026-11-06'
+updated: '2026-11-13'
 ---
 # Skills — Source-grouped Registry
 
@@ -17,15 +17,15 @@ updated: '2026-11-06'
 
 | Folder | What | Upstream | License |
 |---|---|---|---|
-| [`skills/aios/`](./aios/) | AIOS-bundled skills (32) — high-signal coding/Obsidian/meta/systems after the 2026-05-21 audit. See "What got pruned" below for what was removed. | This framework | GPL-2.0-or-later |
+| [`skills/aios/`](./aios/) | AIOS-bundled skills (33) — high-signal coding/Obsidian/meta/systems after the 2026-05-21 audit. See "What got pruned" below for what was removed. | This framework | GPL-2.0-or-later |
 | [`skills/anthropic/`](./anthropic/) | Anthropic's example skills (11) — skill-creator, claude-api, mcp-builder, frontend-design, theme-factory, doc-coauthoring, internal-comms, web-artifacts-builder, webapp-testing, algorithmic-art, slack-gif-creator | [anthropics/skills](https://github.com/anthropics/skills) | Apache-2.0 |
-| [`skills/superpowers/`](./superpowers/) | Core software-engineering workflows (14) — TDD, debugging, code review, plans, brainstorming, worktrees, subagent dispatching | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
+| [`skills/superpowers/`](./superpowers/) | Core software-engineering workflows (14) — TDD, debugging, code review, plans, brainstorming, worktrees, subagent dispatching Registered by `skills/setup.sh` only when no Superpowers plugin is installed (a plugin provides them otherwise). | [obra/superpowers](https://github.com/obra/superpowers) | MIT |
 | [`skills/cloudflare/`](./cloudflare/) | Source-code security audit (1) — `security-audit`: reconnaissance, attack-class playbooks, an evidence bar, a coverage ledger, and validators for its findings. Wired to the `security-engineer` agent; guidance by default, a full audit only when asked | [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) | MIT |
 | [`skills/custom/`](./custom/) | Your own skill extensions — survive `/aios:update` | Operator | Operator's choice |
 
 > **Note on skills available via Anthropic's plugin route** — operators get these via Claude Code's plugin marketplace: `claude plugin install document-skills@anthropic-agent-skills` (already enabled in this framework's default `~/.claude/settings.json`):
 >
-> - **`docx`, `pdf`, `pptx`, `xlsx`** — *not* vendored here because Anthropic ships them under a proprietary license that prohibits redistribution.
+> - **`docx`, `pdf`, `pptx`, `xlsx`** — *not* vendored here. Apache 2.0 since November 2026 (upstream `2c5958e`), but about 3.6 MB together; the plugin keeps them current without growing the framework.
 > - **`canvas-design`** — Apache 2.0 but ships with 5.5 MB of curated fonts (81 font files for poster/design variety). Not bundled by us to keep the framework lean (would have added ~29% to repo size); operators who need it get full quality via the plugin.
 
 ---
@@ -52,9 +52,9 @@ Apache-2.0 licensed example skills from Anthropic's official repo. Covers creati
 
 ## Superpowers (obra/superpowers)
 
-Core software-engineering disciplines, vendored at v6.4.1 (14 of its 15 skills; `diagnosing-superpowers` is left out on purpose — it files bug reports upstream). Many reference each other (e.g., `requesting-code-review` dispatches via `subagent-driven-development`).
+Core software-engineering disciplines, vendored at v7.0.2 (14 of its 15 skills; `diagnosing-superpowers` is left out on purpose — it files bug reports upstream). Many reference each other (e.g., `requesting-code-review` dispatches via `subagent-driven-development`).
 
-> **v6 runs a plan continuously, and upstream's own rule is to rule on ambiguities and keep going ("Rulings, not stalls") — listing every ruling in the final message.** AIOS's contract outranks that, and upstream agrees (`using-superpowers`: your CLAUDE.md and AGENTS.md take precedence). So its four stops — irreversible, security-sensitive, outward-facing, a plan too broken to follow — apply, **plus** anything the operator's `INTENT.md` marks ask or escalate: a pricing, legal, public or client-facing decision is never one of upstream's rulings. Two things it still does without asking, which an operator can gate with a permission rule if they want to: `using-git-worktrees` runs the project's dependency install (npm, pip, poetry, cargo), and `executing-plans` / `subagent-driven-development` need bash for their `scripts/`.
+> **v6 and later run a plan continuously, and upstream's own rule is to rule on ambiguities and keep going ("Rulings, not stalls") — listing every ruling in the final message.** AIOS's contract outranks that, and upstream agrees (`using-superpowers`: your CLAUDE.md and AGENTS.md take precedence). So its four stops — irreversible, security-sensitive, outward-facing, a plan too broken to follow — apply, **plus** anything the operator's `INTENT.md` marks ask or escalate: a pricing, legal, public or client-facing decision is never one of upstream's rulings. Two things it still does without asking, which an operator can gate with a permission rule if they want to: `using-git-worktrees` runs the project's dependency install (npm, pip, poetry, cargo), and `executing-plans` / `subagent-driven-development` need bash for their `scripts/`.
 
 | Skill | When to use |
 |-------|-------------|
@@ -99,6 +99,7 @@ Core software-engineering disciplines, vendored at v6.4.1 (14 of its 15 skills; 
 
 **Meta**
 - `deep-research` — multi-source research for acting under uncertainty; maps the operator's corpus first, sweeps several angles, triangulates, and returns ranked what/why/how proposals (each with an output mode). The harness behind the strategy agents (`market-researcher`, `company-analyst`, `consultant`, `protocol-steward`)
+- `suggest-agent` — suggest the one agent (hat) that fits a request, in one fixed line the AIOS App renders, and wear it or open it only on a yes; also how a session changes hat mid-task
 - `orchestration-ladder` — the agent → parallel → workflow decision lens; picks the right orchestration primitive (single agent, parallel fan-out, or a deterministic workflow) for a task's shape
 - `watch-video` — actually watch/listen to a video or recording and hold it in context (routes the `transcribe.py` + `video-watch.py` hooks, which have no semantic match of their own); a quick comprehension action, **not** filing — `/aios:ingest` remains the path for turning a source into a permanent note
 - `motion-lab` — make motion that renders to video or GIF (a loop, a sting, a title card, a launch or explainer film, a deck component as a clip): every frame a pure function of t, direction given as numbers (the eight-line template, easings, springs as damping ratio, beat grid), and a render → look → fix loop measured by `hooks/motion-render.py` + `hooks/motion-check.py`. Not for reading someone else's video (`watch-video`)

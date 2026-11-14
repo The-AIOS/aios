@@ -35,7 +35,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _accounts  # noqa: E402
-from _fs import blob_token_state, seat_generation, write_json_atomic  # noqa: E402
+from _fs import blob_token_state, pid_alive as _pid_alive, seat_generation, write_json_atomic  # noqa: E402
 
 # Text read from files (vault headings, request payloads, names) carries "→", "—" and
 # accents. On a Windows console stdout/stderr default to cp1252, so print() raises
@@ -856,31 +856,6 @@ RC_LOG = os.path.join(CONFIG_DIR, "rc-reconnect.log")
 # Control panel and the session sits `waiting` on "Continue" -- so the command is only
 # ever sent once the registry shows the drop.
 RC_WAIT_DROP_SECS = 90
-
-
-def _pid_alive(pid: int) -> bool:
-    """Liveness without side effects on every platform. NEVER os.kill(pid, 0) on Windows:
-    there signal 0 is not a probe, it is TerminateProcess with exit code 0."""
-    if pid <= 0:
-        return False
-    if os.name == "nt":
-        import ctypes
-        k32 = ctypes.windll.kernel32
-        h = k32.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
-        if not h:
-            return k32.GetLastError() == 5         # ERROR_ACCESS_DENIED: exists, not ours
-        try:
-            code = ctypes.c_ulong()
-            return bool(k32.GetExitCodeProcess(h, ctypes.byref(code))) and code.value == 259  # STILL_ACTIVE
-        finally:
-            k32.CloseHandle(h)
-    try:
-        os.kill(pid, 0)
-        return True
-    except PermissionError:
-        return True
-    except OSError:
-        return False
 
 
 def session_states() -> tuple:
