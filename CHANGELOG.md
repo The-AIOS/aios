@@ -59,6 +59,17 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-14 — The hat a session wears now shows in one fixed line
+
+`hash: 5cc662c`
+
+> **What you can now do.** See which hat a session put on in one fixed line at the start of every spawned session, `Wearing agent: accountant.`, which the AIOS App shows as the session's hat.
+
+**The wearing line** (follows #299, #307). Sessions already chose the right hat from their name and your projects' Hats rows, and said so in their own words. But the fixed line was defined only inside the `suggest-agent` skill, which a starting session never opens, so the line the App reads never appeared. CLAUDE.md § Identity step 2 now spells it out. The skill's description also no longer says it is not for skills, which had told sessions to skip it whenever a skill matched the request too. Suggestions in the middle of a session still depend on the session opening the skill by itself, which it often does not; a hook that makes them reliable is planned for the next release.
+
+**Action required** — check first; do only what applies:
+1. **Start a new Claude session**, so the updated CLAUDE.md and skill load.
+
 ## 2026-11-13 — Sessions wear the right hat for their name and their project
 
 `hash: 1a88208 · 85fe234` · [#299](https://github.com/The-AIOS/aios/issues/299) · [#307](https://github.com/The-AIOS/aios/issues/307) · [#292](https://github.com/The-AIOS/aios/issues/292) · [#303](https://github.com/The-AIOS/aios/issues/303) · [#271](https://github.com/The-AIOS/aios/issues/271) · [#304](https://github.com/The-AIOS/aios/issues/304) · [#306](https://github.com/The-AIOS/aios/issues/306) · [#313](https://github.com/The-AIOS/aios/issues/313) · [#310](https://github.com/The-AIOS/aios/issues/310)
