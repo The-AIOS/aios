@@ -66,6 +66,10 @@ check("by default the hat goes on and work continues", "put the hat on and keep 
 check("INTENT.md's Wearing agents (hats) row can make it ask, per agent too", "Wearing agents (hats)" in skill and "ask: lawyer" in skill)
 check("ask with nobody there: carry on without the hat, never stall", "carry on **without** the hat" in skill and "Never stall" in skill)
 check("'open' moves the work to its own session; 'no' takes the hat off", '"open"' in skill and '"no"' in skill and "Wearing agent: none." in skill)
+op = re.search(r"Pattern: `(\^Opened agent session: [^`]+\$)`", skill)
+orx = re.compile(op.group(1)) if op else None
+check("after 'open', a fixed Opened agent session line names the new session", bool(orx) and orx.match("Opened agent session: accountant-acme.") and not orx.match("Opened agent session: Accountant Acme."))
+check("a failed load writes Wearing agent: none.", "fails to load the hat" in skill and "could not be put on" in skill)
 check("a separate session opens only on the operator's 'open'", "Opens a separate session only when the operator says" in skill)
 check("no agent is named none (the take-off line stays unambiguous)", not glob.glob("agents/**/none.md", recursive=True))
 intent = open("INTENT.md", encoding="utf-8").read()
