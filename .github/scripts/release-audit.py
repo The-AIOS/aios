@@ -23,8 +23,8 @@ WHAT IS SENT
     The release diff minus CHANGELOG.md, and minus the docs of any vendored folder this
     release touches that is PROVEN byte for byte against its upstream (vendored-pins
     --upstream). Those are upstream's files, unmodified; re-reading them was most of a
-    release's audit time and its findings were upstream's choices. Scripts inside those
-    folders are always sent. The brief, both reports and left-out.txt name what was left
+    release's audit time and its findings were upstream's choices. Scripts and every
+    SKILL.md inside those folders are always sent: a SKILL.md is behaviour. The brief, both reports and left-out.txt name what was left
     out. --all sends everything.
 
 THE GATE
@@ -99,7 +99,8 @@ def proven_vendored(base, head, audit_all=False):
     Two models re-reading upstream's docs on every pin refresh is most of an audit's time,
     and its findings are upstream's choices, which a re-vendor cannot change. So when the
     folder is PROVEN against its upstream (tests/vendored-pins.test.sh --upstream), its
-    non-script files are left out; its scripts are always read. Not proven: nothing is left
+    reference files are left out; its scripts and every SKILL.md (instructions the model
+    follows, so behaviour) are always read. Not proven: nothing is left
     out. --all leaves nothing out."""
     if audit_all:
         return [], []
@@ -117,10 +118,12 @@ def proven_vendored(base, head, audit_all=False):
         if r.returncode != 0:
             notes.append(f"{d}: NOT proven against its upstream, so audited in full")
             continue
-        skip = [f for f in mine if not is_script(f, head) and not f.endswith((".upstream-sync", ".upstream-manifest"))]
+        # A SKILL.md is behaviour, not reference: the model follows it, so it is always read.
+        skip = [f for f in mine if not is_script(f, head) and os.path.basename(f) != "SKILL.md"
+                and not f.endswith((".upstream-sync", ".upstream-manifest"))]
         left_out += skip
-        notes.append(f"{d}: proven byte for byte against its upstream; {len(skip)} non-script file(s) left out, "
-                     f"{len(mine) - len(skip)} script or record file(s) audited")
+        notes.append(f"{d}: proven byte for byte against its upstream; {len(skip)} reference file(s) left out, "
+                     f"{len(mine) - len(skip)} SKILL.md, script or record file(s) audited")
     return left_out, notes
 
 

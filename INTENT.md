@@ -32,6 +32,7 @@
 | *Financial decisions* | *ask* | |
 | *Content publishing* | *draft* | |
 | *Agent spawning* | *autonomous* | |
+| *Wearing agents (hats)* | *autonomous* | *`ask` to be asked first; or name agents: `ask: lawyer, accountant`* |
 | *Project note updates* | *autonomous* | |
 | *Observed context writes* | *autonomous* | |
 | *Git push (personal repo)* | *autonomous* | |

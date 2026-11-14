@@ -61,7 +61,15 @@ check("a yes to here writes the wearing line", "write the wearing line" in skill
 
 # 3. The rules that make a suggestion safe.
 check("suggests at most one, and nothing when none fits", "at most one" in skill.lower() and "worse than none" in skill)
-check("never opens or loads without a yes", re.search(r"never (opens|loads)", skill, re.I) is not None and "yes" in skill)
+# Default (#299, operator's decision): the hat goes on and work continues; INTENT.md can make it ask.
+check("by default the hat goes on and work continues", "put the hat on and keep going" in skill and "no such row (the default)" in skill)
+check("INTENT.md's Wearing agents (hats) row can make it ask, per agent too", "Wearing agents (hats)" in skill and "ask: lawyer" in skill)
+check("ask with nobody there: carry on without the hat, never stall", "carry on **without** the hat" in skill and "Never stall" in skill)
+check("'open' moves the work to its own session; 'no' takes the hat off", '"open"' in skill and '"no"' in skill and "Wearing agent: none." in skill)
+check("a separate session opens only on the operator's 'open'", "Opens a separate session only when the operator says" in skill)
+check("no agent is named none (the take-off line stays unambiguous)", not glob.glob("agents/**/none.md", recursive=True))
+intent = open("INTENT.md", encoding="utf-8").read()
+check("the shipped INTENT.md carries the Wearing agents (hats) row", "| *Wearing agents (hats)* | *autonomous* |" in intent)
 check("reads the index every time, so new agents need no edit", "every time" in skill and "agents/_index.md" in skill)
 check("opening goes through the spawn inbox, never spawn", "spawn inbox" in skill and "never by calling `spawn`" in skill)
 

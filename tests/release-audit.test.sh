@@ -67,8 +67,8 @@ rm -rf "$T/r"; $PYBIN $S check --out "$T/r" >"$T/log" 2>&1; rc=$?
 V="$T/vend"; mkdir -p "$V/.github/scripts" "$V/skills/up"; cp .github/scripts/release-audit.py "$V/.github/scripts/"
 gv(){ git -C "$V" -c user.name=t -c user.email=t@t -c commit.gpgsign=false "$@"; }
 gv init -q; gv remote add origin https://github.com/The-AIOS/aios.git
-printf 'repo=x\nhash=abc\n' > "$V/skills/up/.upstream-sync"; echo old > "$V/skills/up/guide.md"; gv add -A; gv commit -qm base
-echo "UPSTREAM DOC CHANGE" > "$V/skills/up/guide.md"; printf 'print("UPSTREAM SCRIPT")\n' > "$V/skills/up/run.py"; echo "OUR CODE" > "$V/ours.md"
+printf 'repo=x\nhash=abc\n' > "$V/skills/up/.upstream-sync"; echo old > "$V/skills/up/guide.md"; echo old > "$V/skills/up/SKILL.md"; gv add -A; gv commit -qm base
+echo "UPSTREAM DOC CHANGE" > "$V/skills/up/guide.md"; echo "UPSTREAM SKILL CHANGE" > "$V/skills/up/SKILL.md"; printf 'print("UPSTREAM SCRIPT")\n' > "$V/skills/up/run.py"; echo "OUR CODE" > "$V/ours.md"
 gv add -A; gv commit -qm release
 VS="$V/.github/scripts/release-audit.py"
 mk out 'echo "VERDICT: PASS"'; mk cl 'echo "VERDICT: PASS"'
@@ -76,6 +76,7 @@ AIOS_AUDIT_PIN_CHECK=true AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" 
 B="$T/rp/brief.md"
 [ $rc -eq 0 ] && grep -qF 'OUR CODE' "$B" && ! grep -qF 'UPSTREAM DOC CHANGE' "$B" && ok "a proven vendored folder's docs are left out; our own code is sent" || no "proven docs were sent or our code was not" "$(cat "$T/log")"
 grep -qF 'UPSTREAM SCRIPT' "$B" && ok "a script inside a proven vendored folder is still audited" || no "a vendored script was left out"
+grep -qF 'UPSTREAM SKILL CHANGE' "$B" && ok "a SKILL.md inside a proven vendored folder is still audited (instructions are behaviour)" || no "a vendored SKILL.md was left out"
 grep -qF 'skills/up: proven byte for byte' "$B" && grep -qF 'skills/up: proven' "$T/rp/outside.md" && grep -qF 'skills/up/guide.md' "$T/rp/left-out.txt" \
   && ok "the brief, the reports and left-out.txt name what was left out" || no "the scope is not named"
 AIOS_AUDIT_PIN_CHECK=false AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $VS run --base HEAD~1 --head HEAD --out "$T/rf" >"$T/log" 2>&1
