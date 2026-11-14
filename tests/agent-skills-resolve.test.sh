@@ -68,7 +68,7 @@ if grep -qE '^\s*(anthropic \| superpowers|anthropic)\)' skills/setup.sh; then
 else
   ok "anthropic/ is no longer excluded"
 fi
-if grep -qF 'sp_plugin=1' skills/setup.sh && grep -qF '[ "$source_dir" = superpowers ] && [ "$sp_plugin" -eq 1 ]' skills/setup.sh; then
+if grep -qF 'installed_plugins.json' skills/setup.sh && grep -qF 'sp_plugin=1' skills/setup.sh && grep -qF '[ "$source_dir" = superpowers ] && [ "$sp_plugin" -eq 1 ]' skills/setup.sh; then
   ok "the registrar verifies its own exclusion premise at runtime (superpowers/ is skipped only when its plugin is installed)"
 else
   no "no presence check behind the exclusion list" "an unverified premise is what produced this bug"

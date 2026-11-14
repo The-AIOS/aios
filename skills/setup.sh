@@ -45,12 +45,14 @@ mkdir -p "$DEST"
 echo "Registering AIOS skills into $DEST ..."
 echo ""
 
-# Is a Superpowers plugin installed? Then it provides those skills, and linking the
-# bundled copy would double them. Checked here, at runtime, never assumed.
+# Is a Superpowers plugin INSTALLED? Then it provides those skills, and linking the
+# bundled copy would double them. Read from Claude Code's own record of installed plugins
+# (any "superpowers@<marketplace>" entry), never from which marketplaces exist: a
+# marketplace can be added with the plugin never installed, and the plugin can come from
+# a marketplace with any name. Checked here, at runtime, never assumed.
 sp_plugin=0
-for m in "$HOME"/.claude/plugins/marketplaces/*superpowers*/ "$HOME"/.claude/plugins/cache/*superpowers*/; do
-  [ -d "$m" ] && { sp_plugin=1; break; }
-done
+grep -q '"superpowers@' "$HOME/.claude/plugins/installed_plugins.json" 2>/dev/null && sp_plugin=1
+unlinked=0
 
 linked=0
 skipped=0
@@ -62,8 +64,13 @@ for skill_md in "$SCRIPT_DIR"/*/*/SKILL.md; do
   source_dir="$(basename "$(dirname "$skill_dir")")"
   name="$(basename "$skill_dir")"
 
-  # A Superpowers plugin provides these skills when installed (see the header).
+  # A Superpowers plugin provides these skills when installed (see the header). A link
+  # this script made earlier, before the plugin arrived, would now double it: remove
+  # exactly that link (it points at the bundled copy). Never a plain folder, never data.
   if [ "$source_dir" = superpowers ] && [ "$sp_plugin" -eq 1 ]; then
+    if [ -L "$DEST/$name" ] && [ "$(readlink "$DEST/$name")" = "$skill_dir" ]; then
+      rm "$DEST/$name" && { echo "  - unlinked (its plugin provides it): $name"; unlinked=$((unlinked + 1)); }
+    fi
     skipped_sources="$skipped_sources $name"; continue
   fi
 
@@ -111,7 +118,8 @@ echo "Restart Claude Code sessions to load newly-registered skills."
 # ─────────────────────────────────────────────────────────────────────────────
 if [ "$sp_plugin" -eq 1 ]; then
   echo ""
-  echo "ℹ️  Superpowers comes from its installed plugin; the bundled copy was not linked."
+  extra=""; [ "$unlinked" -gt 0 ] && extra=" (removed $unlinked earlier link(s))"
+  echo "ℹ️  Superpowers comes from its installed plugin, so the bundled copy is not linked$extra."
 fi
 if [ -n "$stale" ]; then
   n_stale=$(echo $stale | wc -w | tr -d ' ')

@@ -37,12 +37,30 @@ printf '%s' "$out" | grep -q "old copy, left as it is: $SP" && printf '%s' "$out
   && ok "the stale copy is named, with what to do" || no "stale copy not reported: $out"
 [ -L "$H2/.claude/skills/$AI" ] && ok "other sources still register beside a stale copy" || no "$AI not linked beside a stale copy"
 
-# 4. Plugin installed: the bundled Superpowers is not linked (no doubling); other sources still are.
-H3=$(mktemp -d "${TMPDIR:-/tmp}/sp3.XXXXXX"); mkdir -p "$H3/.claude/plugins/marketplaces/superpowers-marketplace"
+plugin(){ mkdir -p "$1/.claude/plugins"; printf '{"version":2,"plugins":{"superpowers@%s":[{"scope":"user"}]}}\n' "$2" > "$1/.claude/plugins/installed_plugins.json"; }
+
+# 4. Plugin installed (from any marketplace): the bundled Superpowers is not linked; other sources still are.
+H3=$(mktemp -d "${TMPDIR:-/tmp}/sp3.XXXXXX"); plugin "$H3" claude-plugins-official
 out=$(run "$H3"); rc=$?
 [ "$rc" = 0 ] && ok "setup exits 0 with the plugin installed" || no "setup failed with the plugin (rc=$rc)"
 [ ! -e "$H3/.claude/skills/$SP" ] && ok "plugin installed: the bundled Superpowers is not linked" || no "plugin installed but $SP was linked (doubled)"
 [ -L "$H3/.claude/skills/$AI" ] && ok "plugin installed: other sources still register" || no "$AI not linked with the plugin installed"
 printf '%s' "$out" | grep -q 'comes from its installed plugin' && ok "it says Superpowers comes from the plugin" || no "no plugin note"
+
+# 5. A marketplace that is merely added (plugin not installed) does not count: the bundled copy is linked.
+H4=$(mktemp -d "${TMPDIR:-/tmp}/sp4.XXXXXX"); mkdir -p "$H4/.claude/plugins/marketplaces/superpowers-marketplace"
+run "$H4" >/dev/null
+[ -L "$H4/.claude/skills/$SP" ] && ok "a marketplace without the installed plugin does not suppress the bundled copy" || no "an added-but-uninstalled marketplace suppressed Superpowers"
+
+# 6. The plugin arrives after setup linked the bundled copy: setup removes exactly its own links, never a plain folder.
+H5=$(mktemp -d "${TMPDIR:-/tmp}/sp5.XXXXXX"); run "$H5" >/dev/null
+OTHER=$(ls -d "$ROOT"/skills/superpowers/*/ | sed -n 2p); OTHER=$(basename "$OTHER")
+unlink "$H5/.claude/skills/$OTHER"; mkdir "$H5/.claude/skills/$OTHER"; echo mine > "$H5/.claude/skills/$OTHER/SKILL.md"
+plugin "$H5" superpowers-marketplace; out=$(run "$H5")
+[ ! -e "$H5/.claude/skills/$SP" ] && ok "after the plugin arrives, setup removes the bundled link it made earlier (no doubling)" || no "the earlier link stayed beside the plugin"
+[ "$(cat "$H5/.claude/skills/$OTHER/SKILL.md" 2>/dev/null)" = mine ] && ok "a plain folder is never removed, even with the plugin installed" || no "a plain folder was removed"
+[ -L "$H5/.claude/skills/$AI" ] && ok "other sources' links are untouched" || no "another source's link was removed"
+printf '%s' "$out" | grep -q 'removed [0-9]* earlier link' && ok "it says how many earlier links it removed" || no "no note about removed links"
+
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

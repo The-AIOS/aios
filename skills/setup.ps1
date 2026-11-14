@@ -17,14 +17,33 @@ New-Item -ItemType Directory -Force -Path $Dest | Out-Null
 Write-Host "Registering AIOS skills into $Dest ..."
 Write-Host ""
 
-$plugins = Join-Path $HOME ".claude\plugins"
-$spPlugin = @(Get-ChildItem -Path (Join-Path $plugins "marketplaces"), (Join-Path $plugins "cache") -Directory -Filter '*superpowers*' -ErrorAction SilentlyContinue).Count -gt 0
+# Installed, not merely available: Claude Code's own record of installed plugins, any
+# "superpowers@<marketplace>" entry (see setup.sh).
+$installed = Join-Path $HOME ".claude\plugins\installed_plugins.json"
+$spPlugin = (Test-Path $installed) -and ((Get-Content -Raw -LiteralPath $installed) -match '"superpowers@')
+$unlinked = 0
 
 $linked = 0
 $skipped = 0
 $stale = @()
 $skipSources = @()
 if ($spPlugin) { $skipSources += 'superpowers' }
+
+# A junction this script made before the plugin arrived would now double it: remove the
+# junction itself (DirectoryInfo.Delete() on a junction never touches its target).
+if ($spPlugin) {
+  Get-ChildItem -Path (Join-Path $ScriptDir 'superpowers') -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+    $t = Join-Path $Dest $_.Name
+    if (Test-Path -LiteralPath $t) {
+      $item = Get-Item -LiteralPath $t -Force
+      if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -and ($item.Target -eq $_.FullName)) {
+        $item.Delete()
+        Write-Host "  - unlinked (its plugin provides it): $($_.Name)"
+        $unlinked++
+      }
+    }
+  }
+}
 
 Get-ChildItem -Path $ScriptDir -Directory |
   Where-Object { $skipSources -notcontains $_.Name } |
@@ -60,7 +79,8 @@ Write-Host "Done - linked $linked, skipped $skipped."
 Write-Host "Restart Claude Code to load newly-registered skills."
 if ($spPlugin) {
   Write-Host ""
-  Write-Host "Superpowers comes from its installed plugin; the bundled copy was not linked."
+  $extra = ""; if ($unlinked -gt 0) { $extra = " (removed $unlinked earlier link(s))" }
+  Write-Host "Superpowers comes from its installed plugin, so the bundled copy is not linked$extra."
 }
 if ($stale.Count -gt 0) {
   Write-Host ""
