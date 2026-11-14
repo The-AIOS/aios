@@ -185,11 +185,11 @@ POST_SWAP_WAIT_SECS = 3
 
 
 def is_pid_alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-        return True
-    except OSError:
-        return False
+    """Side-effect-free liveness (#303). On Windows os.kill(pid, 0) is TerminateProcess, so
+    this delegates to the one shared check in _fs.py, which _watch.py uses too."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from _fs import pid_alive
+    return pid_alive(pid)
 
 
 def env_var_from_pid(pid: int, key: str) -> str:

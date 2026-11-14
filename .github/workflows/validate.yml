@@ -1635,6 +1635,10 @@ jobs:
         # karpathy-coding was adapted MIT text with no credit, listed as GPL. (#310)
         run: bash tests/third-party-credits.test.sh
 
+      - name: liveness checks never end the process they check
+        # On Windows os.kill(pid, 0) is TerminateProcess; _resume.py used it. (#303)
+        run: bash tests/pid-liveness.test.sh
+
       - name: onboarding-aios answers what the AIOS is for, and hands a personal purpose to finding-your-why
         # Newcomers asked what it is all for the moment orientation worked; the agent had no move. (#270)
         run: bash tests/onboarding-aios-why.test.sh
@@ -2308,6 +2312,10 @@ jobs:
           else
             echo "::warning::python3 emitted LF on this runner — the CRLF condition is absent, so the step below is a smoke test only. The simulated coverage in tests/google-connect.test.sh is what holds."
           fi
+
+      - name: liveness checks never end the process they check, on real Windows (#303)
+        shell: bash
+        run: bash tests/pid-liveness.test.sh
 
       - name: The derivation survives it
         shell: bash

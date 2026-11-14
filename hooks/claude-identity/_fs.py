@@ -91,3 +91,28 @@ def seat_generation() -> int:
             return int(f.read().strip() or 0)
     except (OSError, ValueError):
         return 0
+
+
+def pid_alive(pid: int) -> bool:
+    """Liveness without side effects on every platform. NEVER os.kill(pid, 0) on Windows:
+    there signal 0 is not a probe, it is TerminateProcess with exit code 0."""
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return k32.GetLastError() == 5         # ERROR_ACCESS_DENIED: exists, not ours
+        try:
+            code = ctypes.c_ulong()
+            return bool(k32.GetExitCodeProcess(h, ctypes.byref(code))) and code.value == 259  # STILL_ACTIVE
+        finally:
+            k32.CloseHandle(h)
+    try:
+        os.kill(pid, 0)
+        return True
+    except PermissionError:
+        return True
+    except OSError:
+        return False
