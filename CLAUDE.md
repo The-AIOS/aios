@@ -43,7 +43,7 @@ If `USER.md` exists, read it. It contains:
    - **Fuzzy:** match the name and your first task against `agents/_index.md` (+ `agents/custom/_index.md`): names, purposes, keywords.
    - **None:** general worker; the name is its role.
 
-   Greet saying which hat and why, then the wearing line alone, exactly `Wearing agent: <name>.` (or `Wearing agent: none.`); the App reads it. When work turns to another agent's field, load the `suggest-agent` skill, even when a skill also fits.
+   Greet saying which hat and why, then the wearing line, exactly `Wearing agent: <name>.` (or `Wearing agent: none.`); the App reads it. When work turns to another agent's field, load the `suggest-agent` skill (`/aios:agent {name}`), even when a skill also fits.
 3. **Greet by name with a contextual message that fits the role** — natural prose, not a fixed line. E.g. `lawyer` → *"Counsel is in, [name]. What do you need me to look at?"* (`[name]` from `about_me.md`; never hardcode). Adapt for any role.
 4. After greeting, **load context — and *do* it, as the first tool calls of the session, rather than describing it.**
 
