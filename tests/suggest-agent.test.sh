@@ -49,6 +49,16 @@ check("bold, backticks, capitals, two agents or no reason do not match", bool(rx
 m = rx.match(good[1]) if rx else None
 check("the pattern captures the agent name", bool(m) and m.group(1) == "security-engineer")
 
+# 2b. The wearing line: written whenever a hat goes on; the App's current-hat chip reads the last one.
+wp = re.search(r"```\n(\^Wearing agent: .*\$)\n```", skill)
+check("the skill publishes the wearing-line pattern", wp is not None)
+wrx = re.compile(wp.group(1)) if wp else None
+wex = re.search(r"```\n(Wearing agent: [^\n]+)\n```", skill)
+check("the wearing example matches its pattern", bool(wrx and wex and wrx.match(wex.group(1))))
+check("wearing lines: well-formed match, malformed do not", bool(wrx) and wrx.match("Wearing agent: deck-builder.")
+      and not any(wrx.match(b) for b in ["**Wearing agent: accountant.**", "Wearing agent: accountant", "Wearing agent: Accountant.", "Now wearing agent: accountant."]))
+check("a yes to here writes the wearing line", "write the wearing line" in skill)
+
 # 3. The rules that make a suggestion safe.
 check("suggests at most one, and nothing when none fits", "at most one" in skill.lower() and "worse than none" in skill)
 check("never opens or loads without a yes", re.search(r"never (opens|loads)", skill, re.I) is not None and "yes" in skill)
@@ -59,6 +69,7 @@ check("opening goes through the spawn inbox, never spawn", "spawn inbox" in skil
 claude = open("CLAUDE.md", encoding="utf-8").read()
 ident = claude.split("## Identity & Greeting", 1)[-1].split("\n## ", 1)[0]
 check("CLAUDE.md § Identity sends hat changes through suggest-agent", "suggest-agent" in ident)
+check("CLAUDE.md's greeting writes the wearing line", "wearing line" in ident)
 check("the skills index lists it", "`suggest-agent`" in open("skills/_index.md", encoding="utf-8").read())
 print("%d passed, %d failed" % (ok, fail))
 sys.exit(1 if fail else 0)

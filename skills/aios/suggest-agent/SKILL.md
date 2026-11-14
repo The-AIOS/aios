@@ -41,9 +41,27 @@ For surfaces that render it (the AIOS App turns it into a button and a hat chang
 ^Suggested agent: ([a-z0-9][a-z0-9-]*) \((.{1,80})\)\. Wear it here, or open it as its own session\?$
 ```
 
+## The wearing line (exact — the App shows the current hat from it)
+
+Whenever this session **puts a hat on**, write one more fixed line on its own:
+
+```
+Wearing agent: accountant.
+```
+
+- At session start, after CLAUDE.md § Identity step 2 picked a hat (any rung but *None*), as part of the greeting.
+- After a yes to "here", once `/aios:agent {name}` has loaded it.
+- Same rules as the suggestion line: the agent's file name, nothing else on the line, never translated, no markdown. Write it once per change, never to restate the current hat.
+
+The last such line in a transcript is the session's current hat, which is how a resumed session shows it again. Pattern:
+
+```
+^Wearing agent: ([a-z0-9][a-z0-9-]*)\.$
+```
+
 ## What a yes does
 
-- **"here"** (or a plain yes): wear the hat in this session. Run `/aios:agent {name}`, then say in one line that you are now wearing it, and continue the work. Use this when the work is part of what this session is already doing.
+- **"here"** (or a plain yes): wear the hat in this session. Run `/aios:agent {name}`, write the wearing line, and continue the work. Use this when the work is part of what this session is already doing.
 - **"open"**: start it as its own session through the spawn inbox, never by calling `spawn` (see the `orchestration-ladder` skill). Name it role first, `{agent}-{subject}` (`accountant-acme`, no dates), and put the task and where its output goes in the brief. Use this when the work will outlive this conversation or should run beside it.
 - **No, or no answer:** carry on without the hat, and do not suggest it again for this work.
 

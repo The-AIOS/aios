@@ -43,7 +43,7 @@ If `USER.md` exists, read it. It contains:
    - **Fuzzy:** match the name and your first task against `agents/_index.md` (+ `agents/custom/_index.md`): names, purposes, keywords.
    - **None:** general worker; the name is its role.
 
-   Greet saying which hat and why. When the work turns to another hat's field, suggest it (`suggest-agent` skill); on a yes, `/aios:agent {name}`.
+   Greet saying which hat and why, then the `suggest-agent` wearing line. When the work turns to another hat's field, suggest it (`suggest-agent` skill); on a yes, `/aios:agent {name}`.
 3. **Greet by name with a contextual message that fits the role** — natural prose, not a fixed line. E.g. `lawyer` → *"Counsel is in, [name]. What do you need me to look at?"* (`[name]` from `about_me.md`; never hardcode). Adapt for any role.
 4. After greeting, **load context — and *do* it, as the first tool calls of the session, rather than describing it.**
 
@@ -110,7 +110,7 @@ If `USER.md` exists, read it. It contains:
 > - **No live surface** (no `~/.aios/surfaces/*.json` names a running pid — the normal case for a plain clone, and the temporary case for anyone who closed theirs) → do **not** call `spawn`. Hand it to the operator — a surface's **"Spawn a session"** control, or `spawn <name> "<task>"` in a fresh terminal — with the exact name + task so it's one paste. **The tell you got it wrong:** a red-dot *"tool use was rejected"*, or a `spawn` that opens no terminal.
 > - **Harvesting:** a spawned worker is an independent session you can't harvest inline — it reports back, or you read its surface. If you need the result *returned to this session*, you wanted a **subagent or workflow** — see `orchestration-ladder`.
 
-**When the user asks to spawn with a task** (*"spawn an agent to review Acme's Q1 financials"*), send name and task in one inbox request: `{"name":"accountant-acme","task":"Help me analyze Acme's Q1 financials"}` (a human types `spawn accountant-acme "…"`). **Name it role-first:** `{hat-or-kind}-{subject}`, or `{project}-{subject}` when that project's hats apply (§ Identity step 2). Lowercase, ≤3 words, no dates. Reusing a name continues that session; a rename keeps the first word.
+**When the user asks to spawn with a task** (*"spawn an agent to review Acme's Q1 financials"*), send name and task in one inbox request: `{"name":"accountant-acme","task":"Help me analyze Acme's Q1 financials"}` **Name it role-first:** `{hat-or-kind}-{subject}`, or `{project}-{subject}` when that project's hats apply (§ Identity step 2). Lowercase, ≤3 words, no dates. Reusing a name continues that session; a rename keeps the first word.
 
 **Name the output destination in the brief (spawned-output discipline).** A worker can't see your vault conventions; if the brief doesn't say where the deliverable lands, it drifts to the worker's cwd or an invented folder. Route it by type via the File Placement Router and say so: audience-facing / ships outward → `03 - export/{type-or-venture}/` · one project's state → the project note · compounds / will be re-read → the best-matching `reflections/{subfolder}` (e.g. `research`, `audits`) by the retrieval test. **An export is never accidental** — a deck or audience-facing report goes to `export/`, never to reflections. Only a brief that genuinely forgets falls back to `vault/00 - notes/reflections/_inbox/` — provisional, emptied by `/aios:housekeeping` (Bucket 25). *The brief routes by type, or the output waits in `_inbox` — never the worker's guess.*
 

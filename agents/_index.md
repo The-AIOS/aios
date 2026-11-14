@@ -56,7 +56,7 @@ A session's name decides which agent it wears (its **hat**). CLAUDE.md § Identi
    - `bookkeeper` → [[accountant]] · `contract-reviewer` → [[lawyer]] · `strategist` → [[consultant]]
 5. **None** → general-purpose worker with the session name as role context.
 
-The session says which hat it chose and why, so the operator can correct it. When the work turns to another agent's field, or a session with no hat gets a request one agent clearly fits, it suggests that agent in the `suggest-agent` skill's one fixed line and wears it (`/aios:agent {name}`) or opens it as its own session only on the operator's yes.
+The session says which hat it chose and why, so the operator can correct it, and writes the fixed line `Wearing agent: {name}.` whenever it puts a hat on. When the work turns to another agent's field, or a session with no hat gets a request one agent clearly fits, it suggests that agent in the `suggest-agent` skill's one fixed line and wears it (`/aios:agent {name}`) or opens it as its own session only on the operator's yes.
 
 **`aliases:` on an agent** are kind words a session name may lead with (`deck`, `writer`, `review`). Each word belongs to one agent only; `tests/session-hats.test.sh` checks that.
 
