@@ -6,7 +6,7 @@ Bundled MCP for generating images with Google's Gemini 2.5 Flash Image (a.k.a. "
 
 Single tool: `generate_image(prompt, output_path?, aspect_ratio?, reference_images?)` — generates an image from a text prompt, optionally looking at up to three reference images, saves to disk, returns the path.
 
-- **Model:** `gemini-2.5-flash-image` (Nano Banana, released Aug 2025)
+- **Model:** `gemini-2.5-flash-image` by default (Nano Banana, released Aug 2025). Set `NANO_BANANA_MODEL` in the server's env to use a newer image model, or pass `model` per call
 - **Aspect ratios:** `1:1`, `16:9`, `9:16`, `4:3`, `3:4`
 - **Output:** PNG, saved to `output_path` (default: `~/aios/vault/02 - assets/generated/{timestamp}.png`)
 

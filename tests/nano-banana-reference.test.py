@@ -17,6 +17,7 @@ class FakePart:
 class FakeModels:
     def generate_content(self, model, contents, config):
         sent["contents"] = contents
+        sent["model"] = model
         img = types.SimpleNamespace(inline_data=types.SimpleNamespace(data=b"\x89PNG fake"))
         return types.SimpleNamespace(candidates=[types.SimpleNamespace(content=types.SimpleNamespace(parts=[img]))])
 
@@ -39,6 +40,7 @@ for name, mod in {"google": google, "google.genai": genai, "google.genai.types":
                   "mcp.server.fastmcp": fastmcp}.items():
     sys.modules[name] = mod
 os.environ["GEMINI_API_KEY"] = "test-only"
+os.environ.pop("NANO_BANANA_MODEL", None)
 
 spec = importlib.util.spec_from_file_location("server", ROOT / "mcps/nano-banana-mcp/server.py")
 server = importlib.util.module_from_spec(spec); spec.loader.exec_module(server)
@@ -66,6 +68,12 @@ with tempfile.TemporaryDirectory() as d:
     # at most three
     server.generate_image("x", output_path=str(out), reference_images=[str(ref)] * 5)
     check(sum(isinstance(p, FakePart) for p in sent["contents"]) == 3, "no more than three references are sent")
+
+    # model: default when unset, per-call argument wins, reported in the result
+    r = server.generate_image("x", output_path=str(out))
+    check(sent["model"] == "gemini-2.5-flash-image" and r["model"] == sent["model"], "without NANO_BANANA_MODEL the default model is sent")
+    r = server.generate_image("x", output_path=str(out), model="gemini-test-image")
+    check(sent["model"] == "gemini-test-image" and r["model"] == "gemini-test-image", "a per-call model is sent and reported")
 
     # refusals
     for bad, why in [(str(Path(d) / "missing.png"), "a missing file"), (str(Path(d) / "notes.txt"), "a non-image type")]:
