@@ -524,6 +524,8 @@ source ~/.zshrc   # or ~/.bashrc
 . $PROFILE
 ```
 
+**Trust the run folder once.** Each spawn or resume hands its session one fresh private folder under `~/.aios/run/`, and Claude Code asks whether to trust each new one, so an unattended spawn can stop on a question nobody sees. Run `python3 ~/aios/hooks/run-trust-check.py` (on Windows, the interpreter §10's probe picks): it prints nothing when the folder is already trusted, and otherwise the one command that trusts it (`cd ~/.aios/run && claude`, choose Yes, `/exit`). The operator makes that choice in Claude Code's own dialog; never write `~/.claude.json` for them. Each session still sees only its own handoff folder (#323).
+
 Both installers are **idempotent** — timestamped backup → strip prior wrapper block → append canonical version → content-verify → auto-rollback on failure. Safe to re-run; if your wrapper is already current, re-running is a no-op.
 
 What gets installed:

@@ -1656,6 +1656,9 @@ jobs:
         # find lists only the link itself, so a search there finds nothing and says nothing (#319).
         run: bash tests/find-symlink-root.test.sh
 
+      - name: run-trust-check says once when ~/.aios/run is untrusted, and never writes ~/.claude.json
+        run: bash tests/run-trust-check.test.sh
+
       - name: the Hats step reads session names through a script that prints only validated names and typed prompts
         # Transcripts hold untrusted text; the update must never read them directly. (#307 security review)
         run: bash tests/session-names.test.sh

@@ -998,6 +998,14 @@ For each genuine framework drift surfaced (a Tier-1 file that **differs**, or a 
 
 CRLF-normalize when comparing file *contents* (`LC_ALL=C tr -d '\r'`) per the § Backup-on-divergence CRLF note. **Vault-side `Only in` lines are dropped wholesale** — operator extensions (`custom/`), company namespaces (`<company>/`), and runtime (`.venv/`, `__pycache__/`, `*.log`, OAuth/auth caches, `.session`) live only in the vault, are never in canonical, and are never framework-drift-to-pull. (An upstream *deletion* — a file the vault has that canonical removed — is handled by Step 3.4 — removed when you never edited it, asked about once when you did — not here.) Filtering by **side** (`^Only in $VAULT`), not by token, is what makes this robust — `diff` writes `Only in DIR: name` with a colon, so token patterns like `custom/` silently miss `…/custom: name`.
 
+### 6.8. Run-folder trust: read-only, said once, never written
+
+```bash
+python3 "$HOME/aios/hooks/run-trust-check.py"   # on Windows, the interpreter SETUP §10's probe picks
+```
+
+It prints nothing when `~/.aios/run` is trusted in Claude Code (or nothing has been spawned yet). Otherwise it prints why each spawn asks to trust a new folder and the one command that ends it. Relay that in the operator's language, in one short line, after the update report. **Never trust on their behalf:** nothing in this command writes `~/.claude.json`, because accepting the dialog is their decision (#323). It runs on every update, applied or not, and costs nothing once trusted.
+
 ### 6.9. The star ask — applied runs only, asked once, never again either way
 
 **Runs ONLY when this sync actually applied something.** If zero Tier-1 files changed and the reconcile was clean, skip this step entirely and say nothing. *"Already up to date — by the way, star us"* is asking to be paid for nothing, and it is the difference between a request and a nag.
