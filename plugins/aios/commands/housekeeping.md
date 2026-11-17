@@ -983,6 +983,12 @@ Claude Code deletes transcripts older than `cleanupPeriodDays` (default **30**) 
 
 **Propose** archiving the candidates as one item, with the count and the size. **Only on the operator's yes**, run `python3 ~/aios/hooks/transcript-inventory.py --archive`: it writes them to `~/claude-archive/transcripts-<date>.tar.gz`, checks every file is in the archive at its full size, and only then deletes them. A file it cannot verify is kept, and a failed archive deletes nothing. **If retention is still Claude Code's 30 days**, say so in one line and offer `python3 ~/aios/hooks/install-settings.py`, which shows the change before making it. **Zero candidates** → say *"0 throwaway transcripts"*.
 
+#### Bucket 37: Agent files vs documents — one rule for every surface (NEW — propose-only)
+
+A file under `agents/` is an **agent** when it has `name:` and `description:` frontmatter, is not `_index.md` or `README.md`, is not under a `reference/` folder, and is not marked `agent: false`. The AIOS App, Glass and the hint hook list agents by that rule, so a file that is neither an agent nor clearly a document makes the surfaces disagree (#314).
+
+**Run** `python3 ~/aios/hooks/list-agents.py --unclear` (Windows: the interpreter SETUP §10's probe picks). Each line is one such file. **Propose**, per folder: move a venture's reference documents (laws, glossaries, examples, templates) under a `reference/` subfolder, or add `agent: false` to a single one; for a file meant to be an agent, add the missing `name`/`description`. A company-synced folder (`agents/<company>/` with a sync marker) is fixed in its source repo, never in the vault: say so and propose nothing there. Nothing moves without the operator's yes.
+
 ### Phase 2 — Present the packet
 
 Categorize all findings into one review table:
@@ -1017,6 +1023,7 @@ Categorize all findings into one review table:
 - Synced-skill collisions: {N} synced skills, {M} collisions
 - Discardable views: {N} explainers past 30 days, {M} checkboxes in quarter notes
 - Session transcripts: {N} throwaway candidates ({size}), retention {days} days
+- Agent files vs documents: {N} unclear files ({M} in synced company folders)
 
 ### 🟢 Auto-applied (no approval needed)
 {Low-stakes mechanical fixes — link adds where unambiguous, snapshot timestamp updates, obvious [x] marks}
