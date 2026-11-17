@@ -22,7 +22,7 @@ if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
-ROOT = os.environ.get("AIOS_ROOT") or os.path.join(os.path.expanduser("~"), "aios")
+ROOT = os.environ.get("AIOS_ROOT") or os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))  # hooks/agents/ -> root
 ROW = re.compile(r"^\|\s*\[\[([a-z0-9-]+)\]\]\s*\|([^|]*)\|([^|]*)\|")
 WEARING = re.compile(r"Wearing agent: ([a-z0-9-]+)\.")
 MIN_WORDS = 4

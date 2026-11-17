@@ -16,7 +16,7 @@ Modes:
                             agent fields, not under reference/, not marked agent: false): what
                             /aios:housekeeping proposes to move under reference/, mark, or complete.
                             Exit 1 when any exist (the bundled-tree CI check), 0 otherwise.
-Read-only. AIOS_ROOT overrides the vault root (default ~/aios; a symlink is followed).
+Read-only. AIOS_ROOT overrides the vault root (default: the root this file lives in).
 """
 import json
 import os
@@ -73,7 +73,7 @@ def classify(root):
 
 
 def main(argv):
-    root = os.environ.get("AIOS_ROOT") or os.path.join(os.path.expanduser("~"), "aios")
+    root = os.environ.get("AIOS_ROOT") or os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))  # hooks/agents/ -> root
     rows = list(classify(root))
     if "--unclear" in argv:
         unclear = [r for k, r, _ in rows if k == "unclear"]

@@ -21,7 +21,7 @@ Usage:
                                                       tab group named after the project; with no live
                                                       surface, prints one `spawn` line per member instead
 `launch` without `--approved` refuses: the flag is the operator's yes, passed by the skill only after
-they gave it. Env: AIOS_ROOT (vault, default ~/aios), AIOS_INBOX_DIR, AIOS_SURFACES_DIR.
+they gave it. Env: AIOS_ROOT (vault, default: the root this file lives in), AIOS_INBOX_DIR, AIOS_SURFACES_DIR.
 """
 import glob
 import hashlib
@@ -38,7 +38,7 @@ if sys.platform == "win32":
     sys.stderr.reconfigure(encoding="utf-8")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.environ.get("AIOS_ROOT") or os.path.join(os.path.expanduser("~"), "aios")
+ROOT = os.environ.get("AIOS_ROOT") or os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))  # hooks/agents/ -> root
 COLUMNS = ["role", "session", "agent", "tier", "kind", "owns", "reports to", "first task"]
 KINDS = {"standing", "crew"}
 SESSION = re.compile(r"^[a-z0-9]+(-[a-z0-9]+){0,2}$")   # lowercase kebab, at most three words
@@ -248,9 +248,7 @@ def main(argv):
         return 2
     cmd, note = argv[0], argv[1]
     global NOTE_REF
-    real, root = os.path.normcase(os.path.realpath(note)), os.path.normcase(os.path.realpath(ROOT))
-    shown = "~/aios" if root == os.path.normcase(os.path.realpath(os.path.expanduser("~/aios"))) else os.path.realpath(ROOT)
-    NOTE_REF = (shown + "/" + os.path.relpath(real, root).replace(os.sep, "/")) if real.startswith(root + os.sep) else os.path.realpath(note)
+    NOTE_REF = os.path.realpath(note)           # the real path: valid wherever the vault lives
     if cmd == "check":
         errs = check(note)
         for e in errs:
