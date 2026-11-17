@@ -33,7 +33,9 @@ case "$out" in rc=0|rc=1) ok "a python stub forwards (hooks/list-agents.py runs)
 
 names=$(for s in $stubs; do basename "$s"; done | grep . | sed 's/[.]/\\./g' | paste -sd'|' -)
 [ -n "$names" ] || { no "harness: no stub names found"; echo "$pass passed, $fail failed"; exit 1; }
-hits=$(git grep -nE "(^|[^a-zA-Z0-9_./-])hooks/($names)([^a-zA-Z0-9_-]|$)" -- . \
+# A `<ref>:hooks/...` path names a file inside an OLDER commit (a pinned pre-#309 control), so it keeps
+# the old layout on purpose: a colon before hooks/ is skipped.
+hits=$(git grep -nE "(^|[^a-zA-Z0-9_./:-])hooks/($names)([^a-zA-Z0-9_-]|$)" -- . \
         ':!CHANGELOG.md' ':!tests/hooks-layout.test.sh' ':!hooks/install/install-settings.py' ':!tests/install-settings.test.sh' \
         $(for s in $stubs; do printf ":!%s " "$s"; done) | grep -vE 'Moved to hooks/' | head -10)
 [ -z "$hits" ] && ok "nothing outside the stubs names an old top-level hook path" || no "old paths still referenced:

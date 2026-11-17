@@ -59,6 +59,31 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-17 — Agents speak up mid-session, teams from one sentence, and a tidy hooks/ folder
+
+`hash: 95088b4 · dc453e5` · [#317](https://github.com/The-AIOS/aios/issues/317) · [#274](https://github.com/The-AIOS/aios/issues/274) · [#314](https://github.com/The-AIOS/aios/issues/314) · [#309](https://github.com/The-AIOS/aios/issues/309) · [#323](https://github.com/The-AIOS/aios/issues/323) · [#316](https://github.com/The-AIOS/aios/issues/316) · [#319](https://github.com/The-AIOS/aios/issues/319) · [#321](https://github.com/The-AIOS/aios/pull/321)
+
+> **What you can now do.** Ask about invoices, a contract or a deck in the middle of any session, and the agent that fits is suggested in one line the AIOS App shows as a card. Say "staff this project" with one sentence about it, and get a team plan in the project note (a charter, who does what, one chief of staff) that launches only when you say yes. Spawns stop asking you to trust each new folder once you trust one. And `hooks/` is grouped into folders by what each file is for.
+
+**Agents suggest themselves mid-session** (#317). The `suggest-agent` skill only ran when a session decided to open it, and mid-session it almost never did. A new prompt hook, **Hook G**, matches each request against your agents (their names, aliases and the index's keywords) and, when exactly one fits, points the session at the skill, which still decides. It stays quiet for small talk, slash commands, ties and the hat you already wear.
+
+**A team from one sentence** (#274). The new `team-composer` skill writes a `## Team` section into the project note: a short charter every member reads first, then one row per member with its agent, model tier, whether it stays (standing) or does one job (crew), what it owns, who it reports to and its first task. `hooks/agents/team-plan.py` checks it (agents exist, tiers are known, exactly one chief of staff) and, only after your yes, opens one session per member in one App tab group. With no App or Glass running it prints the `spawn` lines instead.
+
+**hooks/ grouped by domain** (#309). Seven folders now hold what was 47 loose files: `context/`, `vault/`, `pipeline/`, `agents/`, `media/`, `security/`, `install/` (beside `claude-identity/`, `git/` and your own `custom/`). Every old path still works this release through a small forwarding file, and goes in the next one. Your `settings.json` is moved to the new paths by the update itself (below).
+
+**Smaller changes.**
+- **Spawns stop asking about each new folder** (#323). Each session gets its own private folder under `~/.aios/run/`, and Claude Code 2.1.326 asked you to trust every new one, so an unattended spawn could stall. Trusting `~/.aios/run` once ends it, and each session still sees only its own folder. A read-only check tells you if it is not trusted yet; nothing trusts it for you.
+- **One rule for what is an agent** (#314). A file under `agents/` is an agent when it has `name:` and `description:`; a venture's laws, examples and templates go in a `reference/` folder. `/aios:housekeeping` (Bucket 37) lists the files that are neither.
+- **`/aios:update` no longer stops on the sandbox** (#316): its scratch files live in the vault's `.aios-run/`, not in `/tmp`.
+- **A symlinked `~/aios` is searched properly** (#319): the update's leftover sweep had silently checked nothing there.
+- **The image model is a setting** (#321, thanks to its contributor): `NANO_BANANA_MODEL`, or a per-call `model`.
+
+**Action required** — check each first; do only what applies:
+1. **`hooks/install/install-settings.py` changed, so the update runs it** without `--apply` first and reads you what it prints. New this time: `+ add G` (agent hints) and `~ move` lines for hooks registered at their old top-level path. Each `~ move` changes only that path, keeping your interpreter and root. Then run it with `--apply` under the execution-disclosure protocol.
+2. **`hooks/install/install-git-hooks.sh` changed** (Windows: `.ps1`), **so the update runs it**: it re-links `aios-commit` to its new home in `~/.local/bin` (Windows: `~/bin/aios-commit.cmd`).
+3. **Only if `python3 ~/aios/hooks/install/run-trust-check.py` prints something:** read it to the operator in one line. It says how to trust `~/.aios/run` once (`cd ~/.aios/run && claude`, choose Yes, `/exit`). Never trust it for them.
+4. **Start a new Claude session**, last, so Hook G and the new skills load.
+
 ## 2026-11-14 — The hat a session wears now shows in one fixed line
 
 `hash: 5cc662c`
