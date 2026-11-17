@@ -10,6 +10,13 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request cancels that PR's run still in progress: a superseded run kept its
+# macOS runners busy, and the next run then queued 11-12 minutes for a 2-minute job. Runs on main
+# are never cancelled, so every merge is checked to the end.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   structure:
     name: Repo structure
