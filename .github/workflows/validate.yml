@@ -1666,6 +1666,9 @@ jobs:
         # A surface listing agents/**/*.md counted a venture's reference documents as agents (#314).
         run: bash tests/list-agents.test.sh
 
+      - name: a team plan is checked, and launched only on the operator's yes
+        run: bash tests/team-plan.test.sh
+
       - name: the Hats step reads session names through a script that prints only validated names and typed prompts
         # Transcripts hold untrusted text; the update must never read them directly. (#307 security review)
         run: bash tests/session-names.test.sh
