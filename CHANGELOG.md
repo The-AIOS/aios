@@ -83,6 +83,7 @@
 - **`/aios:update` no longer stops on the sandbox** (#316): its scratch files live in the vault's `.aios-run/`, not in `/tmp`.
 - **A symlinked `~/aios` is searched properly** (#319): the update's leftover sweep had silently checked nothing there.
 - **The image model is a setting** (#321, thanks to its contributor): `NANO_BANANA_MODEL`, or a per-call `model`.
+- **A team's reports no longer overwrite each other** (#331, a patch after the release): crews named their report to the lead after the lead, so two arriving together kept only one. Each report is now named after its sender. Nothing to do: the next team you launch uses it.
 
 **Action required** — check each first; do only what applies:
 1. **`hooks/install/install-settings.py` changed, so the update runs it** without `--apply` first and reads you what it prints. New this time: `+ add G` (agent hints) and `~ move` lines for hooks registered at their old top-level path. Each `~ move` changes only that path, keeping your interpreter and root. Then run it with `--apply` under the execution-disclosure protocol.
