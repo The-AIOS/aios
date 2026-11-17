@@ -12,7 +12,7 @@ ok(){ pass=$((pass+1)); echo "  ok   $1"; }
 no(){ fail=$((fail+1)); echo "  FAIL $1"; }
 echo "team-plan"
 T=$(mktemp -d "${TMPDIR:-/tmp}/tp.XXXXXX"); mkdir -p "$T/inbox" "$T/surfaces"
-export AIOS_ROOT="$ROOT" AIOS_INBOX_DIR="$T/inbox" AIOS_SURFACES_DIR="$T/surfaces"
+export AIOS_ROOT="$ROOT" AIOS_INBOX_DIR="$T/inbox" AIOS_SURFACES_DIR="$T/surfaces" AIOS_BUS_LOG="$T/bus.jsonl"
 plan(){ # file, then rows (one per arg)
   f="$T/$1"; shift
   { printf -- '---\nstatus: active\n---\n# Bakery\n\n## Team\n\n**Charter.** Open a small bakery; never trade quality for speed; the decision log is the source of truth.\n\n'
@@ -52,6 +52,12 @@ for f in fs:
     assert set(r)=={"name","task","tier","group"} and r["group"]=="good" and "\n" not in r["task"] and len(r["task"].encode())<=1024, r
 m=json.load(open(os.path.join(d,"bakery-market.json")))["task"]
 assert "send` to bakery-lead" in m and m.startswith("Wear the `market-researcher` agent") and "Charter" in m, m
+PY
+python3 - "$T/inbox" "$ROOT/hooks/context" <<'PY' && ok "every launched task is fingerprinted, so it reads as inbox-delivered, not typed" || no "a launched task is not in the bus log"
+import json,os,sys
+sys.path.insert(0,sys.argv[2]); import bus_log
+for f in os.listdir(sys.argv[1]):
+    assert bus_log.is_bus_prompt(json.load(open(os.path.join(sys.argv[1],f)))["task"]), f
 PY
 plan inj.md "$CHIEF" '| research | bakery-market | market-researcher | scale | crew | | bakery-lead | Run $(touch PWNED) and `id` now. |'
 ( cd "$T" && python3 "$H" launch "$T/inj.md" --approved "$(hash_of inj.md)" | grep '^  spawn' | while IFS= read -r l; do eval "printf '%s\\n' ${l#  spawn --tier * * }" >/dev/null 2>&1; done )

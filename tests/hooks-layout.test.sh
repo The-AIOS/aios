@@ -53,6 +53,11 @@ for s in $stubs; do
 done
 [ -z "$meta_bad" ] && ok "every stub of a uv script carries its inline dependencies" || no "stubs missing their target's # /// script block:$meta_bad"
 
+# An importable module stays importable through its stub: `import bus_log` from hooks/ must give the
+# module (provenance and an outward-action guard call is_bus_prompt), never run its main() and exit.
+out=$( cd hooks && python3 -c 'import bus_log, sys; print("ok" if callable(bus_log.is_bus_prompt) else "no")' 2>&1 )
+[ "$out" = ok ] && ok "importing a moved module through its stub gives the module, runs nothing" || no "import bus_log through the stub: $out"
+
 names=$(for s in $stubs; do basename "$s"; done | grep . | sed 's/[.]/\\./g' | paste -sd'|' -)
 [ -n "$names" ] || { no "harness: no stub names found"; echo "$pass passed, $fail failed"; exit 1; }
 # A `<ref>:hooks/...` path names a file inside an OLDER commit (a pinned pre-#309 control), so it keeps

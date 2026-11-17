@@ -19,9 +19,9 @@ mkdir -p "$T/b/.aios/run"; out=$(run "$T/b")
 printf '%s' "$out" | grep -q 'choose Yes' && ok "no ~/.claude.json: says how to trust, once" || no "no ~/.claude.json: $out"
 
 mkdir -p "$T/c/.aios/run"; printf '{"projects":{"%s":{"hasTrustDialogAccepted":false}}}' "$T/c/.aios/run" > "$T/c/.claude.json"
-before=$(shasum "$T/c/.claude.json"); out=$(run "$T/c")
+cp "$T/c/.claude.json" "$T/c-before.json"; out=$(run "$T/c")
 printf '%s' "$out" | grep -q 'cd ~/.aios/run && claude' && ok "untrusted: prints the command" || no "untrusted: $out"
-[ "$(shasum "$T/c/.claude.json")" = "$before" ] && ok "never writes ~/.claude.json" || no "~/.claude.json was changed"
+cmp -s "$T/c/.claude.json" "$T/c-before.json" && [ -s "$T/c-before.json" ] && ok "never writes ~/.claude.json" || no "~/.claude.json was changed"
 
 mkdir -p "$T/d/.aios/run"; printf '{"projects":{"%s":{"hasTrustDialogAccepted":true}}}' "$T/d/.aios/run" > "$T/d/.claude.json"
 out=$(run "$T/d"); [ -z "$out" ] && ok "trusted: silent" || no "trusted but still printed: $out"

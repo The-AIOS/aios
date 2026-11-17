@@ -179,11 +179,21 @@ def ps_quote(s):
     return "'%s'" % s
 
 
+def fingerprint(data):
+    """Log the request in the bus log BEFORE it exists, as Hook D's Write hook does for a session's own
+    writes, so the prompt the surface types into the new session is marked as delivered by the inbox,
+    never as typed by the operator. A team launch must not be the one path that skips it."""
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE), "context"))
+    import bus_log
+    bus_log.record(data, "team-plan")
+
+
 def write_request(path, data):
     """Never overwrite a pending request, never follow a planted link, never expose a half-written file
     to a surface watching the folder: write a private temp with O_EXCL, then rename into place."""
     if os.path.lexists(path):
         raise FileExistsError(path)
+    fingerprint(data)
     tmp = "%s.%d.tmp" % (path, os.getpid())
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:

@@ -82,7 +82,8 @@
 1. **`hooks/install/install-settings.py` changed, so the update runs it** without `--apply` first and reads you what it prints. New this time: `+ add G` (agent hints) and `~ move` lines for hooks registered at their old top-level path. Each `~ move` changes only that path, keeping your interpreter and root. Then run it with `--apply` under the execution-disclosure protocol.
 2. **`hooks/install/install-git-hooks.sh` changed** (Windows: `.ps1`), **so the update runs it**: it re-links `aios-commit` to its new home in `~/.local/bin` (Windows: `~/bin/aios-commit.cmd`).
 3. **Only if `python3 ~/aios/hooks/install/run-trust-check.py` prints something:** read it to the operator in one line. It says how to trust `~/.aios/run` once (`cd ~/.aios/run && claude`, choose Yes, `/exit`). Never trust it for them.
-4. **Start a new Claude session**, last, so Hook G and the new skills load.
+4. **Only if a `permissions.allow` rule in `~/.claude/settings.json`, `~/aios/.claude/settings.json` or `~/aios/.claude/settings.local.json` names a moved hook with a wildcard** (for example `Bash(~/aios/hooks/aios-commit:*)`): commands now call the new path (`hooks/vault/aios-commit`), so that rule stops matching and an unattended `/today` would stall on a permission prompt. List those rules and ask once: *"Add the same rules for the hooks' new folders? The old ones stay this release."* **Recommended: yes.** On yes, add each rule with the new path beside the old one, using the Edit tool, and change nothing else.
+5. **Start a new Claude session**, last, so Hook G and the new skills load.
 
 ## 2026-11-14 — The hat a session wears now shows in one fixed line
 

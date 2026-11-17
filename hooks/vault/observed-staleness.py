@@ -62,7 +62,7 @@ for _stream in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError, OSError):
         pass  # a redirected or wrapped stream that cannot be reconfigured
 
-# Self-locate from this file (hooks/ -> framework root) rather than assuming the ~/aios symlink.
+# Self-locate from this file (hooks/vault/ -> framework root) rather than assuming the ~/aios symlink.
 DEFAULT_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "vault", "00 - notes", "context", "observed")

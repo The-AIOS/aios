@@ -101,6 +101,13 @@ def main():
         data = json.load(sys.stdin)
     except ValueError:
         return 0
+    # Only inside the vault, as Hook E: a session in another repo (a client's, say) must not be pointed
+    # at an agent that would pull the operator's voice and context into it.
+    cwd = data.get("cwd") or os.getcwd()
+    root = os.path.normcase(os.path.realpath(ROOT))      # case-insensitive on Windows, as Hook E
+    here = os.path.normcase(os.path.realpath(cwd))
+    if here != root and not here.startswith(root + os.sep):
+        return 0
     prompt = (data.get("prompt") or "").strip()
     if prompt.startswith("/") or len(prompt.split()) < MIN_WORDS:
         return 0

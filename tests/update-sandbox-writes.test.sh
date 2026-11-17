@@ -15,7 +15,7 @@ echo "update-sandbox-writes"
 
 # Every bash block after Step 1's, as text.
 after1=$(awk '/^### 1\.5/{f=1} f' "$U")
-bad=$(printf '%s\n' "$after1" | grep -nE '(>|>>|tee)[[:space:]]*"?(\$CLONE/|/tmp/)|T="/tmp"' | grep -v '^[[:space:]]*#')
+bad=$(printf '%s\n' "$after1" | grep -v '^[[:space:]]*#' | grep -nE '(>|>>|tee)[[:space:]]*"?(\$CLONE/|/tmp/)|T="/tmp"')
 [ -z "$bad" ] && ok "no step after Step 1 writes into the clone or /tmp" || no "writes into the clone or /tmp remain: $bad"
 grep -q 'tee "$HOME/aios/.aios-run/update-files"' "$U" && ok "Step 2 saves its list in .aios-run/" || no "Step 2's list is not in .aios-run/"
 grep -q 'rm -f "$HOME/aios/.aios-run/update-files"' "$U" && ok "a list from an earlier run is removed before this run's Step 2" || no "a stale list could stand in for this run's"

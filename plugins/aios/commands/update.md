@@ -1004,7 +1004,7 @@ CRLF-normalize when comparing file *contents* (`LC_ALL=C tr -d '\r'`) per the §
 python3 "$HOME/aios/hooks/install/run-trust-check.py"   # on Windows, the interpreter SETUP §10's probe picks
 ```
 
-It prints nothing when `~/.aios/run` is trusted in Claude Code (or nothing has been spawned yet). Otherwise it prints why each spawn asks to trust a new folder and the one command that ends it. Relay that in the operator's language, in one short line, after the update report. **Never trust on their behalf:** nothing in this command writes `~/.claude.json`, because accepting the dialog is their decision (#323). It runs on every update, applied or not, and costs nothing once trusted.
+It prints nothing when `~/.aios/run` is trusted in Claude Code (or nothing has been spawned yet). On Windows that silence counts only if the interpreter actually ran: the Store's `python3` placeholder is silent too, so use the one SETUP §10's probe picks. Otherwise it prints why each spawn asks to trust a new folder and the one command that ends it. Relay that in the operator's language, in one short line, after the update report. **Never trust on their behalf:** nothing in this command writes `~/.claude.json`, because accepting the dialog is their decision (#323). It runs on every update, applied or not, and costs nothing once trusted.
 
 ### 6.9. The star ask — applied runs only, asked once, never again either way
 
