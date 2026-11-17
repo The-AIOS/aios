@@ -318,6 +318,8 @@ if ! { mkdir "$LOCK" 2>/dev/null && ( set -C; : > "$LOCK/owner" ) 2>/dev/null; }
   fi
 fi
 rm -rf /tmp/aios-update-check && git clone --single-branch "$clone_url" /tmp/aios-update-check 2>&1
+# A list left by an earlier run must never stand in for this run's (Step 2 writes a fresh one).
+rm -f "$HOME/aios/.aios-run/update-files"
 ```
 
 If the SSH clone fails on a non-Windows machine, retry with the HTTPS form (`git@github.com:org/repo` → `https://github.com/org/repo`). Get current HEAD: `git -C /tmp/aios-update-check rev-parse HEAD`. If HEAD matches stored hash → run the **completeness reconcile** (§ Step 6.5 — catches drift even when the tracker says "current") → if also clean, **stamp `synced={today}` (leave `hash=` alone — it is already correct), delete any `ref=` line, and commit just the tracker**, then report "Your vault infrastructure is current (synced {date})." → clean up → done. **Write the tracker only if the date is not already today or a `ref=` line is present**, so repeated runs in one day produce one commit, not one per run, while a stale test marker is still cleared. If the reconcile finds drift, this path does not apply: recover it per § Step 6.5 and advance nothing until it is clean.
@@ -494,15 +496,17 @@ done
 # --no-renames: git reports a renamed file by its NEW path only, so the old path would never reach
 # Step 3.4's deletion pass and the stale copy would stay in the vault forever (measured in a
 # release dry run: five files a vendored upstream moved into references/ were left behind).
+mkdir -p "$HOME/aios/.aios-run"   # a vault that never ran the floor has no .aios-run/ yet
 git -C "$CLONE" diff --no-renames {stored_hash}..HEAD --name-only -- \
   "README.md" "START-HERE.md" "SETUP.md" "TOOLS.md" "CHEATSHEET.md" \
   "CONTRIBUTING.md" "CHANGELOG.md" "CLAUDE.md" "AGENTS.md" "EXTENSION-MAP.md" "LICENSE-AUDIT.md" \
   "LICENSE" "NOTICE" "FORTRESS.md" "MODEL-ROUTING.md" "SECURITY.md" "GLOSSARY.md" ".gitignore" \
   "${LAYERS[@]}" "vault/.obsidian/" \
-  ':(exclude)*/custom/**' ':(exclude)*/custom' | tee "$CLONE/.git/aios-update-files"
+  ':(exclude)*/custom/**' ':(exclude)*/custom' | tee "$HOME/aios/.aios-run/update-files"
 # The list is SAVED, not only printed: every tool call is a fresh shell, so a variable set here
-# is gone by Step 3. Steps 3 and 3.4 read this file (it lives in the clone's .git, so it never
-# reaches the vault and goes when the clone does).
+# is gone by Step 3. Steps 3 and 3.4 read this file. It lives in the vault's .aios-run/ (gitignored,
+# never committed), NOT in the /tmp clone: a sandboxed Bash tool may write the vault and $TMPDIR
+# only, so a write into /tmp stopped every run here (#316). Step 1 deletes it, Step 7 removes it.
 ```
 
 > ⚠️ **The `custom/` exclusion is not tidiness — without it this step hands you Tier-2 paths to overwrite.** Every `{layer}/custom/` is on the hard denylist at the top of this file, and Step 6.5's reconcile already filters `/custom(/|: )`. This diff was the one place that did **not**, so it listed operator-owned files as "changed Tier-1" and the apply loop dutifully overwrote them. **Measured on a live vault, 2026-08-27:** canonical edited its seed `mcps/custom/_index.md`; the operator's copy of that file carried the registry row and notes for a **real custom MCP they had built**; the three-way compare correctly classified it *"both sides moved"*, backed it up, and overwrote — and the operator's row was gone from the live file. The backup did its job and nothing was destroyed, but backups are **not auto-restored**, so the default outcome was silent loss of their own content.
@@ -574,7 +578,7 @@ Report to operator at the end: *"`/aios:update` self-updated and continued under
 > **Use this loop (portable across bash and zsh):**
 >
 > ```bash
-> L="${CLONE:-/tmp/aios-update-check}/.git/aios-update-files"
+> L="$HOME/aios/.aios-run/update-files"
 > [ -f "$L" ] || { echo "FATAL: Step 2's saved list is missing. Run Step 2's block (it saves the list), then this step again." >&2; exit 1; }
 > cat "$L" | while IFS= read -r f; do
 >   [ -z "$f" ] && continue
@@ -610,7 +614,7 @@ For each changed Tier 1 file:
 2.7. **Dual-owned files MERGE, never overwrite** — `.gitignore` and `.claude-plugin/marketplace.json` (see their Tier-1 entries). **Skip the three-way backup for these** (the merge itself preserves operator content). For **`.gitignore`**: keep upstream's file (framework rules + the `AIOS-OPERATOR-IGNORES` marker) and append the operator's below-marker lines —
    ```bash
    SENT='AIOS-OPERATOR-IGNORES'
-   CLONE="/tmp/aios-update-check"; T="/tmp"
+   CLONE="/tmp/aios-update-check"; T="$HOME/aios/.aios-run"; mkdir -p "$T"   # never /tmp: the sandbox blocks it (#316)
    # A group's status is its LAST command's, so `{ cat canonical; awk operator; }` succeeds
    # when `cat` fails — and `mv` then installs a .gitignore holding ONLY the operator's lines.
    # Refuse up front, and chain `cat` with `&&` so a late failure cannot reach the `mv` either.
@@ -661,9 +665,11 @@ For each changed Tier 1 file:
    # CRLF-normalize, or a Windows checkout reports "diverged" on a file the
    # operator never touched — and the branch below then tells them to fold in a
    # diff that is entirely line endings. Probe the flag, never the platform (#143).
-   SCR=(); printf 'x\r\n' > "$CLONE/.scr-a"; printf 'x\n' > "$CLONE/.scr-b"
-   diff -q --strip-trailing-cr "$CLONE/.scr-a" "$CLONE/.scr-b" >/dev/null 2>&1 && SCR=(--strip-trailing-cr)
-   rm -f "$CLONE/.scr-a" "$CLONE/.scr-b"
+   # Probe files go in the vault's .aios-run/, never the /tmp clone: the sandbox blocks writes there (#316).
+   P="$HOME/aios/.aios-run"; mkdir -p "$P"
+   SCR=(); printf 'x\r\n' > "$P/.scr-a"; printf 'x\n' > "$P/.scr-b"
+   diff -q --strip-trailing-cr "$P/.scr-a" "$P/.scr-b" >/dev/null 2>&1 && SCR=(--strip-trailing-cr)
+   rm -f "$P/.scr-a" "$P/.scr-b"
    if [ ! -f "$V/$F" ]; then cp "$CLONE/$F" "$V/$F"                      # first sync — just take it
    elif diff -q "${SCR[@]}" "$V/$F" "$CLONE/$F" >/dev/null 2>&1; then :  # identical — nothing to do
    else
@@ -694,7 +700,7 @@ For each changed Tier 1 file:
              local h; h=$(LC_ALL=C tr -d '\r' < "$1" | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
    h_git(){ git -C "$CLONE" cat-file -e "$1" 2>/dev/null || return 1; _have_sha || return 1
             local h; h=$(git -C "$CLONE" show "$1" 2>/dev/null | LC_ALL=C tr -d '\r' | _sha | cut -d' ' -f1) && [ -n "$h" ] || return 1; printf '%s\n' "$h"; }
-   L="$CLONE/.git/aios-update-files"
+   L="$HOME/aios/.aios-run/update-files"
    [ -f "$L" ] || { echo "FATAL: Step 2's saved list is missing. Run Step 2's block (it saves the list), then this step again." >&2; exit 1; }
    cat "$L" | while IFS= read -r f; do
      [ -n "$f" ] || continue
@@ -811,10 +817,12 @@ VAULT="$HOME/aios"; CLONE="/tmp/aios-update-check"
 # actually equate them — rather than test the platform. An ARRAY, because an
 # unquoted `$SCR` is the word-splitting shape Step 3 warns about.
 SCR=()
-printf 'x\r\n' > "$CLONE/.scr-crlf"; printf 'x\n' > "$CLONE/.scr-lf"
-diff -q --strip-trailing-cr "$CLONE/.scr-crlf" "$CLONE/.scr-lf" >/dev/null 2>&1 \
+# Probe files go in the vault's .aios-run/, never the /tmp clone: the sandbox blocks writes there (#316).
+P="$HOME/aios/.aios-run"; mkdir -p "$P"
+printf 'x\r\n' > "$P/.scr-crlf"; printf 'x\n' > "$P/.scr-lf"
+diff -q --strip-trailing-cr "$P/.scr-crlf" "$P/.scr-lf" >/dev/null 2>&1 \
   && SCR=(--strip-trailing-cr)
-rm -f "$CLONE/.scr-crlf" "$CLONE/.scr-lf"
+rm -f "$P/.scr-crlf" "$P/.scr-lf"
 # A diff without the flag predates CRLF checkouts being a concern, so on such a
 # platform the unnormalized compare IS the correct one and the run proceeds.
 # The one combination that cannot be true is Windows AND no flag — say so
@@ -1057,7 +1065,7 @@ cd ~/aios && ~/aios/hooks/aios-commit -m "sync: framework → {short-HEAD} (via 
 ```
 `EXEC` also repairs scripts an earlier sync already committed as 100644 — a mode-only change, carried in this same framework-sync commit. On macOS/Linux it stays empty: `cp` preserved the mode and git saw it.
 
-If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update`. **Framework-sync commits stay DISTINCT from operator session-work commits** (clean attribution), and `aios-commit --vault` at session-end / `/close-day` stays scoped to vault *content* — never framework infra, which is THIS command's domain. Finally `rm -rf /tmp/aios-update-check /tmp/aios-update-check.lock` — clone first, lock last — unless Step 1's lock refused this run (then neither is this run's to remove).
+If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update`. **Framework-sync commits stay DISTINCT from operator session-work commits** (clean attribution), and `aios-commit --vault` at session-end / `/close-day` stays scoped to vault *content* — never framework infra, which is THIS command's domain. Finally `rm -f "$HOME/aios/.aios-run/update-files"; rm -rf /tmp/aios-update-check /tmp/aios-update-check.lock` — list, then clone, lock last — unless Step 1's lock refused this run (then neither is this run's to remove).
 
 > **`hash=` is written ONLY by this command, after a clean fully-applied run. NEVER hand-edit it** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65). The rule is about *that field*, and saying so precisely matters now that the file is no longer single-writer: `hooks/aios-star-check --decline` appends `star-ask=` to the same file, deliberately, because a decline must be per-operator rather than per-machine and `.aios-update` is what travels with the vault. It touches nothing else and never reads `hash=`. A rule stated as *"never write this file"* would have been read as forbidding that, or quietly ignored — neither of which protects `hash=`.
 

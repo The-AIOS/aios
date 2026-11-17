@@ -20,7 +20,7 @@ echo "update-renames-and-stop"
 grep -q 'diff --no-renames {stored_hash}..HEAD --name-only' "$U" && ok "Step 2's file list turns rename detection off" || no "Step 2 lists renames by their new path only"
 
 # Found by the second dry run: each tool call is a fresh shell, so state must not live in variables.
-grep -q '| tee "$CLONE/.git/aios-update-files"' "$U" && ok "Step 2 saves its file list where Step 3 can read it" || no "Step 2's list lives only in the shell that printed it"
+grep -q '| tee "$HOME/aios/.aios-run/update-files"' "$U" && ok "Step 2 saves its file list where Step 3 can read it" || no "Step 2's list lives only in the shell that printed it"
 ! grep -q '"${FILES\[@\]}"' "$U" && ok "no step reads a FILES array nothing defines" || no "a step still reads \${FILES[@]}"
 sed -n '/^CLONE="\/tmp\/aios-update-check"   # each tool call/,/^STOP_HEADER=/p' "$U" | grep -q STOP_HEADER && ok "Step 1.5 sets CLONE itself" || no "Step 1.5 relies on CLONE from another call"
 ! grep -qE 'for d in "\$HOME"/\.claude/plugins/cache/the-aios/aios/\*/commands/' "$U" && ok "no cache loop aborts zsh on an unmatched glob" || no "a cache loop still globs (zsh aborts when there is no cache)"

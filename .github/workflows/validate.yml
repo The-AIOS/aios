@@ -1647,6 +1647,11 @@ jobs:
         # Renames hid old paths from the deletion pass; Step 1.5 used an undefined $STOP_HEADER. (v0.8.18 dry run)
         run: bash tests/update-renames-and-stop.test.sh
 
+      - name: /aios:update writes its scratch into the vault's .aios-run/, never /tmp or the clone
+        # A sandboxed Bash tool can write the vault and $TMPDIR only, so every later write into /tmp
+        # stopped the run (#316). Step 2 also runs here against a read-only clone.
+        run: bash tests/update-sandbox-writes.test.sh
+
       - name: the Hats step reads session names through a script that prints only validated names and typed prompts
         # Transcripts hold untrusted text; the update must never read them directly. (#307 security review)
         run: bash tests/session-names.test.sh
