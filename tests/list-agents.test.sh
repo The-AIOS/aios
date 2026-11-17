@@ -17,15 +17,17 @@ printf -- '---\nname: code-of-commerce\ndescription: The law text\n---\n' > "$A/
 printf -- '---\nagent: false\ntitle: Glossary\n---\n' > "$A/glossary.md"
 printf 'no frontmatter, an example\n' > "$A/example-case.md"
 printf '# Acme agents\n' > "$A/README.md"; printf '# index\n' > "$T/agents/_index.md"
+printf '\357\273\277---\nname: bom-agent\ndescription: Saved by Notepad\n---\n' > "$A/bom-agent.md"
+mkdir -p "$A/loop"; ln -s "$A" "$A/loop/back"
 out=$(AIOS_ROOT="$T" python3 "$H")
-[ "$(printf '%s\n' "$out" | grep -c .)" = 1 ] && printf '%s' "$out" | grep -q '^acme-lawyer	agents/acme/acme-lawyer.md$' \
-  && ok "only the file with name + description is an agent" || no "agent list wrong: $out"
+[ "$(printf '%s\n' "$out" | grep -c .)" = 2 ] && printf '%s' "$out" | grep -q '^acme-lawyer	agents/acme/acme-lawyer.md$' && printf '%s' "$out" | grep -q '^bom-agent	' \
+  && ok "only files with name + description are agents (a UTF-8 BOM included); a symlink loop ends" || no "agent list wrong: $out"
 out=$(AIOS_ROOT="$T" python3 "$H" --unclear); rc=$?
 [ "$rc" = 1 ] && [ "$out" = "agents/acme/example-case.md" ] && ok "--unclear names only the file that is neither, and exits 1" || no "--unclear wrong (rc=$rc): $out"
-AIOS_ROOT="$T" python3 "$H" --json | python3 -c 'import json,sys;d=json.load(sys.stdin);assert d==[{"name":"acme-lawyer","description":"Reviews Acme contracts","path":"agents/acme/acme-lawyer.md"}]' 2>/dev/null \
+AIOS_ROOT="$T" python3 "$H" --json | python3 -c 'import json,sys;d=json.load(sys.stdin);assert {"name":"acme-lawyer","description":"Reviews Acme contracts","path":"agents/acme/acme-lawyer.md"} in d and len(d)==2' 2>/dev/null \
   && ok "--json gives name, description and path for surfaces" || no "--json shape wrong"
 mkdir -p "$T/real"; mv "$T/agents" "$T/real/"; ln -s "$T/real" "$T/link"
-[ "$(AIOS_ROOT="$T/link" python3 "$H" | grep -c .)" = 1 ] && ok "a symlinked vault root is followed" || no "a symlinked root found nothing"
+[ "$(AIOS_ROOT="$T/link" python3 "$H" | grep -c .)" = 2 ] && ok "a symlinked vault root is followed" || no "a symlinked root found nothing"
 out=$(AIOS_ROOT="$ROOT" python3 "$H" --unclear); rc=$?
 [ "$rc" = 0 ] && ok "the bundled agents/ tree has no unclear files" || no "bundled tree has unclear files: $out"
 [ "$(AIOS_ROOT="$ROOT" python3 "$H" | grep -c .)" -ge 40 ] && ok "every bundled agent is listed" || no "bundled agents missing from the list"

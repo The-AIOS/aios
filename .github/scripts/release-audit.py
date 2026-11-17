@@ -155,7 +155,8 @@ COPIES = []   # (source, destination, shown in full?) for the brief
 def full_copy(src, dst, left_out):
     """A copy is shown in full when it could launder unread content into code: its source was left out
     of the audit, or a non-code file became a code file. Moving reviewed code shows only its changes."""
-    return src in left_out or (code_like(dst) and not code_like(src))
+    ours = src.startswith(("hooks/", "plugins/aios/", "agents/aios/", "skills/aios/", ".github/", "tests/"))
+    return src in left_out or (code_like(dst) and not code_like(src)) or (code_like(dst) and not ours)
 
 
 def diff_chunks(base, head, left_out=()):

@@ -33,7 +33,7 @@ FM = re.compile(r"^---\r?\n(.*?)\r?\n---", re.S)
 
 def frontmatter(path):
     try:
-        with open(path, encoding="utf-8", errors="replace") as fh:
+        with open(path, encoding="utf-8-sig", errors="replace") as fh:   # -sig: a BOM must not hide an agent
             m = FM.match(fh.read(65536))   # the whole frontmatter: a long description must not hide an agent
     except OSError:
         return {}
@@ -49,7 +49,13 @@ def frontmatter(path):
 def classify(root):
     """Yield (kind, relpath, fm) for every .md under agents/: kind is agent, document or unclear."""
     base = os.path.join(root, "agents")
+    seen = set()
     for d, dirs, files in os.walk(base, followlinks=True):
+        st = os.stat(d)
+        if (st.st_dev, st.st_ino) in seen:   # a symlink cycle: walk each real folder once
+            dirs[:] = []
+            continue
+        seen.add((st.st_dev, st.st_ino))
         dirs.sort()
         rel_dir = os.path.relpath(d, root).replace("\\", "/")
         in_reference = "/reference" in "/" + rel_dir + "/" and any(p == "reference" for p in rel_dir.split("/"))

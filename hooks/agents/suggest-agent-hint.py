@@ -37,7 +37,7 @@ def load_agents(root):
     agents = {}
     for idx in ("agents/_index.md", "agents/custom/_index.md"):
         try:
-            text = open(os.path.join(root, idx), encoding="utf-8").read()
+            text = open(os.path.join(root, idx), encoding="utf-8-sig").read()
         except OSError:
             continue
         for line in text.splitlines():
@@ -51,13 +51,19 @@ def load_agents(root):
                 k = k.strip().lower().strip("`*_")
                 if 2 < len(k) <= 40:
                     terms.add(k)
-    for base, _dirs, files in os.walk(os.path.join(root, "agents"), followlinks=True):
+    seen = set()
+    for base, dirs, files in os.walk(os.path.join(root, "agents"), followlinks=True):
+        st = os.stat(base)
+        if (st.st_dev, st.st_ino) in seen:   # a symlink cycle: walk each real folder once
+            dirs[:] = []
+            continue
+        seen.add((st.st_dev, st.st_ino))
         for f in files:
             name = f[:-3]
             if not f.endswith(".md") or name not in agents:
                 continue
             try:
-                head = open(os.path.join(base, f), encoding="utf-8").read(1500)
+                head = open(os.path.join(base, f), encoding="utf-8-sig").read(1500)
             except OSError:
                 continue
             m = re.search(r"^aliases:\s*\[([^\]]*)\]", head, re.M)
@@ -108,6 +114,13 @@ def main():
     here = os.path.normcase(os.path.realpath(cwd))
     if here != root and not here.startswith(root + os.sep):
         return 0
+    # A spawned worker picks its own hat from its name at start (CLAUDE.md § Identity step 2): until
+    # its first wearing line exists, a hint would steer it off that hat. Headless runs get nothing.
+    worn = wearing(data.get("transcript_path"))
+    if os.environ.get("CLAUDE_AGENT_NAME") and worn is None:
+        return 0
+    if os.environ.get("CLAUDE_CODE_ENTRYPOINT", "").startswith("sdk"):
+        return 0
     prompt = (data.get("prompt") or "").strip()
     if prompt.startswith("/") or len(prompt.split()) < MIN_WORDS:
         return 0
@@ -118,7 +131,7 @@ def main():
     if len(ranked) > 1 and ranked[1][0] >= ranked[0][0]:
         return 0  # two agents fit about equally: suggest neither (the skill's own rule)
     name = ranked[0][1]
-    if wearing(data.get("transcript_path")) == name:
+    if worn == name:
         return 0
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": "UserPromptSubmit",

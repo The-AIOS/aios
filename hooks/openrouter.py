@@ -12,6 +12,7 @@ if __name__ == "__main__":
     sys.path[0] = os.path.dirname(_P)
     runpy.run_path(_P, run_name="__main__")
 else:
+    sys.path.insert(0, os.path.dirname(_P))
     _s = importlib.util.spec_from_file_location(__name__ + "_moved", _P)
     _m = importlib.util.module_from_spec(_s)
     _s.loader.exec_module(_m)
