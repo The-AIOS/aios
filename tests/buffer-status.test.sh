@@ -51,7 +51,7 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
-B=hooks/buffer-status.py
+B=hooks/vault/buffer-status.py
 # Fresh entries are dated relative to TODAY: a hardcoded date ages past STALE_DAYS and turns
 # the "clean buffer" fixture stale on its own, 30 days after it was written.
 FRESH=$($PYBIN -c "import datetime;print(datetime.date.today()-datetime.timedelta(days=2))")

@@ -33,7 +33,7 @@ echo "== context-floor invocation =="
 
 # ── 1. both contracts prescribe the same, runnable command ───────────────────
 for f in CLAUDE.md AGENTS.md; do
-  line=$(grep -m1 'uv run ~/aios/hooks/context-floor.py' "$f" 2>/dev/null)
+  line=$(grep -m1 'uv run ~/aios/hooks/context/context-floor.py' "$f" 2>/dev/null)
   if [ -z "$line" ]; then
     no "$f prescribes the floor command" "no 'uv run …context-floor.py' line found"
   elif printf '%s' "$line" | grep 'UV_CACHE_DIR' >/dev/null; then
@@ -62,7 +62,7 @@ FAKE="$TMP/home"; mkdir -p "$FAKE/.cache"; chmod 500 "$FAKE/.cache"
 # leaving it set would relocate the cache out of the unwritable HOME and silently
 # un-reproduce the condition.
 out_ctl="$TMP/ctl.out"
-env -u UV_CACHE_DIR -u XDG_CACHE_HOME HOME="$FAKE" TMPDIR="$TMP" uv run hooks/context-floor.py >"$out_ctl" 2>/dev/null
+env -u UV_CACHE_DIR -u XDG_CACHE_HOME HOME="$FAKE" TMPDIR="$TMP" uv run hooks/context/context-floor.py >"$out_ctl" 2>/dev/null
 if [ -s "$out_ctl" ]; then
   no "CONTROL: bare 'uv run' should fail against an unwritable cache" \
      "it produced output, so this environment does not reproduce the condition — the check below proves nothing"
@@ -71,7 +71,7 @@ else
 fi
 
 out_fix="$TMP/fix.out"
-env -u XDG_CACHE_HOME HOME="$FAKE" TMPDIR="$TMP" UV_CACHE_DIR="$TMP/uv-cache" uv run hooks/context-floor.py >"$out_fix" 2>"$TMP/fix.err"
+env -u XDG_CACHE_HOME HOME="$FAKE" TMPDIR="$TMP" UV_CACHE_DIR="$TMP/uv-cache" uv run hooks/context/context-floor.py >"$out_fix" 2>"$TMP/fix.err"
 if [ ! -s "$out_fix" ]; then
   no "the prescribed command runs against an unwritable cache" "$(head -2 "$TMP/fix.err" 2>/dev/null)"
 else

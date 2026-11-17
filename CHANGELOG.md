@@ -59,16 +59,53 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-17 — Agents speak up mid-session, teams from one sentence, and a tidy hooks/ folder
+
+`hash: 95088b4 · 4dae12a` · [#317](https://github.com/The-AIOS/aios/issues/317) · [#274](https://github.com/The-AIOS/aios/issues/274) · [#314](https://github.com/The-AIOS/aios/issues/314) · [#309](https://github.com/The-AIOS/aios/issues/309) · [#323](https://github.com/The-AIOS/aios/issues/323) · [#316](https://github.com/The-AIOS/aios/issues/316) · [#319](https://github.com/The-AIOS/aios/issues/319) · [#321](https://github.com/The-AIOS/aios/pull/321) · [#325](https://github.com/The-AIOS/aios/issues/325) · [#326](https://github.com/The-AIOS/aios/issues/326) · [#327](https://github.com/The-AIOS/aios/issues/327) · [#328](https://github.com/The-AIOS/aios/issues/328)
+
+> **What you can now do.** Ask about invoices, a contract or a deck in the middle of any session, and the agent that fits is suggested in one line the AIOS App shows as a card. Say "staff this project" with one sentence about it, and get a team plan in the project note (a charter, who does what, one chief of staff) that launches only when you say yes. Spawns stop asking you to trust each new folder once you trust one. And `hooks/` is grouped into folders by what each file is for.
+
+**Agents suggest themselves mid-session** (#317). The `suggest-agent` skill only ran when a session decided to open it, and mid-session it almost never did. A new prompt hook, **Hook G**, matches each request against your agents (their names, aliases and the index's keywords) and, when exactly one fits, points the session at the skill, which still decides. It stays quiet for small talk, slash commands, ties and the hat you already wear.
+
+**A team from one sentence** (#274). The new `team-composer` skill writes a `## Team` section into the project note: a short charter every member reads first, then one row per member with its agent, model tier, whether it stays (standing) or does one job (crew), what it owns, who it reports to and its first task. `hooks/agents/team-plan.py` checks it (agents exist, tiers are known, exactly one chief of staff) and, only after your yes, opens one session per member in one App tab group. With no App or Glass running it prints the `spawn` lines instead.
+
+**hooks/ grouped by domain** (#309). Seven folders now hold what was 47 loose files: `context/`, `vault/`, `pipeline/`, `agents/`, `media/`, `security/`, `install/` (beside `claude-identity/`, `git/` and your own `custom/`). Every old path still works this release through a small forwarding file, and goes in the next one. Your `settings.json` is moved to the new paths by the update itself (below).
+
+**Security fixes** (older code, found while reviewing this release).
+- **`issue-scrub` keeps more out of public issues** (#325): names written **bold** or as links in `USER.md` are now redacted, and home paths keep their folders only under `~/aios`, `~/.aios` and `~/.claude`; `~/Clients/<matter>/…` becomes `~/<path redacted>`.
+- **A video cannot steer `video-watch` into your files** (#326): its headless reader may read only the video's frames, and a "URL" can no longer pass options to `yt-dlp`.
+- **Inbox prompts are labelled on Windows too** (#327): requests were never fingerprinted there, so a routine's prompt could read as typed by you.
+- **The text bridge only talks to the companies you chose** (#328): a Gemini key set for image generation no longer turns it on, and falling back from OpenRouter to Gemini needs `AIOS_FALLBACK=gemini`.
+
+**Smaller changes.**
+- **Spawns stop asking about each new folder** (#323). Each session gets its own private folder under `~/.aios/run/`, and Claude Code 2.1.326 asked you to trust every new one, so an unattended spawn could stall. Trusting `~/.aios/run` once ends it, and each session still sees only its own folder. A read-only check tells you if it is not trusted yet; nothing trusts it for you.
+- **One rule for what is an agent** (#314). A file under `agents/` is an agent when it has `name:` and `description:`; a venture's laws, examples and templates go in a `reference/` folder. `/aios:housekeeping` (Bucket 37) lists the files that are neither.
+- **`/aios:update` no longer stops on the sandbox** (#316): its scratch files live in the vault's `.aios-run/`, not in `/tmp`.
+- **A symlinked `~/aios` is searched properly** (#319): the update's leftover sweep had silently checked nothing there.
+- **The image model is a setting** (#321, thanks to its contributor): `NANO_BANANA_MODEL`, or a per-call `model`.
+
+**Action required** — check each first; do only what applies:
+1. **`hooks/install/install-settings.py` changed, so the update runs it** without `--apply` first and reads you what it prints. New this time: `+ add G` (agent hints) and `~ move` lines for hooks registered at their old top-level path. Each `~ move` changes only that path, keeping your interpreter and root. Then run it with `--apply` under the execution-disclosure protocol.
+2. **`hooks/install/install-git-hooks.sh` changed** (Windows: `.ps1`), **so the update runs it**: it re-links `aios-commit` to its new home in `~/.local/bin` (Windows: `~/bin/aios-commit.cmd`).
+3. **Only if `python3 ~/aios/hooks/install/run-trust-check.py` prints something:** read it to the operator in one line. It says how to trust `~/.aios/run` once (`cd ~/.aios/run && claude`, choose Yes, `/exit`). Never trust it for them.
+4. **Only if a `permissions.allow` rule in `~/.claude/settings.json`, `~/aios/.claude/settings.json` or `~/aios/.claude/settings.local.json` names a moved hook's old path** (for example `Bash(~/aios/hooks/aios-commit:*)` or `Bash(~/aios/hooks/whoami)`): commands now call the new path (`hooks/vault/aios-commit`), so that rule stops matching and an unattended `/today` would stall on a permission prompt. List those rules and ask once: *"Add the same rules for the hooks' new folders? The old ones stay this release."* **Recommended: yes.** On yes, add each rule with the new path beside the old one, using the Edit tool, and change nothing else.
+5. **Only if `python3 ~/aios/hooks/pipeline/openrouter.py --check` shows a Gemini key that is in the environment only, or shows the fallback off while you used to rely on it** (#328): Gemini now serves text only when chosen. Ask once: *"Should the text bridge use Gemini (as a fallback when OpenRouter runs out, or as your only provider)? That sends prompts to Google."* On yes: add the line `AIOS_FALLBACK=gemini` to `~/.config/aios-secrets/openrouter.env` (no secret in it) when it is a fallback, and ask the operator to put their own `GEMINI_API_KEY=…` line into `~/.config/aios-secrets/gemini.env` themselves. Never read, copy or print the key. On no, change nothing.
+6. **Only if your own files name a hook's old top-level path**: search `USER.md`, `{agents,hooks,skills,plugins}/custom/`, your scheduled routines and launch agents for `hooks/<file>` where `<file>` is one that moved (the old path now holds a short forwarding file whose first lines say `Moved to hooks/<folder>/<file>`). They keep working this release and stop when the forwarding files go in the next one. List the commands that would break (skip prose that only mentions a path), ask once: *"Point these at the hooks' new folders?"* **Recommended: yes.** On yes, change only each path, with the Edit tool.
+7. **Start a new Claude session**, last, so Hook G and the new skills load.
+
 ## 2026-11-14 — The hat a session wears now shows in one fixed line
 
 `hash: 5cc662c`
 
-> **What you can now do.** See which hat a session put on in one fixed line at the start of every spawned session, `Wearing agent: accountant.`, which the AIOS App shows as the session's hat.
+> **What you can now do.** See which hat a session put on in one fixed line at the start of every spawned session, `Wearing agent: accountant.`, which the AIOS App shows as the session's hat. Choose which Gemini model draws your images, for example `gemini-3.1-flash-image`, instead of the 2025 original.
 
 **The wearing line** (follows #299, #307). Sessions already chose the right hat from their name and your projects' Hats rows, and said so in their own words. But the fixed line was defined only inside the `suggest-agent` skill, which a starting session never opens, so the line the App reads never appeared. CLAUDE.md § Identity step 2 now spells it out. The skill's description also no longer says it is not for skills, which had told sessions to skip it whenever a skill matched the request too. Suggestions in the middle of a session still depend on the session opening the skill by itself, which it often does not; a hook that makes them reliable is planned for the next release.
 
+**The image model is a setting** (#320). `generate_image` always used `gemini-2.5-flash-image`, so newer image models never reached anyone. Set `NANO_BANANA_MODEL` in the server's env to change it for every call, or pass `model` for one call; the result names the model that ran. With neither, nothing changes.
+
 **Action required** — check first; do only what applies:
-1. **Start a new Claude session**, so the updated CLAUDE.md and skill load.
+1. **Only if the operator has the Nano Banana MCP registered and wants a newer image model:** say once that they can add `NANO_BANANA_MODEL` to the server's env, then type `/mcp` and reconnect nano-banana. Nothing changes without it.
+2. **Start a new Claude session**, so the updated CLAUDE.md and skill load.
 
 ## 2026-11-13 — Sessions wear the right hat for their name and their project
 

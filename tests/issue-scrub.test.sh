@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/issue-scrub.test.sh
 #
-# hooks/issue-scrub.py is the last thing between an operator's vault and a public GitHub issue.
+# hooks/security/issue-scrub.py is the last thing between an operator's vault and a public GitHub issue.
 # A scrubber that misses a name fails silently: the issue reads fine and is public forever. One
 # that over-redacts fails loudly but gets bypassed, because nobody files an issue whose commands
 # and file names were replaced with placeholders. So this suite proves BOTH directions:
@@ -15,7 +15,7 @@
 # Plus the contract: --check exit codes, a missing file exits 2, the report line names its counts.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-H="$ROOT/hooks/issue-scrub.py"
+H="$ROOT/hooks/security/issue-scrub.py"
 PYBIN="${PYBIN:-python3}"
 PASS=0; FAIL=0
 ok(){ echo "  ✓ $1"; PASS=$((PASS+1)); }
@@ -85,7 +85,7 @@ cat > "$T/dirty.md" <<EOF
 ## What happened
 Running /aios:close-session as maplewood for Rosalind Quillfeather at northwind-labs failed.
 Reported by rozzyq, also seen by Tomasz Wierzbicki on the bluefin-dental engagement (orchard-guild space).
-Path: /Users/rquill/aios/hooks/clip and C:\\Users\\rquill\\aios\\hooks\\clip
+Path: /Users/rquill/aios/hooks/media/clip and C:\\Users\\rquill\\aios\\hooks\\clip
 Note: vault/00 - notes/context/observed/growth.md and ~/aios/vault/01 - calendar/2026-10/2026-10-11.md
 Links: [[advisory-bluefin-dental]] and [[growth]]
 Contact rosalind@northwind.example or ping D0ABC12345 / C0XYZ98765.
@@ -109,7 +109,7 @@ for planted in maplewood "Rosalind" Quillfeather rozzyq northwind-labs "northwin
     ok "planted '$planted' removed"
   fi
 done
-case "$out" in *"~/aios/hooks/clip"*) ok "home path becomes ~/..., the framework path stays" ;; *) no "home path not rewritten to ~" "$out" ;; esac
+case "$out" in *"~/aios/hooks/media/clip"*) ok "home path becomes ~/..., the framework path stays" ;; *) no "home path not rewritten to ~" "$out" ;; esac
 case "$out" in *"<vault path redacted>"*"<vault link redacted>"*) ok "vault paths and links get visible placeholders" ;; *) no "placeholders missing" "$out" ;; esac
 case "$out" in *"the primary session"*"the operator"*"a company"*) ok "names become roles, not blanks" ;; *) no "role placeholders missing" "$out" ;; esac
 case "$out" in *"a client"*) ok "an advisory-* project reads as a client" ;; *) no "client role missing" "$out" ;; esac
@@ -131,9 +131,9 @@ cat > "$T/clean.md" <<'EOF'
 **Repro** (macOS 15, AIOS 0.8.7, Claude Code 2.1.296):
 1. `bash tests/close-session-idempotency.test.sh` passes.
 2. Run `/aios:close-session --auto` twice; `ps -p 4242 -o command=` shows the flag.
-3. `LANG=en_US.UTF-8 pbcopy < hooks/clip` arrives intact (control).
+3. `LANG=en_US.UTF-8 pbcopy < hooks/media/clip` arrives intact (control).
 
-Files: plugins/aios/commands/close-session.md, hooks/aios-commit, CLAUDE.md, SETUP.md, CHANGELOG.
+Files: plugins/aios/commands/close-session.md, hooks/vault/aios-commit, CLAUDE.md, SETUP.md, CHANGELOG.
 Commit 620088be1f3a9c2d4e5b6a7c8d9e0f1a2b3c4d5e on 2026-10-11 at 21:40; see [[bug-triager]].
 The UTF-8 locale and the acme-co template row are fine. Session id 3f2a9c1e-4b5d-4e6f-8a7b-9c0d1e2f3a4b.
 EOF

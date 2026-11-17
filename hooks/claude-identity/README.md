@@ -180,7 +180,7 @@ The bundled status line also shows the session's effort level beside the model (
 Since v0.8.18 the bundled `context-monitor.py` **writes the usage cache itself**, in the same process: one program per refresh, which is what keeps typing from lagging on Windows. So:
 
 - **`statusLine.command` already runs `context-monitor.py`** (setup's `install-settings.py` writes it) → **already wired; nothing to do.** Do not wrap it in `tee`: the cache is written once already, and wrapping the guarded form (`[ ! -f … ] || python3 …`) in a pipe starves it of input.
-- **No statusLine →** run `python3 ~/aios/hooks/install-settings.py` (it shows what it will change), then the same with `--apply`. It writes the one-program status line.
+- **No statusLine →** run `python3 ~/aios/hooks/install/install-settings.py` (it shows what it will change), then the same with `--apply`. It writes the one-program status line.
 - **A statusLine of your own →** show it to the user and ask: *"Want to (1) replace it with the bundled one (context %, 5h/7d, active account, git status, color-coded warnings), or (2) keep yours and add the cache writer beside it?"*
   - **(1) Replace →** the **replace snippet** below.
   - **(2) Keep →** the **keep snippet** below. It wraps theirs in a subshell, so a status line containing `||` or `&&` still receives the input.

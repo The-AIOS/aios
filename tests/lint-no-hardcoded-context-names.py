@@ -12,7 +12,7 @@ failed: one grepped the raw file, one stripped with sed and missed docstring bod
 both failed a hook that was correct. A guard that cannot be precise about its own claim
 is the thing this suite exists to prevent.
 
-    python3 tests/lint-no-hardcoded-context-names.py hooks/context-floor.py ...
+    python3 tests/lint-no-hardcoded-context-names.py hooks/context/context-floor.py ...
 """
 import io
 import sys
@@ -53,4 +53,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:] or ["hooks/context-floor.py", "hooks/context-rungs.py", "hooks/recall.py"]))
+    sys.exit(main(sys.argv[1:] or ["hooks/context/context-floor.py", "hooks/context/context-rungs.py", "hooks/context/recall.py"]))

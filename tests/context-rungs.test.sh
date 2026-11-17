@@ -17,7 +17,7 @@ if [ -z "$PYBIN" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# hooks/context-rungs.py — the measurement behind /aios:housekeeping Bucket 31
+# hooks/context/context-rungs.py — the measurement behind /aios:housekeeping Bucket 31
 # and the `right-context` skill.
 #
 # The whole reason this tool exists is that a CONSTANT was baked into a rule
@@ -37,7 +37,7 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '        %s\n' "$2"; return 0; }
 
-H="hooks/context-rungs.py"
+H="hooks/context/context-rungs.py"
 [ -f "$H" ] || { printf '  FAIL  %s missing\n' "$H"; exit 1; }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
@@ -204,7 +204,7 @@ PY
 price(){ # $1 rungs hook · prints "file:recent_words" per observed file
   $PYBIN "$1" --json "$TMP/rulelib" | $PYBIN -c 'import json,sys; d=json.load(sys.stdin)["observed"]["detail"]; print(" ".join("%s:%d" % (k, v["recent_words"]) for k, v in sorted(d.items()) if k != "_index.md"))'
 }
-EMIT="$($PYBIN hooks/context-floor.py --json "$TMP/rulelib" | $PYBIN -c 'import json,sys; print(" ".join("%s:%d" % (o["file"], sum(len(t.split()) for t in o["recent"])) for o in sorted(json.load(sys.stdin)["observed"], key=lambda o: o["file"]) if o["file"] != "_index.md"))')"
+EMIT="$($PYBIN hooks/context/context-floor.py --json "$TMP/rulelib" | $PYBIN -c 'import json,sys; print(" ".join("%s:%d" % (o["file"], sum(len(t.split()) for t in o["recent"])) for o in sorted(json.load(sys.stdin)["observed"], key=lambda o: o["file"]) if o["file"] != "_index.md"))')"
 GOT="$(price "$H")"
 [ -n "$EMIT" ] && [ "$GOT" = "$EMIT" ] \
   && ok "rung 1 prices each observed file at the words the floor emits ($GOT)" \

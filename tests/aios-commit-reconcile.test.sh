@@ -7,7 +7,7 @@
 # the operator has edits to a file the remote changed, it touches nothing and says why.
 # Two clones of one bare remote; the twin always pushes first. bash 3.2-safe.
 set -uo pipefail
-AC="$(cd "$(dirname "$0")/.." && pwd)/hooks/aios-commit"
+AC="$(cd "$(dirname "$0")/.." && pwd)/hooks/vault/aios-commit"
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
 g(){ git -c user.name=t -c user.email=t@x "$@"; }

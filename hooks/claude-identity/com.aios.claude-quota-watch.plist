@@ -22,7 +22,7 @@
 
   Unload:
     launchctl unload ~/Library/LaunchAgents/com.aios.claude-quota-watch.plist
-    python3 ~/aios/hooks/aios-health.py retire quota-watch   # else /today reports it overdue forever
+    python3 ~/aios/hooks/pipeline/aios-health.py retire quota-watch   # else /today reports it overdue forever
 
   Notes:
     - Runs under your user session, not as root.

@@ -2,7 +2,7 @@
 # tests/commands-snapshot-helper.test.sh
 #
 # Every command that tells a session to archive an observed-context file must send it
-# through `hooks/aios-snapshot`, and none may prescribe the hand-rolled protocol the helper
+# through `hooks/vault/aios-snapshot`, and none may prescribe the hand-rolled protocol the helper
 # replaced (copy, then pick the "next free letter" by hand). CLAUDE.md § Session End moved
 # the rule to the helper; two commands kept the old text, so a session following the
 # command instead of CLAUDE.md ran the non-atomic protocol the helper exists to retire —
@@ -17,9 +17,9 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok    %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '        %s\n' "$2"; }
 
-printf 'commands archive observed context through hooks/aios-snapshot\n'
+printf 'commands archive observed context through hooks/vault/aios-snapshot\n'
 
-[ -x "$ROOT/hooks/aios-snapshot" ] && ok "hooks/aios-snapshot exists and is executable" || no "hooks/aios-snapshot missing or not executable"
+[ -x "$ROOT/hooks/vault/aios-snapshot" ] && ok "hooks/vault/aios-snapshot exists and is executable" || no "hooks/vault/aios-snapshot missing or not executable"
 
 # 1. a command that names the DATED destination (`…/{YYYY-MM}/{YYYY-MM-DD}-…`, which only a
 #    writer uses — readers name the month folder) must also name the helper
@@ -27,7 +27,7 @@ for f in "$CMDS"/*.md; do
   n=$(basename "$f")
   grep -q 'observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}' "$f" || continue
   if grep -q 'aios-snapshot' "$f"; then ok "$n: names the dated snapshot destination AND the helper"
-  else no "$n: names the dated snapshot destination but never hooks/aios-snapshot" "a session following it will hand-roll the copy"; fi
+  else no "$n: names the dated snapshot destination but never hooks/vault/aios-snapshot" "a session following it will hand-roll the copy"; fi
 done
 
 # 2. no command prescribes the by-hand letter protocol. EVERY occurrence of "next free letter"
@@ -56,9 +56,9 @@ printf 'Something else takes the next free letter for you.\n' > "$FX/other-subje
 
 # 3. the two commands this guards, by name
 for n in close-day housekeeping; do
-  grep -q 'hooks/aios-snapshot "vault/00 - notes/context/observed/' "$CMDS/$n.md" \
+  grep -q 'hooks/vault/aios-snapshot "vault/00 - notes/context/observed/' "$CMDS/$n.md" \
     && ok "$n.md: invokes the helper with the observed path" \
-    || no "$n.md: does not invoke hooks/aios-snapshot on an observed file"
+    || no "$n.md: does not invoke hooks/vault/aios-snapshot on an observed file"
 done
 
 printf '\n%d passed, %d failed\n' "$PASS" "$FAIL"

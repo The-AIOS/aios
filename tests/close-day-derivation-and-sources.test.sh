@@ -24,7 +24,7 @@ TMP=$(mktemp -d "${TMPDIR:-/tmp}/cdds.XXXXXX"); trap 'rm -rf "$TMP"' EXIT
 printf '/close-day — the redraw clock, the Tier B feed-in, the report date, the snapshot read\n'
 
 p_redraw_scope(){ grep -q '\*\*`ecosystem.md`\*\* gets a \*\*full-map re-derivation\*\*' "$1" && grep -q "this clock is \`ecosystem.md\`'s alone" "$1"; }
-p_redraw_clock(){ grep -q 'whenever its own \*\*`rederived:`\*\* frontmatter date is older than the aggregate threshold `hooks/observed-staleness.py` applies (`AGGREGATE_DAYS`), or absent' "$1" && grep -q '— \*\*not\*\* `updated:`. Every atomic append in step 3 sets `updated:` to today' "$1"; }
+p_redraw_clock(){ grep -q 'whenever its own \*\*`rederived:`\*\* frontmatter date is older than the aggregate threshold `hooks/vault/observed-staleness.py` applies (`AGGREGATE_DAYS`), or absent' "$1" && grep -q '— \*\*not\*\* `updated:`. Every atomic append in step 3 sets `updated:` to today' "$1"; }
 p_redraw_sets_both(){ grep -q 'After a redraw, set \*\*both\*\* `rederived:` and `updated:` to today' "$1"; }
 p_old_trigger_gone(){ ! grep -q 'whenever the staleness alarm (below) marks it past its aggregate threshold' "$1"; }
 p_tierb_reads_routed(){ grep -q "both those still in \`session-insights.md\` and those the Tier A pass above routed out of it today" "$1"; }

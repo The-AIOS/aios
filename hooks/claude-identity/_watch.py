@@ -1288,7 +1288,7 @@ def main(self_path: str) -> None:
         log(f"watch crashed: {type(e).__name__}: {e}")
 
 
-# A completed run records its verdict in ~/.aios/health/quota-watch.json (hooks/aios-health.py,
+# A completed run records its verdict in ~/.aios/health/quota-watch.json (hooks/pipeline/aios-health.py,
 # ). Due again within 90 min: the scheduler runs this every 30 min, and the statusLine runs
 # it whenever a session is active, so only a watcher that has really stopped goes past it.
 HEALTH_VALID_FOR = "90m"
@@ -1356,7 +1356,7 @@ def record_health() -> None:
     try:
         import importlib.util
         here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        spec = importlib.util.spec_from_file_location("aios_health", os.path.join(here, "aios-health.py"))
+        spec = importlib.util.spec_from_file_location("aios_health", os.path.join(here, "pipeline", "aios-health.py"))
         if spec is None or spec.loader is None:
             return
         mod = importlib.util.module_from_spec(spec)

@@ -9,7 +9,7 @@
 WHY TWO, AND WHY THESE TWO
     The work in a release is reviewed by Claude sessions. A model cannot dock points for a
     blind spot it shares (MODEL-ROUTING.md § Judge independence), so one audit comes from
-    outside the Claude family, through hooks/openrouter.py. The other is a fresh Claude
+    outside the Claude family, through hooks/pipeline/openrouter.py. The other is a fresh Claude
     session that has never seen how the work was made. Either can block the release.
 
 READ-ONLY BY CONSTRUCTION
@@ -139,6 +139,26 @@ def proven_vendored(base, head, audit_all=False):
     return left_out, notes
 
 
+CODE_EXT = (".py", ".sh", ".ps1", ".js", ".ts", ".mjs", ".swift", ".rb", ".pl")
+
+
+def code_like(path):
+    """A path whose content RUNS or steers a session: scripts, workflows, hooks, SKILL.md."""
+    name = path.rsplit("/", 1)[-1]
+    return (path.endswith(CODE_EXT) or name == "SKILL.md" or path.startswith((".github/", "hooks/"))
+            or ("." not in name and path.startswith(("hooks/", "skills/"))))
+
+
+COPIES = []   # (source, destination, shown in full?) for the brief
+
+
+def full_copy(src, dst, left_out):
+    """A copy is shown in full when it could launder unread content into code: its source was left out
+    of the audit, or a non-code file became a code file. Moving reviewed code shows only its changes."""
+    ours = src.startswith(("hooks/", "plugins/aios/", "agents/aios/", "skills/aios/", ".github/", "tests/"))
+    return src in left_out or not ours or (code_like(dst) and not code_like(src))
+
+
 def diff_chunks(base, head, left_out=()):
     """The release diff in chunks no larger than MAX_DIFF, split at file boundaries.
 
@@ -147,10 +167,27 @@ def diff_chunks(base, head, left_out=()):
     does. A single file larger than the limit is split by lines, and says so. The only
     files not sent are `left_out`: proven vendored docs, named in the brief and reports."""
     spec = [".", ":(exclude)CHANGELOG.md"] + [f":(exclude,literal){p}" for p in left_out]
-    r = sh(["git", "-C", str(ROOT), "diff", f"{base}...{head}", "--"] + spec)
+    # -C --find-copies-harder: a file MOVED to a new folder (with a forwarding stub left at its old
+    # path, as #309 did) shows as a copy of its old version plus its real changes, not as hundreds of
+    # lines of new code. Every changed line is still in the diff; only unchanged moved code is not.
+    r = sh(["git", "-c", "core.quotePath=false", "-C", str(ROOT), "diff", "-C", "--find-copies-harder", f"{base}...{head}", "--"] + spec)
     if r.returncode != 0:
         sys.exit(f"release-audit: git diff failed: {r.stderr.strip()}")
     files = re.split(r"(?m)^(?=diff --git )", r.stdout)
+    left = set(left_out)
+    for k, f in enumerate(files):
+        src = re.search(r"(?m)^(?:copy|rename) from (.+)$", f)   # -C also detects renames: a pure
+        dst = re.search(r"(?m)^(?:copy|rename) to (.+)$", f)     # rename carries no content at all
+        if not (src and dst):
+            continue
+        whole = full_copy(src.group(1), dst.group(1), left)
+        COPIES.append((src.group(1), dst.group(1), whole))
+        if whole:
+            full = sh(["git", "-c", "core.quotePath=false", "-C", str(ROOT), "diff", "--no-renames",
+                       f"{base}...{head}", "--", ":(literal)" + dst.group(1)])
+            if full.returncode != 0 or not full.stdout.strip():
+                sys.exit(f"release-audit: could not show the copy {dst.group(1)} in full; refusing to audit without it")
+            files[k] = full.stdout
     chunks, cur = [], ""
     for f in (x for x in files if x):
         while len(f) > MAX_DIFF:
@@ -176,13 +213,13 @@ def run_outside(brief_path, model=None):
     """-> (report text, model that answered). The bridge's --json names the model that
     actually answered, which differs from the one asked for when it falls back."""
     cmd = os.environ.get("AIOS_AUDIT_OUTSIDE")
-    cmd = cmd.split() if cmd else [sys.executable, str(ROOT / "hooks" / "openrouter.py")]
+    cmd = cmd.split() if cmd else [sys.executable, str(ROOT / "hooks" / "pipeline" / "openrouter.py")]
     model = model or OUTSIDE_MODEL
     r = sh(cmd + ["--prompt-file", str(brief_path), "--json", "--model", model])
     if r.returncode != 0:
         return ("NOT RUN: the outside-family audit did not run.\n"
                 f"{(r.stderr or r.stdout).strip()}\n\n"
-                "Configure an OpenRouter or Gemini key (hooks/openrouter.py --check says which),"
+                "Configure an OpenRouter or Gemini key (hooks/pipeline/openrouter.py --check says which),"
                 " then run again. VERDICT: NOT RUN\n"), model
     try:
         d = json.loads(r.stdout)
@@ -225,6 +262,10 @@ def cmd_run(a):
         (out / "left-out.txt").write_text("\n".join(notes + [""] + left_out) + "\n", encoding="utf-8")
         for n in notes:
             print("scope: " + n)
+    if COPIES:
+        scope += ("\n\nCopies in this release (git copy detection). A copy of reviewed code shows only its changes; "
+                  "a copy whose source was left out, or a non-code file copied into code, is shown in full:\n- " +
+                  "\n- ".join("%s -> %s%s" % (s, d, " (shown in full)" if w else "") for s, d, w in COPIES))
     reports = {"outside": [], "claude": []}
     for i, chunk in enumerate(chunks, 1):
         part = f" (part {i} of {len(chunks)})" if len(chunks) > 1 else ""

@@ -18,7 +18,7 @@ fi
 
 # route-insight.test.sh — entry excision across BOTH supported styles.
 #
-# Regression origin: `hooks/route-insight.py` matched only `### ` headings, but a
+# Regression origin: `hooks/vault/route-insight.py` matched only `### ` headings, but a
 # session-insights buffer that follows the documented lifecycle naturally becomes
 # top-level `- **…**` bullets with indented facets. The tool therefore matched
 # nothing and exited 2 — which reads as "nothing to do", not "I cannot see your
@@ -29,7 +29,7 @@ fi
 # Scenarios 1 and 2 MUST fail (exit 2) against the pre-fix implementation.
 
 set -uo pipefail
-TOOL="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/hooks/route-insight.py"
+TOOL="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/hooks/vault/route-insight.py"
 PASS=0; FAIL=0
 ok(){ printf '  ok   %s\n' "$1"; PASS=$((PASS+1)); }
 no(){ printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; FAIL=$((FAIL+1)); }

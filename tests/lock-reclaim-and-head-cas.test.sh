@@ -28,9 +28,10 @@ REAL_GIT=$(command -v git)
 PIN=3d135ded112bf7b77156b61bb29e6233ff7c7285
 HAVE_OLD=0
 mkdir -p "$TMP/new/git" "$TMP/old/git"
-for h in aios-commit aios-snapshot aios-note-append git/secret-scan.sh; do
-  cp "$ROOT/hooks/$h" "$TMP/new/$h"
-done
+# Since #309 the helpers live in hooks/vault/ and find the scanner one level up: $TMP/git serves
+# both $TMP/new and $TMP/short, while the pinned old tree keeps its own side-by-side git/.
+for h in aios-commit aios-snapshot aios-note-append; do cp "$ROOT/hooks/vault/$h" "$TMP/new/$h"; done
+cp "$ROOT/hooks/git/secret-scan.sh" "$TMP/new/git/"; mkdir -p "$TMP/git"; cp "$ROOT/hooks/git/secret-scan.sh" "$TMP/git/"
 if git -C "$ROOT" cat-file -e "$PIN:hooks/aios-commit" 2>/dev/null; then
   for h in aios-commit aios-snapshot aios-note-append git/secret-scan.sh; do
     git -C "$ROOT" show "$PIN:hooks/$h" > "$TMP/old/$h"

@@ -23,13 +23,19 @@ TMP=$(mktemp -d "${TMPDIR:-/tmp}/csfc.XXXXXX"); trap 'chmod -R u+rwx "$TMP" 2>/d
 TOKEN="gh""p_$(printf 'A%.0s' $(seq 1 36))"
 
 # a hooks/ tree to run: "new" = this checkout; "old" = the same files before this change
+# Each tree keeps the layout of its own version: since #309 aios-commit lives in hooks/vault/ and
+# finds the scanner one level up; before it, both sat side by side. ac() names a tree's aios-commit.
 mkhooks(){ # $1 dest  $2 source ("new" or a git ref)
-  mkdir -p "$1/git"
-  for f in aios-commit git/secret-scan.sh git/pre-commit; do
-    if [ "$2" = new ]; then cp "$ROOT/hooks/$f" "$1/$f"; else git -C "$ROOT" show "$2:hooks/$f" > "$1/$f"; fi
-    chmod +x "$1/$f"
-  done
+  mkdir -p "$1/git" "$1/vault"
+  if [ "$2" = new ]; then
+    cp "$ROOT/hooks/vault/aios-commit" "$1/vault/aios-commit"
+    for f in git/secret-scan.sh git/pre-commit; do cp "$ROOT/hooks/$f" "$1/$f"; done
+  else
+    for f in aios-commit git/secret-scan.sh git/pre-commit; do git -C "$ROOT" show "$2:hooks/$f" > "$1/$f"; done
+  fi
+  chmod +x "$1"/git/* "$1"/vault/* "$1"/aios-commit 2>/dev/null
 }
+ac(){ if [ -f "$1/vault/aios-commit" ]; then echo "$1/vault/aios-commit"; else echo "$1/aios-commit"; fi; }
 # The "old" hooks are pinned to the last commit before this change — never a moving ref like
 # main: once this change is merged, main's hooks ARE the new ones, and asserting that they still
 # show the defects would fail a correct tree. If the pinned commit is not in this checkout, or its
@@ -40,7 +46,7 @@ mkhooks "$TMP/new" new
 HAVE_OLD=0
 if git -C "$ROOT" cat-file -e "$BASE:hooks/aios-commit" 2>/dev/null; then
   mkhooks "$TMP/old" "$BASE"
-  cmp -s "$TMP/old/aios-commit" "$TMP/new/aios-commit" || HAVE_OLD=1
+  cmp -s "$(ac "$TMP/old")" "$(ac "$TMP/new")" || HAVE_OLD=1
 fi
 newrepo(){ local d="$1"; rm -rf "$d"; mkdir -p "$d"; git -C "$d" init -q; git -C "$d" config user.email t@t.io; git -C "$d" config user.name t
            git -C "$d" config core.hooksPath /dev/null; echo x > "$d/f"; git -C "$d" add f; git -C "$d" commit -qm init; }
@@ -54,12 +60,12 @@ printf 'commits and the scanner fail closed\n'
 for v in old new; do
   [ "$v" = old ] && [ "$HAVE_OLD" = 0 ] && continue
   R="$TMP/r1-$v"; newrepo "$R"; echo y > "$R/f"
-  ( cd "$R" && "$TMP/$v/aios-commit" --no-push -m "fix: rotate $TOKEN" -- f >/dev/null 2>&1 ); n=$(commits "$R")
+  ( cd "$R" && "$(ac "$TMP/$v")" --no-push -m "fix: rotate $TOKEN" -- f >/dev/null 2>&1 ); n=$(commits "$R")
   if [ "$v" = old ]; then [ "$n" = 2 ] && ok "1o. OLD: a token in the message was committed (the defect, reproduced)" || no "1o. old code unexpectedly refused"
   else [ "$n" = 1 ] && ok "1n. NEW: a token in the message is refused" || no "1n. token in the message was committed"; fi
 done
 R="$TMP/r1c"; newrepo "$R"; echo y > "$R/f"
-( cd "$R" && "$TMP/new/aios-commit" --no-push -m "fix: ordinary message" -- f >/dev/null 2>&1 ); [ "$(commits "$R")" = 2 ] && ok "1c. an ordinary message still commits" || no "1c. a clean commit was refused"
+( cd "$R" && "$(ac "$TMP/new")" --no-push -m "fix: ordinary message" -- f >/dev/null 2>&1 ); [ "$(commits "$R")" = 2 ] && ok "1c. an ordinary message still commits" || no "1c. a clean commit was refused"
 
 # ---------------------------------------------------------------------------------------------
 # 2. a missing scanner refuses (aios-commit and pre-commit); a scanner without +x still runs
@@ -68,7 +74,7 @@ for v in old new; do
   [ "$v" = old ] && [ "$HAVE_OLD" = 0 ] && continue
   H="$TMP/h2-$v"; rm -rf "$H"; cp -R "$TMP/$v" "$H"; rm -f "$H/git/secret-scan.sh"
   R="$TMP/r2-$v"; newrepo "$R"; printf '%s\n' "$TOKEN" > "$R/f"
-  ( cd "$R" && "$H/aios-commit" --no-push -m "x" -- f >/dev/null 2>&1 ); n=$(commits "$R")
+  ( cd "$R" && "$(ac "$H")" --no-push -m "x" -- f >/dev/null 2>&1 ); n=$(commits "$R")
   if [ "$v" = old ]; then [ "$n" = 2 ] && ok "2o. OLD: no scanner → a token was committed unscanned (the defect, reproduced)" || no "2o. old code unexpectedly refused"
   else [ "$n" = 1 ] && ok "2n. NEW: no scanner → refused" || no "2n. committed with no scanner"; fi
   ( cd "$R" && AIOS_HUMAN=1 bash "$H/git/pre-commit" >/dev/null 2>&1 ); rc=$?
@@ -77,7 +83,7 @@ for v in old new; do
 done
 H="$TMP/h2x"; rm -rf "$H"; cp -R "$TMP/new" "$H"; chmod -x "$H/git/secret-scan.sh"
 R="$TMP/r2x"; newrepo "$R"; printf '%s\n' "$TOKEN" > "$R/f"
-( cd "$R" && "$H/aios-commit" --no-push -m "x" -- f >/dev/null 2>&1 ); [ "$(commits "$R")" = 1 ] && ok "2x. a scanner that lost +x still scans (and blocks the token)" || no "2x. scanner without +x was skipped"
+( cd "$R" && "$(ac "$H")" --no-push -m "x" -- f >/dev/null 2>&1 ); [ "$(commits "$R")" = 1 ] && ok "2x. a scanner that lost +x still scans (and blocks the token)" || no "2x. scanner without +x was skipped"
 # the same for the pre-commit hook (a human commit with AIOS_HUMAN=1): scanner present, no +x
 R="$TMP/r2px"; newrepo "$R"; printf '%s\n' "$TOKEN" > "$R/g"; git -C "$R" add g
 out=$(cd "$R" && AIOS_HUMAN=1 bash "$H/git/pre-commit" 2>&1); rc=$?
@@ -85,7 +91,7 @@ out=$(cd "$R" && AIOS_HUMAN=1 bash "$H/git/pre-commit" 2>&1); rc=$?
 R="$TMP/r2py"; newrepo "$R"; echo clean > "$R/g"; git -C "$R" add g
 ( cd "$R" && AIOS_HUMAN=1 bash "$H/git/pre-commit" >/dev/null 2>&1 ); [ $? = 0 ] && ok "2py. …and lets a clean staged file through" || no "2py. pre-commit refused a clean staged file"
 R="$TMP/r2y"; newrepo "$R"; echo clean > "$R/f"
-( cd "$R" && "$H/aios-commit" --no-push -m "x" -- f >/dev/null 2>&1 ); [ "$(commits "$R")" = 2 ] && ok "2y. …and lets a clean commit through" || no "2y. clean commit refused with a non-executable scanner"
+( cd "$R" && "$(ac "$H")" --no-push -m "x" -- f >/dev/null 2>&1 ); [ "$(commits "$R")" = 2 ] && ok "2y. …and lets a clean commit through" || no "2y. clean commit refused with a non-executable scanner"
 
 # ---------------------------------------------------------------------------------------------
 # 3. a NUL byte does not hide a token
@@ -117,11 +123,11 @@ mkvault(){ newrepo "$1"; mkdir -p "$1/vault"; echo n > "$1/vault/n.md"; git -C "
 for which in diff ls; do
   R="$TMP/r4-$which"; mkvault "$R"
   [ "$which" = diff ] && echo m >> "$R/vault/n.md" || echo new > "$R/vault/new.md"
-  out=$(cd "$R" && FAIL_ON=$which PATH="$SHIM:$PATH" "$TMP/new/aios-commit" --vault --no-push -m "x" 2>&1); rc=$?
+  out=$(cd "$R" && FAIL_ON=$which PATH="$SHIM:$PATH" "$(ac "$TMP/new")" --vault --no-push -m "x" 2>&1); rc=$?
   { [ "$rc" != 0 ] && printf '%s' "$out" | grep 'could not read the repo' >/dev/null && [ "$(commits "$R")" = 2 ]; } \
     && ok "4$which. NEW: the sweep's $which call fails → refused, named, nothing committed" || no "4$which. NEW: failed $which call misread" "rc=$rc out=$out"
   if [ "$HAVE_OLD" = 1 ]; then
-    out=$(cd "$R" && FAIL_ON=$which PATH="$SHIM:$PATH" "$TMP/old/aios-commit" --vault --no-push -m "x" 2>&1); rc=$?
+    out=$(cd "$R" && FAIL_ON=$which PATH="$SHIM:$PATH" "$(ac "$TMP/old")" --vault --no-push -m "x" 2>&1); rc=$?
     if [ "$which" = diff ]; then
       # old: the failed diff yields no paths; the status cross-check then blames a desynced index
       # ("do not differ from HEAD") — exit 0, nothing committed, and no word that git failed
@@ -134,12 +140,12 @@ for which in diff ls; do
   fi
 done
 R="$TMP/r4ok"; mkvault "$R"; echo m >> "$R/vault/n.md"
-out=$(cd "$R" && PATH="$SHIM:$PATH" "$TMP/new/aios-commit" --vault --no-push -m "x" 2>&1); [ "$(commits "$R")" = 3 ] && ok "4c. with nothing failing, the sweep commits as before (shim in place)" || no "4c. the sweep did not commit" "$out"
+out=$(cd "$R" && PATH="$SHIM:$PATH" "$(ac "$TMP/new")" --vault --no-push -m "x" 2>&1); [ "$(commits "$R")" = 3 ] && ok "4c. with nothing failing, the sweep commits as before (shim in place)" || no "4c. the sweep did not commit" "$out"
 
 # a repo with no commits yet: `git diff HEAD` has no HEAD, so the sweep must read the staged paths
 E=$(mktemp -d "${TMPDIR:-/tmp}/csfc-empty.XXXXXX"); git -C "$E" init -q; mkdir -p "$E/vault"; echo hi > "$E/vault/a.md"
 # identity + no signing passed per command: a CI runner has no git identity, and this test must not set one globally
-( cd "$E" && GIT_CONFIG_COUNT=3 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false GIT_CONFIG_KEY_1=user.name GIT_CONFIG_VALUE_1=test GIT_CONFIG_KEY_2=user.email GIT_CONFIG_VALUE_2=test@example.com "$ROOT/hooks/aios-commit" --vault --no-push -m first >/dev/null 2>&1 )
+( cd "$E" && GIT_CONFIG_COUNT=3 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false GIT_CONFIG_KEY_1=user.name GIT_CONFIG_VALUE_1=test GIT_CONFIG_KEY_2=user.email GIT_CONFIG_VALUE_2=test@example.com "$ROOT/hooks/vault/aios-commit" --vault --no-push -m first >/dev/null 2>&1 )
 [ "$(git -C "$E" rev-list --count HEAD 2>/dev/null)" = 1 ] && ok "--vault makes the first commit in a repo with no commits yet" || no "--vault refused the first commit of an empty repo" "the sweep read a failed 'git diff HEAD' as a failed measurement"
 rm -rf "$E"
 
@@ -152,12 +158,12 @@ SYMBASE=${SYMLINK_BASE_REF:-dcf1e2b327a755fe017822593a3b4d694c7438f3}
 HAVE_OLD5=0
 if git -C "$ROOT" cat-file -e "$SYMBASE:hooks/aios-commit" 2>/dev/null; then
   rm -rf "$TMP/old5"; mkhooks "$TMP/old5" "$SYMBASE"
-  cmp -s "$TMP/old5/aios-commit" "$TMP/new/aios-commit" || HAVE_OLD5=1
+  cmp -s "$TMP/old5/aios-commit" "$(ac "$TMP/new")" || HAVE_OLD5=1
 fi
 for v in old5 new; do
   [ "$v" = old5 ] && [ "$HAVE_OLD5" = 0 ] && continue
   B="$TMP/bin5-$v"; mkdir -p "$B/sub"
-  ln -s "$TMP/$v/aios-commit" "$B/sub/aios-commit-abs"          # absolute target
+  ln -s "$(ac "$TMP/$v")" "$B/sub/aios-commit-abs"          # absolute target
   ( cd "$B" && ln -s sub/aios-commit-abs aios-commit )            # relative link to a link
   R="$TMP/r5-$v"; newrepo "$R"; echo clean > "$R/f"
   ( cd "$R" && "$B/aios-commit" --no-push -m "x" -- f >/dev/null 2>&1 ); n=$(commits "$R")

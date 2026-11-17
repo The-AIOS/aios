@@ -82,7 +82,7 @@ Present a summary in the response:
 {Max 3. Omit section if nothing is genuinely ripe — forced candidates erode trust in the lens.}
 ```
 
-Then commit and push: `cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Graduate ideas {date}"`
+Then commit and push: `cd ~/aios && ~/aios/hooks/vault/aios-commit --vault -m "Graduate ideas {date}"`
 
 ### The intake-edge question (ask once per graduated idea)
 

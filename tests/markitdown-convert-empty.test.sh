@@ -33,7 +33,7 @@ class MarkItDown:
     def convert(self, path): return _R(os.environ.get("STUB_TEXT", ""))
 PY
 printf 'x' > "$T/in.pdf"
-conv(){ PYTHONPATH="$T/stub" STUB_TEXT="$1" $PYBIN hooks/markitdown-convert.py "$T/in.pdf" "$T/out.md" >"$T/stdout" 2>"$T/stderr"; }
+conv(){ PYTHONPATH="$T/stub" STUB_TEXT="$1" $PYBIN hooks/media/markitdown-convert.py "$T/in.pdf" "$T/out.md" >"$T/stdout" 2>"$T/stderr"; }
 
 rm -f "$T/out.md"; conv ""; rc=$?
 [ "$rc" -ne 0 ] && ok "an empty conversion exits non-zero" || no "an empty conversion exits 0" "$(cat "$T/stdout")"
@@ -53,7 +53,7 @@ Real text."; rc=$?
 [ "$rc" -eq 0 ] && grep -q 'Real text' "$T/out.md" && grep 'Converted:' "$T/stdout" >/dev/null \
   && ok "real text is written and reported as before" || no "a real conversion broke" "rc=$rc $(cat "$T/stderr")"
 
-PYTHONPATH="$T/stub" STUB_TEXT="" $PYBIN hooks/markitdown-convert.py "$T/in.pdf" >"$T/stdout" 2>"$T/stderr"; rc=$?
+PYTHONPATH="$T/stub" STUB_TEXT="" $PYBIN hooks/media/markitdown-convert.py "$T/in.pdf" >"$T/stdout" 2>"$T/stderr"; rc=$?
 [ "$rc" -ne 0 ] && ok "to stdout, an empty conversion also exits non-zero" || no "stdout mode: an empty conversion exits 0"
 
 printf '\n-- %d passed, %d failed --\n' "$PASS" "$FAIL"

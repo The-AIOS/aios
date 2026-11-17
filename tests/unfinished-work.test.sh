@@ -13,7 +13,7 @@ cd "$(dirname "$0")/.." || exit 1
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
-S=hooks/unfinished-work.sh
+S=hooks/vault/unfinished-work.sh
 [ -f "$S" ] || { echo "::error::$S missing"; exit 1; }
 
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT

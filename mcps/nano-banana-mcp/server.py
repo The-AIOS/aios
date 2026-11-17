@@ -1,4 +1,4 @@
-"""Nano Banana MCP — Gemini 2.5 Flash Image generation as an MCP tool."""
+"""Nano Banana MCP — Gemini image generation (Nano Banana family) as an MCP tool."""
 import os
 import sys
 from pathlib import Path
@@ -27,6 +27,12 @@ if not API_KEY:
 AIOS_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT_DIR = AIOS_ROOT / "vault" / "02 - assets" / "generated"
 
+# The model is a SETTING, not a constant. Hardcoded, every operator stays on the oldest image
+# model while Google ships newer ones, with nothing reporting it. Override per install with
+# NANO_BANANA_MODEL, or per call with the `model` argument. List what your key can reach:
+#   curl -s "https://generativelanguage.googleapis.com/v1beta/models?key=$GEMINI_API_KEY&pageSize=200" | grep -o '"models/[^"]*image[^"]*"'
+DEFAULT_MODEL = os.environ.get("NANO_BANANA_MODEL", "gemini-2.5-flash-image")
+
 mcp = FastMCP("nano-banana")
 client = genai.Client(api_key=API_KEY)
 
@@ -37,8 +43,9 @@ def generate_image(
     output_path: str | None = None,
     aspect_ratio: str = "1:1",
     reference_images: list[str] | None = None,
+    model: str | None = None,
 ) -> dict:
-    """Generate an image from a text prompt using Gemini 2.5 Flash Image (Nano Banana).
+    """Generate an image from a text prompt using a Gemini image model (Nano Banana family).
 
     Args:
         prompt: Natural-language description of the desired image.
@@ -49,9 +56,10 @@ def generate_image(
             face, colours and proportions. The prompt then describes the change ("the same
             character, now working at a laptop"). Without it the model only has the words,
             and a character drifts between images.
+        model: Gemini image model id. Defaults to $NANO_BANANA_MODEL, else gemini-2.5-flash-image.
 
     Returns:
-        Dict with keys: path (str), prompt (str), aspect_ratio (str), size_bytes (int).
+        Dict with keys: path (str), prompt (str), aspect_ratio (str), model (str), size_bytes (int).
     """
     if aspect_ratio not in {"1:1", "16:9", "9:16", "4:3", "3:4"}:
         raise ValueError(f"aspect_ratio must be one of 1:1, 16:9, 9:16, 4:3, 3:4 — got {aspect_ratio}")
@@ -73,7 +81,7 @@ def generate_image(
     contents.append(prompt)
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash-image",
+        model=model or DEFAULT_MODEL,
         contents=contents,
         config=types.GenerateContentConfig(
             response_modalities=["IMAGE"],
@@ -90,6 +98,7 @@ def generate_image(
                 "path": str(out),
                 "prompt": prompt,
                 "aspect_ratio": aspect_ratio,
+                "model": model or DEFAULT_MODEL,
                 "reference_images": list(reference_images or [])[:3],
                 "size_bytes": out.stat().st_size,
             }

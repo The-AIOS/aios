@@ -121,6 +121,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `right-context` | `skills/aios/` | "How much of the operator's context does this task actually need?" |
 | `watch-video` | `skills/aios/` | "Watch this video / listen to this recording and tell me…" — comprehension only; `/aios:ingest` is the filing path |
 | `suggest-agent` | `skills/aios/` | "Is there an agent for this?" — suggests the one agent that fits a request, in one fixed line, and opens it or wears it only on your yes |
+| `team-composer` | `skills/aios/` | "Staff this project" — one sentence becomes a team plan in the project note (charter, members, owners, one chief of staff, a tier each), launched only on your yes |
 | `boards` | `skills/aios/` | "Put this on my sidebar" — build, update or remove a static card in the AIOS App's sidebar (`~/.aios/boards/<name>/index.html`, App 0.15.0+) |
 | `systematic-debugging` | `skills/superpowers/` | "Help me debug this systematically" |
 | `test-driven-development` | `skills/superpowers/` | "Let's write tests first" |
@@ -182,7 +183,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `pci-compliance` | `skills/aios/` | "Audit this for PCI compliance" |
 | `security-audit` | `skills/cloudflare/` | "Security-review this codebase" (guidance); "Run a full security audit" (full run, fans out subagents) |
 
-**Source folders:** `skills/aios/` (AIOS-built — 33 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/cloudflare/` (vendored from `cloudflare/security-audit-skill` — 1 skill) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 59. Browse `skills/_index.md` for the full registry.
+**Source folders:** `skills/aios/` (AIOS-built — 34 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/cloudflare/` (vendored from `cloudflare/security-audit-skill` — 1 skill) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 60. Browse `skills/_index.md` for the full registry.
 
 **Marketplace skills** (NOT in `skills/`, install via `/plugin install`): `canvas-design`/`docx`/`pdf`/`pptx`/`xlsx` (via `document-skills` plugin) · `code-review-excellence` (via `code-review@claude-plugins-official`) · `defuddle` (via Anthropic skills marketplace) · `superpowers` full marketplace (`obra/superpowers-marketplace`).
 
@@ -230,10 +231,10 @@ Setup is opt-in and walked through by `/aios:cold-start-interview` + the SETUP.m
 Converts PDF, Word, Excel, PowerPoint, images, audio (with transcription), YouTube URLs, EPUB, HTML, CSV, JSON, XML, ZIP → clean markdown.
 
 ```bash
-python3 ~/aios/hooks/markitdown-convert.py input.pdf              # prints to stdout
-python3 ~/aios/hooks/markitdown-convert.py input.pdf output.md    # saves to file
-python3 ~/aios/hooks/markitdown-convert.py meeting.mp3 transcript.md
-python3 ~/aios/hooks/markitdown-convert.py budget.xlsx data.md
+python3 ~/aios/hooks/media/markitdown-convert.py input.pdf              # prints to stdout
+python3 ~/aios/hooks/media/markitdown-convert.py input.pdf output.md    # saves to file
+python3 ~/aios/hooks/media/markitdown-convert.py meeting.mp3 transcript.md
+python3 ~/aios/hooks/media/markitdown-convert.py budget.xlsx data.md
 ```
 
 Or just say *"convert this PDF to markdown"* — Claude knows. Also integrated into `/aios:ingest` automatically.
@@ -247,8 +248,8 @@ Powers the branded reports from `/aios:weekly-learnings`, `/aios:learned`, `/aio
 Used internally by `/aios:today` and `/aios:close-day` to batch-load Google Calendar, Tasks, and Slack data in one call. You don't need to run it manually, but you can:
 
 ```bash
-uv run ~/aios/hooks/pipeline-executor.py --command today       # for /today shape
-uv run ~/aios/hooks/pipeline-executor.py --command close-day   # for /close-day shape
+uv run ~/aios/hooks/pipeline/pipeline-executor.py --command today       # for /today shape
+uv run ~/aios/hooks/pipeline/pipeline-executor.py --command close-day   # for /close-day shape
 ```
 
 ### `inject-datetime` — UserPromptSubmit hook (real clock in every prompt)
@@ -256,8 +257,8 @@ uv run ~/aios/hooks/pipeline-executor.py --command close-day   # for /close-day 
 Adds a `<system-time>` block to every user prompt before Claude reads it. Eliminates the "Claude infers wrong weekday/time from conversation history" failure mode — without this hook, Claude can drift on the actual day across long sessions, schedule on stale assumptions, or get the year wrong.
 
 ```bash
-~/aios/hooks/inject-datetime.sh      # macOS / Linux (Git Bash on Windows too)
-~/aios/hooks/inject-datetime.ps1     # PowerShell
+~/aios/hooks/context/inject-datetime.sh      # macOS / Linux (Git Bash on Windows too)
+~/aios/hooks/context/inject-datetime.ps1     # PowerShell
 ```
 
 You don't invoke this manually. It's wired into `~/.claude/settings.json` as a `UserPromptSubmit` hook (see SETUP.md §10 for the JSON snippet). Fires on every prompt you submit; load-bearing for any time-sensitive reasoning Claude does.
@@ -287,13 +288,13 @@ If you want 24/7 autonomous agents — overnight shifts, scheduled cron agents, 
 
 Every session and every spawned worker runs on a Claude model, and on the same prompt the top and
 bottom of the ladder differ by roughly **22× in cost**. `spawn --tier frontier|judgment|scale|fast`
-picks a rung by the *shape* of the work (`judgment` is the default). `hooks/openrouter.py` calls a
+picks a rung by the *shape* of the work (`judgment` is the default). `hooks/pipeline/openrouter.py` calls a
 **non-Claude** model as a tool when you need a different family — a cheap text lane, or an
 **independent judge**, since a model cannot dock points for a bias it shares.
 
 ```bash
-python3 ~/aios/hooks/openrouter.py --check                      # what is wired; makes no call
-python3 ~/aios/hooks/openrouter.py --prompt-file brief.md       # text in, text out
+python3 ~/aios/hooks/pipeline/openrouter.py --check                      # what is wired; makes no call
+python3 ~/aios/hooks/pipeline/openrouter.py --prompt-file brief.md       # text in, text out
 spawn --tier fast transcriber "…"                               # cheap rung for high-frequency work
 ```
 

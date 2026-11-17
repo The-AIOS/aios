@@ -25,7 +25,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 2
 ROOT="$(pwd)"
-AC="$ROOT/hooks/aios-commit"
+AC="$ROOT/hooks/vault/aios-commit"
 
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ✓ %s\n' "$1"; }
@@ -38,11 +38,11 @@ src(){ # file needle label
   if grep -qF -- "$2" "$1"; then ok "$3"
   else no "$3" "'$2' no longer appears in $1 — update .gitignore and this suite together"; fi
 }
-src hooks/aios-note-append '.aios-lock"'            "aios-note-append locks <note>.aios-lock"
-src hooks/aios-note-append '.aiostmp"'              "aios-note-append writes <note>.aiostmp"
-src hooks/aios-snapshot    '/.aios-snapshot.lock"'  "aios-snapshot locks .aios-snapshot.lock"
-src hooks/aios-snapshot    '/.aios-snapshot.$$.tmp"' "aios-snapshot writes .aios-snapshot.<pid>.tmp"
-src hooks/route-insight.py '.routebak-'             "route-insight.py backs up to <file>.routebak-<ts>"
+src hooks/vault/aios-note-append '.aios-lock"'            "aios-note-append locks <note>.aios-lock"
+src hooks/vault/aios-note-append '.aiostmp"'              "aios-note-append writes <note>.aiostmp"
+src hooks/vault/aios-snapshot    '/.aios-snapshot.lock"'  "aios-snapshot locks .aios-snapshot.lock"
+src hooks/vault/aios-snapshot    '/.aios-snapshot.$$.tmp"' "aios-snapshot writes .aios-snapshot.<pid>.tmp"
+src hooks/vault/route-insight.py '.routebak-'             "route-insight.py backs up to <file>.routebak-<ts>"
 src skills/superpowers/brainstorming/visual-companion.md '.superpowers/' "superpowers keeps state in .superpowers/"
 
 OBS='vault/00 - notes/context/observed'

@@ -17,7 +17,7 @@ if [ -z "$PYBIN" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# hooks/context-floor.py — the one-call context floor
+# hooks/context/context-floor.py — the one-call context floor
 #
 # The floor used to be headings only. A session could then hold every title in
 # the vault and behave exactly like one that read nothing: it knew what EXISTED
@@ -37,7 +37,7 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '        %s\n' "$2"; return 0; }
 
-H="hooks/context-floor.py"
+H="hooks/context/context-floor.py"
 [ -f "$H" ] || { printf '  FAIL  %s missing\n' "$H"; exit 1; }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export TMPDIR="$TMP"   # a default (file-mode) run writes its floor here, never the real temp dir

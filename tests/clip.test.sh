@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # tests/clip.test.sh
 #
-# hooks/clip puts paste-bound text on the clipboard intact and proves it. Run against STUB clipboard
+# hooks/media/clip puts paste-bound text on the clipboard intact and proves it. Run against STUB clipboard
 # tools (never the real clipboard: a test must not eat what the operator copied), where the stub
 # pbcopy models the measured macOS bug -- it decodes stdin as UTF-8 only under a UTF-8 locale and as
 # Mac Roman otherwise. A positive control shows the stub really mangles a bare locale-less pbcopy, so
 # a pass means clip forced the locale, not that the stub was lenient.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CLIP="$ROOT/hooks/clip"
+CLIP="$ROOT/hooks/media/clip"
 PASS=0; FAIL=0
 ok(){ echo "  ✓ $1"; PASS=$((PASS+1)); }
 no(){ echo "  ✗ $1"; [ -n "${2:-}" ] && echo "      $2"; FAIL=$((FAIL+1)); }
@@ -59,8 +59,8 @@ printf 'x' | env -i PATH="$T/bin:/usr/bin:/bin" CLIP_PLATFORM=linux bash "$CLIP"
 [ "$rc" = 2 ] && ok "headless Linux exits 2" || no "headless exit $rc (expected 2)"
 
 echo "── wired where it must be ──"
-grep -q 'hooks/clip' "$ROOT/CLAUDE.md" && ok "CLAUDE.md names hooks/clip" || no "CLAUDE.md has no clipboard rule"
-if grep -nE '\| *pbcopy|pbpaste' "$ROOT/hooks/claude-identity/install-wrappers.sh" | grep -vE '^[0-9]+: *#' | grep -v 'LC_ALL=' | grep -v 'hooks/clip' | grep -q .; then
+grep -q 'hooks/media/clip' "$ROOT/CLAUDE.md" && ok "CLAUDE.md names hooks/media/clip" || no "CLAUDE.md has no clipboard rule"
+if grep -nE '\| *pbcopy|pbpaste' "$ROOT/hooks/claude-identity/install-wrappers.sh" | grep -vE '^[0-9]+: *#' | grep -v 'LC_ALL=' | grep -v 'hooks/media/clip' | grep -q .; then
   no "install-wrappers.sh still has a pbcopy/pbpaste with no forced locale" "$(grep -nE '\| *pbcopy|pbpaste' "$ROOT/hooks/claude-identity/install-wrappers.sh")"
 else
   ok "install-wrappers.sh routes every clipboard call through clip or a forced UTF-8 locale"

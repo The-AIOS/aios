@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/star-check.test.sh
 #
-# Guards hooks/aios-star-check — the in-product star ask.
+# Guards hooks/pipeline/aios-star-check — the in-product star ask.
 #
 # WHY THIS EXISTS
 # ---------------
@@ -30,7 +30,7 @@
 set -u
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-SCRIPT="$REPO/hooks/aios-star-check"
+SCRIPT="$REPO/hooks/pipeline/aios-star-check"
 PASS=0; FAIL=0
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/star-check-test.XXXXXX")
 cleanup() { chmod -R u+rwX "$TMP" 2>/dev/null; rm -rf "$TMP"; }
@@ -63,8 +63,8 @@ check_reason(){
 mk_tracker() { printf 'repo=git@github.com:The-AIOS/aios.git\nhash=abc1234\nsynced=2026-01-01\n' > "$1"; }
 
 echo "── 1. the script is present and executable ──"
-[ -f "$SCRIPT" ] && ok "hooks/aios-star-check exists" || bad "hooks/aios-star-check missing"
-[ -x "$SCRIPT" ] && ok "carries the exec bit" || bad "not executable — ./hooks/aios-star-check would be Permission denied"
+[ -f "$SCRIPT" ] && ok "hooks/pipeline/aios-star-check exists" || bad "hooks/pipeline/aios-star-check missing"
+[ -x "$SCRIPT" ] && ok "carries the exec bit" || bad "not executable — ./hooks/pipeline/aios-star-check would be Permission denied"
 bash -n "$SCRIPT" && ok "parses" || bad "syntax error"
 
 echo "── 2. fail closed: every inconclusive input yields 'unknown' ──"

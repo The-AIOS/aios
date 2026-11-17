@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/mass-delete-force-push-guard.test.sh
 #
-# Deletions are ANNOUNCED, never blocked (hooks/aios-commit and hooks/git/pre-push), and from a
+# Deletions are ANNOUNCED, never blocked (hooks/vault/aios-commit and hooks/git/pre-push), and from a
 # Claude session (CLAUDECODE=1) a force push or a remote-branch deletion STOPS and asks the
 # operator, passing with AIOS_ALLOW_FORCE_PUSH=1 once they said yes. A human at a terminal is
 # unaffected. Drives the REAL scripts in a throwaway repo with a throwaway bare remote. bash 3.2-safe.
@@ -9,7 +9,7 @@
 # Run:  bash tests/mass-delete-force-push-guard.test.sh
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-AC="$ROOT/hooks/aios-commit"; HOOK="$ROOT/hooks/git/pre-push"
+AC="$ROOT/hooks/vault/aios-commit"; HOOK="$ROOT/hooks/git/pre-push"
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok    %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; }

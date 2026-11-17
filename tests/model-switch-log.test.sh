@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # tests/model-switch-log.test.sh
 #
-# hooks/model-switch-log.py (SETUP Hook F) appends one line per PostModelSwitch to a JSONL log that
+# hooks/pipeline/model-switch-log.py (SETUP Hook F) appends one line per PostModelSwitch to a JSONL log that
 # /close-session, /close-day and the App read back. Asserts: the real payload's field names map to
 # the documented format; every key is present even when the payload is thin; garbage input writes
 # nothing and still exits 0 (a log must never break a session); a second switch appends.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-H="$ROOT/hooks/model-switch-log.py"
+H="$ROOT/hooks/pipeline/model-switch-log.py"
 PYBIN="${PYBIN:-python3}"
 PASS=0; FAIL=0
 ok(){ echo "  ✓ $1"; PASS=$((PASS+1)); }

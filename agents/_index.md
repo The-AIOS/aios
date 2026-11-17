@@ -58,6 +58,8 @@ A session's name decides which agent it wears (its **hat**). CLAUDE.md § Identi
 
 The session says which hat it chose and why, so the operator can correct it, and writes the fixed line `Wearing agent: {name}.` whenever it puts a hat on. When the work turns to another agent's field, or a session with no hat gets a request one agent clearly fits, it names that agent in the `suggest-agent` skill's one fixed line, puts it on (`/aios:agent {name}`) and keeps working; it asks first only when `INTENT.md`'s *Wearing agents (hats)* row says `ask`. The operator can answer "open" (its own session) or "no" (take it off) at any time.
 
+**What counts as an agent.** A `.md` file under `agents/` with `name:` and `description:` frontmatter, other than `_index.md` and `README.md`, not under a `reference/` folder and not marked `agent: false`. A venture keeps its reference documents (laws, glossaries, examples, templates) beside its agents in a `reference/` subfolder, so no surface mistakes one for the other. `hooks/agents/list-agents.py` applies this rule (`--json` for surfaces, `--unclear` for `/aios:housekeeping` Bucket 37); CI holds the bundled tree to it.
+
 **`aliases:` on an agent** are kind words a session name may lead with (`deck`, `writer`, `review`). Precedence on a clash: `custom/`, then bundled `aios/`, then a company's synced `agents/<company>/`, whose aliases never override a word another agent already answers to. Each bundled word belongs to one agent only; `tests/session-hats.test.sh` checks that.
 
 **`archetype:` tags** (e.g. `archetype: maintainer`) mark an agent's *posture* — the [[../skills/aios/team-archetypes/SKILL|five product archetypes]] (Prototyper / Builder / Sweeper / Grower / Maintainer) — **orthogonally to its domain capability**. One agent can carry several (it shifts posture by project stage). They make *"who's my Builder / Maintainer?"* resolvable and let `/7plan` + `/emerge` check the deployed mix matches the project's lifecycle stage (not `/today` — daily routing is tactical, stage→mix is strategic). They are a *lens layered on top of* the domain bundles — never a reason to rename or restructure agents.
@@ -125,7 +127,7 @@ The session says which hat it chose and why, so the operator can correct it, and
 
 | Agent | Purpose | Match keywords | Schedule |
 |---|---|---|---|
-| [[content-writer]] | Draft posts for LinkedIn, Twitter/X, Substack in the user's voice | draft post, write article, LinkedIn, tweet, Substack | on-demand |
+| [[content-writer]] | Draft posts for LinkedIn, Twitter/X, Substack in the user's voice | draft post, write article, write post, blog post, LinkedIn, tweet, Substack | on-demand |
 | [[kdp-publisher]] | Files on disk → live Amazon KDP listings: pre-flight interior/wrap/EPUB, fill the per-author answer sheet, name the five irreversible decisions (DRM · Select · categories · pricing · accessibility), track review/proof clocks, post-publish checklist, errata ledger; DRY RUN mode uploads nothing — the author clicks | KDP, Amazon KDP, self-publish, publish a book, paperback, Kindle, EPUB, cover wrap, spine, bleed, ISBN, ASIN, KDP Select, DRM, proof, errata, dry run, publicar en KDP, autopublicar | on-demand |
 | [[content-scheduler]] | Plan and queue content calendar from vault insights | content calendar, schedule posts, publishing plan | weekly (Monday) |
 | [[email-drafter]] | Draft professional emails matching voice + context | email, draft email, follow up, outreach, reply to | on-demand |

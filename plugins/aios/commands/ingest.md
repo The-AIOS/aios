@@ -39,7 +39,7 @@ The user provides one of:
 For non-markdown files, convert first using the MarkItDown wrapper. **Work in a folder of this run's own**, never a fixed path: two ingests at once (two sessions, or a session and a scheduled job) would otherwise write and read the same file, and one could file the other's source while everything looked normal.
 ```bash
 INGEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/aios-ingest.XXXXXX") && echo "$INGEST_DIR"   # once per ingest
-python3 ~/aios/hooks/markitdown-convert.py <input_file> "$INGEST_DIR/source.md"
+python3 ~/aios/hooks/media/markitdown-convert.py <input_file> "$INGEST_DIR/source.md"
 ```
 **Each tool call starts a fresh shell, so `$INGEST_DIR` does not carry over.** Note the path the first call printed and write it out literally in every later step (the transcript steps below, the read, the cleanup). When the ingest is filed, remove that folder with `rm -rf` and its literal path.
 
@@ -60,25 +60,25 @@ Then read the converted markdown. Supported formats: PDF, Word (.docx), Excel (.
 **Media enhancements (macOS — optional local upgrades; MarkItDown stays the cross-platform default).**
 MarkItDown is the universal converter and remains **primary for every format above** — documents, images, YouTube captions, and short audio all go through it, on every platform. Two *macOS-only* enhancements handle the exact two things MarkItDown can't; neither demotes it:
 
-1. **Long-form transcription — `hooks/transcribe.py` (macOS · mlx-whisper).** MarkItDown's audio path single-shots the whole file to Google Web Speech — fine for a sentence, useless for a 49-min talk. **On macOS**, route *long-form* local audio/video through the local transcriber instead:
+1. **Long-form transcription — `hooks/media/transcribe.py` (macOS · mlx-whisper).** MarkItDown's audio path single-shots the whole file to Google Web Speech — fine for a sentence, useless for a 49-min talk. **On macOS**, route *long-form* local audio/video through the local transcriber instead:
    ```bash
-   python3 ~/aios/hooks/transcribe.py <media-file-or-direct-URL> "$INGEST_DIR/transcript.txt"
+   python3 ~/aios/hooks/media/transcribe.py <media-file-or-direct-URL> "$INGEST_DIR/transcript.txt"
    ```
    `ffmpeg → mlx-whisper (large-v3-turbo)`, on-device, arbitrary length, no third party. **YouTube still goes through MarkItDown captions first** (faster); fall back to `transcribe.py` only if captions yield nothing. **Non-macOS:** MarkItDown handles it — the long-form-local-audio gap is MarkItDown's own, unchanged (a `faster-whisper` cross-platform build is future work).
 
-2. **Video screen-comprehension — `hooks/video-watch.py` (macOS · opt-in).** A transcript is audio-only — it discards everything *shown* (slides, code, diagrams, terminal, charts). When a video's on-screen content carries signal the narration doesn't, layer the frame reader **on top of** the transcript (from MarkItDown captions OR `transcribe.py`):
+2. **Video screen-comprehension — `hooks/media/video-watch.py` (macOS · opt-in).** A transcript is audio-only — it discards everything *shown* (slides, code, diagrams, terminal, charts). When a video's on-screen content carries signal the narration doesn't, layer the frame reader **on top of** the transcript (from MarkItDown captions OR `transcribe.py`):
    ```bash
-   python3 ~/aios/hooks/video-watch.py <file-or-URL> --transcript "$INGEST_DIR/transcript.txt" --reader ocr --code
+   python3 ~/aios/hooks/media/video-watch.py <file-or-URL> --transcript "$INGEST_DIR/transcript.txt" --reader ocr --code
    ```
-   `ffmpeg` scene-keyframes → pHash dedup → per-frame reader (`ocr` = verbatim via Apple Vision · `vlm` = structure via `claude -p` · `both`) → merged timeline. Ingest the **merged** Markdown instead of the transcript alone. Fortress-clean (on-device OCR + `claude -p`, no API key). **Opt-in** — trigger only when the request signals the screen matters (*"read the slides," "there's code on screen," "watch this tutorial"*) or the content is slide/code/whiteboard-heavy; a plain talking-head stays audio-only. **Non-macOS:** the `vlm` reader (`claude -p`) is cross-platform and works; the `ocr` reader needs Apple Vision — use `--reader vlm` off-Mac (the script says so + degrades, never crashes). Guide: `hooks/video-watch-guide.md`.
+   `ffmpeg` scene-keyframes → pHash dedup → per-frame reader (`ocr` = verbatim via Apple Vision · `vlm` = structure via `claude -p` · `both`) → merged timeline. Ingest the **merged** Markdown instead of the transcript alone. Fortress-clean (on-device OCR + `claude -p`, no API key). **Opt-in** — trigger only when the request signals the screen matters (*"read the slides," "there's code on screen," "watch this tutorial"*) or the content is slide/code/whiteboard-heavy; a plain talking-head stays audio-only. **Non-macOS:** the `vlm` reader (`claude -p`) is cross-platform and works; the `ocr` reader needs Apple Vision — use `--reader vlm` off-Mac (the script says so + degrades, never crashes). Guide: `hooks/media/video-watch-guide.md`.
 
 **Standalone MarkItDown usage (outside /ingest):**
 ```bash
 # Convert any file to markdown
-python3 hooks/markitdown-convert.py input.pdf                    # prints to stdout
-python3 hooks/markitdown-convert.py input.pdf output.md          # saves to file
-python3 hooks/markitdown-convert.py presentation.pptx slides.md  # PowerPoint → markdown
-python3 hooks/markitdown-convert.py recording.mp3 transcript.md  # audio → transcript
+python3 hooks/media/markitdown-convert.py input.pdf                    # prints to stdout
+python3 hooks/media/markitdown-convert.py input.pdf output.md          # saves to file
+python3 hooks/media/markitdown-convert.py presentation.pptx slides.md  # PowerPoint → markdown
+python3 hooks/media/markitdown-convert.py recording.mp3 transcript.md  # audio → transcript
 ```
 
 ### 2. Read and extract

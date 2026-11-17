@@ -1,13 +1,13 @@
 ---
 name: motion-lab
-description: 'Use when making motion that will be rendered to video or GIF — starting from a one-line ask like "make me a 3D animation of X": it first interviews the operator element by element (goal, story, time, hero move, look, camera, motion, banned, engine, QA, output), each with a recommended answer, then renders. For a loop, a logo sting, a title card, a product shot, a launch film, an explainer film, a deck component exported for social. Code-drawn motion where every frame is a pure function of t: the render contract, the eleven-line directed brief (the same elements the interview proposes), the numbers (easing, springs as damping ratio, stagger, beat grid, holds), and the render → look → fix loop run on hooks/motion-render.py and hooks/motion-check.py. NOT for reading someone else''s video (watch-video) and NOT for live UI motion inside a product.'
+description: 'Use when making motion that will be rendered to video or GIF — starting from a one-line ask like "make me a 3D animation of X": it first interviews the operator element by element (goal, story, time, hero move, look, camera, motion, banned, engine, QA, output), each with a recommended answer, then renders. For a loop, a logo sting, a title card, a product shot, a launch film, an explainer film, a deck component exported for social. Code-drawn motion where every frame is a pure function of t: the render contract, the eleven-line directed brief (the same elements the interview proposes), the numbers (easing, springs as damping ratio, stagger, beat grid, holds), and the render → look → fix loop run on hooks/media/motion-render.py and hooks/media/motion-check.py. NOT for reading someone else''s video (watch-video) and NOT for live UI motion inside a product.'
 ---
 
 # Motion Lab
 
 **Direction is numbers, and review is measurement.** Every adjective left in a brief is a decision handed back to the model's default look; every check left to "watching it" is a check that does not happen, because the model sees only the frames it is shown and cannot hear. Measured in public: the same model given 27 words of adjectives and 448 words of numbers for the same subject came back with its stock look for the first and the brief for the second.
 
-The engine is plain: **one self-contained HTML file whose every frame is a pure function of t**, frozen frame by frame in a headless browser (`hooks/motion-render.py`), checked by instruments (`hooks/motion-check.py`), stitched by ffmpeg. Frames are reproducible, an edit is one number and a re-render, and the model can look at its own work.
+The engine is plain: **one self-contained HTML file whose every frame is a pure function of t**, frozen frame by frame in a headless browser (`hooks/media/motion-render.py`), checked by instruments (`hooks/media/motion-check.py`), stitched by ffmpeg. Frames are reproducible, an edit is one number and a re-render, and the model can look at its own work.
 
 ## The bar, by default
 
@@ -41,8 +41,8 @@ A one-line ask (*"make me a 3D animation of X"*) is never rendered as given: the
 ## The loop
 
 ```bash
-R(){ python3 "$HOME/aios/hooks/motion-render.py" "$@"; }   # functions, not strings: zsh does not
-C(){ python3 "$HOME/aios/hooks/motion-check.py" "$@"; }    # word-split "$R", and ~ does not expand in quotes
+R(){ python3 "$HOME/aios/hooks/media/motion-render.py" "$@"; }   # functions, not strings: zsh does not
+C(){ python3 "$HOME/aios/hooks/media/motion-check.py" "$@"; }    # word-split "$R", and ~ does not expand in quotes
 C contract piece.html                                     # lint against the contract first
 R frames piece.html --out frames --frames 0,120,240,360   # stills at YOUR beat frames (these are an example)
 R frames piece.html --out frames --all                    # then every frame (a loop renders 0..N-1)

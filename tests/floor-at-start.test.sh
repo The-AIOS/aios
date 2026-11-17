@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/floor-at-start.test.sh
 #
-# hooks/floor-at-start.py delivers a COMPACT context floor at session start (the pointer to the
+# hooks/context/floor-at-start.py delivers a COMPACT context floor at session start (the pointer to the
 # full floor file, INTENT's boundary sections, the newest entries' titles) as SessionStart
 # additionalContext. It skips resumes, honours AIOS_FLOOR_AT_START=0/1, keeps EVERY mode under
 # its character ceiling with the pointer first, falls back to INTENT when the floor refuses the
@@ -9,7 +9,7 @@
 # start. Runs against a throwaway vault. bash 3.2-safe.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-H="$ROOT/hooks/floor-at-start.py"
+H="$ROOT/hooks/context/floor-at-start.py"
 PYBIN=""; for c in python3 python "py -3"; do if $c -c 'import sys' >/dev/null 2>&1; then PYBIN="$c"; break; fi; done
 [ -n "$PYBIN" ] || { echo "SKIP: no working Python" >&2; exit 0; }
 PASS=0; FAIL=0
@@ -17,8 +17,8 @@ ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n' "$1"; [ -n "${2:-}" ] && printf '       %s\n' "$2"; return 0; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 V="$T/vault-root"; C="$V/vault/00 - notes/context"
-mkdir -p "$C/declared" "$C/observed" "$V/hooks"
-cp "$ROOT/hooks/context-floor.py" "$ROOT/hooks/floor-at-start.py" "$V/hooks/"
+mkdir -p "$C/declared" "$C/observed" "$V/hooks/context"
+cp "$ROOT/hooks/context/context-floor.py" "$ROOT/hooks/context/floor-at-start.py" "$V/hooks/context/"
 printf '# Index\n' > "$C/declared/_index.md"; printf '# Index\n' > "$C/observed/_index.md"
 printf '# About\n## Who\nprose\n' > "$C/declared/about_me.md"
 { printf '# Patterns\n'; for i in 1 2 3 4 5 6 7; do printf '### Pattern %s (2026-10-0%s)\nbody-%s\n' "$i" "$i" "$i"; done; } > "$C/observed/patterns.md"
@@ -27,7 +27,7 @@ printf '# User\n## Identity\n| Name | Role | Greeting style |\n|---|---|---|\n| 
 export TMPDIR="$T"
 hook(){ # $1 source · rest: env assignments. Runs with the vault as cwd (the hook only fires inside it).
   local src="$1"; shift
-  ( cd "$V" && printf '{"session_id":"s1","source":"%s"}' "$src" | env -u AIOS_FLOOR_AT_START -u CLAUDE_AGENT_NAME "$@" $PYBIN "$V/hooks/floor-at-start.py" )
+  ( cd "$V" && printf '{"session_id":"s1","source":"%s"}' "$src" | env -u AIOS_FLOOR_AT_START -u CLAUDE_AGENT_NAME "$@" $PYBIN "$V/hooks/context/floor-at-start.py" )
 }
 ctx(){ $PYBIN -c 'import json,sys
 try: print(json.load(sys.stdin)["hookSpecificOutput"]["additionalContext"])
@@ -59,7 +59,7 @@ case "$(hook startup CLAUDE_CODE_ENTRYPOINT=cli CLAUDE_AGENT_NAME=some-worker | 
 [ -n "$(hook startup CLAUDE_CODE_ENTRYPOINT=cli AIOS_FLOOR_AT_START=0)" ] && no "opt-out ignored" || ok "AIOS_FLOOR_AT_START=0 opts any session out"
 
 echo "-- never in the way --"
-out=$(cd "$V" && printf 'not json' | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$V/hooks/floor-at-start.py"); rc=$?
+out=$(cd "$V" && printf 'not json' | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$V/hooks/context/floor-at-start.py"); rc=$?
 [ "$rc" = 0 ] && ok "malformed stdin: exit 0" || no "malformed stdin rc=$rc"
 mv "$C/observed" "$C/observed.off"
 out=$(hook startup CLAUDE_CODE_ENTRYPOINT=cli); rc=$?
@@ -104,21 +104,21 @@ rm -f "$C/observed/heavy"*.md; cp "$T/intent.small" "$V/INTENT.md"
 
 echo "-- only inside the vault (the hook is registered for every session) --"
 OUTSIDE="$T/elsewhere"; mkdir -p "$OUTSIDE"
-o=$(cd "$OUTSIDE" && printf '{"session_id":"s1","source":"startup"}' | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$V/hooks/floor-at-start.py"); rc=$?
+o=$(cd "$OUTSIDE" && printf '{"session_id":"s1","source":"startup"}' | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$V/hooks/context/floor-at-start.py"); rc=$?
 [ "$rc" = 0 ] && [ -z "$o" ] && ok "process cwd outside the vault: exit 0, silent" || no "fired outside the vault" "$(printf '%s' "$o" | head -c 120)"
 j=$(cd "$OUTSIDE" && $PYBIN -c 'import json,os; print(json.dumps({"session_id":"s1","source":"startup","cwd":os.getcwd()}))')
-o=$(cd "$V" && printf '%s' "$j" | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$V/hooks/floor-at-start.py")
+o=$(cd "$V" && printf '%s' "$j" | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$V/hooks/context/floor-at-start.py")
 [ -z "$o" ] && ok "stdin cwd outside wins over a process cwd inside: silent" || no "stdin cwd ignored"
-o=$(cd "$OUTSIDE" && printf '{"source":"startup"}' | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=sdk-cli $PYBIN "$V/hooks/floor-at-start.py")
+o=$(cd "$OUTSIDE" && printf '{"source":"startup"}' | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=sdk-cli $PYBIN "$V/hooks/context/floor-at-start.py")
 [ -z "$o" ] && ok "a routine outside the vault gets nothing either" || no "routine fired outside the vault"
 j=$(cd "$V/hooks" && $PYBIN -c 'import json,os; print(json.dumps({"session_id":"s1","source":"startup","cwd":os.getcwd()}))')
-o=$(cd "$OUTSIDE" && printf '%s' "$j" | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$V/hooks/floor-at-start.py" | ctx)
+o=$(cd "$OUTSIDE" && printf '%s' "$j" | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$V/hooks/context/floor-at-start.py" | ctx)
 case "$o" in *intent-marker-xyz*) ok "stdin cwd in a vault subfolder: delivered" ;; *) no "subfolder cwd skipped" ;; esac
 ln -s "$V" "$T/link-to-vault" 2>/dev/null
 if [ -L "$T/link-to-vault" ]; then
-  o=$(cd "$T/link-to-vault" && printf '{"session_id":"s1","source":"startup"}' | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$V/hooks/floor-at-start.py" | ctx)
+  o=$(cd "$T/link-to-vault" && printf '{"session_id":"s1","source":"startup"}' | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$V/hooks/context/floor-at-start.py" | ctx)
   case "$o" in *intent-marker-xyz*) ok "cwd through a symlink into the vault: delivered" ;; *) no "symlinked cwd skipped" ;; esac
-  o=$(cd "$V" && printf '{"session_id":"s1","source":"startup"}' | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$T/link-to-vault/hooks/floor-at-start.py" | ctx)
+  o=$(cd "$V" && printf '{"session_id":"s1","source":"startup"}' | env -u AIOS_FLOOR_AT_START CLAUDE_CODE_ENTRYPOINT=cli $PYBIN "$T/link-to-vault/hooks/context/floor-at-start.py" | ctx)
   case "$o" in *intent-marker-xyz*) ok "hook reached through a symlinked root (~/aios): delivered" ;; *) no "symlinked root skipped" ;; esac
 else
   echo "  skip symlink cases (no symlinks on this filesystem)"

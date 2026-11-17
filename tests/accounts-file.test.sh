@@ -82,7 +82,7 @@ echo "== 1. first use imports the USER.md list =="
 sandbox
 # The import reads USER.md beside the code, so this runs a COPY of the hooks under a
 # fixture root. It is the only section that does.
-ROOTX="$H/root"; mkdir -p "$ROOTX/hooks"; cp -R "$ROOT/hooks/claude-identity" "$ROOTX/hooks/"; cp "$ROOT/hooks/aios-health.py" "$ROOTX/hooks/" 2>/dev/null
+ROOTX="$H/root"; mkdir -p "$ROOTX/hooks"; cp -R "$ROOT/hooks/claude-identity" "$ROOTX/hooks/"; mkdir -p "$ROOTX/hooks/pipeline"; cp "$ROOT/hooks/pipeline/aios-health.py" "$ROOTX/hooks/pipeline/" 2>/dev/null
 cat > "$ROOTX/USER.md" <<EOF
 # USER
 
@@ -438,7 +438,7 @@ J="$(sw --availability 2>&1)"; rc=$?
 sw --list >/dev/null 2>&1 && ok "nor --list" || no "--list crashed" ""
 
 echo "== 11b. what a lost or unreadable list does =="
-hooks_copy() { ROOTX="$H/root"; mkdir -p "$ROOTX/hooks"; cp -R "$ROOT/hooks/claude-identity" "$ROOTX/hooks/"; cp "$ROOT/hooks/aios-health.py" "$ROOTX/hooks/" 2>/dev/null; XACC="$ROOTX/hooks/claude-identity/_accounts.py"; XWATCH="$ROOTX/hooks/claude-identity/_watch.py"; XSH="$ROOTX/hooks/claude-identity/claude-identity.sh"; }
+hooks_copy() { ROOTX="$H/root"; mkdir -p "$ROOTX/hooks"; cp -R "$ROOT/hooks/claude-identity" "$ROOTX/hooks/"; mkdir -p "$ROOTX/hooks/pipeline"; cp "$ROOT/hooks/pipeline/aios-health.py" "$ROOTX/hooks/pipeline/" 2>/dev/null; XACC="$ROOTX/hooks/claude-identity/_accounts.py"; XWATCH="$ROOTX/hooks/claude-identity/_watch.py"; XSH="$ROOTX/hooks/claude-identity/claude-identity.sh"; }
 sandbox; hooks_copy; seat "$A" "$DAY"; capture "$A" "$DAY"; capture "$B" "$DAY"; capture "$C" "$DAY"
 printf '## Anthropic accounts\n\n1. `%s`\n2. `%s`\n3. `%s`\n' "$A" "$B" "$C" > "$ROOTX/USER.md"
 env_run $PY "$XACC" rotation >/dev/null

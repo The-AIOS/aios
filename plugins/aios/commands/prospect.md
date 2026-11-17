@@ -4,7 +4,7 @@ tags:
   - command
   - on-demand
 description: Mine the vault for opportunities nobody has named yet (business, products, offerings) with a blind multi-lens sweep, then rank and argue them
-allowed-tools: mcp__obsidian__*, Read, Grep, Glob, Agent, Write, Bash(ls *), Bash(cd ~/aios && ~/aios/hooks/aios-commit:*)
+allowed-tools: mcp__obsidian__*, Read, Grep, Glob, Agent, Write, Bash(ls *), Bash(cd ~/aios && ~/aios/hooks/vault/aios-commit:*)
 ---
 
 # /prospect: Opportunity Prospector
@@ -157,7 +157,7 @@ Write the report to `00 - notes/reflections/prospects/{YYYY-MM-DD}-prospect.md` 
 
 Commit only what this run wrote:
 
-`cd ~/aios && ~/aios/hooks/aios-commit -m "Prospect {date}" -- "vault/00 - notes/reflections/prospects/{YYYY-MM-DD}-prospect.md"` (add `"vault/00 - notes/reflections/_index.md"` if you touched it).
+`cd ~/aios && ~/aios/hooks/vault/aios-commit -m "Prospect {date}" -- "vault/00 - notes/reflections/prospects/{YYYY-MM-DD}-prospect.md"` (add `"vault/00 - notes/reflections/_index.md"` if you touched it).
 
 ## Rules
 

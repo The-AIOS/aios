@@ -6,7 +6,7 @@
 # errors, none logs, each returns a confident wrong answer that looks like a pass.
 #
 # PART A — a keyed item's truth surface is found by grepping for `type: roadmap` +
-# `status: live`. hooks/aios-snapshot archives with `cp -p`, so every archived copy of
+# `status: live`. hooks/vault/aios-snapshot archives with `cp -p`, so every archived copy of
 # a roadmap carries that frontmatter and answers the probe exactly like the real file.
 # An unscoped probe returns the archives too, and an archive is always the staler
 # answer. Measured on a live vault: one key resolved to 19 files, 18 of them snapshots,

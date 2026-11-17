@@ -17,7 +17,7 @@ if [ -z "$PYBIN" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# hooks/recall.py — the on-demand index over observed/ that the floor cannot be.
+# hooks/context/recall.py — the on-demand index over observed/ that the floor cannot be.
 #
 # The floor names every TITLE and prints the newest few bodies. An old lesson whose title does
 # not name the concept is therefore invisible to a session looking for the concept, and nothing
@@ -40,7 +40,7 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '        %s\n' "$2"; return 0; }
 
-H="hooks/recall.py"
+H="hooks/context/recall.py"
 [ -f "$H" ] || { printf '  FAIL  %s missing\n' "$H"; exit 1; }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 OBS_REL="vault/00 - notes/context/observed"
@@ -366,7 +366,7 @@ OUT="$(AIOS_ROOT="$V" $PYBIN "$H" cache 2>&1)"; RC=$?
 [ $RC -eq 0 ] && ok "\$AIOS_ROOT is honoured when --vault is absent" || no "\$AIOS_ROOT ignored (rc=$RC)" "$OUT"
 OUT="$(AIOS_ROOT="$TMP/no-such-vault" $PYBIN "$H" --vault "$V" cache 2>&1)"; RC=$?
 [ $RC -eq 0 ] && ok "--vault wins over \$AIOS_ROOT" || no "--vault did not override the environment (rc=$RC)" "$OUT"
-if grep -E 'hooks/recall\.py' hooks/_index.md | grep -F 'UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run' >/dev/null; then
+if grep -E 'hooks/context/recall\.py' hooks/_index.md | grep -F 'UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run' >/dev/null; then
   ok "hooks/_index.md documents the sandbox-safe uv invocation"
 else
   no "hooks/_index.md lacks the 'UV_CACHE_DIR=... uv run' invocation for recall.py"
@@ -380,13 +380,13 @@ else
 fi
 # Opt-in: nothing runs it. The floor may NAME it in one line of text, so sessions learn it
 # exists (a tool nobody knows about is never used), but no hook imports or calls it.
-if grep -rn 'recall' hooks/floor-at-start.py hooks/install-settings.py >/dev/null 2>&1 \
-   || grep -n 'recall' hooks/context-floor.py | grep -vE '^[0-9]+:[[:space:]]*(w\(|.uv run ~/aios/hooks/recall\.py|#)' | grep -q .; then
+if grep -rn 'recall' hooks/context/floor-at-start.py hooks/install/install-settings.py >/dev/null 2>&1 \
+   || grep -n 'recall' hooks/context/context-floor.py | grep -vE '^[0-9]+:[[:space:]]*(w\(|.uv run ~/aios/hooks/context/recall\.py|#)' | grep -q .; then
   no "recall.py is called from the floor or a session hook" "it is opt-in by contract: named, never run"
 else
   ok "opt-in: no hook imports or calls it"
 fi
-if $PYBIN hooks/context-floor.py --print "$V" 2>/dev/null | grep -F 'uv run ~/aios/hooks/recall.py "<words>"' >/dev/null; then
+if $PYBIN hooks/context/context-floor.py --print "$V" 2>/dev/null | grep -F 'uv run ~/aios/hooks/context/recall.py "<words>"' >/dev/null; then
   ok "the floor names recall.py once, where every session reads"
 else
   no "the floor does not name recall.py" "a tool no session knows about is never used"

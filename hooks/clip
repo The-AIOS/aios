@@ -1,79 +1,8 @@
 #!/usr/bin/env bash
-# hooks/clip — put text on the system clipboard, intact, and prove it landed.
-#
-#   clip [FILE]            copy FILE (or stdin) to the clipboard, then read it back and compare
-#   clip --no-verify ...   copy without the read-back (for a caller that restores a clipboard)
-#
-# WHY. Text an operator will paste into another app (a message, an email, a form) goes through the
-# clipboard, and on macOS `pbcopy` decodes its input with the PROCESS LOCALE: with no UTF-8 locale
-# it falls back to Mac Roman, so `a→b—c á` lands as `a‚Üíb‚Äîc √°`. An interactive login shell is
-# usually rescued by /etc/zprofile; a routine, `claude -p`, AppleScript's `do shell script`, an
-# app's child process or a bash login shell is not. Nothing fails: the mojibake is visible only to
-# whoever receives the paste. So this forces a UTF-8 locale every time, and then reads the
-# clipboard back and compares CONTENT -- a read-back that only checks "something is there" passes
-# on mojibake, because pbpaste echoes the mangled text back faithfully.
-#
-# Exit codes: 0 copied and verified · 2 no clipboard here (SSH, a bridge, headless: give the
-# operator the file path instead) · 3 copied but the read-back differs (do NOT claim the copy).
-#
-# Platforms: macOS (pbcopy/pbpaste) · Windows under Git Bash (PowerShell Set/Get-Clipboard, UTF-8
-# forced on both pipes) · Linux (wl-copy/wl-paste on Wayland, else xclip, else xsel).
-# CLIP_PLATFORM=darwin|windows|linux overrides detection (tests only).
-# CLAUDE.md § Deliverables land standalone. Guarded by tests/clip.test.sh.
-set -u
-
-verify=1
-if [ "${1:-}" = "--no-verify" ]; then verify=0; shift; fi
-
-tmp="$(mktemp "${TMPDIR:-/tmp}/aios-clip-XXXXXX")" || exit 2
-trap 'rm -f "$tmp" "$tmp.back"' EXIT
-if [ $# -gt 0 ]; then cat -- "$1" > "$tmp" || exit 2; else cat > "$tmp"; fi
-
-platform="${CLIP_PLATFORM:-}"
-if [ -z "$platform" ]; then
-  case "$(uname -s 2>/dev/null)" in
-    Darwin) platform=darwin ;;
-    MINGW*|MSYS*|CYGWIN*) platform=windows ;;
-    *) platform=linux ;;
-  esac
-fi
-
-have(){ command -v "$1" >/dev/null 2>&1; }
-utf8="en_US.UTF-8"
-
-case "$platform" in
-  darwin)
-    have pbcopy || { echo "clip: no pbcopy here -- no clipboard" >&2; exit 2; }
-    LC_ALL="$utf8" LANG="$utf8" pbcopy < "$tmp" || exit 2
-    [ "$verify" = 1 ] && { LC_ALL="$utf8" LANG="$utf8" pbpaste > "$tmp.back" 2>/dev/null || exit 2; }
-    ;;
-  windows)
-    ps=powershell; have "$ps" || ps=pwsh; have "$ps" || { echo "clip: no PowerShell -- no clipboard" >&2; exit 2; }
-    "$ps" -NoProfile -Command '[Console]::InputEncoding=[Text.Encoding]::UTF8; Set-Clipboard -Value ([Console]::In.ReadToEnd())' < "$tmp" || exit 2
-    [ "$verify" = 1 ] && { "$ps" -NoProfile -Command '[Console]::OutputEncoding=[Text.Encoding]::UTF8; [Console]::Out.Write((Get-Clipboard -Raw))' > "$tmp.back" 2>/dev/null || exit 2; }
-    ;;
-  linux)
-    if [ -n "${WAYLAND_DISPLAY:-}" ] && have wl-copy; then
-      wl-copy < "$tmp" || exit 2
-      [ "$verify" = 1 ] && { wl-paste --no-newline > "$tmp.back" 2>/dev/null || exit 2; }
-    elif [ -n "${DISPLAY:-}" ] && have xclip; then
-      xclip -selection clipboard -in < "$tmp" || exit 2
-      [ "$verify" = 1 ] && { xclip -selection clipboard -out > "$tmp.back" 2>/dev/null || exit 2; }
-    elif [ -n "${DISPLAY:-}" ] && have xsel; then
-      xsel --clipboard --input < "$tmp" || exit 2
-      [ "$verify" = 1 ] && { xsel --clipboard --output > "$tmp.back" 2>/dev/null || exit 2; }
-    else
-      echo "clip: no clipboard here (no display, or no wl-copy/xclip/xsel)" >&2; exit 2
-    fi
-    ;;
-  *) echo "clip: unknown platform '$platform'" >&2; exit 2 ;;
-esac
-
-[ "$verify" = 1 ] || exit 0
-# Compare content, ignoring CR (Windows clipboards hand back CRLF) and trailing newlines (some
-# backends add one); command substitution strips those, and nothing else.
-if [ "$(tr -d '\r' < "$tmp")" = "$(tr -d '\r' < "$tmp.back")" ]; then
-  exit 0
-fi
-echo "clip: the clipboard does not hold what was copied (read-back differs) -- do not claim the copy" >&2
-exit 3
+# Moved to hooks/media/clip (#309). This stub forwards for one release, then goes.
+# Symlinks are followed (aios-commit is linked into ~/.local/bin), at most 40 hops; CDPATH is
+# cleared so `cd` can never land in another tree's hooks/ or print into the substitution.
+s="$0"; n=0
+while [ -L "$s" ] && [ "$n" -lt 40 ]; do t=$(readlink -- "$s"); case "$t" in /*) s="$t" ;; *) s="$(dirname -- "$s")/$t" ;; esac; n=$((n+1)); done
+d=$(CDPATH= cd -P -- "$(dirname -- "$s")" && pwd) || exit 1
+exec "$d/media/clip" "$@"

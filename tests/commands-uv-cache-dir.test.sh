@@ -63,7 +63,7 @@ else
 fi
 
 # The exemption is real, not a blanket: learned.md pins page-fit bare.
-grep -q 'Bash(uv run ~/aios/hooks/page-fit.py:\*)' plugins/aios/commands/learned.md \
+grep -q 'Bash(uv run ~/aios/hooks/media/page-fit.py:\*)' plugins/aios/commands/learned.md \
   && ok "exemption is scoped: learned.md pins its page-fit call in allowed-tools" \
   || sk "learned.md no longer pins page-fit — exemption unused there"
 
@@ -78,7 +78,7 @@ if [ -z "$tmp_cache" ]; then
 else
   no "a prescription still puts the uv cache in \$TMPDIR, which macOS purges file by file (#253)" "$(printf '%s' "$tmp_cache" | head -3)"
 fi
-grep -qF 'UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-floor.py' CLAUDE.md \
+grep -qF 'UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context/context-floor.py' CLAUDE.md \
   && ok "CLAUDE.md prescribes the floor with the cache in .aios-run/" \
   || no "CLAUDE.md's floor command does not use the .aios-run/ cache"
 
@@ -86,7 +86,7 @@ TMP="$(mktemp -d)"; trap 'chmod -R u+w "$TMP" 2>/dev/null; rm -rf "$TMP"' EXIT
 
 # ── 2. mutant: the scan must catch the old shape ─────────────────────────────
 mkdir -p "$TMP/mut"
-sed 's|UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-rungs.py|uv run ~/aios/hooks/context-rungs.py|' \
+sed 's|UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context/context-rungs.py|uv run ~/aios/hooks/context/context-rungs.py|' \
   plugins/aios/commands/housekeeping.md > "$TMP/mut/housekeeping.md"
 if cmp -s plugins/aios/commands/housekeeping.md "$TMP/mut/housekeeping.md"; then
   no "MUTANT: could not reproduce the old housekeeping line" "the prefixed context-rungs call is gone from the spec"
@@ -103,7 +103,7 @@ if ! command -v uv >/dev/null 2>&1; then
   [ "$FAIL" -eq 0 ]; exit $?
 fi
 
-line=$(grep -m1 'uv run ~/aios/hooks/route-insight.py' plugins/aios/commands/close-day.md | sed 's/^[[:space:]]*//')
+line=$(grep -m1 'uv run ~/aios/hooks/vault/route-insight.py' plugins/aios/commands/close-day.md | sed 's/^[[:space:]]*//')
 # `~/aios/` becomes "$AIOS_REPO"/ — expanded by the child shell from its environment, quoted, so
 # a checkout path with spaces stays one argument. Splicing $REPO into the program text would not.
 inv=$(printf '%s' "$line" | sed 's|\(route-insight\.py\).*|\1|; s|~/aios/|"$AIOS_REPO"/|')
@@ -131,7 +131,7 @@ else
   no "CONTROL: bare 'uv run' failed for another reason" "exit $rc_ctl: $(head -2 "$TMP/ctl.err")"
 fi
 # The predicate itself must not accept an unrelated error that happens to say "cache".
-printf "error: Failed to spawn: \`/tmp/cache-checkout/hooks/route-insight.py\`\n  Caused by: No such file or directory\n" > "$TMP/decoy.err"
+printf "error: Failed to spawn: \`/tmp/cache-checkout/hooks/vault/route-insight.py\`\n  Caused by: No such file or directory\n" > "$TMP/decoy.err"
 cache_failure "$TMP/decoy.err" \
   && no "CONTROL predicate accepts a missing-file error whose path says 'cache'" \
   || ok "CONTROL predicate rejects a missing-file error whose path says 'cache'"

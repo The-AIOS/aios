@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/whoami.test.sh
 #
-# hooks/whoami is the session-start identity check. The old CLAUDE.md line grepped the transcript
+# hooks/context/whoami is the session-start identity check. The old CLAUDE.md line grepped the transcript
 # inline, with `$CLAUDE_CODE_SESSION_ID` in the command, and Claude Code asks permission for any
 # command whose variables it must expand first: every session start prompted, even allowlisted.
 # The helper must resolve the same name, and CLAUDE.md must prescribe no `$` in that check.
@@ -10,7 +10,7 @@ cd "$(dirname "$0")/.." || exit 1
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
-W=hooks/whoami
+W=hooks/context/whoami
 [ -x "$W" ] || { echo "::error::$W missing or not executable"; exit 1; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/projects/-some-project"
@@ -32,7 +32,7 @@ out=$(run 'CLAUDE_CODE_SESSION_ID=*'); [ -z "$out" ] && ok "a glob in the sessio
 
 echo "── CLAUDE.md prescribes the helper, with no \$ in the identity check ──"
 blk=$(awk '/^## Mandatory First Action/{f=1;next} /^## /&&f{exit} f' CLAUDE.md)
-printf '%s' "$blk" | grep -q '`~/aios/hooks/whoami`' && ok "the first action runs hooks/whoami" || no "CLAUDE.md does not prescribe hooks/whoami"
+printf '%s' "$blk" | grep -q '`~/aios/hooks/context/whoami`' && ok "the first action runs hooks/context/whoami" || no "CLAUDE.md does not prescribe hooks/context/whoami"
 printf '%s' "$blk" | grep -q 'CLAUDE_CODE_SESSION_ID' && no "the first action still expands the session id inline" || ok "no session-id expansion left in the first action"
 
 echo

@@ -14,7 +14,7 @@ This skill is for the other ten percent — and for the moment mid-task when the
 ## First, stop asserting and measure
 
 ```bash
-uv run ~/aios/hooks/context-rungs.py          # or --json
+uv run ~/aios/hooks/context/context-rungs.py          # or --json
 ```
 
 It prints the four rungs **for the vault in front of you**, in words and estimated tokens, and ends in a verdict. Run it before reasoning about cost. Two vaults give opposite correct answers:
@@ -32,7 +32,7 @@ So the numbers below are **costs you can look up**, not levels you unlock. Only 
 
 **Rung 0 — both `_index.md`.** Filenames and a line each. Orientation, never a resting place.
 
-**Rung 1 — THE FLOOR. `uv run ~/aios/hooks/context-floor.py`.** The only fixed thing in this skill. One call emits both `_index.md`, every heading in `declared/` and `observed/`, **the last 5 `###` entries of every observed file in full**, `INTENT.md`, and a listing of `ventures/`. Everything after this is judgment.
+**Rung 1 — THE FLOOR. `uv run ~/aios/hooks/context/context-floor.py`.** The only fixed thing in this skill. One call emits both `_index.md`, every heading in `declared/` and `observed/`, **the last 5 `###` entries of every observed file in full**, `INTENT.md`, and a listing of `ventures/`. Everything after this is judgment.
 
 **Rung 2 — all of `declared/`.** A common depth, priced for convenience. Not a level: if one declared file answers your question, read that file.
 
@@ -58,7 +58,7 @@ This is why **reaching mid-task is the normal mode rather than a fallback**, and
 
 Two situations, and they are narrow:
 
-- **The whole context is cheaper than deciding what to skip.** Run `uv run ~/aios/hooks/context-rungs.py`; if the verdict says read it all, read it all. This is not thoroughness, it is arithmetic: when deliberating costs more than acting, do not deliberate.
+- **The whole context is cheaper than deciding what to skip.** Run `uv run ~/aios/hooks/context/context-rungs.py`; if the verdict says read it all, read it all. This is not thoroughness, it is arithmetic: when deliberating costs more than acting, do not deliberate.
 - **The task IS the context.** Synthesising across the operator's history, auditing or compacting the observed files, deriving a pattern that only appears across many of them, answering *as* them. Here an index is a lossy summary of precisely the thing under analysis.
 
 **Outside those two, reaching for everything is not caution — it is the absence of a judgment.** Measured: a worker told to read all of both folders for a two-sentence task spent 38 tool calls across 18 files and never wrote the two sentences. Volume is the failure mode that looks like diligence.
@@ -101,7 +101,7 @@ Rank these, in order, and stop at the first that applies:
 
 A worker told to read *all* of both folders before a two-sentence task spent **38 tool calls across 18 files and never wrote the two sentences**. Rung 3 on a grown vault is not caution — it is a way of not doing the work. The same task, at rung 2, delivered in 26 calls in the operator's voice.
 
-And the failure at the bottom is equally real and much quieter: measured across spawned workers on a live vault, one did substantive work having loaded **nothing at all**, and nothing reported it. `/aios:housekeeping` now names those (Bucket 30, via `hooks/context-load-audit.py`).
+And the failure at the bottom is equally real and much quieter: measured across spawned workers on a live vault, one did substantive work having loaded **nothing at all**, and nothing reported it. `/aios:housekeeping` now names those (Bucket 30, via `hooks/context/context-load-audit.py`).
 
 ## What you owe the operator at the end
 

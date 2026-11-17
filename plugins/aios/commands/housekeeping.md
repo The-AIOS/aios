@@ -375,7 +375,7 @@ Synthesize a ≤100-word behavioral rule from the pattern description + the sour
 
 4. **Annotate the meta-pattern description** with the same graduation flag inline.
 
-5. **Snapshot `antifragile.md` before editing** with the helper, never a hand-rolled copy: `~/aios/hooks/aios-snapshot "vault/00 - notes/context/observed/antifragile.md"`. It archives to `00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-antifragile.md`, compares against every existing archive for the day under a lock, and takes the next free letter itself; `identical` on its output is success, not a skipped step (CLAUDE.md § Session End).
+5. **Snapshot `antifragile.md` before editing** with the helper, never a hand-rolled copy: `~/aios/hooks/vault/aios-snapshot "vault/00 - notes/context/observed/antifragile.md"`. It archives to `00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM-DD}-antifragile.md`, compares against every existing archive for the day under a lock, and takes the next free letter itself; `identical` on its output is success, not a skipped step (CLAUDE.md § Session End).
 
 **Evidence discipline:** show the entry numbers, dates, and the synthesized rule text. *"Meta-pattern Q has 5 entries (most recent #51, 1 day ago) — proposed rule reads: '{exact text}'"* beats *"Q is ready to graduate."*
 
@@ -673,7 +673,7 @@ Audits the vault against the **File Placement Router** (CLAUDE.md § IV) *and* t
 - **Basename collisions** → two linked notes sharing a basename, making `[[name]]` ambiguous (grammar § 5).
 - **Roadmap-layer graduation signals (grammar § 7)** → the vault may have outgrown per-note tracking. Check the four signals: project notes repeatedly flagging the line-count ladder because they carry *prioritized cross-project backlogs* (not history); the same initiative's tasks fragmented across 3+ project notes with no surface owning priority; carries bouncing between notes; cross-everything questions no file can answer. **2+ signals firing → surface the recommendation**: instantiate `templates/aios/roadmap-template.md` (one file first; family maps only when that file grows heavy), wire each participating project note's `Roadmap` row, keys per the truth-flip contract. This is the framework's existing opt-in layer — the bucket's job is noticing *when it's worth offering*, never installing it. Adoption is entirely the operator's call, and "not yet" is a fine answer that shouldn't be re-proposed for 30+ days.
 
-**Scan — context reach (what a session can actually find).** A session finds things through the context floor (`hooks/context-floor.py`), the `_index.md` files and wiki-links. A file none of those reach is, for the AIOS, a file that does not exist. Each finding names the file, the proposed home and the rule behind it:
+**Scan — context reach (what a session can actually find).** A session finds things through the context floor (`hooks/context/context-floor.py`), the `_index.md` files and wiki-links. A file none of those reach is, for the AIOS, a file that does not exist. Each finding names the file, the proposed home and the rule behind it:
 
 - **Unreachable files** → a note inside an indexed folder (one with an `_index.md`) that its index does not list and no other note links to. Folders without an index (`01 - calendar/`, `00 - notes/logs/`, `04 - backups/`, and any room that has not grown one) are reached by date, by tools or by search, and are not scanned. Propose a home and the index line, or a link from the note it belongs with.
 - **Duplicates** → the same content, or the same topic written twice, in two places. Name the one to keep (the one the indexes and links already point at) and propose merging the other into it.
@@ -823,12 +823,12 @@ It runs for months without complaining, which is why it needs a periodic sweep r
 
 **The distinction that keeps this quiet — authorship, not the verb.** Most `claude -p` calls are not findings, and a bucket that flags them all gets ignored:
 
-- **NOT a finding — reading an artifact Claude did not write.** Captioning video frames, OCR interpretation, summarising a PDF, extracting structure from a transcript. AIOS ships exactly this (`hooks/video-watch.py` captions frames with `claude -p`). Measurement, not self-grading.
+- **NOT a finding — reading an artifact Claude did not write.** Captioning video frames, OCR interpretation, summarising a PDF, extracting structure from a transcript. AIOS ships exactly this (`hooks/media/video-watch.py` captions frames with `claude -p`). Measurement, not self-grading.
 - **NOT a finding — a deterministic scorer.** Anything that *counts* (tells per 1,000 words, paragraph bursts, line lengths, link density) has no judge to be biased. The [`voice-gate`](../../../skills/aios/voice-gate/SKILL.md) skill is this on purpose; where a countable proxy exists, counting is strictly better than judging and needs no cross-family call at all.
 - **NOT a finding — factual or structural verification.** *"Does this cite a source that exists?"*, *"is this valid JSON?"*, *"does this contradict the brief?"* have answers independent of house style.
 - **A FINDING — a Claude model scoring the prose quality, voice, or style of Claude-authored text**, especially when the score gates something (publishing, a commit, a promotion between buffers).
 
-**Report as:** *"`{file}:{line}` scores Claude-authored prose with a Claude model (`{the invocation}`, scoring term `{term}` at line {n}). Same-family judge — it cannot penalise a shared tendency. Options: make it deterministic (count a proxy), or cross the family via `hooks/openrouter.py`. Which fits?"*
+**Report as:** *"`{file}:{line}` scores Claude-authored prose with a Claude model (`{the invocation}`, scoring term `{term}` at line {n}). Same-family judge — it cannot penalise a shared tendency. Options: make it deterministic (count a proxy), or cross the family via `hooks/pipeline/openrouter.py`. Which fits?"*
 
 **State COVERAGE, every run, even at zero findings:** *"Same-family judge: **{N}** Claude invocations scanned across **{F}** operator files · **{S}** near scoring vocabulary · **{R}** reported · **{X}** excluded as reading-not-grading."* A silent zero is indistinguishable from a sweep that never ran.
 
@@ -893,7 +893,7 @@ Report as: *"`{file}:{line}` runs headless `Bash` {with no `--settings` file / w
 **Run the shipped detector — do not re-implement it:**
 
 ```bash
-UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-load-audit.py
+UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context/context-load-audit.py
 ```
 
 **Why a hook and not a spec here.** The obvious implementation is wrong in one specific, reproducible way, and it was written that way once: a worker typically does `cd "<vault>/00 - notes/context/observed" && grep '^### ' antifragile.md …`, so matching only `context/(declared|observed)/<file>.md` misses every such read. That version reported three workers at zero who had in fact read the whole floor. **A check that under-reports is worse than none, because its clean answer gets trusted** — so the instrument is code with its own tests, and this bucket calls it.
@@ -918,14 +918,14 @@ UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-load-au
 **Run the shipped measurement — do not eyeball the folders:**
 
 ```bash
-UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-rungs.py
+UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context/context-rungs.py
 ```
 
-**What it reports.** The four rungs of the ladder in this vault — both `_index.md` (rung 0) · **the floor** (rung 1: every heading in both folders *plus the newest 5 `###` entries of every observed file*, which is exactly what `hooks/context-floor.py` writes) · all of `declared/` (rung 2) · everything (rung 3) — in words and estimated tokens, plus the `observed/`-to-`declared/` ratio, ending in a verdict.
+**What it reports.** The four rungs of the ladder in this vault — both `_index.md` (rung 0) · **the floor** (rung 1: every heading in both folders *plus the newest 5 `###` entries of every observed file*, which is exactly what `hooks/context/context-floor.py` writes) · all of `declared/` (rung 2) · everything (rung 3) — in words and estimated tokens, plus the `observed/`-to-`declared/` ratio, ending in a verdict.
 
 **Watch the floor's share, not just its size.** The floor is *bounded by design* — five entries per observed file, so it does not grow as the corpus does. That means its **share** of rung 3 falls over time, which is the ladder working. What is worth surfacing is the opposite: an observed file whose newest five entries are a large fraction of the whole floor is usually a file that needs compacting, not a floor that needs widening.
 
-**The verdict is the point, and it flips.** When everything is only a small multiple of the floor it says **read all of it** — the cut-off is a ratio, not a size, and `hooks/context-rungs.py` (`CHEAP_IF_UNDER`) is its one home, so read it there rather than restating it here. The ladder is not for that vault yet. Above it, it says floor at rung 1 and climb deliberately. **Same rule, opposite advice, both correct.** An operator who is told "your whole context is 7k tokens, read it" is being told something the framework could not tell them before this existed.
+**The verdict is the point, and it flips.** When everything is only a small multiple of the floor it says **read all of it** — the cut-off is a ratio, not a size, and `hooks/context/context-rungs.py` (`CHEAP_IF_UNDER`) is its one home, so read it there rather than restating it here. The ladder is not for that vault yet. Above it, it says floor at rung 1 and climb deliberately. **Same rule, opposite advice, both correct.** An operator who is told "your whole context is 7k tokens, read it" is being told something the framework could not tell them before this existed.
 
 **It refuses rather than under-reporting.** A missing folder exits `2` naming what it could not measure, instead of totalling the folder that *is* there — because a total built from one folder reads as *small*, and small is precisely the answer that talks a session out of loading anything.
 
@@ -939,7 +939,7 @@ UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-rungs.p
 
 #### Bucket 32: Model ladder vs Anthropic's current catalog (NEW — REPORT-ONLY, never edits)
 
-**The gap.** The ladder in `MODEL-ROUTING.md` names one model per rung, and the same ids are literals in `hooks/resolve-tier` and both spawn wrappers. When Anthropic ships a newer model in a family, nothing in the vault changes, so every worker keeps launching on the older one and nothing reports it. It has happened: the ladder once ran a full generation behind while every session reported success.
+**The gap.** The ladder in `MODEL-ROUTING.md` names one model per rung, and the same ids are literals in `hooks/pipeline/resolve-tier` and both spawn wrappers. When Anthropic ships a newer model in a family, nothing in the vault changes, so every worker keeps launching on the older one and nothing reports it. It has happened: the ladder once ran a full generation behind while every session reported success.
 
 **Measure, in this order:**
 
@@ -977,11 +977,17 @@ It costs nothing (a local command, no model call) and prints a table per skill (
 
 #### Bucket 36: Session transcripts — keep the sessions, archive the throwaways (NEW — propose-only)
 
-Claude Code deletes transcripts older than `cleanupPeriodDays` (default **30**) at every session start, silently, so a named session you meant to reopen with resume, or an arc you meant to learn from, is gone a month later. Setup and `/aios:update` set a long retention when the settings have none (`hooks/install-settings.py`, item R). Long retention keeps the throwaways too, and this bucket is where they leave on purpose.
+Claude Code deletes transcripts older than `cleanupPeriodDays` (default **30**) at every session start, silently, so a named session you meant to reopen with resume, or an arc you meant to learn from, is gone a month later. Setup and `/aios:update` set a long retention when the settings have none (`hooks/install/install-settings.py`, item R). Long retention keeps the throwaways too, and this bucket is where they leave on purpose.
 
-**Run** `python3 ~/aios/hooks/transcript-inventory.py` (Windows: the interpreter SETUP §10's probe picks). It reads every transcript's own records and sorts them: **named** (an `agent-name` record: spawned workers, primaries, resumed sessions), **unnamed** interactive sessions, **headless** (`claude -p` and the SDK: routines, probes, test harnesses) and **temp-run** (started in a temp folder). It prints counts and sizes, the retention in force, and the **throwaway candidates**: headless and temp-folder runs older than 14 days. Named and unnamed sessions are counted, never proposed.
+**Run** `python3 ~/aios/hooks/security/transcript-inventory.py` (Windows: the interpreter SETUP §10's probe picks). It reads every transcript's own records and sorts them: **named** (an `agent-name` record: spawned workers, primaries, resumed sessions), **unnamed** interactive sessions, **headless** (`claude -p` and the SDK: routines, probes, test harnesses) and **temp-run** (started in a temp folder). It prints counts and sizes, the retention in force, and the **throwaway candidates**: headless and temp-folder runs older than 14 days. Named and unnamed sessions are counted, never proposed.
 
-**Propose** archiving the candidates as one item, with the count and the size. **Only on the operator's yes**, run `python3 ~/aios/hooks/transcript-inventory.py --archive`: it writes them to `~/claude-archive/transcripts-<date>.tar.gz`, checks every file is in the archive at its full size, and only then deletes them. A file it cannot verify is kept, and a failed archive deletes nothing. **If retention is still Claude Code's 30 days**, say so in one line and offer `python3 ~/aios/hooks/install-settings.py`, which shows the change before making it. **Zero candidates** → say *"0 throwaway transcripts"*.
+**Propose** archiving the candidates as one item, with the count and the size. **Only on the operator's yes**, run `python3 ~/aios/hooks/security/transcript-inventory.py --archive`: it writes them to `~/claude-archive/transcripts-<date>.tar.gz`, checks every file is in the archive at its full size, and only then deletes them. A file it cannot verify is kept, and a failed archive deletes nothing. **If retention is still Claude Code's 30 days**, say so in one line and offer `python3 ~/aios/hooks/install/install-settings.py`, which shows the change before making it. **Zero candidates** → say *"0 throwaway transcripts"*.
+
+#### Bucket 37: Agent files vs documents — one rule for every surface (NEW — propose-only)
+
+A file under `agents/` is an **agent** when it has `name:` and `description:` frontmatter, is not `_index.md` or `README.md`, is not under a `reference/` folder, and is not marked `agent: false`. The AIOS App, Glass and the hint hook list agents by that rule, so a file that is neither an agent nor clearly a document makes the surfaces disagree (#314).
+
+**Run** `python3 ~/aios/hooks/agents/list-agents.py --unclear` (Windows: the interpreter SETUP §10's probe picks). Each line is one such file. **Propose**, per folder: move a venture's reference documents (laws, glossaries, examples, templates) under a `reference/` subfolder, or add `agent: false` to a single one; for a file meant to be an agent, add the missing `name`/`description`. A company-synced folder (`agents/<company>/` with a sync marker) is fixed in its source repo, never in the vault: say so and propose nothing there. Nothing moves without the operator's yes.
 
 ### Phase 2 — Present the packet
 
@@ -1017,6 +1023,7 @@ Categorize all findings into one review table:
 - Synced-skill collisions: {N} synced skills, {M} collisions
 - Discardable views: {N} explainers past 30 days, {M} checkboxes in quarter notes
 - Session transcripts: {N} throwaway candidates ({size}), retention {days} days
+- Agent files vs documents: {N} unclear files ({M} in synced company folders)
 
 ### 🟢 Auto-applied (no approval needed)
 {Low-stakes mechanical fixes — link adds where unambiguous, snapshot timestamp updates, obvious [x] marks}
@@ -1075,7 +1082,7 @@ Write a log to `00 - notes/logs/command-logs/housekeeping-{YYYY-MM-DD}.md` with:
 Commit and push:
 
 ```bash
-cd ~/aios && ~/aios/hooks/aios-commit -m "Housekeeping {date}" -- "vault/00 - notes/logs/command-logs/housekeeping-{YYYY-MM-DD}.md" {every path an applied proposal changed}
+cd ~/aios && ~/aios/hooks/vault/aios-commit -m "Housekeeping {date}" -- "vault/00 - notes/logs/command-logs/housekeeping-{YYYY-MM-DD}.md" {every path an applied proposal changed}
 ```
 
 Name the paths: the log, plus each file this run's applied proposals touched. Not `--vault`, which commits every changed file in the vault, including other sessions' unfinished work, under "Housekeeping". That is the scope expansion step 2 above rules out.

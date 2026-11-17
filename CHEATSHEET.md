@@ -207,7 +207,7 @@ Depth, including how to pick the model per primitive: the **`orchestration-ladde
 | You want to… | Command |
 |---|---|
 | Install the `spawn` / `spawn-kill` wrappers | `bash ~/aios/hooks/claude-identity/install-wrappers.sh` — idempotent, safe to re-run |
-| Guard commits in a concurrently-written vault | `bash ~/aios/hooks/install-git-hooks.sh` — idempotent; also repairs hook permissions and line endings |
+| Guard commits in a concurrently-written vault | `bash ~/aios/hooks/install/install-git-hooks.sh` — idempotent; also repairs hook permissions and line endings |
 
 **Why `spawn` and not raw `claude`:** the wrapper sets `$CLAUDE_AGENT_NAME`, so `CLAUDE.md` can match an agent profile, greet you in character, and load that specialist's judgment. It also owns the respawn loop and the parallel-spawn lock. `claude --remote-control --name <name>` bypasses all of it and is **not recommended**.
 

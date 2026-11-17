@@ -41,7 +41,7 @@ cd "$(dirname "$0")/.." || exit 1
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
-S=hooks/bus-dead-letters.py
+S=hooks/pipeline/bus-dead-letters.py
 [ -f "$S" ] || { echo "::error::$S missing"; exit 1; }
 [ -n "$PYBIN" ] || { echo "SKIP: no working python (the commands that call this require it too). NOT a pass."; exit 0; }
 

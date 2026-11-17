@@ -26,7 +26,7 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '        %s\n' "$2"; return 0; }
 
-HELPER="$PWD/hooks/aios-note-append"
+HELPER="$PWD/hooks/vault/aios-note-append"
 CLOSE_DAY="plugins/aios/commands/close-day.md"
 CLOSE_SESSION="plugins/aios/commands/close-session.md"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT

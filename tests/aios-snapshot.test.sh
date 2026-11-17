@@ -18,7 +18,7 @@ fi
 
 # tests/aios-snapshot.test.sh
 #
-# Guards hooks/aios-snapshot — the observed-context archiver.
+# Guards hooks/vault/aios-snapshot — the observed-context archiver.
 #
 # WHAT THIS IS PROTECTING
 # -----------------------
@@ -45,7 +45,7 @@ fi
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SNAP="$ROOT/hooks/aios-snapshot"
+SNAP="$ROOT/hooks/vault/aios-snapshot"
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '        %s\n' "$2"; }
@@ -54,7 +54,7 @@ D_OF(){ echo "$1/vault/00 - notes/logs/observed-snapshots/2026-08"; }
 newroot(){ local r; r=$(mktemp -d "$TMP/root.XXXXXX"); mkdir -p "$(D_OF "$r")"; echo "$r"; }
 
 echo "── 1. present and executable ──"
-[ -f "$SNAP" ] && ok "hooks/aios-snapshot exists" || no "missing"
+[ -f "$SNAP" ] && ok "hooks/vault/aios-snapshot exists" || no "missing"
 [ -x "$SNAP" ] && ok "carries the exec bit" || no "not executable"
 bash -n "$SNAP" && ok "parses" || no "syntax error"
 

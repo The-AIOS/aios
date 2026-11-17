@@ -40,7 +40,7 @@ Omitting `--tier` gives you `judgment`. That is deliberate: the default should b
 right when nobody thought about it, and under-powering a reasoning task fails silently — you get an
 answer, it is just worse, and nothing tells you.
 
-**`judgment` is a pin, not an inherit — so it has a maintenance duty.** `hooks/resolve-tier`
+**`judgment` is a pin, not an inherit — so it has a maintenance duty.** `hooks/pipeline/resolve-tier`
 answers it with an empty `--model` (the binary's default), but the launcher every AIOS session
 starts through passes `--model` explicitly, at 1M context, because `settings.json` and `/model` are
 not reliable carriers of that choice to spawned children. In practice the rung **is** the literal in
@@ -197,7 +197,7 @@ tool catalog. **Third-party models get text work; Claude keeps the agentic work.
 
 ### 3 · The rail is text-in, text-out — and it leaves your machine
 
-`hooks/openrouter.py` is the sanctioned way to call a non-Claude model. It takes a prompt, returns
+`hooks/pipeline/openrouter.py` is the sanctioned way to call a non-Claude model. It takes a prompt, returns
 text, and touches nothing else: no MCP tools, no vault writes, no credentials beyond its own key.
 
 **It also sends whatever you pass it to a third party.** That is not a caveat, it is the whole
@@ -251,7 +251,7 @@ judge cannot be the evidence.
   agreed before work starts, and an evaluator in its own context that *uses* the artifact (opens
   the page, runs the command) rather than reading the diff.
 - **Never `claude -p` as the scorer of Claude-authored prose quality.** Using `claude -p` as a
-  *reader* is fine and AIOS does it (`hooks/video-watch.py` captions video frames with it). The
+  *reader* is fine and AIOS does it (`hooks/media/video-watch.py` captions video frames with it). The
   line is authorship: reading an artifact Claude did not write is measurement; grading one Claude
   wrote is a family judging itself.
 

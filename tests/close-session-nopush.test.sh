@@ -33,7 +33,7 @@ echo "── every push site is guarded ──"
 # tools, it does not invoke them. Counting it made this assertion report 4 sites for 3
 # guards and fail on a file that was already correct — a guard that cannot tell a
 # declaration from a call fires on every honest edit, and then gets muted.
-SITES=$(grep -E '~/aios/hooks/aios-(commit|note-append)' "$F" | grep -cv '^allowed-tools:')
+SITES=$(grep -E '~/aios/hooks/vault/aios-(commit|note-append)' "$F" | grep -cv '^allowed-tools:')
 GUARDS=$(grep -c 'AIOS_CLOSE_SESSION_NO_PUSH:-' "$F")
 printf '     push-helper invocations: %s · flag guards: %s\n' "$SITES" "$GUARDS"
 if [ "$SITES" -eq "$GUARDS" ]; then
@@ -77,10 +77,10 @@ for sh in bash zsh sh; do
 done
 
 echo "── the helpers actually accept the flag ──"
-grep -q -- '--no-push' hooks/aios-note-append \
+grep -q -- '--no-push' hooks/vault/aios-note-append \
   && ok "aios-note-append accepts --no-push" \
   || no "aios-note-append does not accept --no-push" "the guard would pass an unknown flag"
-grep -q -- '--no-push' hooks/aios-commit \
+grep -q -- '--no-push' hooks/vault/aios-commit \
   && ok "aios-commit accepts --no-push" \
   || no "aios-commit does not accept --no-push"
 
