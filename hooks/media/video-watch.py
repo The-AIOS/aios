@@ -391,10 +391,11 @@ def read_vlm_headless(frames, segments, verbose):
     # The transcript and the frames are UNTRUSTED (anyone's video), so the reader may read the
     # frames and nothing else: it runs in the frames' folder, Read is the only tool that EXISTS,
     # it is allowed only under that folder, and no user or local settings load (their "allow
-    # always" rules would widen it). Measured: with `--allowedTools Read --setting-sources
+    # always" rules would widen it). The rule is `Read(//abs/**)`: in a permission rule a single
+    # leading slash means relative, only `//` is absolute. Measured: with `--allowedTools Read --setting-sources
     # user,project` an injected "read ~/.config/..." succeeded; scoped like this it is refused.
     fdir = os.path.commonpath([os.path.dirname(os.path.abspath(f["path"])) for f in frames])
-    r = run([claude, "-p", prompt, "--tools", "Read", "--allowedTools", "Read(%s/**)" % fdir, "--setting-sources", "project", "--strict-mcp-config", "--permission-mode", "default"], timeout=1200, cwd=fdir)  # noqa: E501 — one line so tests/lint-claude-p.py can see every flag
+    r = run([claude, "-p", prompt, "--tools", "Read", "--allowedTools", "Read(/%s/**)" % fdir, "--setting-sources", "project", "--strict-mcp-config", "--permission-mode", "default"], timeout=1200, cwd=fdir)  # noqa: E501 — one line so tests/lint-claude-p.py can see every flag
     if r.returncode != 0:
         log(f"claude -p failed: {r.stderr.strip()[-400:]}", verbose=verbose)
         return {}
@@ -550,7 +551,7 @@ def main():
     # workdir: explicit (kept) or temp (auto-clean unless --keep-frames)
     cleanup = False
     if a.workdir:
-        workdir = a.workdir; os.makedirs(workdir, exist_ok=True); a.keep_frames = True
+        workdir = os.path.abspath(a.workdir); os.makedirs(workdir, exist_ok=True); a.keep_frames = True   # absolute: the reader runs inside it
     else:
         workdir = tempfile.mkdtemp(prefix="video-watch-"); cleanup = not a.keep_frames
 

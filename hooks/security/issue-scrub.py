@@ -130,7 +130,17 @@ HOME_KEEP = ("aios", ".aios", ".claude")
 def home_rest(rest):
     rest = rest.replace("\\", "/")
     first = rest.lstrip("/").split("/", 1)[0]
-    return rest if (not rest or first in HOME_KEEP) else "/<path redacted>"
+    return rest if (not rest or (first in HOME_KEEP and "/.." not in rest)) else "/<path redacted>"
+
+
+# A private home path can hold spaces (~/Google Drive/Clients/Acme Litigation/, C:\Users\jo\My
+# Documents\Acme Corp\), so it is redacted to the end of the line or the next quote, bracket or
+# backtick: over-redacting a public draft is the safe side. Framework places are handled after.
+_KEEP = r"(?:aios|\.aios|\.claude)(?:[/\\](?![^\n]*\.\.)|(?=[\s`'\"<>()]|$))"
+HOME_PRIVATE = [
+    re.compile(r"/(?:Users|home)/[^/\s`'\"<>]+[/\\](?!" + _KEEP + r")[^\n`'\"<>()]*"),
+    re.compile(r"[A-Za-z]:\\\\?Users\\\\?[^\\\s`'\"<>]+[/\\](?!" + _KEEP + r")[^\n`'\"<>()]*"),
+]
 WIKILINK = re.compile(r"!?\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]")
 WORD = re.compile(r"[A-Za-z0-9\u00C0-\u024F']+")
 SHINGLE = 10
@@ -173,9 +183,15 @@ def table_first_column(body):
         line = line.strip()
         if not line.startswith("|") or re.match(r"^\|[\s:|-]+\|?$", line):
             continue
-        cell = line.strip("|").split("|")[0].strip()
+        line = line.replace("\\|", "\x00")             # Obsidian escapes an alias pipe in tables
+        cell = line.strip("|").split("|")[0].strip().replace("\x00", "|")
         if not cell or (cell.startswith("*") and not cell.startswith("**")) or "{{" in cell:
             continue  # example rows are *italic*; a **bold** cell IS a name; placeholders are not
+        alias = re.match(r"^\[\[([^\]|#]+)(?:#[^\]|]*)?\|([^\]]+)\]\]$", cell)
+        if alias:                                         # [[acme-corp|Acme Corp]]: both are names
+            out.append(alias.group(2).strip("`*_ "))
+            out.append(kebab_words(alias.group(1)).strip())
+            continue
         cell = re.sub(r"\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]", r"\1", cell)   # [[Acme]] -> Acme
         cell = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", cell)                # [Acme](url) -> Acme
         out.append(cell.strip("`*_ "))
@@ -489,6 +505,8 @@ class Scrubber:
             text = self.sub(rx, text, "ids", ph)
         text = self.quotes(text)          # before paths/names rewrite the words it matches on
         text = self.sub(EMAIL, text, "emails", "<email redacted>")
+        for rx in HOME_PRIVATE:
+            text = rx.sub(lambda m: self._hit("paths", m.group(0), "~/<path redacted>"), text)
         for rx in HOME_PATHS:
             text = rx.sub(lambda m: self._hit("paths", m.group(0), "~" + home_rest(m.group(1))), text)
         text = self.vault_paths(text)

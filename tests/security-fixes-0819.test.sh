@@ -35,12 +35,19 @@ f = lambda t: rx.sub(lambda x: "~" + m.home_rest(x.group(1)), t)
 assert f("see /Users/jo/Clients/Northwind-litigation/brief.pdf now") == "see ~/<path redacted> now", f("see /Users/jo/Clients/Northwind-litigation/brief.pdf now")
 assert f("run /Users/jo/aios/hooks/vault/aios-commit") == "run ~/aios/hooks/vault/aios-commit"
 assert f("home is /Users/jo") == "home is ~"
+p = lambda t: m.HOME_PRIVATE[0].sub("~/<path redacted>", t)
+assert "Acme" not in p("see /Users/jo/Google Drive/Clients/Acme Litigation/brief.pdf"), "a path with spaces leaked"
+assert "Clients" not in p("x /Users/jo/aios/../Clients/Acme"), "aios/.. escaped the redaction"
+assert p("run /Users/jo/aios/hooks/x.py") == "run /Users/jo/aios/hooks/x.py"
+w = m.HOME_PRIVATE[1].sub("~/<path redacted>", r"C:\Users\jo\My Documents\Acme Corp\file.docx")
+assert "Acme" not in w, w
+assert "Acme Corp" in m.table_first_column("| Name |\n|---|\n| [[acme-corp\\|Acme Corp]] |\n")
 PY
 
 V=hooks/media/video-watch.py
-grep -qE '"--allowedTools", "Read\(%s/\*\*\)" % fdir, "--setting-sources", "project"' "$V" && grep -q 'cwd=fdir' "$V" \
+grep -qE '"--allowedTools", "Read\(/%s/\*\*\)" % fdir, "--setting-sources", "project"' "$V" && grep -q 'cwd=fdir' "$V" \
   && ok "video-watch's headless reader may read only its frames folder, with no user allow rules" || no "video-watch's reader is not scoped to its frames"
-grep -q '"--quiet", "--", url' "$V" && grep -q 're.match(r"https?://", src, re.I)' "$V" && grep -q 'src = os.path.abspath(src)' "$V" \
+grep -q '"--quiet", "--", url' "$V" && grep -q 're.match(r"https?://", src, re.I)' "$V" && grep -q 'src = os.path.abspath(src)' "$V" && grep -q 'workdir = os.path.abspath(a.workdir)' "$V" \
   && ok "a video URL must be http(s) and follows --; a local path is made absolute" || no "video-watch input can still be read as an option"
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

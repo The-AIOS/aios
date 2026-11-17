@@ -34,10 +34,11 @@ THE PRIVACY TRADE, STATED PLAINLY
 PROVIDER RESOLUTION — OpenRouter first, Gemini second, then stop
     1. OPENROUTER_API_KEY  -> OpenRouter (one key, one account, hundreds of
        models; switching model is a string change).
-    2. GEMINI_API_KEY      -> Gemini direct. The fallback because a Gemini
-       key is already present in many AIOS installs (it is what the
-       nano-banana MCP uses), so the rail works before anyone funds a new
-       account.
+    2. GEMINI_API_KEY      -> Gemini direct, ONLY when its key is in the AIOS secrets
+       file (gemini.env or openrouter.env) or `--provider gemini` is passed. A key
+       in the environment is often there for the image MCP alone and must not turn
+       on a bridge that sends text to Google. With OpenRouter configured, Gemini is
+       a fallback only with AIOS_FALLBACK=gemini (#328).
     3. Neither             -> fail, naming BOTH paths and both file
        locations. Never a silent no-op: a scorer that quietly returns
        nothing reads exactly like a scorer that found nothing wrong.
@@ -323,15 +324,16 @@ def main():
         # Report the resolution WITHOUT the key. A --check that prints a secret
         # is a --check nobody can safely paste into an issue.
         print(f"secrets dir : {SECRETS_DIR}")
-        for var, nm, label in (
-            ("OPENROUTER_API_KEY", "openrouter", "openrouter"),
-            ("GEMINI_API_KEY", "gemini", "gemini"),
-        ):
-            k = find_key(var, nm)
-            where = "not found"
-            if k:
-                where = "secrets file" if load_env(nm).get(var, "").strip() else "environment"
-            print(f"  {label:<11}: {'configured' if k else 'not configured'} ({where})")
+        k = find_key("OPENROUTER_API_KEY", "openrouter")
+        where = ("secrets file" if load_env("openrouter").get("OPENROUTER_API_KEY", "").strip() else "environment") if k else "not found"
+        print(f"  {'openrouter':<11}: {'configured' if k else 'not configured'} ({where})")
+        g = gemini_key()
+        env_only = not g and (os.environ.get("GEMINI_API_KEY") or "").strip()
+        print(f"  {'gemini':<11}: " + ("configured for text (secrets file)" if g else
+              "a key is in the environment only: NOT used for text unless you pass --provider gemini"
+              if env_only else "not configured"))
+        print(f"  {'fallback':<11}: " + ("on (AIOS_FALLBACK=gemini)" if fallback_opted_in() else
+              "off: out of credits is reported, never sent to Gemini"))
         print(f"resolved    : {provider or 'NONE — the rail will refuse rather than guess'}")
         return 0
 
