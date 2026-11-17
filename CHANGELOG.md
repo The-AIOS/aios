@@ -97,12 +97,15 @@
 
 `hash: 5cc662c`
 
-> **What you can now do.** See which hat a session put on in one fixed line at the start of every spawned session, `Wearing agent: accountant.`, which the AIOS App shows as the session's hat.
+> **What you can now do.** See which hat a session put on in one fixed line at the start of every spawned session, `Wearing agent: accountant.`, which the AIOS App shows as the session's hat. Choose which Gemini model draws your images, for example `gemini-3.1-flash-image`, instead of the 2025 original.
 
 **The wearing line** (follows #299, #307). Sessions already chose the right hat from their name and your projects' Hats rows, and said so in their own words. But the fixed line was defined only inside the `suggest-agent` skill, which a starting session never opens, so the line the App reads never appeared. CLAUDE.md § Identity step 2 now spells it out. The skill's description also no longer says it is not for skills, which had told sessions to skip it whenever a skill matched the request too. Suggestions in the middle of a session still depend on the session opening the skill by itself, which it often does not; a hook that makes them reliable is planned for the next release.
 
+**The image model is a setting** (#320). `generate_image` always used `gemini-2.5-flash-image`, so newer image models never reached anyone. Set `NANO_BANANA_MODEL` in the server's env to change it for every call, or pass `model` for one call; the result names the model that ran. With neither, nothing changes.
+
 **Action required** — check first; do only what applies:
-1. **Start a new Claude session**, so the updated CLAUDE.md and skill load.
+1. **Only if the operator has the Nano Banana MCP registered and wants a newer image model:** say once that they can add `NANO_BANANA_MODEL` to the server's env, then type `/mcp` and reconnect nano-banana. Nothing changes without it.
+2. **Start a new Claude session**, so the updated CLAUDE.md and skill load.
 
 ## 2026-11-13 — Sessions wear the right hat for their name and their project
 
