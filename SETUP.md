@@ -112,7 +112,7 @@ Operator said *"set up my AI-OS from this repo"* or similar. You're the executor
    service at a time, only the ones they want. Nothing is lost by waiting; the offer is stronger.
 7. Install the **spawn wrapper** — `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (or `.ps1` on Windows), then re-source the shell rc. **You run it** — it writes the operator's shell profile, so expect a permission prompt and say so in one sentence; never hand them the command to paste.
    > **The interview runs this a second time, on purpose — do not "deduplicate" it.** The installer reads `USER.md` to detect which session names are primary, and `USER.md` does not exist yet at this point in the sequence; the interview writes it at its Step 1 and re-runs the installer immediately after. This run gives the operator a working `spawn` during setup; that run makes it identity-aware. The script is idempotent (timestamped backup → strip prior banner → append fresh), so running it twice is free — and unlike the Obsidian registration above, neither run is redundant.
-8. Wire the **universal hooks** with one command, not a JSON edit: run `python3 ~/aios/hooks/install-settings.py` (Windows: the interpreter §10's probe picks, e.g. `python`). It prints, one plain line per hook, what each does for the operator and changes nothing; show that to them, then run it again with `--apply`. It merges into the existing file (every key kept; an existing status line is kept, except the exact two-program form AIOS itself used to write, which becomes one program), backs the old file up, and reads its own write back. Approving one command is a decision a newcomer can make; approving a wall of JSON is not. **Only if it cannot run**, merge by hand, **yourself, with your file-edit tool** (keep every existing key). The hooks: `UserPromptSubmit` → `inject-datetime` (real clock in every prompt) + `statusLine` → `context-monitor.py` (context display, and the rate-limit cache writer in the same process) + **Hook D, provenance** (marks text you did not write: tool results from email/chat/docs/web/Forum, prompts the spawn inbox typed) + **Hook E, the floor at session start** (a compact context floor delivered to every new session) + **Hook F, the model-switch log** (one line whenever a session's model changes under it), and, only when your settings have no `cleanupPeriodDays`, **transcript retention** (keeps session transcripts 10 years: Claude Code deletes them after 30 days by default, silently). See §10 below for exact JSON — **on Windows, use §10's Windows block as written**, not the macOS commands with words swapped: the Windows prerequisites install neither `pwsh` nor a working `python3`, so both names fail there.
+8. Wire the **universal hooks** with one command, not a JSON edit: run `python3 ~/aios/hooks/install-settings.py` (Windows: the interpreter §10's probe picks, e.g. `python`). It prints, one plain line per hook, what each does for the operator and changes nothing; show that to them, then run it again with `--apply`. It merges into the existing file (every key kept; an existing status line is kept, except the exact two-program form AIOS itself used to write, which becomes one program), backs the old file up, and reads its own write back. Approving one command is a decision a newcomer can make; approving a wall of JSON is not. **Only if it cannot run**, merge by hand, **yourself, with your file-edit tool** (keep every existing key). The hooks: `UserPromptSubmit` → `inject-datetime` (real clock in every prompt) + `statusLine` → `context-monitor.py` (context display, and the rate-limit cache writer in the same process) + **Hook D, provenance** (marks text you did not write: tool results from email/chat/docs/web/Forum, prompts the spawn inbox typed) + **Hook E, the floor at session start** (a compact context floor delivered to every new session) + **Hook F, the model-switch log** (one line whenever a session's model changes under it) + **Hook G, agent hints** (points a session at the one agent a request clearly fits), and, only when your settings have no `cleanupPeriodDays`, **transcript retention** (keeps session transcripts 10 years: Claude Code deletes them after 30 days by default, silently). See §10 below for exact JSON — **on Windows, use §10's Windows block as written**, not the macOS commands with words swapped: the Windows prerequisites install neither `pwsh` nor a working `python3`, so both names fail there.
 9. **Do NOT ask the multi-account question here.** It used to live at this step (*"Do you use more than
    one Anthropic account?"*, plus a launchd install). On day one the operator has not hit a 5h/7d cap, so
    the question has no meaning yet and cannot be answered — it is the most expert-coded moment in the
@@ -635,6 +635,18 @@ Labels **inform** the model; they are not a lock. A send, create or share return
 }
 ```
 
+**Hook G — agent hints.** The `suggest-agent` skill only runs when a session decides by itself to open it, and mid-session it rarely does: a request squarely in an agent's field got a good answer and no agent. `hooks/suggest-agent-hint.py` matches each prompt against the agents index (each agent's name, `aliases:` and match keywords) and, on one clear winner the session is not already wearing, adds one line of context pointing at the skill. The skill still decides, and may decide not to. It is silent for small talk, slash commands and ties, prints nothing else and never blocks.
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "[ ! -f ~/aios/hooks/suggest-agent-hint.py ] || python3 ~/aios/hooks/suggest-agent-hint.py", "timeout": 5 } ] }
+    ]
+  }
+}
+```
+
 **On Windows — the same hooks, in the form that actually runs there.** Two names in the blocks above do not exist on a stock Windows install, and a setup session will otherwise find that out by trial:
 
 - **`pwsh`** is PowerShell 7, which the Windows prerequisites above never install. Use **`powershell`** (Windows PowerShell 5.1, present on every Windows 10/11) for these hooks — `inject-datetime.ps1`, `skills/setup.ps1` and `install-wrappers.ps1` all parse and run under 5.1. *(The spawn-wrapper installer is the one exception to "always `powershell`": it writes the profile of the PowerShell that runs it, so on a machine that has PowerShell 7 it runs under `pwsh` — see §9.)*
@@ -652,7 +664,8 @@ Write **absolute paths with forward slashes** (resolve them once with `cygpath -
   "hooks": {
     "UserPromptSubmit": [
       { "hooks": [ { "type": "command", "command": "[ ! -f \"C:/Users/<you>/aios/hooks/inject-datetime.ps1\" ] || powershell -NoProfile -ExecutionPolicy Bypass -File \"C:/Users/<you>/aios/hooks/inject-datetime.ps1\"" } ] },
-      { "hooks": [ { "type": "command", "command": "[ ! -f \"C:/Users/<you>/aios/hooks/provenance.py\" ] || python \"C:/Users/<you>/aios/hooks/provenance.py\" --prompt", "timeout": 10 } ] }
+      { "hooks": [ { "type": "command", "command": "[ ! -f \"C:/Users/<you>/aios/hooks/provenance.py\" ] || python \"C:/Users/<you>/aios/hooks/provenance.py\" --prompt", "timeout": 10 } ] },
+      { "hooks": [ { "type": "command", "command": "[ ! -f \"C:/Users/<you>/aios/hooks/suggest-agent-hint.py\" ] || python \"C:/Users/<you>/aios/hooks/suggest-agent-hint.py\"", "timeout": 5 } ] }
     ],
     "PreToolUse": [
       {

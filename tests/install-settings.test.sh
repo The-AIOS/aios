@@ -22,7 +22,7 @@ printf '{\n  "model": "x",\n  "permissions": {"allow": ["Bash(ls:*)"]}\n}\n' > "
 cp "$S" "$T/orig.json"
 out=$(run --platform posix)
 cmp -s "$S" "$T/orig.json" && ok "without --apply nothing is written" || no "dry run changed the file"
-case "$out" in *"+ add   A"*"+ add   D"*"+ add   E"*"+ add   F"*"+ add   B"*) ok "the summary lists A, B, D, E, F in plain language" ;; *) no "summary incomplete" "$out" ;; esac
+case "$out" in *"+ add   A"*"+ add   D"*"+ add   E"*"+ add   F"*"+ add   G"*"+ add   B"*) ok "the summary lists A, B, D, E, F, G in plain language" ;; *) no "summary incomplete" "$out" ;; esac
 case "$out" in *'"hooks"'*|*'"command"'*) no "the summary shows raw JSON" ;; *) ok "the summary shows no JSON" ;; esac
 
 run --platform posix --apply >/dev/null; rc=$?
@@ -31,7 +31,7 @@ $PYBIN - "$S" <<'PY' && ok "every hook present, statusLine set, existing keys ke
 import json,sys
 d=json.load(open(sys.argv[1]))
 h=d["hooks"]; cmds=json.dumps(h)
-need=["inject-datetime.sh","provenance.py --prompt","bus_log.py --hook","provenance.py --tool","floor-at-start.py","model-switch-log.py"]
+need=["inject-datetime.sh","provenance.py --prompt","bus_log.py --hook","provenance.py --tool","floor-at-start.py","model-switch-log.py","suggest-agent-hint.py"]
 assert all(n in cmds for n in need), cmds
 assert d["model"]=="x" and d["permissions"]["allow"]==["Bash(ls:*)"]
 assert d["statusLine"]["command"].endswith("context-monitor.py") and "tee" not in d["statusLine"]["command"]  # one program (#292)

@@ -125,7 +125,7 @@ The session says which hat it chose and why, so the operator can correct it, and
 
 | Agent | Purpose | Match keywords | Schedule |
 |---|---|---|---|
-| [[content-writer]] | Draft posts for LinkedIn, Twitter/X, Substack in the user's voice | draft post, write article, LinkedIn, tweet, Substack | on-demand |
+| [[content-writer]] | Draft posts for LinkedIn, Twitter/X, Substack in the user's voice | draft post, write article, write post, blog post, article, LinkedIn, tweet, Substack | on-demand |
 | [[kdp-publisher]] | Files on disk → live Amazon KDP listings: pre-flight interior/wrap/EPUB, fill the per-author answer sheet, name the five irreversible decisions (DRM · Select · categories · pricing · accessibility), track review/proof clocks, post-publish checklist, errata ledger; DRY RUN mode uploads nothing — the author clicks | KDP, Amazon KDP, self-publish, publish a book, paperback, Kindle, EPUB, cover wrap, spine, bleed, ISBN, ASIN, KDP Select, DRM, proof, errata, dry run, publicar en KDP, autopublicar | on-demand |
 | [[content-scheduler]] | Plan and queue content calendar from vault insights | content calendar, schedule posts, publishing plan | weekly (Monday) |
 | [[email-drafter]] | Draft professional emails matching voice + context | email, draft email, follow up, outreach, reply to | on-demand |

@@ -94,6 +94,7 @@ def plan(platform, root, venture_guard):
             ("D", "PostToolUse", PROVENANCE_MATCHER, h("provenance.py") + " --tool", 10),
             ("E", "SessionStart", None, h("floor-at-start.py"), 60),
             ("F", "PostModelSwitch", None, h("model-switch-log.py"), 10),
+            ("G", "UserPromptSubmit", None, h("suggest-agent-hint.py"), 5),
         ]
         if venture_guard:
             rows.append(("C", "PreToolUse", "Edit|Write|MultiEdit|NotebookEdit", h("guard-venture-mount.py"), 10))
@@ -107,6 +108,7 @@ def plan(platform, root, venture_guard):
             ("D", "PostToolUse", PROVENANCE_MATCHER, "python3 ~/aios/hooks/provenance.py --tool", 10),
             ("E", "SessionStart", None, "python3 ~/aios/hooks/floor-at-start.py", 60),
             ("F", "PostModelSwitch", None, "python3 ~/aios/hooks/model-switch-log.py", 10),
+            ("G", "UserPromptSubmit", None, "python3 ~/aios/hooks/suggest-agent-hint.py", 5),
         ]
         if venture_guard:
             rows.append(("C", "PreToolUse", "Edit|Write|MultiEdit|NotebookEdit",
@@ -123,6 +125,7 @@ WHAT = {
     "D": "provenance: marks text you did not write (email, chat, docs, the web, inbox prompts)",
     "E": "the floor at start: each new session starts with your trust contract and recent learnings",
     "F": "the model-switch log: records when a session is moved to another model",
+    "G": "agent hints: when a request clearly fits one of your agents, the session is pointed at it",
     "R": ("transcript retention: keep your session transcripts for 10 years. Claude Code deletes "
           "them after 30 days by default, silently, at every session start, so a long-running "
           "session you want to reopen or learn from is gone a month later"),
