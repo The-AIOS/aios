@@ -51,7 +51,9 @@ for f in fs:
     r=json.load(open(os.path.join(d,f)))
     assert set(r)=={"name","task","tier","group"} and r["group"]=="good" and "\n" not in r["task"] and len(r["task"].encode())<=1024, r
 m=json.load(open(os.path.join(d,"bakery-market.json")))["task"]
-assert "send` to bakery-lead" in m and m.startswith("Wear the `market-researcher` agent") and "Charter" in m, m
+# The report goes in a file named after the sender: two crews naming it after the lead overwrote
+# each other in the live v0.8.19 probe, and one report was lost with nothing reporting it.
+assert "send` to bakery-lead" in m and "spawn-inbox/bakery-market-report.json" in m and m.startswith("Wear the `market-researcher` agent") and "Charter" in m, m
 PY
 python3 - "$T/inbox" "$ROOT/hooks/context" <<'PY' && ok "every launched task is fingerprinted, so it reads as inbox-delivered, not typed" || no "a launched task is not in the bus log"
 import json,os,sys

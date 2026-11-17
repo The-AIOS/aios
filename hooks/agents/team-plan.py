@@ -94,7 +94,11 @@ def task_for(row):
     head = "Wear the `%s` agent (/aios:agent %s)." % (row["agent"], row["agent"])
     if NOTE_REF:
         head += " Read the Charter in the ## Team section of %s first." % NOTE_REF
-    tail = ("When it is done, report back with one spawn-inbox `send` to %s: what you did and what is open." % report
+    # The request file is named after the SENDER: crews reporting to one lead named it after the
+    # lead, so two reports in the same second overwrote each other and one was lost unseen.
+    tail = ("When it is done, report back with one spawn-inbox `send` to %s, written as "
+            "~/.aios/spawn-inbox/%s-report.json (never a file named after %s): what you did and what is open."
+            % (report, row["session"], report)
             if report != "operator" else "When it is done, tell the operator what you did and what is open.")
     return "%s %s %s" % (head, row["first task"].rstrip(), tail)
 
