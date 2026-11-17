@@ -185,12 +185,27 @@ def signature(cmd):
 MOVED = {"inject-datetime.sh": "context", "inject-datetime.ps1": "context", "provenance.py": "context",
          "bus_log.py": "context", "floor-at-start.py": "context", "guard-venture-mount.py": "context",
          "model-switch-log.py": "pipeline", "suggest-agent-hint.py": "agents"}
-OLD_PATH = re.compile(r"(hooks[/\\])(" + "|".join(re.escape(n) for n in MOVED) + r")(?=[\s\"']|$)")
+OLD_PATH = re.compile(r"(?<=[/\\])(hooks[/\\])(" + "|".join(re.escape(n) for n in MOVED) + r")(?=[\s\"']|$)")
+
+
+def _ours(cmd, at):
+    """True when the path holding the match at `at` is THIS framework's hooks/ folder: the text before
+    `hooks/` (back to a space or quote), with ~ and $HOME expanded, resolves to ROOT. An operator's own
+    ~/.claude/hooks/provenance.py, or any other tree's hooks/, is never touched."""
+    start = at
+    while start > 0 and cmd[start - 1] not in " \t\"'":
+        start -= 1
+    root = cmd[start:at].rstrip("/\\")
+    for home in ("${HOME}", "$HOME"):
+        if root.startswith(home):
+            root = "~" + root[len(home):]
+    return bool(root) and os.path.realpath(os.path.expanduser(root)) == os.path.realpath(ROOT)
 
 
 def moved(cmd):
-    """The command with every old top-level hook path moved to its folder, or None when none."""
-    new = OLD_PATH.sub(lambda m: m.group(1) + MOVED[m.group(2)] + m.group(1)[-1] + m.group(2), cmd)
+    """The command with every old top-level path of THIS framework's hooks moved to its folder, or None."""
+    new = OLD_PATH.sub(lambda m: (m.group(1) + MOVED[m.group(2)] + m.group(1)[-1] + m.group(2))
+                       if _ours(cmd, m.start()) else m.group(0), cmd)
     return new if new != cmd else None
 
 

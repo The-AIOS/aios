@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
 # Moved to hooks/install/install-git-hooks.sh (#309). This stub forwards for one release, then goes.
-s="$0"; while [ -L "$s" ]; do t=$(readlink "$s"); case "$t" in /*) s="$t" ;; *) s="$(dirname "$s")/$t" ;; esac; done
-exec "$(cd "$(dirname "$s")" && pwd)/install/install-git-hooks.sh" "$@"
+# Symlinks are followed (aios-commit is linked into ~/.local/bin), at most 40 hops; CDPATH is
+# cleared so `cd` can never land in another tree's hooks/ or print into the substitution.
+s="$0"; n=0
+while [ -L "$s" ] && [ "$n" -lt 40 ]; do t=$(readlink -- "$s"); case "$t" in /*) s="$t" ;; *) s="$(dirname -- "$s")/$t" ;; esac; n=$((n+1)); done
+d=$(CDPATH= cd -P -- "$(dirname -- "$s")" && pwd) || exit 1
+exec "$d/install/install-git-hooks.sh" "$@"

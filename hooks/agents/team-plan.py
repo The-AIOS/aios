@@ -24,6 +24,7 @@ Usage:
 they gave it. Env: AIOS_ROOT (vault, default ~/aios), AIOS_INBOX_DIR, AIOS_SURFACES_DIR.
 """
 import glob
+import hashlib
 import importlib.util
 import json
 import os
@@ -149,36 +150,70 @@ def surface_alive():
         try:
             if pid_alive(int(json.load(open(f, encoding="utf-8")).get("pid"))):
                 return True
-        except (ValueError, TypeError, OSError):
+        except (ValueError, TypeError, OSError, AttributeError):
             continue
     return False
 
 
-def launch(note):
+def plan_hash(note):
+    """What the operator approved: every member's session, agent, tier and the exact task it will be
+    sent. Shown by `check`, required by `launch`, so a note edited after the yes is refused."""
+    _charter, rows, _h = parse(note)
+    blob = "\n".join("%s|%s|%s|%s" % (r["session"], r["agent"], r["tier"], task_for(r)) for r in rows or [])
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:12]
+
+
+def ps_quote(s):
+    """A PowerShell single-quoted string. PowerShell treats the curly quotes as quote characters too,
+    so every one of them is doubled, or a task could close the string and run the rest."""
+    for q in ("'", "\u2018", "\u2019", "\u201a", "\u201b"):
+        s = s.replace(q, q + q)
+    return "'%s'" % s
+
+
+def write_request(path, data):
+    """Never overwrite a pending request, never follow a planted link, never expose a half-written file
+    to a surface watching the folder: write a private temp with O_EXCL, then rename into place."""
+    if os.path.lexists(path):
+        raise FileExistsError(path)
+    tmp = "%s.%d.tmp" % (path, os.getpid())
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, ensure_ascii=False)
+    os.replace(tmp, path)
+
+
+def launch(note, approved):
     errs = check(note)
     if errs:
         return errs, []
+    if approved != plan_hash(note):
+        return ["the plan changed after it was approved, or the approval names another plan "
+                "(approved %s, plan is now %s): show it again and ask again" % (approved or "nothing", plan_hash(note))], []
     _charter, rows, _h = parse(note)
     group = os.path.splitext(os.path.basename(note))[0]
     if not surface_alive():
-        # Quoted for a POSIX shell: these lines are pasted into a terminal, so a task holding `$(...)`,
-        # backticks or quotes must stay one literal argument, never run.
-        lines = ["spawn --tier %s %s %s" % (shlex.quote(r["tier"]), shlex.quote(r["session"]), shlex.quote(task_for(r))) for r in rows]
+        # These lines are pasted into a terminal, so a task holding `$(...)`, backticks or quotes must
+        # stay one literal argument, never run: POSIX quoting here, PowerShell quoting on Windows.
+        q = ps_quote if os.name == "nt" else shlex.quote
+        lines = ["spawn --tier %s %s %s" % (q(r["tier"]), q(r["session"]), q(task_for(r))) for r in rows]
         return [], lines
     inbox = os.environ.get("AIOS_INBOX_DIR") or os.path.join(os.path.expanduser("~"), ".aios", "spawn-inbox")
     os.makedirs(inbox, exist_ok=True)
     written = []
+    taken = [r["session"] for r in rows if os.path.lexists(os.path.join(inbox, r["session"] + ".json"))]
+    if taken:
+        return ["a request for %s is already waiting in the inbox; nothing was written" % ", ".join(taken)], []
     for r in rows:
         path = os.path.join(inbox, r["session"] + ".json")
-        with open(path, "w", encoding="utf-8") as fh:
-            json.dump({"name": r["session"], "task": task_for(r), "tier": r["tier"], "group": group}, fh, ensure_ascii=False)
+        write_request(path, {"name": r["session"], "task": task_for(r), "tier": r["tier"], "group": group})
         written.append(path)
     return [], written
 
 
 def main(argv):
     if len(argv) < 2 or argv[0] not in ("check", "launch"):
-        print("usage: team-plan.py check|launch <note> [--approved]", file=sys.stderr)
+        print("usage: team-plan.py check <note> | launch <note> --approved <plan-hash>", file=sys.stderr)
         return 2
     cmd, note = argv[0], argv[1]
     if cmd == "check":
@@ -186,12 +221,16 @@ def main(argv):
         for e in errs:
             print("refused: " + e)
         if not errs:
-            print("ok: the plan is valid")
+            _c, rows, _h = parse(note)
+            print("ok: the plan is valid. Show the operator each member's task exactly as it will be sent:")
+            for r in rows:
+                print("  %s (%s, %s): %s" % (r["session"], r["agent"], r["tier"], task_for(r)))
+            print("plan: %s   (launch with --approved %s only after the operator's yes to exactly this)" % (plan_hash(note), plan_hash(note)))
         return 1 if errs else 0
-    if "--approved" not in argv:
-        print("refused: launch needs --approved, the operator's yes; nothing was written")
+    if "--approved" not in argv or argv.index("--approved") + 1 >= len(argv):
+        print("refused: launch needs --approved <plan-hash>, the operator's yes to the plan `check` showed; nothing was written")
         return 1
-    errs, out = launch(note)
+    errs, out = launch(note, argv[argv.index("--approved") + 1])
     for e in errs:
         print("refused: " + e)
     if errs:

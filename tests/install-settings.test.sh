@@ -144,20 +144,23 @@ HOME="$E" bash -c "$G" </dev/null >/dev/null 2>&1; rc=$?
 
 echo "── #309: a hook registered at its old top-level path moves to its folder, keeping interpreter and root ──"
 S="$T/moved.json"
-printf '%s' '{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"[ ! -f ~/aios/hooks/inject-datetime.sh ] || bash ~/aios/hooks/inject-datetime.sh"}]},{"hooks":[{"type":"command","command":"/opt/py/bin/python3 /srv/aios/hooks/provenance.py --prompt","timeout":10}]}],"SessionStart":[{"hooks":[{"type":"command","command":"[ ! -f ~/aios/hooks/floor-at-start.py ] || python3 ~/aios/hooks/floor-at-start.py"}]}]},"statusLine":{"type":"command","command":"my-own-line"},"cleanupPeriodDays":30}' > "$S"
-out=$(run --platform posix)
+printf '%s' '{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"[ ! -f ~/aios/hooks/inject-datetime.sh ] || bash ~/aios/hooks/inject-datetime.sh"}]},{"hooks":[{"type":"command","command":"/opt/py/bin/python3 ROOTX/hooks/provenance.py --prompt","timeout":10},{"type":"command","command":"python3 ~/.claude/hooks/provenance.py --prompt"}]}],"SessionStart":[{"hooks":[{"type":"command","command":"[ ! -f ~/aios/hooks/floor-at-start.py ] || python3 ~/aios/hooks/floor-at-start.py"}]}]},"statusLine":{"type":"command","command":"my-own-line"},"cleanupPeriodDays":30}' > "$S"
+sed -i.bak "s|ROOTX|$T/aios|" "$S"
+out=$(HOME="$T" run --platform posix)
 case "$out" in *"~ move  A"*"~ move  D"*"~ move  E"*) ok "the summary names each hook that moves" ;; *) no "no move lines" "$out" ;; esac
-run --platform posix --apply >/dev/null
-$PYBIN - "$S" <<'PY' && ok "old paths moved; interpreter, root and guard kept; nothing else changed" || no "move wrong" "$(cat "$S")"
+HOME="$T" run --platform posix --apply >/dev/null
+$PYBIN - "$S" "$T/aios" <<'PY' && ok "old paths moved; interpreter, root and guard kept; nothing else changed" || no "move wrong" "$(cat "$S")"
 import json,sys
 d=json.load(open(sys.argv[1])); c=[h["command"] for ev in d["hooks"].values() for g in ev for h in g["hooks"]]
 assert "[ ! -f ~/aios/hooks/context/inject-datetime.sh ] || bash ~/aios/hooks/context/inject-datetime.sh" in c, c
-assert "[ ! -f /srv/aios/hooks/context/provenance.py ] || /opt/py/bin/python3 /srv/aios/hooks/context/provenance.py --prompt" in c, c
+r=sys.argv[2]
+assert "[ ! -f %s/hooks/context/provenance.py ] || /opt/py/bin/python3 %s/hooks/context/provenance.py --prompt" % (r, r) in c, c
+assert any("~/.claude/hooks/provenance.py --prompt" in x for x in c), "an operator's own hooks/ path was moved: %s" % c
 assert "[ ! -f ~/aios/hooks/context/floor-at-start.py ] || python3 ~/aios/hooks/context/floor-at-start.py" in c, c
-assert not any("/hooks/inject-datetime" in x or "/hooks/provenance.py" in x or "/hooks/floor-at-start.py" in x for x in c), c
+assert not any(("aios/hooks/inject-datetime" in x or "aios/hooks/provenance.py" in x or "aios/hooks/floor-at-start.py" in x) for x in c), c
 assert d["statusLine"]["command"]=="my-own-line" and d["cleanupPeriodDays"]==30
 PY
-cp "$S" "$T/moved-once.json"; out=$(run --platform posix --apply)
+cp "$S" "$T/moved-once.json"; out=$(HOME="$T" run --platform posix --apply)
 cmp -s "$S" "$T/moved-once.json" && case "$out" in *"Nothing to change"*) ok "a second run moves nothing" ;; *) no "second run did something" "$out" ;; esac || no "second run altered the moved file"
 
 echo "── existing installs: bare AIOS hooks are wrapped in place, the rest untouched ──"

@@ -31,6 +31,18 @@ case "$out" in *rc=0*) ok "a bash stub forwards (hooks/whoami runs)" ;; *) no "h
 out=$(printf '' | python3 hooks/list-agents.py --unclear >/dev/null 2>&1; echo "rc=$?")
 case "$out" in rc=0|rc=1) ok "a python stub forwards (hooks/list-agents.py runs)" ;; *) no "python stub failed: $out" ;; esac
 
+# A bash stub ignores an exported CDPATH (another tree's hooks/ must never win), follows symlinks,
+# and stops on a symlink loop instead of spinning.
+X=$(mktemp -d "${TMPDIR:-/tmp}/hl.XXXXXX"); mkdir -p "$X/other/hooks/context" "$X/bin"
+printf '#!/usr/bin/env bash\necho WRONG-TREE\n' > "$X/other/hooks/context/whoami"; chmod +x "$X/other/hooks/context/whoami"
+out=$( cd "$ROOT" && CDPATH="$X/other" bash hooks/whoami 2>/dev/null )
+case "$out" in *WRONG-TREE*) no "a CDPATH sent the stub into another tree" ;; *) ok "a bash stub ignores CDPATH" ;; esac
+ln -s "$ROOT/hooks/whoami" "$X/bin/whoami"; "$X/bin/whoami" >/dev/null 2>&1 && ok "a bash stub runs through a symlink" || no "the stub failed through a symlink"
+ln -s "$X/bin/loop2" "$X/bin/loop1"; ln -s "$X/bin/loop1" "$X/bin/loop2"; cp "$ROOT/hooks/whoami" "$X/bin/stub"
+( cd "$X/bin" && sed 's|^s="\$0"|s="$X/bin/loop1"|' stub > stub2 && chmod +x stub2 && X="$X" perl -e 'alarm 5; exec @ARGV' bash ./stub2 >/dev/null 2>&1 ); rc=$?
+[ "$rc" != 142 ] && ok "a symlink loop ends instead of spinning" || no "the stub spun on a symlink loop"
+rm -rf "$X"
+
 names=$(for s in $stubs; do basename "$s"; done | grep . | sed 's/[.]/\\./g' | paste -sd'|' -)
 [ -n "$names" ] || { no "harness: no stub names found"; echo "$pass passed, $fail failed"; exit 1; }
 # A `<ref>:hooks/...` path names a file inside an OLDER commit (a pinned pre-#309 control), so it keeps

@@ -46,6 +46,8 @@ def trusted(folder: str, claude_json: str) -> bool:
             projects = json.load(fh).get("projects") or {}
     except (OSError, ValueError, AttributeError):
         return False
+    if not isinstance(projects, dict):
+        return False
     want = {_norm(os.path.abspath(folder)), _norm(os.path.realpath(folder))}
     for key, entry in projects.items():
         if _norm(key) in want and isinstance(entry, dict) and entry.get("hasTrustDialogAccepted") is True:
