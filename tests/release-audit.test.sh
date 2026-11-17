@@ -103,7 +103,7 @@ s = u.spec_from_file_location("r", sys.argv[1]); m = u.module_from_spec(s); s.lo
 assert m.full_copy("skills/anthropic/x/ref.md", "hooks/evil.py", {"skills/anthropic/x/ref.md"})
 assert m.full_copy("docs/a.md", "hooks/a.sh", set())
 assert m.full_copy("notes.txt", "skills/x/SKILL.md", set())
-assert not m.full_copy("hooks/bus_log.py", "hooks/context/bus_log.py", set())
+assert not m.full_copy("hooks/some-tool.py", "hooks/context/some-tool.py", set())
 PY
 grep -qF '"-C", "--find-copies-harder"' "$S" && ok "a moved file is audited as its changes, not as new code (copy detection on)" || no "the audit diff has no copy detection"
 
