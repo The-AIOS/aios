@@ -735,7 +735,9 @@ Step 3's word-splitting warning has shipped since 2026-07-27 and was still viola
 # a literal `^J` so the report stays one line per directory. The removal happens HERE, on the
 # name the shell holds, because a `^J`-printed name cannot be typed back into `rmdir`. No `{}`
 # may appear inside this inner script: BSD find substitutes it even mid-argument.
-find "$HOME/aios" -maxdepth 1 -type d ! -name '.*' -exec sh -c '
+# -H: ~/aios is often a symlink (setup makes one when the vault was cloned elsewhere), and without
+# it find lists only the link itself, so this sweep silently checked nothing (#319).
+find -H "$HOME/aios" -maxdepth 1 -type d ! -name '.*' -exec sh -c '
   d=$1; n=${d##*/}; NL=$(printf "\nx"); NL=${NL%x}
   case "$n" in
     *.[A-Za-z0-9]*" "*|*.[A-Za-z0-9]*"$NL"*)

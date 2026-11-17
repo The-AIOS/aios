@@ -1652,6 +1652,10 @@ jobs:
         # stopped the run (#316). Step 2 also runs here against a read-only clone.
         run: bash tests/update-sandbox-writes.test.sh
 
+      - name: no find is rooted at a bare ~/aios, which may be a symlink
+        # find lists only the link itself, so a search there finds nothing and says nothing (#319).
+        run: bash tests/find-symlink-root.test.sh
+
       - name: the Hats step reads session names through a script that prints only validated names and typed prompts
         # Transcripts hold untrusted text; the update must never read them directly. (#307 security review)
         run: bash tests/session-names.test.sh

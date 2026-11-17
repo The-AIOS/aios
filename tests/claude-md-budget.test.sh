@@ -31,7 +31,9 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 # The ratchet. Raise it DELIBERATELY, in the PR that needs the room, never to get green.
-CEILING=94643
+CEILING=94705
+# +62 (v0.8.19, #319): ~/aios is often a symlink and `find ~/aios` then sees only the link; a live
+# Haiku session searched that way, found no agent and wore no hat. One clause in step 2.
 # +84 (v0.8.18 follow-up): the wearing line spelled out in § Identity step 2. Live probes showed
 # sessions never open suggest-agent at start, so a line defined only there was never written.
 # +59 (v0.8.18): one privacy rule every vault needs, beside "Never send": a web search built
