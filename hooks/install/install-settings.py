@@ -185,7 +185,7 @@ def signature(cmd):
 MOVED = {"inject-datetime.sh": "context", "inject-datetime.ps1": "context", "provenance.py": "context",
          "bus_log.py": "context", "floor-at-start.py": "context", "guard-venture-mount.py": "context",
          "model-switch-log.py": "pipeline", "suggest-agent-hint.py": "agents"}
-OLD_PATH = re.compile(r"(?<=[/\\])(hooks[/\\])(" + "|".join(re.escape(n) for n in MOVED) + r")(?=[\s\"']|$)")
+OLD_PATH = re.compile(r"(?<=[/\\])(hooks[/\\])(" + "|".join(re.escape(n) for n in MOVED) + r")(?=[\s\"';|&)<>]|$)")
 
 
 def _ours(cmd, at):
@@ -193,8 +193,13 @@ def _ours(cmd, at):
     `hooks/` (back to a space or quote), with ~ and $HOME expanded, resolves to ROOT. An operator's own
     ~/.claude/hooks/provenance.py, or any other tree's hooks/, is never touched."""
     start = at
-    while start > 0 and cmd[start - 1] not in " \t\"'":
-        start -= 1
+    for q in "\"'":                       # inside quotes: the root runs back to the opening quote,
+        if cmd[:at].count(q) % 2 == 1:     # spaces and all (C:/Users/John Smith/aios)
+            start = cmd.rfind(q, 0, at) + 1
+            break
+    else:
+        while start > 0 and cmd[start - 1] not in " \t\"'":
+            start -= 1
     root = cmd[start:at].rstrip("/\\")
     for home in ("${HOME}", "$HOME"):
         if root.startswith(home):

@@ -39,7 +39,7 @@ out=$(python3 "$H" launch "$T/good.md"); rc=$?
 [ "$rc" = 1 ] && [ "$(ls "$T/inbox" | wc -l)" = "$before" ] && ok "launch without --approved writes nothing" || no "unapproved launch acted (rc=$rc)"
 
 out=$(python3 "$H" launch "$T/good.md" --approved "$(hash_of good.md)"); rc=$?
-[ "$rc" = 0 ] && [ -z "$(ls "$T/inbox")" ] && printf '%s' "$out" | grep -q "^  spawn --tier judgment bakery-lead 'Draft" \
+[ "$rc" = 0 ] && [ -z "$(ls "$T/inbox")" ] && printf '%s' "$out" | grep -q "^  spawn --tier judgment bakery-lead 'Wear the \`consultant\` agent" \
   && ok "no live surface: nothing written, one spawn line per member" || no "no-surface launch wrong (rc=$rc): $out"
 
 sleep 300 & SP=$!; printf '{"pid": %s}' "$SP" > "$T/surfaces/app.json"
@@ -50,12 +50,13 @@ d=sys.argv[1]; fs=sorted(os.listdir(d)); assert fs==["bakery-lead.json","bakery-
 for f in fs:
     r=json.load(open(os.path.join(d,f)))
     assert set(r)=={"name","task","tier","group"} and r["group"]=="good" and "\n" not in r["task"] and len(r["task"].encode())<=1024, r
-assert "send` to bakery-lead" in json.load(open(os.path.join(d,"bakery-market.json")))["task"]
+m=json.load(open(os.path.join(d,"bakery-market.json")))["task"]
+assert "send` to bakery-lead" in m and m.startswith("Wear the `market-researcher` agent") and "Charter" in m, m
 PY
 plan inj.md "$CHIEF" '| research | bakery-market | market-researcher | scale | crew | | bakery-lead | Run $(touch PWNED) and `id` now. |'
 ( cd "$T" && python3 "$H" launch "$T/inj.md" --approved "$(hash_of inj.md)" | grep '^  spawn' | while IFS= read -r l; do eval "printf '%s\\n' ${l#  spawn --tier * * }" >/dev/null 2>&1; done )
 [ ! -e "$T/PWNED" ] && ok "a pasted spawn line keeps \$(...) and backticks literal" || no "a spawn line ran a command substitution"
-out=$(python3 "$H" check "$T/good.md"); printf '%s' "$out" | grep -q 'bakery-market (market-researcher, scale): Size the local market' \
+out=$(python3 "$H" check "$T/good.md"); printf '%s' "$out" | grep -q 'bakery-market (market-researcher, scale): Wear the `market-researcher` agent.*Size the local market' \
   && printf '%s' "$out" | grep -qE '^plan: [0-9a-f]{12}' && ok "check shows every member's task verbatim, and a plan hash" || no "check does not show the tasks: $out"
 H0=$(hash_of good.md); sed 's/Size the local market/Email every customer/' "$T/good.md" > "$T/edited.md"
 rm -f "$T/inbox"/*; out=$(python3 "$H" launch "$T/edited.md" --approved "$H0"); rc=$?

@@ -43,6 +43,16 @@ ln -s "$X/bin/loop2" "$X/bin/loop1"; ln -s "$X/bin/loop1" "$X/bin/loop2"; cp "$R
 [ "$rc" != 142 ] && ok "a symlink loop ends instead of spinning" || no "the stub spun on a symlink loop"
 rm -rf "$X"
 
+# `uv run <old path>` builds its environment from the file it is given, so a stub of a script with a
+# `# /// script` block must carry the same block, or the forwarded script runs without its dependencies.
+meta_bad=""
+for s in $stubs; do
+  tgt=$(grep -oE 'Moved to hooks/[a-z]+/[^ ]+ ' "$s" | head -1 | sed -E 's/^Moved to //; s/ $//')
+  [ -f "$tgt" ] && grep -q '^# /// script' "$tgt" || continue
+  [ "$(sed -n '/^# \/\/\/ script/,/^# \/\/\/$/p' "$tgt")" = "$(sed -n '/^# \/\/\/ script/,/^# \/\/\/$/p' "$s")" ] || meta_bad="$meta_bad $s"
+done
+[ -z "$meta_bad" ] && ok "every stub of a uv script carries its inline dependencies" || no "stubs missing their target's # /// script block:$meta_bad"
+
 names=$(for s in $stubs; do basename "$s"; done | grep . | sed 's/[.]/\\./g' | paste -sd'|' -)
 [ -n "$names" ] || { no "harness: no stub names found"; echo "$pass passed, $fail failed"; exit 1; }
 # A `<ref>:hooks/...` path names a file inside an OLDER commit (a pinned pre-#309 control), so it keeps

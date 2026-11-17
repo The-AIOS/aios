@@ -57,7 +57,9 @@ def known_agents():
 
 def known_tiers():
     try:
-        out = subprocess.run([os.path.join(os.path.dirname(HERE), "pipeline", "resolve-tier"), "--list"], capture_output=True, text=True, timeout=10).stdout
+        # Through bash: resolve-tier is a bash script, and Windows cannot execute one directly.
+        out = subprocess.run(["bash", os.path.join(os.path.dirname(HERE), "pipeline", "resolve-tier"), "--list"],
+                             capture_output=True, text=True, timeout=10).stdout
     except (OSError, subprocess.TimeoutExpired):
         return set()
     return {line.split()[0] for line in out.splitlines() if line.strip()}
@@ -83,11 +85,17 @@ def parse(note):
     return (charter.group(1).strip() if charter else ""), rows, head
 
 
+NOTE_REF = ""   # set by main(): the project note, as the session will find it
+
+
 def task_for(row):
     report = "operator" if row["reports to"].lower() == "operator" else row["reports to"]
+    head = "Wear the `%s` agent (/aios:agent %s)." % (row["agent"], row["agent"])
+    if NOTE_REF:
+        head += " Read the Charter in the ## Team section of %s first." % NOTE_REF
     tail = ("When it is done, report back with one spawn-inbox `send` to %s: what you did and what is open." % report
             if report != "operator" else "When it is done, tell the operator what you did and what is open.")
-    return "%s %s" % (row["first task"].rstrip(), tail)
+    return "%s %s %s" % (head, row["first task"].rstrip(), tail)
 
 
 def check(note):
@@ -206,7 +214,11 @@ def launch(note, approved):
         return ["a request for %s is already waiting in the inbox; nothing was written" % ", ".join(taken)], []
     for r in rows:
         path = os.path.join(inbox, r["session"] + ".json")
-        write_request(path, {"name": r["session"], "task": task_for(r), "tier": r["tier"], "group": group})
+        try:
+            write_request(path, {"name": r["session"], "task": task_for(r), "tier": r["tier"], "group": group})
+        except FileExistsError:
+            return ["a request for %s appeared in the inbox while launching; written before it: %s"
+                    % (r["session"], ", ".join(os.path.basename(w) for w in written) or "none")], []
         written.append(path)
     return [], written
 
@@ -216,6 +228,9 @@ def main(argv):
         print("usage: team-plan.py check <note> | launch <note> --approved <plan-hash>", file=sys.stderr)
         return 2
     cmd, note = argv[0], argv[1]
+    global NOTE_REF
+    real, root = os.path.realpath(note), os.path.realpath(ROOT)
+    NOTE_REF = ("~/aios/" + os.path.relpath(real, root).replace(os.sep, "/")) if real.startswith(root + os.sep) else os.path.basename(note)
     if cmd == "check":
         errs = check(note)
         for e in errs:

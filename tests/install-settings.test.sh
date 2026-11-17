@@ -160,6 +160,14 @@ assert "[ ! -f ~/aios/hooks/context/floor-at-start.py ] || python3 ~/aios/hooks/
 assert not any(("aios/hooks/inject-datetime" in x or "aios/hooks/provenance.py" in x or "aios/hooks/floor-at-start.py" in x) for x in c), c
 assert d["statusLine"]["command"]=="my-own-line" and d["cleanupPeriodDays"]==30
 PY
+$PYBIN - "$H" "$T/my vault/aios" <<'PY' && ok "a quoted root with a space moves too (C:/Users/John Smith/aios)" || no "a quoted root with a space was not moved"
+import importlib.util as u, os, sys
+os.environ["AIOS_ROOT"] = sys.argv[2]
+s = u.spec_from_file_location("i", sys.argv[1]); m = u.module_from_spec(s); s.loader.exec_module(m)
+r = sys.argv[2]
+assert m.moved('python3 "%s/hooks/provenance.py" --prompt' % r) == 'python3 "%s/hooks/context/provenance.py" --prompt' % r
+assert m.moved('bash ~/elsewhere/hooks/inject-datetime.sh; true') is None
+PY
 cp "$S" "$T/moved-once.json"; out=$(HOME="$T" run --platform posix --apply)
 cmp -s "$S" "$T/moved-once.json" && case "$out" in *"Nothing to change"*) ok "a second run moves nothing" ;; *) no "second run did something" "$out" ;; esac || no "second run altered the moved file"
 
