@@ -111,6 +111,8 @@ def check(note):
         return ["the Team table lacks column(s): %s" % ", ".join(missing)]
     if not charter:
         errs.append("no **Charter.** line: every member reads it first")
+    elif any(unicodedata.category(ch) in ("Cc", "Cf", "Zl", "Zp") for ch in charter):
+        errs.append("the charter holds an invisible or control character, so what is shown would not be what members read")
     if len(rows) < 2:
         errs.append("a team needs at least two members (%d found)" % len(rows))
     chiefs = [r for r in rows if r["role"].lower() == "chief of staff"]
