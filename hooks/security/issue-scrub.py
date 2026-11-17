@@ -134,12 +134,12 @@ def home_rest(rest):
 
 
 # A private home path can hold spaces (~/Google Drive/Clients/Acme Litigation/, C:\Users\jo\My
-# Documents\Acme Corp\), so it is redacted to the end of the line or the next quote, bracket or
-# backtick: over-redacting a public draft is the safe side. Framework places are handled after.
+# Documents\Acme Corp\), so it is redacted to the end of the line or the next quote or backtick (a folder
+# like `Acme (2024)` holds brackets): over-redacting a public draft is the safe side. Framework places are handled after.
 _KEEP = r"(?:aios|\.aios|\.claude)(?:[/\\](?![^\n]*\.\.)|(?=[\s`'\"<>()]|$))"
 HOME_PRIVATE = [
-    re.compile(r"/(?:Users|home)/[^/\s`'\"<>]+[/\\](?!" + _KEEP + r")[^\n`'\"<>()]*"),
-    re.compile(r"[A-Za-z]:\\\\?Users\\\\?[^\\\s`'\"<>]+[/\\](?!" + _KEEP + r")[^\n`'\"<>()]*"),
+    re.compile(r"/(?:Users|home)/[^/\s`'\"<>]+[/\\](?!" + _KEEP + r")[^\n`'\"]*"),
+    re.compile(r"[A-Za-z]:\\\\?Users\\\\?[^\\\s`'\"<>]+[/\\](?!" + _KEEP + r")[^\n`'\"]*"),
 ]
 WIKILINK = re.compile(r"!?\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]")
 WORD = re.compile(r"[A-Za-z0-9\u00C0-\u024F']+")
