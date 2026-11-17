@@ -97,6 +97,14 @@ rm -rf "$T/r"; : > "$T/out.args"
 AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $S run --outside-model openai/gpt-5.6-sol --base HEAD~1 --head HEAD --out "$T/r" >"$T/log" 2>&1
 grep -qF -- '--model openai/gpt-5.6-sol' "$T/out.args" && ok "--outside-model overrides the pinned model" || no "the override was ignored"
 
+$PYBIN - "$S" <<'PY' && ok "a copy of left-out or non-code content into code is shown in full; moved code shows its changes" || no "copy rules wrong"
+import importlib.util as u, sys
+s = u.spec_from_file_location("r", sys.argv[1]); m = u.module_from_spec(s); s.loader.exec_module(m)
+assert m.full_copy("skills/anthropic/x/ref.md", "hooks/evil.py", {"skills/anthropic/x/ref.md"})
+assert m.full_copy("docs/a.md", "hooks/a.sh", set())
+assert m.full_copy("notes.txt", "skills/x/SKILL.md", set())
+assert not m.full_copy("hooks/bus_log.py", "hooks/context/bus_log.py", set())
+PY
 grep -qF '"-C", "--find-copies-harder"' "$S" && ok "a moved file is audited as its changes, not as new code (copy detection on)" || no "the audit diff has no copy detection"
 
 printf '\n-- %d passed, %d failed --\n' "$PASS" "$FAIL"

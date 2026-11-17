@@ -139,6 +139,25 @@ def proven_vendored(base, head, audit_all=False):
     return left_out, notes
 
 
+CODE_EXT = (".py", ".sh", ".ps1", ".js", ".ts", ".mjs", ".swift", ".rb", ".pl")
+
+
+def code_like(path):
+    """A path whose content RUNS or steers a session: scripts, workflows, hooks, SKILL.md."""
+    name = path.rsplit("/", 1)[-1]
+    return (path.endswith(CODE_EXT) or name == "SKILL.md" or path.startswith((".github/", "hooks/"))
+            or ("." not in name and path.startswith(("hooks/", "skills/"))))
+
+
+COPIES = []   # (source, destination, shown in full?) for the brief
+
+
+def full_copy(src, dst, left_out):
+    """A copy is shown in full when it could launder unread content into code: its source was left out
+    of the audit, or a non-code file became a code file. Moving reviewed code shows only its changes."""
+    return src in left_out or (code_like(dst) and not code_like(src))
+
+
 def diff_chunks(base, head, left_out=()):
     """The release diff in chunks no larger than MAX_DIFF, split at file boundaries.
 
@@ -154,6 +173,17 @@ def diff_chunks(base, head, left_out=()):
     if r.returncode != 0:
         sys.exit(f"release-audit: git diff failed: {r.stderr.strip()}")
     files = re.split(r"(?m)^(?=diff --git )", r.stdout)
+    left = set(left_out)
+    for k, f in enumerate(files):
+        src = re.search(r"(?m)^copy from (.+)$", f)
+        dst = re.search(r"(?m)^copy to (.+)$", f)
+        if not (src and dst):
+            continue
+        whole = full_copy(src.group(1), dst.group(1), left)
+        COPIES.append((src.group(1), dst.group(1), whole))
+        if whole:
+            full = sh(["git", "-C", str(ROOT), "diff", "--no-renames", f"{base}...{head}", "--", dst.group(1)])
+            files[k] = full.stdout
     chunks, cur = [], ""
     for f in (x for x in files if x):
         while len(f) > MAX_DIFF:
@@ -228,6 +258,10 @@ def cmd_run(a):
         (out / "left-out.txt").write_text("\n".join(notes + [""] + left_out) + "\n", encoding="utf-8")
         for n in notes:
             print("scope: " + n)
+    if COPIES:
+        scope += ("\n\nCopies in this release (git copy detection). A copy of reviewed code shows only its changes; "
+                  "a copy whose source was left out, or a non-code file copied into code, is shown in full:\n- " +
+                  "\n- ".join("%s -> %s%s" % (s, d, " (shown in full)" if w else "") for s, d, w in COPIES))
     reports = {"outside": [], "claude": []}
     for i, chunk in enumerate(chunks, 1):
         part = f" (part {i} of {len(chunks)})" if len(chunks) > 1 else ""
