@@ -61,7 +61,7 @@
 
 ## 2026-11-17 — Agents speak up mid-session, teams from one sentence, and a tidy hooks/ folder
 
-`hash: 95088b4 · dc453e5` · [#317](https://github.com/The-AIOS/aios/issues/317) · [#274](https://github.com/The-AIOS/aios/issues/274) · [#314](https://github.com/The-AIOS/aios/issues/314) · [#309](https://github.com/The-AIOS/aios/issues/309) · [#323](https://github.com/The-AIOS/aios/issues/323) · [#316](https://github.com/The-AIOS/aios/issues/316) · [#319](https://github.com/The-AIOS/aios/issues/319) · [#321](https://github.com/The-AIOS/aios/pull/321)
+`hash: 95088b4 · 70b06ff` · [#317](https://github.com/The-AIOS/aios/issues/317) · [#274](https://github.com/The-AIOS/aios/issues/274) · [#314](https://github.com/The-AIOS/aios/issues/314) · [#309](https://github.com/The-AIOS/aios/issues/309) · [#323](https://github.com/The-AIOS/aios/issues/323) · [#316](https://github.com/The-AIOS/aios/issues/316) · [#319](https://github.com/The-AIOS/aios/issues/319) · [#321](https://github.com/The-AIOS/aios/pull/321)
 
 > **What you can now do.** Ask about invoices, a contract or a deck in the middle of any session, and the agent that fits is suggested in one line the AIOS App shows as a card. Say "staff this project" with one sentence about it, and get a team plan in the project note (a charter, who does what, one chief of staff) that launches only when you say yes. Spawns stop asking you to trust each new folder once you trust one. And `hooks/` is grouped into folders by what each file is for.
 
