@@ -97,5 +97,7 @@ rm -rf "$T/r"; : > "$T/out.args"
 AIOS_AUDIT_OUTSIDE="$T/out" AIOS_AUDIT_CLAUDE="$T/cl" $PYBIN $S run --outside-model openai/gpt-5.6-sol --base HEAD~1 --head HEAD --out "$T/r" >"$T/log" 2>&1
 grep -qF -- '--model openai/gpt-5.6-sol' "$T/out.args" && ok "--outside-model overrides the pinned model" || no "the override was ignored"
 
+grep -qF '"-C", "--find-copies-harder"' "$S" && ok "a moved file is audited as its changes, not as new code (copy detection on)" || no "the audit diff has no copy detection"
+
 printf '\n-- %d passed, %d failed --\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

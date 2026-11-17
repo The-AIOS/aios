@@ -147,7 +147,10 @@ def diff_chunks(base, head, left_out=()):
     does. A single file larger than the limit is split by lines, and says so. The only
     files not sent are `left_out`: proven vendored docs, named in the brief and reports."""
     spec = [".", ":(exclude)CHANGELOG.md"] + [f":(exclude,literal){p}" for p in left_out]
-    r = sh(["git", "-C", str(ROOT), "diff", f"{base}...{head}", "--"] + spec)
+    # -C --find-copies-harder: a file MOVED to a new folder (with a forwarding stub left at its old
+    # path, as #309 did) shows as a copy of its old version plus its real changes, not as hundreds of
+    # lines of new code. Every changed line is still in the diff; only unchanged moved code is not.
+    r = sh(["git", "-C", str(ROOT), "diff", "-C", "--find-copies-harder", f"{base}...{head}", "--"] + spec)
     if r.returncode != 0:
         sys.exit(f"release-audit: git diff failed: {r.stderr.strip()}")
     files = re.split(r"(?m)^(?=diff --git )", r.stdout)
