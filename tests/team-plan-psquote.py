@@ -3,3 +3,5 @@ s = importlib.util.spec_from_file_location("tp", sys.argv[1]); m = importlib.uti
 R = "’"
 q = m.ps_quote("x" + R + "; Remove-Item ~ ; " + R + " and 'y'")
 assert q == "'x" + R + R + "; Remove-Item ~ ; " + R + R + " and ''y'''", q
+for c in ("'", "\u2018", "\u2019", "\u201a", "\u201b"):
+    assert m.ps_quote("a" + c + "b") == "'a" + c + c + "b'", c

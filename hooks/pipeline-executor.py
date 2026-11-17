@@ -11,16 +11,10 @@
 # ///
 # The block above is copied from the moved file: `uv run` reads it from THIS file to build the
 # environment, so without it the forwarded script runs with none of its dependencies.
-"""Moved to hooks/pipeline/pipeline-executor.py (#309). This stub forwards for one release, then goes."""
-import os, runpy, sys
-p = os.path.join(os.path.dirname(os.path.realpath(__file__)), "pipeline", "pipeline-executor.py")
-sys.argv[0] = p
-runpy.run_path(p, run_name="__main__")
 """Moved to hooks/pipeline/pipeline-executor.py (#309). This stub forwards for one release, then goes.
 
-Run as a script, it runs the real file with that file's folder first on sys.path (so its own
-sibling imports resolve there). Imported as a module, it loads the real module and takes on its
-names, running nothing: `import pipeline_executor` from hooks/ must keep meaning the module, never its main().
+Run as a script, it runs the real file with that file's folder first on sys.path. Imported as a
+module, it loads the real module and takes on its names, running nothing.
 """
 import importlib.util, os, runpy, sys
 _P = os.path.join(os.path.dirname(os.path.realpath(__file__)), "pipeline", "pipeline-executor.py")

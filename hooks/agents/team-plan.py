@@ -30,7 +30,6 @@ import json
 import os
 import re
 import shlex
-import subprocess
 import sys
 
 if sys.platform == "win32":
@@ -56,13 +55,14 @@ def known_agents():
 
 
 def known_tiers():
+    # Read from resolve-tier's own RUNGS line, never by running it: on Windows a bare `bash` can be
+    # WSL's launcher, which cannot read a Windows path, and Git Bash is often not on PATH.
     try:
-        # Through bash: resolve-tier is a bash script, and Windows cannot execute one directly.
-        out = subprocess.run(["bash", os.path.join(os.path.dirname(HERE), "pipeline", "resolve-tier"), "--list"],
-                             capture_output=True, text=True, timeout=10).stdout
-    except (OSError, subprocess.TimeoutExpired):
+        text = open(os.path.join(os.path.dirname(HERE), "pipeline", "resolve-tier"), encoding="utf-8").read()
+    except OSError:
         return set()
-    return {line.split()[0] for line in out.splitlines() if line.strip()}
+    m = re.search(r'^RUNGS="([^"]+)"', text, re.M)
+    return set(m.group(1).split()) if m else set()
 
 
 def parse(note):
@@ -214,7 +214,8 @@ def launch(note, approved):
         # These lines are pasted into a terminal, so a task holding `$(...)`, backticks or quotes must
         # stay one literal argument, never run: POSIX quoting here, PowerShell quoting on Windows.
         q = ps_quote if os.name == "nt" else shlex.quote
-        lines = ["spawn --tier %s %s %s" % (q(r["tier"]), q(r["session"]), q(task_for(r))) for r in rows]
+        flag = "-Tier" if os.name == "nt" else "--tier"     # the PowerShell spawn function's parameter
+        lines = ["spawn %s %s %s %s" % (flag, q(r["tier"]), q(r["session"]), q(task_for(r))) for r in rows]
         return [], lines
     inbox = os.environ.get("AIOS_INBOX_DIR") or os.path.join(os.path.expanduser("~"), ".aios", "spawn-inbox")
     os.makedirs(inbox, exist_ok=True)
@@ -239,7 +240,7 @@ def main(argv):
         return 2
     cmd, note = argv[0], argv[1]
     global NOTE_REF
-    real, root = os.path.realpath(note), os.path.realpath(ROOT)
+    real, root = os.path.normcase(os.path.realpath(note)), os.path.normcase(os.path.realpath(ROOT))
     NOTE_REF = ("~/aios/" + os.path.relpath(real, root).replace(os.sep, "/")) if real.startswith(root + os.sep) else os.path.basename(note)
     if cmd == "check":
         errs = check(note)

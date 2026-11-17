@@ -58,6 +58,11 @@ done
 out=$( cd hooks && python3 -c 'import bus_log, sys; print("ok" if callable(bus_log.is_bus_prompt) else "no")' 2>&1 )
 [ "$out" = ok ] && ok "importing a moved module through its stub gives the module, runs nothing" || no "import bus_log through the stub: $out"
 
+# A python stub forwards exactly once: a second forwarder ran /today's whole pipeline twice.
+twice=""
+for s in $stubs; do case "$s" in *.py) [ "$(grep -c 'runpy.run_path' "$s")" = 1 ] || twice="$twice $s" ;; esac; done
+[ -z "$twice" ] && ok "every python stub runs its target once" || no "stubs that forward more than once:$twice"
+
 names=$(for s in $stubs; do basename "$s"; done | grep . | sed 's/[.]/\\./g' | paste -sd'|' -)
 [ -n "$names" ] || { no "harness: no stub names found"; echo "$pass passed, $fail failed"; exit 1; }
 # A `<ref>:hooks/...` path names a file inside an OLDER commit (a pinned pre-#309 control), so it keeps

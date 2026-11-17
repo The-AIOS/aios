@@ -34,7 +34,7 @@ FM = re.compile(r"^---\r?\n(.*?)\r?\n---", re.S)
 def frontmatter(path):
     try:
         with open(path, encoding="utf-8", errors="replace") as fh:
-            m = FM.match(fh.read(4000))
+            m = FM.match(fh.read(65536))   # the whole frontmatter: a long description must not hide an agent
     except OSError:
         return {}
     out = {}

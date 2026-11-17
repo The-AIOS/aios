@@ -66,7 +66,7 @@ Both readers and the transcriber are fully local (Fortress-clean) except the opt
 
 ## 4. Install
 
-1. Copy **`hooks/media/video-watch.py`** into your `~/aios/hooks/`.
+1. Copy **`hooks/media/video-watch.py`** and **`hooks/media/ocr-image.swift`** into your `~/aios/hooks/media/` (the script finds the OCR reader beside it, and `hooks/custom/` one level up).
 2. Ensure **`hooks/media/ocr-image.swift`** supports `--no-correction` (the code-mode flag — disables Apple Vision autocorrect so it doesn't mangle `C001` → "cool"). If yours predates this, add a `noCorrection` arg that sets `req.usesLanguageCorrection = !noCorrection`.
 3. Confirm the toolchain: `ffmpeg`, `yt-dlp`, `swift`, `claude`, and `pillow` (`python3 -c "import PIL"`).
 4. **YouTube transcripts:** `youtube-transcript-api` on a system python (the script auto-finds an interpreter that has it).
