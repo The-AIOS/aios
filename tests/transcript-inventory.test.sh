@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/transcript-inventory.test.sh
 #
-# hooks/transcript-inventory.py sorts Claude Code's session transcripts and proposes only the
+# hooks/security/transcript-inventory.py sorts Claude Code's session transcripts and proposes only the
 # throwaways (headless and temp-folder runs past an age) for archiving. It must never propose a
 # named or interactive session, and --archive must delete nothing it did not first verify in the
 # archive. Fixture transcripts only: the real ~/.claude is never read here.
@@ -12,7 +12,7 @@ ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 PYBIN=""; for c in python3 python "py -3"; do $c -c 'import sys' >/dev/null 2>&1 && { PYBIN="$c"; break; }; done
 [ -n "$PYBIN" ] || { echo "  - skip: no python"; exit 0; }
-H=hooks/transcript-inventory.py
+H=hooks/security/transcript-inventory.py
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 P="$T/cfg/projects/-proj"; mkdir -p "$P"
 mk(){ printf '%s\n' "$2" > "$P/$1.jsonl"; touch -t "$3" "$P/$1.jsonl"; }

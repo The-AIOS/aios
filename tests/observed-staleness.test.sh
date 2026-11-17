@@ -14,7 +14,7 @@ if [ -z "$PYBIN" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# hooks/observed-staleness.py — the observed-context staleness alarm, as code
+# hooks/vault/observed-staleness.py — the observed-context staleness alarm, as code
 #
 # The threshold half of this alarm was always reliable; the EXEMPTION half —
 # which files have no clock — lived in prose, was re-derived by hand every
@@ -36,7 +36,7 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
-H=hooks/observed-staleness.py
+H=hooks/vault/observed-staleness.py
 [ -f "$H" ] || { echo "  FAIL $H missing"; exit 1; }
 TODAY=2026-09-24
 
@@ -116,11 +116,11 @@ after=$(cat "$T/stale/patterns.md" | cksum)
 [ "$before" = "$after" ] && ok "files are byte-identical after a run" || no "the hook modified a file"
 
 echo "── the commands call the hook, through uv ──"
-grep -q 'uv run ~/aios/hooks/observed-staleness.py' plugins/aios/commands/today.md \
+grep -q 'uv run ~/aios/hooks/vault/observed-staleness.py' plugins/aios/commands/today.md \
   && ok "today.md runs the hook through uv" || no "today.md does not run the hook"
-grep -q 'uv run ~/aios/hooks/observed-staleness.py' plugins/aios/commands/close-day.md \
+grep -q 'uv run ~/aios/hooks/vault/observed-staleness.py' plugins/aios/commands/close-day.md \
   && ok "close-day.md runs the hook through uv" || no "close-day.md does not run the hook"
-grep -q 'python3 ~/aios/hooks/observed-staleness.py' plugins/aios/commands/*.md \
+grep -q 'python3 ~/aios/hooks/vault/observed-staleness.py' plugins/aios/commands/*.md \
   && no "a command runs the hook through python3" "on Windows that name runs nothing, silently" || ok "no command calls it through python3"
 
 echo "── a fresh install is not an error: an explicitly empty stamp has no clock yet ──"
@@ -130,10 +130,10 @@ echo "── a fresh install is not an error: an explicitly empty stamp has no c
 fr="$(mktemp -d)"
 printf -- '---\nupdated: ""\n---\n# seed\n' > "$fr/patterns.md"
 printf -- '---\nupdated: "2026-09-20"\n---\n# real\n' > "$fr/growth.md"
-$PYBIN hooks/observed-staleness.py "$fr" --today 2026-09-24 >/dev/null 2>&1; rc=$?
+$PYBIN hooks/vault/observed-staleness.py "$fr" --today 2026-09-24 >/dev/null 2>&1; rc=$?
 [ "$rc" -eq 0 ] && ok "a seed with updated: \"\" reads as not started (exit 0)" || no "a fresh-install seed was reported as an error" "exit $rc"
 printf -- '---\ntype: claude-context\n---\n# no stamp at all\n' > "$fr/profile.md"
-$PYBIN hooks/observed-staleness.py "$fr" --today 2026-09-24 >/dev/null 2>&1; rc=$?
+$PYBIN hooks/vault/observed-staleness.py "$fr" --today 2026-09-24 >/dev/null 2>&1; rc=$?
 [ "$rc" -eq 2 ] && ok "control: a file with NO updated: key still cannot be measured (exit 2)" || no "control: a missing stamp stopped being an error" "exit $rc"
 rm -rf "$fr"
 

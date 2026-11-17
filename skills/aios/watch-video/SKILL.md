@@ -3,8 +3,8 @@ name: watch-video
 description: >-
   Actually watch or listen to a video/audio source and hold it in context so you can answer questions about it,
   summarise it, pull quotes, or act on what it says — a QUICK COMPREHENSION action, not a filing pipeline.
-  Covers the local media hooks Claude cannot otherwise discover: hooks/transcribe.py (long-form audio → text,
-  on-device) and hooks/video-watch.py (the VISUAL channel — slides, code, diagrams, terminal, on-screen text
+  Covers the local media hooks Claude cannot otherwise discover: hooks/media/transcribe.py (long-form audio → text,
+  on-device) and hooks/media/video-watch.py (the VISUAL channel — slides, code, diagrams, terminal, on-screen text
   that a transcript throws away). Use when the operator shares a video, recording, talk, screencast, demo,
   lecture, meeting capture or YouTube URL and wants you to engage with its CONTENT — "watch this", "what does
   this video say", "does he mention X", "summarise this talk", "is this worth my time", "listen to this
@@ -32,9 +32,9 @@ So the shape of a run is: **get it into context → do what was asked → offer,
 | The source | Reach for | Why |
 |---|---|---|
 | Document (PDF, docx, deck, sheet) | MarkItDown or the `document-skills` | Not this skill's job; those already match semantically |
-| **Long audio/video, audio is enough** | `hooks/transcribe.py` | MarkItDown single-shots audio to Google Web Speech — fine for a sentence, useless for a 49-minute interview |
+| **Long audio/video, audio is enough** | `hooks/media/transcribe.py` | MarkItDown single-shots audio to Google Web Speech — fine for a sentence, useless for a 49-minute interview |
 | **YouTube, audio is enough** | MarkItDown captions **first** | Far faster than transcribing; fall back to `transcribe.py` when captions are absent or garbage |
-| **The SCREEN carries signal** | `hooks/video-watch.py` **on top of** the transcript | A transcript discards every frame: slides, code, diagrams, terminal, charts, on-screen text |
+| **The SCREEN carries signal** | `hooks/media/video-watch.py` **on top of** the transcript | A transcript discards every frame: slides, code, diagrams, terminal, charts, on-screen text |
 
 **The screen carries signal when** the source is a talk with slides, a screencast, a code walkthrough, a tool demo, a lecture with diagrams, or anything where *"as you can see here"* would leave you blind. When in doubt, ask — the visual pass costs real time.
 
@@ -42,10 +42,10 @@ So the shape of a run is: **get it into context → do what was asked → offer,
 
 ```bash
 # transcript spine (on-device: ffmpeg → mlx-whisper large-v3-turbo, arbitrary length)
-python3 ~/aios/hooks/transcribe.py <file-or-URL> /tmp/watch-transcript.txt
+python3 ~/aios/hooks/media/transcribe.py <file-or-URL> /tmp/watch-transcript.txt
 
 # visual channel, layered on the transcript — NEVER instead of it
-python3 ~/aios/hooks/video-watch.py <file-or-URL> \
+python3 ~/aios/hooks/media/video-watch.py <file-or-URL> \
   --transcript /tmp/watch-transcript.txt --reader ocr --code
 ```
 
@@ -58,7 +58,7 @@ Everything else (`--scene-threshold`, `--max-frames`, `--sample-every`, `--max-w
 
 ## Platform reality — state it, don't hit it
 
-Both hooks are **macOS / Apple Silicon** (`mlx-whisper`, Apple Vision via `hooks/ocr-image.swift`). On Linux or Windows, say so and fall back to **MarkItDown**, which handles YouTube captions and short audio cross-platform. Don't let an operator watch a command fail to learn this.
+Both hooks are **macOS / Apple Silicon** (`mlx-whisper`, Apple Vision via `hooks/media/ocr-image.swift`). On Linux or Windows, say so and fall back to **MarkItDown**, which handles YouTube captions and short audio cross-platform. Don't let an operator watch a command fail to learn this.
 
 ## Set expectations before you burn the time
 

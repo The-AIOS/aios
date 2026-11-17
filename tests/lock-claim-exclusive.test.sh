@@ -62,7 +62,8 @@ done
   || no "the shim never gave two winners" "every lock result below would prove nothing"
 
 # Hooks under test: the working tree (new) and the pinned pre-fix tree (old).
-cp -R "$ROOT/hooks" "$TMP/new"
+# Since #309 the helpers live in hooks/vault/ and find the scanner one level up, in hooks/git/.
+cp -R "$ROOT/hooks/vault" "$TMP/new"; cp -R "$ROOT/hooks/git" "$TMP/git"
 HAVE_OLD=0
 if git -C "$ROOT" cat-file -e "$PIN:hooks/aios-commit" 2>/dev/null; then
   mkdir -p "$TMP/old" && git -C "$ROOT" archive "$PIN" hooks | tar -x -C "$TMP/old" && mv "$TMP/old/hooks" "$TMP/oldh" && HAVE_OLD=1

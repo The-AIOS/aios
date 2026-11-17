@@ -238,7 +238,7 @@ jobs:
           # This check used to glob `<layer>/*/` directly, which reads whatever happens to be on
           # disk — including build artifacts that .gitignore correctly excludes. On 2026-09-04 a
           # contributor's PR went red here while its own suite passed 10/10: their test was the
-          # first CI step ever to execute hooks/pipeline-executor.py, Python wrote
+          # first CI step ever to execute hooks/pipeline/pipeline-executor.py, Python wrote
           # hooks/__pycache__/, and this step — later in the same job — read that directory as a
           # company namespace and failed the build. `.gitignore:13` excludes `**/__pycache__/`,
           # so git never saw it; only the glob did.
@@ -277,12 +277,12 @@ jobs:
             esac
           done
 
-          # hooks/ — allowed: claude-identity + git (aios-commit pre-commit guard + secret-scan) + custom
-          # (files are layer-level; only subfolders checked)
+          # hooks/ — grouped by domain (#309): claude-identity, git, custom, and the seven domain folders.
+          # (top-level files are checked by tests/hooks-layout.test.sh; only subfolders here)
           for name in $(tracked_dirs hooks); do
             case "$name" in
-              claude-identity|git|custom) ;;
-              *) FOUND+=$'\n  - hooks/'"$name"'/  (expected: claude-identity/, git/, or custom/)' ;;
+              claude-identity|git|custom|context|vault|pipeline|agents|media|security|install) ;;
+              *) FOUND+=$'\n  - hooks/'"$name"'/  (expected: claude-identity/, git/, custom/, or a domain folder: context, vault, pipeline, agents, media, security, install)' ;;
             esac
           done
 
@@ -393,7 +393,7 @@ jobs:
           # a defect that only shows up the other way; this looks at the mode directly.
           #
           # WHY .sh AND NOT "has a shebang": measured across the tree, the shebang rule flags 5
-          # files that are CORRECTLY non-executable (hooks/pipeline-executor.py and friends are
+          # files that are CORRECTLY non-executable (hooks/pipeline/pipeline-executor.py and friends are
           # invoked as `python3 <path>` by their callers, never run directly). A rule with known
           # false positives gets muted, so the narrow one is the useful one: at the time of
           # writing, 27 tracked .sh files, 27 expected at 755.
@@ -495,7 +495,7 @@ jobs:
           # guarded here instead of trusted: the two must name the SAME repos and the SAME
           # verdicts. This is the check that makes the second file acceptable; delete it and
           # the pair silently diverges the way the bus fulfillers did.
-          SH=hooks/aios-star-check; PS=hooks/aios-star-check.ps1
+          SH=hooks/pipeline/aios-star-check; PS=hooks/pipeline/aios-star-check.ps1
           test -f "$SH" && test -f "$PS" || { echo "::error::star-check pair incomplete"; exit 1; }
 
           # Repos each file would ever ask about, in sorted order.
@@ -583,7 +583,7 @@ jobs:
           # stay gitignored. This is a path/filename check — content-based secret detection
           # is GitHub Push Protection at push time where it is enabled — it is on by default
           # for PUBLIC repos only, so a private operator vault usually lacks it — plus the
-          # secret self-scan in hooks/aios-commit before the commit exists.
+          # secret self-scan in hooks/vault/aios-commit before the commit exists.
           #
           # Categories covered:
           # - Cryptographic keys: *.key, *.pem, *.pfx, *.p12, *.cer, *.crt
@@ -803,7 +803,7 @@ jobs:
           echo "OK: no ~/obsidian hardcoded paths — framework is install-path-agnostic with ~/aios canonical default"
 
       # The check above greps for the path as TEXT. It therefore passed for two months while
-      # hooks/pipeline-executor.py resolved USER.md from `Path.home() / "obsidian"` — the same
+      # hooks/pipeline/pipeline-executor.py resolved USER.md from `Path.home() / "obsidian"` — the same
       # retired path, assembled programmatically, so not one of the textual patterns matched.
       # The guard reported "no hardcoded paths" about a state it had never examined, and an
       # operator whose vault was elsewhere silently lost their entire USER.md config on every
@@ -1172,7 +1172,7 @@ jobs:
       - name: /close-session asks before it writes the block, and says None for empty fields
         # Questions gathered before the committed block, step 8 verify-only, the --auto exception covering every observed write, one rule for empty fields — with mutated copies proving each check can fail.
         run: bash tests/close-session-order-and-fields.test.sh
-      - name: commands archive observed context through hooks/aios-snapshot
+      - name: commands archive observed context through hooks/vault/aios-snapshot
         # A command that names the dated snapshot destination must name the helper; none may prescribe the by-hand next-free-letter step.
         run: bash tests/commands-snapshot-helper.test.sh
       - name: /aios:housekeeping checks that could not tell true from false
@@ -1412,7 +1412,7 @@ jobs:
         # honoured. The recommended field was the broken one, so the 22x spend spread that
         # carries Calibrate-Don't-Choose did not apply on the majority path.
         #
-        # hooks/resolve-tier is the one table any surface can read. This suite asserts the
+        # hooks/pipeline/resolve-tier is the one table any surface can read. This suite asserts the
         # two SHIPPED copies agree (resolver vs the wrapper text in install-wrappers.sh)
         # rather than restating the mapping — a third copy would be the same bug again.
         # It also asserts the installers normalize every hook .gitattributes protects, by
@@ -1669,6 +1669,9 @@ jobs:
       - name: a team plan is checked, and launched only on the operator's yes
         run: bash tests/team-plan.test.sh
 
+      - name: hooks/ is grouped by domain, and no old top-level path is referenced (#309)
+        run: bash tests/hooks-layout.test.sh
+
       - name: the Hats step reads session names through a script that prints only validated names and typed prompts
         # Transcripts hold untrusted text; the update must never read them directly. (#307 security review)
         run: bash tests/session-names.test.sh
@@ -1744,14 +1747,14 @@ jobs:
         run: bash tests/note-append-create-if-missing.test.sh
 
       - name: routine health — a job that fails or stops running is reported
-        # hooks/aios-health.py: one file per scheduled job with a deadline. A job that
+        # hooks/pipeline/aios-health.py: one file per scheduled job with a deadline. A job that
         # stops running writes nothing, so it can only be caught by its deadline passing; the
         # suite proves overdue, never-run, failed and unreadable files are all reported, and a
         # healthy one is silent.
         run: bash tests/aios-health.test.sh
 
       - name: the session-start identity check needs no permission prompt
-        # hooks/whoami resolves the name (env var, else the transcript) so CLAUDE.md's first action
+        # hooks/context/whoami resolves the name (env var, else the transcript) so CLAUDE.md's first action
         # carries no `$` for Claude Code to refuse to pre-check.
         run: bash tests/whoami.test.sh
 
@@ -1952,7 +1955,7 @@ jobs:
       - name: every non-ASCII-printing hook guards Windows stdout
         # Windows consoles are cp1252, so a print() carrying an em dash raises
         # UnicodeEncodeError and the hook does NOT RUN — the failure is absence, not a
-        # mangled glyph. Measured: hooks/buffer-status.py scored 18 passed / 5 failed on
+        # mangled glyph. Measured: hooks/vault/buffer-status.py scored 18 passed / 5 failed on
         # Windows and 23 / 0 elsewhere, entirely from its own report line.
         #
         # The convention already existed in three hooks (pipeline-executor.py,
@@ -2299,7 +2302,7 @@ jobs:
           set -e
           echo "core.autocrlf → $(git config --get core.autocrlf || echo '(unset)')"
           rc=0
-          for f in hooks/aios-commit hooks/aios-note-append hooks/git/secret-scan.sh tests/aios-commit.test.sh; do
+          for f in hooks/vault/aios-commit hooks/vault/aios-note-append hooks/git/secret-scan.sh tests/aios-commit.test.sh; do
             if grep -qU $'\r' "$f"; then echo "::error::$f contains CR after checkout — Git Bash cannot execute it. Check .gitattributes."; rc=1
             else echo "  ok (LF): $f"; fi
           done

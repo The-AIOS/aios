@@ -18,10 +18,10 @@ The uncomfortable part, stated plainly: **most of the real risk reduction is run
 Your vault is a folder on your machine and a private repository you own. MCP tokens sit on your own disk — deleting `~/.google_workspace_mcp/credentials/` revokes that machine's access immediately. The framework has no telemetry, and Claude Code's Bash tool is sandboxed by default. This is a real rung, not a placeholder.
 
 **Rung 1 — know what leaves.** An hour, nothing to install.
-Inventory your outbound paths and write the list down: which MCPs are connected and to whose servers · what your git remotes are and whether any is public · whether `hooks/openrouter.py` has a key (it is inert without one — see [`MODEL-ROUTING.md`](./MODEL-ROUTING.md)) · what sits below the `AIOS-OPERATOR-IGNORES` marker in your `.gitignore`. **You cannot contain what you have not enumerated**, and this is the rung people skip because it produces no artifact.
+Inventory your outbound paths and write the list down: which MCPs are connected and to whose servers · what your git remotes are and whether any is public · whether `hooks/pipeline/openrouter.py` has a key (it is inert without one — see [`MODEL-ROUTING.md`](./MODEL-ROUTING.md)) · what sits below the `AIOS-OPERATOR-IGNORES` marker in your `.gitignore`. **You cannot contain what you have not enumerated**, and this is the rung people skip because it produces no artifact.
 
 **Rung 2 — scope what an agent can touch.** An afternoon, all software, no hardware.
-Set permissions deliberately in `.claude/settings.json` rather than accepting whatever accumulated. Move every API key out of your shell rc into `~/.config/aios-secrets/*.env`, so a key is never in the environment of every process you launch. Install the git hooks (`bash hooks/install-git-hooks.sh`) so a credential cannot be committed by accident. Put private-data paths below the `.gitignore` operator marker, and true never-share entries in `.git/info/exclude`, which updates never touch. Commit through `aios-commit`, never `git add -A`. **This is the rung that pays.**
+Set permissions deliberately in `.claude/settings.json` rather than accepting whatever accumulated. Move every API key out of your shell rc into `~/.config/aios-secrets/*.env`, so a key is never in the environment of every process you launch. Install the git hooks (`bash hooks/install/install-git-hooks.sh`) so a credential cannot be committed by accident. Put private-data paths below the `.gitignore` operator marker, and true never-share entries in `.git/info/exclude`, which updates never touch. Commit through `aios-commit`, never `git add -A`. **This is the rung that pays.**
 
 **Rung 3 — separate the risky work.** Software, per task.
 Run experimental or untrusted work in its own git worktree so a bad edit cannot reach your main tree. For anything you would not want reading your keychain, a second macOS user account is a stronger boundary than any flag. Keep judgment work in sessions you can watch, and autonomous loops on machine-checkable changes only — the reasoning for that is in [`CLAUDE.md`](./CLAUDE.md) § Comprehension debt.
@@ -43,8 +43,8 @@ Read-only, and safe to run at any time. Ask a session *"which containment rung a
 # ── rung 1 · what leaves ────────────────────────────────────────────────────
 git -C ~/aios remote -v 2>/dev/null | awk '{print $2}' | sort -u        # any PUBLIC remote?
 grep -c 'AIOS-OPERATOR-IGNORES' ~/aios/.gitignore 2>/dev/null           # operator marker?
-test -f ~/aios/hooks/openrouter.py \
-  && python3 ~/aios/hooks/openrouter.py --check 2>&1 | tail -2 \
+test -f ~/aios/hooks/pipeline/openrouter.py \
+  && python3 ~/aios/hooks/pipeline/openrouter.py --check 2>&1 | tail -2 \
   || echo "rail:not-installed (run /aios:update)"
 
 # ── rung 2 · what an agent can touch ────────────────────────────────────────
@@ -454,7 +454,7 @@ This section is split into "if you're a Claude session running on the main" vs "
 
 You're running on the operator's primary computer. Your role is interactive partnership — help the operator with the work in front of them.
 
-**At session start (every session):** follow `CLAUDE.md` § Mandatory First Action and § Identity & Greeting: `~/aios/hooks/whoami` for your identity, then the context floor, then what the work points at.
+**At session start (every session):** follow `CLAUDE.md` § Mandatory First Action and § Identity & Greeting: `~/aios/hooks/context/whoami` for your identity, then the context floor, then what the work points at.
 
 **During the session, when the operator asks for a worker:**
 
@@ -470,7 +470,7 @@ You're running on the agent host. Your role is to ship work autonomously, commit
 **At session start (every session):**
 
 1. Pull the latest vault: `cd ~/aios && git pull origin main`.
-2. Follow `CLAUDE.md` § Mandatory First Action: `~/aios/hooks/whoami`, then the floor.
+2. Follow `CLAUDE.md` § Mandatory First Action: `~/aios/hooks/context/whoami`, then the floor.
 3. Your work arrives as the task of the bus request that opened you. If you were opened without one (a scheduled routine), read the latest daily note for what is queued.
 
 **Identity discipline:** you are the mini's session, not the main's. Don't claim to be the operator's primary session.

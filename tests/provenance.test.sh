@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # tests/provenance.test.sh
 #
-# hooks/provenance.py marks text that is not the operator's: what a reading tool returns (email,
+# hooks/context/provenance.py marks text that is not the operator's: what a reading tool returns (email,
 # chat, docs, web, Forum) and a prompt the spawn inbox TYPED into a session (recognised by the
-# fingerprint hooks/bus_log.py records when the request is written, or by the bus pointer line).
+# fingerprint hooks/context/bus_log.py records when the request is written, or by the bus pointer line).
 # It never blocks; it never labels a tool that writes. Runs in a throwaway HOME. bash 3.2-safe.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -15,7 +15,7 @@ no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n' "$1"; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 export HOME="$T" AIOS_BUS_LOG="$T/.aios/bus-sent.jsonl"
 mkdir -p "$T/.aios/spawn-inbox"
-P="$ROOT/hooks/provenance.py"; B="$ROOT/hooks/bus_log.py"
+P="$ROOT/hooks/context/provenance.py"; B="$ROOT/hooks/context/bus_log.py"
 tool(){ printf '{"tool_name":"%s","tool_response":"x"}' "$1" | $PYBIN "$P" --tool; }
 
 echo "-- tool results --"

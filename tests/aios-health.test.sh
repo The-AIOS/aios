@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # tests/aios-health.test.sh
 #
-# hooks/aios-health.py is routine health (contract from #171): one small file per scheduled
+# hooks/pipeline/aios-health.py is routine health (contract from #171): one small file per scheduled
 # job, written at the END of a completed run, with a deadline. A job that fails is reported; a job
 # that stops running is reported too, because its deadline passes with nothing written. This proves
 # both, plus the reader's rules (silent when fine, unreadable files reported, never "didn't run"),
 # and that the quota watcher writes its own verdict.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-H="$ROOT/hooks/aios-health.py"
+H="$ROOT/hooks/pipeline/aios-health.py"
 W="$ROOT/hooks/claude-identity/_watch.py"
 PYBIN="${PYBIN:-python3}"
 PASS=0; FAIL=0

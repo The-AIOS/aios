@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# hooks/pipeline-executor.py — calendar times land in the operator's timezone
+# hooks/pipeline/pipeline-executor.py — calendar times land in the operator's timezone
 #
 # Google does not return one shape for `dateTime`. A calendar that carries a
 # timezone yields a local offset (`2026-09-22T15:00:00+02:00`). A calendar
@@ -30,12 +30,12 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '        %s\n' "$2"; return 0; }
 
-H="hooks/pipeline-executor.py"
+H="hooks/pipeline/pipeline-executor.py"
 [ -f "$H" ] || { printf '  FAIL  %s missing\n' "$H"; exit 1; }
 
 run_py(){ python3 - "$@" <<'PYEOF'
 import importlib.util, sys
-spec = importlib.util.spec_from_file_location("pe", "hooks/pipeline-executor.py")
+spec = importlib.util.spec_from_file_location("pe", "hooks/pipeline/pipeline-executor.py")
 pe = importlib.util.module_from_spec(spec); spec.loader.exec_module(pe)
 
 checks = []
@@ -78,7 +78,7 @@ eq("unknown timezone does not raise",
    pe._local_hhmm("2026-09-21T10:10:00Z", "Mars/Olympus"), "10:10")
 
 # 7. The renderer must not go back to slicing.
-src = open("hooks/pipeline-executor.py").read()
+src = open("hooks/pipeline/pipeline-executor.py").read()
 checks.append(("renderer does not slice dateTime[:16]",
                'start.get("dateTime", "")[:16].split("T")' not in src,
                "the string-slicing renderer is back"))

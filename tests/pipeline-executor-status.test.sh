@@ -39,7 +39,7 @@ cd "$(dirname "$0")/.." || exit 1
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
-EXEC=hooks/pipeline-executor.py
+EXEC=hooks/pipeline/pipeline-executor.py
 
 echo "── the wrong-cause message is gone ──"
 if grep -qF 'configured but credentials missing' "$EXEC"; then
@@ -98,7 +98,7 @@ esac
 echo "── the skip list the executor read is shown (#243) ──"
 SK=$($PYBIN -c '
 import importlib.util
-spec = importlib.util.spec_from_file_location("pe", "hooks/pipeline-executor.py")
+spec = importlib.util.spec_from_file_location("pe", "hooks/pipeline/pipeline-executor.py")
 pe = importlib.util.module_from_spec(spec); spec.loader.exec_module(pe)
 print(pe._skip_status([]))
 print(pe._skip_status(["Feed Calendar", "Formula 1"]))

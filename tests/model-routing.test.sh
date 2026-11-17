@@ -53,7 +53,7 @@ no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 
 SH=hooks/claude-identity/install-wrappers.sh
 PS=hooks/claude-identity/install-wrappers.ps1
-RAIL=hooks/openrouter.py
+RAIL=hooks/pipeline/openrouter.py
 DOC=MODEL-ROUTING.md
 
 echo "── the two wrappers implement the SAME ladder ──"

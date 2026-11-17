@@ -22,8 +22,11 @@
 # wins. `validate.yml` now fails the build if any tracked executable has an unspecified eol, so
 # the next addition cannot slip through even if it doesn't match these patterns.
 hooks/aios-*            text eol=lf
-hooks/resolve-tier      text eol=lf
-hooks/clip              text eol=lf
+hooks/vault/aios-*      text eol=lf
+hooks/pipeline/aios-*   text eol=lf
+hooks/context/whoami    text eol=lf
+hooks/pipeline/resolve-tier      text eol=lf
+hooks/media/clip              text eol=lf
 hooks/git/pre-commit    text eol=lf
 hooks/git/pre-push      text eol=lf
 hooks/claude-identity/rc-reconnect  text eol=lf

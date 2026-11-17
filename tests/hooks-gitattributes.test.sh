@@ -19,7 +19,7 @@ attr(){ git -C "$T" check-attr eol -- "$1" | sed 's/.*eol: //'; }
 
 echo "── control: without hooks/.gitattributes the eol is unspecified ──"
 mv "$T/hooks/.gitattributes" "$T/ga.off"
-[ "$(attr hooks/aios-commit)" = "unspecified" ] && ok "control holds (no root file in this repo)" || no "control: eol already set without the file"
+[ "$(attr hooks/vault/aios-commit)" = "unspecified" ] && ok "control holds (no root file in this repo)" || no "control: eol already set without the file"
 mv "$T/ga.off" "$T/hooks/.gitattributes"
 
 echo "── with it, every executable and script is LF, every .ps1 CRLF ──"

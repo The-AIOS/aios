@@ -1,6 +1,6 @@
 # The render contract
 
-Paste these lines under every motion prompt. `hooks/motion-check.py contract` lints a page against the
+Paste these lines under every motion prompt. `hooks/media/motion-check.py contract` lints a page against the
 rules 1–6 (and that the page exposes `renderAt`); rule 7 is checked by `seam`.
 
 1. **One self-contained file.** HTML, CSS and JS inline; assets as data URIs or files beside it.

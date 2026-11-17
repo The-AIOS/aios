@@ -4,7 +4,7 @@ tags:
   - command
   - weekly
 description: Compile the week's insights from daily notes into a single writing-ready summary
-allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/aios && git:*), Bash(ls:*), Bash(cat:*), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*), Bash(uv run ~/aios/hooks/page-fit.py:*)
+allowed-tools: mcp__obsidian__*, Read, Write, Bash(cd ~/aios && git:*), Bash(ls:*), Bash(cat:*), Bash("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome":*), Bash(uv run ~/aios/hooks/media/page-fit.py:*)
 ---
 
 # /weekly-learnings — Weekly Summary
@@ -422,7 +422,7 @@ For monthly / quarterly / semester / yearly reports, swap `weekly` for `monthly`
 
 3b. **Measure the fit — every run, PDF or not.** HTML has no page, so an overflowing `.page` reads fine on screen and only splits across extra sheets when printed; *"fit exactly 3 pages"* is a measurement, not a judgment about item counts:
 ```bash
-uv run ~/aios/hooks/page-fit.py --expect 3 "$HOME/aios/vault/03 - export/reports/weekly/Week{N}-AI-OS.html"
+uv run ~/aios/hooks/media/page-fit.py --expect 3 "$HOME/aios/vault/03 - export/reports/weekly/Week{N}-AI-OS.html"
 ```
    - **Exit 0** → every page fits. Proceed.
    - **Exit 1** → it names each overflowing page and by how many px (*"page 3: OVER by 90 px"*). Trim **that page** by about that much — shorten or drop its lowest-value items — re-save, and measure again until it fits. Never trim a page that fits.

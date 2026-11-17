@@ -47,7 +47,7 @@ rm -rf "$TMP/lock"; mkdir "$TMP/lock"; touch -t 200001010000 "$TMP/lock"
 ( run_lock > "$TMP/r1" ) & ( run_lock > "$TMP/r2" ) & wait
 wins=$(cat "$TMP/r1" "$TMP/r2" | grep -c 'rc=0')
 have "$wins" "1" "1l. two runs racing for one stale lock → exactly one acquires it"
-grep -qF 'Finally `rm -rf /tmp/aios-update-check /tmp/aios-update-check.lock`' "$SPEC" && ok "1i. spec: Step 7's own cleanup line releases the lock with the clone" || no "1i. spec: Step 7's cleanup line does not release the lock" "a model following Step 7 leaves the lock behind"
+grep -qF 'Finally `rm -f "$HOME/aios/.aios-run/update-files"; rm -rf /tmp/aios-update-check /tmp/aios-update-check.lock`' "$SPEC" && ok "1i. spec: Step 7's own cleanup line releases the lock with the clone" || no "1i. spec: Step 7's cleanup line does not release the lock" "a model following Step 7 leaves the lock behind"
 grep -q "except when Step 1's lock refused this run" "$SPEC" && ok "1j. spec: Step 7's cleanup is withheld from a refused run" || no "1j. spec: a refused run would still clean up"
 rm -rf "$TMP/lock"
 
@@ -74,7 +74,7 @@ must_pass(){ [ -n "$(through "$1")" ] && ok "3p. survives the filters: $2" || no
 must_drop(){ [ -z "$(through "$1")" ] && ok "3d. dropped as intended: $2" || no "3d. WRONGLY kept: $2" "$1"; }
 must_pass "Files $VAULT/skills/anthropic/doc-coauthoring/SKILL.md and $CLONE/skills/anthropic/doc-coauthoring/SKILL.md differ" "a bundled skill whose name contains 'oauth' (co-oauth-oring)"
 must_pass "Only in $CLONE/mcps/google-workspace-mcp: oauth.json.template" "the OAuth TEMPLATE the framework ships"
-must_pass "Files $VAULT/hooks/aios-commit and $CLONE/hooks/aios-commit differ" "an ordinary framework file"
+must_pass "Files $VAULT/hooks/vault/aios-commit and $CLONE/hooks/vault/aios-commit differ" "an ordinary framework file"
 must_drop "Files $VAULT/mcps/google-workspace-mcp/oauth.json and $CLONE/mcps/google-workspace-mcp/oauth.json differ" "a real oauth.json credential"
 must_drop "Files $VAULT/.gitignore and $CLONE/.gitignore differ" ".gitignore (dual-owned, merged in Step 2.7)"
 must_drop "Files $VAULT/.claude-plugin/marketplace.json and $CLONE/.claude-plugin/marketplace.json differ" "marketplace.json (dual-owned)"
@@ -95,7 +95,7 @@ old_through(){ printf '%s\n' "$1" | grep -vE "\.(log|pyc)$|oauth|egg-info|\.sess
 # ---------------------------------------------------------------------------
 # end marker by fixed string: BSD awk reads `\{\}` as an interval, so a regex end never matched and the
 # extraction silently ran on to the end of the spec (the sweep still printed first, so it "passed")
-SWEEP=$(awk '/^find "\$HOME\/aios" -maxdepth 1 -type d ! -name/{f=1} f{print} f&&index($0,"esac'"'"' _ {} \\;")==1+length($0)-length("esac'"'"' _ {} \\;"){exit}' "$SPEC")
+SWEEP=$(awk '/^find -H "\$HOME\/aios" -maxdepth 1 -type d ! -name/{f=1} f{print} f&&index($0,"esac'"'"' _ {} \\;")==1+length($0)-length("esac'"'"' _ {} \\;"){exit}' "$SPEC")
 [ "$(printf '%s\n' "$SWEEP" | grep -c .)" -lt 20 ] && ok "4-'. extraction stops at the end of the sweep block" || no "4-'. extraction ran past the sweep block" "$(printf '%s\n' "$SWEEP" | grep -c .) lines"
 [ -n "$SWEEP" ] && ok "4-. sweep block extracted from Step 3" || no "4-. could not extract the sweep block"
 H="$TMP/home"; mkdir -p "$H/aios/01 - calendar" "$H/aios/CHANGELOG.md SETUP.md" "$H/aios/CHANGELOG.md

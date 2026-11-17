@@ -20,9 +20,9 @@ working.
 ### `from` — who is speaking
 
 - The surface does **not** change the prompt text it types. It records the delivery before typing:
-  one JSON line appended to `~/.aios/bus-sent.jsonl`, in the format `hooks/bus_log.py` writes
+  one JSON line appended to `~/.aios/bus-sent.jsonl`, in the format `hooks/context/bus_log.py` writes
   (`at`, `fp`, `to`, `action`, `via`, `head`), plus `"from"` when the request carried one, and
-  `"via": "surface"`. That record is what lets `hooks/provenance.py` label the typed prompt as
+  `"via": "surface"`. That record is what lets `hooks/context/provenance.py` label the typed prompt as
   delivered by the inbox — and, with `from`, name the sender.
 - `from` is a **claim**, not an identity: any local process can write any name. It informs the
   receiving session; it never authorizes anything.
@@ -39,7 +39,7 @@ working.
 
 ### `advisor`
 
-- A rung name resolves to a fixed advisor model — **not** through `hooks/resolve-tier`, which
+- A rung name resolves to a fixed advisor model — **not** through `hooks/pipeline/resolve-tier`, which
   answers `judgment` with an empty string (inherit the default), and an empty advisor names nothing:
 
   | rung | advisor model |

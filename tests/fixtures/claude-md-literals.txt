@@ -58,7 +58,7 @@ audits
 Bash
 behavioural
 business.md
-cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Session {date}: {brief description}"
+cd ~/aios && ~/aios/hooks/vault/aios-commit --vault -m "Session {date}: {brief description}"
 class:
 claude
 claude --remote-control
@@ -80,10 +80,10 @@ git add -A
 grep -h '^###' "…/observed/"*.md
 grep -h '^#' "…/declared/"*.md
 growth.md
-hooks/aios-snapshot
+hooks/vault/aios-snapshot
 hooks/claude-identity/install-wrappers.sh
-hooks/context-rungs.py
-hooks/openrouter.py
+hooks/context/context-rungs.py
+hooks/pipeline/openrouter.py
 housekeeping.md
 identical <dest>
 INBOX_CONTRACT

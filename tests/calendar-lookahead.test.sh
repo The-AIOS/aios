@@ -13,7 +13,7 @@ if [ -z "$PYBIN" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# hooks/pipeline-executor.py — the calendar LOOKAHEAD reaches /today, dated
+# hooks/pipeline/pipeline-executor.py — the calendar LOOKAHEAD reaches /today, dated
 #
 # Until this change the multi-day window was fetched only for /close-day, so
 # /today saw one day of live calendar and took every later date from the vault.
@@ -40,12 +40,12 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '        %s\n' "$2"; return 0; }
 
-H="hooks/pipeline-executor.py"
+H="hooks/pipeline/pipeline-executor.py"
 [ -f "$H" ] || { printf '  FAIL  %s missing\n' "$H"; exit 1; }
 
 run_py(){ $PYBIN - "$@" <<'PYEOF'
 import importlib.util, io, re, sys
-spec = importlib.util.spec_from_file_location("pe", "hooks/pipeline-executor.py")
+spec = importlib.util.spec_from_file_location("pe", "hooks/pipeline/pipeline-executor.py")
 pe = importlib.util.module_from_spec(spec); spec.loader.exec_module(pe)
 
 checks = []
@@ -160,7 +160,7 @@ eq("a one-day all-day event carries no span tag",
    "- All day — Holiday")
 checks.append(("the fetch passes its window to the renderer",
                "window=(_date_only(time_min), _date_only(time_max))" in
-               io.open("hooks/pipeline-executor.py", encoding="utf-8").read(),
+               io.open("hooks/pipeline/pipeline-executor.py", encoding="utf-8").read(),
                "google_calendar_events does not pass window="))
 
 # 7. The per-calendar cap scales with the window.
@@ -174,7 +174,7 @@ eq("cap never exceeds the API page ceiling",
    pe._per_calendar_cap("2026-09-01T00:00:00Z", "2026-12-31T23:59:59Z"), 250)
 
 # 8. The header the executor prints is the header the docs quote — exactly.
-src = io.open("hooks/pipeline-executor.py", encoding="utf-8").read()
+src = io.open("hooks/pipeline/pipeline-executor.py", encoding="utf-8").read()
 m = re.search(r'LOOKAHEAD_DAYS = (\d+)', src)
 days = m.group(1) if m else "?"
 printed = f"## Google Calendar — Next {days} days (AUTHORITATIVE — reconcile vault dates against this)"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regression suite for the USER.md source detector (hooks/pipeline-executor.py).
+# Regression suite for the USER.md source detector (hooks/pipeline/pipeline-executor.py).
 #
 # History, because it explains the shape of these tests:
 #   · Original bug — a whole-document substring test (`if "Slack" in content`). The better
@@ -37,8 +37,8 @@ no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n' "$1"; }
 have(){ [ "$1" = "$2" ] && ok "$3" || { no "$3"; printf '       expected %s, got %s\n' "$2" "$1"; }; }
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-EXEC="$ROOT/hooks/pipeline-executor.py"
-[ -f "$EXEC" ] || { echo "cannot find hooks/pipeline-executor.py"; exit 1; }
+EXEC="$ROOT/hooks/pipeline/pipeline-executor.py"
+[ -f "$EXEC" ] || { echo "cannot find hooks/pipeline/pipeline-executor.py"; exit 1; }
 
 printf 'USER.md source detector\n'
 

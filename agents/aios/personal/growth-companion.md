@@ -38,7 +38,7 @@ Two modes, one agent, one record (`growth.md`):
 ## Tools required
 - **Obsidian MCP** (`mcp__obsidian__*`) — read observed context files, recent daily notes
 - **Read** — for cross-references
-- **Bash** — `hooks/aios-snapshot` before editing `growth.md` (mentoring only)
+- **Bash** — `hooks/vault/aios-snapshot` before editing `growth.md` (mentoring only)
 
 ## Instructions
 
@@ -128,7 +128,7 @@ The plan lives in `growth.md` under `## Development plan`, beside `## Compass` w
 - **Write only this section, and only at the close of a weekly session or a coach-of-the-coach pass.** Snapshot first, then set `updated:` to today (CLAUDE.md § Session End):
 
   ```bash
-  ~/aios/hooks/aios-snapshot "vault/00 - notes/context/observed/growth.md"
+  ~/aios/hooks/vault/aios-snapshot "vault/00 - notes/context/observed/growth.md"
   ```
 
   Every other part of `growth.md` keeps its normal route: session-insights → `/close-day`'s growth pass.

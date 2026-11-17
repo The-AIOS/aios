@@ -151,7 +151,7 @@ After Tier 1 replace lands, execute any updated script that **produces operator-
 | **Installer / state-producer** | Idempotent scripts that write to `~/.zshrc`, `~/.claude/`, `~/Library/LaunchAgents/`, etc. — running them is the whole point | **Auto-run** |
 | **Plugin sync target** | Markdown command files that need to land in `~/.claude/plugins/{marketplaces,cache}/...` to be active | **Auto-sync** (cp to both locations) |
 | **Dep-installer** | Scripts that install system packages or write to shared paths (e.g. `mcps/setup.sh` installs venvs + Node deps) | **Flag as manual step** — operator decides which MCPs need refresh; running blindly is expensive |
-| **Library code** | Scripts invoked by other commands (e.g. `hooks/pipeline-executor.py` — called by `/today` and `/close-day`) | **No action needed** — the next caller picks up the new code automatically |
+| **Library code** | Scripts invoked by other commands (e.g. `hooks/pipeline/pipeline-executor.py` — called by `/today` and `/close-day`) | **No action needed** — the next caller picks up the new code automatically |
 
 Concrete rules for what's currently in the framework (the operator-environment-state class):
 
@@ -167,8 +167,8 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   ```
   Same idempotency. (Hard-coding `pwsh` fails the install on a stock machine — surfaced by a Windows operator 2026-05-27.)
 - **Any `hooks/claude-identity/install-*.sh` / `install-*.ps1` updated** (current + future installers in that path) → auto-run by the same rule, under the same platform guard (`.sh` on non-Windows, `.ps1` on Windows).
-- **`hooks/install-settings.py` updated** → run it **without** `--apply` first (`python3 ~/aios/hooks/install-settings.py`; on Windows the interpreter SETUP §10's probe picks) and read the operator what it prints: `+ add` lines are hooks this release wires, `~ guard` lines wrap an existing AIOS hook so a missing hook file is skipped instead of blocking every prompt, `~ update B` replaces the two-program status line AIOS used to write with the one-program form (a status line the operator wrote is never touched). If it lists anything, run it again with `--apply` under the execution-disclosure protocol (it writes only `~/.claude/settings.json` and a backup beside it, never anything else); if it says *Nothing to change*, say nothing. This is how installs made before a hook change get migrated without a hand edit.
-- **`hooks/install-git-hooks.sh` / `.ps1` updated, OR any `hooks/git/*` changed** → run the git-hooks installer, platform-guarded exactly like the wrapper installer (`bash $HOME/aios/hooks/install-git-hooks.sh` on macOS/Linux; on Windows `pwsh -File $HOME/aios/hooks/install-git-hooks.ps1`, falling back to `powershell -File …`). Idempotent. Report anything it says it normalized.
+- **`hooks/install/install-settings.py` updated** → run it **without** `--apply` first (`python3 ~/aios/hooks/install/install-settings.py`; on Windows the interpreter SETUP §10's probe picks) and read the operator what it prints: `+ add` lines are hooks this release wires, `~ guard` lines wrap an existing AIOS hook so a missing hook file is skipped instead of blocking every prompt, `~ update B` replaces the two-program status line AIOS used to write with the one-program form (a status line the operator wrote is never touched). If it lists anything, run it again with `--apply` under the execution-disclosure protocol (it writes only `~/.claude/settings.json` and a backup beside it, never anything else); if it says *Nothing to change*, say nothing. This is how installs made before a hook change get migrated without a hand edit.
+- **`hooks/install/install-git-hooks.sh` / `.ps1` updated, OR any `hooks/git/*` changed** → run the git-hooks installer, platform-guarded exactly like the wrapper installer (`bash $HOME/aios/hooks/install/install-git-hooks.sh` on macOS/Linux; on Windows `pwsh -File $HOME/aios/hooks/install/install-git-hooks.ps1`, falling back to `powershell -File …`). Idempotent. Report anything it says it normalized.
 
   **Note the gate includes the hooks themselves, not only the installer** — a hook that is merely *copied* by Step 3 is not installed. It is a state-producer twice over: it sets `core.hooksPath` (per-machine, never version-controlled), and it **normalizes the hook scripts' line endings and exec bits**, which is the only surface that reaches an operator for that. `.gitattributes` carries the `text eol=lf` rule and cannot do the job: it is Tier-0, so it never syncs to a vault, and a fork's copy freezes at fork time. On Windows the difference is not cosmetic — `core.autocrlf=true` rewrites the hooks to CRLF on checkout, the shebang then fails to resolve (`env: bash\r`, exit 127), and git reads that as a refusal, so the operator cannot commit or push at all.
 
@@ -1001,7 +1001,7 @@ CRLF-normalize when comparing file *contents* (`LC_ALL=C tr -d '\r'`) per the §
 ### 6.8. Run-folder trust: read-only, said once, never written
 
 ```bash
-python3 "$HOME/aios/hooks/run-trust-check.py"   # on Windows, the interpreter SETUP §10's probe picks
+python3 "$HOME/aios/hooks/install/run-trust-check.py"   # on Windows, the interpreter SETUP §10's probe picks
 ```
 
 It prints nothing when `~/.aios/run` is trusted in Claude Code (or nothing has been spawned yet). Otherwise it prints why each spawn asks to trust a new folder and the one command that ends it. Relay that in the operator's language, in one short line, after the update report. **Never trust on their behalf:** nothing in this command writes `~/.claude.json`, because accepting the dialog is their decision (#323). It runs on every update, applied or not, and costs nothing once trusted.
@@ -1010,13 +1010,13 @@ It prints nothing when `~/.aios/run` is trusted in Claude Code (or nothing has b
 
 **Runs ONLY when this sync actually applied something.** If zero Tier-1 files changed and the reconcile was clean, skip this step entirely and say nothing. *"Already up to date — by the way, star us"* is asking to be paid for nothing, and it is the difference between a request and a nag.
 
-**Runs ONLY once the operator has actually used AIOS.** The check itself withholds the verdict until the vault is at least 7 days old (`AIOS_STAR_MIN_DAYS`, dated from the tracker's first commit). Nothing to do here — it is enforced inside `hooks/aios-star-check` so all three callers agree — but it is why a fresh install never sees this step. Asking on day one asks someone to vouch publicly for software they have not used, which is the same objection as asking on a no-op sync.
+**Runs ONLY once the operator has actually used AIOS.** The check itself withholds the verdict until the vault is at least 7 days old (`AIOS_STAR_MIN_DAYS`, dated from the tracker's first commit). Nothing to do here — it is enforced inside `hooks/pipeline/aios-star-check` so all three callers agree — but it is why a fresh install never sees this step. Asking on day one asks someone to vouch publicly for software they have not used, which is the same objection as asking on a no-op sync.
 
 **Runs ONLY when a human is in the loop.** `/aios:update` auto-fires from `/today` and `/close-day`, and those run in scheduled routines with nobody present. A prompt nobody sees cannot be answered, and **silence must never read as yes.** If this run was auto-fired, or you are executing in a routine / cron / bridge context, skip the step and set `AIOS_STAR_ASK=never` so the check itself agrees with you.
 
 ```bash
-# Verdict only — this never prompts and never writes. See hooks/aios-star-check.
-eval "$(bash "$HOME/aios/hooks/aios-star-check")"   # sets verdict= repos= reason=
+# Verdict only — this never prompts and never writes. See hooks/pipeline/aios-star-check.
+eval "$(bash "$HOME/aios/hooks/pipeline/aios-star-check")"   # sets verdict= repos= reason=
 ```
 
 Act on `$verdict`, and on **nothing else**:
@@ -1042,8 +1042,8 @@ Star the AIOS repos you're using?
 
 On the answer:
 
-- **yes** → `bash "$HOME/aios/hooks/aios-star-check" --star $repos`. It prints `starred=<repo>` / `failed=<repo>:<code>` per repo and exits non-zero if any failed. **Report exactly what it reports.** If two of three succeeded, say which one didn't — never print a blanket "starred!" over a failure. A receipt for something that did not happen is the one output this framework cannot ship. No state is recorded on success: the API is authoritative and re-checkable, so the next run reads `starred` on its own.
-- **no** → `bash "$HOME/aios/hooks/aios-star-check" --decline`. Terminal, forever, on every machine this operator owns.
+- **yes** → `bash "$HOME/aios/hooks/pipeline/aios-star-check" --star $repos`. It prints `starred=<repo>` / `failed=<repo>:<code>` per repo and exits non-zero if any failed. **Report exactly what it reports.** If two of three succeeded, say which one didn't — never print a blanket "starred!" over a failure. A receipt for something that did not happen is the one output this framework cannot ship. No state is recorded on success: the API is authoritative and re-checkable, so the next run reads `starred` on its own.
+- **no** → `bash "$HOME/aios/hooks/pipeline/aios-star-check" --decline`. Terminal, forever, on every machine this operator owns.
 - **no answer** → do nothing and record nothing. Silence is not a decline; it just is not a yes. It may surface again on a later applied update, which is the deliberately conservative choice — recording a refusal the operator never gave is worse than one extra ask months later.
 
 **Never star anything without an explicit yes.** GitHub's Acceptable Use Policies §4 name *"automated starring"* verbatim as rank abuse, enforced at org level. Beyond the policy: a star is a public act on the operator's profile, and an agent taking an unmandated public action in a user's name is precisely the failure this whole framework argues against. There is nothing to gain by removing the keystroke — the keystroke is the only thing that makes the star worth having.
@@ -1071,13 +1071,13 @@ if [ "$(git -C ~/aios config --bool core.fileMode)" = false ]; then
     EXEC+=(--exec "$p")
   done < <(git -C /tmp/aios-update-check ls-files -s | awk -F'\t' '$1 ~ /^100755 / {print $2}')
 fi
-cd ~/aios && ~/aios/hooks/aios-commit -m "sync: framework → {short-HEAD} (via /aios:update)" "${EXEC[@]}" -- {the Tier-1 paths applied this run} .aios-update
+cd ~/aios && ~/aios/hooks/vault/aios-commit -m "sync: framework → {short-HEAD} (via /aios:update)" "${EXEC[@]}" -- {the Tier-1 paths applied this run} .aios-update
 ```
 `EXEC` also repairs scripts an earlier sync already committed as 100644 — a mode-only change, carried in this same framework-sync commit. On macOS/Linux it stays empty: `cp` preserved the mode and git saw it.
 
 If only the tracker advanced (no Tier-1 file changed), commit just `.aios-update`. **Framework-sync commits stay DISTINCT from operator session-work commits** (clean attribution), and `aios-commit --vault` at session-end / `/close-day` stays scoped to vault *content* — never framework infra, which is THIS command's domain. Finally `rm -f "$HOME/aios/.aios-run/update-files"; rm -rf /tmp/aios-update-check /tmp/aios-update-check.lock` — list, then clone, lock last — unless Step 1's lock refused this run (then neither is this run's to remove).
 
-> **`hash=` is written ONLY by this command, after a clean fully-applied run. NEVER hand-edit it** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65). The rule is about *that field*, and saying so precisely matters now that the file is no longer single-writer: `hooks/aios-star-check --decline` appends `star-ask=` to the same file, deliberately, because a decline must be per-operator rather than per-machine and `.aios-update` is what travels with the vault. It touches nothing else and never reads `hash=`. A rule stated as *"never write this file"* would have been read as forbidding that, or quietly ignored — neither of which protects `hash=`.
+> **`hash=` is written ONLY by this command, after a clean fully-applied run. NEVER hand-edit it** — hand-bumping it past un-pulled commits is exactly what creates permanent orphans (see `antifragile.md` #65). The rule is about *that field*, and saying so precisely matters now that the file is no longer single-writer: `hooks/pipeline/aios-star-check --decline` appends `star-ask=` to the same file, deliberately, because a decline must be per-operator rather than per-machine and `.aios-update` is what travels with the vault. It touches nothing else and never reads `hash=`. A rule stated as *"never write this file"* would have been read as forbidding that, or quietly ignored — neither of which protects `hash=`.
 
 ## Output format
 

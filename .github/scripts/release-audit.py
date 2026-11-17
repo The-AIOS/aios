@@ -9,7 +9,7 @@
 WHY TWO, AND WHY THESE TWO
     The work in a release is reviewed by Claude sessions. A model cannot dock points for a
     blind spot it shares (MODEL-ROUTING.md § Judge independence), so one audit comes from
-    outside the Claude family, through hooks/openrouter.py. The other is a fresh Claude
+    outside the Claude family, through hooks/pipeline/openrouter.py. The other is a fresh Claude
     session that has never seen how the work was made. Either can block the release.
 
 READ-ONLY BY CONSTRUCTION
@@ -176,13 +176,13 @@ def run_outside(brief_path, model=None):
     """-> (report text, model that answered). The bridge's --json names the model that
     actually answered, which differs from the one asked for when it falls back."""
     cmd = os.environ.get("AIOS_AUDIT_OUTSIDE")
-    cmd = cmd.split() if cmd else [sys.executable, str(ROOT / "hooks" / "openrouter.py")]
+    cmd = cmd.split() if cmd else [sys.executable, str(ROOT / "hooks" / "pipeline" / "openrouter.py")]
     model = model or OUTSIDE_MODEL
     r = sh(cmd + ["--prompt-file", str(brief_path), "--json", "--model", model])
     if r.returncode != 0:
         return ("NOT RUN: the outside-family audit did not run.\n"
                 f"{(r.stderr or r.stdout).strip()}\n\n"
-                "Configure an OpenRouter or Gemini key (hooks/openrouter.py --check says which),"
+                "Configure an OpenRouter or Gemini key (hooks/pipeline/openrouter.py --check says which),"
                 " then run again. VERDICT: NOT RUN\n"), model
     try:
         d = json.loads(r.stdout)

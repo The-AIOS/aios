@@ -19,7 +19,7 @@ CMD="$(grep -o "sparse-checkout set --no-cone '/\*' '!/tests/'" "$ROOT/SETUP.md"
 git clone -q "$ROOT" "$T/v" 2>/dev/null || { no "could not clone the repo under test"; echo "── RESULT: $PASS passed, $FAIL failed ──"; exit 1; }
 git -C "$T/v" sparse-checkout set --no-cone '/*' '!/tests/' || no "sparse-checkout set failed (git too old?)"
 [ ! -e "$T/v/tests" ] && ok "tests/ is not in the working tree" || no "tests/ still checked out"
-[ -f "$T/v/CLAUDE.md" ] && [ -f "$T/v/hooks/aios-commit" ] && [ -d "$T/v/plugins/aios" ] && ok "the framework is all there" || no "sparse-checkout dropped framework files"
+[ -f "$T/v/CLAUDE.md" ] && [ -f "$T/v/hooks/vault/aios-commit" ] && [ -d "$T/v/plugins/aios" ] && ok "the framework is all there" || no "sparse-checkout dropped framework files"
 [ -z "$(git -C "$T/v" status --porcelain)" ] && ok "the tree is clean (nothing reads as deleted)" || no "status is dirty" "$(git -C "$T/v" status --porcelain | head -3)"
 echo x >> "$T/v/README.md"
 git -C "$T/v" -c user.name=t -c user.email=t@t commit -qam t && [ "$(git -C "$T/v" show --stat --format= HEAD | grep -c tests/)" = 0 ] \

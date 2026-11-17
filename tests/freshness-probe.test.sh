@@ -20,7 +20,7 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 expect(){ if [ "$2" = "$3" ]; then ok "$1"; else no "$1" "expected '$3', got '$2'"; fi; }
-S=hooks/freshness-probe.sh
+S=hooks/pipeline/freshness-probe.sh
 [ -f "$S" ] || { echo "::error::$S missing"; exit 1; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 

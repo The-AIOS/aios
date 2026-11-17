@@ -28,7 +28,7 @@ no(){ FAIL=$((FAIL+1)); printf '  ✗ %s\n      %s\n' "$1" "${2:-}"; }
 has(){ grep -qF -- "$2" "$1"; }
 
 C=plugins/aios/commands/compact.md
-if has "$C" 'hooks/aios-snapshot "vault/00 - notes/context/observed/antifragile.md"'; then
+if has "$C" 'hooks/vault/aios-snapshot "vault/00 - notes/context/observed/antifragile.md"'; then
   ok "#152 compact § 3.5 snapshots through aios-snapshot"
 else no "#152 compact § 3.5 snapshots through aios-snapshot" "the snapshot step must call the tool, not hand-roll it"; fi
 if grep -qE '`cp` the current file to .*observed-snapshots' "$C"; then
@@ -52,7 +52,7 @@ H=plugins/aios/commands/housekeeping.md
 if grep -qE 'roughly [0-9]+k tokens' "$H"; then
   no "#155 housekeeping restates no rungs cut-off" "$(grep -nE 'roughly [0-9]+k tokens' "$H" | cut -c1-100)"
 else ok "#155 housekeeping restates no rungs cut-off"; fi
-if grep -q 'CHEAP_IF_UNDER' hooks/context-rungs.py && has "$H" 'CHEAP_IF_UNDER'; then
+if grep -q 'CHEAP_IF_UNDER' hooks/context/context-rungs.py && has "$H" 'CHEAP_IF_UNDER'; then
   ok "#155 housekeeping names the hook constant that owns it"
 else no "#155 housekeeping names the hook constant that owns it" "CHEAP_IF_UNDER must exist in the hook and be the pointer"; fi
 

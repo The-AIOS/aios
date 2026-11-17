@@ -24,7 +24,7 @@ ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 
 SRC="$PWD"
-[ -f "$SRC/hooks/install-git-hooks.sh" ] || { echo "::error::hooks/install-git-hooks.sh missing"; exit 1; }
+[ -f "$SRC/hooks/install/install-git-hooks.sh" ] || { echo "::error::hooks/install/install-git-hooks.sh missing"; exit 1; }
 [ -f "$SRC/hooks/git/pre-push" ]         || { echo "::error::hooks/git/pre-push missing"; exit 1; }
 
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
@@ -38,7 +38,7 @@ mkrepo(){
   echo "$r"
 }
 # Run the installer against a scratch repo with an isolated HOME.
-install_into(){ HOME="$T/home.$$" bash "$1/hooks/install-git-hooks.sh" "$1" 2>&1; }
+install_into(){ HOME="$T/home.$$" bash "$1/hooks/install/install-git-hooks.sh" "$1" 2>&1; }
 # Invoke a pre-push hook the way git does: (remote-name, url) + a ref line on stdin.
 runhook(){ printf 'refs/heads/main a refs/heads/main b\n' | "$1" origin git@github.com:someone/x.git >/dev/null 2>&1; echo $?; }
 has_cr(){ LC_ALL=C grep -q $'\r' "$1" 2>/dev/null; }
@@ -105,12 +105,12 @@ echo "── the installer causes NO mode churn on a correct checkout ──"
 # content changed, which `aios-commit --vault` would then sweep into a session commit as if
 # they were the operator's work. Nothing is gained: a 644 `.py` run as `python3 x.py` works.
 R=$(mkrepo modes)
-for lib in hooks/pipeline-executor.py hooks/route-insight.py hooks/guard-venture-mount.py; do
+for lib in hooks/pipeline/pipeline-executor.py hooks/vault/route-insight.py hooks/context/guard-venture-mount.py; do
   [ -f "$R/$lib" ] && chmod 644 "$R/$lib"
 done
 install_into "$R" >/dev/null 2>&1
 bad=0
-for lib in hooks/pipeline-executor.py hooks/route-insight.py hooks/guard-venture-mount.py; do
+for lib in hooks/pipeline/pipeline-executor.py hooks/vault/route-insight.py hooks/context/guard-venture-mount.py; do
   [ -f "$R/$lib" ] || continue
   if [ -x "$R/$lib" ]; then bad=$((bad+1)); printf '     BECAME EXECUTABLE %s\n' "$lib"; fi
 done
@@ -119,12 +119,12 @@ done
 
 echo "── but a LOST exec bit on a by-name hook is still repaired ──"
 R=$(mkrepo lostbit)
-for f in hooks/aios-snapshot hooks/aios-star-check hooks/resolve-tier hooks/git/pre-push; do
+for f in hooks/vault/aios-snapshot hooks/pipeline/aios-star-check hooks/pipeline/resolve-tier hooks/git/pre-push; do
   [ -f "$R/$f" ] && chmod -x "$R/$f"
 done
 install_into "$R" >/dev/null 2>&1
 lost=0
-for f in hooks/aios-snapshot hooks/aios-star-check hooks/resolve-tier hooks/git/pre-push; do
+for f in hooks/vault/aios-snapshot hooks/pipeline/aios-star-check hooks/pipeline/resolve-tier hooks/git/pre-push; do
   [ -f "$R/$f" ] || continue
   [ -x "$R/$f" ] || { lost=$((lost+1)); printf '     STILL NOT EXECUTABLE %s\n' "$f"; }
 done

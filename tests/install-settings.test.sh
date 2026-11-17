@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # tests/install-settings.test.sh
 #
-# hooks/install-settings.py wires SETUP §10's universal hooks without asking a new operator to
+# hooks/install/install-settings.py wires SETUP §10's universal hooks without asking a new operator to
 # approve raw JSON. Asserts: it changes nothing without --apply; --apply adds every hook and keeps
 # every other key; a second run changes nothing (byte-identical); an operator's own statusLine is
 # never replaced; invalid JSON is refused untouched; and every command it writes is one SETUP §10
 # prints, on both platforms -- so the helper and the manual reference cannot drift apart.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-H="$ROOT/hooks/install-settings.py"
+H="$ROOT/hooks/install/install-settings.py"
 PYBIN="${PYBIN:-python3}"
 PASS=0; FAIL=0
 ok(){ echo "  ✓ $1"; PASS=$((PASS+1)); }
@@ -135,19 +135,37 @@ done < "$CMDS"
 [ -z "$bad" ] && ok "none exits 2 when its file is missing" || no "hook commands that BLOCK on a missing file" "$bad"
 # Controls: the unguarded form really does exit 2 (so the check above can fail), and a PRESENT hook
 # that means to block still blocks through the guard.
-HOME="$E" bash -c 'python3 ~/aios/hooks/provenance.py --prompt' </dev/null >/dev/null 2>&1; rc=$?
+HOME="$E" bash -c 'python3 ~/aios/hooks/context/provenance.py --prompt' </dev/null >/dev/null 2>&1; rc=$?
 [ "$rc" = 2 ] && ok "control: the bare form exits 2 on a missing file" || no "control: bare form exited $rc" "the no-block check could not have failed"
-mkdir -p "$E/aios/hooks"; printf 'import sys\nsys.exit(2)\n' > "$E/aios/hooks/provenance.py"
-G=$($PYBIN -c "import importlib.util as u;s=u.spec_from_file_location('i','$H');m=u.module_from_spec(s);s.loader.exec_module(m);print(m.guard('python3 ~/aios/hooks/provenance.py --prompt'))")
+mkdir -p "$E/aios/hooks/context"; printf 'import sys\nsys.exit(2)\n' > "$E/aios/hooks/context/provenance.py"
+G=$($PYBIN -c "import importlib.util as u;s=u.spec_from_file_location('i','$H');m=u.module_from_spec(s);s.loader.exec_module(m);print(m.guard('python3 ~/aios/hooks/context/provenance.py --prompt'))")
 HOME="$E" bash -c "$G" </dev/null >/dev/null 2>&1; rc=$?
 [ "$rc" = 2 ] && ok "control: a present hook keeps its own exit code through the guard" || no "the guard swallowed a real block (exit $rc)"
+
+echo "── #309: a hook registered at its old top-level path moves to its folder, keeping interpreter and root ──"
+S="$T/moved.json"
+printf '%s' '{"hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"[ ! -f ~/aios/hooks/inject-datetime.sh ] || bash ~/aios/hooks/inject-datetime.sh"}]},{"hooks":[{"type":"command","command":"/opt/py/bin/python3 /srv/aios/hooks/provenance.py --prompt","timeout":10}]}],"SessionStart":[{"hooks":[{"type":"command","command":"[ ! -f ~/aios/hooks/floor-at-start.py ] || python3 ~/aios/hooks/floor-at-start.py"}]}]},"statusLine":{"type":"command","command":"my-own-line"},"cleanupPeriodDays":30}' > "$S"
+out=$(run --platform posix)
+case "$out" in *"~ move  A"*"~ move  D"*"~ move  E"*) ok "the summary names each hook that moves" ;; *) no "no move lines" "$out" ;; esac
+run --platform posix --apply >/dev/null
+$PYBIN - "$S" <<'PY' && ok "old paths moved; interpreter, root and guard kept; nothing else changed" || no "move wrong" "$(cat "$S")"
+import json,sys
+d=json.load(open(sys.argv[1])); c=[h["command"] for ev in d["hooks"].values() for g in ev for h in g["hooks"]]
+assert "[ ! -f ~/aios/hooks/context/inject-datetime.sh ] || bash ~/aios/hooks/context/inject-datetime.sh" in c, c
+assert "[ ! -f /srv/aios/hooks/context/provenance.py ] || /opt/py/bin/python3 /srv/aios/hooks/context/provenance.py --prompt" in c, c
+assert "[ ! -f ~/aios/hooks/context/floor-at-start.py ] || python3 ~/aios/hooks/context/floor-at-start.py" in c, c
+assert not any("/hooks/inject-datetime" in x or "/hooks/provenance.py" in x or "/hooks/floor-at-start.py" in x for x in c), c
+assert d["statusLine"]["command"]=="my-own-line" and d["cleanupPeriodDays"]==30
+PY
+cp "$S" "$T/moved-once.json"; out=$(run --platform posix --apply)
+cmp -s "$S" "$T/moved-once.json" && case "$out" in *"Nothing to change"*) ok "a second run moves nothing" ;; *) no "second run did something" "$out" ;; esac || no "second run altered the moved file"
 
 echo "── existing installs: bare AIOS hooks are wrapped in place, the rest untouched ──"
 S="$T/legacy.json"
 cat > "$S" <<'JSON'
 {"model":"opus","hooks":{
- "UserPromptSubmit":[{"hooks":[{"type":"command","command":"bash ~/aios/hooks/inject-datetime.sh"},{"type":"command","command":"python3 ~/aios/hooks/provenance.py --prompt","timeout":10}]}],
- "PreToolUse":[{"matcher":"Edit|Write|MultiEdit|NotebookEdit","hooks":[{"type":"command","command":"python3 \"$HOME/aios/hooks/guard-venture-mount.py\"","timeout":10}]},{"matcher":"Bash","hooks":[{"type":"command","command":"python3 /opt/mine/check.py"}]}]}}
+ "UserPromptSubmit":[{"hooks":[{"type":"command","command":"bash ~/aios/hooks/context/inject-datetime.sh"},{"type":"command","command":"python3 ~/aios/hooks/context/provenance.py --prompt","timeout":10}]}],
+ "PreToolUse":[{"matcher":"Edit|Write|MultiEdit|NotebookEdit","hooks":[{"type":"command","command":"python3 \"$HOME/aios/hooks/context/guard-venture-mount.py\"","timeout":10}]},{"matcher":"Bash","hooks":[{"type":"command","command":"python3 /opt/mine/check.py"}]}]}}
 JSON
 out=$(run --platform posix)
 case "$out" in *"~ guard A"*"~ guard C"*"~ guard D"*) ok "dry run lists the guards it would add (A, C, D)" ;; *) no "dry run did not list the guards" "$out" ;; esac
@@ -155,8 +173,8 @@ run --platform posix --apply >/dev/null
 $PYBIN - "$S" <<'PY' && ok "bare hooks wrapped with their own path spelling; an operator's own hook untouched" || no "migration wrong" "$(cat "$S")"
 import json, sys
 s = json.load(open(sys.argv[1])); cmds = [h["command"] for gs in s["hooks"].values() for g in gs for h in g["hooks"]]
-assert '[ ! -f "$HOME/aios/hooks/guard-venture-mount.py" ] || python3 "$HOME/aios/hooks/guard-venture-mount.py"' in cmds, cmds
-assert "[ ! -f ~/aios/hooks/provenance.py ] || python3 ~/aios/hooks/provenance.py --prompt" in cmds, cmds
+assert '[ ! -f "$HOME/aios/hooks/context/guard-venture-mount.py" ] || python3 "$HOME/aios/hooks/context/guard-venture-mount.py"' in cmds, cmds
+assert "[ ! -f ~/aios/hooks/context/provenance.py ] || python3 ~/aios/hooks/context/provenance.py --prompt" in cmds, cmds
 assert "python3 /opt/mine/check.py" in cmds, cmds
 assert s["model"] == "opus"
 PY

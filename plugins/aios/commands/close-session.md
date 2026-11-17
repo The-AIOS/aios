@@ -4,7 +4,7 @@ tags:
   - command
   - daily
 description: End-of-session capture — detects vault vs project terminal, writes to the right place
-allowed-tools: mcp__obsidian__*, Bash(~/aios/hooks/aios-commit:*), Bash(~/aios/hooks/aios-note-append:*), Bash(cd ~/aios && git:*), Bash(pwd), Bash(ls *), Bash(cat *), Read
+allowed-tools: mcp__obsidian__*, Bash(~/aios/hooks/vault/aios-commit:*), Bash(~/aios/hooks/vault/aios-note-append:*), Bash(cd ~/aios && git:*), Bash(pwd), Bash(ls *), Bash(cat *), Read
 ---
 
 # /close-session — Session Capture
@@ -178,11 +178,11 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
 
    Walk through whatever the operator asks about (the *why* + failure modes, not a line reading). What they decline to grasp goes into the session block's `**Comprehension:**` field and an `**Open threads:**` carry — marked *un-grasped*, not *done* — so `/close-day` can resurface it. The debt is the operator's (they're the one who owns the system in a room); your job is to keep it low, never to wave agent output through on their behalf. Full mechanism: the `comprehension-debt` skill.
 
-   **c. Model-switch check** (SETUP Hook F) — no question, so it runs under `--auto` too: `UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/model-switch-log.py --report --session "$CLAUDE_CODE_SESSION_ID"`. Empty output means this session ran on the model it asked for, or Hook F is not wired: say nothing. A line means part of this session ran on another model, usually after a flagged message: add `**Model:** finished on {to} (asked for {requested})` to the session block (after `**Comprehension:**`) before step 5 appends it, so `/close-day` and whoever reads the work later know which model wrote it.
+   **c. Model-switch check** (SETUP Hook F) — no question, so it runs under `--auto` too: `UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/pipeline/model-switch-log.py --report --session "$CLAUDE_CODE_SESSION_ID"`. Empty output means this session ran on the model it asked for, or Hook F is not wired: say nothing. A line means part of this session ran on another model, usually after a flagged message: add `**Model:** finished on {to} (asked for {requested})` to the session block (after `**Comprehension:**`) before step 5 appends it, so `/close-day` and whoever reads the work later know which model wrote it.
 
 5. **Append the session block via the race-safe helper — never write the note directly** (a concurrent Close-all broadcast fires several vault sessions at once; a direct read-append-write would clobber). Write the block (format below) to a temp file, then:
    ```bash
-   ~/aios/hooks/aios-note-append \
+   ~/aios/hooks/vault/aios-note-append \
      --note "$HOME/aios/vault/01 - calendar/{YYYY-MM}/{YYYY-MM-DD}.md" \
      --before "## Close of Day" \
      --create-if-missing \
@@ -249,7 +249,7 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
 
 10. **Commit any observed-context you touched via `aios-commit`** (the note block was already committed by `aios-note-append` in step 5). **NEVER `git add -A`** — in a concurrently-written vault it sweeps other sessions' + the human's in-flight files into your commit (scrambled attribution). Commit only the paths you changed:
    ```bash
-   ~/aios/hooks/aios-commit -m "session: {date} {topic}" \
+   ~/aios/hooks/vault/aios-commit -m "session: {date} {topic}" \
      $([ "${AIOS_CLOSE_SESSION_NO_PUSH:-}" = "1" ] && echo --no-push) -- \
      "vault/00 - notes/context/observed/session-insights.md" {any other files you edited}
    ```
@@ -258,7 +258,7 @@ Announce the detected mode: "Detected: **vault session** — writing to daily no
 
 10b. **Record that this close finished** (interactive closes only — an `--auto` close carries the marker in its block, and an `--auto` resume writes none). Write `<!-- close-session-done: {SID} @ {VHEAD} -->` to a temp file, with the **same `{VHEAD}` as this close's stamp**, plus one such line for each hash the gate listed in `close-session owed:` (this close routed their share too). Then append the file through the same helper:
    ```bash
-   ~/aios/hooks/aios-note-append \
+   ~/aios/hooks/vault/aios-note-append \
      --note "$HOME/aios/vault/01 - calendar/{YYYY-MM}/{YYYY-MM-DD}.md" \
      --before "## Close of Day" \
      -m "session: {HH:MM} {Topic} — done" \
@@ -330,7 +330,7 @@ If yes → write the pages (with `[[wiki-links]]`, proper frontmatter, source at
 1. Determine the project name from the repo (read `package.json` name, or `CLAUDE.md` title, or folder name)
 2. **Date rule:** If the current time is between midnight and 7:00 AM, ask the user which date the report belongs to — late-night sessions usually belong to the previous day. After 7:00 AM, use today's date.
 3. Infer session content from the conversation
-4. Write the report to **`~/aios/.claude/session-report-{YYYY-MM-DD}-{project}-{session}.md`** — `{project}` is a filesystem-safe slug of the repo name (from step 1), `{session}` is `$CLAUDE_AGENT_NAME` (fallback: a short session-id or pid if unset). **Both suffixes are load-bearing at a shared dir:** `{project}` keeps two *different* repos' sessions from colliding in the one harvest dir, and `{session}` keeps a Close-all broadcast's N workers in the *same* repo from clobbering each other. Write it to `~/aios/.claude/` **even though the session runs in another repo** — that's the whole point: one dir close-day always scans, no registration needed. (`~/aios/.claude/` is fully gitignored, so the report never leaks into any repo's git.) Then commit your session's own scoped work via `~/aios/hooks/aios-commit -m "..." $([ "${AIOS_CLOSE_SESSION_NO_PUSH:-}" = "1" ] && echo --no-push) -- <paths>` (never `git add -A`). **The `--no-push` opt-out applies here too** — Mode B is the third and last push site, and an automated wrapper is *more* likely to run in this mode than in Mode A, not less.
+4. Write the report to **`~/aios/.claude/session-report-{YYYY-MM-DD}-{project}-{session}.md`** — `{project}` is a filesystem-safe slug of the repo name (from step 1), `{session}` is `$CLAUDE_AGENT_NAME` (fallback: a short session-id or pid if unset). **Both suffixes are load-bearing at a shared dir:** `{project}` keeps two *different* repos' sessions from colliding in the one harvest dir, and `{session}` keeps a Close-all broadcast's N workers in the *same* repo from clobbering each other. Write it to `~/aios/.claude/` **even though the session runs in another repo** — that's the whole point: one dir close-day always scans, no registration needed. (`~/aios/.claude/` is fully gitignored, so the report never leaks into any repo's git.) Then commit your session's own scoped work via `~/aios/hooks/vault/aios-commit -m "..." $([ "${AIOS_CLOSE_SESSION_NO_PUSH:-}" = "1" ] && echo --no-push) -- <paths>` (never `git add -A`). **The `--no-push` opt-out applies here too** — Mode B is the third and last push site, and an automated wrapper is *more* likely to run in this mode than in Mode A, not less.
 5. Confirm: "Session report written to `~/aios/.claude/session-report-{date}-{project}-{session}.md`. `/close-day` will pick it up tonight."
 
 ### Session report format (Mode B)

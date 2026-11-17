@@ -24,7 +24,7 @@ npm view @jtalk22/slack-mcp version                      # what is current
 cd "$(mktemp -d)" && npm pack @jtalk22/slack-mcp@<ver> && tar xzf *.tgz   # the exact published files
 # replace everything in mcps/slack-mcp except connector.json and UPSTREAM.md with package/*
 # set package=@jtalk22/slack-mcp@<ver> in .upstream-sync, then pin the same version everywhere it is invoked:
-#   connector.json · mcps/setup.sh · SETUP.md · plugins/aios/commands/mcps-setup.md · hooks/pipeline-executor.py
+#   connector.json · mcps/setup.sh · SETUP.md · plugins/aios/commands/mcps-setup.md · hooks/pipeline/pipeline-executor.py
 bash tests/vendored-pins.test.sh --record mcps/slack-mcp
 bash tests/vendored-pins.test.sh --upstream mcps/slack-mcp  # must print N/N files match
 ```

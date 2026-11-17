@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# hooks/run-trust-check.py (#323): says once when ~/.aios/run is untrusted, is silent when it is
+# hooks/install/run-trust-check.py (#323): says once when ~/.aios/run is untrusted, is silent when it is
 # trusted or absent, honours CLAUDE_CONFIG_DIR and AIOS_RUN_DIR, and never writes ~/.claude.json.
 # Usage: bash tests/run-trust-check.test.sh [repo-root]. Written for bash 3.2.
 set -u
 ROOT="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
-H="$ROOT/hooks/run-trust-check.py"
+H="$ROOT/hooks/install/run-trust-check.py"
 pass=0; fail=0
 ok(){ pass=$((pass+1)); echo "  ok   $1"; }
 no(){ fail=$((fail+1)); echo "  FAIL $1"; }

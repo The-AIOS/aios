@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # tests/motion-lab.test.sh
 #
-# hooks/motion-render.py + hooks/motion-check.py, the instruments behind skills/aios/motion-lab.
+# hooks/media/motion-render.py + hooks/media/motion-check.py, the instruments behind skills/aios/motion-lab.
 # The skill's acceptance bar is "reproduces one 6 s loop with every check green", so the example
 # loop is rendered and checked end to end -- and every check is also shown to FAIL on a planted
 # defect, because a check that cannot fail is not a check.
@@ -14,7 +14,7 @@
 #             a move launched from rest is caught as a speed corner
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-R="$ROOT/hooks/motion-render.py"; C="$ROOT/hooks/motion-check.py"
+R="$ROOT/hooks/media/motion-render.py"; C="$ROOT/hooks/media/motion-check.py"
 EX="$ROOT/skills/aios/motion-lab/examples/loop-6s.html"
 PYBIN="${PYBIN:-python3}"
 PASS=0; FAIL=0; SKIP=0
@@ -162,7 +162,7 @@ HTMLC
 else skip "no Python Playwright + Chromium here"; fi
 
 echo "── video-watch writes its manifest beside --out, not into the cwd ──"
-grep -n 'os.getcwd()' "$ROOT/hooks/video-watch.py" | grep -i -E 'manifest|caption-prompt' >/dev/null \
+grep -n 'os.getcwd()' "$ROOT/hooks/media/video-watch.py" | grep -i -E 'manifest|caption-prompt' >/dev/null \
   && no "video-watch.py still writes the manifest into the working directory" || ok "no manifest path built from the cwd"
 
 echo "── RESULT: $PASS passed, $FAIL failed, $SKIP skipped ──"

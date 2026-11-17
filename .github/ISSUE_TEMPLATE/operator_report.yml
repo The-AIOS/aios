@@ -8,7 +8,7 @@ body:
         Thanks for reporting. This is the form for operators: you don't need to know which file is wrong, only what you observed.
 
         - **Class, not incident.** The most useful report names who else would hit this ("every operator who runs two sessions at once"), not only that it happened to you.
-        - **Nothing from your vault.** No names, client or company names, paths into your notes, emails, IDs or screenshots of a real vault. Home paths become `~/...`. If you use the `aios-feedback` agent, it runs `hooks/issue-scrub.py` on the draft and shows you the result before anything is filed.
+        - **Nothing from your vault.** No names, client or company names, paths into your notes, emails, IDs or screenshots of a real vault. Home paths become `~/...`. If you use the `aios-feedback` agent, it runs `hooks/security/issue-scrub.py` on the draft and shows you the result before anything is filed.
         - **Personal preference?** A change only you want belongs in `USER.md` → `## Command personalizations` or in `custom/` (see [CONTRIBUTING.md](https://github.com/The-AIOS/aios/blob/main/CONTRIBUTING.md)), not here.
         - **Wrong repo?** Panel problems go to [aios-glass](https://github.com/The-AIOS/aios-glass/issues), install and desktop-app problems to [aios-app](https://github.com/The-AIOS/aios-app/issues). Unsure? File here; maintainers route it.
 

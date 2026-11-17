@@ -15,7 +15,7 @@
 #   2. `ls ~/.config/aios-secrets/*.env` is FATAL under zsh: an unmatched glob
 #      aborts the command before ls runs, so 2>/dev/null cannot help. It died on
 #      exactly the machine it exists to describe.
-#   3. An unguarded call to hooks/openrouter.py printed a traceback on a vault
+#   3. An unguarded call to hooks/pipeline/openrouter.py printed a traceback on a vault
 #      that had not pulled it — reads as a broken machine, not a missing update.
 #   4. `git worktree list` always prints the main tree, so a raw count of 1 marks
 #      rung 3 satisfied for everybody.
@@ -69,7 +69,7 @@ grep -qE '^\s*ls ~/\.config/aios-secrets/\*' "$T/planted" \
   && ok "control: that check DOES fire on a planted bad probe" || no "CONTROL FAILED — check is vacuous"
 grep -qF "find ~/.config/aios-secrets" "$DOC" && ok "uses find instead" || no "the find form is missing"
 # REGRESSIONS 3-5
-grep -qF 'test -f ~/aios/hooks/openrouter.py' "$DOC" && ok "rail probe is file-guarded" || no "unguarded rail probe"
+grep -qF 'test -f ~/aios/hooks/pipeline/openrouter.py' "$DOC" && ok "rail probe is file-guarded" || no "unguarded rail probe"
 grep -qE 'worktree list.*wc -l\) - 1' "$DOC" && ok "worktree count subtracts the main tree" || no "raw worktree count"
 # Markdown emphasis sits between the words ("**not-readable**, never *no
 # firewall*"), so match with the inline markers allowed rather than assuming
@@ -106,7 +106,7 @@ grep -qF "**$truth commands" README.md && ok "README command count matches disk 
   || no "README command count disagrees with disk" "expected $truth"
 
 echo "── the git-hook probe answers for the hooks dir git actually uses (#151) ──"
-# The installer sets `core.hooksPath` (hooks/install-git-hooks.sh); the probe used to test a
+# The installer sets `core.hooksPath` (hooks/install/install-git-hooks.sh); the probe used to test a
 # fixed `.git/hooks/pre-commit`, so it printed ABSENT on every correctly installed vault and
 # "installed" on one whose only hook was a stale file git no longer runs. Run the probe line
 # FORTRESS.md actually ships, against two fixture repos, rather than grep it for a string.

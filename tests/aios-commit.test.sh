@@ -11,8 +11,8 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-AC="$ROOT/hooks/aios-commit"
-ANA="$ROOT/hooks/aios-note-append"
+AC="$ROOT/hooks/vault/aios-commit"
+ANA="$ROOT/hooks/vault/aios-note-append"
 SCAN="$ROOT/hooks/git/secret-scan.sh"
 PASS=0; FAIL=0
 ok(){ echo "  ✓ $1"; PASS=$((PASS+1)); }
@@ -388,8 +388,8 @@ h5w(){ # $1 hook → "<stderr WARNING count>:<git status line count>"
 }
 [ "$(h5w "$AC")" = "0:0" ] && ok "git mv then --vault → no warning, clean status" || no "git mv then --vault → warning:status = $(h5w "$AC")" "a false sync warning on a successful commit"
 H5W=$(mktemp -d); mkdir -p "$H5W/git"; cp "$ROOT/hooks/git/secret-scan.sh" "$H5W/git/"
-sed '/the old half of a staged/,/^    fi$/d' "$AC" > "$H5W/aios-commit"; chmod +x "$H5W/aios-commit"
-case "$(h5w "$H5W/aios-commit")" in 0:*) no "control: without the skip the warning did not return" "the check above proves nothing";; *) ok "control: without the skip, the false warning returns";; esac
+mkdir -p "$H5W/vault"; sed '/the old half of a staged/,/^    fi$/d' "$AC" > "$H5W/vault/aios-commit"; chmod +x "$H5W/vault/aios-commit"
+case "$(h5w "$H5W/vault/aios-commit")" in 0:*) no "control: without the skip the warning did not return" "the check above proves nothing";; *) ok "control: without the skip, the false warning returns";; esac
 rm -rf "$H5W"
 H5_PIN=a1bdd93a25a85749df66db0a94a8ea4701fbefc7
 H5_OLD=$(mktemp -d); mkdir -p "$H5_OLD/git"

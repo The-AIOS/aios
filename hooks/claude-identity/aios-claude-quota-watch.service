@@ -19,7 +19,7 @@
 ;
 ; Remove:
 ;   systemctl --user disable --now aios-claude-quota-watch.timer
-;   python3 ~/aios/hooks/aios-health.py retire quota-watch   # else /today reports it overdue forever
+;   python3 ~/aios/hooks/pipeline/aios-health.py retire quota-watch   # else /today reports it overdue forever
 ;
 ; Note: if you are not logged into a graphical session, systemd may stop your
 ; user manager on logout and the timer with it. `loginctl enable-linger $USER`

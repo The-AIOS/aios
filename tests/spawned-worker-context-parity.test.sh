@@ -155,9 +155,9 @@ printf '%s' "$STEP4" | grep 'antifragile' >/dev/null \
 # was here before, and it passed while the numbers disagreed by 70%. Compare the
 # CONSTANTS, and require each tool to name the other.
 # Strongest form: rungs reads the floor's own constant, so they cannot differ at all.
-FLOOR_N="$(grep -oE '^DEFAULT_RECENT = [0-9]+' hooks/context-floor.py | grep -oE '[0-9]+')"
-RUNGS_N="$(grep -oE '^RECENT_PER_FILE = [0-9]+' hooks/context-rungs.py | grep -oE '[0-9]+')"
-grep -qE '^RECENT_PER_FILE = FLOOR\.DEFAULT_RECENT$' hooks/context-rungs.py && RUNGS_N="$FLOOR_N"
+FLOOR_N="$(grep -oE '^DEFAULT_RECENT = [0-9]+' hooks/context/context-floor.py | grep -oE '[0-9]+')"
+RUNGS_N="$(grep -oE '^RECENT_PER_FILE = [0-9]+' hooks/context/context-rungs.py | grep -oE '[0-9]+')"
+grep -qE '^RECENT_PER_FILE = FLOOR\.DEFAULT_RECENT$' hooks/context/context-rungs.py && RUNGS_N="$FLOOR_N"
 if [ -z "$FLOOR_N" ] || [ -z "$RUNGS_N" ]; then
   no "could not read the recency constant from both tools (floor='$FLOOR_N' rungs='$RUNGS_N')" \
      "if the constant cannot be found it cannot be compared, and this check passes vacuously"
@@ -167,14 +167,14 @@ else
   no "the recency constant differs: floor=$FLOOR_N rungs=$RUNGS_N" \
      "rung 1 would then price a floor no session actually receives"
 fi
-grep -q 'context-floor.py' hooks/context-rungs.py \
+grep -q 'context-floor.py' hooks/context/context-rungs.py \
   && ok "context-rungs.py ties rung 1 to the floor tool by name" \
   || no "the two tools do not reference each other" "nothing links the price to the thing priced"
 
 # And the floor must actually carry CONTENT, not only headings -- the defect this rung
 # was rebuilt to fix. A floor of titles alone leaves a session knowing what exists and
 # nothing the system has learned, so every close-day append changes no later behaviour.
-grep -qiE 'last .*entries|MOST RECENT' hooks/context-floor.py \
+grep -qiE 'last .*entries|MOST RECENT' hooks/context/context-floor.py \
   && ok "the floor emits recent entry bodies, not just the map" \
   || no "the floor is titles-only" "then the compounding loop never closes at session start"
 
@@ -372,10 +372,10 @@ for pair in "CLAUDE.md:$CM" "AGENTS.md:AGENTS.md" "the wrapper:$WR" "the .ps1:$P
     || no "$label leaves about_business.md looking like venture context" \
           "it is a ~1:100 pointer -- mistaking the index for the territory"
 done
-grep -q 'ventures' hooks/context-floor.py \
+grep -q 'ventures' hooks/context/context-floor.py \
   && ok "the floor tool lists the ventures" \
   || no "the floor omits ventures/" "a map that omits a third of the vault is not a map"
-grep -q 'ventures' hooks/context-rungs.py \
+grep -q 'ventures' hooks/context/context-rungs.py \
   && ok "the rungs tool prices ventures into rung 3" \
   || no "rung 3 excludes ventures/" "then 'everything' understates the true total by a third"
 
@@ -432,10 +432,10 @@ echo " the floor's selectors match how the files are actually written"
 #   2. file order is NOT reliably newest-last. Measured across nine observed files, the
 #      tail was the newest entry in only 5 of 8 dated ones. Taking the tail elsewhere
 #      hands a session stale entries while calling them recent -- wrong AND looks right.
-grep -q 'INDEX_HEADING' hooks/context-floor.py \
+grep -q 'INDEX_HEADING' hooks/context/context-floor.py \
   && ok "the floor detects a rule-library file and emits its index" \
   || no "every observed file is treated as a chronology" "antifragile's index is the entry point its own text names"
-grep -q 'def newest' hooks/context-floor.py \
+grep -q 'def newest' hooks/context/context-floor.py \
   && ok "recency is computed from entry DATES, not file position" \
   || no "the floor takes the tail as the newest" "true for only 5 of 8 files measured"
 grep -q 'rule library\|RULE LIBRARY' "$CM" \
@@ -500,7 +500,7 @@ for pair in "CLAUDE.md:$CM" "AGENTS.md:AGENTS.md" "the wrapper:$WR" "the .ps1:$P
 done
 
 # The tool must carry the same top rung, or Bucket 31 advises something no rule supports.
-grep -q 'TASK IS THE CONTEXT ITSELF' hooks/context-rungs.py \
+grep -q 'TASK IS THE CONTEXT ITSELF' hooks/context/context-rungs.py \
   && ok "context-rungs.py names the rung-3 case for large vaults too" \
   || no "the tool only offers rung 3 to small vaults" "then a synthesis task on a big vault has no sanctioned read"
 

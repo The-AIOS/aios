@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Hook G, hooks/suggest-agent-hint.py (#317): names one agent for a prompt that clearly fits it, and
+# Hook G, hooks/agents/suggest-agent-hint.py (#317): names one agent for a prompt that clearly fits it, and
 # stays silent for small talk, slash commands, ties, and the hat already worn. Never blocks.
 # Runs against the real agents index, so a keyword edit that breaks a fixture fails here.
 # Usage: bash tests/suggest-agent-hint.test.sh [repo-root]. Written for bash 3.2.
 set -u
 ROOT="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
-H="$ROOT/hooks/suggest-agent-hint.py"
+H="$ROOT/hooks/agents/suggest-agent-hint.py"
 pass=0; fail=0
 ok(){ pass=$((pass+1)); echo "  ok   $1"; }
 no(){ fail=$((fail+1)); echo "  FAIL $1"; }

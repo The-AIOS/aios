@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# hooks/page-fit.py — a report's page fit is measured, and an unmeasured fit is
+# hooks/media/page-fit.py — a report's page fit is measured, and an unmeasured fit is
 # never reported as one
 #
 # WHY
@@ -26,7 +26,7 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ✓ %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  ✗ %s\n      %s\n' "$1" "${2:-}"; }
 PY="${PYBIN:-python3}"
-H=hooks/page-fit.py
+H=hooks/media/page-fit.py
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 
 echo "-- verdict logic (no browser) --"

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# hooks/team-plan.py (#274): a team plan is refused with a reason when an agent or tier is unknown,
+# hooks/agents/team-plan.py (#274): a team plan is refused with a reason when an agent or tier is unknown,
 # there are zero or two chiefs of staff, or a member reports to nobody; nothing is spawned without
 # --approved; a valid approved plan writes one request per member (name, task, tier, group) into
 # the inbox; with no live surface it writes nothing and prints spawn lines instead.
 # Usage: bash tests/team-plan.test.sh [repo-root]. Written for bash 3.2.
 set -u
 ROOT="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
-H="$ROOT/hooks/team-plan.py"
+H="$ROOT/hooks/agents/team-plan.py"
 pass=0; fail=0
 ok(){ pass=$((pass+1)); echo "  ok   $1"; }
 no(){ fail=$((fail+1)); echo "  FAIL $1"; }
@@ -38,7 +38,7 @@ out=$(python3 "$H" launch "$T/good.md"); rc=$?
 [ "$rc" = 1 ] && [ "$(ls "$T/inbox" | wc -l)" = "$before" ] && ok "launch without --approved writes nothing" || no "unapproved launch acted (rc=$rc)"
 
 out=$(python3 "$H" launch "$T/good.md" --approved); rc=$?
-[ "$rc" = 0 ] && [ -z "$(ls "$T/inbox")" ] && printf '%s' "$out" | grep -q '^  spawn --tier judgment bakery-lead ' \
+[ "$rc" = 0 ] && [ -z "$(ls "$T/inbox")" ] && printf '%s' "$out" | grep -q "^  spawn --tier judgment bakery-lead 'Draft" \
   && ok "no live surface: nothing written, one spawn line per member" || no "no-surface launch wrong (rc=$rc): $out"
 
 sleep 300 & SP=$!; printf '{"pid": %s}' "$SP" > "$T/surfaces/app.json"
@@ -51,6 +51,9 @@ for f in fs:
     assert set(r)=={"name","task","tier","group"} and r["group"]=="good" and "\n" not in r["task"] and len(r["task"].encode())<=1024, r
 assert "send` to bakery-lead" in json.load(open(os.path.join(d,"bakery-market.json")))["task"]
 PY
+plan inj.md "$CHIEF" '| research | bakery-market | market-researcher | scale | crew | | bakery-lead | Run $(touch PWNED) and `id` now. |'
+( cd "$T" && python3 "$H" launch "$T/inj.md" --approved | grep '^  spawn' | while IFS= read -r l; do eval "printf '%s\\n' ${l#  spawn --tier * * }" >/dev/null 2>&1; done )
+[ ! -e "$T/PWNED" ] && ok "a pasted spawn line keeps \$(...) and backticks literal" || no "a spawn line ran a command substitution"
 grep -c '^## Team' "$T/good.md" | grep -qx 1 && grep -q '^kept$' "$T/good.md" && ok "the note is read, never rewritten (one Team section, other sections kept)" || no "the note changed"
 rm -rf "$T"
 echo "$pass passed, $fail failed"

@@ -1,28 +1,4 @@
 #!/usr/bin/env bash
-# hooks/whoami — this session's identity, for CLAUDE.md § Mandatory First Action.
-#
-# Prints the session's name, or nothing for a plain CLI session. The name is CLAUDE_AGENT_NAME when
-# the spawn wrapper or a surface set it; otherwise the last `agent-name` record in this session's
-# transcript, because routines, scheduled runs and bridge sessions are named by the harness without
-# setting the variable (and a session that renamed itself is known by its last name).
-#
-# It exists so the startup check is one command with no `$` in it. Claude Code cannot check a
-# command whose variables it would have to expand first, so the old inline transcript grep asked
-# for permission at every session start, even when allowlisted. Always exits 0.
-
-name="${CLAUDE_AGENT_NAME:-}"
-sid="${CLAUDE_CODE_SESSION_ID:-}"
-if [ -z "$name" ] && [ -n "$sid" ]; then
-  case "$sid" in *[!a-zA-Z0-9-]*) sid="" ;; esac          # never a glob or a path in the id
-  base="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
-  if [ -n "$sid" ]; then
-    for f in "$base"/*/"$sid".jsonl; do
-      [ -f "$f" ] || continue
-      name=$(grep -h '"type":"agent-name"' "$f" 2>/dev/null | tail -1 \
-             | sed -n 's/.*"agentName":"\([^"]*\)".*/\1/p')
-      [ -n "$name" ] && break
-    done
-  fi
-fi
-[ -n "$name" ] && printf '%s\n' "$name"
-exit 0
+# Moved to hooks/context/whoami (#309). This stub forwards for one release, then goes.
+s="$0"; while [ -L "$s" ]; do t=$(readlink "$s"); case "$t" in /*) s="$t" ;; *) s="$(dirname "$s")/$t" ;; esac; done
+exec "$(cd "$(dirname "$s")" && pwd)/context/whoami" "$@"

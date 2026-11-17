@@ -2,7 +2,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # A token pasted into a Claude Code session must be findable, and never reprinted
 #
-# hooks/transcript-secret-scan.py looks for secret-shaped values in session
+# hooks/security/transcript-secret-scan.py looks for secret-shaped values in session
 # transcripts using hooks/git/secret-scan.sh's own pattern list. What this pins:
 #
 #   1. It FINDS a pasted key and a pasted cloud key, and reports kind, date,
@@ -29,7 +29,7 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
-S=hooks/transcript-secret-scan.py
+S=hooks/security/transcript-secret-scan.py
 R="$T/projects/p1"; ST="$T/state"; mkdir -p "$R"
 KEY="sk-ant-$(printf 'Ab1Cd2Ef%.0s' 1 2 3 4)"          # 32 chars after the prefix
 AWS="AKIA$(printf 'ABCDEFGH12345678')"

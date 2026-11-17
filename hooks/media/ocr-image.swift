@@ -1,5 +1,5 @@
 // ocr-image.swift — local macOS Vision OCR for the AIOS capture Pass-0.
-// Usage:  swift hooks/ocr-image.swift <image-path> [--no-correction]
+// Usage:  swift hooks/media/ocr-image.swift <image-path> [--no-correction]
 //           → prints recognized text (stdout).
 //         --no-correction disables language correction (use for code, serials,
 //           IDs — Vision's autocorrect mangles tokens like C001 → "cool").

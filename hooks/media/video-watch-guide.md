@@ -14,7 +14,7 @@ tags: [aios-infra, video, multimodal, guide, export]
 
 ## 1. The problem it solves
 
-AIOS bundles Microsoft's **markitdown** (`hooks/markitdown-convert.py`) to turn any file into Markdown. But markitdown is **blind to the screen**:
+AIOS bundles Microsoft's **markitdown** (`hooks/media/markitdown-convert.py`) to turn any file into Markdown. But markitdown is **blind to the screen**:
 
 - An `.mp4` is routed to the *audio* converter → `exiftool` metadata + speech-to-text. **Every frame is discarded.**
 - The YouTube path scrapes page metadata + the existing transcript. **No frames.**
@@ -57,7 +57,7 @@ Everything is already on a typical AIOS Mac — **no pip install** for the core:
 | Download (YouTube) | `yt-dlp` | capped to 720p |
 | Frame extraction | `ffmpeg` | `select='gt(scene,T)'` scene-change |
 | Dedup | `pillow` | pure-pillow dHash, no opencv/imagehash |
-| OCR reader | `swift` + Apple Vision | `hooks/ocr-image.swift`, on-device, **no network** |
+| OCR reader | `swift` + Apple Vision | `hooks/media/ocr-image.swift`, on-device, **no network** |
 | VLM reader | `claude` CLI | `claude -p`, subscription auth — **no `ANTHROPIC_API_KEY`** |
 | Transcript (YouTube) | `youtube-transcript-api` | per-machine install on system python (often 3.9) |
 | Transcript (local file) | `whisper.cpp` (`whisper-cli`) | on-device, free, Metal-fast; model in `~/.cache/aios/whisper/` |
@@ -66,8 +66,8 @@ Both readers and the transcriber are fully local (Fortress-clean) except the opt
 
 ## 4. Install
 
-1. Copy **`hooks/video-watch.py`** into your `~/aios/hooks/`.
-2. Ensure **`hooks/ocr-image.swift`** supports `--no-correction` (the code-mode flag — disables Apple Vision autocorrect so it doesn't mangle `C001` → "cool"). If yours predates this, add a `noCorrection` arg that sets `req.usesLanguageCorrection = !noCorrection`.
+1. Copy **`hooks/media/video-watch.py`** into your `~/aios/hooks/`.
+2. Ensure **`hooks/media/ocr-image.swift`** supports `--no-correction` (the code-mode flag — disables Apple Vision autocorrect so it doesn't mangle `C001` → "cool"). If yours predates this, add a `noCorrection` arg that sets `req.usesLanguageCorrection = !noCorrection`.
 3. Confirm the toolchain: `ffmpeg`, `yt-dlp`, `swift`, `claude`, and `pillow` (`python3 -c "import PIL"`).
 4. **YouTube transcripts:** `youtube-transcript-api` on a system python (the script auto-finds an interpreter that has it).
 5. **Local-file transcripts (whisper.cpp):** `brew install whisper-cpp`, then fetch a model once:
@@ -81,7 +81,7 @@ Both readers and the transcriber are fully local (Fortress-clean) except the opt
 ## 5. Use
 
 ```bash
-python3 hooks/video-watch.py <file-or-youtube-url> [options]
+python3 hooks/media/video-watch.py <file-or-youtube-url> [options]
 
   --reader vlm|ocr|both     per-frame reader (default vlm)
   --engine backbone|gemini  pipeline (default backbone; gemini = stub)
@@ -131,6 +131,6 @@ This was reviewed with an **Inversion premortem** ("it's 6 months later and it b
 
 ---
 
-*Built for AIOS, 2026-06-20. Companion to the operator's project note `infra-video-comprehension`. The capability is one script (`hooks/video-watch.py`) plus the Apple Vision OCR helper.*
+*Built for AIOS, 2026-06-20. Companion to the operator's project note `infra-video-comprehension`. The capability is one script (`hooks/media/video-watch.py`) plus the Apple Vision OCR helper.*
 
-**Not for reviewing your own motion.** This reads other people's films, which are cut-heavy, and it drops near-duplicate frames on purpose. A piece you made yourself is continuous motion, where the error lives in the difference between two adjacent frames: render the frames from source with `hooks/motion-render.py` and check them with `hooks/motion-check.py` (skill: `motion-lab`). Measured on an 8 s loop: 0 scene cuts, and 1 frame of 480 extracted.
+**Not for reviewing your own motion.** This reads other people's films, which are cut-heavy, and it drops near-duplicate frames on purpose. A piece you made yourself is continuous motion, where the error lives in the difference between two adjacent frames: render the frames from source with `hooks/media/motion-render.py` and check them with `hooks/media/motion-check.py` (skill: `motion-lab`). Measured on an 8 s loop: 0 scene cuts, and 1 frame of 480 extracted.

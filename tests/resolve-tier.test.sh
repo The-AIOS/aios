@@ -25,7 +25,7 @@ cd "$(dirname "$0")/.." || exit 1
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
-R=hooks/resolve-tier
+R=hooks/pipeline/resolve-tier
 W=hooks/claude-identity/install-wrappers.sh
 [ -x "$R" ] || { echo "::error::$R missing or not executable"; exit 1; }
 [ -f "$W" ] || { echo "::error::$W missing"; exit 1; }
@@ -74,7 +74,7 @@ echo "-- 5. install-git-hooks normalizes every hook .gitattributes protects --"
 # narrow name list left it green — it was testing the test's belief about the installer
 # rather than the installer. That is the defect class this whole suite exists for, found by
 # mutating it.
-GLOBS=$(grep -oE '^for _h in .*; do' hooks/install-git-hooks.sh \
+GLOBS=$(grep -oE '^for _h in .*; do' hooks/install/install-git-hooks.sh \
         | sed -E 's/^for _h in //; s/; do$//' \
         | tr ' ' '\n' | sed -E 's/"//g; s|\$HOOKS_DIR|hooks|g' | grep -v '^$')
 [ -n "$GLOBS" ] && ok "extracted the installer's own normalization globs" \
@@ -108,8 +108,8 @@ echo "-- 6. both installers SELECT the same way: derive, never enumerate --"
 # were changed to derive from the directory + a shebang test — at which point a
 # token-matching check was asserting an implementation detail that had been deliberately
 # removed. So assert the SHAPE: each side sweeps both directories and filters on a shebang.
-strip_sh(){ sed -E 's/#.*//' hooks/install-git-hooks.sh; }
-strip_ps(){ sed -E 's/#.*//' hooks/install-git-hooks.ps1; }
+strip_sh(){ sed -E 's/#.*//' hooks/install/install-git-hooks.sh; }
+strip_ps(){ sed -E 's/#.*//' hooks/install/install-git-hooks.ps1; }
 chk(){ # label · bash regex · powershell regex
   a=$(strip_sh | grep -cE "$2"); b=$(strip_ps | grep -cE "$3")
   if [ "${a:-0}" -gt 0 ] && [ "${b:-0}" -gt 0 ]; then ok "both installers $1"
@@ -122,8 +122,8 @@ chk "sweep the git/ subdir"          'HOOKS_DIR/git/'         "Join-Path \\\$Hoo
 # bash and `-like '#!*'` in PowerShell both contain a `#` inside quotes. Stripping-at-hash is
 # a cousin of removing comments, and it silently scored 0 on code that was plainly there.
 # Prose cannot produce these two shapes, so the raw match is safe here.
-a=$(grep -cE "grep -q '\\^#!'" hooks/install-git-hooks.sh)
-b=$(grep -cE "like '#!\\*'" hooks/install-git-hooks.ps1)
+a=$(grep -cE "grep -q '\\^#!'" hooks/install/install-git-hooks.sh)
+b=$(grep -cE "like '#!\\*'" hooks/install/install-git-hooks.ps1)
 if [ "${a:-0}" -gt 0 ] && [ "${b:-0}" -gt 0 ]; then ok "both installers filter on a shebang rather than a name list"
 else no "shebang filter — bash=$a powershell=$b" "Windows is the platform this exists for; the .ps1 may not lag the .sh"; fi
 

@@ -17,7 +17,7 @@ if [ -z "$PYBIN" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# hooks/context-load-audit.py — the instrument behind /aios:housekeeping's
+# hooks/context/context-load-audit.py — the instrument behind /aios:housekeeping's
 # Bucket 30, tested against synthetic transcripts with known answers
 #
 # This exists because the FIRST version of this measurement was wrong, and wrong
@@ -36,7 +36,7 @@ PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  PASS  %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL  %s\n' "$1"; [ -n "${2:-}" ] && printf '        %s\n' "$2"; return 0; }
 
-H="hooks/context-load-audit.py"
+H="hooks/context/context-load-audit.py"
 [ -f "$H" ] || { printf '  FAIL  %s missing\n' "$H"; exit 1; }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 HOME_FAKE="$TMP/home"; mkdir -p "$HOME_FAKE/.claude/projects/proj"

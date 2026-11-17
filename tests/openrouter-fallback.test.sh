@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# hooks/openrouter.py tries the next configured provider when one is out of credits, over a
+# hooks/pipeline/openrouter.py tries the next configured provider when one is out of credits, over a
 # spend cap or rate-limited (HTTP 402/429), and says so when every one is exhausted. Any other
 # failure (a bad key, a bad request) is reported as is, never retried elsewhere, and a forced
 # --provider never falls back. Offline: both providers are faked.
@@ -16,7 +16,7 @@ def check(name, cond):
     else: fail += 1; print("  FAIL " + name)
 print("openrouter-fallback")
 os.environ["OPENROUTER_API_KEY"] = "sk-or-test"; os.environ["GEMINI_API_KEY"] = "g-test"
-spec = importlib.util.spec_from_file_location("orb", "hooks/openrouter.py")
+spec = importlib.util.spec_from_file_location("orb", "hooks/pipeline/openrouter.py")
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 m.load_env = lambda name: {}
 calls = []

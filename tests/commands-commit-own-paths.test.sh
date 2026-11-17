@@ -37,8 +37,8 @@ TMP0="$(mktemp -d)"
 # Judged per line, so a line holding TWO invocations is refused outright: one good call on it
 # would otherwise vouch for a pathless one beside it.
 bad_calls(){
-  grep -E 'hooks/aios-commit ' "$1" | grep -v '^allowed-tools:' | while IFS= read -r l; do
-    n=$(printf '%s\n' "$l" | grep -o 'hooks/aios-commit ' | wc -l | tr -d ' ')
+  grep -E 'hooks/vault/aios-commit ' "$1" | grep -v '^allowed-tools:' | while IFS= read -r l; do
+    n=$(printf '%s\n' "$l" | grep -o 'hooks/vault/aios-commit ' | wc -l | tr -d ' ')
     [ "$n" -gt 1 ] && { printf '%s\n' "$l"; continue; }
     case "$l" in
       *--vault*) printf '%s\n' "$l" ;;
@@ -49,7 +49,7 @@ bad_calls(){
 }
 for f in today housekeeping; do
   bad=$(bad_calls "$C/$f.md")
-  if [ -z "$(grep -E 'hooks/aios-commit ' "$C/$f.md" | grep -v '^allowed-tools:')" ]; then
+  if [ -z "$(grep -E 'hooks/vault/aios-commit ' "$C/$f.md" | grep -v '^allowed-tools:')" ]; then
     no "$f.md: no aios-commit invocation found"
   elif [ -n "$bad" ]; then
     no "$f.md has an aios-commit call that sweeps or names no paths" "$(printf '%s\n' "$bad" | head -1)"
@@ -60,12 +60,12 @@ done
 
 # The check is per call: one good call must not vouch for a bad one beside it.
 cp "$C/today.md" "$TMP0/today-mut.md"
-printf '\n- `cd ~/aios && ~/aios/hooks/aios-commit -m "Daily plan {date}"`\n' >> "$TMP0/today-mut.md"
+printf '\n- `cd ~/aios && ~/aios/hooks/vault/aios-commit -m "Daily plan {date}"`\n' >> "$TMP0/today-mut.md"
 [ -n "$(bad_calls "$TMP0/today-mut.md")" ] \
   && ok "MUTANT: a pathless call added beside a good one is caught" \
   || no "MUTANT: a pathless call beside a good one passes"
 # …and on the SAME line as the good one.
-sed 's|^\(- `cd ~/aios \&\& ~/aios/hooks/aios-commit -m "Daily plan {date}" -- .*\)$|\1 then `cd ~/aios \&\& ~/aios/hooks/aios-commit -m "Daily plan {date}"`|' \
+sed 's|^\(- `cd ~/aios \&\& ~/aios/hooks/vault/aios-commit -m "Daily plan {date}" -- .*\)$|\1 then `cd ~/aios \&\& ~/aios/hooks/vault/aios-commit -m "Daily plan {date}"`|' \
   "$C/today.md" > "$TMP0/today-mut2.md"
 if cmp -s "$C/today.md" "$TMP0/today-mut2.md"; then
   no "MUTANT (same line) could not be built"
@@ -99,8 +99,8 @@ fixture(){
   git -C "$V" init -q
   git -C "$V" config user.email t@example.com; git -C "$V" config user.name Test; git -C "$V" config commit.gpgsign false
   # the helper resolves its siblings from the vault it lives in
-  mkdir -p "$V/hooks/git"
-  cp "$REPO/hooks/aios-commit" "$V/hooks/"; cp "$REPO/hooks/git/secret-scan.sh" "$V/hooks/git/"
+  mkdir -p "$V/hooks/git" "$V/hooks/vault"
+  cp "$REPO/hooks/vault/aios-commit" "$V/hooks/vault/"; cp "$REPO/hooks/git/secret-scan.sh" "$V/hooks/git/"
   echo seed > "$V/vault/seed.md"; git -C "$V" add -A; git -C "$V" commit -q -m init
   echo "# today" > "$V/vault/01 - calendar/2026-10/2026-10-11.md"     # this run's write
   echo "half done" > "$V/vault/00 - notes/peer-wip.md"                 # another session's
@@ -129,7 +129,7 @@ else
     || no "RUN: the peer's file did not stay uncommitted"
 
   fixture
-  runline 'cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Daily plan 2026-10-11"'
+  runline 'cd ~/aios && ~/aios/hooks/vault/aios-commit --vault -m "Daily plan 2026-10-11"'
   committed | grep -q 'peer-wip' \
     && ok "CONTROL: the old --vault line sweeps the peer's file in" \
     || no "CONTROL: the old --vault line did not sweep the peer's file — check 3 proves nothing" "$(tail -2 "$TMP/out")"

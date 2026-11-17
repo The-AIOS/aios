@@ -5,7 +5,7 @@ Windows consoles default to cp1252. A `print()` carrying an em dash, an arrow or
 an emoji raises UnicodeEncodeError there and aborts the script — so on Windows the
 failure is not a mangled character, it is the tool not running. The framework's
 own prose style uses em dashes liberally, which makes this a standing trap rather
-than an edge case: `hooks/buffer-status.py` scored 18 passed / 5 failed on Windows
+than an edge case: `hooks/vault/buffer-status.py` scored 18 passed / 5 failed on Windows
 purely from its report line, while passing 23 / 0 everywhere else.
 
 Three hooks already carried the guard (`pipeline-executor.py`, `route-insight.py`,

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# hooks/list-agents.py (#314): the one rule for what is an agent. Fixture vault: an agent, a
+# hooks/agents/list-agents.py (#314): the one rule for what is an agent. Fixture vault: an agent, a
 # document under reference/, one marked agent: false, an unclear file, README/_index skipped,
 # JSON shape. Then the bundled tree: every file there is an agent or a document, none unclear.
 # Usage: bash tests/list-agents.test.sh [repo-root]. Written for bash 3.2.
 set -u
 ROOT="${1:-$(cd "$(dirname "$0")/.." && pwd)}"
-H="$ROOT/hooks/list-agents.py"
+H="$ROOT/hooks/agents/list-agents.py"
 pass=0; fail=0
 ok(){ pass=$((pass+1)); echo "  ok   $1"; }
 no(){ fail=$((fail+1)); echo "  FAIL $1"; }

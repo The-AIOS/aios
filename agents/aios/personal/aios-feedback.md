@@ -1,6 +1,6 @@
 ---
 name: aios-feedback
-description: 'Use when an operator wants to report something about AIOS itself (a bug, a papercut, a doc that said one thing while the system did another, a missing capability) or hands you another operator''s report to pass upstream. First triages, from CONTRIBUTING.md, whether it is a personal setting (custom/ first), a signal to file as an issue, a fix the operator built that belongs in a pull request, or team-scoped infra for a company repo. For an issue: turns what was observed into ONE well-formed GitHub issue on the right repo: routes by what was observed, de-duplicates against open and closed issues and the CHANGELOG, scrubs the draft with hooks/issue-scrub.py so nothing from the vault leaves the machine, shows the operator the final text and the target repo, and creates the issue only after an explicit yes.'
+description: 'Use when an operator wants to report something about AIOS itself (a bug, a papercut, a doc that said one thing while the system did another, a missing capability) or hands you another operator''s report to pass upstream. First triages, from CONTRIBUTING.md, whether it is a personal setting (custom/ first), a signal to file as an issue, a fix the operator built that belongs in a pull request, or team-scoped infra for a company repo. For an issue: turns what was observed into ONE well-formed GitHub issue on the right repo: routes by what was observed, de-duplicates against open and closed issues and the CHANGELOG, scrubs the draft with hooks/security/issue-scrub.py so nothing from the vault leaves the machine, shows the operator the final text and the target repo, and creates the issue only after an explicit yes.'
 keywords: feedback, report a bug, report this, file an issue, open an issue, this is broken, this just broke, papercut, upstream, canonical, contribute, github issue, feature request, the doc says, every operator would hit this, reportar, repórtalo, abrir un issue, esto no funciona, esto debería estar en el AIOS
 tools: '*'
 tags:
@@ -26,7 +26,7 @@ Turn what an operator observed about AIOS into one well-formed GitHub issue on t
 - Example tasks: "Turn this clipboard note into an issue on canonical", "The App ignored tier:fast, report it", "Every operator will hit this stall, file it", "File this against my test repo so I can see how it works".
 
 ## Tools required
-- **Bash**: `gh auth status`, `gh issue list/view/create/comment`, `gh label list`, `grep` on `CHANGELOG.md`, `ps -p <pid> -o command=`, `claude --version`, `uv run hooks/issue-scrub.py`, `hooks/clip` for the clipboard fallback.
+- **Bash**: `gh auth status`, `gh issue list/view/create/comment`, `gh label list`, `grep` on `CHANGELOG.md`, `ps -p <pid> -o command=`, `claude --version`, `uv run hooks/security/issue-scrub.py`, `hooks/media/clip` for the clipboard fallback.
 - **Read**: the written report, `plugins/aios/.claude-plugin/plugin.json`, `.aios-update`, `CHANGELOG.md`, `CONTRIBUTING.md`, the observed file an entry came from.
 - **WebFetch** to `api.github.com`: read-only fallback when `gh` is unavailable (reads work unauthenticated; creation does not).
 - **Write**: only the draft and the scrubbed body, in `~/.aios/aios-feedback/`.
@@ -108,7 +108,7 @@ Write the draft to `~/.aios/aios-feedback/draft.md`, never into the vault, then:
 
 ```bash
 D="$HOME/.aios/aios-feedback"; mkdir -p "$D"   # one fixed folder: $TMPDIR differs between sandboxed and unsandboxed calls
-UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/issue-scrub.py "$D/draft.md" --out "$D/final.md"
+UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/security/issue-scrub.py "$D/draft.md" --out "$D/final.md"
 ```
 
 It replaces home paths with `~/…`; paths into `00 - notes` / `01 - calendar` / `02 - assets` / `03 - export` / `04 - backups`, vault wikilinks, and verbatim runs from `USER.md`, `INTENT.md` or `context/` with placeholders; and names it loads from the vault (session names, companies, ventures, clients, contacts, the operator's own name and email) with roles such as *the operator*, *a client*, *a company*. Emails, Slack and Drive links, Slack ids, phone numbers and token-shaped strings go too. Pass `--term "<name>"` for any person or organization mentioned in this session that the vault does not hold.
@@ -135,7 +135,7 @@ Creating an issue or a comment is an outward, public action. It stops for an exp
    ```
    or `gh issue comment {N} --repo {target} --body-file …` for a twin. Print the URL it returns.
 6. **An invalid token or an x509 error from inside a sandbox is the sandbox, not the account.** A sandboxed shell cannot reach the keyring or the system certificates, so `gh` reports *"the token in keyring is invalid"* or a certificate error even when the operator is signed in. Re-run the same `gh` command unsandboxed before concluding anything, and never suggest `gh auth refresh` on the strength of a sandboxed failure.
-7. **If `gh` is not installed or not authenticated** (checked unsandboxed), do not run `gh auth login` or any refresh flow for the operator. Put the scrubbed body on the clipboard with `~/aios/hooks/clip "$HOME/.aios/aios-feedback/final.md"` (it forces UTF-8 and verifies the paste; exit `2` means no clipboard here, so give the file path instead) and give the operator the new-issue URL to open themselves: `https://github.com/{target}/issues/new?title={url-encoded title}`. Add `&template=operator_report.yml` only when you confirmed in Step 4 that the target ships that form.
+7. **If `gh` is not installed or not authenticated** (checked unsandboxed), do not run `gh auth login` or any refresh flow for the operator. Put the scrubbed body on the clipboard with `~/aios/hooks/media/clip "$HOME/.aios/aios-feedback/final.md"` (it forces UTF-8 and verifies the paste; exit `2` means no clipboard here, so give the file path instead) and give the operator the new-issue URL to open themselves: `https://github.com/{target}/issues/new?title={url-encoded title}`. Add `&template=operator_report.yml` only when you confirmed in Step 4 that the target ships that form.
 
 ### Step 7: Record
 - The issue URL goes in this session's report, so `/close-session` records it as shipped.

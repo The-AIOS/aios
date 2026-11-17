@@ -52,7 +52,7 @@ PY
 case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) PLAT=windows; SH=bash ;; *) PLAT=posix; SH=sh ;; esac
 H3=$(mktemp -d "${TMPDIR:-/tmp}/sl3.XXXXXX"); mkdir -p "$H3/.claude"; ln -s "$ROOT" "$H3/aios" 2>/dev/null || cp -R "$ROOT" "$H3/aios"
 CMD=$(AIOS_ROOT="$ROOT" AIOS_WIN_PYTHON=python python3 -c 'import importlib.util,sys
-s=importlib.util.spec_from_file_location("m","hooks/install-settings.py"); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
+s=importlib.util.spec_from_file_location("m","hooks/install/install-settings.py"); m=importlib.util.module_from_spec(s); s.loader.exec_module(m)
 print(m.plan(sys.argv[1], sys.argv[2], False)[1])' "$PLAT" "$ROOT")
 OUT3=$(printf '%s' "$PAYLOAD" | HOME="$H3" USERPROFILE="$H3" CLAUDE_CONFIG_DIR="$H3/.claude" AIOS_ACCOUNTS_FILE="$H3/.aios/accounts.json" \
   AIOS_KEYCHAIN_SERVICE="aios-accounts-test" USER_MD_PATH="$H3/none.md" "$SH" -c "$CMD" 2>&1)

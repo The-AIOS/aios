@@ -454,7 +454,7 @@ delivered at session start (Hook E): INTENT.md, the titles of the newest entries
 every observed/ file, and the map. Its last section names the FULL floor file -- open it
 for depth whenever a title or the work points there. If there is no such block, run it:
 
-    UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context-floor.py
+    UV_CACHE_DIR="$HOME/aios/.aios-run/uv-cache" uv run ~/aios/hooks/context/context-floor.py
 
 It WRITES the floor to a file and prints only a MAP. The map is not the floor: read the
 file it names, in parts, until its last line is "=== END OF FLOOR".
@@ -526,7 +526,7 @@ reach: open what the work points at, to the depth it needs, when it points there
 
   READING EVERY FILE IN declared/, observed/ AND EVERY VENTURE IS NOT THE TOP OF A LADDER.
   It is the degenerate case, correct in two situations only: the whole context is cheaper
-  than deciding what to skip (run `uv run ~/aios/hooks/context-rungs.py`; if the verdict
+  than deciding what to skip (run `uv run ~/aios/hooks/context/context-rungs.py`; if the verdict
   says read it all, read it all — when deliberating costs more than acting, do not
   deliberate), or THE TASK IS THE CONTEXT ITSELF — synthesis across their history,
   auditing or compacting the observed files, answering AS them, where an index is a lossy
@@ -551,7 +551,7 @@ they have already decided this — stop guessing and read.
 UNSURE IS NOT A THIRD ANSWER — read MORE, not less, for that same asymmetry. Over-reading
 costs tokens once; under-reading costs the operator's voice and fails silently. If the
 call is genuinely hard, load the `right-context` skill — it carries the full ladder and
-measures what each rung costs in THIS vault (hooks/context-rungs.py).
+measures what each rung costs in THIS vault (hooks/context/context-rungs.py).
 
 Describing this rule is not doing it: right after CLAUDE.md's identity check, the next
 thing you do is the `ls`.
@@ -907,7 +907,7 @@ LAUNCHER
         # Every clipboard call forces a UTF-8 locale: pbcopy/pbpaste decode with the process
         # locale and fall back to Mac Roman without one, and `do shell script` below runs with an
         # almost empty environment -- so non-ASCII in a launcher or a saved clipboard would be
-        # mangled. hooks/clip does the same with a read-back; it is used where it is installed.
+        # mangled. hooks/media/clip does the same with a read-back; it is used where it is installed.
         local saved_clip; saved_clip=$(LC_ALL=en_US.UTF-8 pbpaste 2>/dev/null)
         printf '%s' "$launcher" > "$run_dir/spawn-launch-cmd-$name"
         printf '%s' 'Terminal: Create New Terminal' | LC_ALL=en_US.UTF-8 pbcopy
@@ -946,7 +946,7 @@ tell application "System Events"
     delay 0.6
     -- Step 2: deliver the launcher via PASTE — swap the clipboard to the launcher
     -- command (staged in a temp file), paste, and run.
-    do shell script "f=\"$run_dir/spawn-launch-cmd-$name\"; if [ -x ~/aios/hooks/clip ]; then ~/aios/hooks/clip --no-verify \"\$f\" || true; else LC_ALL=en_US.UTF-8 pbcopy < \"\$f\"; fi"
+    do shell script "f=\"$run_dir/spawn-launch-cmd-$name\"; if [ -x ~/aios/hooks/media/clip ]; then ~/aios/hooks/media/clip --no-verify \"\$f\" || true; else LC_ALL=en_US.UTF-8 pbcopy < \"\$f\"; fi"
     keystroke "v" using {command down}
     delay 0.4
     keystroke return

@@ -11,7 +11,7 @@ The same line is how a session changes hat mid-task (CLAUDE.md § Identity step 
 
 ## When to suggest
 
-A prompt hook (`hooks/suggest-agent-hint.py`, wired as Hook G) may point you here with a line naming one agent. It matched words against the agents index and nothing more: the rules below still decide, and "no suggestion" stays a valid answer.
+A prompt hook (`hooks/agents/suggest-agent-hint.py`, wired as Hook G) may point you here with a line naming one agent. It matched words against the agents index and nothing more: the rules below still decide, and "no suggestion" stays a valid answer.
 
 Suggest when **all** of these hold:
 

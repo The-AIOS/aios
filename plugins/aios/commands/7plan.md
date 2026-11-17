@@ -70,7 +70,7 @@ From the data already loaded — process everything in memory:
    - If no → commit directly. `/today` will create each day's note fresh each morning.
 
 ### Message 4 — Commit + push
-- `cd ~/aios && ~/aios/hooks/aios-commit --vault -m "Weekly plan W{WW}"`
+- `cd ~/aios && ~/aios/hooks/vault/aios-commit --vault -m "Weekly plan W{WW}"`
 
 ## Output
 
