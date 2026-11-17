@@ -140,6 +140,23 @@ def find_key(var, secrets_name):
     return v or None
 
 
+def gemini_key(force=None):
+    """Gemini for TEXT only when chosen for it: a key in the AIOS secrets file (gemini.env or
+    openrouter.env), or `--provider gemini`. A GEMINI_API_KEY in the environment is often there for
+    the image tool alone, and must not silently turn on a text bridge that sends prompts to Google."""
+    k = (load_env("gemini").get("GEMINI_API_KEY") or load_env("openrouter").get("GEMINI_API_KEY") or "").strip()
+    if not k and force == "gemini":
+        k = (os.environ.get("GEMINI_API_KEY") or "").strip()
+    return k or None
+
+
+def fallback_opted_in():
+    """Handing a prompt to a SECOND company needs its own yes: AIOS_FALLBACK=gemini in
+    openrouter.env (or the environment). Without it, out of credits is reported, never rerouted."""
+    v = load_env("openrouter").get("AIOS_FALLBACK") or os.environ.get("AIOS_FALLBACK") or ""
+    return v.strip().lower() == "gemini"
+
+
 def resolve_provider(force=None):
     """-> (provider, key) or (None, None). OpenRouter first, Gemini second."""
     if force in (None, "openrouter"):
@@ -149,7 +166,7 @@ def resolve_provider(force=None):
         if force == "openrouter":
             return None, None
     if force in (None, "gemini"):
-        k = find_key("GEMINI_API_KEY", "gemini")
+        k = gemini_key(force)
         if k:
             return "gemini", k
         if force == "gemini":
@@ -160,13 +177,14 @@ def resolve_provider(force=None):
 def configured_providers(force=None):
     """-> [(provider, key)] in order. Forced: just that one. Otherwise every provider with a
     key, OpenRouter first, so an exhausted one can hand over to the next."""
-    order = [force] if force else ["openrouter", "gemini"]
-    out = []
-    for p in order:
-        k = find_key("OPENROUTER_API_KEY", "openrouter") if p == "openrouter" else find_key("GEMINI_API_KEY", "gemini")
-        if k:
-            out.append((p, k))
-    return out
+    if force:
+        k = find_key("OPENROUTER_API_KEY", "openrouter") if force == "openrouter" else gemini_key(force)
+        return [(force, k)] if k else []
+    ork = find_key("OPENROUTER_API_KEY", "openrouter")
+    gk = gemini_key()
+    if ork:
+        return [("openrouter", ork)] + ([("gemini", gk)] if gk and fallback_opted_in() else [])
+    return [("gemini", gk)] if gk else []
 
 
 # Out of credits or over a spending cap: the provider cannot serve this call, so the next

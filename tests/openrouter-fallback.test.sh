@@ -18,7 +18,9 @@ print("openrouter-fallback")
 os.environ["OPENROUTER_API_KEY"] = "sk-or-test"; os.environ["GEMINI_API_KEY"] = "g-test"
 spec = importlib.util.spec_from_file_location("orb", "hooks/pipeline/openrouter.py")
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-m.load_env = lambda name: {}
+# Gemini is chosen for text in the secrets file, and the fallback is opted into there too.
+SECRETS = {"gemini": {"GEMINI_API_KEY": "g-test"}, "openrouter": {"AIOS_FALLBACK": "gemini"}}
+m.load_env = lambda name: SECRETS.get(name, {})
 calls = []
 def fake(name, behaviour):
     def f(key, model, prompt, system):
@@ -58,6 +60,12 @@ check("a forced provider never falls back", rc == 1 and calls == [("openrouter",
 
 rc, out, err = run(["--prompt", "hi"], "from openrouter", "from gemini")
 check("a working OpenRouter is used alone", rc == 0 and "from openrouter" in out and calls == [("openrouter", None)])
+SECRETS = {}   # only the environment's GEMINI_API_KEY (set for the image tool), nothing opted in
+rc, out, err = run(["--prompt", "hi"], no_credits, "from gemini")
+check("an env-only Gemini key (the image tool's) never receives a text prompt", rc == 1 and calls == [("openrouter", None)])
+SECRETS = {"gemini": {"GEMINI_API_KEY": "g-test"}}   # Gemini chosen for text, fallback NOT opted in
+rc, out, err = run(["--prompt", "hi"], no_credits, "from gemini")
+check("without AIOS_FALLBACK=gemini, out of credits is reported, never sent to a second company", rc == 1 and calls == [("openrouter", None)])
 print("%d passed, %d failed" % (ok, fail))
 sys.exit(1 if fail else 0)
 PY

@@ -1672,6 +1672,9 @@ jobs:
       - name: hooks/ is grouped by domain, and no old top-level path is referenced (#309)
         run: bash tests/hooks-layout.test.sh
 
+      - name: security fixes for older code (bus_log on Windows, issue-scrub names and paths, video-watch reader)
+        run: bash tests/security-fixes-0819.test.sh
+
       - name: the Hats step reads session names through a script that prints only validated names and typed prompts
         # Transcripts hold untrusted text; the update must never read them directly. (#307 security review)
         run: bash tests/session-names.test.sh

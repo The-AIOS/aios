@@ -61,7 +61,7 @@
 
 ## 2026-11-17 — Agents speak up mid-session, teams from one sentence, and a tidy hooks/ folder
 
-`hash: 95088b4 · 70b06ff` · [#317](https://github.com/The-AIOS/aios/issues/317) · [#274](https://github.com/The-AIOS/aios/issues/274) · [#314](https://github.com/The-AIOS/aios/issues/314) · [#309](https://github.com/The-AIOS/aios/issues/309) · [#323](https://github.com/The-AIOS/aios/issues/323) · [#316](https://github.com/The-AIOS/aios/issues/316) · [#319](https://github.com/The-AIOS/aios/issues/319) · [#321](https://github.com/The-AIOS/aios/pull/321)
+`hash: 95088b4 · 70b06ff` · [#317](https://github.com/The-AIOS/aios/issues/317) · [#274](https://github.com/The-AIOS/aios/issues/274) · [#314](https://github.com/The-AIOS/aios/issues/314) · [#309](https://github.com/The-AIOS/aios/issues/309) · [#323](https://github.com/The-AIOS/aios/issues/323) · [#316](https://github.com/The-AIOS/aios/issues/316) · [#319](https://github.com/The-AIOS/aios/issues/319) · [#321](https://github.com/The-AIOS/aios/pull/321) · [#325](https://github.com/The-AIOS/aios/issues/325) · [#326](https://github.com/The-AIOS/aios/issues/326) · [#327](https://github.com/The-AIOS/aios/issues/327) · [#328](https://github.com/The-AIOS/aios/issues/328)
 
 > **What you can now do.** Ask about invoices, a contract or a deck in the middle of any session, and the agent that fits is suggested in one line the AIOS App shows as a card. Say "staff this project" with one sentence about it, and get a team plan in the project note (a charter, who does what, one chief of staff) that launches only when you say yes. Spawns stop asking you to trust each new folder once you trust one. And `hooks/` is grouped into folders by what each file is for.
 
@@ -70,6 +70,12 @@
 **A team from one sentence** (#274). The new `team-composer` skill writes a `## Team` section into the project note: a short charter every member reads first, then one row per member with its agent, model tier, whether it stays (standing) or does one job (crew), what it owns, who it reports to and its first task. `hooks/agents/team-plan.py` checks it (agents exist, tiers are known, exactly one chief of staff) and, only after your yes, opens one session per member in one App tab group. With no App or Glass running it prints the `spawn` lines instead.
 
 **hooks/ grouped by domain** (#309). Seven folders now hold what was 47 loose files: `context/`, `vault/`, `pipeline/`, `agents/`, `media/`, `security/`, `install/` (beside `claude-identity/`, `git/` and your own `custom/`). Every old path still works this release through a small forwarding file, and goes in the next one. Your `settings.json` is moved to the new paths by the update itself (below).
+
+**Security fixes** (older code, found while reviewing this release).
+- **`issue-scrub` keeps more out of public issues** (#325): names written **bold** or as links in `USER.md` are now redacted, and home paths keep their folders only under `~/aios`, `~/.aios` and `~/.claude`; `~/Clients/<matter>/…` becomes `~/<path redacted>`.
+- **A video cannot steer `video-watch` into your files** (#326): its headless reader may read only the video's frames, and a "URL" can no longer pass options to `yt-dlp`.
+- **Inbox prompts are labelled on Windows too** (#327): requests were never fingerprinted there, so a routine's prompt could read as typed by you.
+- **The text bridge only talks to the companies you chose** (#328): a Gemini key set for image generation no longer turns it on, and falling back from OpenRouter to Gemini needs `AIOS_FALLBACK=gemini`.
 
 **Smaller changes.**
 - **Spawns stop asking about each new folder** (#323). Each session gets its own private folder under `~/.aios/run/`, and Claude Code 2.1.326 asked you to trust every new one, so an unattended spawn could stall. Trusting `~/.aios/run` once ends it, and each session still sees only its own folder. A read-only check tells you if it is not trusted yet; nothing trusts it for you.
@@ -83,7 +89,8 @@
 2. **`hooks/install/install-git-hooks.sh` changed** (Windows: `.ps1`), **so the update runs it**: it re-links `aios-commit` to its new home in `~/.local/bin` (Windows: `~/bin/aios-commit.cmd`).
 3. **Only if `python3 ~/aios/hooks/install/run-trust-check.py` prints something:** read it to the operator in one line. It says how to trust `~/.aios/run` once (`cd ~/.aios/run && claude`, choose Yes, `/exit`). Never trust it for them.
 4. **Only if a `permissions.allow` rule in `~/.claude/settings.json`, `~/aios/.claude/settings.json` or `~/aios/.claude/settings.local.json` names a moved hook's old path** (for example `Bash(~/aios/hooks/aios-commit:*)` or `Bash(~/aios/hooks/whoami)`): commands now call the new path (`hooks/vault/aios-commit`), so that rule stops matching and an unattended `/today` would stall on a permission prompt. List those rules and ask once: *"Add the same rules for the hooks' new folders? The old ones stay this release."* **Recommended: yes.** On yes, add each rule with the new path beside the old one, using the Edit tool, and change nothing else.
-5. **Start a new Claude session**, last, so Hook G and the new skills load.
+5. **Only if `~/.config/aios-secrets/openrouter.env` has an OpenRouter key and a `GEMINI_API_KEY` is set anywhere (environment or a secrets file):** the bridge no longer falls back to Gemini on its own (#328). Ask once: *"When OpenRouter runs out of credits, should text prompts go to Gemini instead? That sends them to a second company."* On yes, add `AIOS_FALLBACK=gemini` to `openrouter.env`, and make sure `GEMINI_API_KEY` is in `~/.config/aios-secrets/gemini.env` (a key only in the environment no longer counts); use the Edit tool and never print the key. On no, change nothing.
+6. **Start a new Claude session**, last, so Hook G and the new skills load.
 
 ## 2026-11-14 — The hat a session wears now shows in one fixed line
 

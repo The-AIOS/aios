@@ -77,6 +77,13 @@ def record(req, via):
             have.add(h)
 
 
+def in_inbox(path, inbox=None, pathmod=os.path):
+    """normcase+normpath both sides: on Windows expanduser gives C:\\Users\\x/.aios/spawn-inbox
+    (mixed separators), so a plain startswith never matched and NOTHING was fingerprinted there."""
+    box = pathmod.normcase(pathmod.normpath(inbox or INBOX))
+    return pathmod.normcase(pathmod.normpath(path)).startswith(box + pathmod.sep)
+
+
 def is_bus_prompt(text):
     """True when this exact text (whitespace and case aside) went through the inbox in 14 days."""
     if not text:
@@ -91,7 +98,7 @@ def main():
             data = json.load(sys.stdin)
             ti = data.get("tool_input") or {}
             path = os.path.expanduser(ti.get("file_path", ""))
-            if path.startswith(INBOX + os.sep) and path.endswith(".json"):
+            if in_inbox(path) and path.endswith(".json"):
                 body = ti.get("content") or ti.get("new_string") or ""
                 try:
                     record(json.loads(body), "session-write")

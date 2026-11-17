@@ -119,9 +119,18 @@ PHONE = re.compile(r"(?<![\w.:/-])(?:\+\d{1,3}[\s.-]?\(?\d{1,4}\)?(?:[\s.-]?\d{2
 OPAQUE = re.compile(r"(?<![\w/-])(?=[A-Za-z0-9_-]*[A-Z])(?=[A-Za-z0-9_-]*[a-z])(?=[A-Za-z0-9_-]*\d)"
                     r"[A-Za-z0-9_-]{28,}(?![\w-])")
 HOME_PATHS = [
-    re.compile(r"/Users/[^/\s`'\"<>]+"), re.compile(r"/home/[^/\s`'\"<>]+"),
-    re.compile(r"[A-Za-z]:\\\\?Users\\\\?[^\\\s`'\"<>]+"),
+    re.compile(r"/Users/[^/\s`'\"<>]+((?:/[^\s`'\"<>()]+)?)"), re.compile(r"/home/[^/\s`'\"<>]+((?:/[^\s`'\"<>()]+)?)"),
+    re.compile(r"[A-Za-z]:\\\\?Users\\\\?[^\\\s`'\"<>]+((?:[\\/][^\s`'\"<>()]+)?)"),
 ]
+# Under home, only the framework's own places keep their folders: anything else (~/Clients/<matter>,
+# ~/Documents/<client>) is a private name in a path, which a public issue must not carry.
+HOME_KEEP = ("aios", ".aios", ".claude")
+
+
+def home_rest(rest):
+    rest = rest.replace("\\", "/")
+    first = rest.lstrip("/").split("/", 1)[0]
+    return rest if (not rest or first in HOME_KEEP) else "/<path redacted>"
 WIKILINK = re.compile(r"!?\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]")
 WORD = re.compile(r"[A-Za-z0-9\u00C0-\u024F']+")
 SHINGLE = 10
@@ -165,9 +174,11 @@ def table_first_column(body):
         if not line.startswith("|") or re.match(r"^\|[\s:|-]+\|?$", line):
             continue
         cell = line.strip("|").split("|")[0].strip()
-        if not cell or cell.startswith("*") or "{{" in cell:
-            continue  # header-less example rows are italic; placeholders are not names
-        out.append(cell.strip("`* "))
+        if not cell or (cell.startswith("*") and not cell.startswith("**")) or "{{" in cell:
+            continue  # example rows are *italic*; a **bold** cell IS a name; placeholders are not
+        cell = re.sub(r"\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]", r"\1", cell)   # [[Acme]] -> Acme
+        cell = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", cell)                # [Acme](url) -> Acme
+        out.append(cell.strip("`*_ "))
     return out[1:] if out and out[0].lower() in ("name", "company", "identity") else out
 
 
@@ -479,7 +490,7 @@ class Scrubber:
         text = self.quotes(text)          # before paths/names rewrite the words it matches on
         text = self.sub(EMAIL, text, "emails", "<email redacted>")
         for rx in HOME_PATHS:
-            text = rx.sub(lambda m: self._hit("paths", m.group(0), "~"), text)
+            text = rx.sub(lambda m: self._hit("paths", m.group(0), "~" + home_rest(m.group(1))), text)
         text = self.vault_paths(text)
         text = self.links(text)
         text = self.names(text)
