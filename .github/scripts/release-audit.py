@@ -156,7 +156,7 @@ def full_copy(src, dst, left_out):
     """A copy is shown in full when it could launder unread content into code: its source was left out
     of the audit, or a non-code file became a code file. Moving reviewed code shows only its changes."""
     ours = src.startswith(("hooks/", "plugins/aios/", "agents/aios/", "skills/aios/", ".github/", "tests/"))
-    return src in left_out or (code_like(dst) and not code_like(src)) or (code_like(dst) and not ours)
+    return src in left_out or not ours or (code_like(dst) and not code_like(src))
 
 
 def diff_chunks(base, head, left_out=()):
@@ -170,20 +170,23 @@ def diff_chunks(base, head, left_out=()):
     # -C --find-copies-harder: a file MOVED to a new folder (with a forwarding stub left at its old
     # path, as #309 did) shows as a copy of its old version plus its real changes, not as hundreds of
     # lines of new code. Every changed line is still in the diff; only unchanged moved code is not.
-    r = sh(["git", "-C", str(ROOT), "diff", "-C", "--find-copies-harder", f"{base}...{head}", "--"] + spec)
+    r = sh(["git", "-c", "core.quotePath=false", "-C", str(ROOT), "diff", "-C", "--find-copies-harder", f"{base}...{head}", "--"] + spec)
     if r.returncode != 0:
         sys.exit(f"release-audit: git diff failed: {r.stderr.strip()}")
     files = re.split(r"(?m)^(?=diff --git )", r.stdout)
     left = set(left_out)
     for k, f in enumerate(files):
-        src = re.search(r"(?m)^copy from (.+)$", f)
-        dst = re.search(r"(?m)^copy to (.+)$", f)
+        src = re.search(r"(?m)^(?:copy|rename) from (.+)$", f)   # -C also detects renames: a pure
+        dst = re.search(r"(?m)^(?:copy|rename) to (.+)$", f)     # rename carries no content at all
         if not (src and dst):
             continue
         whole = full_copy(src.group(1), dst.group(1), left)
         COPIES.append((src.group(1), dst.group(1), whole))
         if whole:
-            full = sh(["git", "-C", str(ROOT), "diff", "--no-renames", f"{base}...{head}", "--", dst.group(1)])
+            full = sh(["git", "-c", "core.quotePath=false", "-C", str(ROOT), "diff", "--no-renames",
+                       f"{base}...{head}", "--", ":(literal)" + dst.group(1)])
+            if full.returncode != 0 or not full.stdout.strip():
+                sys.exit(f"release-audit: could not show the copy {dst.group(1)} in full; refusing to audit without it")
             files[k] = full.stdout
     chunks, cur = [], ""
     for f in (x for x in files if x):

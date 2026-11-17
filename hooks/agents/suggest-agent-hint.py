@@ -98,8 +98,34 @@ def wearing(transcript_path):
             tail = fh.read().decode("utf-8", "replace")
     except (OSError, TypeError):
         return None
-    hits = WEARING.findall(tail)
+    # Only the session's own words count: a "Wearing agent:" line inside a tool result (an email, a
+    # note) must neither unlock nor suppress the hint.
+    hits = []
+    for line in tail.splitlines():
+        try:
+            rec = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(rec, dict) or rec.get("type") != "assistant":
+            continue
+        for c in (rec.get("message") or {}).get("content") or []:
+            if isinstance(c, dict) and c.get("type") == "text":
+                hits += WEARING.findall(c.get("text") or "")
     return hits[-1] if hits else None
+
+
+def replied(transcript_path):
+    """True once the session has answered at least once. A spawned worker picks its hat in its first
+    reply, so its first prompt is the one moment a hint would steer it; after that (and in a named
+    primary session, which never prints a wearing line) hints work as for anyone."""
+    try:
+        with open(transcript_path, "rb") as fh:
+            for line in fh:
+                if b'"type":"assistant"' in line.replace(b" ", b""):
+                    return True
+    except (OSError, TypeError):
+        return False
+    return False
 
 
 def main():
@@ -117,7 +143,7 @@ def main():
     # A spawned worker picks its own hat from its name at start (CLAUDE.md § Identity step 2): until
     # its first wearing line exists, a hint would steer it off that hat. Headless runs get nothing.
     worn = wearing(data.get("transcript_path"))
-    if os.environ.get("CLAUDE_AGENT_NAME") and worn is None:
+    if os.environ.get("CLAUDE_AGENT_NAME") and not replied(data.get("transcript_path")):
         return 0
     if os.environ.get("CLAUDE_CODE_ENTRYPOINT", "").startswith("sdk"):
         return 0

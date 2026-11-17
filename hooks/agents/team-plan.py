@@ -30,6 +30,7 @@ import json
 import os
 import re
 import shlex
+import unicodedata
 import sys
 
 if sys.platform == "win32":
@@ -141,8 +142,8 @@ def check(note):
             errs.append("%s: reports to '%s', which is not another member's session" % (who, target))
         if not r["first task"]:
             errs.append("%s: no first task" % who)
-        elif any(ord(ch) < 32 or ord(ch) == 127 for ch in r["first task"]):
-            errs.append("%s: the first task holds a control character" % who)
+        elif any(unicodedata.category(ch) in ("Cc", "Cf", "Zl", "Zp") for ch in task_for(r)):
+            errs.append("%s: the task holds an invisible or control character, so what is shown would not be what is sent" % who)
         elif len(task_for(r).encode("utf-8")) > MAX_TASK:
             errs.append("%s: the first task is too long to be typed in one line (keep it under ~%d bytes)" % (who, MAX_TASK - 150))
     # de-duplicate, keep order
@@ -163,11 +164,12 @@ def surface_alive():
     return False
 
 
-def plan_hash(note):
-    """What the operator approved: every member's session, agent, tier and the exact task it will be
-    sent. Shown by `check`, required by `launch`, so a note edited after the yes is refused."""
-    _charter, rows, _h = parse(note)
-    blob = "\n".join("%s|%s|%s|%s" % (r["session"], r["agent"], r["tier"], task_for(r)) for r in rows or [])
+def plan_hash(charter, rows):
+    """What the operator approved: the charter every member reads first, and every member's session,
+    agent, tier and the exact task it will be sent. Shown by `check`, required by `launch`, computed
+    from the same parsed rows that are then sent, so a note edited after the yes is refused."""
+    blob = "\n".join(["charter|" + (charter or "")] +
+                     ["%s|%s|%s|%s" % (r["session"], r["agent"], r["tier"], task_for(r)) for r in rows or []])
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()[:12]
 
 
@@ -198,17 +200,21 @@ def write_request(path, data):
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         json.dump(data, fh, ensure_ascii=False)
-    os.replace(tmp, path)
+    try:
+        os.link(tmp, path)        # fails if the path appeared meanwhile: never replaces a request
+    finally:
+        os.unlink(tmp)
 
 
 def launch(note, approved):
     errs = check(note)
     if errs:
         return errs, []
-    if approved != plan_hash(note):
+    charter, rows, _h = parse(note)          # parsed once: these rows are hashed AND sent
+    now = plan_hash(charter, rows)
+    if approved != now:
         return ["the plan changed after it was approved, or the approval names another plan "
-                "(approved %s, plan is now %s): show it again and ask again" % (approved or "nothing", plan_hash(note))], []
-    _charter, rows, _h = parse(note)
+                "(approved %s, plan is now %s): show it again and ask again" % (approved or "nothing", now)], []
     group = os.path.splitext(os.path.basename(note))[0]
     if not surface_alive():
         # These lines are pasted into a terminal, so a task holding `$(...)`, backticks or quotes must
@@ -241,17 +247,20 @@ def main(argv):
     cmd, note = argv[0], argv[1]
     global NOTE_REF
     real, root = os.path.normcase(os.path.realpath(note)), os.path.normcase(os.path.realpath(ROOT))
-    NOTE_REF = ("~/aios/" + os.path.relpath(real, root).replace(os.sep, "/")) if real.startswith(root + os.sep) else os.path.basename(note)
+    shown = "~/aios" if root == os.path.normcase(os.path.realpath(os.path.expanduser("~/aios"))) else os.path.realpath(ROOT)
+    NOTE_REF = (shown + "/" + os.path.relpath(real, root).replace(os.sep, "/")) if real.startswith(root + os.sep) else os.path.realpath(note)
     if cmd == "check":
         errs = check(note)
         for e in errs:
             print("refused: " + e)
         if not errs:
-            _c, rows, _h = parse(note)
-            print("ok: the plan is valid. Show the operator each member's task exactly as it will be sent:")
+            charter, rows, _h = parse(note)
+            h = plan_hash(charter, rows)
+            print("ok: the plan is valid. Show the operator the charter and each member's task exactly as sent:")
+            print("  Charter: %s" % charter)
             for r in rows:
                 print("  %s (%s, %s): %s" % (r["session"], r["agent"], r["tier"], task_for(r)))
-            print("plan: %s   (launch with --approved %s only after the operator's yes to exactly this)" % (plan_hash(note), plan_hash(note)))
+            print("plan: %s   (launch with --approved %s only after the operator's yes to exactly this)" % (h, h))
         return 1 if errs else 0
     if "--approved" not in argv or argv.index("--approved") + 1 >= len(argv):
         print("refused: launch needs --approved <plan-hash>, the operator's yes to the plan `check` showed; nothing was written")

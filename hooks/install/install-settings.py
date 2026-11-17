@@ -192,19 +192,26 @@ def _ours(cmd, at):
     """True when the path holding the match at `at` is THIS framework's hooks/ folder: the text before
     `hooks/` (back to a space or quote), with ~ and $HOME expanded, resolves to ROOT. An operator's own
     ~/.claude/hooks/provenance.py, or any other tree's hooks/, is never touched."""
-    start = at
-    for q in "\"'":                       # inside quotes: the root runs back to the opening quote,
-        if cmd[:at].count(q) % 2 == 1:     # spaces and all (C:/Users/John Smith/aios)
-            start = cmd.rfind(q, 0, at) + 1
-            break
-    else:
-        while start > 0 and cmd[start - 1] not in " \t\"'":
-            start -= 1
-    root = cmd[start:at].rstrip("/\\")
-    for home in ("${HOME}", "$HOME"):
-        if root.startswith(home):
-            root = "~" + root[len(home):]
-    return bool(root) and os.path.realpath(os.path.expanduser(root)) == os.path.realpath(ROOT)
+    # Candidate starts: the nearest space or quote (an unquoted path), and the nearest opening quote of
+    # either kind (a quoted root with spaces, C:/Users/John Smith/aios). Any one resolving to ROOT wins,
+    # so nested quotes or a stray apostrophe earlier in the command do not hide this framework's path.
+    starts = set()
+    s = at
+    while s > 0 and cmd[s - 1] not in " \t\"'":
+        s -= 1
+    starts.add(s)
+    for q in "\"'":
+        i = cmd.rfind(q, 0, at)
+        if i >= 0:
+            starts.add(i + 1)
+    for start in starts:
+        root = cmd[start:at].rstrip("/\\")
+        for home in ("${HOME}", "$HOME"):
+            if root.startswith(home):
+                root = "~" + root[len(home):]
+        if root and os.path.realpath(os.path.expanduser(root)) == os.path.realpath(ROOT):
+            return True
+    return False
 
 
 def moved(cmd):

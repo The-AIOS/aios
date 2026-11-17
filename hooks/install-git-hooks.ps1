@@ -2,5 +2,6 @@
 # Re-run through -File in the same PowerShell edition, so named switches (-Decline, -Json)
 # bind as parameters: splatting @args would hand them over as plain strings.
 $t = Join-Path $PSScriptRoot 'install/install-git-hooks.ps1'
-& (Get-Process -Id $PID).Path -NoProfile -ExecutionPolicy Bypass -File $t @args
+$exe = Join-Path $PSHOME $(if ($PSVersionTable.PSEdition -eq 'Core') { 'pwsh.exe' } else { 'powershell.exe' })
+& $exe -NoProfile -ExecutionPolicy Bypass -File $t @args
 exit $LASTEXITCODE
