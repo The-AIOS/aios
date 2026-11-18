@@ -17,6 +17,9 @@ WHAT IT WIRES (SETUP §10 is the reference; tests/install-settings.test.sh keeps
   R  transcript retention -- keep session transcripts for 10 years instead of Claude Code's 30 days
      (set only when the file has no cleanupPeriodDays; an operator's own value is never changed)
 
+The summary also reports guarded hooks whose script file no longer exists (`! missing`), so an update
+that renames or removes a hook is visible instead of silently skipping it.
+
 USAGE
   install-settings.py              show what would change (default: changes nothing)
   install-settings.py --apply      back up settings.json, merge, write, read back and verify
@@ -78,6 +81,31 @@ def guard(cmd):
         return cmd
     m = SCRIPT.search(cmd)
     return "[ ! -f %s ] || %s" % (m.group(1), cmd) if m else cmd
+
+
+def guarded_path(cmd):
+    """The script path in `[ ! -f <script> ] || <cmd>`, exactly as the command spells it, or None.
+
+    Only the first bracket (the guard test) counts. SCRIPT also matches the command after `||`, so
+    calling it on the whole string would find the second path, which is the one being run, not the
+    one the shell tests for existence.
+    """
+    if not GUARDED.match(cmd):
+        return None
+    end = cmd.find(']')
+    if end < 0:
+        return None
+    m = SCRIPT.search(cmd, 0, end)
+    return m.group(1) if m else None
+
+
+def resolve_path(raw):
+    """Expand the shell spellings the guard uses (`~`, `$HOME`, `${HOME}`, quotes) for os.path."""
+    raw = raw.strip('"\'')
+    for home in ("${HOME}", "$HOME"):
+        if raw.startswith(home):
+            raw = "~" + raw[len(home):]
+    return os.path.expanduser(raw)
 
 
 def plan(platform, root, venture_guard):
@@ -304,11 +332,25 @@ def main():
                     upgrades.append((wanted[signature(cmd)], hk))
                 if signature(cmd) in wanted and moved(cmd):
                     moves.append((wanted[signature(cmd)], hk))
+    # A guarded hook whose file is gone is a silent no-op (that is the point of the guard). Report
+    # it so an update that renamed or removed a hook is visible in the dry run and in --apply.
+    missing = []
+    for event, groups in (settings.get("hooks") or {}).items():
+        for group in groups or []:
+            for hk in group.get("hooks", []) or []:
+                cmd = str(hk.get("command", ""))
+                raw = guarded_path(cmd)
+                if raw and not os.path.exists(resolve_path(raw)):
+                    missing.append((event, raw))
     status_add = "statusLine" not in settings
+    cur_status = str(settings.get("statusLine", {}).get("command", ""))
+    raw_status = guarded_path(cur_status)
+    if raw_status and not os.path.exists(resolve_path(raw_status)):
+        missing.append(("statusLine", raw_status))
     status_note = None
     status_upgrade = None
     if not status_add:
-        cur = str(settings["statusLine"].get("command", "")).strip()
+        cur = cur_status.strip()
         flat = cur.replace('"', "")
         # The form AIOS itself wrote before #292: bash + tee + claude-identity.sh cache + context-monitor.py,
         # two programs per render. Only those forms are ours to replace; anything else is the operator's.
@@ -356,6 +398,8 @@ def main():
         print("  ~ guard %s  a missing hook file is skipped instead of blocking every prompt" % key)
     for key in sorted({k for k, _ in moves}):
         print("  ~ move  %s  its file moved into a folder in hooks/ (#309); the path is updated, nothing else" % key)
+    for event, raw in missing:
+        print("  ! missing  %s  %s  this hook is being skipped; its file does not exist" % (event, raw))
     if not venture_guard:
         print("  - later C  the venture guard is added when you mount a company (/aios:company --mount)")
     if retention_add:

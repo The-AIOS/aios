@@ -59,6 +59,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-18 — A removed hook now says it is gone
+
+`hash: ` · [#334](https://github.com/The-AIOS/aios/issues/334)
+
+> **What you can now do.** Update past a hook that was renamed or removed and see which hooks are being skipped, instead of finding out weeks later that a guard turned the failure into silence.
+
+**A missing hook file is reported, not hidden.** The `[ ! -f … ] || …` guard correctly keeps a missing hook from blocking every prompt, but it also made the hook a silent no-op: the installer said "Done" and listed nothing about the file that no longer existed. The installer's dry run and `--apply` now print `! missing  <event>  <path>  this hook is being skipped; its file does not exist` for every guarded hook and the status line whose file is gone, so `/aios:update` reads it aloud.
+
+**Action required:** none. Start a new Claude session after the update so the report appears on the next run of `install-settings.py`.
+
 ## 2026-11-17 — Agents speak up mid-session, teams from one sentence, and a tidy hooks/ folder
 
 `hash: 95088b4 · 4dae12a` · [#317](https://github.com/The-AIOS/aios/issues/317) · [#274](https://github.com/The-AIOS/aios/issues/274) · [#314](https://github.com/The-AIOS/aios/issues/314) · [#309](https://github.com/The-AIOS/aios/issues/309) · [#323](https://github.com/The-AIOS/aios/issues/323) · [#316](https://github.com/The-AIOS/aios/issues/316) · [#319](https://github.com/The-AIOS/aios/issues/319) · [#321](https://github.com/The-AIOS/aios/pull/321) · [#325](https://github.com/The-AIOS/aios/issues/325) · [#326](https://github.com/The-AIOS/aios/issues/326) · [#327](https://github.com/The-AIOS/aios/issues/327) · [#328](https://github.com/The-AIOS/aios/issues/328)

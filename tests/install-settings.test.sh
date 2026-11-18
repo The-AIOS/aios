@@ -233,5 +233,31 @@ cp "$S" "$T/custom.json"; out=$(run --platform posix --apply)
 cmp -s "$S" "$T/custom.json" >/dev/null 2>&1 || grep -q 'my-own-monitor' "$S"
 grep -q 'my-own-monitor' "$S" && case "$out" in *"~ update B"*) no "a custom line that feeds the cache was offered as an update" ;; *) ok "a custom status line that feeds the cache is kept, unflagged" ;; esac || no "custom line replaced"
 
+echo "── #334: a guarded hook whose file is gone is reported, not silently skipped ──"
+S="$T/missing.json"
+DANGLING="$T/empty-home/aios/hooks/context/no-such-hook.py"
+"$PYBIN" - "$S" "$DANGLING" <<'PY' && ok "fixture with a dangling guarded hook written" || no "fixture write" "$(cat "$S")"
+import json, sys
+d = {
+  "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "[ ! -f %s ] || python3 %s" % (sys.argv[2], sys.argv[2])}]}]},
+  "statusLine": {"type": "command", "command": "[ ! -f %s ] || python3 %s" % (sys.argv[2], sys.argv[2])},
+}
+json.dump(d, open(sys.argv[1], "w"))
+PY
+out=$(run --platform posix)
+case "$out" in
+  *"! missing  UserPromptSubmit  $DANGLING"*"! missing  statusLine  $DANGLING"*) ok "dry run names the dangling file for the hook and the status line" ;;
+  *) no "no missing lines for the dangling hook" "$out" ;;
+esac
+case "$out" in *'this hook is being skipped'*) ok "the line says the hook is being skipped" ;; *) no "no skip explanation" "$out" ;; esac
+mkdir -p "$T/live-home/aios/hooks/context"; : > "$T/live-home/aios/hooks/context/live.py"
+LIVE="$T/live-home/aios/hooks/context/live.py"
+"$PYBIN" - "$S" "$LIVE" <<'PY' && ok "control fixture with a present hook written" || no "control fixture write"
+import json, sys
+json.dump({"hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": "[ ! -f %s ] || python3 %s" % (sys.argv[2], sys.argv[2])}]}]}}, open(sys.argv[1], "w"))
+PY
+out=$(run --platform posix)
+case "$out" in *"! missing"*) no "a present hook was reported missing" "$out" ;; *) ok "a present guarded hook is not reported missing" ;; esac
+
 echo "── RESULT: $PASS passed, $FAIL failed ──"
 [ "$FAIL" = 0 ]
