@@ -83,6 +83,7 @@
 - **`/aios:update` no longer stops on the sandbox** (#316): its scratch files live in the vault's `.aios-run/`, not in `/tmp`.
 - **A symlinked `~/aios` is searched properly** (#319): the update's leftover sweep had silently checked nothing there.
 - **The image model is a setting** (#321, thanks to its contributor): `NANO_BANANA_MODEL`, or a per-call `model`.
+- **A hook that is being skipped now says so** (#334, a patch after the release, thanks to its reporter). Every AIOS hook is guarded so a missing file is skipped instead of blocking every prompt, and nothing said when that happened. `install-settings.py` now prints `! link` when `~/aios` does not lead to the framework (a clone elsewhere with no link: every hook was off, provenance included) and `! missing` for each hook or status line whose file is gone; `/aios:update` relays these lines on every run (Step 6.85). Nothing to do unless it prints one.
 - **A team's reports no longer overwrite each other** (#331, a patch after the release): crews named their report to the lead after the lead, so two arriving together kept only one. Each report is now named after its sender. Nothing to do: the next team you launch uses it.
 
 **Action required** — check each first; do only what applies:
