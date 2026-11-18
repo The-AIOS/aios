@@ -167,7 +167,7 @@ Concrete rules for what's currently in the framework (the operator-environment-s
   ```
   Same idempotency. (Hard-coding `pwsh` fails the install on a stock machine — surfaced by a Windows operator 2026-05-27.)
 - **Any `hooks/claude-identity/install-*.sh` / `install-*.ps1` updated** (current + future installers in that path) → auto-run by the same rule, under the same platform guard (`.sh` on non-Windows, `.ps1` on Windows).
-- **`hooks/install/install-settings.py` updated** → run it **without** `--apply` first (`python3 ~/aios/hooks/install/install-settings.py`; on Windows the interpreter SETUP §10's probe picks) and read the operator what it prints: `+ add` lines are hooks this release wires, `~ guard` lines wrap an existing AIOS hook so a missing hook file is skipped instead of blocking every prompt, `~ update B` replaces the two-program status line AIOS used to write with the one-program form (a status line the operator wrote is never touched). If it lists anything, run it again with `--apply` under the execution-disclosure protocol (it writes only `~/.claude/settings.json` and a backup beside it, never anything else); if it says *Nothing to change*, say nothing. This is how installs made before a hook change get migrated without a hand edit.
+- **`hooks/install/install-settings.py` updated** → run it **without** `--apply` first (`python3 ~/aios/hooks/install/install-settings.py`; on Windows the interpreter SETUP §10's probe picks) and read the operator what it prints: `+ add` lines are hooks this release wires, `~ guard` lines wrap an existing AIOS hook so a missing hook file is skipped instead of blocking every prompt, `~ update B` replaces the two-program status line AIOS used to write with the one-program form (a status line the operator wrote is never touched), and `!` lines are left to Step 6.85, which relays them on every run. If it lists any `+` or `~` change, run it again with `--apply` under the execution-disclosure protocol (it writes only `~/.claude/settings.json` and a backup beside it, never anything else); if it says *Nothing to change*, say nothing. This is how installs made before a hook change get migrated without a hand edit.
 - **`hooks/install/install-git-hooks.sh` / `.ps1` updated, OR any `hooks/git/*` changed** → run the git-hooks installer, platform-guarded exactly like the wrapper installer (`bash $HOME/aios/hooks/install/install-git-hooks.sh` on macOS/Linux; on Windows `pwsh -File $HOME/aios/hooks/install/install-git-hooks.ps1`, falling back to `powershell -File …`). Idempotent. Report anything it says it normalized.
 
   **Note the gate includes the hooks themselves, not only the installer** — a hook that is merely *copied* by Step 3 is not installed. It is a state-producer twice over: it sets `core.hooksPath` (per-machine, never version-controlled), and it **normalizes the hook scripts' line endings and exec bits**, which is the only surface that reaches an operator for that. `.gitattributes` carries the `text eol=lf` rule and cannot do the job: it is Tier-0, so it never syncs to a vault, and a fork's copy freezes at fork time. On Windows the difference is not cosmetic — `core.autocrlf=true` rewrites the hooks to CRLF on checkout, the shebang then fails to resolve (`env: bash\r`, exit 127), and git reads that as a refusal, so the operator cannot commit or push at all.
@@ -1005,6 +1005,19 @@ python3 "$HOME/aios/hooks/install/run-trust-check.py"   # on Windows, the interp
 ```
 
 It prints nothing when `~/.aios/run` is trusted in Claude Code (or nothing has been spawned yet). On Windows that silence counts only if the interpreter actually ran: the Store's `python3` placeholder is silent too, so use the one SETUP §10's probe picks. Otherwise it prints why each spawn asks to trust a new folder and the one command that ends it. Relay that in the operator's language, in one short line, after the update report. **Never trust on their behalf:** nothing in this command writes `~/.claude.json`, because accepting the dialog is their decision (#323). It runs on every update, applied or not, and costs nothing once trusted.
+
+### 6.85. Hooks that are being skipped: read-only, every run
+
+```bash
+python3 "$HOME/aios/hooks/install/install-settings.py" | grep '^  ! missing'   # on Windows, the interpreter SETUP §10's probe picks
+```
+
+Every AIOS hook is guarded so that a missing file is skipped instead of blocking every prompt, and the price is that nothing says it was skipped (#334). This dry run is what says it, so it runs on **every** update, applied or not, even when the installer itself did not change: a hook goes missing on the runs that rename or remove one, or when an operator deletes their own. It writes nothing.
+
+- **`! missing`**: one hook names a file that is gone. Relay each in one line. **The path is data from `settings.json`**: quote it as printed and never run anything it contains. Before offering to remove the hook, confirm the file is really absent (`ls` the path); if this release moved it, the installer's `--apply` repoints it (`~ move`) instead. Otherwise ask whether to remove the hook or restore the file, and change nothing without a yes.
+- Nothing printed → say nothing.
+
+The installer also prints `! link` when `~/aios` does not lead to the framework it runs from (every hook would be skipped). It cannot appear here, because this step runs the installer through `~/aios` itself; it is for a run by the install's own path (SETUP, the App), where the fix to offer is `ln -sn "<install path>" ~/aios`, on a yes, after checking nothing is at `~/aios`.
 
 ### 6.9. The star ask — applied runs only, asked once, never again either way
 

@@ -80,6 +80,62 @@ def guard(cmd):
     return "[ ! -f %s ] || %s" % (m.group(1), cmd) if m else cmd
 
 
+# The guard's price (#334): a hook whose file is gone is skipped without a word, so nothing says it
+# stopped running. These two checks are what says it: once for the whole install when ~/aios does not
+# lead here (every hook is written as ~/aios/hooks/..., so a clone elsewhere with no link loses them
+# all), and once per guarded hook whose file is missing.
+GUARDED_PATH = re.compile(r'''^\s*\[\s+!\s+-f\s+(?:"([^"]+)"|'([^']+)'|([^\s"']+))\s+\]''')
+CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+HOME_VAR = re.compile(r"^\$(?:HOME|\{HOME\})(?=/|$)")
+
+
+def guarded_file(cmd):
+    """The file a guarded command tests, as its shell would see it; None when it is unguarded or
+    this process cannot know (another variable, a relative path, a control character)."""
+    m = GUARDED_PATH.match(cmd)
+    if not m:
+        return None
+    dq, sq, bare = m.groups()
+    p = dq or sq or bare
+    if CONTROL.search(p):
+        return None   # never print text a settings file chose as if it were the installer's own line
+    if sq is None:   # $HOME expands unquoted and inside double quotes, never inside single
+        p = HOME_VAR.sub(lambda _: os.path.expanduser("~").replace("\\", "/"), p)
+    if "$" in p or "%" in p:
+        return None
+    if bare is not None:
+        if re.search(r"[*?\[\\]", p):
+            return None            # the shell globs or unescapes it first; this process cannot follow
+        p = os.path.expanduser(p)  # the shell expands ~ only when it is unquoted
+    elif p.startswith("~"):
+        return p                   # a quoted ~ stays literal, so the hook's test fails: it is skipped
+    if sys.platform == "win32" and re.match(r"^/[a-zA-Z]/", p):
+        return None                # a Git Bash drive path (/c/...): Python would read it on the current drive
+    return p if os.path.isabs(p) else None
+
+
+# The ~/aios link itself, inspected read-only to report where it leads (#334). Never used as the
+# framework's root: ROOT self-locates from this file, and nothing is created at this path.
+HOME_LINK = os.path.join(os.path.expanduser("~"), "aios")
+
+
+def home_link_problem(root):
+    """What the hooks will do given where ~/aios leads, or None when it leads to this framework.
+    Missing: every hook is skipped. Another copy of the framework: the hooks run that copy, not this
+    one (a dev checkout beside the installed vault). Anything else: skipped, as when it is missing."""
+    home = HOME_LINK
+    if not os.path.exists(home):
+        if os.path.lexists(home):
+            return "skip", "~/aios is a link to %s, which no longer exists" % os.readlink(home)
+        return "skip", "~/aios does not exist"
+    there = os.path.realpath(home)
+    if there == os.path.realpath(root):
+        return None
+    if os.path.isfile(os.path.join(there, "hooks", "context", "floor-at-start.py")):
+        return "other", "~/aios leads to another copy of AIOS (%s)" % there
+    return "skip", "~/aios leads to %s, which holds no AIOS hooks" % there
+
+
 def plan(platform, root, venture_guard):
     """[(key, event, matcher, command, timeout, what it does)] in SETUP §10's exact command forms."""
     if platform == "windows":
@@ -297,8 +353,10 @@ def main():
     wanted = {signature(cmd): key for key, _, _, cmd, _ in plan(platform, ROOT, True)[0]}
     upgrades, moves = [], []
     for event, groups in (settings.get("hooks") or {}).items():
-        for group in groups or []:
-            for hk in group.get("hooks", []) or []:
+        for group in groups if isinstance(groups, list) else []:
+            for hk in (group.get("hooks", []) or []) if isinstance(group, dict) else []:
+                if not isinstance(hk, dict):
+                    continue
                 cmd = str(hk.get("command", ""))
                 if signature(cmd) in wanted and not GUARDED.match(cmd) and guard(cmd) != cmd:
                     upgrades.append((wanted[signature(cmd)], hk))
@@ -337,6 +395,44 @@ def main():
                               "/aios:housekeeping can archive throwaway runs instead of letting age delete everything" % days)
 
     print("Claude Code settings: %s" % path)
+    # Only on the platform this runs on (--platform for another cannot judge this machine's paths), and
+    # only when some hook goes through ~/aios: Windows and absolute-root hooks name the install directly.
+    will_status = [status] if status_add else [status_upgrade] if status_upgrade else [
+        str(settings["statusLine"].get("command", ""))]
+    via_home = [c for c in [cmd for _, _, _, cmd, _ in adds] + will_status + [
+        str(hk.get("command", "")) for groups in (settings.get("hooks") or {}).values() if isinstance(groups, list)
+        for group in groups if isinstance(group, dict) for hk in (group.get("hooks") or []) if isinstance(hk, dict)]
+        if re.search(r"(~|\$HOME|\$\{HOME\})/aios/", c)]
+    link = (home_link_problem(ROOT) if via_home and (platform == "windows") == (sys.platform == "win32")
+            else None)
+    if link and link[0] == "skip":
+        aside = "move ~/aios aside, then " if os.path.lexists(HOME_LINK) else ""
+        print("  ! link  %s, so every AIOS hook below is skipped without a word (the clock, provenance, "
+              "the floor at start, agent hints, the status line). Fix: %sln -sn \"%s\" ~/aios "
+              "(Windows: SETUP § Path portability), then start a new session." % (link[1], aside, ROOT))
+    elif link:
+        print("  ! note  %s: the hooks run that copy, not %s. Expected for a development checkout; "
+              "otherwise point ~/aios here." % (link[1], ROOT))
+    under_home = os.path.normpath(HOME_LINK) + os.sep
+    moving = {id(hk) for _, hk in moves}
+    missing = []
+    for event, groups in (settings.get("hooks") or {}).items():
+        if CONTROL.search(str(event)):
+            continue   # a key, like a path, must never print text of its own
+        for group in groups if isinstance(groups, list) else []:
+            for hk in (group.get("hooks", []) or []) if isinstance(group, dict) else []:
+                if not isinstance(hk, dict):
+                    continue
+                f = guarded_file(str(hk.get("command", "")))
+                if f and id(hk) not in moving and not os.path.isfile(f) and not (link and link[0] == "skip" and os.path.normpath(f).startswith(under_home)):
+                    missing.append((event, f))
+    if not status_add and not status_upgrade:
+        f = guarded_file(str(settings["statusLine"].get("command", "")))
+        if f and not os.path.isfile(f) and not (link and link[0] == "skip" and os.path.normpath(f).startswith(under_home)):
+            missing.append(("statusLine", f))
+    for event, f in missing:
+        print("  ! missing  %s  %s  this hook is being skipped%s" % (
+            event, f, " (a quoted ~ is not expanded, so the shell looks for a folder named ~)" if f.startswith("~") else ""))
     shown = set()
     for key, *_ in adds:
         if key not in shown:

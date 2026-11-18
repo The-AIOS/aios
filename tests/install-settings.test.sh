@@ -233,5 +233,74 @@ cp "$S" "$T/custom.json"; out=$(run --platform posix --apply)
 cmp -s "$S" "$T/custom.json" >/dev/null 2>&1 || grep -q 'my-own-monitor' "$S"
 grep -q 'my-own-monitor' "$S" && case "$out" in *"~ update B"*) no "a custom line that feeds the cache was offered as an update" ;; *) ok "a custom status line that feeds the cache is kept, unflagged" ;; esac || no "custom line replaced"
 
+# #334: the guard turns a missing hook file into a silent skip, so the installer must say when it
+# happens. Fixture home + framework; each case fails without the check (no `!` line is printed).
+G="$T/g334"; mkdir -p "$G/home" "$G/fw/hooks/context" "$G/fw/hooks/claude-identity" "$G/other/hooks/context"
+touch "$G/fw/hooks/context/floor-at-start.py" "$G/other/hooks/context/floor-at-start.py"
+cat > "$G/s.json" <<'J'
+{"hooks":{"UserPromptSubmit":[{"hooks":[
+ {"type":"command","command":"[ ! -f ~/aios/hooks/context/no-such-hook.py ] || python3 ~/aios/hooks/context/no-such-hook.py"},
+ {"type":"command","command":"[ ! -f \"$HOME/aios/hooks/context/floor-at-start.py\" ] || python3 \"$HOME/aios/hooks/context/floor-at-start.py\""},
+ {"type":"command","command":"[ ! -f ~/aios/hooks/floor-at-start.py ] || python3 ~/aios/hooks/floor-at-start.py"}]}]},
+ "statusLine":{"type":"command","command":"[ ! -f ~/aios/hooks/claude-identity/gone.py ] || python3 ~/aios/hooks/claude-identity/gone.py"}}
+J
+g(){ HOME="$G/home" AIOS_ROOT="$G/fw" $PYBIN "$H" --settings "$G/s.json" --platform posix; }
+out=$(g)
+case "$out" in *"! link  ~/aios does not exist"*"ln -s"*) ok "no ~/aios: one line says every hook is skipped, with the fix" ;; *) no "no ~/aios link line" "$out" ;; esac
+case "$out" in *"! missing"*"aios/hooks"*) no "per-hook lines repeat what the link line already says" "$out" ;; *) ok "no ~/aios: the hooks under it are not listed one by one" ;; esac
+ln -s "$G/fw" "$G/home/aios"; out=$(g)
+case "$out" in *"! link"*) no "a correct ~/aios link was flagged" "$out" ;; *) ok "a correct ~/aios link prints no link line" ;; esac
+case "$out" in *"! missing  UserPromptSubmit  "*"no-such-hook.py  this hook is being skipped"*) ok "a guarded hook whose file is gone is named" ;; *) no "dangling hook not named" "$out" ;; esac
+case "$out" in *"! missing  statusLine  "*"gone.py"*) ok "a guarded status line whose file is gone is named" ;; *) no "dangling status line not named" "$out" ;; esac
+case "$out" in *"floor-at-start.py  this hook"*) no "a hook whose file exists (quoted \$HOME form) was flagged" "$out" ;; *) ok "a hook whose file exists is not flagged, quoted \$HOME form included" ;; esac
+case "$out" in *"hooks/floor-at-start.py  this hook"*) no "a hook the installer is about to move was flagged as missing" "$out" ;; *) ok "a hook ~ move repoints is not reported missing" ;; esac
+rm "$G/home/aios"; ln -s "$G/other" "$G/home/aios"; out=$(g)
+case "$out" in *"! note  ~/aios leads to another copy of AIOS"*) ok "~/aios on another copy: a note, not a skip warning" ;; *) no "other-copy note missing" "$out" ;; esac
+case "$out" in *"! link "*) no "another copy was reported as skipping every hook" "$out" ;; *) ok "another copy is not reported as skipping" ;; esac
+# Review round: quoting forms, forged lines, odd shapes.
+rm "$G/home/aios"; ln -s "$G/fw" "$G/home/aios"; touch "$G/fw/hooks/context/single.py"
+cat > "$G/q.json" <<'J'
+{"hooks":{"Stop":[{"hooks":[
+ {"type":"command","command":"[ ! -f \"$HOME/aios/hooks/context/absent.py\" ] || python3 \"$HOME/aios/hooks/context/absent.py\""},
+ {"type":"command","command":"[ ! -f 'HOMEDIR/aios/hooks/context/single.py' ] || true"},
+ {"type":"command","command":"[ ! -f \"/nope\n  ! link  forged line\" ] || true"}]}],
+ "Odd":{"hooks":[]}, "Odd2":[{"hooks":["echo hi"]}], "Odd3":["x"]}}
+J
+sed -i.bak "s#HOMEDIR#$G/home#" "$G/q.json"
+out=$(HOME="$G/home" AIOS_ROOT="$G/fw" $PYBIN "$H" --settings "$G/q.json" --platform posix 2>&1); rc=$?
+case "$out" in *"! missing  Stop  "*"absent.py"*) ok "a double-quoted \$HOME hook whose file is gone is named" ;; *) no "quoted \$HOME missing hook not named" "$out" ;; esac
+case "$out" in *"single.py  this hook"*) no "a single-quoted path that exists was flagged" "$out" ;; *) ok "a single-quoted path that exists is not flagged" ;; esac
+case "$out" in *"forged line"*) no "a path with a newline printed a line of its own" "$out" ;; *) ok "a path with a control character never prints text of its own" ;; esac
+case "$out" in *Traceback*) no "odd hook shapes crash the installer" "$out" ;; *) ok "odd hook shapes (not lists, not dicts) do not crash it" ;; esac
+# Second review round.
+cat > "$G/r2.json" <<J
+{"hooks":{"Stop":[{"hooks":[
+ {"type":"command","command":"[ ! -f '$G/fw/hooks/context/single-absent.py' ] || true"},
+ {"type":"command","command":"[ ! -f ~/aios/hooks/context/*.py ] || true"},
+ {"type":"command","command":"[ ! -f \"~/aios/hooks/context/floor-at-start.py\" ] || true"}]}],
+ "Stop\n  ! missing  forged by event":[{"hooks":[{"type":"command","command":"[ ! -f /nope/x.py ] || true"}]}]}}
+J
+out=$(HOME="$G/home" AIOS_ROOT="$G/fw" $PYBIN "$H" --settings "$G/r2.json" --platform posix 2>&1)
+case "$out" in *"! missing  Stop  "*"single-absent.py"*) ok "a single-quoted path whose file is gone is named" ;; *) no "single-quoted missing path not named" "$out" ;; esac
+case "$out" in *'*.py  this hook'*) no "a glob path the shell expands was flagged" "$out" ;; *) ok "a path the shell globs is not judged" ;; esac
+case "$out" in *"floor-at-start.py  this hook is being skipped (a quoted ~ is not expanded"*) ok "a quoted ~ is named with why the shell skips it" ;; *) no "quoted ~ not explained" "$out" ;; esac
+case "$out" in *"forged by event"*) no "an event key printed a line of its own" "$out" ;; *) ok "an event key with a control character prints nothing" ;; esac
+# Absolute-root hooks with no ~/aios at all: every hook runs, so no link line.
+rm -f "$G/home/aios"; ABS="$G/fw/hooks"
+HOME="$G/home" AIOS_ROOT="$G/fw" $PYBIN "$H" --settings "$G/abs.json" --platform posix --apply >/dev/null 2>&1
+$PYBIN - "$G/abs.json" "$G/home" "$G/fw" <<'PY'
+import json,sys
+p,home,fw=sys.argv[1:]; s=open(p).read().replace("~/aios",fw).replace("$HOME/aios",fw); open(p,"w").write(s)
+PY
+out=$(HOME="$G/home" AIOS_ROOT="$G/fw" $PYBIN "$H" --settings "$G/abs.json" --platform posix 2>&1)
+case "$out" in *"! link"*) no "absolute-root hooks with no ~/aios got a link warning" "$out" ;; *) ok "absolute-root hooks with no ~/aios get no link warning" ;; esac
+# A dangling ~/aios link: say so, and offer to move it aside before ln -sn.
+ln -s "$G/gone" "$G/home/aios"; out=$(HOME="$G/home" AIOS_ROOT="$G/fw" $PYBIN "$H" --settings "$G/s.json" --platform posix 2>&1)
+case "$out" in *"! link  ~/aios is a link to"*"which no longer exists"*"move ~/aios aside, then ln -sn"*) ok "a dangling ~/aios link is named, with move-aside then ln -sn" ;; *) no "dangling link not handled" "$out" ;; esac
+rm -f "$G/home/aios"
+
+grep -q '^### 6\.85\. Hooks that are being skipped' "$ROOT/plugins/aios/commands/update.md" && grep -q "install-settings.py\" | grep '^  ! missing'" "$ROOT/plugins/aios/commands/update.md" \
+  && ok "/aios:update relays the ! lines on every run (Step 6.85)" || no "update.md lacks the every-run Step 6.85"
+
 echo "── RESULT: $PASS passed, $FAIL failed ──"
 [ "$FAIL" = 0 ]
