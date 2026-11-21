@@ -59,6 +59,26 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-22 — Leftover notes stop becoming tasks, a skipped hook says so, and the security docs say what leaves your machine
+
+`hash: 16f9341 · 2e76bbb` · [#337](https://github.com/The-AIOS/aios/issues/337) · [#334](https://github.com/The-AIOS/aios/issues/334) · [#338](https://github.com/The-AIOS/aios/issues/338) · [#339](https://github.com/The-AIOS/aios/issues/339) · [#340](https://github.com/The-AIOS/aios/issues/340)
+
+> **What you can now do.** Close a session without its leftover notes coming back tomorrow as tasks you never set. See, when you run the installer or update, any hook that has quietly stopped running. Read in one place what leaves your machine and how to remove AIOS completely.
+
+**A session's leftover notes stop becoming tomorrow's tasks** (#337). `/close-session` wrote whatever a session left open as checkboxes, `/close-day` never resolved them, and `/today` carried every open checkbox, so an observation, a fact or an FYI came back each morning as a task, and its carry count climbed until you were asked for a reason. Now open threads are plain bullets tagged `task`, `follow-up` or `note`. `/close-day` carries, routes or drops each one: it decides the clear cases, asks you once about the doubtful ones together, and never carries a doubtful one when nobody is there to answer. `/today` no longer reads session blocks once the day has a Close of Day. Session blocks written before this update, with checkboxes, are triaged the same way.
+
+**A hook that is being skipped now says so** (#334, thanks to its reporter, and to the author of #335, who sent the same fix independently). Every AIOS hook is guarded so that a missing file is skipped instead of blocking every prompt, and nothing said when that happened. `install-settings.py` now prints `! missing` for each hook or status line whose file is gone, and `! link` when `~/aios` does not lead to the framework (every hook would be off, provenance included). `/aios:update` relays the missing lines on every run (Step 6.85). Paths and keys that contain control characters are never printed, so a settings file cannot forge one of these lines.
+
+**The security docs say what they can back up** (#338, #339, #340).
+- `SECURITY.md` opens with **what leaves your machine**: what a session reads goes to Anthropic as model input, and how long it is kept follows your Claude account's terms, not AIOS.
+- A new **Uninstall** section lists everything AIOS adds and ends with revoking access at each provider, because deleting a file revokes nothing. A guided `/aios:uninstall` is still to come (#339 stays open for it).
+- `FORTRESS.md` stops claiming the Bash sandbox is on by default (check yours with `/sandbox`) and says deleting the Google credentials needs a revoke too.
+- `README.md` and `AGENTS.md` ask anyone, or any AI, assessing safety to read `SECURITY.md` and `FORTRESS.md` first.
+
+**Action required** — check each first; do only what applies:
+1. **`hooks/install/install-settings.py` changed, so the update runs it** without `--apply` first and reads you what it prints. New this time: `! missing` lines for hooks whose file is gone (Step 6.85 then asks, per hook, whether to remove it or restore the file; nothing changes without your yes) and, only when run by the install's own path, `! link`.
+2. **Start a new Claude session**, last, so the updated `/close-session`, `/close-day` and `/today` load.
+
 ## 2026-11-17 — Agents speak up mid-session, teams from one sentence, and a tidy hooks/ folder
 
 `hash: 95088b4 · 4dae12a` · [#317](https://github.com/The-AIOS/aios/issues/317) · [#274](https://github.com/The-AIOS/aios/issues/274) · [#314](https://github.com/The-AIOS/aios/issues/314) · [#309](https://github.com/The-AIOS/aios/issues/309) · [#323](https://github.com/The-AIOS/aios/issues/323) · [#316](https://github.com/The-AIOS/aios/issues/316) · [#319](https://github.com/The-AIOS/aios/issues/319) · [#321](https://github.com/The-AIOS/aios/pull/321) · [#325](https://github.com/The-AIOS/aios/issues/325) · [#326](https://github.com/The-AIOS/aios/issues/326) · [#327](https://github.com/The-AIOS/aios/issues/327) · [#328](https://github.com/The-AIOS/aios/issues/328)
@@ -83,7 +103,6 @@
 - **`/aios:update` no longer stops on the sandbox** (#316): its scratch files live in the vault's `.aios-run/`, not in `/tmp`.
 - **A symlinked `~/aios` is searched properly** (#319): the update's leftover sweep had silently checked nothing there.
 - **The image model is a setting** (#321, thanks to its contributor): `NANO_BANANA_MODEL`, or a per-call `model`.
-- **A hook that is being skipped now says so** (#334, a patch after the release, thanks to its reporter). Every AIOS hook is guarded so a missing file is skipped instead of blocking every prompt, and nothing said when that happened. `install-settings.py` now prints `! link` when `~/aios` does not lead to the framework (a clone elsewhere with no link: every hook was off, provenance included) and `! missing` for each hook or status line whose file is gone; `/aios:update` relays these lines on every run (Step 6.85). Nothing to do unless it prints one.
 - **A team's reports no longer overwrite each other** (#331, a patch after the release): crews named their report to the lead after the lead, so two arriving together kept only one. Each report is now named after its sender. Nothing to do: the next team you launch uses it.
 
 **Action required** — check each first; do only what applies:
