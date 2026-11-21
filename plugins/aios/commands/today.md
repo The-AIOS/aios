@@ -259,6 +259,11 @@ Place triage decisions at the top of Parking lot, not buried in Rhythm.
   - **`target` > 14 days out** → carry is **hidden from daily notes entirely**. The item stays alive in: (1) the relevant project note's to-do list, (2) the project's `_index.md` snapshot. It re-enters the daily note flow when the target crosses the 14-day horizon.
   - **`/close-day` companion rule**: when triaging carries, if a carry has `waiting-on-date: YYYY-MM-DD` with target >14 days out, route it to the project note's to-do list (not "Carries forward" in the daily note). The carry is "filed" rather than "carried" — same persistence, different surface.
 
+- **`quiet-until` carries are silent until their date** (#341). A deferral is an instruction about attention, not only a date: *"table it"*, *"later"*, *"not until the 30th"* mean **don't bring it up**, where `waiting-on-date` means *blocked, remind me*. A carry tagged `quiet-until: YYYY-MM-DD`:
+  - **before the date** → appears **nowhere** visible: not in Rhythm, Parking lot (no 📅 line), Horizon, asides, the Agents section or the Google Tasks preview. It is not counted and never triaged. It stays alive in one of two places, never dropped: its project note's to-dos when one fits, otherwise the note's hidden quiet block at the very end, an Obsidian comment that reading view does not show: `%% quiet-until (surfaced by /today on its date)` then one `- [ ] {task} _(quiet-until: YYYY-MM-DD, from: {origin})_` line each, then `%%`. Copy the previous note's quiet block forward whole.
+  - **on or after the date** → it surfaces once as a normal task (Rhythm when it fits today, otherwise Parking lot), without the `quiet-until` tag and with its carry count where it left off.
+  - The drop check (clean pass step 2) counts a quiet carry as placed when it is in today's quiet block or its project note.
+
 - **Window-cadence carries are not drift.** Carries with the triad — explicit far-out `target` + tagged reason (e.g. `blocked-on-X-with-energy`) + window-cadence pacing (recurring slots toward the target, e.g. Fri/Sat 6 hrs/wk toward a Q3 ship) — are properly paced, NOT drift. Count is the audit trail of windows-not-yet-used. Display neutrally: `_(carried ×N, target: YYYY-Qn, sequenced via {window})`. NO 🎯 / 🔴 / decide-or-park language. NO growth-edge invocation. The carry-without-deciding escalation applies to UNTAGGED, no-target, no-window carries only.
 - **Stale project snapshot refresh:** For any project flagged as stale in Message 1b (snapshot >7 days old), read just the `## To-Dos` section from the project note and update the `_index.md` snapshot. This prevents to-dos from going invisible in untouched projects.
 - Count streaks (consecutive days of study, writing, shipping)
@@ -390,7 +395,7 @@ If USER.md has no `### Growth routines` section: include one gentle line: "No gr
 ## Parking lot
 {Carried items from yesterday + today's overflow, in one place. Every carried item shows `_(carried ×N, reason: {tag})_` — the count is the audit trail, the reason is the triage. Items without a carry count are new today (overflow from Rhythm or backlog). Order: escalations first (🔴 stale/untagged ×10+), then untagged warnings (⚠️ ×6-9 asking for reason), then tagged carries (no escalation — the reason justifies them), then normal carries, then new overflow. No cap — every carried item must land here if it wasn't placed in Rhythm. This section IS the receipt that nothing was dropped.}
 - [ ] 🔴 {task} _(carried ×N, reason stale)_ — **DECIDE: retag / park**
-- [ ] ⚠️ {task} _(carried ×N, no reason)_ — **PICK:** `strategic-deferral` / `blocked-on-{who}` / `needs-challenge` / `waiting-on-date` / `park`
+- [ ] ⚠️ {task} _(carried ×N, no reason)_ — **PICK:** `strategic-deferral` / `blocked-on-{who}` / `needs-challenge` / `waiting-on-date` / `quiet-until {date}` / `park`
 - [ ] {task} _(carried ×N, strategic-deferral)_
 - [ ] {task} _(carried ×N, blocked-on-{name})_
 - [ ] {task} _(new today, overflow)_
