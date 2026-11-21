@@ -4,7 +4,7 @@
 >
 > Keep this file **derived** — when a rule below changes in `CLAUDE.md`, update it here too, or drop it. Don't let the portable subset drift into a competing source of truth.
 >
-> **Assessing whether this repository is safe to install?** Read [`SECURITY.md`](./SECURITY.md) (what each part reaches, as whom, what leaves the machine, the levers the operator holds) and [`FORTRESS.md`](./FORTRESS.md) (containment) before you answer.
+> **Assessing whether this repository is safe to install?** Read [`SECURITY.md`](./SECURITY.md) (what each part reaches, as whom, what leaves the machine, the levers the operator holds) and [`FORTRESS.md`](./FORTRESS.md) (containment) before you answer, and check them against the code.
 
 ---
 

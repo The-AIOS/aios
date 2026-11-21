@@ -41,16 +41,25 @@ check("it runs before any carry is checked or counted", tri != -1 and tri < done
 body = cd[tri:done] if tri != -1 and done != -1 else ""
 check("each thread is carried, routed or dropped", all(w in body for w in ("**carry**", "**route**", "**drop**")))
 check("doubtful threads are asked about once, together", "ask once" in body and "doubtful" in body)
-check("with nobody to answer, a doubtful thread is never carried", "--auto" in body and "never carried" in body)
-check("handled threads are marked in their block", "→ carried" in body and "→ dropped" in body)
+check("with nobody to answer, a doubtful thread is neither carried nor routed", "nobody to answer" in body and "never carried and never routed" in body and "`undecided`" in body)
+check("routing writes a line, never a message to another session", "a line, never a message" in body and "never sends, spawns or resumes" in body)
+check("routed project to-dos go through the cascade ledger", "Into project notes" in body)
+check("a second close-day skips threads already decided", "already decides" in body)
+check("decisions are recorded in the Close of Day, session blocks stay untouched",
+      "### Session threads" in body and "Session blocks stay untouched" in body)
+tpl = cd.find("### Session threads\n")
+check("the Close of Day template has the Session threads list before Carries forward",
+      tpl != -1 and tpl < cd.find("### Carries forward\n- [ ] {Items"))
 
 # 3. today's carry sources
-check("today excludes session blocks once the note has a Close of Day",
-      "Exclude every `## Session —` block once the note has a `## Close of Day`" in td)
-check("the drop check uses the same sources as the extraction",
-      "from the same sources as the extraction" in td and "`## Session —` blocks are not checked" in td)
-check("without a Close of Day, session threads are shown once, never carried with a count",
-      "candidates shown once" in td and "never carries with a count" in td)
+check("today carries only what close-day decided from session blocks",
+      "Session blocks: carry only what was decided" in td and "a thread decided there is skipped" in td)
+check("an undecided or never-triaged thread becomes one decision line, never a lost task",
+      "`- [ ] Decide: {thread}" in td and "a session that closed after close-day ran" in td and "a note from before this change" in td)
+check("the drop check counts a session thread as placed only when decided or on a Decide line",
+      "counts as placed when it is decided in `### Session threads` or appears as a `Decide:` line" in td)
+check("close-session's comprehension carry is a task thread, not a checkbox carry",
+      "`**Open threads:**` carry" not in cs and "thread tagged `task`" in cs)
 print("%d passed, %d failed" % (ok, fail))
 sys.exit(1 if fail else 0)
 PY

@@ -8,9 +8,12 @@
 
 ## What leaves your machine
 
-- **Everything a session reads goes to Anthropic as model input**: the notes, mail, calendar entries and files it opens, and your messages. That is how the model sees them. How long Anthropic keeps them, and whether they are used for training, follows **your Claude account's terms**, not anything AIOS sets.
-- **Your credentials and your vault's history stay with you.** Tokens sit on your disk, and the vault is a folder plus a private repository you own. AIOS has no server of its own and sends no telemetry.
+- **Everything a session reads goes to Anthropic as model input**: the notes, mail, calendar entries and files it opens, your messages, and any file it happens to read, a token file included. That is how the model sees them. How long Anthropic keeps them, and whether they are used for training, follows **your Claude account's terms**, not anything AIOS sets. Claude Code's own usage reporting is Anthropic's, configured in Claude Code, not by AIOS.
 - **Each connector talks to its own provider, as you.** Google, Slack, GitHub and the rest receive what a session asks them for, under your account.
+- **Your vault's history goes to the git host you chose** (a private repository you own, which is still a copy on that host's servers).
+- **Web searches and page fetches** go to the search and web services a session calls. **Optional other models** (the text bridge in `hooks/pipeline/openrouter.py`) receive only the text sent to them, and only if you set them up.
+- **Any tool that can send can be told to send.** A session that can email, post or run `curl` can carry what it read anywhere, if something it read instructs it to. See prompt injection, below.
+- **What stays with you:** AIOS has no server of its own and sends no telemetry, and it never sends your credentials anywhere by design. Tokens sit on your disk, readable by whatever runs as you.
 
 To remove AIOS completely, see [§ Uninstall](#uninstall). To check whether your terminal commands run sandboxed, run `/sandbox` in Claude Code.
 
@@ -165,7 +168,7 @@ Two of the original six were invisible to that lint until this section was first
 
 These are the controls you inherit without configuring anything — worth knowing, because most of them are invisible when they work.
 
-- **Your credentials stay on your machine.** AIOS has no backend of its own and no telemetry of your vault. What a session reads does go to Anthropic as model input (§ [What leaves your machine](#what-leaves-your-machine)).
+- **AIOS never sends your credentials anywhere.** It has no backend of its own and no telemetry of your vault. A session that reads a token file does send it to Anthropic as model input, like anything else it reads; § [What leaves your machine](#what-leaves-your-machine) lists every channel.
 - **Live session cookies are gitignored** (`.gitignore:41`) — they cannot be committed by accident, which is the realistic way such a file leaks.
 - **32 credential-leak checks run in CI** on every change, plus a personalization guard that fails the build if operator-specific content reaches canonical.
 - **Vendored MCPs record their upstream** in a `.upstream-sync` file (repo, commit, date), so what was taken and when is auditable.
@@ -182,17 +185,37 @@ These are the controls you inherit without configuring anything — worth knowin
 
 ## Uninstall
 
-How to remove AIOS completely. Do it in this order, and do the last step even if you skip others: **deleting a file never revokes access, only the provider can.** A session can walk you through it (*"list what AIOS added to this machine and help me remove it"*), but nothing below should be deleted without you seeing it first.
+How to remove what AIOS adds. Do it in this order, and do the last step even if you skip others: **deleting a file never revokes access, only the provider can.** A session can walk you through it (*"list what AIOS added to this machine and help me remove it"*), but nothing below should be deleted without you seeing it first.
 
-1. **Quit the AIOS App** and drag `AIOS.app` to the Trash. Its settings live in `~/Library/Application Support/AIOS` (macOS).
+1. **Quit the AIOS App** and remove it (macOS: drag `AIOS.app` to the Trash; its settings live in `~/Library/Application Support/AIOS`; on Windows and Linux, the App's own uninstaller and its settings folder). Remove the **AIOS Glass** extension from your editor if you installed it.
 2. **Remove the Claude Code wiring.**
-   - In `~/.claude/settings.json`: the hooks whose commands name `aios/hooks/`, the `statusLine` if it runs `context-monitor.py`, and `cleanupPeriodDays` if AIOS set it. The installer left a backup beside the file (`settings.json.bak-aios-…`) from before its first write.
+   - In `~/.claude/settings.json`: the hooks whose commands name `aios/hooks/`, the `statusLine` if it runs `context-monitor.py`, and `cleanupPeriodDays` if AIOS set it. Every installer run that wrote the file left a backup beside it (`settings.json.bak-aios-<time>`); the oldest is your file from before AIOS, if the installer made the first change.
    - The plugin: `claude plugin uninstall aios@the-aios`, then `claude plugin marketplace remove the-aios`.
-   - The skills AIOS linked into `~/.claude/skills/`: the links that point into `~/aios/skills/`.
-   - The MCP servers AIOS registered in `~/.claude.json` (`claude mcp list` shows them; `claude mcp remove <name>` removes one).
-3. **Remove the shell wiring.** In `~/.zshrc` (or `~/.bashrc`), delete the blocks between `# ==== claude-spawn-wrappers` and `# ==== END claude-spawn-wrappers ====`, and between `# ==== claude-primary-session` and its `END` line. Remove `~/.local/bin/aios-commit` (Windows: `~/bin/aios-commit.cmd`).
-4. **Remove background jobs.** `launchctl unload ~/Library/LaunchAgents/com.aios.claude-quota-watch.plist`, then delete the file, plus any Slack token-refresh agent you set up from `mcps/slack-mcp`.
+   - The skills AIOS linked into `~/.claude/skills/`: the links that point into your AIOS checkout's `skills/` folder.
+   - The MCP servers AIOS registered in `~/.claude.json` (`claude mcp list` shows them; `claude mcp remove <name>` removes one), and the folder trust for `~/.aios/run` in the same file.
+   - **Your session transcripts** in `~/.claude/projects/` hold everything your sessions read, mail included, and AIOS asked Claude Code to keep them for years. Delete the ones you no longer want, and remove `cleanupPeriodDays` so the default applies again.
+3. **Remove the shell wiring.** In `~/.zshrc` or `~/.bashrc` (Windows: your PowerShell `$PROFILE`), delete the blocks between `# ==== claude-spawn-wrappers` and `# ==== END claude-spawn-wrappers ====`, and between `# ==== claude-primary-session` and its `END` line, **and any API keys you exported there**. Remove `~/.local/bin/aios-commit` (Windows: `~/bin/aios-commit.cmd`) and the `~/aios` link if you made one.
+4. **Stop background jobs.** The quota watcher keeps rotating Claude accounts until it is removed.
+   - macOS: `launchctl list | grep claude-quota-watch` finds it (it may carry your organisation's name instead of `com.aios`); `launchctl unload` its plist in `~/Library/LaunchAgents/`, then delete the file.
+   - Linux: `systemctl --user disable --now aios-claude-quota-watch.timer`, then delete the `.service` and `.timer` files.
+   - Windows: `pwsh -File hooks/claude-identity/install-quota-watch.ps1 -Uninstall`.
+   - Any Slack token-refresh job you set up from `mcps/slack-mcp`.
 5. **Remove local state:** `~/.aios/` (the spawn inbox, surfaces, boards, run folders, bus logs).
-6. **Remove credentials on disk:** `~/.google_workspace_mcp/`, `~/.config/aios-secrets/`, `~/.slack-mcp-workflows.json`, and any token file a connector's README told you to create.
-7. **Decide about your vault.** `~/aios` holds your notes and their history, and its remote is your backup. It is yours, not the framework's: keep it, archive it, or delete it, but only on purpose.
-8. **Revoke access at every provider (required).** Google: your account's *Third-party apps & services* page, remove each AIOS connector. Slack: sign out the session the connector used, or revoke the app. GitHub: delete the personal access tokens and OAuth apps you made for it. Any other connector: its own *connected apps* page. Until this step is done, a copied token keeps working.
+6. **Remove credentials on disk:**
+   - `~/.google_workspace_mcp/` and `~/.workspace-mcp/` (OAuth state and downloaded mail attachments);
+   - `~/.slack-mcp-tokens.json` (the live Slack tokens), `~/.slack-mcp-meta.json`, `~/.slack-mcp-workflows.json`, and on macOS the Keychain items named `slack-mcp-server` (Keychain Access, search for it);
+   - `~/.config/aios-secrets/`;
+   - the browser cookies imported for the Playwright connector, under `mcps/playwright-mcp/auth/` inside the vault;
+   - the extra Claude accounts used for switching: `~/.claude/identities/` and the `~/.claude-acct-*` folders;
+   - `~/.notebooklm/` (a signed-in Google browser session), `~/.claude/spotify-cache.json`, `~/.stitch-mcp/`;
+   - any other token or session file a connector created; each connector's README in `mcps/` names its own.
+7. **Decide about your vault.** `~/aios` holds your notes and their history, and its remote is your backup. It is yours, not the framework's: keep it, archive it, or delete it, but only on purpose. If you keep it, the cookie files in step 6 are inside it.
+8. **Revoke access at every provider (required).**
+   - Google: your account's *Third-party apps & services* page; remove each AIOS connector. If you used NotebookLM, also sign that browser session out (*Your devices* in the Google account).
+   - Slack: sign out the session the connector used, or revoke the app.
+   - GitHub: delete the personal access tokens and OAuth apps you made for it.
+   - Each site whose cookies you imported (Substack, LinkedIn, X and the like): sign out everywhere.
+   - Claude: sign out each account you added for switching.
+   - Any other connector: its own *connected apps* page.
+
+   Until this step is done, a copied token or cookie keeps working.
