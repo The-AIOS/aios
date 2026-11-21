@@ -200,6 +200,18 @@ The block, appended to the daily note being closed (may be today or yesterday if
 - **Mark it partial, not done.** Strike only the part that shipped; the remainder becomes `- [ ] {what is left} → [[{note}]]` in the relevant project note's To-Dos (or in `### Carries forward` when no project note fits). The note that holds the plan keeps an open `status:` (`proposal`, `draft`, `in progress`, or the operator's own word) until the whole of it is done.
 - **Then read the unfinished-work check.** Each `unfinished-work:` finding is an open note no task points to: add that task now, the same way, and report it in one line under `### Shipped` or the verdict — *"Unfinished work given a task: [[{note}]] → [[{project}]]."* No question to the operator; this is bookkeeping, not a decision. `unfinished-work: none` → say nothing.
 
+## Session threads triage (before any carry is written)
+
+Every `## Session —` block ends with `**Open threads:**`. Those are what a session left open, not tasks the operator set: an observation, a fact, an FYI, work another session will pick up. **This step is the only place they become tasks**, and only by decision (#337). Before writing `### Carries forward`, read each block's threads (plain bullets tagged `task`, `follow-up` or `note`; older blocks may still write them as `- [ ]`) and decide each one:
+
+- **carry** → into `### Carries forward`, with `from: {session}` provenance. Only an operator's task belongs here.
+- **route** → a to-do in its project note (the truth surface), or a follow-up for the session or agent it names.
+- **drop** → a note, a fact, or already done. Recorded nowhere else.
+
+**Decide the clear cases yourself, and never create a surprise carry.** When it is unclear whether a thread is the operator's task, ask once, inline, with all the doubtful threads together: *"These session threads: carry, route, or drop?"*. Under `--auto`, or with nobody to answer, a doubtful thread is **routed or dropped, never carried**.
+
+Then mark each thread handled in its session block, so the block reads honestly and nothing downstream re-scans it as open: append `→ carried`, `→ [[{project}]]` or `→ dropped`, and turn a legacy `- [ ]` into a plain bullet with that mark.
+
 ## Done-outside-a-session check (before any carry is counted)
 
 A task the operator finished outside every session never reaches a session, so without this step it carries, its count climbs, and at ×6 the triage below asks them for a reason for something already done. The count then makes a false statement about the person. So before writing `### Carries forward`, and before the carry-reason triage below, check every carried **outward action** against the world.

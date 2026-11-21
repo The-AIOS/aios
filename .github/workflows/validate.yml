@@ -1676,6 +1676,9 @@ jobs:
       - name: a team plan is checked, and launched only on the operator's yes
         run: bash tests/team-plan.test.sh
 
+      - name: a session's open threads are triaged by close-day, never carried by default (#337)
+        run: bash tests/session-threads-not-carries.test.sh
+
       - name: hooks/ is grouped by domain, and no old top-level path is referenced (#309)
         run: bash tests/hooks-layout.test.sh
 
