@@ -250,6 +250,7 @@ daily, which left `7plan` and `compact` with no home and no signal that a longer
 | **Bi-weekly** | `/aios:emerge` | Surfaces patterns you have not named yet — the ones implied across notes rather than written down. |
 | **Monthly** | `/aios:compact` | Digests and archives the previous month, and bounds the files that grow without limit. |
 | **Monthly to quarterly** | `/aios:prospect` | Mines the vault for opportunities you have not named (offerings, products, plays) and returns a short ranked menu. Best right after a burst. |
+| **When you want out** | `/aios:uninstall` | Lists what AIOS added to this machine, removes each piece only on your yes (the vault last, after a backup), and gives you the provider revocations only you can do. |
 
 **None of these are required, and skipping one costs you nothing that day.** They are the difference
 between a vault that stores and a vault that compounds — which is why they are worth knowing exist,

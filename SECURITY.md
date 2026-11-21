@@ -185,7 +185,7 @@ These are the controls you inherit without configuring anything — worth knowin
 
 ## Uninstall
 
-How to remove what AIOS adds. Do it in this order, and do the last step even if you skip others: **deleting a file never revokes access, only the provider can.** A session can walk you through it (*"list what AIOS added to this machine and help me remove it"*), but nothing below should be deleted without you seeing it first.
+How to remove what AIOS adds. Do it in this order, and do the last step even if you skip others: **deleting a file never revokes access, only the provider can.** `/aios:uninstall` walks it on your machine: it inventories what is present, shows each removal and runs it only on your yes, and backs up the vault before touching it. Nothing below should be deleted without you seeing it first.
 
 1. **Quit the AIOS App** and remove it (macOS: drag `AIOS.app` to the Trash; its settings live in `~/Library/Application Support/AIOS`; on Windows and Linux, the App's own uninstaller and its settings folder). Remove the **AIOS Glass** extension from your editor if you installed it.
 2. **Remove the Claude Code wiring.**
