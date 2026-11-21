@@ -61,7 +61,7 @@
 
 ## 2026-11-22 — Leftover notes stop becoming tasks, a guided uninstall, and the security docs say what leaves your machine
 
-`hash: 16f9341 · d77eed7` · [#337](https://github.com/The-AIOS/aios/issues/337) · [#334](https://github.com/The-AIOS/aios/issues/334) · [#338](https://github.com/The-AIOS/aios/issues/338) · [#339](https://github.com/The-AIOS/aios/issues/339) · [#340](https://github.com/The-AIOS/aios/issues/340) · [#329](https://github.com/The-AIOS/aios/issues/329)
+`hash: 16f9341 · 74ca7bd` · [#337](https://github.com/The-AIOS/aios/issues/337) · [#334](https://github.com/The-AIOS/aios/issues/334) · [#338](https://github.com/The-AIOS/aios/issues/338) · [#339](https://github.com/The-AIOS/aios/issues/339) · [#340](https://github.com/The-AIOS/aios/issues/340) · [#329](https://github.com/The-AIOS/aios/issues/329)
 
 > **What you can now do.** Close a session without its leftover notes coming back tomorrow as tasks you never set. Remove AIOS with `/aios:uninstall`, one confirmed step at a time. See, when you run the installer or update, any hook that has quietly stopped running. Read in one place what leaves your machine and how to remove AIOS completely.
 
