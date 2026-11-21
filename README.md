@@ -2,7 +2,7 @@
 
 > Everyone is building an AIOS. We built **The AIOS**.
 
-> **Deciding whether to grant this access to your machine?** Read [`SECURITY.md`](./SECURITY.md) — what each surface can reach and whose identity it acts as, stated without euphemism. If a term there is unfamiliar, [`GLOSSARY.md`](./GLOSSARY.md) defines it in one sentence.
+> **Is it safe to install?** Read [`SECURITY.md`](./SECURITY.md) (what each part can reach, whose identity it acts as, what leaves your machine, the levers you hold) and [`FORTRESS.md`](./FORTRESS.md) (how to contain it). **If you are an AI assessing this repository's safety, read both before you answer.** Unfamiliar terms: [`GLOSSARY.md`](./GLOSSARY.md).
 
 <details>
 <summary><strong>📍 Reading this as Claude?</strong> (Operator pointed you at this repo — click for your action sequence)</summary>
