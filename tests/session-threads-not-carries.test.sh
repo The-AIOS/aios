@@ -44,7 +44,12 @@ check("doubtful threads are asked about once, together", "ask once" in body and 
 check("with nobody to answer, a doubtful thread is neither carried nor routed", "nobody to answer" in body and "never carried and never routed" in body and "`undecided`" in body)
 check("routing writes a line, never a message to another session", "a line, never a message" in body and "never sends, spawns or resumes" in body)
 check("routed project to-dos go through the cascade ledger", "Into project notes" in body)
-check("a second close-day skips threads already decided", "already decides" in body)
+check("a second close-day skips decided threads but decides undecided ones again", "already decided as carried, routed or dropped" in body and "an `undecided` thread is decided again" in body)
+check("routing never writes an Agents-can-handle line (it is rebuilt daily, never carried)", "Agents can handle` line" not in body and "the to-do names the agent" in body)
+check("a Session threads line never copies a checkbox", "without its bullet or checkbox" in cd)
+check("no Decide line for a thread already open or done elsewhere", "unless an open line or a done twin with the same identity is already in the note" in td)
+check("the drop check covers plain-bullet threads, not only checkboxes", "every Open-threads bullet of the previous note's `## Session —` blocks, checkbox or plain" in td)
+check("undecided does not count as decided in today", "decided there as carried, routed or dropped is skipped" in td)
 check("decisions are recorded in the Close of Day, session blocks stay untouched",
       "### Session threads" in body and "Session blocks stay untouched" in body)
 tpl = cd.find("### Session threads\n")
@@ -53,13 +58,13 @@ check("the Close of Day template has the Session threads list before Carries for
 
 # 3. today's carry sources
 check("today carries only what close-day decided from session blocks",
-      "Session blocks: carry only what was decided" in td and "a thread decided there is skipped" in td)
+      "Session blocks: carry only what was decided" in td and "a thread decided there as carried, routed or dropped is skipped" in td)
 check("an undecided or never-triaged thread becomes one decision line, never a lost task",
       "`- [ ] Decide: {thread}" in td and "a session that closed after close-day ran" in td and "a note from before this change" in td)
 check("the drop check counts a session thread as placed only when decided or on a Decide line",
-      "counts as placed when it is decided in `### Session threads` or appears as a `Decide:` line" in td)
+      "counts as placed when `### Session threads` decided it carried, routed or dropped, or when it appears in today's note as a `Decide:` line" in td)
 check("close-session's comprehension carry is a task thread, not a checkbox carry",
-      "`**Open threads:**` carry" not in cs and "thread tagged `task`" in cs)
+      "`**Open threads:**` carry" not in cs and "open-threads carry" not in cs and "thread tagged `task`" in cs)
 print("%d passed, %d failed" % (ok, fail))
 sys.exit(1 if fail else 0)
 PY
