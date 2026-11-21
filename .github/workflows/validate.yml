@@ -1701,9 +1701,6 @@ jobs:
       - name: a session's open threads are triaged by close-day, never carried by default (#337)
         run: bash tests/session-threads-not-carries.test.sh
 
-      - name: a deferred item stays silent until its date, and is never lost (#341)
-        run: bash tests/quiet-until.test.sh
-
       - name: hooks/ is grouped by domain, and no old top-level path is referenced (#309)
         run: bash tests/hooks-layout.test.sh
 

@@ -31,10 +31,8 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 # The ratchet. Raise it DELIBERATELY, in the PR that needs the room, never to get green.
-CEILING=95041
+CEILING=94842
 # +32 (v0.8.20, #339): /aios:uninstall named in § Vault Commands, like every other command.
-# +199 (v0.8.20, #341): a deferral said in chat must be tagged that turn; no command reads chat,
-# so the one rule that catches it lives in the contract every session loads.
 # +105 (v0.8.19, #309): hooks/ is grouped by domain, so the paths sessions run grow by their folder
 # (hooks/context/whoami, hooks/vault/aios-commit, hooks/media/clip, ...). Paths, not prose.
 # +62 (v0.8.19, #319): ~/aios is often a symlink and `find ~/aios` then sees only the link; a live

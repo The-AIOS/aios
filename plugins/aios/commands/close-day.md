@@ -239,7 +239,7 @@ Before writing `### Carries forward`, scan each item crossing into tomorrow. **(
 ⚠️ Carry triage — these need a reason tag before they cross tomorrow:
 
 1. "{task A}" — carrying to ×{N+1}, no reason tagged.
-   Pick: strategic-deferral / blocked-on-{who?} / needs-challenge / waiting-on-date / quiet-until {date} / park
+   Pick: strategic-deferral / blocked-on-{who?} / needs-challenge / waiting-on-date / park
 
 2. "{task B}" — carrying to ×{N+1}, current reason "blocked-on-{name}" is 32 days stale.
    Retag or reaffirm: same-reason-still-valid / new-reason / park
@@ -252,8 +252,6 @@ Wait for the response. Then write `### Carries forward` with the updated tags ap
 **An `unverified` carry is asked a different question.** At ×6 its count may be counting something already done, so do not offer the avoidance reasons first. Ask: *"{task} — I couldn't check whether you did this (no {mail|calendar} connected). Done already, or still open?"* **Done** → close it as done outside a session (`_(done outside a session: per operator, {date})_`). **Still open** → drop `unverified` and run the normal triage on it.
 
 **Don't ask for reasons below ×6.** A carry ×1-5 isn't a pattern yet; forcing a tag at ×2 is noise.
-
-**`quiet-until` carries pass through silently** (#341). An item the operator deferred with *"table it"*, *"later"* or *"not until {date}"* carries `quiet-until: YYYY-MM-DD`. Before its date it is left out of `### Carries forward`, the verdict, the session threads triage, the carry-reason triage and the Google Tasks preview; its count does not move. It goes to its project note's to-dos when one fits, otherwise into the note's hidden quiet block at the very end (`%% quiet-until … %%`, the format `/today` uses). If the operator defers something during close-day itself, tag it then and there.
 
 **Don't re-ask tagged carries.** If `_(carried ×8, reason: strategic-deferral)_` and today didn't change that context, carry it forward as `_(carried ×9, reason: strategic-deferral)_` — no prompt.
 
@@ -594,7 +592,7 @@ Scan today's daily note for checked items (`- [x]`). For each, search open Googl
 
 ### Create carries
 
-For each item in "Carries forward" (never a `quiet-until` item, which is not in it), check if a Google Task with a similar title already exists among open tasks. When the operator defers an existing Google Task until a date, update its due date to that date instead of showing it in the preview. If not, create a new task with:
+For each item in "Carries forward," check if a Google Task with a similar title already exists among open tasks. If not, create a new task with:
 - **Title:** the carry item text (clean — no source tags, no wiki-links)
 - **Due date:** tomorrow
 - **Notes:** `Created by /close-day from daily note {date}`
