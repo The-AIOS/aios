@@ -61,7 +61,7 @@
 
 ## 2026-11-22 — Leftover notes stop becoming tasks, a guided uninstall, and the security docs say what leaves your machine
 
-`hash: 16f9341 · 74ca7bd` · [#337](https://github.com/The-AIOS/aios/issues/337) · [#334](https://github.com/The-AIOS/aios/issues/334) · [#338](https://github.com/The-AIOS/aios/issues/338) · [#339](https://github.com/The-AIOS/aios/issues/339) · [#340](https://github.com/The-AIOS/aios/issues/340) · [#329](https://github.com/The-AIOS/aios/issues/329)
+`hash: 16f9341 · 74ca7bd` · [#337](https://github.com/The-AIOS/aios/issues/337) · [#334](https://github.com/The-AIOS/aios/issues/334) · [#338](https://github.com/The-AIOS/aios/issues/338) · [#339](https://github.com/The-AIOS/aios/issues/339) · [#340](https://github.com/The-AIOS/aios/issues/340) · [#329](https://github.com/The-AIOS/aios/issues/329) · [#343](https://github.com/The-AIOS/aios/issues/343)
 
 > **What you can now do.** Close a session without its leftover notes coming back tomorrow as tasks you never set. Remove AIOS with `/aios:uninstall`, one confirmed step at a time. See, when you run the installer or update, any hook that has quietly stopped running. Read in one place what leaves your machine and how to remove AIOS completely.
 
@@ -75,6 +75,8 @@
 - A new **Uninstall** section lists what AIOS adds, including the Slack tokens, the extra Claude accounts, imported browser cookies, the quota watcher on every platform and the long-kept transcripts, and ends with revoking access at each provider, because deleting a file revokes nothing.
 - `FORTRESS.md` stops claiming the Bash sandbox is on by default (check yours with `/sandbox`) and says deleting the Google credentials needs a revoke too.
 - `README.md` and `AGENTS.md` ask anyone, or any AI, assessing safety to read `SECURITY.md` and `FORTRESS.md` first.
+
+**A session commits its own work, not other sessions' unfinished files** (#343, thanks to its reporter). CLAUDE.md told every session to close with `aios-commit --vault`, which commits every changed file in the vault, so when two sessions (or you in Obsidian) were writing at once, one session's commit carried the other's half-done work under the wrong message. Sessions now name the paths they wrote, and so do `/7plan`, `/compact` and `/graduate`. `--vault` stays only for `/close-day`'s labelled end-of-day sweep.
 
 **Faster checks on every change** (#329). The longest CI job now runs in three parallel parts, and a run needs one macOS machine instead of two, so a pull request waits less for its checks. Nothing changes on your machine.
 

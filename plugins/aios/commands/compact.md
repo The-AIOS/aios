@@ -139,7 +139,7 @@ Individual snapshot and role-log files accumulate daily. This command:
    - Role logs: {N} files → digest + zip
    - Space saved estimate
 
-6. **Commit and push**: `cd ~/aios && ~/aios/hooks/vault/aios-commit --vault -m "Compact {target-month} logs"`
+6. **Commit and push** the paths this command wrote or removed, never a vault-wide sweep (#343): `cd ~/aios && ~/aios/hooks/vault/aios-commit -m "Compact {target-month} logs" -- "vault/00 - notes/logs/observed-snapshots/{target-month}" "vault/00 - notes/logs/role-logs/{target-month}" {any other file it touched, quoted}`
 
 ## End state
 

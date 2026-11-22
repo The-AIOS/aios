@@ -11,7 +11,7 @@
 # `--vault`.
 #
 # Checks:
-#   1. today.md and housekeeping.md invoke aios-commit with named paths and
+#   1. today.md, housekeeping.md, 7plan.md, compact.md and graduate.md (#343) invoke aios-commit with named paths and
 #      never with --vault.
 #   2. close-day.md commits its own writes by name FIRST, then sweeps with
 #      --vault under a subject that says "Sweep" — never a --vault "Close day".
@@ -30,6 +30,12 @@ ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n' "$1"; [ $# -gt 1 ] && printf '       %s\n' "$2"; return 0; }
 
 echo "== commands commit their own paths =="
+# CLAUDE.md § Session End and § Git & Commit Conventions are what a session follows at every close (#343).
+if grep -nE 'hooks/vault/aios-commit --vault' "$REPO/CLAUDE.md" >/dev/null; then
+  no "CLAUDE.md prescribes aios-commit --vault for a session's own work" "$(grep -nE 'hooks/vault/aios-commit --vault' "$REPO/CLAUDE.md" | head -1)"
+else
+  ok "CLAUDE.md: a session commits the paths it wrote, never --vault"
+fi
 
 # ── 1. today + housekeeping: named paths, no --vault ─────────────────────────
 TMP0="$(mktemp -d)"
@@ -47,7 +53,7 @@ bad_calls(){
     esac
   done
 }
-for f in today housekeeping; do
+for f in today housekeeping 7plan compact graduate; do
   bad=$(bad_calls "$C/$f.md")
   if [ -z "$(grep -E 'hooks/vault/aios-commit ' "$C/$f.md" | grep -v '^allowed-tools:')" ]; then
     no "$f.md: no aios-commit invocation found"
