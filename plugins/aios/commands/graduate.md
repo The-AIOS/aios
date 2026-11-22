@@ -82,7 +82,7 @@ Present a summary in the response:
 {Max 3. Omit section if nothing is genuinely ripe — forced candidates erode trust in the lens.}
 ```
 
-Then commit and push the paths this command wrote, never a vault-wide sweep (#343): `cd ~/aios && ~/aios/hooks/vault/aios-commit -m "Graduate ideas {date}" -- "vault/00 - notes/ideas/{slug}.md" {each other note it created or edited, quoted}`
+Then commit and push the paths this command wrote, never a vault-wide sweep (#343): `cd ~/aios && ~/aios/hooks/vault/aios-commit -m "Graduate ideas {date}" -- "vault/00 - notes/ideas/{slug}.md" "vault/00 - notes/ideas/_index.md" {each other note it created or edited, quoted}`
 
 ### The intake-edge question (ask once per graduated idea)
 

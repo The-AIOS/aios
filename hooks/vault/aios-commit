@@ -25,7 +25,8 @@
 #     --vault sweeps the changed vault paths for you (space- AND rename-safe: it enumerates
 #     `git diff --name-only HEAD` ∪ untracked under vault/ + .aios-update + USER.md + INTENT.md, minus machine-local
 #     noise) — so callers never hand-roll a `git status | awk` sweep that truncates paths with
-#     spaces ("00 - notes"). This is the sanctioned "commit the session's vault work" invocation.
+#     spaces ("00 - notes"). It is /close-day's labelled end-of-day sweep ONLY: it takes other
+#     sessions' unfinished files too, so a session commits the paths it wrote instead (#343).
 #   aios-commit -m "message" --untrack <path> [--untrack <path>] [--] [<path> ...]
 #     --untrack records a path's REMOVAL from tracking while LEAVING THE FILE ON DISK — the
 #     "I just gitignored something that was already tracked" case. `git add` cannot express it
@@ -366,7 +367,7 @@ if [ "$VAULT_MODE" = 1 ]; then
       echo "  Your real index may be desynced — \`git reset\` fixes it and keeps your working tree."
       # Exit 0, not non-zero, and the reason is a real tradeoff rather than an oversight: this
       # command did not FAIL, it correctly declined to commit. `--vault` is called mid-ritual by
-      # /close-session, /close-day and /aios:update, and a non-zero here would abort those chains
+      # /close-day's sweep, and a non-zero here would abort those chains
       # over a cosmetic index state. The message is the deliverable; the exit code stays honest
       # about what happened, which is "nothing, on purpose".
       exit 0

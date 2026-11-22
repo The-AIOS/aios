@@ -31,7 +31,7 @@ no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n' "$1"; [ $# -gt 1 ] && printf '     
 
 echo "== commands commit their own paths =="
 # CLAUDE.md § Session End and § Git & Commit Conventions are what a session follows at every close (#343).
-if grep -nE 'hooks/vault/aios-commit --vault' "$REPO/CLAUDE.md" >/dev/null; then
+if grep -nE 'aios-commit --vault' "$REPO/CLAUDE.md" >/dev/null; then
   no "CLAUDE.md prescribes aios-commit --vault for a session's own work" "$(grep -nE 'hooks/vault/aios-commit --vault' "$REPO/CLAUDE.md" | head -1)"
 else
   ok "CLAUDE.md: a session commits the paths it wrote, never --vault"
