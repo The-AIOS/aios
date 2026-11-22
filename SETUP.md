@@ -865,7 +865,7 @@ Run them via: `/aios:<command-name>`
 | Weekly | `7plan`, `drift`, `weekly-learnings` |
 | Bi-weekly | `graduate`, `emerge` |
 | Monthly | `compact`, `housekeeping` (mid-month, or when triggers fire) |
-| As needed | `ideas`, `ghost`, `challenge`, `trace`, `connect`, `prospect`, `learned`, `role-report`, `company` (multi-company mount/sync), `update`, `agent`, `cold-start-interview` (first-run only) |
+| As needed | `ideas`, `ghost`, `challenge`, `trace`, `connect`, `prospect`, `learned`, `role-report`, `company` (multi-company mount/sync), `update`, `agent`, `cold-start-interview` (first-run only), `uninstall` (guided removal) |
 
 ---
 

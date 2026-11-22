@@ -220,6 +220,10 @@ No overrides — use default behavior.
 
 No overrides — use default behavior.
 
+### /uninstall
+
+No overrides — use default behavior.
+
 ### /learned
 
 No overrides — use default behavior.

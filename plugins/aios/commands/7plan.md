@@ -70,7 +70,7 @@ From the data already loaded — process everything in memory:
    - If no → commit directly. `/today` will create each day's note fresh each morning.
 
 ### Message 4 — Commit + push
-- `cd ~/aios && ~/aios/hooks/vault/aios-commit --vault -m "Weekly plan W{WW}"`
+- `cd ~/aios && ~/aios/hooks/vault/aios-commit -m "Weekly plan W{WW}" -- "vault/01 - calendar/{YYYY-MM}/{YYYY}-W{WW}-plan.md" {each daily-note skeleton it created, quoted}` — the paths this command wrote, never a vault-wide sweep, which would commit other sessions' unfinished files under this subject (#343).
 
 ## Output
 

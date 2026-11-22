@@ -55,6 +55,7 @@ type: index
 | [[trace]]        | Track how an idea evolved over time                                              |
 | [[connect]]      | Find cross-domain bridges in the vault                                           |
 | [[prospect]]     | Mine the vault for unnamed opportunities — blind multi-lens sweep, ranked argued menu |
+| [[uninstall]]    | Remove AIOS from this machine: inventory, a confirmed step at a time, the vault last, the provider checklist |
 | [[learned]]      | Distill insights into publish-ready content                                      |
 | [[housekeeping]] | Vault housekeeping — 12 buckets: link/index repair, merges + archival, carry cleanup, table trim, INTENT drift, antifragile compact, plugin-cache verify, permissions audit |
 | [[role-report]]  | Quarterly role report per pillars in role-expectations.md                        |

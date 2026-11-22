@@ -30,6 +30,7 @@ Say `/aios:{name}` or just describe what you need. Claude matches intent to comm
 | `/aios:learned` | Distill insights into a publish-ready report | After a substantive period worth reflecting on | HTML + PDF at `vault/03 - export/reports/learned/` |
 | `/aios:mcps-setup` | Guided MCP setup — tokens, registration, verification | First-time setup or when adding a new MCP | Each MCP registered in `~/.claude/settings.json` + smoke-tested |
 | `/aios:prospect` | Mine the vault for opportunities nobody has named (business, products, offerings) — four blind lenses, a completeness critic, a ranked argued menu | Monthly or quarterly, after a burst (launch, conference, run of client calls) | Ranked menu at `vault/00 - notes/reflections/prospects/` — never commits; offers `lead-generator` for the top pick |
+| `/aios:uninstall` | Remove AIOS from this machine, guided: it inventories what is present, shows every removal and runs each only on your yes, backs up the vault before touching it, and ends with the providers you must revoke yourself | When you want out, or to check what AIOS added |
 | `/aios:role-report` | Period report based on your role pillars | Monthly or quarterly | HTML + PDF at `vault/03 - export/reports/role/` |
 | `/aios:today` | Generate today's daily plan from full vault context | Every morning | Daily note at `vault/01 - calendar/{YYYY-MM}/{YYYY-MM-DD}.md` |
 | `/aios:trace` | Track how thinking about an idea evolved over time | When revisiting a topic | Timeline of belief shifts with source snippets |

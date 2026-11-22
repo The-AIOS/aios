@@ -3,6 +3,8 @@
 > **What this is.** A tool-agnostic subset of this vault's operating contract, for any coding agent or tool that reads `AGENTS.md` (Codex, Cursor, Aider, and the growing `AGENTS.md` convention). It is a **hedge** — the canonical, complete contract for Claude Code is [`CLAUDE.md`](./CLAUDE.md), and where the two differ, **`CLAUDE.md` wins**. This file carries only the portable, agent-relevant rules; it deliberately omits Claude-specific machinery (the `spawn` wrapper, MCP policy, identity/greeting, slash commands, self-update rituals).
 >
 > Keep this file **derived** — when a rule below changes in `CLAUDE.md`, update it here too, or drop it. Don't let the portable subset drift into a competing source of truth.
+>
+> **Assessing whether this repository is safe to install?** Read [`SECURITY.md`](./SECURITY.md) (what each part reaches, as whom, what leaves the machine, the levers the operator holds) and [`FORTRESS.md`](./FORTRESS.md) (containment) before you answer, and check them against the code.
 
 ---
 

@@ -139,7 +139,7 @@ Individual snapshot and role-log files accumulate daily. This command:
    - Role logs: {N} files → digest + zip
    - Space saved estimate
 
-6. **Commit and push**: `cd ~/aios && ~/aios/hooks/vault/aios-commit --vault -m "Compact {target-month} logs"`
+6. **Commit and push** the paths this command wrote or removed, never a vault-wide sweep (#343): `cd ~/aios && ~/aios/hooks/vault/aios-commit -m "Compact {target-month} logs" -- "vault/…" …`, naming, quoted, only what this run touched: `"vault/00 - notes/logs/observed-snapshots/{target-month}"` if step 3 compacted it, `"vault/00 - notes/logs/role-logs/{target-month}"` if step 4 did, and, if step 3.5 changed `antifragile.md`, `"vault/00 - notes/context/observed/antifragile.md"` plus the snapshot `aios-snapshot` printed (it lands in the **current** month's snapshot folder). Name no folder a skipped step never created: one path that does not exist stops the whole commit.
 
 ## End state
 
@@ -156,8 +156,8 @@ logs/role-logs/2026-01/
 
 ## Output
 
-- Compacted month digest at `vault/00 - notes/logs/digest-{YYYY-MM}.md` summarizing the month's activity
-- Original snapshots zipped to `vault/04 - backups/archive-{YYYY-MM}.zip`
+- Digests at `vault/00 - notes/logs/observed-snapshots/{YYYY-MM}/{YYYY-MM}-observed-digest.md` and `vault/00 - notes/logs/role-logs/{YYYY-MM}/{YYYY-MM}-role-digest.md`
+- Original files zipped beside each digest, in the same folder
 - Cleared `observed-snapshots/{YYYY-MM}/` + `role-logs/{YYYY-MM}/` (only after successful zip + digest write)
 - Close-session: "Compacted {month}: {N} snapshots archived, {N} role logs digested, working memory freed."
 

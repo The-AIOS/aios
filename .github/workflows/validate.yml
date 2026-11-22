@@ -1021,14 +1021,12 @@ jobs:
           PY
 
   identity_backends:
-    name: Identity manager — both credential backends (${{ matrix.os }})
+    name: Identity manager — file backend (Linux)
     # Canonical-contract check, so it carries the fork guard like its siblings.
     if: github.event.repository.fork != true && github.event.repository.private != true
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    # The Keychain backend runs in the macOS job below (`primitives_bash32`), so a run needs one
+    # macOS runner, not two (#329).
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -1063,8 +1061,8 @@ jobs:
           fi
           echo "OK: the suite refuses to run when its isolation is not in effect"
 
-  primitives:
-    name: Commit primitives
+  primitives_1:
+    name: Commit primitives (part 1 of 3)
     # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
     # content /aios:update legitimately delivered — red mail for healthy files, and pulling
@@ -1080,6 +1078,9 @@ jobs:
         # until now the framework's own CI did not have it — so any suite exercising that
         # invocation could only skip. A tool the contract mandates belongs in the contract's CI.
         uses: astral-sh/setup-uv@v5
+
+      - name: zsh for the suites that run under it (the macOS session shell)
+        run: command -v zsh >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq zsh; }
 
       - name: aios-commit / aios-note-append / secret-scan regression test
         run: bash tests/aios-commit.test.sh
@@ -1440,6 +1441,27 @@ jobs:
         # warns in writing that a check which always fires is one the operator stops reading.
         run: bash tests/bus-dead-letters.test.sh
 
+  primitives_2:
+    name: Commit primitives (part 2 of 3)
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true && github.event.repository.private != true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        # CLAUDE.md mandates `uv` as THE command every session runs for its context floor, and
+        # until now the framework's own CI did not have it — so any suite exercising that
+        # invocation could only skip. A tool the contract mandates belongs in the contract's CI.
+        uses: astral-sh/setup-uv@v5
+
+      - name: zsh for the suites that run under it (the macOS session shell)
+        run: command -v zsh >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq zsh; }
+
       - name: unfinished-work reports open notes with no task, and is silent when one exists
         # /close-day runs this every evening, so the silent half carries a control per
         # legitimate shape: a project-note task, a daily-note task with an aliased link,
@@ -1676,6 +1698,9 @@ jobs:
       - name: a team plan is checked, and launched only on the operator's yes
         run: bash tests/team-plan.test.sh
 
+      - name: a session's open threads are triaged by close-day, never carried by default (#337)
+        run: bash tests/session-threads-not-carries.test.sh
+
       - name: hooks/ is grouped by domain, and no old top-level path is referenced (#309)
         run: bash tests/hooks-layout.test.sh
 
@@ -1749,6 +1774,28 @@ jobs:
         # the behaviour was worth documenting. Refusal cases are asserted FIRST (#110),
         # and the control replays the retired predicate and requires it to mis-anchor.
         run: bash tests/note-append-marker.test.sh
+
+  primitives_3:
+    name: Commit primitives (part 3 of 3)
+    # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
+    # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
+    # content /aios:update legitimately delivered — red mail for healthy files, and pulling
+    # the new workflow by hand only moves the error. For a contributor PR this still RUNS:
+    # pull_request events evaluate github.event.repository against the BASE repo, not the fork.
+    if: github.event.repository.fork != true && github.event.repository.private != true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        # CLAUDE.md mandates `uv` as THE command every session runs for its context floor, and
+        # until now the framework's own CI did not have it — so any suite exercising that
+        # invocation could only skip. A tool the contract mandates belongs in the contract's CI.
+        uses: astral-sh/setup-uv@v5
+
+      - name: zsh for the suites that run under it (the macOS session shell)
+        run: command -v zsh >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq zsh; }
+
       - name: note-append --create-if-missing creates the note under the append lock
         # A missing note used to be created by each caller with its own write, outside
         # the lock: two sessions both saw "missing", both wrote, and the slower one erased
@@ -2196,6 +2243,20 @@ jobs:
           fi
           echo "OK: every tests/*.sh is referenced by a workflow"
 
+  primitives:
+    # The required check. The suites run in the three parts above, in parallel (#329); this job
+    # passes only when all three passed, so the check keeps its name and its meaning.
+    name: Commit primitives
+    if: always() && github.event.repository.fork != true && github.event.repository.private != true
+    needs: [primitives_1, primitives_2, primitives_3]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every part passed
+        run: |
+          for r in "${{ needs.primitives_1.result }}" "${{ needs.primitives_2.result }}" "${{ needs.primitives_3.result }}"; do
+            [ "$r" = success ] || { echo "::error::a Commit primitives part did not pass ($r)"; exit 1; }
+          done
+
   primitives_bash32:
     # Canonical-contract check: skipped when this repo is a FORK or PRIVATE (both are operator vaults; SETUP's clone-and-push path makes a private non-fork).
     # A fork keeps .github/ frozen (Tier 0 never syncs), so its OLD workflow judges NEW
@@ -2208,10 +2269,45 @@ jobs:
     # above runs on ubuntu (bash 5), where `"${arr[@]}"` on an empty array is harmless — so it
     # structurally could NOT catch #6 (empty-array expansion aborting under `set -u`). Neither
     # could any maintainer whose PATH has Homebrew bash first. This lane is the one that can.
-    name: Commit primitives (bash 3.2 — macOS system bash)
+    name: macOS — identity manager (Keychain) and commit primitives (bash 3.2)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
+      # The identity manager's Keychain backend, moved here from its own macOS job so a run needs
+      # one macOS runner (#329). It runs BEFORE the bash pin below, under the runner's default
+      # bash, exactly as it did in its own job.
+      - name: Credential-cycle suite
+        shell: bash
+        run: |
+          set -e
+          # WHY BOTH OSes: the credential store is chosen by `uname` — Keychain on Darwin,
+          # a plaintext file everywhere else — so a single-OS run exercises exactly one
+          # backend and certifies nothing about the other. That is not hypothetical: this
+          # suite reported 25/25 against the file backend while, on macOS, three of its
+          # assertions were passing by reading the machine's REAL credential and one could
+          # not pass at all. Two lanes, or the guarantee is fiction.
+          echo "uname: $(uname -s)"
+          bash hooks/claude-identity/test-identity-cycle.sh
+          bash tests/identity-guards.test.sh
+          bash tests/accounts-file.test.sh
+
+      - name: The suite REFUSES to run without the keychain override (safety gate)
+        shell: bash
+        run: |
+          set -e
+          # The gate is the reason this suite is safe to run on a maintainer's own Mac.
+          # Assert it actually fires, rather than trusting that it is present: strip the
+          # override from a COPY and require exit 2.
+          cp -r hooks /tmp/nogate
+          sed -i.bak 's/^KEYCHAIN_SERVICE=.*/KEYCHAIN_SERVICE="Claude Code-credentials"/' \
+            /tmp/nogate/claude-identity/claude-identity.sh
+          if bash /tmp/nogate/claude-identity/test-identity-cycle.sh >/dev/null 2>&1; then
+            echo "::error::The suite RAN against a script with no AIOS_KEYCHAIN_SERVICE override. On macOS that writes to the operator's real credential."
+            exit 1
+          fi
+          echo "OK: the suite refuses to run when its isolation is not in effect"
+
 
       - name: Pin `bash` on PATH to the 3.2 system bash
         # Load-bearing: the hooks under test carry `#!/usr/bin/env bash`, so without this the
@@ -2645,6 +2741,9 @@ jobs:
       - counts
       - skill_resolution
       - identity_backends
+      - primitives_1
+      - primitives_2
+      - primitives_3
       - primitives
       - primitives_bash32
       - primitives_windows

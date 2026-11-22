@@ -31,7 +31,10 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 # The ratchet. Raise it DELIBERATELY, in the PR that needs the room, never to get green.
-CEILING=94810
+CEILING=95138
+# +296 (v0.8.20, #343, incl. renames/deletions/snapshots): § Session End and § Git commit the session's own paths; --vault would sweep
+# other sessions' unfinished files under this session's message. The reason has to sit beside the rule.
+# +32 (v0.8.20, #339): /aios:uninstall named in § Vault Commands, like every other command.
 # +105 (v0.8.19, #309): hooks/ is grouped by domain, so the paths sessions run grow by their folder
 # (hooks/context/whoami, hooks/vault/aios-commit, hooks/media/clip, ...). Paths, not prose.
 # +62 (v0.8.19, #319): ~/aios is often a symlink and `find ~/aios` then sees only the link; a live
