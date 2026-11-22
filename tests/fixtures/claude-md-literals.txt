@@ -51,14 +51,14 @@ agent-name
 agents/**/{name}.md
 agents/_index.md
 agents/custom/_index.md
-aios-commit --vault
+--vault
 aios-spawn-inbox: contract N
 antifragile.md
 audits
 Bash
 behavioural
 business.md
-cd ~/aios && ~/aios/hooks/vault/aios-commit --vault -m "Session {date}: {brief description}"
+cd ~/aios && ~/aios/hooks/vault/aios-commit -m "Session {date}: {brief description}" -- "vault/…" …
 class:
 claude
 claude --remote-control
