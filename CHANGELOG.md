@@ -61,7 +61,7 @@
 
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
-`hash: HASHPLACEHOLDER` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
+`hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
 
 > **What you can now do.** Import a site's cookies for the Playwright connector and get that site's cookies only, in a file only you can read.
 
