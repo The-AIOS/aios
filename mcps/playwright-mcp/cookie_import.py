@@ -51,7 +51,23 @@ SITES = {
 
 
 AUTH_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "auth")
-os.makedirs(AUTH_DIR, exist_ok=True)
+os.makedirs(AUTH_DIR, mode=0o700, exist_ok=True)
+try:
+    os.chmod(AUTH_DIR, 0o700)  # an existing folder keeps its old mode through makedirs
+except OSError:
+    pass
+
+
+def domain_matches(cookie_domain: str, domain: str) -> bool:
+    """True only when a cookie belongs to `domain` itself or one of its subdomains.
+
+    browser_cookie3.chrome(domain_name=d) matches the cookie store with LIKE '%d%', so asking for
+    "x.com" also returns box.com, dropbox.com, x.com.example.net and any other host that merely
+    contains those letters. Every cookie is therefore checked here, on a label boundary:
+    "x.com" and "mobile.x.com" pass, "box.com" and "x.com.example.net" do not."""
+    d = (cookie_domain or "").strip().lower().lstrip(".")
+    want = domain.strip().lower().lstrip(".")
+    return bool(d) and (d == want or d.endswith("." + want))
 
 
 def import_site(site: str) -> bool:
@@ -68,6 +84,8 @@ def import_site(site: str) -> bool:
         try:
             cj = browser_cookie3.chrome(domain_name=domain)
             for c in cj:
+                if not domain_matches(c.domain, domain):
+                    continue  # another site's cookie that only shares the suffix
                 key = (c.name, c.domain)
                 if key in seen:
                     continue
@@ -109,8 +127,20 @@ def import_site(site: str) -> bool:
 
     storage_state = {"cookies": cookies, "origins": []}
     output = os.path.join(AUTH_DIR, f"{site}.json")
-    with open(output, "w") as f:
-        json.dump(storage_state, f, indent=2)
+    # Owner-only: the file holds live session cookies. Written to a temp file that mkstemp creates
+    # 0600 in the same folder, then moved over the old one: the cookies are never in a file another
+    # local user can read (not even an old 0644 one being rewritten), a symlink at the destination is
+    # replaced rather than followed, and a failed write leaves the previous file whole. On Windows the
+    # mode bits only control read-only, so there the folder's own permissions are what protect it.
+    import tempfile
+    fd, tmp = tempfile.mkstemp(prefix=f".{site}.", suffix=".json", dir=AUTH_DIR)
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(storage_state, f, indent=2)
+        os.replace(tmp, output)
+    except BaseException:
+        os.unlink(tmp)
+        raise
 
     print(f"  {status} {site}: {len(cookies)} cookies → auth/{site}.json{hint}")
     return has_critical

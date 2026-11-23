@@ -127,7 +127,7 @@ Five of these are AIOS-built (`playwright`, `pdf-generator`, `spotify-dj`, `nano
 
 | Server | Code in this repo | What it reaches · stores | Status |
 |---|---|---|---|
-| `playwright-mcp` | 136 loc | **Decrypts the Chrome cookie store via Keychain**; writes live cookies to `auth/*.json` (gitignored). No network of its own. | **reviewed 2026-09-15** · `browser-cookie3==0.20.1` pinned (was undeclared) |
+| `playwright-mcp` | 166 loc | **Decrypts the Chrome cookie store via Keychain**; writes live cookies to `auth/*.json` (gitignored). No network of its own. | **reviewed 2026-11-23** (each cookie now kept only for its own site; files owner-only) · `browser-cookie3==0.20.1` pinned (was undeclared) |
 | `notebooklm-mcp` | 94 loc · **vendored** from `teng-lin/notebooklm-py` | Drives a real browser against `notebooklm.google.com` using your Google session; saves `~/.notebooklm/storage_state.json`. | reviewed 2026-09-15 · `playwright==1.58.0` |
 | `pdf-generator-mcp` | 163 loc | Local only — runs headless Chrome over a temp file to render PDFs. No credentials, no network. | reviewed 2026-09-15 · `mcp` pinned |
 | `spotify-dj-mcp` | 141 loc | Spotify via `spotipy`, OAuth to `127.0.0.1:8888`, keys from env. | reviewed 2026-09-15 · `mcp`, `spotipy` pinned |

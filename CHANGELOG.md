@@ -59,6 +59,43 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
+
+`hash: HASHPLACEHOLDER` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
+
+> **What you can now do.** Import a site's cookies for the Playwright connector and get that site's cookies only, in a file only you can read.
+
+**The cookie import kept other sites' sessions** ([GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx), reported by an IT reviewer for one of our users). `mcps/playwright-mcp/cookie_import.py` asked Chrome's cookie store for each site by a loose name match, so importing `x.com` also saved the live sessions of every site whose name merely contains those letters (`box.com`, `dropbox.com`, `wix.com`, banks and others) into `auth/x.json`. The other sites had the same exposure to look-alike domains. The files stay in your vault and are ignored by git, so they were never pushed, but they were plain-text copies of sessions you never chose to import, readable by anything running as you and by other users on a shared machine. Now each cookie is kept only if its domain is the site's own or one of its subdomains, and the file is created readable by you alone.
+
+**Action required** — check each first; do only what applies:
+1. **Only if `mcps/playwright-mcp/auth/` holds any `*.json`:** list, for each file, the distinct cookie domains it holds (names only, never a cookie's value) and mark those that do not belong to its site (the site's domains are in `SITES` in `cookie_import.py`):
+   ```bash
+   python3 - "$HOME/aios/mcps/playwright-mcp" <<'PY'
+   import ast, json, os, sys
+   d = sys.argv[1]; sites = {}
+   try:
+       tree = ast.parse(open(os.path.join(d, "cookie_import.py"), encoding="utf-8").read())
+       for n in tree.body:
+           if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "SITES":
+               sites = {k: v[0] for k, v in ast.literal_eval(n.value).items()}
+   except Exception as e:
+       print("warning: could not read SITES (" + str(e) + "); every domain below will read as foreign")
+   ok = lambda dom, ds: any(dom.lstrip(".").lower() == w or dom.lstrip(".").lower().endswith("." + w) for w in ds)
+   for f in sorted(os.listdir(os.path.join(d, "auth"))):
+       if not f.endswith(".json") or f.startswith("."): continue
+       try:
+           doms = sorted({str(c.get("domain", "")) for c in json.load(open(os.path.join(d, "auth", f), encoding="utf-8")).get("cookies", [])})
+       except Exception:
+           print(f, "| unreadable"); continue
+       foreign = [x for x in doms if not ok(x, sites.get(f[:-5], []))]
+       print(f, "| foreign:", ", ".join(foreign) or "none")
+   PY
+   ```
+   - **`auth/x.json`: delete it** (it is the file the advisory describes). The operator re-imports with `python cookie_import.py x` only if they still use it.
+   - **Any other file with a foreign domain:** show the operator its foreign domains and ask before deleting it. A file with none: keep it and run `chmod 600` on it.
+   - **If any file held a foreign domain, tell the operator which sites**, and that signing out of those sites in Chrome ends the copied sessions; only they can do that.
+2. **Nothing else changes on your machine.** No restart is needed for this fix.
+
 ## 2026-11-22 — Leftover notes stop becoming tasks, a guided uninstall, and the security docs say what leaves your machine
 
 `hash: 16f9341 · 08d542f` · [#337](https://github.com/The-AIOS/aios/issues/337) · [#334](https://github.com/The-AIOS/aios/issues/334) · [#338](https://github.com/The-AIOS/aios/issues/338) · [#339](https://github.com/The-AIOS/aios/issues/339) · [#340](https://github.com/The-AIOS/aios/issues/340) · [#329](https://github.com/The-AIOS/aios/issues/329) · [#343](https://github.com/The-AIOS/aios/issues/343)
