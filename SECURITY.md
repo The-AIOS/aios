@@ -55,7 +55,7 @@ This is the column most tools never show you, and it matters more than the permi
 | Surface | Acts as | What that means |
 |---|---|---|
 | **Slack** | **You.** Not a bot. | Messages post under your name. Authentication is a `xoxc-`/`xoxd-` token pair **extracted from your Chrome session**, so the session holds your full interactive Slack identity — every channel and DM you can see. A dedicated Slack app with explicit scopes is the safer pattern for a work account, and AIOS does not currently ship one. |
-| **Browser automation** | **You, on any site you are logged into.** | `mcps/playwright-mcp/cookie_import.py` decrypts your Chrome cookie store through the macOS Keychain and writes live session cookies to `auth/<site>.json`. The importer knows Substack, LinkedIn, X and Paragraph out of the box, and imports only the sites you name. Anything with a valid cookie can be acted on — including services with no formal integration. |
+| **Browser automation** | **You, on any site you are logged into.** | `mcps/playwright-mcp/cookie_import.py` decrypts your Chrome cookie store through the macOS Keychain and writes live session cookies to `auth/<site>.json`. The importer knows Substack, LinkedIn, X and Paragraph out of the box: given site names it imports those, and with none it imports all four. Each file holds only its site's own cookies (that site's domains and their subdomains), readable by you alone; before the fix for GHSA-9w4x-x588-8mmx a file could also hold other sites' sessions. Anything with a valid cookie can be acted on — including services with no formal integration. |
 | **Google Workspace** | You — across the services *you* enable | Calendar, Tasks, Drive, Docs, Sheets, Slides, Gmail, Contacts, Forms are available; **you choose which to turn on**, and Chat ships off by default. Apps Script is deliberately excluded as too broad. Fewer enabled is a smaller surface, and that choice is yours at setup and after. |
 | **GitHub** | Your token's scopes | Whatever you granted the PAT. |
 | **The vault + shell** | Your user account | A session can read, write, commit, push, and run commands as you. |
@@ -127,7 +127,7 @@ Five of these are AIOS-built (`playwright`, `pdf-generator`, `spotify-dj`, `nano
 
 | Server | Code in this repo | What it reaches · stores | Status |
 |---|---|---|---|
-| `playwright-mcp` | 136 loc | **Decrypts the Chrome cookie store via Keychain**; writes live cookies to `auth/*.json` (gitignored). No network of its own. | **reviewed 2026-09-15** · `browser-cookie3==0.20.1` pinned (was undeclared) |
+| `playwright-mcp` | 166 loc | **Decrypts the Chrome cookie store via Keychain**; writes live cookies to `auth/*.json` (gitignored). No network of its own. | **reviewed 2026-11-23** (each cookie now kept only for its own site; files owner-only) · `browser-cookie3==0.20.1` pinned (was undeclared) |
 | `notebooklm-mcp` | 94 loc · **vendored** from `teng-lin/notebooklm-py` | Drives a real browser against `notebooklm.google.com` using your Google session; saves `~/.notebooklm/storage_state.json`. | reviewed 2026-09-15 · `playwright==1.58.0` |
 | `pdf-generator-mcp` | 163 loc | Local only — runs headless Chrome over a temp file to render PDFs. No credentials, no network. | reviewed 2026-09-15 · `mcp` pinned |
 | `spotify-dj-mcp` | 141 loc | Spotify via `spotipy`, OAuth to `127.0.0.1:8888`, keys from env. | reviewed 2026-09-15 · `mcp`, `spotipy` pinned |
