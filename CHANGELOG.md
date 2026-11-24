@@ -59,6 +59,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-24 — aios-commit keeps every -m, like git
+
+`hash: ` · [#374](https://github.com/The-AIOS/aios/issues/374)
+
+> **What you can now do.** Pass a subject and a body as two `-m` flags and get both in the commit.
+
+**Only the last `-m` reached the commit** ([#374](https://github.com/The-AIOS/aios/issues/374)). `hooks/vault/aios-commit` overwrote the message on each `-m`, so `-m "subject" -m "trailers"` produced a commit whose whole message was the trailers. It now joins repeated `-m` values as paragraphs separated by a blank line, as `git commit` does. Covered in `tests/aios-commit.test.sh`.
+
+**Action required:** none.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
