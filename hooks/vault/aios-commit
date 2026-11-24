@@ -48,10 +48,15 @@ set -uo pipefail
 die(){ echo "aios-commit: $*" >&2; exit 1; }
 
 MSG=""; NO_PUSH=0; VAULT_MODE=0; PATHS=(); UNTRACK=(); EXECS=()
+addmsg(){ if [ -z "$MSG" ]; then MSG="$1"; elif [ -n "$1" ]; then MSG="$MSG
+
+$1"; fi; }
 while [ $# -gt 0 ]; do
   case "$1" in
-    -m)   MSG="${2:-}"; shift 2 ;;
-    -m*)  MSG="${1#-m}"; shift ;;
+    # Repeated -m values are joined as paragraphs, as `git commit` does. Each -m used to
+    # overwrite the last, so `-m subject -m trailers` committed the trailers alone (#374).
+    -m)   addmsg "${2:-}"; shift 2 ;;
+    -m*)  addmsg "${1#-m}"; shift ;;
     --no-push) NO_PUSH=1; shift ;;
     --vault) VAULT_MODE=1; shift ;;
     # --untrack: record a path's REMOVAL from tracking while leaving the file on disk.

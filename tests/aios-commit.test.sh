@@ -42,6 +42,15 @@ R=$(newrepo); ( cd "$R"; echo v1>tracked; echo o>unrel; git add -A; git commit -
   [ "$n" = "1" ] && git status --porcelain unrel | grep '^ M' >/dev/null ) && ok "scoped: 1 file committed, unrelated stays dirty" || no "scope leak"
 rm -rf "$R"
 
+echo "── aios-commit: repeated -m are joined as paragraphs, like git (#374) ──"
+R=$(newrepo); ( cd "$R"; echo v1>tracked; git add -A; git commit -qm init
+  echo v2>tracked
+  CLAUDE_CODE_SESSION_ID= "$AC" -m "subject line" -m "Body paragraph." -m"Trailer: x" --no-push -- tracked >/dev/null 2>&1
+  [ "$(git log -1 --format=%s)" = "subject line" ] \
+    && [ "$(git log -1 --format=%B | sed '/^$/d' | tr '\n' '|')" = "subject line|Body paragraph.|Trailer: x|" ] \
+    && git log -1 --format=%B | sed -n 2p | grep -qx '' ) && ok "three -m: subject, body and trailer all kept, blank line between" || no "a repeated -m was dropped or not separated"
+rm -rf "$R"
+
 echo "── aios-commit --vault: space-path committed, machine-local excluded ──"
 R=$(newrepo); ( cd "$R"; mkdir -p "vault/00 - notes" .glass vault/.obsidian
   echo a>"vault/00 - notes/n.md"; echo b>.glass/state.json; echo c>vault/.obsidian/workspace.json; git add -A; git commit -qm init
