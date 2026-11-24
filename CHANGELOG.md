@@ -59,6 +59,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-24 — Session blocks no longer vanish on Windows
+
+`hash: ` · [#361](https://github.com/The-AIOS/aios/issues/361)
+
+> **What you can now do.** Close a session on Windows and find its block in the daily note.
+
+**A session block could disappear on Windows while the close reported success** ([#361](https://github.com/The-AIOS/aios/issues/361)). `hooks/vault/aios-note-append --before` passed the block file's path to awk with `-v`, and awk processes escape sequences there, so a Windows temp path lost characters at every `\U`, `\L` or `\T`. The block read as empty, the note was written back unchanged, and the commit said "nothing to commit". The path now reaches awk through the environment, which is not escape-processed, and a block that cannot be read stops the run with an error instead of looking like success. New test: `tests/note-append-backslash-path.test.sh`.
+
+**Action required:** none. If you close sessions on Windows, check that recent daily notes hold the session blocks you expected; any that went missing before this fix are not recoverable from the note, only from the session itself.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)

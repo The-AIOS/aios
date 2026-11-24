@@ -152,13 +152,27 @@ if [ "$CREATED" = 1 ] && [ -z "$HEADER" ]; then
   # leading blank line (both other branches would prepend one).
   cat "$BLOCKFILE" >> "$NOTE" || die "could not append to $NOTE (disk full, or not writable) — the note may be partially written"
 elif [ -n "$BEFORE" ]; then
-  awk -v marker="$BEFORE" -v bf="$BLOCKFILE" '
-    BEGIN{ blk=""; while((getline l < bf) > 0) blk = blk l "\n" }
+  # The block path reaches awk through ENVIRON, never `-v`: awk processes escape sequences in
+  # a `-v` assignment, so a Windows path (C:\Users\...\Local\Temp\...) loses characters at
+  # every \U, \L, \T, getline fails, blk stays EMPTY and the note is rewritten unchanged. The
+  # commit then reports "nothing to commit", which reads as success while the block is gone
+  # (#361). ENVIRON values are not escape-processed, and an empty read now exits 3 (a loud
+  # failure) instead of writing the note back as it was.
+  AIOS_BLOCKFILE="$BLOCKFILE" awk -v marker="$BEFORE" '
+    BEGIN{ bf = ENVIRON["AIOS_BLOCKFILE"]; blk = ""
+           while ((getline l < bf) > 0) blk = blk l "\n"
+           if (blk == "") { unread = 1; exit 3 } }
     !done && index($0, marker) == 1 { printf "%s%s\n", blk, $0; done=1; next }
     { print }
-    END{ if (!done) printf "\n%s", blk }      # marker absent -> append at the end
-  ' "$NOTE" > "$NOTE.aiostmp" || { rm -f "$NOTE.aiostmp" 2>/dev/null
-        die "could not write $NOTE.aiostmp (disk full, or the directory is not writable) — note unchanged"; }
+    END{ if (!done) { if (!unread) printf "\n%s", blk }           # marker absent -> append at the end
+         if (unread) exit 3 }
+  ' "$NOTE" > "$NOTE.aiostmp"
+  RC=$?
+  if [ "$RC" -ne 0 ]; then
+    rm -f "$NOTE.aiostmp" 2>/dev/null
+    [ "$RC" -eq 3 ] && die "could not read the block file $BLOCKFILE — note unchanged"
+    die "could not write $NOTE.aiostmp (disk full, or the directory is not writable) — note unchanged"
+  fi
   mv "$NOTE.aiostmp" "$NOTE" || die "could not replace $NOTE — note unchanged; your block is in $NOTE.aiostmp"
 else
   { printf '\n' >> "$NOTE" && cat "$BLOCKFILE" >> "$NOTE"; } \
