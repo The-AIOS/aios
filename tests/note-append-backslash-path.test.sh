@@ -45,7 +45,7 @@ RC=$?
 ORDER="$(grep '^## ' "$D/note.md" | sed 's/ *|.*//' | tr '\n' '>')"
 [ "$ORDER" = "## Plan>## Session — 10:00>## Close of Day>" ] \
   && ok "block landed before the marker" || no "block missing or misplaced" "$ORDER"
-( cd "$D" && git log -1 --format=%s ) | grep -q probe \
+( cd "$D" && git log -1 --format=%s ) | grep probe >/dev/null \
   && ok "the note was committed" || no "no commit was made"
 
 echo "── 2. an unreadable block is a loud failure, never 'nothing to commit' ──"
