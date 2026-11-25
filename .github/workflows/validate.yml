@@ -1806,6 +1806,13 @@ jobs:
         # blocks; the main case races six creators and requires all six blocks to land.
         run: bash tests/note-append-create-if-missing.test.sh
 
+      - name: note-append --before reads a block path that contains backslashes
+        # The block path used to reach awk through -v, which escape-processes it, so a
+        # Windows temp path read as an empty block and the note was rewritten unchanged
+        # while the commit said "nothing to commit" (#361). A directory named with \t and
+        # \U sequences reproduces that on Linux.
+        run: bash tests/note-append-backslash-path.test.sh
+
       - name: routine health — a job that fails or stops running is reported
         # hooks/pipeline/aios-health.py: one file per scheduled job with a deadline. A job that
         # stops running writes nothing, so it can only be caught by its deadline passing; the
