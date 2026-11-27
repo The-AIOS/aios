@@ -1,0 +1,457 @@
+{
+  "what": "Shared cases for the daily note's `## Agents can handle` section: what `/today` writes, and what a surface must bind from it.",
+  "how_to_run": "For each case, join `note` with newlines, give it to the surface's section parser, and compare with `expect`. `suggestions` is the ordered list of live, bindable lines: `task` is the label, `agents` the agents named after `agent:` (the first one is dispatched), `command` and `arg` are present only on a command-routed line. `count` is the badge. A case with `template` is that template line filled in.",
+  "rule": "tests/fixtures/agents-can-handle-ref.py states the rule and is the reference reading.",
+  "templates": {
+    "note": "The lines the writer is told to write, verbatim from each file. The framework's test fails when a file and this list disagree, and every case with `template` must still have that line's shape.",
+    "plugins/aios/commands/today.md": ["- 🤖 {task} _(→ agent: [[agent-name]])_", "- 🤖 {task} _(→ command: `/aios:{command-name}`)_"],
+    "CLAUDE.md": ["- 🤖 {task} _(→ agent: [[name]])_", "- 🤖 {task} _(→ command: `/aios:{name}`)_"]
+  },
+  "cases": [
+    {
+      "case": "agent template filled in",
+      "template": "- 🤖 {task} _(→ agent: [[agent-name]])_",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Draft the launch email _(→ agent: [[email-drafter]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft the launch email", "agents": ["email-drafter"]}]}
+    },
+    {
+      "case": "command template filled in",
+      "template": "- 🤖 {task} _(→ command: `/aios:{command-name}`)_",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Ingest the keynote _(→ command: `/aios:ingest`)_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Ingest the keynote", "agents": [], "command": "/aios:ingest"}]}
+    },
+    {
+      "case": "the template line, with its canonical task checked in another section, is done",
+      "template": "- 🤖 {task} _(→ agent: [[agent-name]])_",
+      "note": [
+        "## Rhythm",
+        "- [x] Draft the deck",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "the template line, with its canonical task struck in another section, is done",
+      "template": "- 🤖 {task} _(→ agent: [[agent-name]])_",
+      "note": [
+        "## Rhythm",
+        "- ~~Draft the deck~~ ✅",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "the template line, with its canonical task still open, counts",
+      "template": "- 🤖 {task} _(→ agent: [[agent-name]])_",
+      "note": [
+        "## Rhythm",
+        "- [ ] Draft the deck",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft the deck", "agents": ["deck-builder"]}]}
+    },
+    {
+      "case": "a longer done line that contains the task as whole words closes it",
+      "template": "- 🤖 {task} _(→ agent: [[agent-name]])_",
+      "note": [
+        "## Rhythm",
+        "- [x] Draft the deck for Ana — sent",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a done line that only starts like the task does not close it",
+      "template": "- 🤖 {task} _(→ agent: [[agent-name]])_",
+      "note": [
+        "## Rhythm",
+        "- [x] Review PRD with Ana",
+        "",
+        "## Agents can handle",
+        "- 🤖 Review PR _(→ agent: [[code-reviewer]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Review PR", "agents": ["code-reviewer"]}]}
+    },
+    {
+      "case": "a done line that only ends like the task does not close it",
+      "template": "- 🤖 {task} _(→ agent: [[agent-name]])_",
+      "note": [
+        "## Rhythm",
+        "- [x] Preview PR",
+        "",
+        "## Agents can handle",
+        "- 🤖 Review PR _(→ agent: [[code-reviewer]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Review PR", "agents": ["code-reviewer"]}]}
+    },
+    {
+      "case": "a task too short to tell apart is never closed by a done line",
+      "template": "- 🤖 {task} _(→ agent: [[agent-name]])_",
+      "note": [
+        "## Rhythm",
+        "- [x] Email",
+        "",
+        "## Agents can handle",
+        "- 🤖 Email _(→ agent: [[email-drafter]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Email", "agents": ["email-drafter"]}]}
+    },
+    {
+      "case": "a task of six characters is long enough to be closed by a done line",
+      "template": "- 🤖 {task} _(→ agent: [[agent-name]])_",
+      "note": [
+        "## Rhythm",
+        "- [x] Review",
+        "",
+        "## Agents can handle",
+        "- 🤖 Review _(→ agent: [[code-reviewer]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a command line with its canonical task checked elsewhere is done",
+      "template": "- 🤖 {task} _(→ command: `/aios:{command-name}`)_",
+      "note": [
+        "## Rhythm",
+        "- [x] Ingest the keynote",
+        "",
+        "## Agents can handle",
+        "- 🤖 Ingest the keynote _(→ command: `/aios:ingest`)_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a project wikilink before the agent: the agent is the one after `agent:`",
+      "template": "- 🤖 {task} _(→ agent: [[agent-name]])_",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Draft [[acme-sales]] follow-up _(→ agent: [[content-writer]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft [[acme-sales]] follow-up", "agents": ["content-writer"]}]}
+    },
+    {
+      "case": "a project wikilink in a line routed to no agent binds nothing",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Review the [[acme-sales]] pipeline _(→ me at close-day)_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a wikilink in the route with no `agent:` before it binds nothing",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ [[deck-builder]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a line with no route still needs `agent:` before the wikilink",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Draft the deck → agent: [[deck-builder]]",
+        "- 🤖 Draft the memo → [[content-writer]]"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft the deck → agent: [[deck-builder]]", "agents": ["deck-builder"]}]}
+    },
+    {
+      "case": "an aliased wikilink names the agent, not its display text",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Draft the post _(→ agent: [[content-writer|Writer]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft the post", "agents": ["content-writer"]}]}
+    },
+    {
+      "case": "two agents after `agent:` are both listed, in order",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Review the contract _(→ agent: [[lawyer]] / [[accountant]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Review the contract", "agents": ["lawyer", "accountant"]}]}
+    },
+    {
+      "case": "a second note after the route does not hide it",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Research the grant _(→ agent: [[researcher]])_ _(suggested)_",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_ _(→ carried from Monday)_"
+      ],
+      "expect": {"count": 2, "suggestions": [{"task": "Research the grant", "agents": ["researcher"]}, {"task": "Draft the deck", "agents": ["deck-builder"]}]}
+    },
+    {
+      "case": "a command with its argument inside the backticks",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Ingest the keynote _(→ command: `/aios:ingest https://example.com/talk`)_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Ingest the keynote", "agents": [], "command": "/aios:ingest", "arg": "https://example.com/talk"}]}
+    },
+    {
+      "case": "a command with a URL elsewhere on the line: the URL is its argument",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Ingest https://example.com/talk _(→ command: `/aios:ingest`)_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Ingest https://example.com/talk", "agents": [], "command": "/aios:ingest", "arg": "https://example.com/talk"}]}
+    },
+    {
+      "case": "a command with a markdown link on the line: the link target is its argument",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Ingest [the keynote](https://example.com/talk) _(→ command: `/aios:ingest`)_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Ingest [the keynote](https://example.com/talk)", "agents": [], "command": "/aios:ingest", "arg": "https://example.com/talk"}]}
+    },
+    {
+      "case": "a command line with no route (older notes) still binds",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Ingest the keynote — `/aios:ingest` https://example.com/talk"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Ingest the keynote — `/aios:ingest` https://example.com/talk", "agents": [], "command": "/aios:ingest", "arg": "https://example.com/talk"}]}
+    },
+    {
+      "case": "a backticked command in the task text does not beat the one after `command:`",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Ingest what `/aios:today` listed _(→ command: `/aios:ingest`)_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Ingest what `/aios:today` listed", "agents": [], "command": "/aios:ingest"}]}
+    },
+    {
+      "case": "a backticked command in the task text of an agent line: the agent is dispatched",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Summarize what `/aios:drift` found _(→ agent: [[consultant]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Summarize what `/aios:drift` found", "agents": ["consultant"]}]}
+    },
+    {
+      "case": "a bare /command with no backticks binds nothing",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Ingest the keynote _(→ command: /aios:ingest)_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "backticked `spawn ingest` has no slash and binds nothing",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Ingest the keynote _(→ visible `spawn ingest`)_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "backticked `ingest` has no slash and binds nothing",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Ingest the keynote _(→ `ingest` session, idle)_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "prose routing binds nothing",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Reports backfill _(→ me at close-day)_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a bold label (older notes) is the task",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 **Draft the launch email** — for Tuesday _(→ agent: [[email-drafter]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft the launch email", "agents": ["email-drafter"]}]}
+    },
+    {
+      "case": "a bold label with its canonical task checked elsewhere is done",
+      "note": [
+        "- [x] Draft the launch email",
+        "",
+        "## Agents can handle",
+        "- 🤖 **Draft the launch email** _(→ agent: [[email-drafter]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "bold in the middle of the task text is not the label",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Draft the **Q3** board deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft the **Q3** board deck", "agents": ["deck-builder"]}]}
+    },
+    {
+      "case": "a hyphen in the task text survives",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Write the follow-up _(→ agent: [[email-drafter]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Write the follow-up", "agents": ["email-drafter"]}]}
+    },
+    {
+      "case": "an asterisk bullet is a list item too",
+      "note": [
+        "## Agents can handle",
+        "* 🤖 Draft the post _(→ agent: [[content-writer]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft the post", "agents": ["content-writer"]}]}
+    },
+    {
+      "case": "a struck mirror line is done",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 ~~Draft the post~~ ✅ _(→ agent: [[content-writer]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a struck mirror line with the done mark after its route is done",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 ~~Draft the post~~ _(→ agent: [[content-writer]])_ ✅"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a mirror line struck whole is done without the done mark: its route is not live text",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 ~~Draft the post~~ _(→ agent: [[content-writer]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a rescheduled mirror line (a strike, live text beside it, no done mark) is still open",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 ~~Call Bob Tuesday~~ Call Bob Thursday _(→ agent: [[meeting-prepper]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "~~Call Bob Tuesday~~ Call Bob Thursday", "agents": ["meeting-prepper"]}]}
+    },
+    {
+      "case": "a canonical task struck whole is done without the done mark",
+      "note": [
+        "## Rhythm",
+        "- ~~Draft the deck~~",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a canonical task struck whole beside a time slot and an annotation is done",
+      "note": [
+        "## Rhythm",
+        "- 09:30 ~~Draft the deck~~ _(carry ×3)_",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a canonical task struck, with a result note and the done mark, is done",
+      "note": [
+        "## Rhythm",
+        "- ~~Draft the deck~~ sent to Ana ✅",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a rescheduled canonical task (a strike, live text after it, no done mark) is an edit and closes nothing",
+      "note": [
+        "## Rhythm",
+        "- ~~Draft the deck~~ → Thursday",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft the deck", "agents": ["deck-builder"]}]}
+    },
+    {
+      "case": "a canonical task with one word struck and no done mark is an edit and closes nothing",
+      "note": [
+        "## Rhythm",
+        "- [ ] Draft the deck ~~Tuesday~~ Thursday",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft the deck", "agents": ["deck-builder"]}]}
+    },
+    {
+      "case": "a checked line is done",
+      "note": [
+        "## Agents can handle",
+        "- [x] 🤖 Draft the post _(→ agent: [[content-writer]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a line stamped 🚀 is already with an agent",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 Draft the post _(→ agent: [[content-writer]])_ 🚀"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "the section ends at the next `## ` heading; a `###` inside it does not end it",
+      "note": [
+        "## Rhythm",
+        "- 🤖 Outside, before _(→ agent: [[consultant]])_",
+        "",
+        "## Agents can handle",
+        "### Morning",
+        "- 🤖 Inside the section _(→ agent: [[consultant]])_",
+        "",
+        "## Radar",
+        "- 🤖 Outside, after _(→ agent: [[consultant]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Inside the section", "agents": ["consultant"]}]}
+    },
+    {
+      "case": "a whole section as `/today` writes it: header and footer are prose, the count is the live bindable lines",
+      "note": [
+        "## Today I ship",
+        "- [x] Send the board update",
+        "- [ ] Draft [[acme-sales]] follow-up",
+        "",
+        "## Agents can handle",
+        "🤖 **2 tasks agents can handle:**",
+        "- 🤖 Draft [[acme-sales]] follow-up _(→ agent: [[content-writer]])_",
+        "- 🤖 Ingest the keynote _(→ command: `/aios:ingest https://example.com/talk`)_",
+        "- 🤖 Send the board update _(→ agent: [[email-drafter]])_",
+        "- 🤖 Research the grant _(→ agent: [[researcher]])_ 🚀",
+        "",
+        "Say \"go with agents\" to spawn them all, or `/agent {name}` to wear the hat yourself in this session.",
+        "",
+        "## Radar"
+      ],
+      "expect": {"count": 2, "suggestions": [{"task": "Draft [[acme-sales]] follow-up", "agents": ["content-writer"]}, {"task": "Ingest the keynote", "agents": [], "command": "/aios:ingest", "arg": "https://example.com/talk"}]}
+    }
+  ]
+}

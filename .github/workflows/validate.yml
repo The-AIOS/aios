@@ -1495,6 +1495,14 @@ jobs:
         # that actually bind, and that close-day checks the silent direction unprompted.
         run: bash tests/agents-mirror-contract.test.sh
 
+      - name: the agents mirror means the same thing to its writer and its readers
+        # `/today` writes the section; the App and Glass parse it. The readers agreed with
+        # each other and not with the template: the line `/today` is told to write never
+        # matched its own task checked elsewhere, and a project wikilink in the task text
+        # was dispatched as the agent. The shared cases file is what all three answer to;
+        # this runs it against the reference reading and against the templates themselves.
+        run: bash tests/agents-can-handle-cases.test.sh
+
       - name: a changelog entry answers what-you-can-do and what-to-do, and stops
         # Every entry is read by every operator's session on every /aios:update, so a
         # sentence here is re-read forever. This file drifted to 5,000-word entries twice

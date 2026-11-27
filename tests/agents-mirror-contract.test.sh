@@ -36,12 +36,14 @@ fi
 # while `/today`'s own rules list ingest as delegatable, leaving a writer with an
 # ingest task no template to copy.
 #
-# SCOPE. Canonical cannot import the surfaces' TypeScript, so BINDS_* below is
-# the binding contract as canonical DECLARES it, mirroring
-# `aios-glass/src/tasks/agentParse.ts` and `aios-app/src/main/aios.ts`. The
-# surfaces are the implementation. If they ever disagree with this contract that
-# is a surface bug -- file it per CONTRIBUTING.md § the symptom router (a
-# documented form with no effect -> suspect the surface that executes it).
+# SCOPE. Canonical cannot import the surfaces' TypeScript, so the binding rule
+# is stated once in this repo, in tests/fixtures/agents-can-handle-ref.py, and
+# section 1 below asks that reference. The surfaces are the implementation; the
+# shared cases file beside the reference (agents-can-handle.cases.json, run by
+# tests/agents-can-handle-cases.test.sh and by each surface's own tests) is what
+# keeps them on the same rule. If a surface ever disagrees with it that is a
+# surface bug -- file it per CONTRIBUTING.md § the symptom router (a documented
+# form with no effect -> suspect the surface that executes it).
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -52,14 +54,15 @@ C=CLAUDE.md; T=plugins/aios/commands/today.md; D=plugins/aios/commands/close-day
 for f in "$C" "$T" "$D"; do [ -f "$f" ] || { echo "::error::$f missing"; exit 1; }; done
 
 echo "-- 1. the binding contract discriminates (the control) --"
-# A line binds iff it is a list item AND carries [[wikilink]] or a BACKTICKED /command.
-$PYBIN - <<'PY'
-import re, sys
-WIKI = re.compile(r'\[\[([^\]|]+?)(?:\|[^\]]+)?\]\]')
-CMD  = re.compile(r'`(/[a-z][\w:-]*)`', re.I)
-LIST = re.compile(r'^\s*[-*]\s')
+# A line binds iff the reference reading returns it as a suggestion. A wikilink
+# binds only after `agent:`, so a project link in a line routed to nobody is the
+# near-miss the old "any wikilink" reading turned into a phantom button.
+$PYBIN - tests/fixtures/agents-can-handle-ref.py <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("ref", sys.argv[1])
+ref = importlib.util.module_from_spec(spec); spec.loader.exec_module(ref)
 def binds(line):
-    return bool(LIST.match(line)) and bool(WIKI.search(line) or CMD.search(line))
+    return len(ref.parse("## Agents can handle\n" + line)) == 1
 cases = [
     (True,  '- 🤖 Task _(→ agent: [[deck-builder]])_',            'agent form'),
     (True,  '- 🤖 Ingest _(→ command: `/aios:ingest`)_',          'command form (backticked, slashed)'),
@@ -68,6 +71,7 @@ cases = [
     (False, '- 🤖 Ingest _(→ `ingest` session, idle)_',           'backticked `ingest` -- no slash'),
     (False, '- 🤖 Reports backfill _(→ me at close-day)_',        'prose routing'),
     (False, 'Say "go with agents" or run `/ghost` here.',         'prose footer mentioning a /command'),
+    (False, '- 🤖 Review [[acme-sales]] _(→ me at close-day)_',   'project wikilink, routed to nobody'),
 ]
 bad = 0
 for want, line, label in cases:
@@ -76,7 +80,7 @@ for want, line, label in cases:
     if got != want: bad += 1
 sys.exit(1 if bad else 0)
 PY
-[ $? -eq 0 ] && ok "contract binds both sanctioned forms and skips all five near-misses" \
+[ $? -eq 0 ] && ok "contract binds both sanctioned forms and skips all six near-misses" \
   || no "the binding contract does not discriminate" "if it cannot skip \`spawn ingest\` it cannot catch the real bug"
 
 echo "-- 2. CLAUDE.md documents BOTH forms, and no longer claims a bare /token binds --"
