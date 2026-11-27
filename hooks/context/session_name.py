@@ -28,6 +28,10 @@ import os
 import re
 import sys
 
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 RECORD_PREFIX = b'{"type":"agent-name"'
 _NAME = re.compile(rb'"agentName":"([^"]+)"')
 _SAFE_ID = re.compile(r"^[A-Za-z0-9-]+$")
