@@ -59,6 +59,18 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-27 — The rules for a session asking a surface to open a file
+
+`hash: `
+
+> **What you can now do.** Nothing yet. This writes down how a surface will decide when a session asks it to show a file in its own viewer; the App and Glass implement it next.
+
+**Contract 5 of the spawn inbox is specified: the `open` verb** (The-AIOS/aios-app#198). Today a session can show you a file only through the system opener, so a note lands in whatever application your computer uses for `.md`. With contract 5 a session inside the App or Glass asks the surface to open the file in its own viewer. `skills/aios/orchestration-ladder/inbox-contract-5.md` sets out the request and the thirteen checks a surface makes, in order, before it opens anything. The file must be inside the framework root (your vault included) and is compared as text before the disk is touched; links are followed one step at a time and never out of the root. Your workspace folders do not count for a session's request, because their list lives in files any session can write; a file in a repository outside the framework root cannot be opened this way. The file must not be a secret by its name (environment files, keys, OAuth tokens and saved browser sessions, anything under `.git`, `.claude` or `agent-secrets`), must not have a second hard link, and must not be binary or executable. A session may have five requests counted a minute and a surface twenty in all, and a request is dropped if the surface saw it more than a minute ago. Opening only shows the file: it is never run or handed to another application, the surface window is never raised over what you are doing, and what is shown is the file that was checked. `inbox-contract-5.conformance.json` is the one fixture both surfaces run, and `tests/inbox-contract-5.test.sh` checks every case against a reference implementation of the spec (`tests/fixtures/inbox-contract-5-ref.py`).
+
+Contract 4 stays in force: the spec says so at the top, and no session should send `open` until the surfaces stamp contract 5.
+
+**Action required:** none. Nothing is installed and nothing runs on your machine.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
