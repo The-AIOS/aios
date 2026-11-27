@@ -40,12 +40,14 @@ Omitting `--tier` on a `spawn` you type gives you `judgment`. That is deliberate
 be the rung that is right when nobody thought about it, and under-powering a reasoning task fails
 silently — you get an answer, it is just worse, and nothing tells you.
 
-**A spawn-inbox request that names neither a tier nor a model is different: it starts on the model
-the operator saved** (`/model`, `settings.json`), on either surface. The App starts such a request
-as a plain `claude`, with no `--model`; a surface that launches through `spawn` asks for the same
-with `spawn --inherit-model <name>` (PowerShell: `-InheritModel`), which is the one way to make the
+**A spawn-inbox request that names neither a tier nor a model is different: it starts on the
+operator's own default model**, the one a plain `claude` starts (the `model` in `settings.json`,
+else the binary's default), on either surface. The App starts such a request as a plain `claude`,
+with no `--model`; a surface that launches through `spawn` asks for the same with
+`spawn --inherit-model <name>` (PowerShell: `-InheritModel`), which is the one way to make the
 launcher pass no model at all. It ignores `$CLAUDE_MODEL` too, as a plain `claude` does, and it is
-refused beside `--tier` or `--model`. Write `"tier":"judgment"` in the request to get the pin below.
+refused beside `--tier` or `--model`. An inheriting worker given an advisor gets no consult
+instruction: that is appended for a Sonnet- or Haiku-class worker, and here the model is not known.
 
 **`judgment` is a pin, not an inherit — so it has a maintenance duty.** `hooks/pipeline/resolve-tier`
 answers it with an empty `--model` (the binary's default), but the launcher every AIOS session

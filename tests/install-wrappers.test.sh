@@ -164,6 +164,20 @@ rm -f "$tmp/args"; ispawn CLAUDE_INHERIT_MODEL=1 HOME="$tmp" TMPDIR="$tmp" PATH=
 [ "$(modelof)" = 'claude-opus-5-5[1m]' ] && ok "a plain spawn from inside an inheriting session passes the pin again" || no "the inherit variable leaked into a plain spawn" "$(modelof)"
 rm -f "$tmp/args"; ispawn CLAUDE_INHERIT_MODEL=1 HOME="$tmp" TMPDIR="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; shift; spawn "$@"' _ "$FNS" --tier fast worker "task" >/dev/null 2>&1
 [ "$(modelof)" = 'claude-haiku-5-5' ] && ok "and a tier given there still names its model" || no "a tier lost to a leaked inherit variable" "$(modelof)"
+rm -f "$tmp/args"; out=$(runi --inherit-model=1 worker "task"); rc=$?
+[ "$rc" != 0 ] && [ ! -f "$tmp/args" ] && case "$out" in *"takes no value"*) true ;; *) false ;; esac \
+  && ok "--inherit-model=<value> is refused instead of becoming the task of a pinned worker" || no "--inherit-model=1 was not refused (rc=$rc)" "$out"
+# The two paths the harness does not run (the launcher file a new terminal executes, and the
+# in-shell subshell) both set or clear the variable: without the line in the launcher a spawn from
+# a Claude session would start the pin while saying nothing.
+grep -q '^\$inherit_line$' "$SRC" && grep -q '^  \[ -n "\$inherit_model" \] && inherit_line="export CLAUDE_INHERIT_MODEL=1"$' "$SRC" \
+  && grep -q '^  local inherit_line="unset CLAUDE_INHERIT_MODEL"$' "$SRC" \
+  && ok "the generated launcher sets the variable when inheriting and clears it otherwise" || no "the launcher file does not carry the inherit variable"
+LF="$tmp/.aios/run/spawn-launch-worker.sh"
+rm -f "$tmp/args" "$LF"; runi --inherit-model worker "task" >/dev/null
+grep -q -x 'export CLAUDE_INHERIT_MODEL=1' "$LF" 2>/dev/null && ok "the launcher file written for an inheriting spawn exports the variable" || no "the launcher file of an inheriting spawn does not export it" "$(cat "$LF" 2>&1 | head -8)"
+rm -f "$tmp/args" "$LF"; runi worker "task" >/dev/null
+grep -q -x 'unset CLAUDE_INHERIT_MODEL' "$LF" 2>/dev/null && ! grep -q 'export CLAUDE_INHERIT_MODEL' "$LF" && ok "the launcher file of a plain spawn clears it" || no "the launcher file of a plain spawn does not clear it" "$(cat "$LF" 2>&1 | head -8)"
 grep -q '^      --inherit-model) inherit_model=1; shift ;;$' "$SRC" && ok "the flag is one a surface can find in the installed block (start of a case line)" || no "the --inherit-model case line changed shape; surfaces look for it"
 grep -q 'mv "$run_dir/resume-prompt-$name.md" "$_h/"' "$SRC" && ok "an account-switch resume moves its prompt into a fresh handoff folder" || no "the resume prompt is still read from the run dir itself"
 out=$( env -u CLAUDECODE HOME="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; spawn --effort ultra worker task' _ "$FNS" 2>&1 ); rc=$?

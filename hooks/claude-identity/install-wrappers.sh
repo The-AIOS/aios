@@ -611,6 +611,7 @@ spawn() {
       --model)     [ $# -ge 2 ] || { echo "spawn: --model needs a value" >&2; return 2; }; model="$2"; shift 2 ;;
       --model=*)   model="${1#*=}"; shift ;;
       --inherit-model) inherit_model=1; shift ;;
+      --inherit-model=*) echo "spawn: --inherit-model takes no value" >&2; return 2 ;;
       --profile)   [ $# -ge 2 ] || { echo "spawn: --profile needs a value" >&2; return 2; }; profile="$2"; shift 2 ;;
       --profile=*) profile="${1#*=}"; shift ;;
       --effort)    [ $# -ge 2 ] || { echo "spawn: --effort needs a value" >&2; return 2; }; effort="$2"; shift 2 ;;
@@ -810,6 +811,7 @@ ${1#*=}"; shift ;;
   # surface (which never reads this file) get it too; this is the reinforcement on the wrapper path.
   { _spawn_task_preamble; printf '%s\n' "$task"; } > "$task_file"
   if [ -n "$spawn_advisor" ]; then
+    # (An --inherit-model worker has no spawn_model: its model is not known here, so no block.)
     case "$spawn_model" in *sonnet*|*haiku*) _spawn_advisor_block >> "$task_file" ;; esac
   fi
 
