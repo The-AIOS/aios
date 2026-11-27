@@ -71,9 +71,12 @@ CONTRACT (relied on by the commands that call it)
   * nothing wrong        -> print exactly `bus-dead-letters: none`
   * each dead letter     -> one line with to / action / reason / at
   * each unclaimed req   -> one `bus-unclaimed:` line with to / action / age
-  * each abandoned claim -> one `bus-claim-abandoned:` line with to / action / file /
-                            age, ENDING in `claimer=<surface>:<pid> (<state>)`, where
-                            state is `gone`, `still running` or `not checked`
+  * each abandoned claim -> one `bus-claim-abandoned:` line that STARTS with
+                            `file=<file> restore-as=<request>.json` (or with
+                            `file=(unusual-name)` when the name is not plain), then
+                            age / to / action, and ENDS in
+                            `claimer=<surface>:<pid> (<state>)`, where state is
+                            `gone`, `still running` or `not checked`
   * if that check itself fails -> one `bus-claim-abandoned: (this check failed: …)`
                             line, with no claimer; the other two reports still print
   * anything printed from a request (a field, its file name, the error from reading
@@ -127,6 +130,11 @@ CLAIMING_AFTER_S = 600
 # only and matched whole (fullmatch), as the surfaces do: a name they would never restore
 # must not be reported as one they will.
 CLAIMING_NAME = re.compile(r"(.+\.json)\.claiming-([a-z0-9]+)-([0-9]+)")
+
+
+# A file name the commands may put in a shell command as it stands: no space, no quote,
+# no shell metacharacter, nothing `_clean` would have altered.
+PLAIN_NAME = re.compile(r"[A-Za-z0-9._-]+")
 
 
 def _clean(value):
@@ -201,9 +209,19 @@ def _taken_age(path):
 def abandoned_claims(inbox):
     """Requests a surface took and never published as a hold, older than the claim grace.
 
-    Every line ENDS with the claimer and its state, `claimer=<surface>:<pid> (<state>)`,
-    whether or not the file could be read: the commands decide what to offer from that
-    ending, so it is never followed by anything.
+    The commands turn a line into a shell command, so the parts they act on are the
+    script's own and sit where text from the request cannot reach them:
+
+      bus-claim-abandoned: file=<F> restore-as=<R> age=<A> to=… action=… claimer=<S>:<P> (<state>)
+
+    * `file=` and `restore-as=` come FIRST and hold no space: the file's name, and the
+      request name it goes back to (computed here, so nobody splits a name by eye). They
+      are printed only for a name made of letters, digits, dot, dash and underscore.
+      Any other name prints `file=(unusual-name)` and no `restore-as=`: such a name
+      would need quoting, or was altered when printed, and the commands then offer
+      nothing but a look at the directory.
+    * the line ENDS in the claimer and its state, whether or not the file could be read.
+    * `to=` and `action=` are text from the request and sit in the middle.
     """
     out = []
     for path in sorted(glob.glob(os.path.join(inbox, "*.json.claiming-*"))):
@@ -214,21 +232,22 @@ def abandoned_claims(inbox):
         secs = _taken_age(path)
         if secs is None or not secs >= CLAIMING_AFTER_S:
             continue
-        # `file=` is what the commands need to act on the right file: the request's own
-        # `name` can differ from its file name, and two claims can share a target.
-        tail = "file=%s age=%s claimer=%s:%s (%s)" % (
-            _clean(name), _fmt_age(secs), m.group(2), m.group(3), _pid_state(m.group(3)))
+        if PLAIN_NAME.fullmatch(name):
+            head = "file=%s restore-as=%s age=%s" % (name, m.group(1), _fmt_age(secs))
+        else:
+            head = "file=(unusual-name) age=%s" % _fmt_age(secs)
+        tail = "claimer=%s:%s (%s)" % (m.group(2), m.group(3), _pid_state(m.group(3)))
         try:
             with open(path, encoding="utf-8") as fh:
                 doc = json.load(fh)
             if not isinstance(doc, dict):
                 raise ValueError("top level is %s, expected object" % type(doc).__name__)
             out.append(
-                "bus-claim-abandoned: to=%s action=%s %s"
-                % (_clean(doc.get("name", "?")), _clean(doc.get("action", "spawn")), tail)
+                "bus-claim-abandoned: %s to=%s action=%s %s"
+                % (head, _clean(doc.get("name", "?")), _clean(doc.get("action", "spawn")), tail)
             )
         except Exception as exc:
-            out.append("bus-claim-abandoned: (unreadable: %s) %s" % (_clean(exc), tail))
+            out.append("bus-claim-abandoned: %s (unreadable: %s) %s" % (head, _clean(exc), tail))
     return out
 
 
