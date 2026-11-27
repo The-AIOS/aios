@@ -2052,7 +2052,7 @@ jobs:
         run: bash tests/inbox-contract-4.test.sh
 
       - name: inbox contract 5 (the open verb) — every fixture case passes a reference of the spec's checks
-        # Any session can ask a surface to open a file, so the decision is written once as twelve
+        # Any session can ask a surface to open a file, so the decision is written once as thirteen
         # ordered checks (inbox-contract-5.md) and once as a fixture both surfaces run. This holds
         # the two together, and a control proves the reference can fail.
         run: bash tests/inbox-contract-5.test.sh
