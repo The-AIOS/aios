@@ -985,9 +985,9 @@ Claude Code deletes transcripts older than `cleanupPeriodDays` (default **30**) 
 
 #### Bucket 37: Agent files vs documents — one rule for every surface (NEW — propose-only)
 
-A file under `agents/` is an **agent** when it has `name:` and `description:` frontmatter, is not `_index.md` or `README.md`, is not under a `reference/` folder, and is not marked `agent: false`. The AIOS App, Glass and the hint hook list agents by that rule, so a file that is neither an agent nor clearly a document makes the surfaces disagree (#314).
+A file under `agents/` is an **agent** when its frontmatter `tags` include `agent` and its file name does not start with `_`. The AIOS App, Glass, the team composer and the team plan all list agents by that rule, so an agent written by hand without the tag is missing from every one of them, with no error (#418).
 
-**Run** `python3 ~/aios/hooks/agents/list-agents.py --unclear` (Windows: the interpreter SETUP §10's probe picks). Each line is one such file. **Propose**, per folder: move a venture's reference documents (laws, glossaries, examples, templates) under a `reference/` subfolder, or add `agent: false` to a single one; for a file meant to be an agent, add the missing `name`/`description`. A company-synced folder (`agents/<company>/` with a sync marker) is fixed in its source repo, never in the vault: say so and propose nothing there. Nothing moves without the operator's yes.
+**Run** `python3 ~/aios/hooks/agents/list-agents.py --unclear` (Windows: the interpreter SETUP §10's probe picks). Each line is a file and what to do about it. **Propose**, per file: for one meant to be an agent, add `agent` to its `tags` (and a `description` if it has none); for a venture's reference documents (laws, glossaries, examples, templates), move them under a `reference/` subfolder, or add `agent: false` to a single one; for a file that carries the tag and is also marked as a document, remove whichever is wrong. A company-synced folder (`agents/<company>/` with a sync marker) is fixed in its source repo, never in the vault: say so and propose nothing there. Nothing changes without the operator's yes.
 
 ### Phase 2 — Present the packet
 
