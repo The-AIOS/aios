@@ -19,19 +19,20 @@ case "$(uname -s)" in Darwin|Linux) ;; *) echo "  skip: process groups are macOS
 
 T=$(mktemp -d "${TMPDIR:-/tmp}/sk.XXXXXX")
 TOYS=""                                  # every pid this test started; the only pids it may signal
-# Cleanup signals a toy only while its pid still shows one of our programs, so a number the system
-# has since given to someone else is never touched.
-cleanup(){
-  local p c
+# Cleanup signals a toy only while its pid still runs one of our programs (its command line names
+# this test's folder: `ps -o args=` carries the path on Linux and macOS alike, where `comm` is the
+# short name on Linux), so a number the system has since given to someone else is never touched.
+reap(){
+  local p a
   for p in $TOYS; do
-    c=$(ps -o comm= -p "$p" 2>/dev/null) || continue
-    case "$c" in
+    a=$(ps -o args= -p "$p" 2>/dev/null) || continue
+    case "$a" in
       "$T"/*) kill -KILL "$p" 2>/dev/null ;;
-      sh|*/sh) [ "$(ps -o pgid= -p "$p" | tr -d ' ')" = "$p" ] && kill -KILL -- "-$p" 2>/dev/null ;;
+      *"$T"/*) [ "$(ps -o pgid= -p "$p" | tr -d ' ')" = "$p" ] && kill -KILL -- "-$p" 2>/dev/null ;;
     esac
   done
-  rm -rf "$T"
 }
+cleanup(){ reap; rm -rf "$T"; }
 trap cleanup EXIT
 # The toy session is a tiny program of our own named `claude` (comm = claude, the only thing the
 # helper takes for a session). Built, not copied: macOS kills a copied system binary at exec, and it
@@ -39,7 +40,10 @@ trap cleanup EXIT
 # environment is read. It ignores its arguments and waits for a signal.
 printf '#include <unistd.h>\nint main(void) { alarm(600); for (;;) pause(); }\n' > "$T/toy.c"   # gone in 10 min even if the trap never runs
 if ! cc -o "$T/claude" "$T/toy.c" 2>/dev/null; then echo "  skip: no C compiler to build the toy session"; exit 0; fi
-ln -s "$(command -v sleep)" "$T/other"
+# The non-session toy is the same program under another name. Not a link to `sleep`: the Rust
+# coreutils on Ubuntu refuse to run a utility called by a name that is not its own, so it died at
+# start, and a case that needed it alive passed or failed for that reason instead of its own.
+cp "$T/claude" "$T/other"
 export CLAUDE_CONFIG_DIR="$T/cfg"; mkdir -p "$CLAUDE_CONFIG_DIR/sessions"
 # reg PID NAME [STARTED-EPOCH-SECONDS] [FORMER-NAMES-JSON]
 reg(){ printf '{"pid": %s, "name": "%s", "cwd": "%s", "startedAt": %s000, "formerNames": %s}\n' "$1" "$2" "$T" "${3:-$(date +%s)}" "${4:-[]}" > "$CLAUDE_CONFIG_DIR/sessions/$1.json"; }
@@ -133,9 +137,13 @@ resolve axb; rc=$?
 reg 999999 ghost
 resolve ghost; rc=$?
 [ "$rc" = 1 ] && ok "a registry entry whose pid is gone is not a session" || no "dead pid: rc=$rc"
-reg "$O" imposter
-resolve imposter; rc=$?
-[ "$rc" = 1 ] && ok "a registered pid that is not claude is not a session" || no "not claude: rc=$rc"
+if ! alive "$O"; then
+  no "test setup did not start: the non-session toy is not running, so 'a registered pid that is not claude' cannot be tested"
+else
+  reg "$O" imposter
+  resolve imposter; rc=$?
+  { [ "$rc" = 1 ] && alive "$O"; } && ok "a registered pid that is not claude is not a session" || no "not claude: rc=$rc"
+fi
 unreg "$O"
 reg "$D" stale $(( $(date +%s) - 3600 ))
 resolve stale; rc=$?
@@ -196,12 +204,16 @@ unreg "$C"
 # 3b. a session inside a group it does not own (a script with other work): only the pid is signalled.
 G=$(grouped "$T/claude 300 & $T/other 300 & wait"); TOYS="$TOYS $G"
 C=$(child_of "$G" claude); S=$(child_of "$G" other)
-reg "$C" build
-sk build; rc=$?
-sleep 0.3
-if [ "$rc" = 0 ] && ! alive "$C" && alive "$G" && alive "$S"; then ok "a session in someone else's group: only its pid ends, the group's other work lives"; else no "pid-only: rc=$rc C=$(alive "$C" && echo up) G=$(alive "$G" || echo DOWN) S=$(alive "$S" || echo DOWN): $(cat "$T/sk.out")"; fi
-grep -q "its process group was left alone" "$T/sk.out" && ok "and it says why the group was left alone" || no "no reason given: $(cat "$T/sk.out")"
-unreg "$C"
+if ! { [ -n "$C" ] && [ -n "$S" ] && alive "$C" && alive "$S" && alive "$G"; }; then
+  no "test setup did not start: the shared group is not running (C=$C S=$S G=$G), so 'only its pid ends' cannot be tested"
+else
+  reg "$C" build
+  sk build; rc=$?
+  sleep 0.3
+  if [ "$rc" = 0 ] && ! alive "$C" && alive "$G" && alive "$S"; then ok "a session in someone else's group: only its pid ends, the group's other work lives"; else no "pid-only: rc=$rc C=$(alive "$C" && echo up) G=$(alive "$G" || echo DOWN) S=$(alive "$S" || echo DOWN): $(cat "$T/sk.out")"; fi
+  grep -q "its process group was left alone" "$T/sk.out" && ok "and it says why the group was left alone" || no "no reason given: $(cat "$T/sk.out")"
+  unreg "$C"
+fi
 
 # 3c. nothing live by that name: exit 1, and the files stay.
 touch "$RUN/spawn-task-gone.md" "$RUN/spawn-launch-gone.sh"
@@ -242,6 +254,12 @@ PS1F="$ROOT/hooks/claude-identity/install-wrappers.ps1"
 PSK=$(awk '/^function spawn-kill \{/,/^\}/' "$PS1F")
 printf '%s' "$PSK" | grep -q 'CommandLine -like' && no "the Windows spawn-kill still matches a command line" || ok "the Windows spawn-kill no longer matches a command line"
 printf '%s' "$PSK" | grep -q 'ConvertFrom-Json' && ok "the Windows spawn-kill reads the session registry" || no "the Windows spawn-kill does not read the registry"
+
+# ---- 5. The test leaves nothing behind ------------------------------------------------------------
+reap; sleep 0.3
+left=""
+for p in $TOYS; do case "$(ps -o args= -p "$p" 2>/dev/null)" in *"$T"/*) alive "$p" && left="$left $p" ;; esac; done
+[ -z "$left" ] && ok "no toy process is left running" || no "toy processes left running:$left"
 
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]
