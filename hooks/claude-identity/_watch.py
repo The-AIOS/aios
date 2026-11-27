@@ -851,7 +851,9 @@ def paused_until() -> float:
             until = datetime.fromisoformat(raw).timestamp()
         except Exception:
             until = 0.0
-    if until <= time.time():
+    # `float()` also reads "inf", "nan" and "1e400": none is a date. An infinite marker would pause the
+    # autopilot forever, the one thing a malformed marker must never do, so they are malformed too.
+    if not math.isfinite(until) or until <= time.time():
         return 0
     return until
 

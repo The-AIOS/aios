@@ -95,6 +95,13 @@ check 'all(r["rotation_paused_until"] is None for r in rows)' "$J" "an expired p
 printf 'not-a-date\n' > "$H/.claude/quota-watch.paused"
 J="$(avail)"
 check 'all(r["rotation_paused_until"] is None for r in rows)' "$J" "a malformed pause is no pause"
+for bad in inf nan 1e400 -inf; do
+  printf '%s\n' "$bad" > "$H/.claude/quota-watch.paused"
+  J="$(avail)"
+  check 'all(r["rotation_paused_until"] is None for r in rows)' "$J" "a marker reading '$bad' is malformed: no pause, and the answer is still JSON"
+done
+W="$(printf 'inf\n' > "$H/.claude/quota-watch.paused"; env_run $PY -c 'import sys; sys.path.insert(0, sys.argv[1]); import _watch; print(_watch.paused_until())' "$ROOT/hooks/claude-identity")"
+[ "$W" = "0" ] && ok "and the watcher ignores an infinite marker rather than pausing forever" || no "the watcher pauses forever on inf" "$W"
 : > "$H/.claude/quota-watch.paused"
 J="$(avail)"
 check 'all(r["rotation_paused_until"] is None for r in rows)' "$J" "an empty marker seconds old (a pause being written) is not reported as a pause"
