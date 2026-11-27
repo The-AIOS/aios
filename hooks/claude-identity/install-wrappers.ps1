@@ -681,48 +681,82 @@ Invoke-ClaudeWithRespawn -Name '$Name' -BootstrapFile '$taskFile'
 }
 
 function spawn-kill {
-    # Kill a spawned worker session cleanly on Windows.
+    # Close one named session on Windows (#417). The target is the session whose name in the session
+    # registry ($env:CLAUDE_CONFIG_DIR\sessions or ~\.claude\sessions, *.json only) is EXACTLY the
+    # name given. It used to be the first process whose command line matched
+    # "*--remote-control*--name*$Name*", so a longer name, or a prompt that mentioned the name, was
+    # enough to be killed, and a session started without --remote-control was never found.
     #
-    # Windows has no POSIX process groups, so the bash trick of `kill -KILL -- -PGID`
-    # doesn't translate. Strategy: kill the PARENT process (the launcher pwsh that
-    # holds the _claude_with_respawn loop) to take down the respawn cycle, then
-    # kill claude itself to mop up any orphan that didn't cascade.
-    #
-    # Note: Windows Terminal doesn't expose a per-tab close API -- the tab will
-    # remain visible after the agent process exits. The tab can be closed
-    # manually (Ctrl+Shift+W). The agent process itself is dead -- that's the
-    # part that matters for stopping work.
-    #
-    # Needs Windows validation on PS 5.1 + PS 7+. Untested on Windows as of
-    # 2026-05-18; bash version on macOS is the proven path.
+    # Two live sessions with the name: refuses and lists them. None: says so and removes nothing.
+    # Windows has no process groups: claude is stopped, and its parent too ONLY when the parent is the
+    # shell this wrapper's spawn opened for it (its -EncodedCommand runs Invoke-ClaudeWithRespawn for
+    # this name), so the respawn loop ends with it. Any other parent (an IDE terminal, a user's shell)
+    # is left alone. The session's files are removed only after it is gone.
     [CmdletBinding()]
     param([Parameter(Mandatory, Position=0)] [string] $Name)
 
-    # PowerShell doesn't expose process command lines via Get-Process -- use CIM.
-    # claude.exe on Windows is the Claude Code binary; node.exe is a possible
-    # fallback for some install paths.
-    $claudeProc = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
-                  Where-Object {
-                    ($_.Name -eq 'claude.exe' -or $_.Name -eq 'node.exe') -and
-                    $_.CommandLine -like "*--remote-control*--name*$Name*"
-                  } | Select-Object -First 1
-
-    if (-not $claudeProc) {
-        Write-Warning "[spawn-kill] no claude process found for '$Name'"
-        Remove-Item -Force -ErrorAction SilentlyContinue "$env:TEMP\spawn-task-$Name.md","$env:TEMP\spawn-launch-$Name.ps1"
+    $cfg = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $HOME '.claude' }
+    $dir = Join-Path $cfg 'sessions'
+    if (-not (Test-Path -LiteralPath $dir -PathType Container)) {
+        Write-Warning "[spawn-kill] cannot read the session registry ($dir); nothing was done."
         return
     }
-
-    $parentPid = $claudeProc.ParentProcessId
-    if ($parentPid) {
-        Stop-Process -Id $parentPid -Force -ErrorAction SilentlyContinue
+    try { $files = @(Get-ChildItem -LiteralPath $dir -Filter '*.json' -File -ErrorAction Stop) }
+    catch {
+        Write-Warning "[spawn-kill] cannot read the session registry ($dir); nothing was done."
+        return
     }
+    $hits = @()
+    foreach ($f in $files) {
+        if ($f.Extension -ne '.json') { continue }
+        try { $rec = Get-Content -Raw -LiteralPath $f.FullName -ErrorAction Stop | ConvertFrom-Json } catch { continue }
+        if ($null -eq $rec -or -not ($rec.name -is [string]) -or $rec.name -cne $Name) { continue }
+        $sp = 0
+        if (-not [int]::TryParse([string]$rec.pid, [ref]$sp) -or $sp -le 0) { continue }
+        $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$sp" -ErrorAction SilentlyContinue
+        if (-not $proc -or ($proc.Name -ne 'claude.exe' -and $proc.Name -ne 'node.exe')) { continue }
+        # A pid is reused: a process created after the session registered is not that session. An entry
+        # or a process whose start cannot be read is not provably that session either.
+        $s = $rec.startedAt
+        if (-not ($s -is [int] -or $s -is [long] -or $s -is [double] -or $s -is [decimal])) { continue }
+        $started = [double]$s
+        if (-not ($started -gt 0 -and $started -lt 1e14) -or -not $proc.CreationDate) { continue }
+        $createdMs = ($proc.CreationDate.ToUniversalTime() - [datetime]'1970-01-01').TotalMilliseconds
+        if ($createdMs -gt $started + 5000) { continue }
+        $hits += $proc
+    }
+    if ($hits.Count -eq 0) {
+        Write-Warning "[spawn-kill] no live session named '$Name'; nothing was done."
+        return
+    }
+    if ($hits.Count -gt 1) {
+        Write-Warning "[spawn-kill] $($hits.Count) live sessions are named '$Name'; refusing to choose. Close the right one from its own terminal:"
+        $hits | ForEach-Object { Write-Warning "  pid $($_.ProcessId)  started $($_.CreationDate)" }
+        return
+    }
+    $claudeProc = $hits[0]
+    $loop = $null
+    $parent = Get-CimInstance Win32_Process -Filter "ProcessId=$($claudeProc.ParentProcessId)" -ErrorAction SilentlyContinue
+    if ($parent -and ($parent.Name -eq 'powershell.exe' -or $parent.Name -eq 'pwsh.exe') -and
+        $parent.CommandLine -match '-EncodedCommand\s+(\S+)') {
+        try {
+            $inner = [System.Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($Matches[1]))
+            if ($inner.Contains("Invoke-ClaudeWithRespawn -Name '$Name' ")) { $loop = $parent }
+        } catch { $loop = $null }
+    }
+    if ($loop) { Stop-Process -Id $loop.ProcessId -Force -ErrorAction SilentlyContinue }
     Stop-Process -Id $claudeProc.ProcessId -Force -ErrorAction SilentlyContinue
-
+    Wait-Process -Id $claudeProc.ProcessId -Timeout 5 -ErrorAction SilentlyContinue
+    if (Get-Process -Id $claudeProc.ProcessId -ErrorAction SilentlyContinue) {
+        Write-Warning "[spawn-kill] '$Name' (PID $($claudeProc.ProcessId)) is still running."
+        return
+    }
     Remove-Item -Force -ErrorAction SilentlyContinue "$env:TEMP\spawn-task-$Name.md","$env:TEMP\spawn-launch-$Name.ps1"
-
-    Write-Host "[ok] killed '$Name' (PID $($claudeProc.ProcessId), parent $parentPid)"
-    Write-Host "      Windows Terminal tab will remain open; close manually with Ctrl+Shift+W"
+    if ($loop) {
+        Write-Host "[ok] killed '$Name' (PID $($claudeProc.ProcessId) and its respawn shell $($loop.ProcessId))"
+    } else {
+        Write-Host "[ok] ended '$Name' (PID $($claudeProc.ProcessId); its parent was left alone: not a shell this wrapper opened for it)"
+    }
 }
 # Account commands. The aliases and the rotation order live in ~/.aios/accounts.json and are
 # resolved by the script. It is a bash script, so it runs under Git Bash: a bare `bash` here can

@@ -1100,6 +1100,11 @@ jobs:
         # reported by operators, neither catchable here because nothing tested this file.
         run: bash tests/install-wrappers.test.sh
 
+      - name: spawn-kill closes the session named, by the registry, and no other (#417)
+        # It found its target with an unanchored pattern and took the first match, so `deploy`
+        # could kill `deploy-eu`. Toy sessions only: nothing on the runner is signalled.
+        run: bash tests/spawn-kill.test.sh
+
       - name: rotation threshold reaches its enforcing process
         # THRESHOLD_5H/7D lived in claude-identity.sh and nothing read them: never
         # exported, no consumer in that file, and the hot path (statusLine ->
@@ -2359,6 +2364,9 @@ jobs:
         # The installer writes to a *stock* Mac's shell rc, which is exactly where 3.2 lives.
         run: /bin/bash tests/install-wrappers.test.sh
 
+      - name: spawn-kill under bash 3.2, on macOS process groups (#417)
+        run: /bin/bash tests/spawn-kill.test.sh
+
       - name: helper artifacts stay out of a --vault commit under bash 3.2
         # The suite drives the real aios-commit --vault, whose shebang resolves to 3.2 here.
         run: /bin/bash tests/gitignore-helper-artifacts.test.sh
@@ -2659,6 +2667,71 @@ jobs:
           $n = (Select-String -Path $PROFILE -Pattern '^function spawn \{').Count
           if ($n -ne 1) { Write-Host "::error::Expected exactly 1 spawn definition after re-run, found $n"; exit 1 }
           Write-Host "ok: idempotent, still parses, exactly one spawn definition"
+
+      - name: spawn-kill closes only the session named, found in the session registry (#417)
+        # Executed, not inspected: the old function matched "*--remote-control*--name*$Name*" and
+        # was never run on Windows. Every session here is a TOY (a copy of ping.exe named claude.exe)
+        # registered in a throwaway registry; nothing else on the runner is signalled.
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          . $PROFILE
+          $root = Join-Path $env:RUNNER_TEMP 'sk'
+          New-Item -ItemType Directory -Force -Path (Join-Path $root 'cfg\sessions') | Out-Null
+          $env:CLAUDE_CONFIG_DIR = Join-Path $root 'cfg'
+          $toy = Join-Path $root 'claude.exe'
+          Copy-Item "$env:WINDIR\System32\PING.EXE" $toy
+          $toys = @()
+          function Start-Toy { $p = Start-Process -FilePath $toy -ArgumentList '-n','600','127.0.0.1' -WindowStyle Hidden -PassThru; $script:toys += $p.Id; $p.Id }
+          function Reg([int]$id, [string]$n) {
+            $rec = @{ pid = $id; name = $n; startedAt = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds() } | ConvertTo-Json
+            Set-Content -Path (Join-Path $env:CLAUDE_CONFIG_DIR "sessions\$id.json") -Value $rec -Encoding ASCII
+          }
+          function Alive([int]$id) { [bool](Get-Process -Id $id -ErrorAction SilentlyContinue) }
+          function Fail([string]$m) { Write-Host "::error::$m"; $script:toys | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; exit 1 }
+          try {
+            $eu = Start-Toy; Reg $eu 'deploy-eu'
+            $out = spawn-kill deploy 3>&1 | Out-String
+            if ($out -notmatch "no live session named 'deploy'" -or -not (Alive $eu)) { Fail "a prefix matched: $out" }
+            Write-Host "ok: only deploy-eu live, 'deploy' finds nothing and deploy-eu lives"
+
+            $d = Start-Toy; Reg $d 'deploy'
+            $out = spawn-kill deploy 3>&1 | Out-String
+            Start-Sleep -Milliseconds 500
+            if ((Alive $d) -or -not (Alive $eu)) { Fail "deploy=$(Alive $d) deploy-eu=$(Alive $eu): $out" }
+            Write-Host "ok: 'deploy' ends deploy, deploy-eu lives, and this shell (its parent) was left alone"
+
+            $a = Start-Toy; $b = Start-Toy; Reg $a 'twin'; Reg $b 'twin'
+            $out = spawn-kill twin 3>&1 | Out-String
+            if ($out -notmatch '2 live sessions are named' -or -not (Alive $a) -or -not (Alive $b)) { Fail "twins: $out" }
+            Write-Host "ok: two sessions named twin: refused, both live"
+
+            $f = Join-Path $env:TEMP 'spawn-task-gone.md'; Set-Content -Path $f -Value 'x'
+            $out = spawn-kill gone 3>&1 | Out-String
+            if (-not (Test-Path $f)) { Fail "a session that was not found had its files removed" }
+            Write-Host "ok: no live session: nothing removed"
+
+            # The respawn shell this wrapper opens: its -EncodedCommand calls Invoke-ClaudeWithRespawn for
+            # the name. Closing the session closes that shell too, so its loop cannot start a new one.
+            $inner = "function Invoke-ClaudeWithRespawn { param(`$Name, `$BootstrapFile) & '$toy' -n 600 127.0.0.1 }`nInvoke-ClaudeWithRespawn -Name 'loopy' -BootstrapFile 'x'"
+            $enc = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($inner))
+            # -NoExit, as spawn opens it: the shell outlives its session unless spawn-kill closes it.
+            $sh = Start-Process powershell -ArgumentList '-NoProfile','-NoExit','-EncodedCommand',$enc -WindowStyle Hidden -PassThru
+            $toys += $sh.Id
+            $c = $null
+            for ($i = 0; $i -lt 50 -and -not $c; $i++) {
+              Start-Sleep -Milliseconds 200
+              $c = Get-CimInstance Win32_Process -Filter "ParentProcessId=$($sh.Id) AND Name='claude.exe'"
+            }
+            if (-not $c) { Fail "the toy respawn shell did not start its session" }
+            $toys += $c.ProcessId; Reg $c.ProcessId 'loopy'
+            $out = spawn-kill loopy 3>&1 | Out-String
+            Start-Sleep -Milliseconds 500
+            if ((Alive $c.ProcessId) -or (Alive $sh.Id)) { Fail "loop: session=$(Alive $c.ProcessId) shell=$(Alive $sh.Id): $out" }
+            Write-Host "ok: the session and the respawn shell this wrapper opened for it both end"
+          } finally {
+            $toys | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
+          }
 
       - name: aios-star-check.ps1 parses and fails closed
         # SAME REASON THIS LANE EXISTS. aios-star-check.ps1 was authored on a machine with no

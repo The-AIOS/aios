@@ -835,6 +835,7 @@ LAUNCHER
   # terminal INHERITS $CLAUDECODE when the IDE itself was launched from a Claude session,
   # so we need the explicit Glass marker to force in-shell regardless. A plain shell
   # (no $CLAUDECODE) also goes in-shell. (2026-07-23)
+  local _spawn_t0; _spawn_t0=$(date +%s)   # the start check below wants a session started after this
   if [ -n "$CLAUDECODE" ] && [ -z "$AIOS_GLASS_TERM" ]; then
     (
       local lockdir="$run_dir/spawn.lock.d"
@@ -979,11 +980,17 @@ APPLESCRIPT
     # this `spawn` and Claude's auto-mode classifier gated it. Either way, say so
     # LOUDLY and name the real paths — never leave the caller staring at a dead red
     # dot thinking a session is coming. (2026-07-23)
-    local _spawned=0 _i
-    for _i in 1 2 3 4 5 6 7 8 9 10 11 12; do
-      if pgrep -f "name $name" >/dev/null 2>&1; then _spawned=1; break; fi
-      sleep 1
-    done
+    # By the exact name in the session registry (#417): the pattern "name $name" also matched a
+    # longer name that starts with this one. No Python: the check is skipped, never guessed.
+    local _spawned=0 _i _py
+    if _py=$(_aios_py); then
+      for _i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+        if _aios_pyrun "$_py" "$HOME/aios/hooks/claude-identity/_kill_target.py" exists "$name" "$_spawn_t0" 2>/dev/null; then _spawned=1; break; fi
+        sleep 1
+      done
+    else
+      _spawned=1
+    fi
     if [ "$_spawned" = "0" ]; then
       echo "⚠️  spawn: no worker '$name' appeared — the IDE palette drive didn't land." >&2
       echo "    If you are an AGENT (a Claude session): do NOT retry \`spawn\` — it's gated." >&2
@@ -1020,62 +1027,94 @@ _spawn_clean_files() {
   return 0
 }
 
-spawn-kill() {
-  # Kill a spawned worker session cleanly.
-  #
-  # Why process-group kill (not single-PID kill): the spawn wrapper runs
-  # _claude_with_respawn inside a parent zsh that lives in the spawned tab.
-  # That zsh is the respawn loop body — if you SIGKILL only the named claude
-  # process, the loop respawns a fresh claude (defeating the kill), and if you
-  # close the window mid-loop, Terminal pops a "terminate running processes?"
-  # modal because the launcher zsh is still alive. If you click "Terminate" on
-  # that modal it kills the zsh but leaves claude as an orphan reparented to
-  # launchd — silent leak.
-  #
-  # Killing the process GROUP (PGID) takes down launcher-zsh + claude +
-  # recovery prompt + any descendants atomically. No respawn, no modal, no
-  # orphan. Per antifragile #50 (May 17) + #53 (May 18 — three-step plugin
-  # uninstall) — runtime state requires explicit teardown, not just a PID kill.
-  local name="${1:?Usage: spawn-kill <session-name>}"
-  local claude_pid pgid tty
+_aios_py() {
+  # A working Python 3, found the way claude-identity.sh finds it: on Windows `python3` is the Store
+  # stub, and under launchd /usr/bin/python3 can be the Command Line Tools stub. Prints the command
+  # (it may be two words, e.g. `py -3`, so callers use it unquoted), or nothing.
+  local _cand
+  for _cand in python3 python "py -3" /opt/homebrew/bin/python3 /usr/local/bin/python3 "$HOME/.local/bin/python3"; do
+    if _aios_pyrun "$_cand" -c 'import sys; sys.exit(sys.version_info[0] < 3)' >/dev/null 2>&1; then printf '%s' "$_cand"; return 0; fi
+  done
+  return 1
+}
 
-  # NOTE: ".*" between "claude" and "--remote-control" tolerates flags injected
-  # between them (e.g. "--model claude-opus-5[1m]" from the model-selection
-  # block above). Without the wildcard, this pgrep silently fails to find any
-  # spawn launched after the model flag landed — leaving orphan processes.
-  # Caught 2026-05-22 during testing-day end-to-end run.
-  claude_pid=$(pgrep -f "claude .*--remote-control --name $name" | head -1)
-  if [ -z "$claude_pid" ]; then
-    echo "[spawn-kill] no claude process found for '$name'" >&2
+_aios_pyrun() {
+  # Run the Python _aios_py found ($1) with the remaining arguments. `py -3` is the one candidate of
+  # two words; everything else is a single path, run quoted (zsh does not split a variable, and a
+  # home folder may hold a space).
+  local _p="$1"; shift
+  if [ "$_p" = "py -3" ]; then py -3 "$@"; else "$_p" "$@"; fi
+}
+
+spawn-kill() {
+  # Close one named session (#417). The target is the session whose name in the session registry
+  # (~/.claude/sessions/*.json) is EXACTLY the name given -- never a pattern on a command line, which
+  # let `deploy` match `deploy-eu`. hooks/claude-identity/_kill_target.py decides; this sends signals.
+  #
+  # What is closed: the session's process GROUP when it is provably nothing more than the session --
+  # led by the session, or by the spawn wrapper's launcher or respawn loop. That takes the loop down
+  # with the session, so it does not start a new one (a signal to claude alone lets the loop respawn
+  # it; closing the window mid-loop pops Terminal's modal and can orphan claude). Anything else (a
+  # session inside an editor's or a script's group) gets one SIGTERM to its pid only.
+  # The group gets SIGTERM, then SIGKILL only if the session is still running five seconds later.
+  #
+  # Two sessions with the name: refuses and lists them. None: says so and removes nothing. The
+  # session's files are removed only after it is gone.
+  local name="${1:?Usage: spawn-kill <session-name>}"
+  local py helper line rc scope a b c d tty i
+  helper="$HOME/aios/hooks/claude-identity/_kill_target.py"
+  py=$(_aios_py) || { echo "[spawn-kill] no working Python found; nothing was done." >&2; return 1; }
+  [ -f "$helper" ] || { echo "[spawn-kill] $helper is missing; nothing was done." >&2; return 1; }
+  line=$(_aios_pyrun "$py" "$helper" resolve "$name"); rc=$?
+  [ "$rc" -eq 0 ] || return "$rc"
+  read -r scope a b c d <<< "$line"
+  if [ "$scope" = "group" ]; then           # a = pgid, b = pid, c = its start time, d = the leader's
+    # Before each signal: is the same process still at that pid? (A pid is reused within minutes.)
+    _aios_pyrun "$py" "$helper" running "$b" "$c" || { echo "[spawn-kill] '$name' ended before it was signalled; nothing was done." >&2; return 1; }
+    tty=$(ps -o tty= -p "$b" 2>/dev/null | tr -d ' ')
+    kill -TERM -- "-$a" 2>/dev/null
+    # Wait for the session AND the group's leader (the wrapper's loop, when it leads): a loop that
+    # survives SIGTERM (a trap in the user's rc) would start the session again a minute later.
+    i=0
+    while [ $i -lt 25 ] && { _aios_pyrun "$py" "$helper" running "$b" "$c" || _aios_pyrun "$py" "$helper" running "$a" "$d"; }; do
+      sleep 0.2; i=$((i + 1))
+    done
+    if _aios_pyrun "$py" "$helper" running "$b" "$c" || _aios_pyrun "$py" "$helper" running "$a" "$d"; then
+      kill -KILL -- "-$a" 2>/dev/null
+      sleep 0.3
+    fi
+    if _aios_pyrun "$py" "$helper" running "$b" "$c" || _aios_pyrun "$py" "$helper" running "$a" "$d"; then
+      echo "[spawn-kill] '$name' (PID $b, group $a) is still running after SIGTERM and SIGKILL." >&2
+      return 1
+    fi
+    # macOS: close the Terminal.app window that held it (modal-free now the group is gone). No-op on
+    # Linux or in an IDE terminal (the IDE manages its tabs).
+    if [ -n "$tty" ] && [ "$tty" != "??" ] && command -v osascript >/dev/null 2>&1; then
+      osascript -e "tell application \"Terminal\"
+        set wList to every window
+        repeat with w in wList
+          try
+            set t_tty to tty of (first tab of w)
+            if t_tty contains \"$tty\" then close w saving no
+          end try
+        end repeat
+      end tell" 2>/dev/null
+    fi
     _spawn_clean_files "$name"
+    echo "[ok] killed '$name' (PID $b, process group $a)"
+    return 0
+  fi
+  # pid only: a = pid, b = its start time, c and d = the reason the group was left alone.
+  _aios_pyrun "$py" "$helper" running "$a" "$b" || { echo "[spawn-kill] '$name' ended before it was signalled; nothing was done." >&2; return 1; }
+  kill -TERM "$a" 2>/dev/null
+  i=0
+  while [ $i -lt 25 ] && _aios_pyrun "$py" "$helper" running "$a" "$b"; do sleep 0.2; i=$((i + 1)); done
+  if _aios_pyrun "$py" "$helper" running "$a" "$b"; then
+    echo "[spawn-kill] sent SIGTERM to '$name' (PID $a) and it is still running. Only its pid was signalled: $c $d." >&2
     return 1
   fi
-
-  pgid=$(ps -o pgid= -p "$claude_pid" | tr -d ' ')
-  tty=$(ps -o tty= -p "$claude_pid" | tr -d ' ')
-
-  kill -KILL -- -"$pgid" 2>/dev/null
-  sleep 0.3
-
-  # macOS only: close the Terminal.app window for this TTY (modal-free now
-  # that the process group is gone). No-op on Linux or when the session ran
-  # inside an IDE-integrated terminal (the IDE manages tab lifecycle).
-  if command -v osascript >/dev/null 2>&1; then
-    osascript -e "tell application \"Terminal\"
-      set wList to every window
-      repeat with w in wList
-        try
-          set t_tty to tty of (first tab of w)
-          if t_tty contains \"$tty\" then close w saving no
-        end try
-      end repeat
-    end tell" 2>/dev/null
-  fi
-
-  # Clean tmp artifacts so the next \`spawn $name\` starts fresh
   _spawn_clean_files "$name"
-
-  echo "[ok] killed '$name' (PID $claude_pid, PGID $pgid, $tty)"
+  echo "[ok] ended '$name' (PID $a; its process group was left alone: $c $d)"
 }
 # Account commands. The aliases and the rotation order live in ~/.aios/accounts.json and are
 # resolved by the script, so there is nothing per-operator to keep in sync here.
