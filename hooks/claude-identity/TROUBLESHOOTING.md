@@ -32,7 +32,7 @@ Same focus class — fixed by `set frontmost to true`. If still failing, the Acc
 Run a throwaway spawn and confirm a named session launched, then kill it:
 ```bash
 spawn difftest "Reply 'ok' then stop."
-sleep 11 && pgrep -fl "remote-control --name difftest"   # a PID line = success
+sleep 11 && grep -lE '"name": ?"difftest"' ~/.claude/sessions/*.json   # a file = success (exact name, as spawn-kill reads it)
 spawn-kill difftest
 ```
 Test on the operator's *actual* keyboard layout — that's where layout bugs surface (don't validate only on US/ABC).

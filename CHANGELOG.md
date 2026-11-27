@@ -59,6 +59,24 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-27 — `spawn-kill` closes the session you name, and no other
+
+`hash: ` · [#417](https://github.com/The-AIOS/aios/issues/417)
+
+> **What you can now do.** Close a worker with `spawn-kill <name>` and know it closes that session only: a worker whose name starts with the same word is safe, and a session the AIOS App started is found too.
+
+**`spawn-kill` finds the session by its exact name in the session registry** (#417). It used to look for the first process whose command line contained the name, so `spawn-kill deploy` could close `deploy-eu`. It could not see a session started without `--remote-control` (the App starts them that way), and when it found nothing it removed that session's task files anyway. Now:
+- two live sessions with the name: it refuses and lists them;
+- none: it says so and removes nothing;
+- the registry cannot be read: it does nothing.
+
+The same holds on Windows.
+
+**What it closes is narrower and safer.** It closes the session together with the `spawn` wrapper's restart loop, so the session does not come back a minute later. That covers sessions `spawn` opened in a new terminal and sessions started in the current shell (the way AIOS Glass and a typed `spawn` start them). A session that lives inside something else's process group (an editor, a script) gets a polite stop to its own process only, where it used to take the whole group down with it. The session's files are removed only after it has ended.
+
+**Action required** — check first; do only what applies:
+1. **Only if `spawn-kill` is installed** (`type spawn-kill` on macOS/Linux, `Get-Command spawn-kill` on Windows): re-run `bash ~/aios/hooks/claude-identity/install-wrappers.sh` (Windows: `install-wrappers.ps1`), which is idempotent, then tell the operator that terminals already open keep the old function until they open a new one or run `source ~/.zshrc`.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
