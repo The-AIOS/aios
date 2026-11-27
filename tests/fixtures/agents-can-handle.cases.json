@@ -2,6 +2,7 @@
   "what": "Shared cases for the daily note's `## Agents can handle` section: what `/today` writes, and what a surface must bind from it.",
   "how_to_run": "For each case, join `note` with newlines, give it to the surface's section parser, and compare with `expect`. `suggestions` is the ordered list of live, bindable lines: `task` is the label, `agents` the agents named after `agent:` (the first one is dispatched), `command` and `arg` are present only on a command-routed line. `count` is the badge. A case with `template` is that template line filled in.",
   "rule": "tests/fixtures/agents-can-handle-ref.py states the rule and is the reference reading.",
+  "undecided": ["A struck line with no ✅. today.md reads it as an edit or a reschedule, never as done; close-day.md and both surfaces read any strike as done. No case here contains one, on purpose: the cases say nothing either way until that is decided."],
   "templates": {
     "note": "The lines the writer is told to write, verbatim from each file. The framework's test fails when a file and this list disagree, and every case with `template` must still have that line's shape.",
     "plugins/aios/commands/today.md": ["- 🤖 {task} _(→ agent: [[agent-name]])_", "- 🤖 {task} _(→ command: `/aios:{command-name}`)_"],

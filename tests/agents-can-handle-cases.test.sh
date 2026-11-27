@@ -33,7 +33,7 @@ export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
 
 # Moves ONLY together with the copies: aios-app src/test/fixtures/agents-can-handle.cases.json
 # and its pin in src/test/agentCases.test.ts.
-PIN="6a9f95eee4ec1cd8f6c4343b32a2e91b09e90a97114c0586acfa1a4a1376718d"
+PIN="7d7f8d7dd5bd307cbb850dfa717260bfc511ea43931a66aadaf0e23bd53148d9"
 
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
@@ -80,6 +80,9 @@ def shape(t):
 broken = [c.get("case") for c in cases if not {"case", "note", "expect"} <= set(c)
           or c["expect"].get("count") != len(c["expect"].get("suggestions", [None]))]
 say(not broken, "every case has case, note, expect, and a count equal to its suggestions" + (": %s" % broken if broken else ""))
+# Undecided, so the cases must not take a side: no note line may carry a strike without the done mark.
+bare = [c["case"] for c in cases for l in c["note"] if re.search(r"~~[^~]+~~", l) and "\u2705" not in l]
+say(bool(doc.get("undecided")) and not bare, "no case rules on a strike with no done mark (undecided)" + (": %s" % bare if bare else ""))
 names = [c["case"] for c in cases]
 say(len(names) == len(set(names)), "case names are unique")
 for src, path in (("plugins/aios/commands/today.md", today), ("CLAUDE.md", claude)):
