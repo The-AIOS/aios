@@ -46,7 +46,8 @@ cp -R "$ROOT/hooks/agents" "$ROOT/hooks/pipeline" "$ROOT/hooks/context" "$ROOT/h
 cp "$ROOT/agents/aios/strategy/market-researcher.md" "$V/agents/aios/strategy/"
 out=$(AIOS_ROOT="$V" python3 "$H" check "$T/good.md"); rc=$?
 [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "no agent named 'cos' under agents/" && ok "refused: a vault with no cos agent at all" || no "a vault without cos passed (rc=$rc): $out"
-printf -- "---\nname: cos\ndescription: 'Use when this operator runs a team their own way.'\n---\n# COS\n" > "$V/agents/custom/cos.md"
+# Tagged \`agent\`, as every agent file is (the bundled cos.md carries it too).
+printf -- "---\nname: cos\ndescription: 'Use when this operator runs a team their own way.'\ntags: [agent]\n---\n# COS\n" > "$V/agents/custom/cos.md"
 out=$(AIOS_ROOT="$V" python3 "$H" check "$T/good.md"); rc=$?
 [ "$rc" = 0 ] && ok "an operator's own agents/custom/cos.md alone satisfies the rule" || no "a custom cos was refused (rc=$rc): $out"
 cp "$ROOT/agents/aios/strategy/cos.md" "$V/agents/aios/strategy/"
