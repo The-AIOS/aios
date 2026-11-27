@@ -90,7 +90,7 @@ and it quotes only the path as written, never a resolved one. Checks 1 to 8 make
    Unicode code points, ends in a separator, or has a `.` or `..` segment [`bad-path`]: resolving `..` would make the
    system walk folders outside the root, and whether that succeeds would tell the session that they exist.
    The trimmed path is the one used from here on. On Windows these apply with both separators, and also,
-   first of all:
+   right after the character check and before the rest:
    - a path starting with two separators of either kind (`\\host\share`, `\\?\…`, `\\.\…`, `\/host`)
      [`bad-path`]: touching it could send the operator's network credentials to that host;
    - a path that is not a drive letter, a colon and a separator (`C:x.md`, `\Users\x.md`) [`not-absolute`];
@@ -126,9 +126,12 @@ and it quotes only the path as written, never a resolved one. Checks 1 to 8 make
     path, the file changed under the checks [`unavailable`]. "The same name" means equal once both are put in
     Unicode normalization form C and folded as below (on macOS a note stored decomposed, `reunión` as `o` plus
     a combining accent, comes back that way, and is the same note); on Windows a segment of the resolved path
-    may also be a short 8.3 name that the stored one spells out, which the fixture cannot express.
+    may also be a short 8.3 name that the stored one spells out, which the fixture cannot express. The
+    comparison is made within one surface, between two names it read itself, so it needs no agreement between
+    languages beyond its own.
 12. **Kind.** The file is binary, or too large for the viewer to show [`unreadable`]. A surface does not fall
-    back to revealing it in the file manager. Images and PDF documents are shown: the surface renders them
+    back to revealing it in the file manager. Images and PDF documents are shown (a PDF only as § Showing it
+    allows): the surface renders them
     itself.
 13. **Executable.** The resolved name ends in `.exe`, `.com`, `.bat`, `.cmd`, `.ps1`, `.msi`, `.scr`, `.app`,
     `.command`, `.lnk`, `.url`, `.webloc`, `.desktop`, `.terminal`, `.jar`, `.vbs`, `.hta`, `.reg`, `.scpt`,
