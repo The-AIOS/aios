@@ -52,9 +52,9 @@ echo "-- 2. the control: the reading the surfaces had before fails --"
 out=$($PYBIN "$R" --old "$F" 2>&1); rc=$?
 [ $rc -ne 0 ] && ok "the cases catch it: $(printf '%s' "$out" | tail -1)" \
   || no "the cases pass under the old reading" "they would not have caught either defect"
-printf '%s' "$out" | grep -qF 'MISS a project wikilink before the agent' \
+printf '%s' "$out" | grep -F 'MISS a project wikilink before the agent' >/dev/null \
   && ok "a project note dispatched as the agent is caught" || no "the project-wikilink case passes under the old reading"
-printf '%s' "$out" | grep -qF 'MISS the template line, with its canonical task checked in another section' \
+printf '%s' "$out" | grep -F 'MISS the template line, with its canonical task checked in another section' >/dev/null \
   && ok "a template line that outlives its checked task is caught" || no "the checked-twin case passes under the old reading"
 
 echo "-- 3. the templates are in the file, and the file follows the templates --"
