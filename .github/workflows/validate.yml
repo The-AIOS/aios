@@ -1401,6 +1401,12 @@ jobs:
         # and shipped-invocation half, which is where the class actually recurs.
         run: bash tests/headless-allowlist.test.sh
 
+      - name: the live headless checks start no session unless asked, and then on the cheapest rung
+        # tests/headless-allowlist.test.sh starts nine real claude -p sessions. Run by default they
+        # ran on every local full suite, on the operator's default model (#421). A stand-in claude
+        # on PATH records every call: none without AIOS_LIVE_CHECKS=1, each with --model <fast>.
+        run: bash tests/headless-live-opt-in.test.sh
+
       - name: the pre-push owner guard is inert until configured
         # Contributed in #92. The property that matters is INERTNESS: canonical ships
         # with no organisation names inside it, and a fresh clone must exit 0 until the

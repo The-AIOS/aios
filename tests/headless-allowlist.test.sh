@@ -49,12 +49,22 @@ fi
 # It needs a real `claude` binary and network, which CI does not have, so it
 # SKIPS there with a stated reason and exits 0. A skip that announces itself is
 # honest; a green tick from a test that never ran is the defect this file is
-# about. Run it locally, or on any machine where `claude -p` works, whenever the
-# permission surface changes.
+# about.
+#
+# THE LIVE HALF RUNS ONLY WHEN ASKED (#421): AIOS_LIVE_CHECKS=1
+# It starts nine real `claude -p` sessions. Run by default, it did so on every
+# local full suite, on the operator's own default model: sessions a coordinator
+# saw and nobody had launched, at the top rung's price on a machine set to it.
+# So without the variable it skips, says why, and says so in the summary line;
+# with it, every call runs on the cheapest rung (`hooks/pipeline/resolve-tier
+# fast`, read at run time so it never names a stale id). Run it whenever the
+# permission surface changes:
+#     AIOS_LIVE_CHECKS=1 bash tests/headless-allowlist.test.sh
+# `tests/headless-live-opt-in.test.sh` holds both rules with a stand-in claude.
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
-PASS=0; FAIL=0; SKIP=0
+PASS=0; FAIL=0; SKIP=0; LIVE_SKIPPED=""
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf '  FAIL %s\n     %s\n' "$1" "${2:-}"; }
 sk(){ SKIP=$((SKIP+1)); printf '  skip %s\n     %s\n' "$1" "${2:-}"; }
@@ -110,7 +120,13 @@ if ! command -v claude >/dev/null 2>&1; then
   sk "runtime check" "no \`claude\` binary — CI has none. NOT a pass: the guarantee was not measured."
 elif [ -n "${CI:-}" ]; then
   sk "runtime check" "CI has no credentials/network for a real -p run. NOT a pass."
+elif [ "${AIOS_LIVE_CHECKS:-}" != 1 ]; then
+  LIVE_SKIPPED="live checks not run: set AIOS_LIVE_CHECKS=1"
+  sk "runtime check" "it starts nine real claude -p sessions, so it runs only with AIOS_LIVE_CHECKS=1 (#421). NOT a pass: the guarantee was not measured."
+elif ! LIVE_MODEL=$(bash hooks/pipeline/resolve-tier fast 2>/dev/null) || [ -z "$LIVE_MODEL" ]; then
+  no "runtime check not started: hooks/pipeline/resolve-tier fast gave no model" "the live calls run only on the cheapest rung, never on the operator's default"
 else
+  echo "  live calls on $LIVE_MODEL (resolve-tier fast)"
   # Every live call is capped: one hung `claude -p` once stalled the whole suite with nothing
   # reporting it. A killed call leaves NO side effect, which would read as "held" -- so each
   # timeout is recorded and turned into a failure below, never a silent pass. The watchdog
@@ -129,7 +145,7 @@ else
       grep -qF -e "aios-allowlist-canary.$$" -e "aios-inherit.$$" -e "aios-sbx.$$" "$t" 2>/dev/null && printf '%s\n' "$t"
     done; }
   claude(){
-    command claude "$@" & local pid=$!
+    command claude --model "$LIVE_MODEL" "$@" & local pid=$!
     ( i=0; while kill -0 "$pid" 2>/dev/null; do
         if [ "$i" -ge "$LIVE_CAP" ]; then kill -TERM "$pid" 2>/dev/null; echo "$*" | cut -c1-80 >> "$HUNG"; break; fi
         sleep 1; i=$((i+1)); done ) >/dev/null 2>&1 &
@@ -227,5 +243,5 @@ except Exception: print('')" 2>/dev/null)
 fi
 
 echo
-printf '── %d passed, %d failed, %d skipped ──\n' "$PASS" "$FAIL" "$SKIP"
+printf '── %d passed, %d failed, %d skipped%s ──\n' "$PASS" "$FAIL" "$SKIP" "${LIVE_SKIPPED:+ ($LIVE_SKIPPED)}"
 [ "$FAIL" -eq 0 ]
