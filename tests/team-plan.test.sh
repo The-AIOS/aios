@@ -38,8 +38,9 @@ plan f.md "$CHIEF"; refused f.md "at least two members" "a team of one in a plan
 # with the fix in the reason.
 plan g.md '| chief of staff | bakery-lead | consultant | judgment | standing | the plan, the decision log | operator | Draft the 90-day plan from the charter. |' "$RES"
 refused g.md "the chief of staff wears the \`cos\` agent, not 'consultant'" "a chief of staff wearing a building hat"
-# An operator's own agents/custom/cos.md is the `cos` the lead wears: the plan names the agent, and the
-# vault resolves a name to custom/ before the bundle. With no `cos` at all the reason says which file is missing.
+# The rule is on the agent's NAME, so an operator's own agents/custom/cos.md satisfies it, alone or beside
+# the bundled one (which file is then worn is /aios:agent's rule, custom/ first, not tested here). With no
+# `cos` at all the reason names the missing agent.
 V="$T/vault"; mkdir -p "$V/agents/custom" "$V/agents/aios/strategy" "$V/hooks"
 cp -R "$ROOT/hooks/agents" "$ROOT/hooks/pipeline" "$ROOT/hooks/context" "$ROOT/hooks/claude-identity" "$V/hooks/"
 cp "$ROOT/agents/aios/strategy/market-researcher.md" "$V/agents/aios/strategy/"
