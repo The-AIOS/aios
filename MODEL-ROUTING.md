@@ -36,9 +36,16 @@ work, not by importance** — "important" is what tempts you to the top rung for
 - **Decide the behaviour for unattended work deliberately.** The setting is `/config` → *"Switch models when a message is flagged"*. Interactively, switching keeps you working; for a routine or worker whose output you will trust without watching it, you may prefer it to stop instead of finishing on a model you did not choose.
 - **Let the log tell you.** With SETUP's Hook F wired, every switch is appended to `~/.aios/model-switch.jsonl`, and `/close-session` and `/close-day` name any session that finished on a model it did not ask for.
 
-Omitting `--tier` gives you `judgment`. That is deliberate: the default should be the rung that is
-right when nobody thought about it, and under-powering a reasoning task fails silently — you get an
-answer, it is just worse, and nothing tells you.
+Omitting `--tier` on a `spawn` you type gives you `judgment`. That is deliberate: the default should
+be the rung that is right when nobody thought about it, and under-powering a reasoning task fails
+silently — you get an answer, it is just worse, and nothing tells you.
+
+**A spawn-inbox request that names neither a tier nor a model is different: it starts on the model
+the operator saved** (`/model`, `settings.json`), on either surface. The App starts such a request
+as a plain `claude`, with no `--model`; a surface that launches through `spawn` asks for the same
+with `spawn --inherit-model <name>` (PowerShell: `-InheritModel`), which is the one way to make the
+launcher pass no model at all. It ignores `$CLAUDE_MODEL` too, as a plain `claude` does, and it is
+refused beside `--tier` or `--model`. Write `"tier":"judgment"` in the request to get the pin below.
 
 **`judgment` is a pin, not an inherit — so it has a maintenance duty.** `hooks/pipeline/resolve-tier`
 answers it with an empty `--model` (the binary's default), but the launcher every AIOS session

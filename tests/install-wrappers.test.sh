@@ -140,6 +140,31 @@ grep -q "\$_.Name -match '^handoff-\[0-9a-f\]{16}\$'" "$(dirname "$SRC")/install
 rm -f "$tmp/args"
 env -u CLAUDECODE -u CLAUDE_ADD_DIRS HOME="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; _claude_with_respawn primary ""' _ "$FNS" >/dev/null 2>&1
 [ -f "$tmp/args" ] && [ -z "$(adds)" ] && ok "a launch with no prompt file adds no --add-dir" || no "a plain launch got --add-dir" "$(adds | tr '\n' ' ')"
+# --inherit-model (The-AIOS/aios-app#230): a surface that takes a request naming neither a tier nor
+# a model must start what the other surface starts, and the App starts a plain `claude`: no --model,
+# so the operator's saved model. The launcher otherwise ALWAYS passes --model (its pin), so without
+# this flag the same request started two different models depending on which surface took it.
+modelof(){ grep -A1 -x -- '--model' "$tmp/args" 2>/dev/null | tail -1; }
+ispawn(){ env -u CLAUDECODE -u AIOS_GLASS_TERM -u CLAUDE_EFFORT -u CLAUDE_ADVISOR_MODEL -u CLAUDE_INHERIT_MODEL -u CLAUDE_MODEL "$@"; }
+runi(){ ispawn HOME="$tmp" TMPDIR="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; shift; spawn "$@"' _ "$FNS" "$@" 2>&1; }
+rm -f "$tmp/args"; runi worker "task" >/dev/null
+[ "$(modelof)" = 'claude-opus-5-5[1m]' ] && ok "control: a plain spawn passes the launcher's pin as --model" || no "control: a plain spawn passed '$(modelof)'" "$(tr '\n' ' ' < "$tmp/args" 2>/dev/null)"
+rm -f "$tmp/args"; runi --inherit-model worker "task" >/dev/null
+[ -f "$tmp/args" ] && ! grep -q -x -- '--model' "$tmp/args" && ok "spawn --inherit-model starts claude with no --model at all" || no "--inherit-model still passed a model" "$(tr '\n' ' ' < "$tmp/args" 2>/dev/null)"
+grep -q -x -- '--remote-control' "$tmp/args" && grep -q -x 'worker' "$tmp/args" && ok "and everything else the launcher adds is still there (--remote-control, the name)" || no "--inherit-model dropped more than the model" "$(tr '\n' ' ' < "$tmp/args" 2>/dev/null)"
+rm -f "$tmp/args"; ispawn CLAUDE_MODEL=claude-sonnet-5-5 HOME="$tmp" TMPDIR="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; shift; spawn "$@"' _ "$FNS" --inherit-model worker "task" >/dev/null 2>&1
+[ -f "$tmp/args" ] && ! grep -q -x -- '--model' "$tmp/args" && ok "an exported CLAUDE_MODEL does not come back in: a plain claude never reads it" || no "CLAUDE_MODEL leaked into an inheriting spawn" "$(modelof)"
+for bad in "--tier fast" "--model claude-haiku-5-5"; do
+  rm -f "$tmp/args"; out=$(runi --inherit-model $bad worker "task"); rc=$?
+  [ "$rc" != 0 ] && [ ! -f "$tmp/args" ] && case "$out" in *"cannot be combined"*) true ;; *) false ;; esac \
+    && ok "--inherit-model with $bad is refused, nothing starts" || no "--inherit-model with $bad was not refused (rc=$rc)" "$out"
+done
+# A spawn made from inside an inheriting session must not inherit by accident.
+rm -f "$tmp/args"; ispawn CLAUDE_INHERIT_MODEL=1 HOME="$tmp" TMPDIR="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; shift; spawn "$@"' _ "$FNS" worker "task" >/dev/null 2>&1
+[ "$(modelof)" = 'claude-opus-5-5[1m]' ] && ok "a plain spawn from inside an inheriting session passes the pin again" || no "the inherit variable leaked into a plain spawn" "$(modelof)"
+rm -f "$tmp/args"; ispawn CLAUDE_INHERIT_MODEL=1 HOME="$tmp" TMPDIR="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; shift; spawn "$@"' _ "$FNS" --tier fast worker "task" >/dev/null 2>&1
+[ "$(modelof)" = 'claude-haiku-5-5' ] && ok "and a tier given there still names its model" || no "a tier lost to a leaked inherit variable" "$(modelof)"
+grep -q '^      --inherit-model) inherit_model=1; shift ;;$' "$SRC" && ok "the flag is one a surface can find in the installed block (start of a case line)" || no "the --inherit-model case line changed shape; surfaces look for it"
 grep -q 'mv "$run_dir/resume-prompt-$name.md" "$_h/"' "$SRC" && ok "an account-switch resume moves its prompt into a fresh handoff folder" || no "the resume prompt is still read from the run dir itself"
 out=$( env -u CLAUDECODE HOME="$tmp" PATH="$tmp/bin:$PATH" bash -c 'eval "$1"; spawn --effort ultra worker task' _ "$FNS" 2>&1 ); rc=$?
 [ "$rc" != 0 ] && case "$out" in *"unknown --effort"*) true ;; *) false ;; esac && ok "an unknown --effort is refused, naming the flag" || no "--effort ultra not refused (rc=$rc)" "$out"
@@ -321,6 +346,11 @@ grep -q "\$effortArgs = @('--effort', \$env:CLAUDE_EFFORT)" "$PS1" && ok "ps1 pa
 grep -q "\$advisorArgs = @('--settings', \$advFile)" "$PS1" && ok "ps1 passes the advisor as a settings file" || no "ps1 never passes the advisor"
 grep -q '\$modelArgs + \$effortArgs + \$advisorArgs' "$PS1" && ok "ps1 effort/advisor args reach the claude invocation" || no "ps1 args built but never passed"
 grep -q 'CLAUDE_ADVISOR_MODEL = .\$spawnAdvisor' "$PS1" && ok "ps1 new-window path carries the advisor" || no "ps1 new-window path drops the advisor"
+grep -q '\[switch\] \$InheritModel' "$PS1" && ok "ps1 spawn takes -InheritModel (twin of --inherit-model)" || no "ps1 spawn has no -InheritModel"
+grep -q "if (\$env:CLAUDE_INHERIT_MODEL -eq '1') { \$modelArgs = @() }" "$PS1" && ok "ps1 launcher drops --model when asked to inherit" || no "ps1 launcher ignores CLAUDE_INHERIT_MODEL"
+grep -q 'CLAUDE_INHERIT_MODEL = if (\$InheritModel)' "$PS1" && grep -q '^\$inheritStmt' "$PS1" && grep -q 'CLAUDE_INHERIT_MODEL = \$prev.I' "$PS1" \
+  && ok "ps1 in-process and new-window paths both carry -InheritModel, and the in-process one restores it" || no "a ps1 spawn path drops -InheritModel"
+grep -q 'if (\$InheritModel -and (\$Tier -or \$Model))' "$PS1" && ok "ps1 refuses -InheritModel with -Tier or -Model" || no "ps1 accepts -InheritModel beside a model"
 grep -q '\[string\[\]\] \$AddDir' "$PS1" && ok "ps1 spawn takes -AddDir (twin of --add-dir)" || no "ps1 spawn has no -AddDir"
 grep -q "match '\^handoff-\[0-9a-f\]{16}\$'" "$PS1" && ok "ps1 grants only a handoff folder, never %TEMP% itself" || no "ps1 can grant the folder a file merely sits in (all of %TEMP%)"
 grep -q 'taskFile = Join-Path \$handoff "aios-spawn-task-' "$PS1" && ok "ps1 spawn writes its task into a fresh handoff folder" || no "ps1 task still written straight into %TEMP%"

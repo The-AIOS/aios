@@ -223,6 +223,12 @@ _claude_with_respawn() {
   # build if the two ever disagree, or if MODEL-ROUTING.md's judgment row names another model.
   local model_to_use="${CLAUDE_MODEL:-claude-opus-5-5[1m]}"
   local -a model_args=(--model "$model_to_use")
+  # CLAUDE_INHERIT_MODEL=1 (`spawn --inherit-model`): start with NO --model, so the session runs
+  # on the model the operator saved (`/model`, settings.json), as a plain `claude` does. A surface
+  # asks for this when a request names neither a tier nor a model: the AIOS App starts such a
+  # request with no flag, and the same request must not start another model here. $CLAUDE_MODEL is
+  # not consulted either: it is this launcher's variable, and a plain `claude` never reads it.
+  [ "${CLAUDE_INHERIT_MODEL:-}" = 1 ] && model_args=()
 
   # MCP profile (optional). $CLAUDE_MCP_PROFILE names a file in ~/.aios/mcp-profiles/;
   # the session then loads ONLY the servers that file declares. Unset → no flags at
@@ -594,7 +600,9 @@ spawn() {
   # --effort low|medium|high|xhigh|max — the worker's effort (Claude Code's --effort).
   # --advisor <rung|model> — an advisor model for the worker (a rung name resolves like --tier;
   # anything else is a model id). No rung has a default advisor. MODEL-ROUTING § Advisor.
-  local tier="" model="" profile="" effort="" advisor="" add_dirs=""
+  # --inherit-model — no value. Start the worker with no --model at all: the model the operator
+  # saved, not this launcher's pin. Not with --tier or --model (they name a model; this names none).
+  local tier="" model="" profile="" effort="" advisor="" add_dirs="" inherit_model=""
   local -a _args=()
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -602,6 +610,7 @@ spawn() {
       --tier=*)    tier="${1#*=}"; shift ;;
       --model)     [ $# -ge 2 ] || { echo "spawn: --model needs a value" >&2; return 2; }; model="$2"; shift 2 ;;
       --model=*)   model="${1#*=}"; shift ;;
+      --inherit-model) inherit_model=1; shift ;;
       --profile)   [ $# -ge 2 ] || { echo "spawn: --profile needs a value" >&2; return 2; }; profile="$2"; shift 2 ;;
       --profile=*) profile="${1#*=}"; shift ;;
       --effort)    [ $# -ge 2 ] || { echo "spawn: --effort needs a value" >&2; return 2; }; effort="$2"; shift 2 ;;
@@ -690,6 +699,10 @@ ${1#*=}"; shift ;;
   # no global ~/.zshrc export (that hack risked leaving every future terminal
   # pinned to the model if the revert was ever missed).
   [ -n "$model" ] && spawn_model="$model"
+  # --inherit-model names no model, so it cannot travel with a flag that names one.
+  if [ -n "$inherit_model" ] && { [ -n "$tier" ] || [ -n "$model" ]; }; then
+    echo "⚠️  spawn: --inherit-model starts the session with no model flag; it cannot be combined with --tier or --model" >&2; return 1
+  fi
 
   local spawn_effort=""
   case "$effort" in
@@ -813,10 +826,14 @@ ${1#*=}"; shift ;;
     bash) _sh=/bin/bash; _rc="$HOME/.bashrc" ;;
     *)    _sh=/bin/zsh;  _rc="$HOME/.zshrc"  ;;
   esac
+  # Always one or the other, so a spawn made from inside an inheriting session does not inherit too.
+  local inherit_line="unset CLAUDE_INHERIT_MODEL"
+  [ -n "$inherit_model" ] && inherit_line="export CLAUDE_INHERIT_MODEL=1"
   cat > "$launcher" <<LAUNCHER
 #!$_sh
 [ -f "$_rc" ] && source "$_rc"
 ${spawn_model:+export CLAUDE_MODEL='$spawn_model'}
+$inherit_line
 ${spawn_profile:+export CLAUDE_MCP_PROFILE='$spawn_profile'}
 ${spawn_effort:+export CLAUDE_EFFORT='$spawn_effort'}
 ${spawn_advisor:+export CLAUDE_ADVISOR_MODEL='$spawn_advisor'}
@@ -1001,6 +1018,7 @@ APPLESCRIPT
     # operator's shell (the reason the old branch used an assignment prefix).
     (
       [ -n "$spawn_model" ]   && export CLAUDE_MODEL="$spawn_model"
+      if [ -n "$inherit_model" ]; then export CLAUDE_INHERIT_MODEL=1; else unset CLAUDE_INHERIT_MODEL; fi
       [ -n "$spawn_effort" ]  && export CLAUDE_EFFORT="$spawn_effort"
       [ -n "$spawn_advisor" ] && export CLAUDE_ADVISOR_MODEL="$spawn_advisor"
       [ -n "$add_dirs" ]      && export CLAUDE_ADD_DIRS="$add_dirs"
