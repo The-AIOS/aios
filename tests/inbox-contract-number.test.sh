@@ -32,8 +32,10 @@ OL="skills/aios/orchestration-ladder/SKILL.md"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
 nums(){ grep -oE '[0-9]+' | sort -u | tr '\n' ' ' | sed 's/ $//'; }
-# A document as one line, so a sentence wrapped across two lines is still found.
-flat(){ tr '\n' ' ' < "$1" | tr -s ' '; }
+# A document as one line, so a sentence wrapped across two lines is still found. The
+# leading blockquote marker goes first: CLAUDE.md states this inside a "> - " bullet,
+# where a wrapped line would otherwise carry a ">" into the middle of the sentence.
+flat(){ sed 's/^[> ]*//' "$1" | tr '\n' ' ' | tr -s ' '; }
 # A declared number: the integer after "<key>" in the one file that owns it.
 declared(){ [ -f "$1" ] && grep -oE "\"$2\" *: *[0-9]+" "$1" | grep -oE '[0-9]+$' | nums; }
 # What a document says is current: every number in a "current contract is **N**" sentence.
