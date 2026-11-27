@@ -1,11 +1,11 @@
 ---
 name: team-composer
-description: Turn one sentence about a project ("I want to start a bakery, here's the site") into a proposed team of agents written into the project note, then launch it only on the operator's yes. Names the project's stage, picks agents and a model tier per role, one chief of staff, a charter, who is a standing member and who is a one-job crew, what each one owns, and a first task that ends by reporting back. Use when the operator asks for a team, a crew, a squad, "who should work on this", or to staff a new venture or project. NOT for wearing one agent in this session (that is suggest-agent) and NOT for spawning a single worker.
+description: Turn one sentence about a project ("I want to start a bakery, here's the site") into a proposed team of agents written into the project note, then launch it only on the operator's yes. Names the project's stage, picks agents and a model tier per role, one chief of staff who coordinates and does not build (the `cos` agent), a charter, who is a standing member and who is a one-job crew, what each one owns, and a first task that ends by reporting back. Use when the operator asks for a team, a crew, a squad, "who should work on this", or to staff a new venture or project. NOT for wearing one agent in this session (that is suggest-agent) and NOT for spawning a single worker.
 ---
 
 # Team composer
 
-A team is more than a list of workers. It has a charter every member reads first, members who keep a domain for months and crews who do one job and leave, one writer per artifact, and a chief of staff the others report to. This skill writes that as a plan the operator can read and edit, and launches it only when they say yes.
+A team is more than a list of workers. It has a charter every member reads first, members who keep a domain for months and crews who do one job and leave, one writer per artifact, and a chief of staff the others report to. The chief of staff is a coordinator: it wears the `cos` agent, hands out the work, gives turns, reads the evidence and talks to the operator. It does not write the plan or anything else the team produces; a member does. This skill writes that as a plan the operator can read and edit, and launches it only when they say yes.
 
 > **On Windows** run each `python3 …` below with the interpreter SETUP §10's probe picks (often `python`). The Microsoft Store's `python3` placeholder prints nothing and runs nothing, and silence from `check` is **never** a pass: a valid plan always prints `ok:` and a plan hash.
 
@@ -18,10 +18,10 @@ Name the **stage** with the `team-archetypes` skill (new / growing / scaling). I
 ## 2. Pick the members
 
 - **Agents:** only what exists. List them with `python3 ~/aios/hooks/agents/list-agents.py --json` and match the project's needs to each agent's description and the `keywords:` in its file. Never name an agent that is not on that list.
-- **Tiers:** by the kind of work, from `~/aios/hooks/pipeline/resolve-tier --list` (`MODEL-ROUTING.md` says what each is for). Judgment for the chief of staff and anything decided, scale or fast for research crews and volume.
+- **Tiers:** by the kind of work, from `~/aios/hooks/pipeline/resolve-tier --list` (`MODEL-ROUTING.md` says what each is for). `frontier` for the chief of staff, which holds the whole team's state for as long as the team runs; judgment for anything decided; scale or fast for research crews and volume. `frontier` is the costliest rung (`MODEL-ROUTING.md` gives the spread between rungs), and a long-lived lead keeps spending: the operator can lower the lead's tier in the note's Team table before saying yes.
 - **Kind:** `standing` for a domain that will keep coming back (it is resumed by name and keeps its context), `crew` for one job that reports back and retires. Day one can be small: two or three members is a real team.
-- **Chief of staff:** exactly one member, usually standing, who reports to the operator. Everyone else reports to the chief of staff or to another member.
-- **Owns:** each standing member is the single writer of named artifacts (the plan, the decision log, the site). Two members never own the same thing.
+- **Chief of staff:** exactly one member, usually standing, who reports to the operator, and whose agent is `cos` (`check` refuses any other; an operator's own `agents/custom/cos.md` is the one worn when it exists). It owns the team log and the common rules, never a deliverable. Everyone else reports to the chief of staff or to another member.
+- **Owns:** each standing member is the single writer of named artifacts (the plan, the decision log, the site). Two members never own the same thing. The plan and the documents belong to a member, not to the chief of staff.
 - **A checker,** when the team produces things that reach other people: one member checks outputs against the charter's source of truth before the operator sees them.
 - **Session names** are role-first, lowercase, at most three words (`bakery-lead`, `bakery-market`).
 
@@ -36,11 +36,12 @@ Replace the note's `## Team` section, or add one above the next `##` heading. **
 
 | Role | Session | Agent | Tier | Kind | Owns | Reports to | First task |
 |---|---|---|---|---|---|---|---|
-| chief of staff | bakery-lead | consultant | judgment | standing | the plan, the decision log | operator | Draft the 90-day plan from the charter. |
+| chief of staff | bakery-lead | cos | frontier | standing | the team log, the common rules | operator | Read the cos contract, open the team log and the common rules, then brief each member. |
+| strategy | bakery-plan | consultant | judgment | standing | the 90-day plan, the decision log | bakery-lead | Draft the 90-day plan from the charter. |
 | research | bakery-market | market-researcher | scale | crew | | bakery-lead | Size the local market for artisan bread. |
 ```
 
-Write the first task without the report-back: the launcher adds it (*report back with one inbox `send` to {reports to}*), so every handoff closes. Keep each task to one line, short enough to type.
+The chief of staff's first task is always that one: read its contract, open the log and the rules, hand out the work. Write the first task without the report-back: the launcher adds it (*report back with one inbox `send` to {reports to}*), so every handoff closes. Keep each task to one line, short enough to type.
 
 Then check it: `python3 ~/aios/hooks/agents/team-plan.py check "<note>"`. Fix every `refused:` line before showing the plan.
 
@@ -52,4 +53,4 @@ Show the charter, then **every member's task exactly as `check` printed it** (it
 
 ## After launch
 
-Members report to the chief of staff with the inbox's `send` verb. When a crew finishes, its output and method go into a standing member's context, and the crew's transcript is offered for archiving on the operator's yes. Sessions get renamed, so track members by session, not by name (`orchestration-ladder`).
+Members report to the chief of staff with the inbox's `send` verb. The chief of staff reads what they bring, decides what runs next and carries their questions to the operator one at a time; a report is a status, never the operator's approval. When a crew finishes, its output and method go into a standing member's context, and the crew's transcript is offered for archiving on the operator's yes. Sessions get renamed, so track members by session, not by name (`orchestration-ladder`).

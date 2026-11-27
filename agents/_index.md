@@ -4,7 +4,7 @@ tags:
   - index
   - moc
 created: '2026-05-21'
-updated: '2026-11-13'
+updated: '2026-11-27'
 ---
 # Agents — Top-Level Registry
 
@@ -19,7 +19,7 @@ Organized into **7 bundles by purpose**. Install only the bundles you need.
 | Bundle | Purpose | Count |
 |---|---|---|
 | **`aios/sales/`** | Lead generation, proposals, CRM, brand monitoring | 4 |
-| **`aios/strategy/`** | Market research, advisory, company analysis, open-source governance, quarterly objectives | 5 |
+| **`aios/strategy/`** | Market research, advisory, company analysis, open-source governance, quarterly objectives, team coordination | 6 |
 | **`aios/finance-legal/`** | Accounting, legal review, invoicing, compliance | 4 |
 | **`aios/engineering/`** | Code review, documentation, bug triage, security, building, growth, refactoring | 8 |
 | **`aios/communication/`** | Content, brochures, decks, emails, meeting prep, reports, design systems, animation, explainers, book publishing | 11 |
@@ -27,7 +27,7 @@ Organized into **7 bundles by purpose**. Install only the bundles you need.
 | **`aios/commerce/`** | Customer-facing shopping + merchant agents | 1 |
 | **`custom/`** | Your own agents (operator-specific extensions, never synced) | — |
 
-**Total bundled agents: 40.** Each bundle has a `README.md` describing its scope; this file is the master registry.
+**Total bundled agents: 41.** Each bundle has a `README.md` describing its scope; this file is the master registry.
 
 > **Standard:** all agents follow the [Agent Skills open standard](https://github.com/anthropics/skills) (138K⭐ — Anthropic's public canonical repo). Cross-platform compatible with Claude Code, Codex, Gemini CLI, Cursor, Antigravity.
 
@@ -100,6 +100,7 @@ The session says which hat it chose and why, so the operator can correct it, and
 | [[company-analyst]] | Acquired-style deep dives — history, strategy, moat, playbook | company analysis, acquired, deep dive, moat, 7 powers | on-demand |
 | [[protocol-steward]] | Governance + open-source + licensing + trademark for an open protocol/standard — lead technically without being perceived as owner (avoid vendor-capture) | governance, open-source, license, Apache, MIT, consortium, foundation, steering committee, trademark, vendor-capture, protocol, standard, CLA | on-demand |
 | [[okr-coach]] | Quarterly objectives inside the rituals — drafts ≤3 objectives with instrument-named KRs citing keys/project notes into one zero-checkbox quarter note, presented as a draft; scores it once on the quarter's last Friday | OKR, objectives, key results, quarter, quarterly plan, score the quarter, quarterly review, objetivos del trimestre | quarterly (first week: set · last Friday: score) |
+| [[cos]] | Chief of staff of a team: decides what enters and when, writes each worker's brief, gives turns, reads the evidence, keeps the team log, talks to the operator. Does not build | chief of staff, cos, team lead, coordinate the team, run the team, coordinator, hand out the work | standing (while the team runs) |
 
 ### aios/finance-legal/ — Accounting, legal, invoicing, compliance
 

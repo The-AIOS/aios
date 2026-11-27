@@ -66,6 +66,7 @@ Say `spawn {name}` to launch a named tab dedicated to that role, or `/agent {nam
 | `company-analyst` | Acquired-style deep dives — history, strategy, moat | strategy |
 | `compliance-checker` | Review documents against legal/regulatory requirements | finance-legal |
 | `consultant` | Strategic advisory, frameworks, recommendations | strategy |
+| `cos` | Chief of staff of a team: coordinates, briefs each worker, gives turns, reads the evidence, talks to you. Does not build | strategy |
 | `content-scheduler` | Plan and queue content calendar from vault insights | communication |
 | `content-writer` | Draft posts for LinkedIn, X, Substack in your voice | communication |
 | `crm-updater` | Sync deal updates into the pipeline USER.md names | sales |
@@ -122,7 +123,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `right-context` | `skills/aios/` | "How much of the operator's context does this task actually need?" |
 | `watch-video` | `skills/aios/` | "Watch this video / listen to this recording and tell me…" — comprehension only; `/aios:ingest` is the filing path |
 | `suggest-agent` | `skills/aios/` | "Is there an agent for this?" — suggests the one agent that fits a request, in one fixed line, and opens it or wears it only on your yes |
-| `team-composer` | `skills/aios/` | "Staff this project" — one sentence becomes a team plan in the project note (charter, members, owners, one chief of staff, a tier each), launched only on your yes |
+| `team-composer` | `skills/aios/` | "Staff this project" — one sentence becomes a team plan in the project note (charter, members, owners, one chief of staff who coordinates and does not build, a tier each), launched only on your yes |
 | `boards` | `skills/aios/` | "Put this on my sidebar" — build, update or remove a static card in the AIOS App's sidebar (`~/.aios/boards/<name>/index.html`, App 0.15.0+) |
 | `systematic-debugging` | `skills/superpowers/` | "Help me debug this systematically" |
 | `test-driven-development` | `skills/superpowers/` | "Let's write tests first" |

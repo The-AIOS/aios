@@ -120,7 +120,7 @@ Naming a worker is how you choose its expertise — the name **is** the role, an
 | Research that goes wide before it concludes | *"Have the `market-researcher` map who else is doing this."* |
 | A second opinion on a decision | *"Bring in the `consultant` and argue the other side."* |
 
-**35 agents across seven bundles** — sales · strategy · finance-legal · engineering · communication · personal · commerce. You don't need the list: describe the job and ask for "someone who does X"; the session matches and tells you who it picked. Registry: [`agents/_index.md`](./agents/_index.md).
+**41 agents across seven bundles** — sales · strategy · finance-legal · engineering · communication · personal · commerce. You don't need the list: describe the job and ask for "someone who does X"; the session matches and tells you who it picked. Registry: [`agents/_index.md`](./agents/_index.md).
 
 #### Reaching for a capability
 

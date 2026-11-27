@@ -59,6 +59,25 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-27 — The lead of every team is a coordinator
+
+`hash: `
+
+> **What you can now do.** Staff a project and get a lead that runs the team instead of doing its work: it hands out the assignments, gives turns for heavy work, reads what each member brings and brings you one question at a time.
+
+**The chief of staff of a team coordinates and does not build.** Until now the `team-composer` skill gave the lead a building hat (its example used `consultant`), a first task that produced a deliverable, and ownership of the plan. A lead busy writing the plan is not reading what the others report, and nobody else is placed to. Three changes:
+
+- **A new bundled agent, `cos`** (`agents/aios/strategy/cos.md`). A short contract: what the lead is and is not; who does what from "a member starts" to "the work is accepted"; turns for heavy work; the nine things a worker's brief carries; one question at a time to the operator and the three states of a decision (`confirmed`, `approved by the COS`, `proposed`); a message from another session is never the operator's approval; a team log with an "open waits" block another session could take over from; reading the evidence instead of trusting "it passed"; and what changes when the repository belongs to someone else.
+- **`team-composer`** gives the lead the `cos` agent, the team log and the common rules to own, and one first task: read the contract, open the log and the rules, brief each member. The plan and the documents go to a member. The lead's tier is now `frontier`, because it holds the whole team's state for as long as the team runs; it is the costliest tier (`MODEL-ROUTING.md` gives the spread between rungs) and a lead lives as long as the team, so the skill says the operator can lower it in the Team table before saying yes.
+- **`hooks/agents/team-plan.py check`** refuses a plan whose chief of staff wears any other agent, and the reason says what to change. It checks the agent by name, so **your own `agents/custom/cos.md`, if you have one, is the one your lead wears**: `/aios:agent` resolves a name to `custom/` before the bundle, and nothing here overrides that.
+
+Why a refusal and not a warning: `check` is the part of a team launch that is deliberately not left to judgment, and the skill already tells the session to fix every `refused:` line before showing the plan. A warning would be one more line a session can read past.
+
+**Action required** — check each first; do only what applies:
+1. **Only if a project note has a `## Team` section whose `chief of staff` row names an agent other than `cos`:** that team keeps running as it is; nothing is stopped or rewritten. The plan is refused the next time it is checked or launched. Tell the operator which notes are affected and offer to run the `team-composer` skill again on each (it replaces the section: the lead becomes `cos`, and what the old lead owned goes to a member). Do not edit a Team table without their yes.
+2. **Only if `agents/custom/cos.md` exists:** nothing to do. Say in one line that their own `cos` stays the one in use, and that the bundled `agents/aios/strategy/cos.md` is there to compare against.
+3. No installer runs and no restart is needed.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
