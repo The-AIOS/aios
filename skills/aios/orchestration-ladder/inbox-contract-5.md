@@ -87,9 +87,10 @@ and it quotes only the path as written, never a resolved one. Checks 1 to 8 make
    separator (U+2028, U+2029) or a direction mark or override (U+061C, U+200E, U+200F, U+202A–U+202E,
    U+2066–U+2069) [`bad-path`]: dead letters and notices quote the path, and these would make it read as
    something else. It is not absolute, or it starts with `~` [`not-absolute`]. It is longer than 4,096
-   characters, ends in a separator, or has a `.` or `..` segment [`bad-path`]: resolving `..` would make the
+   Unicode code points, ends in a separator, or has a `.` or `..` segment [`bad-path`]: resolving `..` would make the
    system walk folders outside the root, and whether that succeeds would tell the session that they exist.
-   The trimmed path is the one used from here on. On Windows these apply with both separators, and also:
+   The trimmed path is the one used from here on. On Windows these apply with both separators, and also,
+   first of all:
    - a path starting with two separators of either kind (`\\host\share`, `\\?\…`, `\\.\…`, `\/host`)
      [`bad-path`]: touching it could send the operator's network credentials to that host;
    - a path that is not a drive letter, a colon and a separator (`C:x.md`, `\Users\x.md`) [`not-absolute`];
@@ -121,8 +122,11 @@ and it quotes only the path as written, never a resolved one. Checks 1 to 8 make
     comparison does (on macOS `.obſidian` reaches `.obsidian`). So the surface also asks the file system for
     the stored name of the file it is about to open (`realpath(3)`; in Node `fs.realpathSync.native`, which
     on Windows also turns a short name into the long one) and applies the secret rules to that too. If that
-    call fails [`unavailable`]. If the stored name is not a secret but differs from the resolved path by more
-    than the case of its letters or a short name, the file changed under the checks [`unavailable`].
+    call fails [`unavailable`]. If the stored name is not a secret but is not the same name as the resolved
+    path, the file changed under the checks [`unavailable`]. "The same name" means equal once both are put in
+    Unicode normalization form C and folded as below (on macOS a note stored decomposed, `reunión` as `o` plus
+    a combining accent, comes back that way, and is the same note); on Windows a segment of the resolved path
+    may also be a short 8.3 name that the stored one spells out, which the fixture cannot express.
 12. **Kind.** The file is binary, or too large for the viewer to show [`unreadable`]. A surface does not fall
     back to revealing it in the file manager. Images and PDF documents are shown: the surface renders them
     itself.
@@ -154,14 +158,15 @@ Decided by NAME only. No surface reads a file's content to decide whether it is 
 
 Names are compared folded: lower case, then upper case, then lower case again (`s.lower().upper().lower()` in
 Python, `s.toLowerCase().toUpperCase().toLowerCase()` in JavaScript, which agree), so `ſ` is `s`, `ß` and `ẞ`
-are `ss`, and `ı` is `i`: spellings a case-insensitive file system may take to the ASCII names below. One backup
+are `ss`, and `ı` is `i`: spellings a case-insensitive file system may take to the ASCII names below. The two
+languages agree on every character that folds to ASCII, which is all the rules below compare. One backup
 suffix (`.bak`, `.old`, `.orig`, `.backup` or `~`) is taken off the last segment first, so `token.json.bak` is
 judged as `token.json`. A path is a secret when:
 
 - any segment is `.ssh`, `.gnupg`, `.aws`, `.docker`, `.kube`, `.git`, `.obsidian`, `.claude` or
   `agent-secrets`; or
-- its last segment is `.env` or `.envrc`, starts with `.env_` or `.env-`, contains `.env.`, or ends with
-  `.env` (but `.envelope.md` is a note); or it is `.netrc`, `.pgpass`, `.npmrc`, `.pypirc`,
+- its last segment starts with `.env` and is not prose (see below; `.envelope.md` is a note, `.envrc.local`
+  is not), contains `.env.`, or ends with `.env`; or it is `.netrc`, `.pgpass`, `.npmrc`, `.pypirc`,
   `.git-credentials`, `.dockercfg`, `.mcp.json`, `.dev.vars`, `credentials`, `kubeconfig`, `auth.json`,
   `.htpasswd`, `.vault-token`, `.yarnrc.yml`, `.s3cfg`, `.my.cnf`, `storage_state.json` or
   `spotify-cache.json`; or
@@ -170,8 +175,11 @@ judged as `token.json`. A path is a secret when:
 - its last segment ends with `.json` and starts with `service-account` or contains `firebase-adminsdk`; or
 - it is a `.json` file directly inside a folder named `auth` (where browser automation keeps saved logins);
   or
-- its last segment is not prose (it does not end in `.md`, `.markdown`, `.html`, `.htm`, `.pdf`, `.png`,
-  `.jpg`, `.jpeg`, `.gif`, `.webp` or `.svg`), and its name without the extension, split into words (at every
+- its last segment is neither prose (it does not end in `.md`, `.markdown`, `.html`, `.htm`, `.pdf`, `.png`,
+  `.jpg`, `.jpeg`, `.gif`, `.webp` or `.svg`) nor source code (`.py`, `.js`, `.mjs`, `.cjs`, `.ts`, `.tsx`,
+  `.jsx`, `.sh`, `.bash`, `.zsh`, `.go`, `.rs`, `.rb`, `.swift`, `.kt`, `.java`, `.c`, `.h`, `.cpp`, `.cs`,
+  `.php`, `.css`, `.scss`, `.lua` or `.pl`: a `token-store.js` or a `secret-scan.sh` is code an agent may
+  well show, and its name says what it handles, not that it holds one), and its name without the extension, split into words (at every
   change from an ASCII lower-case letter to an ASCII upper-case one, then, folded, into runs of `a`–`z` and of
   `0`–`9`), has one of the words `token`, `tokens`, `credential`, `credentials`, `oauth`, `secret`, `secrets`,
   `cookie`, `cookies`, `password`, `passwords`, `apikey` or `apikeys`, or the word `api` followed by `key` or
@@ -201,15 +209,18 @@ These hold however a surface's viewer works:
   those bytes too, never by their path. A viewer that would read the file again later repeats checks 9 to 13 first and shows nothing
   new if they fail. Otherwise a session could swap the file for a link to a key after the open, and the viewer
   would display the key. (The surfaces show such a file as a read-only snapshot and never reload it, and never
-  save or restore it as an open file across a restart. "Open to edit" first checks the real file again, the
-  same way (still the same file, one link, inside the root), opens nothing if it changed, and otherwise
+  save or restore it as an open file across a restart. "Open to edit" first checks the real file again: the
+  walk still ends at the same file (device and inode, or file id), with one link, under a name that is not a
+  secret. If not, it opens nothing and tells the operator why (an editor that saves by replacing the file
+  gives it a new identity, and that counts as changed). Otherwise it
   reopens it in the surface's own editor as the operator's own file; it never hands it to the system opener.)
 - **Nothing the file points at is loaded on its behalf unless it would pass these checks.** A local image in
   a rendered note is joined to the opened file's resolved folder, `..` applied as text, and shown only if a
   request for it would pass checks 5 to 13, from the bytes of the file that passed. Remote images wait for the
   operator, as the viewers already do for notes. Raw HTML inside a note never runs scripts, and frames,
-  objects and embeds are never loaded. A PDF is shown with its scripts, links and launch actions inert; a
-  surface whose viewer cannot promise that refuses it [`unreadable`] after the decision (both do today). A
+  objects and embeds are never loaded. A PDF is shown only with its scripts, links and launch actions
+  inert; a surface whose viewer cannot promise that refuses it with an [`unreadable`] dead letter, a refusal
+  of the surface's own after the thirteen checks (both surfaces refuse PDFs today). Apart from a PDF, a
   link the
   operator clicks inside the file is the operator's own action, through the surface's usual path; nothing in
   an opened file is handed to the system opener by itself.

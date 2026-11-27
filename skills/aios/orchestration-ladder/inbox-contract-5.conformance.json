@@ -431,6 +431,41 @@
       "class": "text",
       "stored": ""
     },
+    "/home/op/aios/vault/repo/.envrc.local": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/repo/.env1": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/Case.md": {
+      "kind": "file",
+      "class": "text",
+      "stored": "/home/op/aios/vault/case.md"
+    },
+    "/home/op/aios/vault/reunión.md": {
+      "kind": "file",
+      "class": "text",
+      "stored": "/home/op/aios/vault/reunión.md"
+    },
+    "/home/op/aios/vault/moved.md": {
+      "kind": "file",
+      "class": "text",
+      "stored": "/home/op/aios/vault/other.md"
+    },
+    "/home/op/aios/vault/repo/password_reset.py": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/repo/token-store.js": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/repo/secret-scan.sh": {
+      "kind": "file",
+      "class": "text"
+    },
     "/home/op/aios/vault/run.fileloc": {
       "kind": "file",
       "class": "text"
@@ -3124,6 +3159,141 @@
         "do": "open",
         "path": "/home/op/aios/vault/.environment-notes.md",
         "mode": "auto"
+      }
+    },
+    {
+      "case": "a direnv local file",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/.envrc.local"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "a numbered environment file",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/.env1"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "a stored name that differs only in case opens",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/Case.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/Case.md",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "a stored name that differs only in Unicode normalization opens",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/reunión.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/reunión.md",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "a stored name that names another file is unavailable",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/moved.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "unavailable"
+      }
+    },
+    {
+      "case": "source code is not judged by its words",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/password_reset.py"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/repo/password_reset.py",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "nor a script named for a token store",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/token-store.js"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/repo/token-store.js",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "nor a shell script that scans for secrets",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/secret-scan.sh"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/repo/secret-scan.sh",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "a paragraph separator in the path",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/no te.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "bad-path"
+      }
+    },
+    {
+      "case": "an Arabic letter mark in the path",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/؜note.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "bad-path"
       }
     },
     {

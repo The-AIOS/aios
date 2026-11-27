@@ -12,6 +12,7 @@ import math
 import posixpath
 import re
 import sys
+import unicodedata
 
 MAX_HOPS = 40
 MAX_PATH = 4096
@@ -21,6 +22,8 @@ SECRET_NAMES = {".netrc", ".pgpass", ".npmrc", ".pypirc", ".git-credentials", ".
                 "auth.json", ".htpasswd", ".vault-token", ".yarnrc.yml", ".s3cfg", ".my.cnf"}
 SECRET_EXT = (".asc", ".pem", ".key", ".p12", ".pfx", ".p8", ".kdbx", ".ovpn", ".ppk", ".jks", ".keystore", ".tfstate", ".tfvars")
 PROSE_EXT = (".md", ".markdown", ".html", ".htm", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg")
+CODE_EXT = (".py", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".sh", ".bash", ".zsh", ".go", ".rs", ".rb",
+              ".swift", ".kt", ".java", ".c", ".h", ".cpp", ".cs", ".php", ".css", ".scss", ".lua", ".pl")
 BACKUP_SUFFIX = (".bak", ".old", ".orig", ".backup", "~")
 WORDS = {"token", "tokens", "credential", "credentials", "oauth", "secret", "secrets", "cookie", "cookies",
          "password", "passwords", "apikey", "apikeys"}
@@ -58,7 +61,7 @@ def is_secret(path):
             raw_b = raw_b[:-len(suf)]
             break
     b = fold(raw_b)
-    if b in (".env", ".envrc") or b.startswith((".env_", ".env-")) or ".env." in b or b.endswith(".env") \
+    if (b.startswith(".env") and not b.endswith(PROSE_EXT)) or ".env." in b or b.endswith(".env") \
             or b in SECRET_NAMES:
         return True
     if b.endswith(SECRET_EXT):
@@ -67,7 +70,7 @@ def is_secret(path):
         return True
     if len(segs) > 1 and segs[-2] == "auth" and b.endswith(".json"):
         return True
-    if not b.endswith(PROSE_EXT):
+    if not b.endswith(PROSE_EXT) and not b.endswith(CODE_EXT):
         stem = raw_b.rsplit(".", 1)[0] if "." in raw_b.lstrip(".") else raw_b
         w = words_of(stem)
         if WORDS & set(w) or any(w[i] == "api" and w[i + 1] in ("key", "keys") for i in range(len(w) - 1)):
@@ -263,6 +266,9 @@ def decide(doc, case, roots):
             return {"do": "refuse", "why": "unavailable"}
         if is_secret(node["stored"]):
             return {"do": "refuse", "why": "secret"}
+        same = lambda a, b: fold(unicodedata.normalize("NFC", a)) == fold(unicodedata.normalize("NFC", b))
+        if not same(node["stored"], real):
+            return {"do": "refuse", "why": "unavailable"}
     # 12. kind
     if node.get("class") in ("binary", "large"):
         return {"do": "refuse", "why": "unreadable"}
