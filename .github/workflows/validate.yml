@@ -1880,6 +1880,27 @@ jobs:
         # never a verb list of its own, which would be the third copy.
         run: bash tests/bus-verb-parity.test.sh
 
+      - name: the inbox contract numbers are declared once, and both documents repeat them
+        # The stamp an agent reads in ~/.aios/spawn-inbox/README.md is only useful beside two
+        # numbers: the contract the verbs arrived in and the one in force. inbox-contract.json
+        # declares both; CLAUDE.md and the orchestration-ladder skill each repeat them. No
+        # network and no other repo -- this is the check that blocks (#409).
+        run: bash tests/inbox-contract-number.test.sh
+
+      - name: the declared inbox contract equals what the App and Glass stamp (reads both repos)
+        # The declaration is hand-typed and the stamp is written by code that is not in this
+        # repo, so this reads INBOX_CONTRACT from the default branch of both surfaces. It is the
+        # only step here that needs the network. Exit 1 means both were read and the number
+        # differs: red. Exit 75 means a surface could not be reached: nothing was compared, so it
+        # is neither a pass nor a failure of this change -- it is surfaced as a warning.
+        run: |
+          rc=0; bash tests/inbox-contract-stamp.test.sh || rc=$?
+          if [ "$rc" = 75 ]; then
+            echo "::warning::inbox contract NOT checked against the surfaces: a surface repo could not be read. Re-run this job; a pass here would have meant nothing."
+            exit 0
+          fi
+          exit "$rc"
+
       - name: a spawned worker's context rule agrees across both copies
         # The rule lives in two places because a worker is born on two paths: the wrapper
         # injects it into the task file for `spawn` in a terminal, while a worker born
