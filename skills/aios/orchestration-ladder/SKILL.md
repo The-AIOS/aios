@@ -102,7 +102,7 @@ Two levers, and they are not interchangeable. **`spawn --profile <name>`** scope
 
 Three shapes that look like the fix and are not: `--allowedTools ""` is swallowed (the flag is variadic and eats a prompt that follows it, so put the prompt **first**) · `--permission-mode manual` does **not** block · `--disallowedTools` is a denylist, so `Write`, `Edit` and `Agent` survive it.
 
-**And you cannot verify any of this by asking the worker what tools it has.** Under a restrictive allowlist it still lists `Bash` and `Write` — it is describing its *schema*, not its permissions. **Only an absent side effect is evidence:** did a file appear, did the command run. `tests/headless-allowlist.test.sh` is that check; it skips loudly rather than passing where no `claude` binary exists.
+**And you cannot verify any of this by asking the worker what tools it has.** Under a restrictive allowlist it still lists `Bash` and `Write` — it is describing its *schema*, not its permissions. **Only an absent side effect is evidence:** did a file appear, did the command run. `tests/headless-allowlist.test.sh` is that check; it skips loudly rather than passing where no `claude` binary exists, and its live half (nine real `claude -p` sessions on the cheapest rung) runs only with `AIOS_LIVE_CHECKS=1`.
 
 Matters most when a delegated prompt carries text from **outside** the vault — a fetched page, an email body, a transcript. A published RCE against Claude Code came from a *"summarise this website"* request.
 

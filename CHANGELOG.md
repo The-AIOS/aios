@@ -59,6 +59,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-27 — The test suite starts no Claude session unless you ask
+
+`hash: `
+
+> **What you can now do.** Run the framework's whole `tests/` folder without it starting real Claude sessions on your default model.
+
+**The live half of `tests/headless-allowlist.test.sh` runs only with `AIOS_LIVE_CHECKS=1`** (#421). That test proves the headless containment recipe by starting nine real `claude -p` sessions, and it did so on every machine with a `claude` binary, on the operator's own default model: a full suite run was nine sessions nobody had launched, at the top rung's price on a machine set to it. Without the variable the live half now skips, and the summary line says so (`… 1 skipped (live checks not run: set AIOS_LIVE_CHECKS=1)`), so a skipped check never reads as a passed one. With it, every call runs on the cheapest rung, read from `hooks/pipeline/resolve-tier fast`; if that gives no model, the live half fails before starting anything. `CONTRIBUTING.md` says when to run it. `tests/headless-live-opt-in.test.sh` holds both rules with a stand-in `claude`, so it starts no session either.
+
+**Action required** — none. `tests/` is not synced into a vault.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
