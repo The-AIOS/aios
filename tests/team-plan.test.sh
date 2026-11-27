@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # hooks/agents/team-plan.py (#274): a team plan is refused with a reason when an agent or tier is unknown,
-# there are zero or two chiefs of staff, or a member reports to nobody; nothing is spawned without
+# there are zero or two chiefs of staff, the chief of staff does not wear the `cos` agent, or a member
+# reports to nobody; nothing is spawned without
 # --approved; a valid approved plan writes one request per member (name, task, tier, group) into
 # the inbox; with no live surface it writes nothing and prints spawn lines instead.
 # Usage: bash tests/team-plan.test.sh [repo-root]. Written for bash 3.2.
@@ -20,7 +21,7 @@ plan(){ # file, then rows (one per arg)
     for r in "$@"; do printf '%s\n' "$r"; done
     printf '\n## Notes\n\nkept\n'; } > "$f"
 }
-CHIEF='| chief of staff | bakery-lead | consultant | judgment | standing | the plan, the decision log | operator | Draft the 90-day plan from the charter. |'
+CHIEF='| chief of staff | bakery-lead | cos | frontier | standing | the team log, the common rules | operator | Open the team log and the common rules, then brief each member. |'
 RES='| research | bakery-market | market-researcher | scale | crew | | bakery-lead | Size the local market for artisan bread. |'
 hash_of(){ python3 "$H" check "$T/$1" | sed -n "s/^plan: \([0-9a-f]*\).*/\1/p"; }
 refused(){ out=$(python3 "$H" check "$T/$1"); rc=$?; [ "$rc" = 1 ] && printf '%s' "$out" | grep -q "$2" && ok "refused: $3" || no "not refused ($3): rc=$rc $out"; }
@@ -29,17 +30,35 @@ plan good.md "$CHIEF" "$RES"
 out=$(python3 "$H" check "$T/good.md"); [ $? = 0 ] && ok "a valid plan passes" || no "valid plan refused: $out"
 plan a.md "$CHIEF" '| research | bakery-market | wizard | scale | crew | | bakery-lead | x |'; refused a.md "no agent named 'wizard'" "an unknown agent"
 plan b.md "$CHIEF" '| research | bakery-market | market-researcher | turbo | crew | | bakery-lead | x |'; refused b.md "unknown tier 'turbo'" "an unknown tier"
-plan c.md '| lead | bakery-lead | consultant | judgment | standing | plan | operator | x |' "$RES"; refused c.md "exactly one row must be the chief of staff (0" "no chief of staff"
-plan d.md "$CHIEF" '| chief of staff | bakery-two | consultant | judgment | standing | plan | operator | x |'; refused d.md "(2 found)" "two chiefs of staff"
+plan c.md '| lead | bakery-lead | cos | frontier | standing | the team log | operator | x |' "$RES"; refused c.md "exactly one row must be the chief of staff (0" "no chief of staff"
+plan d.md "$CHIEF" '| chief of staff | bakery-two | cos | frontier | standing | the team log | operator | x |'; refused d.md "(2 found)" "two chiefs of staff"
 plan e.md "$CHIEF" '| research | bakery-market | market-researcher | scale | crew | | nobody | x |'; refused e.md "not another member" "reporting to nobody"
 plan f.md "$CHIEF"; refused f.md "at least two members" "a team of one in a plan"
+# The lead coordinates and does not build, so it wears `cos`: a building hat on that row is refused,
+# with the fix in the reason.
+plan g.md '| chief of staff | bakery-lead | consultant | judgment | standing | the plan, the decision log | operator | Draft the 90-day plan from the charter. |' "$RES"
+refused g.md "the chief of staff wears the \`cos\` agent, not 'consultant'" "a chief of staff wearing a building hat"
+# An operator's own agents/custom/cos.md is the `cos` the lead wears: the plan names the agent, and the
+# vault resolves a name to custom/ before the bundle. With no `cos` at all the reason says which file is missing.
+V="$T/vault"; mkdir -p "$V/agents/custom" "$V/agents/aios/strategy" "$V/hooks"
+cp -R "$ROOT/hooks/agents" "$ROOT/hooks/pipeline" "$ROOT/hooks/context" "$ROOT/hooks/claude-identity" "$V/hooks/"
+cp "$ROOT/agents/aios/strategy/market-researcher.md" "$V/agents/aios/strategy/"
+out=$(AIOS_ROOT="$V" python3 "$H" check "$T/good.md"); rc=$?
+[ "$rc" = 1 ] && printf '%s' "$out" | grep -q "no agent named 'cos' under agents/" && ok "refused: a vault with no cos agent at all" || no "a vault without cos passed (rc=$rc): $out"
+printf -- "---\nname: cos\ndescription: 'Use when this operator runs a team their own way.'\n---\n# COS\n" > "$V/agents/custom/cos.md"
+out=$(AIOS_ROOT="$V" python3 "$H" check "$T/good.md"); rc=$?
+[ "$rc" = 0 ] && ok "an operator's own agents/custom/cos.md alone satisfies the rule" || no "a custom cos was refused (rc=$rc): $out"
+cp "$ROOT/agents/aios/strategy/cos.md" "$V/agents/aios/strategy/"
+out=$(AIOS_ROOT="$V" python3 "$H" check "$T/good.md"); rc=$?
+[ "$rc" = 0 ] && printf '%s' "$out" | grep -q "bakery-lead (cos, frontier): Wear the \`cos\` agent (/aios:agent cos)" \
+  && ok "custom and bundled cos together: the plan passes and names the agent, never a path" || no "custom + bundled cos wrong (rc=$rc): $out"
 
 before=$(ls "$T/inbox" | wc -l)
 out=$(python3 "$H" launch "$T/good.md"); rc=$?
 [ "$rc" = 1 ] && [ "$(ls "$T/inbox" | wc -l)" = "$before" ] && ok "launch without --approved writes nothing" || no "unapproved launch acted (rc=$rc)"
 
 out=$(python3 "$H" launch "$T/good.md" --approved "$(hash_of good.md)"); rc=$?
-[ "$rc" = 0 ] && [ -z "$(ls "$T/inbox")" ] && printf '%s' "$out" | grep -q "^  spawn --tier judgment bakery-lead 'Wear the \`consultant\` agent" \
+[ "$rc" = 0 ] && [ -z "$(ls "$T/inbox")" ] && printf '%s' "$out" | grep -q "^  spawn --tier frontier bakery-lead 'Wear the \`cos\` agent" \
   && ok "no live surface: nothing written, one spawn line per member" || no "no-surface launch wrong (rc=$rc): $out"
 
 sleep 300 & SP=$!; printf '{"pid": %s}' "$SP" > "$T/surfaces/app.json"

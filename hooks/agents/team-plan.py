@@ -3,7 +3,8 @@
 
 The team-composer skill writes the plan into the project note; this script is the part that must
 not be left to judgment: every agent exists, every tier is one the ladder knows, exactly one chief
-of staff, every task fits one typed line, and nothing is spawned before the operator said yes.
+of staff and it wears the `cos` agent (it coordinates, it does not build), every task fits one typed
+line, and nothing is spawned before the operator said yes.
 
 The section it reads (the skill writes it; an operator may edit it):
 
@@ -13,7 +14,7 @@ The section it reads (the skill writes it; an operator may edit it):
 
     | Role | Session | Agent | Tier | Kind | Owns | Reports to | First task |
     |---|---|---|---|---|---|---|---|
-    | chief of staff | bakery-lead | consultant | judgment | standing | the plan | operator | ... |
+    | chief of staff | bakery-lead | cos | frontier | standing | the team log | operator | ... |
 
 Usage:
   team-plan.py check  <project-note.md>               exit 0 = valid, 1 = refused (reasons printed)
@@ -41,6 +42,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.environ.get("AIOS_ROOT") or os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))  # hooks/agents/ -> root
 COLUMNS = ["role", "session", "agent", "tier", "kind", "owns", "reports to", "first task"]
 KINDS = {"standing", "crew"}
+# The chief of staff's hat. Checked by NAME, never by path: a vault resolves a name to agents/custom/
+# before the bundle, so an operator's own agents/custom/cos.md is the one the lead wears.
+LEAD_AGENT = "cos"
 SESSION = re.compile(r"^[a-z0-9]+(-[a-z0-9]+){0,2}$")   # lowercase kebab, at most three words
 MAX_TASK = 1000                                         # bytes a surface types in one line
 
@@ -144,6 +148,9 @@ def check(note):
         if r in chiefs:
             if target.lower() != "operator":
                 errs.append("%s: the chief of staff reports to the operator" % who)
+            if r["agent"] != LEAD_AGENT:
+                errs.append("%s: the chief of staff wears the `%s` agent, not '%s': it coordinates and does not "
+                            "build, so give the plan and the documents to a member" % (who, LEAD_AGENT, r["agent"]))
         elif target not in sessions or target == r["session"]:
             errs.append("%s: reports to '%s', which is not another member's session" % (who, target))
         if not r["first task"]:

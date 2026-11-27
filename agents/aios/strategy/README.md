@@ -11,6 +11,7 @@ Install this bundle if you do market research, give strategic advisory, or want 
 | [[market-researcher]] | Deep 11-section McKinsey-style market intelligence — TAM, competitive landscape, market sizing, segmentation, regulatory environment, future outlook |
 | [[consultant]] | Strategic advisory using established frameworks — Porter's five forces, jobs-to-be-done, growth strategy, Wardley mapping. Bring questions; get frameworks |
 | [[company-analyst]] | Acquired.fm-style deep dives — history, strategy, moat (7 Powers), playbook grade, lessons. For competitive intelligence or due diligence |
+| [[cos]] | Chief of staff of a team — coordinates, writes each worker's brief, gives turns, reads the evidence, keeps the team log, talks to the operator. Does not build. The hat the `team-composer` skill gives every team's lead |
 
 ## When to install
 

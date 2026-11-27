@@ -114,7 +114,7 @@ Core software-engineering disciplines, vendored at v7.0.2 (14 of its 15 skills; 
 - `leverage-points` — Meadows' lens for *where* to intervene in a system (the systems-science backing for "fix the system, not the symptom")
 - `sustainable-cadence` — operator capacity/pace as a design input; tells paced work apart from avoidance (generative complement to the anti-values)
 - `commons-governance` — Ostrom's commons design principles applied to shared vaults, collab spaces, company sync, and multi-agent repos
-- `team-composer` — one sentence about a project becomes a team plan in its project note (charter, standing members and crews, owners, one chief of staff, a tier each), launched through the spawn inbox only on the operator's yes
+- `team-composer` — one sentence about a project becomes a team plan in its project note (charter, standing members and crews, owners, one chief of staff who coordinates and does not build, a tier each), launched through the spawn inbox only on the operator's yes
 - `team-archetypes` — Cherny's five product archetypes (Prototyper/Builder/Sweeper/Grower/Maintainer); compose a team or agent fleet by lifecycle posture matched to product stage
 - `comprehension-debt` — keep the operator's understanding from falling behind what their agents ship; the defensive complement to Arc sessions (detection via `/close-session`, prevention via `/aios:housekeeping`)
 - `right-context` — decide how much operator context to load at session start, and when to climb mid-task: the four-rung ladder, the escalation tells, and `hooks/context/context-rungs.py`, which measures what each rung costs *in this vault* so no file has to hardcode a volume that grows
