@@ -55,6 +55,17 @@ def known_agents():
     return {fm["name"] for kind, _r, fm in _load("list-agents").classify(ROOT) if kind == "agent"}
 
 
+def untagged_files():
+    """{name: path} for files under agents/ that would be agents but for the `agent` tag (#418)."""
+    out = {}
+    for kind, rel, fm in _load("list-agents").classify(ROOT):
+        if kind == "unclear":
+            for key in (fm.get("name"), os.path.basename(rel)[:-3]):   # a plan may use either
+                if key:
+                    out.setdefault(key, rel)
+    return out
+
+
 def known_tiers():
     # Read from resolve-tier's own RUNGS line, never by running it: on Windows a bare `bash` can be
     # WSL's launcher, which cannot read a Windows path, and Git Bash is often not on PATH.
@@ -123,6 +134,7 @@ def check(note):
     if len(chiefs) != 1:
         errs.append("exactly one row must be the chief of staff (%d found)" % len(chiefs))
     agents, tiers = known_agents(), known_tiers()
+    untagged_by_name = None
     if not tiers:
         errs.append("could not read the tier list from hooks/pipeline/resolve-tier --list")
     sessions = [r["session"] for r in rows]
@@ -133,7 +145,11 @@ def check(note):
         if sessions.count(r["session"]) > 1:
             errs.append("%s: two members share this session name" % who)
         if r["agent"] not in agents:
-            errs.append("%s: no agent named '%s' under agents/" % (who, r["agent"]))
+            if untagged_by_name is None:
+                untagged_by_name = untagged_files()
+            untagged = untagged_by_name.get(r["agent"])
+            errs.append("%s: no agent named '%s' under agents/" % (who, r["agent"])
+                        + (" (%s has no `agent` tag: add `agent` to its `tags`)" % untagged if untagged else ""))
         if tiers and r["tier"] not in tiers:
             errs.append("%s: unknown tier '%s' (known: %s)" % (who, r["tier"], ", ".join(sorted(tiers))))
         if r["kind"].lower() not in KINDS:

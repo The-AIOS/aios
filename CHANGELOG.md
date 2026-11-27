@@ -59,6 +59,19 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-27 — An agent is a file that carries the `agent` tag, in every list
+
+`hash: ` · [#418](https://github.com/The-AIOS/aios/issues/418)
+
+> **What you can now do.** See the same agents everywhere: the team composer and the team plan now list exactly the agents the AIOS App and Glass show. And when an agent you wrote by hand is missing from them, `/aios:housekeeping` tells you which file and what to add.
+
+**One rule, the one the App and Glass already apply** (#418). A file under `agents/` is an agent when its frontmatter `tags` include `agent` and its file name does not start with `_`. The framework's own list (`hooks/agents/list-agents.py`, read by the `team-composer` skill and by `team-plan.py`) used a different rule, `name:` plus `description:`, so the two disagreed in both directions: a document kept beside a venture's agents with those two fields counted as an agent for the framework only, and an agent written without the tag was an agent for the framework and missing from both surfaces' pickers.
+
+**What changes for you.** A file with `name:` and `description:` and no `agent` tag is no longer listed as an agent by the framework. A team plan that names it is refused, and the refusal names the file and says to add `agent` to its `tags`. Agents made from the agent template already carry the tag, and so does every bundled agent. Wearing an agent by its file name (`/aios:agent {name}`, or a session named after it) is unchanged. A `reference/` folder and `agent: false` no longer decide what is an agent; they mark a file as a document on purpose, so the housekeeping check stays quiet about it.
+
+**Action required** — check first; do only what applies:
+1. **Only if `python3 ~/aios/hooks/agents/list-agents.py --unclear` prints any line** (Windows: the interpreter SETUP §10's probe picks): show the operator the files and what each line says to do, and propose it per file: add `agent` to the `tags` of a file meant to be an agent; move a document under a `reference/` subfolder or mark it `agent: false`. Change nothing without their yes. A company-synced folder is fixed in its source repo, never in the vault.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)

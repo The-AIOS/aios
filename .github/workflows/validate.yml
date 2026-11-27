@@ -1692,7 +1692,8 @@ jobs:
         run: bash tests/suggest-agent-hint.test.sh
 
       - name: one rule decides what is an agent, and the bundled tree follows it
-        # A surface listing agents/**/*.md counted a venture's reference documents as agents (#314).
+        # A surface listing agents/**/*.md counted a venture's reference documents as agents (#314). The rule is the
+        # `agent` tag, the one the App and Glass apply; tests/fixtures/agent-rule.cases.json holds the shared cases (#418).
         run: bash tests/list-agents.test.sh
 
       - name: a team plan is checked, and launched only on the operator's yes

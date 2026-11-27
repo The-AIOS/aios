@@ -17,7 +17,7 @@ Name the **stage** with the `team-archetypes` skill (new / growing / scaling). I
 
 ## 2. Pick the members
 
-- **Agents:** only what exists. List them with `python3 ~/aios/hooks/agents/list-agents.py --json` and match the project's needs to each agent's description and the `keywords:` in its file. Never name an agent that is not on that list.
+- **Agents:** only what exists. List them with `python3 ~/aios/hooks/agents/list-agents.py --json` and match the project's needs to each agent's description and the `keywords:` in its file. Never name an agent that is not on that list. A file the operator expects there and is missing has no `agent` tag: `list-agents.py --unclear` says which.
 - **Tiers:** by the kind of work, from `~/aios/hooks/pipeline/resolve-tier --list` (`MODEL-ROUTING.md` says what each is for). Judgment for the chief of staff and anything decided, scale or fast for research crews and volume.
 - **Kind:** `standing` for a domain that will keep coming back (it is resumed by name and keeps its context), `crew` for one job that reports back and retires. Day one can be small: two or three members is a real team.
 - **Chief of staff:** exactly one member, usually standing, who reports to the operator. Everyone else reports to the chief of staff or to another member.

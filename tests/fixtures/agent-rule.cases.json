@@ -1,0 +1,546 @@
+{
+ "what": "Shared cases for one question: which files under `agents/` are agents. The rule: a `.md` file whose frontmatter `tags` include `agent`, and whose file name does not start with `_`.",
+ "how_to_run": "For each case, create `files` under an empty folder (each value is the file's lines, joined with a newline, or with the case's `newline` when it gives one) and each entry of `links` as a symbolic link (link path to target, both relative to that folder; a target that does not exist is meant: the link is broken). Take that folder as the vault root, list its agents and compare with `expect.agents`, ordered by `path`: `name` and `path` always, `description` when the case gives one. `expect.unclear` is what the framework's lint reports (`list-agents.py --unclear --json`): a surface that has no such lint ignores it. A case with `surfaces_today` describes a known difference in the surfaces: skip it there, quoting the reason, until the surface is fixed.",
+ "rule": "hooks/agents/list-agents.py states the rule and is the reference reading. tests/list-agents.test.sh runs it over every case.",
+ "fields_read": "`tags` as a block list (`tags:` then `- item` lines) or inline (`tags: [a, b]` or `tags: a`), compared without regard to case. `name`, else the file name without `.md`. `description`, else empty. Outer quotes are removed; `''` inside single quotes and `\\\"` inside double quotes are unescaped.",
+ "unclear_reasons": {
+  "no-tag": "no `agent` tag, not under a `reference/` folder, not marked `agent: false`, and not README.md",
+  "no-description": "tagged `agent`, with no `description`",
+  "tagged-document": "tagged `agent` and also under `reference/` or marked `agent: false`; the tag wins"
+ },
+ "cases": [
+  {
+   "case": "a block-list tag makes an agent",
+   "files": {
+    "agents/acme/acme-lawyer.md": [
+     "---",
+     "name: acme-lawyer",
+     "description: Reviews Acme contracts",
+     "tags:",
+     "  - agent",
+     "  - sales",
+     "---",
+     "body"
+    ]
+   },
+   "expect": {
+    "agents": [
+     {
+      "name": "acme-lawyer",
+      "path": "agents/acme/acme-lawyer.md",
+      "description": "Reviews Acme contracts"
+     }
+    ],
+    "unclear": []
+   }
+  },
+  {
+   "case": "an inline tag list, and a tag in another case",
+   "files": {
+    "agents/custom/a.md": [
+     "---",
+     "name: a",
+     "description: Does a thing",
+     "tags: [sales, agent]",
+     "---",
+     "body"
+    ],
+    "agents/custom/b.md": [
+     "---",
+     "name: b",
+     "description: Does a thing",
+     "tags: [Agent]",
+     "---",
+     "body"
+    ],
+    "agents/custom/c.md": [
+     "---",
+     "name: c",
+     "description: Does a thing",
+     "tags: agent",
+     "---",
+     "body"
+    ]
+   },
+   "expect": {
+    "agents": [
+     {
+      "name": "a",
+      "path": "agents/custom/a.md"
+     },
+     {
+      "name": "b",
+      "path": "agents/custom/b.md"
+     },
+     {
+      "name": "c",
+      "path": "agents/custom/c.md"
+     }
+    ],
+    "unclear": []
+   }
+  },
+  {
+   "case": "quoted items in an inline list, and a quoted list",
+   "files": {
+    "agents/custom/qi.md": [
+     "---",
+     "name: qi",
+     "tags: ['agent', \"sales\"]",
+     "---"
+    ],
+    "agents/custom/ql.md": [
+     "---",
+     "name: ql",
+     "tags: \"[agent]\"",
+     "---"
+    ]
+   },
+   "expect": {
+    "agents": [
+     {
+      "name": "qi",
+      "path": "agents/custom/qi.md"
+     },
+     {
+      "name": "ql",
+      "path": "agents/custom/ql.md"
+     }
+    ],
+    "unclear": [
+     {
+      "path": "agents/custom/qi.md",
+      "why": "no-description"
+     },
+     {
+      "path": "agents/custom/ql.md",
+      "why": "no-description"
+     }
+    ]
+   }
+  },
+  {
+   "case": "Windows line endings",
+   "newline": "\r\n",
+   "files": {
+    "agents/custom/crlf.md": [
+     "---",
+     "name: crlf",
+     "description: Saved on Windows",
+     "tags:",
+     "  - agent",
+     "---",
+     "body"
+    ]
+   },
+   "expect": {
+    "agents": [
+     {
+      "name": "crlf",
+      "path": "agents/custom/crlf.md",
+      "description": "Saved on Windows"
+     }
+    ],
+    "unclear": []
+   }
+  },
+  {
+   "case": "name and description without the tag is not an agent, and is reported",
+   "files": {
+    "agents/custom/handmade.md": [
+     "---",
+     "name: handmade",
+     "description: Written by hand",
+     "---",
+     "body"
+    ]
+   },
+   "expect": {
+    "agents": [],
+    "unclear": [
+     {
+      "path": "agents/custom/handmade.md",
+      "why": "no-tag"
+     }
+    ]
+   }
+  },
+  {
+   "case": "a tag that only contains the word is not the tag",
+   "files": {
+    "agents/custom/x.md": [
+     "---",
+     "name: x",
+     "description: Does a thing",
+     "tags: [agents, subagent, agent-like]",
+     "---",
+     "body"
+    ]
+   },
+   "expect": {
+    "agents": [],
+    "unclear": [
+     {
+      "path": "agents/custom/x.md",
+      "why": "no-tag"
+     }
+    ]
+   }
+  },
+  {
+   "case": "no name: the file name is the name",
+   "files": {
+    "agents/custom/quiet-one.md": [
+     "---",
+     "description: Does a thing",
+     "tags:",
+     "  - agent",
+     "  - sales",
+     "---",
+     "body"
+    ]
+   },
+   "expect": {
+    "agents": [
+     {
+      "name": "quiet-one",
+      "path": "agents/custom/quiet-one.md"
+     }
+    ],
+    "unclear": []
+   }
+  },
+  {
+   "case": "no description: still an agent, and reported",
+   "files": {
+    "agents/custom/terse.md": [
+     "---",
+     "name: terse",
+     "tags:",
+     "  - agent",
+     "  - sales",
+     "---",
+     "body"
+    ]
+   },
+   "expect": {
+    "agents": [
+     {
+      "name": "terse",
+      "path": "agents/custom/terse.md",
+      "description": ""
+     }
+    ],
+    "unclear": [
+     {
+      "path": "agents/custom/terse.md",
+      "why": "no-description"
+     }
+    ]
+   }
+  },
+  {
+   "case": "a file whose name starts with _ is skipped, tag or not; README.md has no special standing",
+   "files": {
+    "agents/_index.md": [
+     "# index"
+    ],
+    "agents/custom/_draft.md": [
+     "---",
+     "name: draft",
+     "description: Does a thing",
+     "tags:",
+     "  - agent",
+     "  - sales",
+     "---",
+     "body"
+    ],
+    "agents/acme/README.md": [
+     "# Acme agents"
+    ],
+    "agents/custom/README.md": [
+     "---",
+     "name: readme-agent",
+     "description: Does a thing",
+     "tags:",
+     "  - agent",
+     "  - sales",
+     "---",
+     "body"
+    ]
+   },
+   "expect": {
+    "agents": [
+     {
+      "name": "readme-agent",
+      "path": "agents/custom/README.md"
+     }
+    ],
+    "unclear": []
+   }
+  },
+  {
+   "case": "documents: under reference/, or marked agent: false, are quiet",
+   "files": {
+    "agents/acme/reference/code-of-commerce.md": [
+     "---",
+     "name: code-of-commerce",
+     "description: The law text",
+     "---",
+     "body"
+    ],
+    "agents/acme/glossary.md": [
+     "---",
+     "agent: false",
+     "title: Glossary",
+     "---"
+    ],
+    "agents/acme/reference/deep/note.md": [
+     "plain"
+    ]
+   },
+   "expect": {
+    "agents": [],
+    "unclear": []
+   }
+  },
+  {
+   "case": "a loose file with no tag and no document mark is reported",
+   "files": {
+    "agents/acme/example-case.md": [
+     "no frontmatter, an example"
+    ]
+   },
+   "expect": {
+    "agents": [],
+    "unclear": [
+     {
+      "path": "agents/acme/example-case.md",
+      "why": "no-tag"
+     }
+    ]
+   }
+  },
+  {
+   "case": "the tag wins over a document mark, and the contradiction is reported",
+   "files": {
+    "agents/acme/reference/tagged.md": [
+     "---",
+     "name: tagged",
+     "description: Does a thing",
+     "tags:",
+     "  - agent",
+     "  - sales",
+     "---",
+     "body"
+    ],
+    "agents/acme/marked.md": [
+     "---",
+     "name: marked",
+     "description: Does a thing",
+     "agent: false",
+     "tags:",
+     "  - agent",
+     "  - sales",
+     "---",
+     "body"
+    ]
+   },
+   "expect": {
+    "agents": [
+     {
+      "name": "marked",
+      "path": "agents/acme/marked.md"
+     },
+     {
+      "name": "tagged",
+      "path": "agents/acme/reference/tagged.md"
+     }
+    ],
+    "unclear": [
+     {
+      "path": "agents/acme/marked.md",
+      "why": "tagged-document"
+     },
+     {
+      "path": "agents/acme/reference/tagged.md",
+      "why": "tagged-document"
+     }
+    ]
+   }
+  },
+  {
+   "case": "a linked folder and a linked file are followed",
+   "files": {
+    "elsewhere/acme/far.md": [
+     "---",
+     "name: far",
+     "description: Does a thing",
+     "tags:",
+     "  - agent",
+     "  - sales",
+     "---",
+     "body"
+    ],
+    "elsewhere/single.md": [
+     "---",
+     "name: single",
+     "description: Does a thing",
+     "tags:",
+     "  - agent",
+     "  - sales",
+     "---",
+     "body"
+    ],
+    "agents/custom/.keep": [
+     ""
+    ]
+   },
+   "links": {
+    "agents/acme": "elsewhere/acme",
+    "agents/custom/single.md": "elsewhere/single.md"
+   },
+   "expect": {
+    "agents": [
+     {
+      "name": "far",
+      "path": "agents/acme/far.md"
+     },
+     {
+      "name": "single",
+      "path": "agents/custom/single.md"
+     }
+    ],
+    "unclear": []
+   }
+  },
+  {
+   "case": "a folder reached through a second link is listed under both paths",
+   "files": {
+    "agents/acme/shared.md": [
+     "---",
+     "name: shared",
+     "description: Does a thing",
+     "tags: [agent]",
+     "---"
+    ],
+    "agents/custom/.keep": [
+     ""
+    ]
+   },
+   "links": {
+    "agents/custom/alias": "agents/acme"
+   },
+   "expect": {
+    "agents": [
+     {
+      "name": "shared",
+      "path": "agents/acme/shared.md"
+     },
+     {
+      "name": "shared",
+      "path": "agents/custom/alias/shared.md"
+     }
+    ],
+    "unclear": []
+   }
+  },
+  {
+   "case": "a broken link is not a file",
+   "files": {
+    "agents/custom/real.md": [
+     "---",
+     "name: real",
+     "description: Does a thing",
+     "tags: [agent]",
+     "---"
+    ]
+   },
+   "links": {
+    "agents/custom/gone.md": "elsewhere/missing.md"
+   },
+   "expect": {
+    "agents": [
+     {
+      "name": "real",
+      "path": "agents/custom/real.md"
+     }
+    ],
+    "unclear": []
+   }
+  },
+  {
+   "case": "YAML quote escapes in a description are undone",
+   "files": {
+    "agents/custom/q.md": [
+     "---",
+     "name: q",
+     "description: 'Explains an ingest''s argument'",
+     "tags: [agent]",
+     "---"
+    ]
+   },
+   "surfaces_today": "The AIOS App reads this as expected. Glass shows the doubled quote until it takes the App's frontmatter reader (The-AIOS/aios-app#228).",
+   "expect": {
+    "agents": [
+     {
+      "name": "q",
+      "path": "agents/custom/q.md",
+      "description": "Explains an ingest's argument"
+     }
+    ],
+    "unclear": []
+   }
+  },
+  {
+   "case": "a UTF-8 byte order mark before the frontmatter does not hide an agent",
+   "files": {
+    "agents/custom/bom-agent.md": [
+     "\ufeff---",
+     "name: bom-agent",
+     "description: Saved by Notepad",
+     "tags: [agent]",
+     "---"
+    ]
+   },
+   "surfaces_today": "Both surfaces match the frontmatter at the first character and do not strip the mark, so they list nothing here. Read in their code, not run.",
+   "expect": {
+    "agents": [
+     {
+      "name": "bom-agent",
+      "path": "agents/custom/bom-agent.md"
+     }
+    ],
+    "unclear": []
+   }
+  },
+  {
+   "case": "a link that loops back lists each agent once",
+   "files": {
+    "agents/acme/once.md": [
+     "---",
+     "name: once",
+     "description: Does a thing",
+     "tags:",
+     "  - agent",
+     "  - sales",
+     "---",
+     "body"
+    ]
+   },
+   "links": {
+    "agents/acme/loop": "agents/acme"
+   },
+   "surfaces_today": "Both surfaces list the folder with Node's recursive directory read, which follows the loop until the path is too long: measured on a three-file tree, 197 entries 66 levels deep, so the agent is listed many times.",
+   "expect": {
+    "agents": [
+     {
+      "name": "once",
+      "path": "agents/acme/once.md"
+     }
+    ],
+    "unclear": []
+   }
+  }
+ ]
+}
