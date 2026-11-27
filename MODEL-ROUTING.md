@@ -55,7 +55,9 @@ inherit the operator's saved model for the same request, so it asks
 `hooks/pipeline/resolve-tier --launch-model <rung>`, which never answers empty: `judgment` prints
 the wrappers' pinned id, every other rung prints its usual id. The surface still owes the
 wrapper's other half: `$CLAUDE_MODEL`, when the operator set it, wins. `tests/resolve-tier.test.sh`
-fails if that answer and the two wrappers stop naming the same model.
+fails if that answer and the two wrappers stop naming the same model. So the pinned id is written
+in three places, and a new Opus moves all three in one PR: the two wrappers and `LAUNCHER_PIN` in
+`hooks/pipeline/resolve-tier`.
 
 **`--tier mechanical` still works and still resolves to Claude Sonnet 4.6.** It predates this
 ladder and is kept byte-identical, because changing what an existing flag resolves to would change
