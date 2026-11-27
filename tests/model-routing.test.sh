@@ -234,10 +234,11 @@ else
     || no "MODEL-ROUTING.md says Fable $FR_DOC, --tier frontier starts Fable $FR_VER" "a reader choosing the top rung is told about a model nothing starts"
   [ "$FR_ADV" = "$FR_SH" ] && ok "--advisor frontier and --tier frontier name the same model ($FR_SH)" \
     || no "--advisor frontier is $FR_ADV, --tier frontier is $FR_SH" "one table was bumped and the other was not"
-  # The doc's own examples of pinning this model must not lag the rung they describe.
-  STALE=$(grep -oE 'claude-fable-[0-9]+(-[0-9]+)?' "$DOC" | sort -u | grep -vx "$FR_SH" | tr '\n' ' ')
-  [ -z "$STALE" ] && ok "every Fable id MODEL-ROUTING.md writes is the frontier rung's ($FR_SH)" \
-    || no "MODEL-ROUTING.md still writes: $STALE" "the rung is $FR_SH"
+  # The doc's own `--model` examples of pinning this model must not lag the rung they describe.
+  # Only lines that pass --model: a sentence that names an older id on purpose stays legal.
+  STALE=$(grep -E -e '--model' "$DOC" | grep -oE 'claude-fable-[0-9]+(-[0-9]+)?' | sort -u | grep -vx "$FR_SH" | tr '\n' ' ')
+  [ -z "$STALE" ] && ok "every Fable id in MODEL-ROUTING.md's --model examples is the frontier rung's ($FR_SH)" \
+    || no "MODEL-ROUTING.md's --model examples still write: $STALE" "the rung is $FR_SH"
 fi
 # CONTROL: the parser must tell two adjacent versions apart, or the comparison above is decoration.
 CTL=$(printf '%s' 'claude-fable-5-1' | sed -nE 's/^claude-fable-([0-9]+(-[0-9]+)?).*/\1/p' | tr '-' '.')

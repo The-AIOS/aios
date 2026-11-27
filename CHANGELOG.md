@@ -67,12 +67,12 @@
 
 **`frontier` named the previous model** (#411). `--tier frontier` and `--advisor frontier` resolved to `claude-fable-5-1` after `claude-fable-5-2` shipped, and nothing reported it. The id now moves in every place it is written: `hooks/pipeline/resolve-tier`, both spawn wrappers (the tier table and the advisor table), the ladder in `MODEL-ROUTING.md` and the tier table in the inbox contract. Both ids were checked with the recipe in `MODEL-ROUTING.md` § Verify an id before you trust it; a made-up id was the control. `tests/model-routing.test.sh` now fails when the doc's `frontier` row, the tier table and the advisor table stop naming the same model, the way it already did for `judgment`. No test can know a model shipped; what it catches is the half-update.
 
-Nothing else about the tier changes: what it is for, what it costs relative to the others, and its context window, which is the long one with or without a `[1m]` suffix.
+Nothing else about the tier changes: what it is for and where it sits in the ladder are as `MODEL-ROUTING.md` describes them.
 
 **Action required** — check each first; do only what applies:
 1. **The spawn wrapper is re-installed.** Modified, not new: `hooks/claude-identity/install-wrappers.sh` (Windows: `install-wrappers.ps1`). It writes the same paths as before (the `spawn` function block in the operator's shell rc file; on Windows, the PowerShell profile). The change is the model id on the `frontier` rows and in comments and one printed tip; no new write path, network call or credential read. Show the diff, then run it as `/aios:update` does.
 2. **Open terminals keep the old function** until they reload their rc file (`source ~/.zshrc`, or a new terminal). Say so last.
-3. **Only if the operator pins the old id by hand** (a routine or script that passes `--model claude-fable-5-1`): it keeps working, the id is still valid. Mention it; change nothing.
+3. **Only if the operator pins the old id by hand** (a routine or script that passes `--model claude-fable-5-1`): the old id still answered when this change was checked. Mention it; change nothing.
 
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
