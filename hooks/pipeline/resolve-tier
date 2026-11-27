@@ -20,10 +20,21 @@
 #   resolve-tier judgment    -> (empty, exit 0) = inherit the binary's default
 #   resolve-tier bogus       -> error on stderr, exit 2, rungs listed
 #   resolve-tier --list      -> every rung and what it resolves to
+#   resolve-tier --launch-model judgment -> claude-opus-5-5[1m]: what the launcher STARTS
 #
 # An EMPTY stdout with exit 0 is a real answer, not a failure: `judgment` deliberately
 # means "the frontier default", which is expressed by passing no --model. A caller must
 # distinguish empty-and-0 from non-zero, exactly as the framework's other measurements do.
+#
+# `--launch-model <rung>` is for the surface that starts `claude` itself. "No --model" is only
+# the same thing as `judgment` when the launcher fills the gap, and the wrapper does: it passes
+# --model "${CLAUDE_MODEL:-<its pinned id>}" on every start (MODEL-ROUTING.md, "a pin, not an
+# inherit"). A surface with no such launcher inherits the operator's saved model instead, so one
+# request starts two different models. This form never answers empty: for `judgment` it prints
+# the wrappers' pinned id, for every other rung the same id as the plain form. The caller owes
+# the wrapper's other half: an operator's own $CLAUDE_MODEL still wins over the printed id.
+# The plain form keeps answering `judgment` with empty, so a surface that predates this is
+# unchanged; and on a framework that predates it, `--launch-model` exits 2 like any unknown rung.
 #
 # Documentation of what each rung is FOR lives in MODEL-ROUTING.md and nowhere else.
 set -uo pipefail
@@ -43,8 +54,12 @@ rung_model() {
 }
 RUNGS="frontier judgment scale fast mechanical"
 
+# What the launcher starts when a rung resolves to empty: the literal in install-wrappers.sh
+# and .ps1 (`${CLAUDE_MODEL:-…}`). tests/resolve-tier.test.sh fails if the three disagree.
+LAUNCHER_PIN='claude-opus-5-5[1m]'
+
 usage() {
-  echo "usage: resolve-tier <rung>   |   resolve-tier --list" >&2
+  echo "usage: resolve-tier <rung>   |   resolve-tier --list   |   resolve-tier --launch-model <rung>" >&2
   echo "rungs: $RUNGS" >&2
   echo "(what each rung is for: MODEL-ROUTING.md)" >&2
 }
@@ -53,6 +68,15 @@ case "${1:-}" in
   ''|-h|--help) usage; exit 2 ;;
   --list)
     for r in $RUNGS; do m=$(rung_model "$r"); printf '%-11s %s\n' "$r" "${m:-<inherit default>}"; done
+    exit 0 ;;
+  --launch-model)
+    [ -n "${2:-}" ] || { usage; exit 2; }
+    if ! m=$(rung_model "$2"); then
+      echo "resolve-tier: unknown rung '$2'" >&2
+      usage
+      exit 2
+    fi
+    printf '%s\n' "${m:-$LAUNCHER_PIN}"
     exit 0 ;;
 esac
 

@@ -53,6 +53,34 @@ got=$("$R" judgment 2>/dev/null); rc=$?
 [ "$rc" = "0" ] && [ -z "$got" ] && ok "judgment → empty, exit 0 (inherit the default)" \
   || no "judgment returned '$got' exit $rc" "it must mean 'pass no --model', which is empty-and-zero — not an error"
 
+echo "-- 2b. --launch-model names what the launcher STARTS: never empty, judgment = the wrappers' pin --"
+# A surface that starts `claude` itself reads `judgment` as "no --model" and so inherits the
+# operator's saved model, while the wrapper starts its pinned literal: one request, two models.
+# `--launch-model <rung>` answers with the id the wrapper would start when $CLAUDE_MODEL is
+# unset. The expectation is EXTRACTED from the two installers, never restated here.
+PIN_SH=$(grep -oE 'model_to_use="\$\{CLAUDE_MODEL:-[^}]+\}"' "$W" | sed -E 's/.*:-([^}]+)\}.*/\1/')
+PIN_PS=$(grep -oE "\\\$modelToUse = if \(\\\$env:CLAUDE_MODEL\) \{ \\\$env:CLAUDE_MODEL \} else \{ '[^']+' \}" hooks/claude-identity/install-wrappers.ps1 | sed -E "s/.*else \{ '([^']+)' \}/\1/")
+[ -n "$PIN_SH" ] && ok "extracted the bash wrapper's pin ($PIN_SH)" || no "could not extract the pin from $W" "the launcher line changed shape: fix this extraction, do not hardcode the id"
+[ -n "$PIN_PS" ] && [ "$PIN_PS" = "$PIN_SH" ] && ok "the PowerShell wrapper pins the same id" || no "PowerShell pin '$PIN_PS' vs bash pin '$PIN_SH'" "the two installers must start the same model"
+got=$("$R" --launch-model judgment 2>/dev/null); rc=$?
+[ "$rc" = "0" ] && [ -n "$PIN_SH" ] && [ "$got" = "$PIN_SH" ] && ok "--launch-model judgment → $got (the wrappers' pin)" \
+  || no "--launch-model judgment returned '$got' exit $rc, wrappers pin '$PIN_SH'" "a surface asking this must get what the wrapper starts"
+n=0
+while read -r rung model; do
+  [ -n "$rung" ] && [ -n "$model" ] || continue
+  n=$((n+1))
+  got=$("$R" --launch-model "$rung" 2>/dev/null); rc=$?
+  [ "$rc" = "0" ] && [ "$got" = "$model" ] && ok "--launch-model $rung → $model (same as the plain answer)" \
+    || no "--launch-model $rung returned '$got' exit $rc, wrapper says '$model'"
+done <<< "$WT"
+[ "$n" -ge 3 ] && ok "compared $n non-empty rungs" || no "only $n rungs compared for --launch-model"
+got=$("$R" --launch-model definitely-not-a-rung 2>/dev/null); rc=$?
+[ "$rc" = "2" ] && [ -z "$got" ] && ok "--launch-model with an unknown rung → exit 2, nothing printed" || no "--launch-model unknown rung: '$got' exit $rc"
+"$R" --launch-model >/dev/null 2>&1; rc=$?
+[ "$rc" = "2" ] && ok "--launch-model with no rung → exit 2" || no "--launch-model with no rung exited $rc"
+got=$("$R" judgment 2>/dev/null); rc=$?
+[ "$rc" = "0" ] && [ -z "$got" ] && ok "the plain 'judgment' answer is still empty (older surfaces keep working)" || no "plain judgment changed: '$got' exit $rc"
+
 echo "-- 3. an unknown rung FAILS loudly, never silently defaults --"
 got=$("$R" definitely-not-a-rung 2>/dev/null); rc=$?
 [ "$rc" != "0" ] && ok "unknown rung → exit $rc" || no "unknown rung exited 0 with '$got'" "a typo must not resolve to the frontier default — that is the silent-drop bug this replaces"
