@@ -212,6 +212,9 @@ function Invoke-ClaudeWithRespawn {
     # pin rather than an inherit. tests/model-routing.test.sh fails if the two disagree.
     $modelToUse = if ($env:CLAUDE_MODEL) { $env:CLAUDE_MODEL } else { 'claude-opus-5-5[1m]' }
     $modelArgs = @('--model', $modelToUse)
+    # CLAUDE_INHERIT_MODEL=1 (spawn -InheritModel): no --model at all, so the session runs on the
+    # model the operator saved, as a plain `claude` does. $env:CLAUDE_MODEL is not consulted either.
+    if ($env:CLAUDE_INHERIT_MODEL -eq '1') { $modelArgs = @() }
     # Effort and advisor (optional; set by spawn -Effort/-Advisor or an inbox request). Unset ->
     # no flags, byte-identical to before. The advisor goes through a settings FILE: the claude
     # .cmd shim mangles quotes inside an argument, so inline JSON is not safe here.
@@ -360,6 +363,9 @@ function spawn {
         # claude-fable-5-1) per-spawn with NO global env mutation (set for the call
         # only, then restored below).
         [string] $Model,
+        # -InheritModel -- start the worker with no --model at all: the model the operator saved,
+        # not this launcher's pin. Not with -Tier or -Model (they name a model; this names none).
+        [switch] $InheritModel,
         # -Effort low|medium|high|xhigh|max -- the worker's effort (Claude Code's --effort).
         [ValidateSet('low','medium','high','xhigh','max')] [string] $Effort,
         # -Advisor <rung|model> -- an advisor model for the worker; a rung resolves like -Tier,
@@ -388,6 +394,9 @@ function spawn {
     }
     # -Model overrides -Tier: pin an explicit model outside the tier ladder.
     if ($Model) { $spawnModel = $Model }
+    if ($InheritModel -and ($Tier -or $Model)) {
+        Write-Error "spawn: -InheritModel starts the session with no model flag; it cannot be combined with -Tier or -Model"; return
+    }
     $spawnAdvisor = switch ($Advisor) {
         ''         { $null }
         'frontier' { 'claude-fable-5-1' }
@@ -607,13 +616,14 @@ function spawn {
     if ((-not $env:CLAUDECODE) -or $env:AIOS_GLASS_TERM) {
         # In-process path: set CLAUDE_MODEL for the call only, then restore (no leak).
         # Set the per-spawn variables for the call only, then restore them (no leak).
-        $prev = @{ M = $env:CLAUDE_MODEL; E = $env:CLAUDE_EFFORT; A = $env:CLAUDE_ADVISOR_MODEL; D = $env:CLAUDE_ADD_DIRS }
+        $prev = @{ M = $env:CLAUDE_MODEL; E = $env:CLAUDE_EFFORT; A = $env:CLAUDE_ADVISOR_MODEL; D = $env:CLAUDE_ADD_DIRS; I = $env:CLAUDE_INHERIT_MODEL }
         if ($spawnModel)   { $env:CLAUDE_MODEL = $spawnModel }
+        $env:CLAUDE_INHERIT_MODEL = if ($InheritModel) { '1' } else { $null }
         if ($Effort)       { $env:CLAUDE_EFFORT = $Effort }
         if ($spawnAdvisor) { $env:CLAUDE_ADVISOR_MODEL = $spawnAdvisor }
         if ($AddDir)       { $env:CLAUDE_ADD_DIRS = ($AddDir -join "`n") }
         try { Invoke-ClaudeWithRespawn -Name $Name -BootstrapFile $taskFile }
-        finally { $env:CLAUDE_MODEL = $prev.M; $env:CLAUDE_EFFORT = $prev.E; $env:CLAUDE_ADVISOR_MODEL = $prev.A; $env:CLAUDE_ADD_DIRS = $prev.D }
+        finally { $env:CLAUDE_MODEL = $prev.M; $env:CLAUDE_EFFORT = $prev.E; $env:CLAUDE_ADVISOR_MODEL = $prev.A; $env:CLAUDE_ADD_DIRS = $prev.D; $env:CLAUDE_INHERIT_MODEL = $prev.I }
         return
     }
 
@@ -629,6 +639,7 @@ function spawn {
     # Inject the model into the new shell's env before it launches (mirrors the
     # in-process path). Empty when no --tier override -> frontier default.
     $modelStmt = if ($spawnModel) { "`$env:CLAUDE_MODEL = '$spawnModel'" } else { '' }
+    $inheritStmt = if ($InheritModel) { "`$env:CLAUDE_INHERIT_MODEL = '1'" } else { "`$env:CLAUDE_INHERIT_MODEL = `$null" }
     $effortStmt = if ($Effort) { "`$env:CLAUDE_EFFORT = '$Effort'" } else { '' }
     $advisorStmt = if ($spawnAdvisor) { "`$env:CLAUDE_ADVISOR_MODEL = '$spawnAdvisor'" } else { '' }
     # The folders reach the new shell as base64 DATA, never as code: PowerShell also reads the
@@ -641,6 +652,7 @@ function spawn {
     $inner = @"
 . `$PROFILE
 $modelStmt
+$inheritStmt
 $effortStmt
 $advisorStmt
 $addDirStmt

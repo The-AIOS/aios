@@ -59,6 +59,20 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-27 — A request with no model starts the same model on both surfaces
+
+`hash: `
+
+> **What you can now do.** Send a spawn-inbox request with no tier and no model and get the same model whichever surface takes it: your own default, the one a plain `claude` starts.
+
+**`spawn --inherit-model` starts a session with no model flag** (The-AIOS/aios-app#230, part of The-AIOS/aios-app#226). The launcher every `spawn` goes through always passed `--model`, its pinned 1M-context Opus unless a tier or a model was given. The App starts a spawn-inbox request that names neither as a plain `claude`, on your own default model (what a plain `claude` starts); Glass launches through `spawn`, so the same request started the pinned Opus there. `spawn --inherit-model <name>` (PowerShell: `spawn -InheritModel <name>`) passes no `--model` at all, and a surface uses it for a request with no tier and no model. It does not read `$CLAUDE_MODEL`, and it is refused together with `--tier` or `--model`.
+
+**What changes for you.** Nothing until your surface uses the flag. A `spawn` you type yourself still starts the pinned model. `MODEL-ROUTING.md` now says which case gets which.
+
+**Action required** — check each first; do only what applies:
+1. **The modified wrapper installer:** `/aios:update` re-runs `hooks/claude-identity/install-wrappers.sh` (Windows: `install-wrappers.ps1`). It writes the same shell file as before; what changes is that `spawn` accepts `--inherit-model` (`-InheritModel`) and its launcher passes no `--model` when asked. Check with `grep -c -- '--inherit-model)' ~/.zshrc` (or `~/.bashrc`; PowerShell: `Select-String -SimpleMatch '$InheritModel' $PROFILE`): `0`, or no match, means the wrapper in your shell is the old one, and a surface that checks for the flag keeps starting the pinned model until the installer has run.
+2. **Last: open a new terminal** (or `source` your shell file). A shell that was already open keeps the old `spawn`.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
