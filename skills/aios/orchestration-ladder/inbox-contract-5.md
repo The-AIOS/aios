@@ -201,17 +201,21 @@ These hold however a surface's viewer works:
   those bytes too, never by their path. A viewer that would read the file again later repeats checks 9 to 13 first and shows nothing
   new if they fail. Otherwise a session could swap the file for a link to a key after the open, and the viewer
   would display the key. (The surfaces show such a file as a read-only snapshot and never reload it, and never
-  save or restore it as an open file across a restart. "Open to edit" reopens it in the surface's own editor as
-  the operator's own file; it never hands it to the system opener.)
+  save or restore it as an open file across a restart. "Open to edit" first checks the real file again, the
+  same way (still the same file, one link, inside the root), opens nothing if it changed, and otherwise
+  reopens it in the surface's own editor as the operator's own file; it never hands it to the system opener.)
 - **Nothing the file points at is loaded on its behalf unless it would pass these checks.** A local image in
   a rendered note is joined to the opened file's resolved folder, `..` applied as text, and shown only if a
   request for it would pass checks 5 to 13, from the bytes of the file that passed. Remote images wait for the
   operator, as the viewers already do for notes. Raw HTML inside a note never runs scripts, and frames,
-  objects and embeds are never loaded. A PDF is shown with its scripts and launch actions inert. A link the
+  objects and embeds are never loaded. A PDF is shown with its scripts, links and launch actions inert; a
+  surface whose viewer cannot promise that refuses it [`unreadable`] after the decision (both do today). A
+  link the
   operator clicks inside the file is the operator's own action, through the surface's usual path; nothing in
   an opened file is handed to the system opener by itself.
 - **No raised window.** An `open` never brings the surface's window to the front of the operating system, and
-  never moves the keyboard focus out of what the operator is typing into.
+  never moves the keyboard focus out of what the operator is typing into: not even by opening into the editor
+  they are typing in.
 
 ## What the operator sees
 
