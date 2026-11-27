@@ -1,28 +1,34 @@
 #!/usr/bin/env bash
 # hooks/context/whoami — this session's identity, for CLAUDE.md § Mandatory First Action.
 #
-# Prints the session's name, or nothing for a plain CLI session. The name is CLAUDE_AGENT_NAME when
-# the spawn wrapper or a surface set it; otherwise the last `agent-name` record in this session's
-# transcript, because routines, scheduled runs and bridge sessions are named by the harness without
-# setting the variable (and a session that renamed itself is known by its last name).
+# Prints the session's name, or nothing for a plain CLI session. The name is the LAST `agent-name`
+# record in this session's transcript: a session that renamed itself answers to its last name, and
+# that is the name the session registry and both surfaces know it by. CLAUDE_AGENT_NAME, which the
+# spawn wrapper or a surface set at launch and nothing updates afterwards, is the fallback: no
+# session id, no transcript yet, or no record in it. Routines, scheduled runs and bridge sessions
+# are named by the harness without the variable, so they were always read from the transcript.
+#
+# A record is a line that BEGINS `{"type":"agent-name"`, as the harness writes it; a tool result
+# that quotes one is not. The whole file is read, because the end of a long transcript may hold no
+# record (measured: 0.14 s at 30 MB, 0.46 s at 210 MB). hooks/context/session_name.py is the same
+# rule for the Python hooks, and tests/session-name.test.sh holds the two to the same answers.
 #
 # It exists so the startup check is one command with no `$` in it. Claude Code cannot check a
 # command whose variables it would have to expand first, so the old inline transcript grep asked
 # for permission at every session start, even when allowlisted. Always exits 0.
 
-name="${CLAUDE_AGENT_NAME:-}"
+name=""
 sid="${CLAUDE_CODE_SESSION_ID:-}"
-if [ -z "$name" ] && [ -n "$sid" ]; then
-  case "$sid" in *[!a-zA-Z0-9-]*) sid="" ;; esac          # never a glob or a path in the id
+case "$sid" in *[!a-zA-Z0-9-]*) sid="" ;; esac            # never a glob or a path in the id
+if [ -n "$sid" ]; then
   base="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
-  if [ -n "$sid" ]; then
-    for f in "$base"/*/"$sid".jsonl; do
-      [ -f "$f" ] || continue
-      name=$(grep -h '"type":"agent-name"' "$f" 2>/dev/null | tail -1 \
-             | sed -n 's/.*"agentName":"\([^"]*\)".*/\1/p')
-      [ -n "$name" ] && break
-    done
-  fi
+  for f in "$base"/*/"$sid".jsonl; do
+    [ -f "$f" ] || continue
+    name=$(LC_ALL=C grep '^{"type":"agent-name"' "$f" 2>/dev/null \
+           | LC_ALL=C sed -n 's/.*"agentName":"\([^"][^"]*\)".*/\1/p' | tail -1)
+    [ -n "$name" ] && break
+  done
 fi
+[ -n "$name" ] || name="${CLAUDE_AGENT_NAME:-}"
 [ -n "$name" ] && printf '%s\n' "$name"
 exit 0

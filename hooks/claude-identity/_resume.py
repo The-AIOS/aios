@@ -57,7 +57,8 @@ Discovery: reads ~/.claude/sessions/*.json (filename is PID, cwd + sessionId
 inside). On Claude Code 2.1.121+, the session JSON also includes a `name`
 field — the user-facing session name written by the binary itself, which
 survives arg-rewrites and manual `claude --resume X` invocations. We read
-identity in priority order: `CLAUDE_AGENT_NAME` env (set by spawn wrapper)
+identity in priority order: the last `agent-name` record of the transcript
+(a session can rename itself) → `CLAUDE_AGENT_NAME` env (set by spawn wrapper)
 → JSON `name` field → `--name` from ps args. Session UUID (the transcript
 file) is discovered via `lsof -p PID` or read from the JSON's sessionId.
 Sessions without a discoverable name are skipped (no respawn) so we never
@@ -76,6 +77,7 @@ Useful for verifying the fix before the next real swap fires.
 """
 import json
 import os
+import re
 import stat
 import subprocess
 import sys
@@ -294,34 +296,63 @@ def auto_name(session_id: str) -> str:
     return f"{adj}-{ani}"
 
 
+_PLAIN_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+
+
+def _transcript_name(session_id) -> str:
+    """The last `agent-name` record of the session's transcript, through the reader every Python
+    hook shares (hooks/context/session_name.py). '' when there is none, when it is not a plain
+    session name, or when the reader is missing."""
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "context"))
+        from session_name import session_name
+        name = session_name(session_id)
+    except Exception:
+        return ""
+    # This name ends up in file names and in a command typed into a terminal, and a transcript
+    # holds whatever a session wrote. Anything that is not a plain session name is not used.
+    return name if _PLAIN_NAME.match(name) else ""
+
+
 def session_name_from_pid(pid: int, info: dict | None = None) -> str:
-    """Canonical session-name reader.
+    """Canonical session-name reader: the name the session answers to NOW.
 
     Priority:
-    1. `CLAUDE_AGENT_NAME` env var — set by the spawn wrapper, untouched
+    1. The LAST `agent-name` record of the session's transcript (found through
+       `info["sessionId"]`). A session can rename itself, and this is the name
+       the registry and both surfaces resolve it by. Everything below is a name
+       fixed at launch, which a rename leaves behind.
+    2. `CLAUDE_AGENT_NAME` env var — set by the spawn wrapper, untouched
        by Claude Code. Stable surface we own.
-    2. `name` field in the session JSON at `~/.claude/sessions/<pid>.json`
+    3. `name` field in the session JSON at `~/.claude/sessions/<pid>.json`
        — added by Claude Code 2.1.121+. Stable, written by the binary itself,
        survives arg-rewrites and manual `claude --resume <X>` invocations.
        Pass `info` (the parsed JSON dict) to enable this tier.
-    3. `--name <name>` from ps args — fallback for sessions launched on
+    4. `--name <name>` from ps args — fallback for sessions launched on
        Claude Code versions that don't write the JSON name yet.
-    4. Auto-baptized name derived deterministically from `info["sessionId"]`
+    5. Auto-baptized name derived deterministically from `info["sessionId"]`
        — only for `entrypoint == "cli"` sessions. Catches plain `claude`
        invocations (no name, no env, no flag) so the swap can still
        respawn them. After the first swap, the auto-name is baked into
        `--name` args of the respawn, so this tier doesn't fire again.
 
     `--resume` is never consulted (its value is always a session UUID,
-    never a name). SDK subprocesses (`entrypoint != "cli"`) skip tier 4
+    never a name). SDK subprocesses (`entrypoint != "cli"`) skip tier 5
     and return empty — they're internal claude children, not respawnable.
 
-    Reading from env first prevents the 2026-04-28 corruption mode where
+    Reading env before the args prevents the 2026-04-28 corruption mode where
     Claude Code's internal arg-rewrite caused our ps-args parser to leak
     the session UUID into `--name`. The JSON tier (added 2026-04-28) and
     auto-baptize tier (added 2026-04-28) close the gap for sessions that
     don't go through the spawn wrapper — including teammates' main
-    sessions launched as plain `claude`."""
+    sessions launched as plain `claude`.
+
+    This is NOT the name a wrapper's restart loop is addressed by: see
+    `loop_key_from_pid()`."""
+    if info:
+        transcript_name = _transcript_name(info.get("sessionId"))
+        if transcript_name:
+            return transcript_name
     env_name = env_var_from_pid(pid, "CLAUDE_AGENT_NAME")
     if env_name:
         return env_name
@@ -332,12 +363,28 @@ def session_name_from_pid(pid: int, info: dict | None = None) -> str:
     args_name = session_name_from_ps(pid)
     if args_name:
         return args_name
-    # Tier 4: auto-baptize unnamed CLI sessions
+    # Tier 5: auto-baptize unnamed CLI sessions
     if info and info.get("entrypoint") == "cli":
         sid = info.get("sessionId")
         if isinstance(sid, str) and sid:
             return auto_name(sid)
     return ""
+
+
+def loop_key_from_pid(pid: int, name: str) -> str:
+    """The name a wrapper's restart loop is addressed by, which is not always the session's name.
+
+    `_claude_with_respawn <name>` looks for its signal files (`swap-respawn-<name>.flag` and the
+    two beside it) under the name it was STARTED with, and exports that same name to claude as
+    `CLAUDE_AGENT_NAME`. A session that renamed itself still runs inside a loop that knows only the
+    old name, so a signal written under the new one is never found: the session is stopped and
+    comes back without its resume prompt. So the loop is addressed by the variable, and `name`
+    (what `session_name_from_pid()` returned) is used only when the variable is not set.
+
+    The loop then starts claude again with `--name <the name it was started with>`: a renamed
+    session restarted in place comes back under its old name. That is the wrapper's doing and is
+    not changed here."""
+    return env_var_from_pid(pid, "CLAUDE_AGENT_NAME") or name
 
 
 def tty_for_pid(pid: int) -> str:
@@ -764,14 +811,14 @@ def main() -> None:
             skipped.append(f"{pid} — Windows: left running; it adopts the new account on its next request")
             continue
 
-        # Pull session name in priority order:
-        # 1. CLAUDE_AGENT_NAME env (canonical, spawn-wrapper-set)
-        # 2. name field in session JSON (Claude Code 2.1.121+ writes it)
-        # 3. --name flag in ps args (legacy fallback)
-        # `--resume`'s value is never used (it's a UUID, not a name).
+        # The name the session answers to (session_name_from_pid: the last name in its
+        # transcript, then CLAUDE_AGENT_NAME, the session JSON, --name). `--resume`'s value
+        # is never used (it's a UUID, not a name). `loop_key` is the name its wrapper loop was
+        # started with: the two differ when the session renamed itself.
         name = session_name_from_pid(pid, info)
+        loop_key = loop_key_from_pid(pid, name)
         if not name:
-            # No CLAUDE_AGENT_NAME and no --name flag — can't respawn cleanly.
+            # No transcript name, no CLAUDE_AGENT_NAME and no --name flag — can't respawn cleanly.
             # Includes plain `claude` and bare `claude --resume <uuid>` invocations.
             # Session keeps running on the new account; just no marker + resume prompt.
             skipped.append(f"{pid} — no CLAUDE_AGENT_NAME / --name, skip")
@@ -820,7 +867,7 @@ def main() -> None:
             # If capable: write the in-place signal files BEFORE the kill so the
             # wrapper sees them on its first post-exit check.
             if respawn_capable and session_id:
-                write_in_place_signal(name, session_id, prompt)
+                write_in_place_signal(loop_key, session_id, prompt)
         except (RuntimeError, OSError) as e:
             skipped.append(f"{pid} ({name}) — private run dir unusable ({e}); left running")
             continue
@@ -842,7 +889,7 @@ def main() -> None:
 
         if respawn_capable and session_id:
             # In-place path: poll for the wrapper-respawned claude.
-            new_pid, msg = wait_for_new_claude(name, killed_pid=pid, timeout=8.0)
+            new_pid, msg = wait_for_new_claude(loop_key, killed_pid=pid, timeout=8.0)
             ok = new_pid > 0
             target = "in-place"
         else:

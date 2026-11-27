@@ -1814,9 +1814,16 @@ jobs:
         run: bash tests/aios-health.test.sh
 
       - name: the session-start identity check needs no permission prompt
-        # hooks/context/whoami resolves the name (env var, else the transcript) so CLAUDE.md's first action
-        # carries no `$` for Claude Code to refuse to pre-check.
+        # hooks/context/whoami resolves the name (the transcript's last record, else the env var) so
+        # CLAUDE.md's first action carries no `$` for Claude Code to refuse to pre-check.
         run: bash tests/whoami.test.sh
+
+      - name: a session has one name, whoever reads it
+        # The name a session answers to is the LAST agent-name record of its transcript. whoami (bash)
+        # and hooks/context/session_name.py (what the Python hooks import) are run over the same
+        # transcripts and must agree; the context-load audit and the account-swap resume use it, and
+        # the resume still addresses a wrapper's restart loop by the name the loop was started with.
+        run: bash tests/session-name.test.sh
 
       - name: transcripts are sorted, and only throwaways are archived, after verification
         run: bash tests/transcript-inventory.test.sh
