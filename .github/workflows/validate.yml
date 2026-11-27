@@ -2051,6 +2051,12 @@ jobs:
       - name: inbox contract 4 — fixture parses; advisor rungs agree across spec, fixture and both wrappers
         run: bash tests/inbox-contract-4.test.sh
 
+      - name: inbox contract 5 (the open verb) — every fixture case passes a reference of the spec's checks
+        # Any session can ask a surface to open a file, so the decision is written once as twelve
+        # ordered checks (inbox-contract-5.md) and once as a fixture both surfaces run. This holds
+        # the two together, and a control proves the reference can fail.
+        run: bash tests/inbox-contract-5.test.sh
+
       - name: every .ps1 is ASCII or carries a BOM (Windows PowerShell 5.1 reads BOM-less files as ANSI)
         run: bash tests/ps1-encoding.test.sh
 

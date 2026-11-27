@@ -59,6 +59,18 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-27 — The rules for a session asking a surface to open a file
+
+`hash: `
+
+> **What you can now do.** Nothing yet. This writes down how a surface will decide when a session asks it to show a file in its own viewer; the App and Glass implement it next.
+
+**Contract 5 of the spawn inbox is specified: the `open` verb** (The-AIOS/aios-app#198). Today a session can show you a file only through the system opener, so a note lands in whatever application your computer uses for `.md`. With contract 5 a session inside the App or Glass asks the surface to open the file in its own viewer. `skills/aios/orchestration-ladder/inbox-contract-5.md` sets out the request and the twelve checks a surface makes, in order, before it opens anything: the file must be inside the vault or your workspace folders once every link is resolved, must not be a secret by its name (`.env`, keys, anything under `agent-secrets`), must not be binary or executable, and a session may have at most five files opened a minute. Opening only shows the file; it is never run or handed to another application. `inbox-contract-5.conformance.json` is the one fixture both surfaces run, and `tests/inbox-contract-5.test.sh` checks every case against a reference implementation of the spec.
+
+Contract 4 stays in force: the spec says so at the top, and no session should send `open` until the surfaces stamp contract 5.
+
+**Action required:** none. Nothing is installed and nothing runs on your machine.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
