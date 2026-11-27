@@ -31,7 +31,9 @@ set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 # The ratchet. Raise it DELIBERATELY, in the PR that needs the room, never to get green.
-CEILING=95138
+CEILING=95229
+# +91 (#409): § Spawning Sessions names the CURRENT inbox contract beside the one the verbs arrived
+# in. A session told to read the stamp could not tell that a contract newer than the verb set existed.
 # +296 (v0.8.20, #343, incl. renames/deletions/snapshots): § Session End and § Git commit the session's own paths; --vault would sweep
 # other sessions' unfinished files under this session's message. The reason has to sit beside the rule.
 # +32 (v0.8.20, #339): /aios:uninstall named in § Vault Commands, like every other command.

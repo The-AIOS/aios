@@ -59,6 +59,18 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-27 — The docs name the inbox contract your machine actually runs
+
+`hash: `
+
+> **What you can now do.** Nothing new to run. A session that checks the spawn-inbox stamp now knows which contract is current, and the framework notices when the App and Glass move to the next one.
+
+**The canonical docs named contract 3 and both surfaces stamp 4** (#409). `CLAUDE.md` § Spawning Sessions said where the four verbs arrived and nothing about the contract in force, so a session reading it could not tell that the optional fields of contract 4 (`from`, `effort`, `advisor`) existed, or which number guards them. Both documents now say both numbers: the verbs are contract 3, the current contract is 4. The current number is declared in one file, `skills/aios/orchestration-ladder/inbox-contract.json`, and the skill links the contract 4 spec, which nothing linked before. That spec's header still said contract 3 stayed in force; it now says 4 is.
+
+**Two tests, kept apart.** `tests/inbox-contract-number.test.sh` needs no network: it fails when `CLAUDE.md` or the skill disagrees with the declared number. `tests/inbox-contract-stamp.test.sh` reads `INBOX_CONTRACT` from the default branch of the App and Glass repos and fails when the declaration is not the higher of the two. When a surface repo cannot be reached it reports the check as not run (exit 75, a warning in CI) and never as a pass. It reads the surfaces' source until the shared package publishes this number in a cases file (The-AIOS/aios-app#226).
+
+**Action required:** none. Docs and tests only; nothing is installed and nothing runs on your machine.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
