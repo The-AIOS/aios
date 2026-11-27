@@ -202,6 +202,10 @@ echo '{"name":"sub","task":"x"}' > "$T/shape/x\$(touch pwned).json.claiming-app-
 out=$(later "$T/shape")
 printf '%s\n' "$out" | grep -q "^bus-claim-abandoned: file=q.claiming-zz.json.claiming-app-$DEAD restore-as=q.claiming-zz.json age=" && ok "a request name that contains '.claiming-' goes back under its whole name" || no "wrong restore-as for a name containing .claiming-" "$out"
 printf '%s\n' "$out" | grep -q "^bus-claim-abandoned: file=t.json.claiming-app-$LIVE restore-as=t.json age=.* to=evil file=x.json .* claimer=app:$LIVE (still running)\$" && ok "text from the request sits in the middle; the start and the end stay the script's" || no "request text reached the start or the end of the line" "$out"
+echo '{"name":"dot","task":"x"}' > "$T/shape/.hidden.json.claiming-app-$DEAD"
+out=$(later "$T/shape")
+printf '%s\n' "$out" | grep -q "^bus-claim-abandoned: file=.hidden.json.claiming-app-$DEAD restore-as=.hidden.json " && ok "a request whose name starts with a dot is reported too" || no "a dot-file claim was skipped" "$out"
+[ -f "$T/shape/x\$(touch pwned).json.claiming-app-$DEAD" ] && [ ! -e pwned ] && [ ! -e "$T/shape/pwned" ] && ok "the fixture with a command substitution in its name exists under that literal name, and nothing ran" || no "the unsafe-name fixture is not what the test says it is"
 [ "$(printf '%s\n' "$out" | grep -c '^bus-claim-abandoned: file=(unusual-name) age=')" = "2" ] && ok "a name with a space or a shell metacharacter is reported without its name" || no "an unsafe file name was printed for use" "$out"
 printf '%s\n' "$out" | grep -q 'pwned\|sp ace' && no "an unsafe name appears in the output" "$out" || ok "and the unsafe names appear nowhere in the output"
 bad=$(printf '%s\n' "$out" | grep -vE '^bus-claim-abandoned: file=(\(unusual-name\)|[A-Za-z0-9._-]+ restore-as=[A-Za-z0-9._-]+\.json) age=' || true)
@@ -287,6 +291,7 @@ for f in plugins/aios/commands/today.md plugins/aios/commands/close-day.md; do
   grep 'bus-claim-abandoned:' "$f" | grep -q 'unreadable' && ok "$f says what to do with a claim that could not be read" || no "$f does not cover the unreadable line"
   grep 'bus-claim-abandoned:' "$f" | grep -q 'this check failed' && ok "$f says what to do when the check itself failed" || no "$f does not cover the 'this check failed' line"
   grep 'bus-claim-abandoned:' "$f" | grep -q 'restore-as=' && grep 'bus-claim-abandoned:' "$f" | grep -q 'spawn-inbox/<file>' && ok "$f builds the command from file= and restore-as=, in the inbox" || no "$f does not name the file or the directory to act on"
+  grep 'bus-claim-abandoned:' "$f" | grep -q 'never put back' && ok "$f names the lines that are never put back" || no "$f lost the never-put-back rule"
   grep 'bus-claim-abandoned:' "$f" | grep -q 'unusual-name' && ok "$f offers nothing for a name that is not safe in a command" || no "$f does not cover file=(unusual-name)"
 done
 A=$(grep 'One or more `bus-claim-abandoned:`' plugins/aios/commands/today.md); B=$(grep 'One or more `bus-claim-abandoned:`' plugins/aios/commands/close-day.md)

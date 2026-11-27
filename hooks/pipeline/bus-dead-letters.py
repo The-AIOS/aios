@@ -224,11 +224,15 @@ def abandoned_claims(inbox):
     * `to=` and `action=` are text from the request and sit in the middle.
     """
     out = []
-    for path in sorted(glob.glob(os.path.join(inbox, "*.json.claiming-*"))):
-        name = os.path.basename(path)
+    try:
+        names = sorted(os.listdir(inbox))   # not glob: `*` skips a name that starts with a dot
+    except OSError:
+        names = []
+    for name in names:
         m = CLAIMING_NAME.fullmatch(name)
         if not m:
             continue
+        path = os.path.join(inbox, name)
         secs = _taken_age(path)
         if secs is None or not secs >= CLAIMING_AFTER_S:
             continue
