@@ -44,7 +44,7 @@ working.
 
   | rung | advisor model |
   |---|---|
-  | `frontier` | `claude-fable-5-1` |
+  | `frontier` | `claude-fable-5-2` |
   | `judgment` | `claude-opus-5-5` |
   | `scale` | `claude-sonnet-5-5` |
   | `fast` | `claude-haiku-5-5` |

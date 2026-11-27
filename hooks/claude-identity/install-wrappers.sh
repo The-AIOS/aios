@@ -588,7 +588,7 @@ spawn() {
   # so it auto-tracks as the model lineup evolves — no hard-coding the frontier).
   # `judgment` (or no flag) keeps the frontier default (_claude_with_respawn's
   # CLAUDE_MODEL fallback). --model <id> — optional, overrides --tier; pins an
-  # explicit/specialist model per-spawn (e.g. `--model claude-fable-5-1`) with NO
+  # explicit/specialist model per-spawn (e.g. `--model claude-fable-5-2`) with NO
   # global env mutation. Strip the flags first, THEN parse positionals so
   # `spawn name task` is byte-identical to before when no flag is passed.
   # --effort low|medium|high|xhigh|max — the worker's effort (Claude Code's --effort).
@@ -677,7 +677,7 @@ ${1#*=}"; shift ;;
   # id, so mechanical has never been silently falling back to the frontier.)
   local spawn_model=""
   case "$tier" in
-    frontier)    spawn_model='claude-fable-5-1' ;;
+    frontier)    spawn_model='claude-fable-5-2' ;;
     judgment|"") spawn_model="" ;;
     scale)       spawn_model='claude-sonnet-5-5' ;;
     fast)        spawn_model='claude-haiku-5-5' ;;
@@ -685,7 +685,7 @@ ${1#*=}"; shift ;;
     *) echo "⚠️  spawn: unknown --tier '$tier' (use: frontier | judgment | scale | fast — 'mechanical' also still accepted)" >&2; return 1 ;;
   esac
   # --model <id> pins an explicit model (overrides --tier) — for a temporary or
-  # specialist model outside the tier ladder (e.g. --model claude-fable-5-1). It sets
+  # specialist model outside the tier ladder (e.g. --model claude-fable-5-2). It sets
   # spawn_model, which the launcher exports as CLAUDE_MODEL for THIS spawn only —
   # no global ~/.zshrc export (that hack risked leaving every future terminal
   # pinned to the model if the revert was ever missed).
@@ -700,7 +700,7 @@ ${1#*=}"; shift ;;
   local spawn_advisor=""
   case "$advisor" in
     "") ;;
-    frontier) spawn_advisor='claude-fable-5-1' ;;
+    frontier) spawn_advisor='claude-fable-5-2' ;;
     judgment) spawn_advisor='claude-opus-5-5' ;;
     scale)    spawn_advisor='claude-sonnet-5-5' ;;
     fast)     spawn_advisor='claude-haiku-5-5' ;;
@@ -742,7 +742,7 @@ ${1#*=}"; shift ;;
     echo "[spawn] No name given — using handle: $name"
     echo "[spawn] Tip: name a specific agent for matched expertise (e.g. \`spawn accountant\`)."
     echo "[spawn] Tip: --tier fast (high-frequency) | scale (volume) | judgment (default: reasoning) | frontier (hardest, long-running autonomy)."
-    echo "[spawn] Tip: add \`--model <id>\` to pin a specific model (e.g. \`--model claude-fable-5-1\`) — no global env hack."
+    echo "[spawn] Tip: add \`--model <id>\` to pin a specific model (e.g. \`--model claude-fable-5-2\`) — no global env hack."
     echo "[spawn] Tip: --profile <name> loads only the MCP servers in ~/.aios/mcp-profiles/<name>.json."
     echo "[spawn] See agents/_index.md for the full list."
     echo "[spawn] Opening session: $name"

@@ -357,7 +357,7 @@ function spawn {
         # .sh case block and with the bare-word guard below.
         [ValidateSet('frontier','judgment','scale','fast','mechanical')] [string] $Tier,
         # -Model <id> overrides -Tier; pins an explicit/specialist model (e.g.
-        # claude-fable-5-1) per-spawn with NO global env mutation (set for the call
+        # claude-fable-5-2) per-spawn with NO global env mutation (set for the call
         # only, then restored below).
         [string] $Model,
         # -Effort low|medium|high|xhigh|max -- the worker's effort (Claude Code's --effort).
@@ -380,7 +380,7 @@ function spawn {
     # an existing flag resolves to would change the cost and behaviour of work already
     # running. 'scale' is its successor for new work.
     $spawnModel = switch ($Tier) {
-        'frontier'   { 'claude-fable-5-1' }
+        'frontier'   { 'claude-fable-5-2' }
         'scale'      { 'claude-sonnet-5-5' }
         'fast'       { 'claude-haiku-5-5' }
         'mechanical' { 'claude-sonnet-4-6' }   # legacy alias -- do not remap
@@ -390,7 +390,7 @@ function spawn {
     if ($Model) { $spawnModel = $Model }
     $spawnAdvisor = switch ($Advisor) {
         ''         { $null }
-        'frontier' { 'claude-fable-5-1' }
+        'frontier' { 'claude-fable-5-2' }
         'judgment' { 'claude-opus-5-5' }
         'scale'    { 'claude-sonnet-5-5' }
         'fast'     { 'claude-haiku-5-5' }
@@ -406,7 +406,7 @@ function spawn {
         Write-Host "[spawn] No name given -- using handle: $Name"
         Write-Host "[spawn] Tip: name a specific agent for matched expertise (e.g. ``spawn accountant``)."
         Write-Host "[spawn] Tip: -Tier fast (high-frequency) | scale (volume) | judgment (default: reasoning) | frontier (hardest, long-running autonomy)."
-        Write-Host "[spawn] Tip: add ``-Model <id>`` to pin a specific model (e.g. ``-Model claude-fable-5-1``) -- no global env hack."
+        Write-Host "[spawn] Tip: add ``-Model <id>`` to pin a specific model (e.g. ``-Model claude-fable-5-2``) -- no global env hack."
         Write-Host "[spawn] See agents/_index.md for the full list."
         Write-Host "[spawn] Opening session: $Name"
     }

@@ -21,7 +21,7 @@ work, not by importance** — "important" is what tempts you to the top rung for
 
 | `spawn --tier` | Model | Use it for | Effort to start from |
 |---|---|---|---|
-| `frontier` | Claude Fable 5.1 | Your hardest problems: long-running agents in production, code migration, multi-step reasoning, and tasks needing creative thinking and full autonomy | `high` (`xhigh`/`max` for the hardest runs) |
+| `frontier` | Claude Fable 5.2 | Your hardest problems: long-running agents in production, code migration, multi-step reasoning, and tasks needing creative thinking and full autonomy | `high` (`xhigh`/`max` for the hardest runs) |
 | `judgment` **(default)** | Claude Opus 5.5 | Reasoning-intensive work — legal, financial analysis, research, other complex domains — and production coding | `high` |
 | `scale` | Claude Sonnet 5.5 | General-purpose workloads at scale, across coding and knowledge work | `medium` |
 | `fast` | Claude Haiku 5.5 | High-frequency, latency-sensitive tasks; sub-agents inside an orchestration | `low` |
@@ -57,7 +57,7 @@ successor for new work; `mechanical` will keep working.
 ### Acting on the ladder
 
 - **A spawned worker:** `spawn --tier fast transcriber "..."` (Windows: `-Tier fast`)
-- **One specific model, outside the ladder:** `spawn --model claude-fable-5-1 name "..."` —
+- **One specific model, outside the ladder:** `spawn --model claude-fable-5-2 name "..."` —
   overrides `--tier`, exports `CLAUDE_MODEL` **for that spawn's launcher only**. Never export
   `CLAUDE_MODEL` in your shell rc to achieve this; miss the revert and every future terminal is
   pinned.
@@ -186,7 +186,7 @@ needed" is the advisor (§ The advisor), which needs neither.
 ### 2 · `spawn --model` takes Claude ids only — by design, not by accident
 
 `spawn` passes `--model` straight through to the `claude` binary, and Claude Code runs Claude
-models. So `spawn --model claude-fable-5-1` works and `spawn --model some-other-vendor-model`
+models. So `spawn --model claude-fable-5-2` works and `spawn --model some-other-vendor-model`
 cannot.
 
 That is the right shape rather than a limitation to route around. It keeps non-Claude models away
