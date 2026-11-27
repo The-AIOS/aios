@@ -30,9 +30,17 @@ while IFS= read -r -d '' f; do
   # pointing at the whole file would be a second, competing status for all of them.
   awk 'NR==1 && $0!="---"{exit} NR>1 && $0=="---"{exit} /^type:[[:space:]]*["'"'"']?roadmap/{f=1} END{exit !f}' "$f" && continue
   printf '%s\n' "$status" | grep -qiE "^($OPEN)\$" || continue
-  base=$(basename "$f" .md)
-  # The exact note, never a prefix: [[plan]] must not count as a link to plan-v2.
-  if ! printf '%s\n' "$open_tasks" | grep -qF -e "[[$base]]" -e "[[$base|" -e "[[$base#"; then
+  # A link names the note by its basename OR by any trailing part of its vault path:
+  # Obsidian writes [[reflections/books/one/_index|…]] when basenames collide, and a
+  # basename-only match never sees it. Whole folder names only, so [[ne/_index]] is
+  # not a link to one/_index. The exact note, never a prefix: [[plan]] must not count
+  # as a link to plan-v2.
+  rel="${f#$VAULT/}"; rel="${rel%.md}"; pats=()
+  while :; do
+    pats+=(-e "[[$rel]]" -e "[[$rel|" -e "[[$rel#")
+    case "$rel" in */*) rel="${rel#*/}" ;; *) break ;; esac
+  done
+  if ! printf '%s\n' "$open_tasks" | grep -qF "${pats[@]}"; then
     echo "unfinished-work: ${f#$NOTES/} (status: $status) — no open task links to it"
     found=$((found+1))
   fi

@@ -87,6 +87,25 @@ printf -- '- [ ] ship it → [[plan#phase 2]]\n' > "$T/prefix/00 - notes/project
 out=$(run prefix)
 [ "$out" = "unfinished-work: none" ] && ok "CONTROL: [[plan#heading]] is a link to plan" || no "a heading link was not counted: '$out'"
 
+echo "-- a link by the note's path counts, not only by its basename --"
+mk pathlink; mkdir -p "$T/pathlink/00 - notes/reflections/books/one"
+printf -- '---\nstatus: draft\n---\nbody\n' > "$T/pathlink/00 - notes/reflections/books/one/_index.md"
+printf -- '- [ ] next chapter [[reflections/books/one/_index|the book]]\n' > "$T/pathlink/00 - notes/projects/p.md"
+out=$(run pathlink)
+[ "$out" = "unfinished-work: none" ] && ok "[[reflections/books/one/_index|…]] links the note" || no "a path link was not counted: '$out'" "Obsidian writes a path when basenames collide"
+printf -- '- [ ] next chapter [[00 - notes/reflections/books/one/_index#ch 2]]\n' > "$T/pathlink/00 - notes/projects/p.md"
+out=$(run pathlink)
+[ "$out" = "unfinished-work: none" ] && ok "a vault-root path with a heading links the note" || no "a full vault path was not counted: '$out'"
+printf -- '- [ ] next chapter [[one/_index]]\n' > "$T/pathlink/00 - notes/projects/p.md"
+out=$(run pathlink)
+[ "$out" = "unfinished-work: none" ] && ok "a shorter trailing path links the note" || no "a partial path was not counted: '$out'"
+printf -- '- [ ] next chapter [[books/two/_index]]\n' > "$T/pathlink/00 - notes/projects/p.md"
+out=$(run pathlink)
+case "$out" in *"reflections/books/one/_index.md"*) ok "CONTROL: a path to ANOTHER folder's _index does not count" ;; *) no "[[books/two/_index]] counted for books/one/_index: '$out'" ;; esac
+printf -- '- [ ] next chapter [[ne/_index]]\n' > "$T/pathlink/00 - notes/projects/p.md"
+out=$(run pathlink)
+case "$out" in *"reflections/books/one/_index.md"*) ok "CONTROL: a path matches whole folder names, never a partial one" ;; *) no "[[ne/_index]] counted for one/_index: '$out'" ;; esac
+
 echo
 echo "-- $PASS passed, $FAIL failed --"
 [ "$FAIL" -eq 0 ]
