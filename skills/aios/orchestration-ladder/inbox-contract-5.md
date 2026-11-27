@@ -23,7 +23,7 @@ operating system has for that type.
 |---|---|---|
 | `action` | yes | `"open"`. |
 | `name` | yes | The registry name of the session asking. Not a target: it is who is asking, used for the rate limit and named in what the operator sees. It is a claim, never an identity. Required also because a fulfiller on contract 4 refuses a request with no `name` without naming the verb; with one, it dead-letters `unknown action 'open'`, which is what an agent is told to expect. |
-| `path` | yes | An absolute path. No `~`, no relative path. |
+| `path` | yes | An absolute path inside the framework root. No `~`, no relative path, no `.` or `..`. |
 | `line` | no | A line to put the cursor on. |
 | `surface` | no | As in contract 2: which surface should do it. Absent, whichever claims it first. |
 | `from` | no | As in contract 4. |
@@ -31,75 +31,104 @@ operating system has for that type.
 Opening only SHOWS. The surface never runs the file, never hands it to another application, and never
 reveals it in the system file manager. The file's content never goes back to the session that asked.
 
+**What this protects against, in proportion.** A session able to rewrite a surface's configuration or a
+link in the home folder can already read those files with its own tools. What `open` must not become is a
+more comfortable way to put them on the operator's screen, nor something a session confused by someone
+else's text can trigger with a single JSON file. The checks below are written for that, not as a boundary
+against a session that is determined to get around them.
+
+## The root
+
+**The only root is the framework root (the vault included).** The operator's workspace folders do not
+count for a request from a session: their list lives in files inside the framework root that any session
+can write (`.glass/shell.json`, `.glass/state.json`), so a session could add `~/.config` to it and then ask
+for a file there. A file in a repository outside the framework root therefore cannot be opened through this
+verb; the way to change that later is a list of folders the operator confirms in the surface itself, not
+implemented here.
+
+The surface resolves the root **once, when it starts**, not on every request: re-pointing the link the root
+is reached through (`~/aios`) or the setting that names it then needs the surface to restart. A root is never
+the file-system root, the home folder, a folder that contains the home folder, or a folder inside a hidden
+folder of the home (any segment below home that starts with a dot: `~/.config`, `~/.local`). And it must look
+like a framework root (it holds `vault/` and `plugins/aios/`); otherwise the surface turns `open` off and
+says so once, rather than open files from somewhere else.
+
+The fixture's `roots` are a list on purpose, so the rules above are tested with more than one; a surface
+passes exactly one.
+
 ## The decision, in order
 
 A surface decides every `open` request with the checks below, in this order, and stops at the first that
-fails. A failure is a dead letter (`.undelivered`) whose reason names the check; nothing is opened. The
-`why` code in brackets is what the conformance fixture compares; the wording of the reason is the
-surface's own, and it quotes only the path as written, never the resolved one. Checks 1 to 7 read no file
-system at all.
+fails. A failure is a dead letter (`.undelivered`) whose reason names the check; nothing is opened. The `why`
+code in brackets is what the conformance fixture compares; the wording of the reason is the surface's own,
+and it quotes only the path as written, never a resolved one. Checks 1 to 8 make no file-system call.
 
-1. **`name`** is missing, is not a string, sanitizes to nothing, or is longer than 64 characters once
-   sanitized [`bad-name`]. (Sanitized as the surfaces sanitize every session name: trimmed, lower case,
-   whitespace to dashes, anything but letters, digits and dashes dropped.)
-2. **Rate.** Every `open` request a surface decides is counted, refused ones included, and so is asking
-   again for a file already open. If this surface has decided **20** or more in the last **60 seconds**,
-   from any sessions [`flood`]. If it has decided **5** or more for this same `name` in that time
-   [`rate-limited`]. A surface may drop `flood` requests without writing a dead letter for each, writing
-   instead one dead letter a minute that says how many were dropped, so a flood cannot bury the dead
+1. **Age.** The surface first saw the request file more than **60 seconds** ago, or the file was already in
+   the inbox when the surface started [`too-old`]. "First saw" is the surface's own clock: the time of the
+   file event, or of the first pass that listed it. Never the file's timestamps, which whoever writes the
+   request sets. A request refused here is not counted in check 2. The other verbs wait; this one does not,
+   because a file that opens minutes after it was asked for takes the operator's attention for something
+   nobody is asking for any more.
+2. **Flood.** Every `open` request a surface decides is counted (except those refused by check 1), refused
+   ones included, and asking again for a file already open counts too. If this surface has counted
+   **20** or more in the last **60 seconds**, from any sessions [`flood`]. This check needs no field, so a stream of
+   malformed requests is a flood too. A surface may drop `flood` requests without a dead letter for each,
+   writing instead one dead letter a minute that says how many were dropped, so a flood cannot bury the dead
    letters that matter.
-3. **`path`** is missing, not a string, contains a NUL, a carriage return or a line feed, or is empty after
-   trimming surrounding white space [`bad-path`]. It is not absolute, or it starts with `~`
-   [`not-absolute`]. The trimmed path is the one used from here on. On Windows, also:
+3. **`name`** is missing, is not a string, or once sanitized is empty or longer than 64 characters
+   [`bad-name`]. Sanitized as the surfaces sanitize every session name: trimmed, lower case, white space to
+   dashes, every character other than `a`–`z`, `0`–`9` and `-` dropped, and leading and trailing dashes
+   removed.
+4. **Rate.** The surface has counted **5** or more requests for this same `name` in the last 60 seconds
+   [`rate-limited`].
+5. **`path`** is missing, not a string, contains a NUL, a carriage return or a line feed, or is empty after
+   trimming ASCII spaces and tabs from both ends [`bad-path`]. It is not absolute, or it starts with `~`
+   [`not-absolute`]. It has a `.` or `..` segment [`bad-path`]: resolving `..` would make the system walk
+   folders outside the root, and whether that succeeds would tell the session that they exist. The trimmed
+   path is the one used from here on. On Windows, also:
    - a path starting with two separators (`\\host\share`, `\\?\…`, `\\.\…`) [`bad-path`]: touching it could
      send the operator's network credentials to that host;
    - a path that is not a drive letter, a colon and a separator (`C:x.md`, `\Users\x.md`) [`not-absolute`];
    - a colon anywhere after the drive (an alternate data stream), a segment ending in a dot or a space, or a
-     segment whose name before its first dot is a reserved device (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`,
-     `LPT1`–`LPT9`) [`bad-path`]: Windows would open a different file than the name says.
-4. **Age.** The surface first saw the request file more than **60 seconds** ago, or the file was already in
-   the inbox when the surface started [`too-old`]. "First saw" is the surface's own clock: the time of the
-   file event, or of the first pass that listed it. Never the file's timestamps, which whoever writes the
-   request sets. The other verbs wait; this one does not, because a file that opens ten minutes after it
-   was asked for takes the operator's attention for something nobody is asking for any more.
-5. **`line`**, when the field is present, is not a number equal to a whole number from 1 to 10,000,000
-   [`bad-line`]. `true`, `null`, `"12"` and `1.5` are refused; `12.0` is line 12.
-6. **A secret, by the path as written** [`secret`]. See *Secrets* below.
-7. **Roots, as text.** With `.` and `..` applied as text, the path is not inside one of the surface's roots,
-   as written or resolved [`unavailable`]. No file system call is made for a path that fails here.
-8. **Resolve.** The path is resolved through every symbolic link, in every segment, to the name the file
-   system stores (`realpath(3)`; in Node, `fs.realpathSync.native`), and compared byte for byte. It does not
-   exist, or the resolution loops [`unavailable`].
-9. **Roots, resolved.** The resolved path is not inside one of the resolved roots [`unavailable`]. A path
-   written through a link inside a root that points outside is therefore refused: deciding on the path as
-   written would let a link in the vault open a key in `~/.ssh`. Missing and outside share one code on
-   purpose: the dead letter is readable by the session, and two codes would let it probe which files exist
-   outside the roots.
-10. **A regular file, with one link.** The resolved path is a directory, a pipe, a socket, a device or
-    anything but a regular file [`not-a-file`]. It has more than one hard link [`hard-link`]: a hard link
-    to a key made inside the vault resolves to itself and has an innocent name, so neither the roots nor
-    the secret check would see it.
+     segment whose name before its first dot, without trailing spaces, is a reserved device (`CON`, `PRN`,
+     `AUX`, `NUL`, `COM0`–`COM9`, `LPT0`–`LPT9`, `COM¹`–`COM³`, `LPT¹`–`LPT³`, `CONIN$`, `CONOUT$`)
+     [`bad-path`]: Windows would open something other than what the name says.
+6. **`line`**, when the field is present, is not a number equal to a whole number from 1 to 10,000,000
+   [`bad-line`]. `true`, `null`, `"12"`, `1.5` and numbers too large for a float are refused; `12.0` and
+   `1e3` are lines 12 and 1000.
+7. **A secret, by the path as written** [`secret`]. See *Secrets* below.
+8. **Root, as text.** With separators collapsed, the path is not inside the root, as the root was configured
+   or as it resolved at start [`unavailable`]. No file-system call is made for a path that fails here.
+9. **Resolve, inside the root.** Starting at the resolved root and walking the rest of the path one segment
+   at a time: a segment that does not exist, a link loop, or a link whose target (read, not followed, and
+   normalized as text, a relative target from the link's folder) is outside the resolved root
+   [`unavailable`]. The target of such a link is never touched. A link to somewhere inside the root is
+   followed and the walk continues from there. Missing and outside share one code on purpose: the dead letter
+   is readable by the session, and two codes would let it probe what exists outside the root.
+10. **A regular file, with one link.** What the walk ends on is a directory, a pipe, a socket, a device or
+    anything but a regular file [`not-a-file`]. It has more than one hard link [`hard-link`]: a hard link to a
+    key made inside the vault resolves to itself and has an innocent name, so neither the root nor the secret
+    check would see it. (Measured on the framework root of a working vault: 0 of 103,145 files have a second
+    link.)
 11. **A secret, by the resolved path** [`secret`].
-12. **Kind.** The file is binary, or too large for the viewer to show [`unreadable`]. A surface does not
-    fall back to revealing it in the file manager. Images and PDF documents are shown: the surface renders
-    them itself.
-13. **Executable.** The file has an execute permission bit, or its extension is one of `.exe`, `.com`,
-    `.bat`, `.cmd`, `.ps1`, `.msi`, `.scr`, `.app`, `.command`, `.lnk`, `.url`, `.webloc`, `.desktop`,
-    `.terminal`, `.jar`, `.vbs`, `.hta`, `.reg`, `.scpt`, `.workflow`, `.pkg`, `.dmg`, `.appimage`
-    [`executable`]. Showing a script is harmless; the rule is there so that no request ever puts something
-    runnable one click away.
+12. **Kind.** The file is binary, or too large for the viewer to show [`unreadable`]. A surface does not fall
+    back to revealing it in the file manager. Images and PDF documents are shown: the surface renders them
+    itself.
+13. **Executable.** The resolved name ends in `.exe`, `.com`, `.bat`, `.cmd`, `.ps1`, `.msi`, `.scr`, `.app`,
+    `.command`, `.lnk`, `.url`, `.webloc`, `.desktop`, `.terminal`, `.jar`, `.vbs`, `.hta`, `.reg`, `.scpt`,
+    `.workflow`, `.pkg`, `.dmg` or `.appimage`, or the file has an execute permission bit and its name does
+    not end in a document extension (`.md`, `.markdown`, `.txt`, `.json`, `.yaml`, `.yml`, `.toml`, `.csv`,
+    `.log`, `.html`, `.htm`, `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`, `.pdf`) [`executable`]. Some
+    drives mark every file executable, which is why documents are exempt from the bit.
 
-**The roots** are the framework root (the vault included) and the operator's workspace folders: the folders
-the surface already lets its explorer and quick-open read. Not the files the operator dropped onto a surface
-(that grant is for the operator's own work, not for an agent), and never the file-system root, the home
-folder, or a folder that contains the home folder, even if a configuration lists one: the workspace list is
-a file inside the framework root, which a session can write.
+On Windows, checks 8 and 9 compare paths with one separator (`\`) and without regard to case.
 
 When every check passes, the surface opens the RESOLVED path, with:
 
 - **`mode: "source"`** when the resolved name ends in `.html`, `.htm`, `.xhtml`, `.xht`, `.shtml`, `.mht` or
   `.mhtml`. A viewer may render HTML with its scripts running, on the assumption that the file is the
-  operator's own export; a file an agent asked for is not known to be. Every other file opens in the
+  operator's own export; a file an agent asked for is not known to be. An `.svg` is shown only as an image
+  (an `<img>`, never inline and never in a frame), where it cannot run code. Every other file opens in the
   viewer's usual mode.
 - the cursor on `line` when it was given.
 
@@ -109,66 +138,79 @@ Decided by NAME only. No surface reads a file's content to decide whether it is 
 
 A path is a secret when, compared without case:
 
-- any segment is `.ssh`, `.gnupg`, `.aws`, `.docker`, `.kube`, `.git`, `.obsidian` or `agent-secrets`; or
+- any segment is `.ssh`, `.gnupg`, `.aws`, `.docker`, `.kube`, `.git`, `.obsidian`, `.claude` or
+  `agent-secrets`; or
 - its last segment is `.env`, starts with `.env.`, ends with `.env`, or is `.envrc`, `.netrc`, `.pgpass`,
-  `.npmrc`, `.pypirc`, `.git-credentials`, `.dockercfg`, `.mcp.json` or `storage_state.json`; or
-- its last segment ends with `.pem`, `.key`, `.p12`, `.pfx`, `.kdbx`, `.ovpn`, `.ppk`, `.jks` or
-  `.keystore`; or
+  `.npmrc`, `.pypirc`, `.git-credentials`, `.dockercfg`, `.mcp.json`, `.dev.vars`, `credentials`,
+  `kubeconfig`, `storage_state.json` or `spotify-cache.json`; or
+- its last segment ends with `.pem`, `.key`, `.p12`, `.pfx`, `.p8`, `.kdbx`, `.ovpn`, `.ppk`, `.jks`,
+  `.keystore`, `.tfstate` or `.tfvars`; or
 - its last segment starts with `service-account` and ends with `.json`; or
-- its last segment ends with `.json`, `.yaml`, `.yml` or `.toml` and contains `token`, `credential`,
-  `oauth`, `secret` or `cookie` (where the framework's own `.gitignore` says OAuth tokens, saved browser
+- it is a `.json` file directly inside a folder named `auth` (where browser automation keeps saved logins);
+  or
+- its last segment ends with `.json`, `.yaml`, `.yml` or `.toml` and, split into words at every character
+  other than a letter or digit, has one of the words `token`, `credential`, `credentials`, `oauth`, `secret`,
+  `secrets`, `cookie` or `cookies` (where the framework's own `.gitignore` says OAuth tokens, saved browser
   sessions and cookies live); or
-- its last segment is `id_rsa`, `id_dsa`, `id_ecdsa` or `id_ed25519`, optionally followed by `_sk` (the
-  private halves of SSH keys; the `.pub` files are not secrets).
+- its last segment starts with `id_rsa`, `id_dsa`, `id_ecdsa` or `id_ed25519` and does not end in `.pub` (the
+  private halves of SSH keys, whatever suffix they were given).
 
 The list is applied to the path as written and to the resolved path, so neither a secret reached through a
-link nor a link named like a secret gets through. It refuses a few ordinary files too (`.env.example`,
-anything under `.git`, Obsidian's own settings): a name-only rule cannot tell a template from the real file,
-and none of those is something an agent needs to show. It does not refuse a note whose name merely mentions a
-token or a secret (`tokenomics.md`): only data files are matched by those words.
+link nor a link named like a secret gets through. It refuses some ordinary files too (`.env.example`,
+anything under `.git` or `.obsidian`, a data file such as `token-usage.json` or `cookie-consent.yml`): a
+name-only rule cannot tell a template from the real file, and none of those is something an agent needs to
+show. It does not refuse a note whose name merely mentions a token or a secret (`tokenomics.md`,
+`secrets-of-sales.md`), nor a data file whose words only resemble one (`tokenizer.json`, `design-tokens.json`).
 
 ## Showing it
 
 These hold however a surface's viewer works:
 
 - **The content shown is the content checked.** A surface reads what it shows from the file it decided on:
-  still a regular file, still one link, still the same file (device and inode, or the Windows file id) as
-  when the checks ran. A viewer that would read the file again later (a reload when the file changes on
-  disk) repeats checks 8 to 13 first, and shows nothing new if they fail. Otherwise a session could swap the
-  file for a link to a key after the open, and the viewer would display the key.
-- **Nothing the file points at is fetched on its behalf from outside the roots.** A rendered note's images
-  that are local files outside the roots are not loaded; remote images wait for the operator, as the
-  viewers already do for notes; nothing in an opened file is handed to the system opener.
-- **No raised window.** An `open` never brings the surface's window to the front of the operating system,
-  and never moves the keyboard focus out of what the operator is typing into.
+  still a regular file, still one link, still the same file (device and inode, or the Windows file id) as when
+  the checks ran. A viewer that would read the file again later repeats checks 9 to 13 first and shows nothing
+  new if they fail. Otherwise a session could swap the file for a link to a key after the open, and the viewer
+  would display the key. (The surfaces show such a file as a read-only snapshot and never reload it; "open to
+  edit" hands it to the operator's own way of opening files.)
+- **Nothing the file points at is loaded on its behalf unless it would pass these checks.** A local image in
+  a rendered note is shown only if a request for it would pass checks 5 to 13; remote images wait for the
+  operator, as the viewers already do for notes; raw HTML inside a note never runs scripts; nothing in an
+  opened file is handed to the system opener.
+- **No raised window.** An `open` never brings the surface's window to the front of the operating system, and
+  never moves the keyboard focus out of what the operator is typing into.
 
 ## What the operator sees
 
 - The file opens in the surface's own viewer: a viewer pane in the App, an editor tab in Glass.
-- **In front inside the surface, unless the operator is typing.** If the operator has typed into a session
-  in the last few seconds (the App's existing guard against typing over a prompt that is being written), the
-  file opens in a background tab and a short notice names the session that asked and the file. Otherwise
-  its tab comes to the front of the surface. Glass always keeps the keyboard where it is (`preserveFocus`).
+- **In front inside the surface, unless the operator is typing.** If the operator has typed into a session in
+  the last few seconds (the App's existing guard against typing over a prompt that is being written), the file
+  opens in a background tab and a short notice names the session that asked and the file. Otherwise its tab
+  comes to the front of the surface. Glass always keeps the keyboard where it is (`preserveFocus`).
 - A request that is refused is a dead letter, which `/today` and `/close-day` already show.
 
 ## How a session uses it
 
-Inside a surface (the terminal carries `AIOS_GLASS_TERM`) and only when the inbox README is stamped
-contract 5 or later, a session shows a file with `open` instead of the system opener. Outside a surface, or
-on an older stamp, nothing changes.
+Inside a surface (the terminal carries `AIOS_GLASS_TERM`) and only when the inbox README is stamped contract 5
+or later, a session shows a file with `open` instead of the system opener. Outside a surface, or on an older
+stamp, nothing changes.
 
 ## What this does not cover
 
-- A file mounted into a root under an innocent name (a bind or network mount of a secret folder) is not
+- A session that re-points the framework root to a visible folder (through the link or the setting) and has
+  the surface restarted widens what `open` reaches. The real anchor is a root the operator confirms in the
+  surface, with `open` turned off until they confirm again if it changes; not implemented here.
+- A file mounted into the root under an innocent name (a bind or network mount of a secret folder) is not
   seen by a name-only rule.
-- Two surfaces running at once may have different roots; with `surface` absent, the one that claims the
-  request decides.
+- Two surfaces running at once may have resolved different roots; with `surface` absent, the one that claims
+  the request decides.
 
 ## Conformance
 
-`inbox-contract-5.conformance.json` is one fixture for every implementation. It describes a small file
-system (paths, links, kinds, link counts), the roots and the home folder, and for each case a request, how
+`inbox-contract-5.conformance.json` is one fixture for every implementation. It describes a small file system
+(paths, links, kinds, link counts), the configured roots and the home folder, and for each case a request, how
 long ago the surface first saw it, the requests already counted, and the expected decision:
 `{"do": "open", "path", "line", "mode"}` or `{"do": "refuse", "why"}`. Its `windows_paths` give the code the
-path-shape and secret checks assign to Windows paths. `tests/inbox-contract-5.test.sh` runs every case
-against a reference implementation, so the fixture is known to be self-consistent before a surface runs it.
+path-shape and secret checks assign to Windows paths, and `windows_roots` whether a Windows path is inside a
+root. `tests/inbox-contract-5.test.sh` runs every case against a reference implementation
+(`tests/fixtures/inbox-contract-5-ref.py`), so the fixture is known to be self-consistent before a surface runs
+it.

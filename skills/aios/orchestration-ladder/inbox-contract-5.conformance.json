@@ -1,7 +1,7 @@
 {
   "contract": 5,
   "status": "draft",
-  "how_to_run": "For each case, decide `request` with the surface's open decision, using `fs` as the file system, `roots` as the surface's roots and `home` as the home folder. `age_ms` is how long ago the surface first saw the request file; `present_at_start` means it was already there when the surface started. `recent` lists the open requests this surface already decided in the last while (refused ones included): who asked and how long ago. Compare with `expect`: {do: open, path, mode, line?} or {do: refuse, why}. Paths are POSIX. An `fs` entry is a regular file (`class`: text, asset, binary or large; `executable`; `links`, default 1), a directory, `other` (a pipe, a socket, a device), or a symbolic link (`to`, absolute). A folder that holds an entry exists even when it is not listed. `windows_paths` are decided with Windows path rules and need no file system: each names the code the path shape and secret checks give it, or null when those checks pass.",
+  "how_to_run": "For each case, decide `request` with the surface's open decision, using `fs` as the file system, `roots` as the surface's configured roots and `home` as the home folder; the roots are prepared once (resolved, and the file-system root, the home folder and its ancestors dropped) before any case. `age_ms` is how long ago the surface first saw the request file; `present_at_start` means it was already there when the surface started. `recent` lists the open requests this surface already counted: who asked and how long ago. Compare with `expect`: {do: open, path, mode, line?} or {do: refuse, why}. Paths are POSIX. An `fs` entry is a regular file (`class`: text, asset, binary or large; `executable`; `links`, default 1), a directory, `other` (a pipe, a socket, a device), or a symbolic link (`to`, absolute or relative to the link's folder). A folder that holds an entry exists even when it is not listed. `windows_paths` are decided with Windows path rules and need no file system: each names the code the path-shape and secret checks give it, or null when those checks pass. `windows_roots` says whether a Windows path is inside a root, compared with one separator and without case.",
   "constants": {
     "max_age_ms": 60000,
     "rate_max": 5,
@@ -15,7 +15,9 @@
     "/home/op/aios",
     "/home/op/rootlink",
     "/home/op",
-    "/"
+    "/",
+    "/home",
+    "/home/op/.config"
   ],
   "fs": {
     "/home/op/aios/vault/note.md": {
@@ -30,11 +32,23 @@
       "kind": "file",
       "class": "text"
     },
+    "/home/op/aios/vault/deck.xhtml": {
+      "kind": "file",
+      "class": "text"
+    },
     "/home/op/aios/vault/report-link.md": {
       "kind": "symlink",
       "to": "/home/op/aios/vault/page.html"
     },
+    "/home/op/aios/vault/html-to-md.html": {
+      "kind": "symlink",
+      "to": "/home/op/aios/vault/note.md"
+    },
     "/home/op/aios/vault/pic.png": {
+      "kind": "file",
+      "class": "asset"
+    },
+    "/home/op/aios/vault/logo.svg": {
       "kind": "file",
       "class": "asset"
     },
@@ -55,6 +69,11 @@
       "class": "text",
       "executable": true
     },
+    "/home/op/aios/vault/onedrive-note.md": {
+      "kind": "file",
+      "class": "text",
+      "executable": true
+    },
     "/home/op/aios/vault/setup.PS1": {
       "kind": "file",
       "class": "text"
@@ -62,6 +81,10 @@
     "/home/op/aios/vault/shortcut.webloc": {
       "kind": "file",
       "class": "text"
+    },
+    "/home/op/aios/vault/script-link": {
+      "kind": "symlink",
+      "to": "/home/op/aios/hooks/run.sh"
     },
     "/home/op/aios/vault/folder": {
       "kind": "dir"
@@ -82,9 +105,17 @@
       "kind": "file",
       "class": "text"
     },
+    "/home/op/notes/tov": {
+      "kind": "symlink",
+      "to": "/home/op/aios/vault"
+    },
     "/home/op/aios/vault/link-in.md": {
       "kind": "symlink",
       "to": "/home/op/work/repo/README.md"
+    },
+    "/home/op/aios/vault/rel-link.md": {
+      "kind": "symlink",
+      "to": "../vault/note.md"
     },
     "/home/op/work/repo/README.md": {
       "kind": "file",
@@ -130,6 +161,10 @@
       "kind": "file",
       "class": "text"
     },
+    "/home/op/work/repo/id_rsa_work": {
+      "kind": "file",
+      "class": "text"
+    },
     "/home/op/work/repo/id_ed25519.pub": {
       "kind": "file",
       "class": "text"
@@ -146,6 +181,18 @@
       "kind": "file",
       "class": "text"
     },
+    "/home/op/work/repo/token-usage.json": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/work/repo/tokenizer.json": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/work/repo/design-tokens.json": {
+      "kind": "file",
+      "class": "text"
+    },
     "/home/op/work/repo/gcp-oauth-client.json": {
       "kind": "file",
       "class": "text"
@@ -154,11 +201,35 @@
       "kind": "file",
       "class": "text"
     },
+    "/home/op/work/repo/cookie-consent.yml": {
+      "kind": "file",
+      "class": "text"
+    },
     "/home/op/work/repo/storage_state.json": {
       "kind": "file",
       "class": "text"
     },
+    "/home/op/work/repo/spotify-cache.json": {
+      "kind": "file",
+      "class": "text"
+    },
     "/home/op/work/repo/.npmrc": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/work/repo/.dev.vars": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/work/repo/credentials": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/work/repo/AuthKey_ABC.p8": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/work/repo/prod.tfstate": {
       "kind": "file",
       "class": "text"
     },
@@ -183,6 +254,18 @@
       "class": "text"
     },
     "/home/op/work/repo/known_hosts": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/work/repo/.github/ci.yml": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/mcps/playwright-mcp/auth/site.json": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/.claude/settings.local.json": {
       "kind": "file",
       "class": "text"
     },
@@ -215,6 +298,10 @@
       "to": "/home/op/work"
     },
     "/home/op/aios-other/x.md": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/.config/gh/hosts.yml": {
       "kind": "file",
       "class": "text"
     },
@@ -291,6 +378,22 @@
       }
     },
     {
+      "case": "an exponent that is a whole number",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/note.md",
+        "line": 1000.0
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/note.md",
+        "mode": "auto",
+        "line": 1000
+      }
+    },
+    {
       "case": "the largest line",
       "request": {
         "action": "open",
@@ -307,11 +410,11 @@
       }
     },
     {
-      "case": "surrounding spaces are trimmed",
+      "case": "surrounding spaces and tabs are trimmed",
       "request": {
         "action": "open",
         "name": "w1",
-        "path": "  /home/op/aios/vault/note.md  "
+        "path": " \t/home/op/aios/vault/note.md  "
       },
       "age_ms": 1000,
       "expect": {
@@ -349,6 +452,20 @@
       }
     },
     {
+      "case": "xhtml opens in source mode",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/deck.xhtml"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/deck.xhtml",
+        "mode": "source"
+      }
+    },
+    {
       "case": "the mode is decided by the resolved name",
       "request": {
         "action": "open",
@@ -363,6 +480,20 @@
       }
     },
     {
+      "case": "a link named .html to a note opens the note in the usual mode",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/html-to-md.html"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/note.md",
+        "mode": "auto"
+      }
+    },
+    {
       "case": "an image opens (the surface renders it)",
       "request": {
         "action": "open",
@@ -373,6 +504,20 @@
       "expect": {
         "do": "open",
         "path": "/home/op/aios/vault/pic.png",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "an svg opens as an image",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/logo.svg"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/logo.svg",
         "mode": "auto"
       }
     },
@@ -391,6 +536,20 @@
       }
     },
     {
+      "case": "a note with the execute bit opens (some drives mark everything executable)",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/onedrive-note.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/onedrive-note.md",
+        "mode": "auto"
+      }
+    },
+    {
       "case": "a link in the vault to a file in another root opens the resolved file",
       "request": {
         "action": "open",
@@ -401,6 +560,20 @@
       "expect": {
         "do": "open",
         "path": "/home/op/work/repo/README.md",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "a relative link target is resolved from the link's folder",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/rel-link.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/note.md",
         "mode": "auto"
       }
     },
@@ -429,20 +602,6 @@
       "expect": {
         "do": "open",
         "path": "/home/op/work/repo/README.md",
-        "mode": "auto"
-      }
-    },
-    {
-      "case": "dot-dot that stays inside",
-      "request": {
-        "action": "open",
-        "name": "w1",
-        "path": "/home/op/aios/hooks/../vault/note.md"
-      },
-      "age_ms": 1000,
-      "expect": {
-        "do": "open",
-        "path": "/home/op/aios/vault/note.md",
         "mode": "auto"
       }
     },
@@ -503,6 +662,34 @@
       }
     },
     {
+      "case": "a data file named tokenizer is not a secret (whole words only)",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/tokenizer.json"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/work/repo/tokenizer.json",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "a data file named design-tokens is not a secret (tokens is not token)",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/design-tokens.json"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/work/repo/design-tokens.json",
+        "mode": "auto"
+      }
+    },
+    {
       "case": "known_hosts is not a secret",
       "request": {
         "action": "open",
@@ -513,6 +700,20 @@
       "expect": {
         "do": "open",
         "path": "/home/op/work/repo/known_hosts",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": ".github is not .git",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/.github/ci.yml"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/work/repo/.github/ci.yml",
         "mode": "auto"
       }
     },
@@ -531,6 +732,607 @@
       }
     },
     {
+      "case": "a name of 64 characters",
+      "request": {
+        "action": "open",
+        "name": "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww",
+        "path": "/home/op/aios/vault/note.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/note.md",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "seen 60 s ago still opens",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/note.md"
+      },
+      "age_ms": 60000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/note.md",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "seen more than 60 s ago is dropped",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/note.md"
+      },
+      "age_ms": 60001,
+      "expect": {
+        "do": "refuse",
+        "why": "too-old"
+      }
+    },
+    {
+      "case": "a request already there when the surface started is dropped",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/note.md"
+      },
+      "age_ms": 0,
+      "expect": {
+        "do": "refuse",
+        "why": "too-old"
+      },
+      "present_at_start": true
+    },
+    {
+      "case": "age is checked before the flood",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/note.md"
+      },
+      "age_ms": 0,
+      "expect": {
+        "do": "refuse",
+        "why": "too-old"
+      },
+      "recent": [
+        {
+          "name": "s0",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s1",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s2",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s3",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s4",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s5",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s6",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s7",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s8",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s9",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s10",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s11",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s12",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s13",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s14",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s15",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s16",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s17",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s18",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s19",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s20",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s21",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s22",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s23",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s24",
+          "ago_ms": 1000
+        }
+      ],
+      "present_at_start": true
+    },
+    {
+      "case": "age wins over a secret",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/.env"
+      },
+      "age_ms": 600000,
+      "expect": {
+        "do": "refuse",
+        "why": "too-old"
+      }
+    },
+    {
+      "case": "twenty requests across sessions is a flood",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/note.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "flood"
+      },
+      "recent": [
+        {
+          "name": "s0",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s1",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s2",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s3",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s4",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s5",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s6",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s7",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s8",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s9",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s10",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s11",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s12",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s13",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s14",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s15",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s16",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s17",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s18",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s19",
+          "ago_ms": 1000
+        }
+      ]
+    },
+    {
+      "case": "a flood is refused even with no name",
+      "request": {
+        "action": "open",
+        "path": "/home/op/aios/vault/note.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "flood"
+      },
+      "recent": [
+        {
+          "name": "s0",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s1",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s2",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s3",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s4",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s5",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s6",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s7",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s8",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s9",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s10",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s11",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s12",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s13",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s14",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s15",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s16",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s17",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s18",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s19",
+          "ago_ms": 1000
+        }
+      ]
+    },
+    {
+      "case": "nineteen across sessions is not",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/note.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/note.md",
+        "mode": "auto"
+      },
+      "recent": [
+        {
+          "name": "s0",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s1",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s2",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s3",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s4",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s5",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s6",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s7",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s8",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s9",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s10",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s11",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s12",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s13",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s14",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s15",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s16",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s17",
+          "ago_ms": 1000
+        },
+        {
+          "name": "s18",
+          "ago_ms": 1000
+        }
+      ]
+    },
+    {
+      "case": "requests older than a minute are not part of a flood",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/note.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/note.md",
+        "mode": "auto"
+      },
+      "recent": [
+        {
+          "name": "s0",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s1",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s2",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s3",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s4",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s5",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s6",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s7",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s8",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s9",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s10",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s11",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s12",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s13",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s14",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s15",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s16",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s17",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s18",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s19",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s20",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s21",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s22",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s23",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s24",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s25",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s26",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s27",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s28",
+          "ago_ms": 60001
+        },
+        {
+          "name": "s29",
+          "ago_ms": 60001
+        }
+      ]
+    },
+    {
       "case": "no name",
       "request": {
         "action": "open",
@@ -547,6 +1349,19 @@
       "request": {
         "action": "open",
         "name": "  !! ",
+        "path": "/home/op/aios/vault/note.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "bad-name"
+      }
+    },
+    {
+      "case": "a name that is only dashes",
+      "request": {
+        "action": "open",
+        "name": "---",
         "path": "/home/op/aios/vault/note.md"
       },
       "age_ms": 1000,
@@ -806,193 +1621,6 @@
       ]
     },
     {
-      "case": "twenty requests across sessions is a flood",
-      "request": {
-        "action": "open",
-        "name": "w1",
-        "path": "/home/op/aios/vault/note.md"
-      },
-      "age_ms": 1000,
-      "expect": {
-        "do": "refuse",
-        "why": "flood"
-      },
-      "recent": [
-        {
-          "name": "s0",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s1",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s2",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s3",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s4",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s5",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s6",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s7",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s8",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s9",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s10",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s11",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s12",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s13",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s14",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s15",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s16",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s17",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s18",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s19",
-          "ago_ms": 1000
-        }
-      ]
-    },
-    {
-      "case": "nineteen across sessions is not",
-      "request": {
-        "action": "open",
-        "name": "w1",
-        "path": "/home/op/aios/vault/note.md"
-      },
-      "age_ms": 1000,
-      "expect": {
-        "do": "open",
-        "path": "/home/op/aios/vault/note.md",
-        "mode": "auto"
-      },
-      "recent": [
-        {
-          "name": "s0",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s1",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s2",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s3",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s4",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s5",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s6",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s7",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s8",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s9",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s10",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s11",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s12",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s13",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s14",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s15",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s16",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s17",
-          "ago_ms": 1000
-        },
-        {
-          "name": "s18",
-          "ago_ms": 1000
-        }
-      ]
-    },
-    {
       "case": "no path",
       "request": {
         "action": "open",
@@ -1096,57 +1724,55 @@
       }
     },
     {
-      "case": "seen 60 s ago still opens",
+      "case": "a path that starts with a non-ASCII space is not trimmed",
       "request": {
         "action": "open",
         "name": "w1",
-        "path": "/home/op/aios/vault/note.md"
+        "path": " /home/op/aios/vault/note.md"
       },
-      "age_ms": 60000,
+      "age_ms": 1000,
       "expect": {
-        "do": "open",
-        "path": "/home/op/aios/vault/note.md",
-        "mode": "auto"
+        "do": "refuse",
+        "why": "not-absolute"
       }
     },
     {
-      "case": "seen more than 60 s ago is dropped",
+      "case": "dot-dot is refused, even when it would stay inside",
       "request": {
         "action": "open",
         "name": "w1",
-        "path": "/home/op/aios/vault/note.md"
+        "path": "/home/op/aios/hooks/../vault/note.md"
       },
-      "age_ms": 60001,
+      "age_ms": 1000,
       "expect": {
         "do": "refuse",
-        "why": "too-old"
+        "why": "bad-path"
       }
     },
     {
-      "case": "a request already there when the surface started is dropped",
+      "case": "dot-dot that would climb out is refused before anything is resolved",
       "request": {
         "action": "open",
         "name": "w1",
-        "path": "/home/op/aios/vault/note.md"
+        "path": "/home/op/aios/vault/../../Documents/x/../../aios/vault/note.md"
       },
-      "age_ms": 0,
+      "age_ms": 1000,
       "expect": {
         "do": "refuse",
-        "why": "too-old"
-      },
-      "present_at_start": true
+        "why": "bad-path"
+      }
     },
     {
-      "case": "age wins over a secret",
+      "case": "a single dot segment is refused",
       "request": {
         "action": "open",
         "name": "w1",
-        "path": "/home/op/work/repo/.env"
+        "path": "/home/op/aios/vault/./note.md"
       },
-      "age_ms": 600000,
+      "age_ms": 1000,
       "expect": {
         "do": "refuse",
-        "why": "too-old"
+        "why": "bad-path"
       }
     },
     {
@@ -1248,6 +1874,20 @@
       }
     },
     {
+      "case": "a line past what a float holds",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/note.md",
+        "line": 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "bad-line"
+      }
+    },
+    {
       "case": ".env by name",
       "request": {
         "action": "open",
@@ -1313,6 +1953,19 @@
       }
     },
     {
+      "case": "a private key with a suffix",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/id_rsa_work"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
       "case": "an ssh private key with _sk",
       "request": {
         "action": "open",
@@ -1352,11 +2005,50 @@
       }
     },
     {
+      "case": "a .p8 key",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/AuthKey_ABC.p8"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "terraform state",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/prod.tfstate"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
       "case": "token.json",
       "request": {
         "action": "open",
         "name": "w1",
         "path": "/home/op/work/repo/token.json"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "a data file with the word token",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/token-usage.json"
       },
       "age_ms": 1000,
       "expect": {
@@ -1391,6 +2083,19 @@
       }
     },
     {
+      "case": "a yml file named cookie",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/cookie-consent.yml"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
       "case": "a saved browser session",
       "request": {
         "action": "open",
@@ -1404,11 +2109,63 @@
       }
     },
     {
+      "case": "a browser auth store under an auth folder",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/mcps/playwright-mcp/auth/site.json"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "a music service token cache",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/spotify-cache.json"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
       "case": ".npmrc",
       "request": {
         "action": "open",
         "name": "w1",
         "path": "/home/op/work/repo/.npmrc"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": ".dev.vars",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/.dev.vars"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "a file named credentials",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/work/repo/credentials"
       },
       "age_ms": 1000,
       "expect": {
@@ -1435,6 +2192,19 @@
         "action": "open",
         "name": "w1",
         "path": "/home/op/work/repo/.git/config"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "anything under .claude",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/.claude/settings.local.json"
       },
       "age_ms": 1000,
       "expect": {
@@ -1534,6 +2304,19 @@
       }
     },
     {
+      "case": "outside as text, even when a link would lead inside",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/notes/tov/note.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "unavailable"
+      }
+    },
+    {
       "case": "a sibling folder that shares a root's prefix is outside",
       "request": {
         "action": "open",
@@ -1547,11 +2330,24 @@
       }
     },
     {
-      "case": "dot-dot that climbs out of the roots",
+      "case": "the home folder listed as a root is ignored",
       "request": {
         "action": "open",
         "name": "w1",
-        "path": "/home/op/aios/vault/../../notes/out.md"
+        "path": "/home/op/notes/out.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "unavailable"
+      }
+    },
+    {
+      "case": "a root inside a hidden folder of home is ignored",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/.config/gh/hosts.yml"
       },
       "age_ms": 1000,
       "expect": {
@@ -1716,11 +2512,24 @@
       }
     },
     {
-      "case": "a file with the execute bit",
+      "case": "a script with the execute bit",
       "request": {
         "action": "open",
         "name": "w1",
         "path": "/home/op/aios/hooks/run.sh"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "executable"
+      }
+    },
+    {
+      "case": "an executable reached through a link",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/script-link"
       },
       "age_ms": 1000,
       "expect": {
@@ -1792,6 +2601,36 @@
       "why": "bad-path"
     },
     {
+      "case": "COM0 is reserved too",
+      "path": "C:\\Users\\op\\aios\\com0.txt",
+      "why": "bad-path"
+    },
+    {
+      "case": "a superscript port is reserved",
+      "path": "C:\\Users\\op\\aios\\LPT¹.md",
+      "why": "bad-path"
+    },
+    {
+      "case": "the console input device",
+      "path": "C:\\Users\\op\\aios\\CONIN$",
+      "why": "bad-path"
+    },
+    {
+      "case": "a reserved stem followed by spaces",
+      "path": "C:\\Users\\op\\aios\\CON .md",
+      "why": "bad-path"
+    },
+    {
+      "case": "a name that only starts like a device is fine",
+      "path": "C:\\Users\\op\\aios\\console.md",
+      "why": null
+    },
+    {
+      "case": "a folder that only starts like a device is fine",
+      "path": "C:\\Users\\op\\aios\\aux-notes\\x.md",
+      "why": null
+    },
+    {
       "case": "a trailing dot",
       "path": "C:\\Users\\op\\aios\\server.pem.",
       "why": "bad-path"
@@ -1804,6 +2643,11 @@
     {
       "case": "a folder with a trailing space",
       "path": "C:\\Users\\op\\aios \\x.md",
+      "why": "bad-path"
+    },
+    {
+      "case": "dot-dot on Windows",
+      "path": "C:\\Users\\op\\aios\\..\\x.md",
       "why": "bad-path"
     },
     {
@@ -1820,6 +2664,26 @@
       "case": "an ordinary drive path passes the shape checks",
       "path": "C:\\Users\\op\\aios\\note.md",
       "why": null
+    }
+  ],
+  "windows_roots": [
+    {
+      "case": "a root and a request in different case and separators",
+      "root": "c:\\users\\op\\aios",
+      "path": "C:/Users/op/AIOS/vault/note.md",
+      "inside": true
+    },
+    {
+      "case": "a sibling that shares the prefix",
+      "root": "C:\\Users\\op\\aios",
+      "path": "C:\\Users\\op\\aios-other\\x.md",
+      "inside": false
+    },
+    {
+      "case": "another drive",
+      "root": "C:\\Users\\op\\aios",
+      "path": "D:\\Users\\op\\aios\\x.md",
+      "inside": false
     }
   ]
 }
