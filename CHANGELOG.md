@@ -59,6 +59,20 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-27 — A bus request dropped half-way through its claim is reported
+
+`hash: `
+
+> **What you can now do.** Nothing new to run. `/today` and `/close-day` now tell you when a request sent over the bus was taken by a surface and then dropped before anyone started on it.
+
+**A third way a bus request can be lost, and the only one nothing reported** (The-AIOS/aios-app#229). A surface that claims through the shared claim (The-AIOS/aios-app#237) takes a request by renaming it to a private name, `<name>.json.claiming-<surface>-<pid>`, stamps it, and then publishes it as `.holding`. If the process stops between those steps, the file is neither a waiting request, nor a hold, nor a dead letter, so nothing listed it. A running surface on that version puts it back by itself; when none is running, the request was gone with nothing said. `hooks/pipeline/bus-dead-letters.py` now prints one `bus-claim-abandoned:` line for each such file older than 10 minutes, with the file, the name it goes back to, the age, the target, the action, which surface and pid took it, and whether that process is gone, still running, or could not be checked. Anything printed from a request (a field, its file name, the error from reading it) now stays on one line in all three kinds of report, so a line break inside a request's name cannot pass for a second report line.
+
+**The script only reports.** It never puts a claim back: a claimer that is only paused publishes the hold when it resumes, and a request put back meanwhile would run twice. `/today` and `/close-day` offer to put it back only when the line says `(gone)`, with a rename that refuses to overwrite, built from two fields the script prints for that purpose and only for a file name that is safe to put in a command; for `(still running)` or `(not checked)` they show it and recommend waiting. The pid is checked through `hooks/claude-identity/_fs.py`, the check that is safe on Windows.
+
+Until the App and Glass ship that claim, no such file is ever written and the new line never appears.
+
+**Action required:** none. Nothing is installed and nothing new runs: the same script `/today` and `/close-day` already call prints one more kind of line.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
