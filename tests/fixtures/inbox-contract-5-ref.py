@@ -19,10 +19,11 @@ SECRET_SEGMENTS = {".ssh", ".gnupg", ".aws", "agent-secrets", ".git", ".docker",
 SECRET_NAMES = {".netrc", ".pgpass", ".npmrc", ".pypirc", ".git-credentials", ".dockercfg", ".mcp.json",
                 "storage_state.json", "spotify-cache.json", ".dev.vars", "credentials", "kubeconfig",
                 "auth.json", ".htpasswd", ".vault-token", ".yarnrc.yml", ".s3cfg", ".my.cnf"}
-SECRET_EXT = (".pem", ".key", ".p12", ".pfx", ".p8", ".kdbx", ".ovpn", ".ppk", ".jks", ".keystore", ".tfstate", ".tfvars")
-WORD_EXT = (".json", ".yaml", ".yml", ".toml", ".txt")
+SECRET_EXT = (".asc", ".pem", ".key", ".p12", ".pfx", ".p8", ".kdbx", ".ovpn", ".ppk", ".jks", ".keystore", ".tfstate", ".tfvars")
+PROSE_EXT = (".md", ".markdown", ".html", ".htm", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg")
+BACKUP_SUFFIX = (".bak", ".old", ".orig", ".backup", "~")
 WORDS = {"token", "tokens", "credential", "credentials", "oauth", "secret", "secrets", "cookie", "cookies",
-         "password", "passwords", "apikey"}
+         "password", "passwords", "apikey", "apikeys"}
 EXEC_EXT = (".exe", ".com", ".bat", ".cmd", ".ps1", ".msi", ".scr", ".app", ".command", ".lnk", ".url", ".webloc",
             ".desktop", ".terminal", ".jar", ".vbs", ".hta", ".reg", ".scpt", ".workflow", ".pkg", ".dmg", ".appimage",
             ".jse", ".vbe", ".wsf", ".wsh", ".cpl", ".msc", ".pif", ".scf", ".appref-ms", ".application",
@@ -32,16 +33,16 @@ DOC_EXT = (".md", ".markdown", ".txt", ".json", ".yaml", ".yml", ".toml", ".csv"
            ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".pdf")
 SOURCE_EXT = (".html", ".htm", ".xhtml", ".xht", ".shtml", ".mht", ".mhtml")
 RESERVED = re.compile(r"(con|prn|aux|nul|com[0-9¹²³]|lpt[0-9¹²³]|conin\$|conout\$)")
-BAD_CHARS = re.compile(r"[\x00-\x1f\x7f-\x9f‪-‮⁦-⁩]")
+BAD_CHARS = re.compile("[\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069]")
 
 
 def fold(s):
-    """Full Unicode case folding, the way a case-insensitive file system compares names."""
-    return s.casefold()
+    """Lower, upper, lower: the same in Python and JavaScript, and it takes ſ, ß, ẞ and ı to ASCII."""
+    return s.lower().upper().lower()
 
 
 def words_of(stem):
-    stem = re.sub(r"([a-z])([A-Z])", r"\1 \2", stem)      # camelCase → camel Case
+    stem = re.sub(r"([a-z])([A-Z])", r"\1 \2", stem)      # ASCII camelCase → camel Case
     return re.findall(r"[a-z]+|[0-9]+", fold(stem))
 
 
@@ -52,8 +53,13 @@ def is_secret(path):
     if any(s in SECRET_SEGMENTS for s in segs):
         return True
     raw_b = [s for s in re.split(r"[\\/]+", path) if s][-1]
-    b = segs[-1]
-    if b.startswith(".env") or b.endswith(".env") or b in SECRET_NAMES:
+    for suf in BACKUP_SUFFIX:                                 # one backup suffix is stripped first
+        if fold(raw_b).endswith(suf) and len(raw_b) > len(suf):
+            raw_b = raw_b[:-len(suf)]
+            break
+    b = fold(raw_b)
+    if b in (".env", ".envrc") or b.startswith((".env_", ".env-")) or ".env." in b or b.endswith(".env") \
+            or b in SECRET_NAMES:
         return True
     if b.endswith(SECRET_EXT):
         return True
@@ -61,10 +67,10 @@ def is_secret(path):
         return True
     if len(segs) > 1 and segs[-2] == "auth" and b.endswith(".json"):
         return True
-    if b.endswith(WORD_EXT) or "." not in b.lstrip("."):
+    if not b.endswith(PROSE_EXT):
         stem = raw_b.rsplit(".", 1)[0] if "." in raw_b.lstrip(".") else raw_b
         w = words_of(stem)
-        if WORDS & set(w) or any(w[i] == "api" and w[i + 1] == "key" for i in range(len(w) - 1)):
+        if WORDS & set(w) or any(w[i] == "api" and w[i + 1] in ("key", "keys") for i in range(len(w) - 1)):
             return True
     return re.match(r"id_(rsa|dsa|ecdsa|ed25519)", b) is not None and not b.endswith(".pub")
 
@@ -77,15 +83,17 @@ def sanitize(name):
 
 def windows_shape(p):
     """The path-shape checks with Windows rules; None when they pass."""
+    if not p or BAD_CHARS.search(p):
+        return "bad-path"
     if re.match(r"^[\\/]{2}", p):
         return "bad-path"
     if not re.match(r"^[A-Za-z]:[\\/]", p):
         return "not-absolute"
     rest = p[2:]
-    if ":" in rest:
+    if len(p) > MAX_PATH or re.search(r"[\\/]$", p) or ":" in rest:
         return "bad-path"
     for seg in [s for s in re.split(r"[\\/]+", rest) if s]:
-        if seg in (".", "..") or seg.endswith(".") or seg.endswith(" ") or re.search(r"~\d", seg) \
+        if seg in (".", "..") or seg.endswith(".") or seg.endswith(" ") or re.search(r"~[0-9]", seg) \
                 or RESERVED.fullmatch(fold(seg.split(".")[0].rstrip(" "))):
             return "bad-path"
     return None
@@ -246,9 +254,15 @@ def decide(doc, case, roots):
         return {"do": "refuse", "why": "not-a-file"}
     if int(node.get("links", 1)) > 1:
         return {"do": "refuse", "why": "hard-link"}
-    # 11. secret, resolved (a surface also checks the name the file system stores for it)
+    # 11. secret, resolved, and by the name the file system stores for it (`stored` stands in for
+    #     realpath native; an empty one is a realpath that failed)
     if is_secret(real):
         return {"do": "refuse", "why": "secret"}
+    if "stored" in node:
+        if not node["stored"]:
+            return {"do": "refuse", "why": "unavailable"}
+        if is_secret(node["stored"]):
+            return {"do": "refuse", "why": "secret"}
     # 12. kind
     if node.get("class") in ("binary", "large"):
         return {"do": "refuse", "why": "unreadable"}

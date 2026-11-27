@@ -377,6 +377,60 @@
       "kind": "file",
       "class": "text"
     },
+    "/home/op/aios/vault/.ẞh/notes.md": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/repo/.gıt/config": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/repo/api_keys.json": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/repo/apikeys.json": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/repo/secrets.ini": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/repo/token.json.bak": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/repo/server.pem.bak": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/repo/private.asc": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/repo/prod.env.local": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/.envelope.md": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/.environment-notes.md": {
+      "kind": "file",
+      "class": "text"
+    },
+    "/home/op/aios/vault/OBSIDX/data.json": {
+      "kind": "file",
+      "class": "text",
+      "stored": "/home/op/aios/vault/.obsidian/data.json"
+    },
+    "/home/op/aios/vault/raced.md": {
+      "kind": "file",
+      "class": "text",
+      "stored": ""
+    },
     "/home/op/aios/vault/run.fileloc": {
       "kind": "file",
       "class": "text"
@@ -2928,6 +2982,203 @@
       }
     },
     {
+      "case": "a capital sharp s folds to ss: .ẞh is .ssh",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/.ẞh/notes.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "a dotless i folds to i: .gıt is .git (NTFS matches it)",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/.gıt/config"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "plural api keys, with a separator",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/api_keys.json"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "plural api keys, glued",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/apikeys.json"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "the word rule applies to any extension but prose",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/secrets.ini"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "one backup suffix is stripped first",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/token.json.bak"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "a key with a backup suffix",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/server.pem.bak"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "an armored key",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/private.asc"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": ".env. inside a name",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/repo/prod.env.local"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "a note named .envelope is not an environment file",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/.envelope.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/.envelope.md",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "nor .environment-notes",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/.environment-notes.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "open",
+        "path": "/home/op/aios/vault/.environment-notes.md",
+        "mode": "auto"
+      }
+    },
+    {
+      "case": "the name the file system stores is judged too",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/OBSIDX/data.json"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "secret"
+      }
+    },
+    {
+      "case": "a stored name that cannot be read is unavailable",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/raced.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "unavailable"
+      }
+    },
+    {
+      "case": "a line separator in the path",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/no te.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "bad-path"
+      }
+    },
+    {
+      "case": "a direction mark in the path",
+      "request": {
+        "action": "open",
+        "name": "w1",
+        "path": "/home/op/aios/vault/‎note.md"
+      },
+      "age_ms": 1000,
+      "expect": {
+        "do": "refuse",
+        "why": "bad-path"
+      }
+    },
+    {
       "case": "plural tokens in a data file",
       "request": {
         "action": "open",
@@ -3526,6 +3777,21 @@
       "case": "two separators of mixed kinds",
       "path": "\\/host\\share\\x.md",
       "why": "bad-path"
+    },
+    {
+      "case": "a trailing separator",
+      "path": "C:\\Users\\op\\aios\\vault\\note.md\\",
+      "why": "bad-path"
+    },
+    {
+      "case": "a control character",
+      "path": "C:\\Users\\op\\aios\\vault\\a\u0007.md",
+      "why": "bad-path"
+    },
+    {
+      "case": "a tilde before a non-ASCII digit is not a short name",
+      "path": "C:\\Users\\op\\aios\\vault\\n~١.md",
+      "why": null
     },
     {
       "case": "a short name cannot be judged by its name, and is refused",

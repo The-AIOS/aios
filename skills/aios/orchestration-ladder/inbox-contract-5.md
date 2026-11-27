@@ -51,8 +51,8 @@ is reached through (`~/aios`) or the setting that names it then needs the surfac
 the file-system root, the home folder, a folder that contains the home folder, or a folder inside a hidden
 folder of the home (any segment below home that starts with a dot: `~/.config`, `~/.local`). And it must look
 like a framework root (it holds `vault/` and `plugins/aios/`). When no root is left, the surface turns `open`
-off: it logs why once, and refuses every `open` with an [`unavailable`] dead letter that says `open` is off and
-why, rather than open files from somewhere else.
+off: it logs why once, and refuses every `open` that reaches check 8 with an [`unavailable`] dead letter that
+says `open` is off and why, rather than open files from somewhere else.
 
 The fixture's `roots` list several candidates on purpose, so these rules are tested; prepared, they leave
 exactly one. Its `framework_roots` cases give other lists and what is left of each.
@@ -82,17 +82,19 @@ and it quotes only the path as written, never a resolved one. Checks 1 to 8 make
    removed.
 4. **Rate.** The surface has counted **5** or more requests for this same `name` in the last 60 seconds
    [`rate-limited`].
-5. **`path`** is missing or not a string, or, once ASCII spaces and tabs are trimmed from both ends, is
-   empty, contains a control character (U+0000–U+001F, U+007F–U+009F) or a bidirectional override
-   (U+202A–U+202E, U+2066–U+2069), is longer than 4,096 characters, or ends in a separator [`bad-path`]. It
-   is not absolute, or it starts with `~` [`not-absolute`]. It has a `.` or `..` segment [`bad-path`]:
-   resolving `..` would make the system walk folders outside the root, and whether that succeeds would tell
-   the session that they exist. The trimmed path is the one used from here on. On Windows, also:
+5. **`path`**, in this order: it is missing or not a string, or, once ASCII spaces and tabs are trimmed from
+   both ends, is empty or contains a control character (U+0000–U+001F, U+007F–U+009F), a line or paragraph
+   separator (U+2028, U+2029) or a direction mark or override (U+061C, U+200E, U+200F, U+202A–U+202E,
+   U+2066–U+2069) [`bad-path`]: dead letters and notices quote the path, and these would make it read as
+   something else. It is not absolute, or it starts with `~` [`not-absolute`]. It is longer than 4,096
+   characters, ends in a separator, or has a `.` or `..` segment [`bad-path`]: resolving `..` would make the
+   system walk folders outside the root, and whether that succeeds would tell the session that they exist.
+   The trimmed path is the one used from here on. On Windows these apply with both separators, and also:
    - a path starting with two separators of either kind (`\\host\share`, `\\?\…`, `\\.\…`, `\/host`)
      [`bad-path`]: touching it could send the operator's network credentials to that host;
    - a path that is not a drive letter, a colon and a separator (`C:x.md`, `\Users\x.md`) [`not-absolute`];
    - a colon anywhere after the drive (an alternate data stream), a segment ending in a dot or a space, a
-     segment with a `~` followed by a digit (a short 8.3 name such as `OBSIDI~1`, which says nothing about the
+     segment with a `~` followed by an ASCII digit (a short 8.3 name such as `OBSIDI~1`, which says nothing about the
      long name it stands for), or a segment whose name before its first dot, without trailing spaces, is a
      reserved device (`CON`, `PRN`,
      `AUX`, `NUL`, `COM0`–`COM9`, `LPT0`–`LPT9`, `COM¹`–`COM³`, `LPT¹`–`LPT³`, `CONIN$`, `CONOUT$`)
@@ -118,7 +120,9 @@ and it quotes only the path as written, never a resolved one. Checks 1 to 8 make
     the spelling of the request, and a case-insensitive file system matches more spellings than a lower-case
     comparison does (on macOS `.obſidian` reaches `.obsidian`). So the surface also asks the file system for
     the stored name of the file it is about to open (`realpath(3)`; in Node `fs.realpathSync.native`, which
-    on Windows also turns a short name into the long one) and applies the secret rules to that too.
+    on Windows also turns a short name into the long one) and applies the secret rules to that too. If that
+    call fails [`unavailable`]. If the stored name is not a secret but differs from the resolved path by more
+    than the case of its letters or a short name, the file changed under the checks [`unavailable`].
 12. **Kind.** The file is binary, or too large for the viewer to show [`unreadable`]. A surface does not fall
     back to revealing it in the file manager. Images and PDF documents are shown: the surface renders them
     itself.
@@ -148,26 +152,30 @@ When every check passes, the surface opens the RESOLVED path, with:
 
 Decided by NAME only. No surface reads a file's content to decide whether it is a secret.
 
-Names are compared after full Unicode case folding (as Python's `casefold()`, or upper case then lower case in
-JavaScript), so `ſ` is `s` and `ß` is `ss`, the way a case-insensitive file system compares them. A path is a
-secret when:
+Names are compared folded: lower case, then upper case, then lower case again (`s.lower().upper().lower()` in
+Python, `s.toLowerCase().toUpperCase().toLowerCase()` in JavaScript, which agree), so `ſ` is `s`, `ß` and `ẞ`
+are `ss`, and `ı` is `i`: spellings a case-insensitive file system may take to the ASCII names below. One backup
+suffix (`.bak`, `.old`, `.orig`, `.backup` or `~`) is taken off the last segment first, so `token.json.bak` is
+judged as `token.json`. A path is a secret when:
 
 - any segment is `.ssh`, `.gnupg`, `.aws`, `.docker`, `.kube`, `.git`, `.obsidian`, `.claude` or
   `agent-secrets`; or
-- its last segment starts with `.env` or ends with `.env`, or is `.netrc`, `.pgpass`, `.npmrc`, `.pypirc`,
+- its last segment is `.env` or `.envrc`, starts with `.env_` or `.env-`, contains `.env.`, or ends with
+  `.env` (but `.envelope.md` is a note); or it is `.netrc`, `.pgpass`, `.npmrc`, `.pypirc`,
   `.git-credentials`, `.dockercfg`, `.mcp.json`, `.dev.vars`, `credentials`, `kubeconfig`, `auth.json`,
   `.htpasswd`, `.vault-token`, `.yarnrc.yml`, `.s3cfg`, `.my.cnf`, `storage_state.json` or
   `spotify-cache.json`; or
-- its last segment ends with `.pem`, `.key`, `.p12`, `.pfx`, `.p8`, `.kdbx`, `.ovpn`, `.ppk`, `.jks`,
+- its last segment ends with `.asc`, `.pem`, `.key`, `.p12`, `.pfx`, `.p8`, `.kdbx`, `.ovpn`, `.ppk`, `.jks`,
   `.keystore`, `.tfstate` or `.tfvars`; or
 - its last segment ends with `.json` and starts with `service-account` or contains `firebase-adminsdk`; or
 - it is a `.json` file directly inside a folder named `auth` (where browser automation keeps saved logins);
   or
-- its last segment ends with `.json`, `.yaml`, `.yml`, `.toml` or `.txt`, or has no extension, and its name
-  without the extension, split into words (at every change from a lower-case letter to an upper-case one,
-  then, folded, into runs of `a`–`z` and of `0`–`9`), has one of the words `token`, `tokens`, `credential`,
-  `credentials`, `oauth`, `secret`, `secrets`, `cookie`, `cookies`, `password`, `passwords` or `apikey`, or
-  the word `api` followed by `key` (where the framework's own `.gitignore` says OAuth tokens, saved browser
+- its last segment is not prose (it does not end in `.md`, `.markdown`, `.html`, `.htm`, `.pdf`, `.png`,
+  `.jpg`, `.jpeg`, `.gif`, `.webp` or `.svg`), and its name without the extension, split into words (at every
+  change from an ASCII lower-case letter to an ASCII upper-case one, then, folded, into runs of `a`–`z` and of
+  `0`–`9`), has one of the words `token`, `tokens`, `credential`, `credentials`, `oauth`, `secret`, `secrets`,
+  `cookie`, `cookies`, `password`, `passwords`, `apikey` or `apikeys`, or the word `api` followed by `key` or
+  `keys` (where the framework's own `.gitignore` says OAuth tokens, saved browser
   sessions and cookies live); or
 - its last segment starts with `id_rsa`, `id_dsa`, `id_ecdsa` or `id_ed25519` and does not end in `.pub` (the
   private halves of SSH keys, whatever suffix they were given).
@@ -227,13 +235,19 @@ stamp, nothing changes.
   surface, with `open` turned off until they confirm again if it changes; not implemented here.
 - A file mounted into the root under an innocent name (a bind or network mount of a secret folder) is not
   seen by a name-only rule.
+- "Open to edit" opens the real file in an ordinary editor tab, which reloads from disk as such tabs do and
+  does not repeat these checks: a session that later swaps the file for a link to a key, after the operator
+  chose to edit it, is outside what `open` decides.
+- A name-only rule refuses some ordinary files (an extensionless `TODO-passwords-rotation`) and lets through
+  secrets with unremarkable names; it is a guard against the comfortable case, not an inventory.
 - Two surfaces running at once may have resolved different roots; with `surface` absent, the one that claims
   the request decides.
 
 ## Conformance
 
 `inbox-contract-5.conformance.json` is one fixture for every implementation. It describes a small file system
-(paths, links, kinds, link counts), the configured roots and the home folder, and for each case a request, how
+(paths, links, kinds, link counts, and for some files a `stored` name: what `realpath` native returns for
+it, empty when that call fails), the configured roots and the home folder, and for each case a request, how
 long ago the surface first saw it, the requests already counted, and the expected decision:
 `{"do": "open", "path", "line", "mode"}` or `{"do": "refuse", "why"}`. Its `windows_paths` give the code the
 path-shape and secret checks assign to Windows paths, and `windows_roots` whether a Windows path is inside a
