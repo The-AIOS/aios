@@ -59,6 +59,18 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-27 — A surface can ask which model `judgment` starts
+
+`hash: `
+
+> **What you can now do.** Nothing new by hand. A surface that opens sessions itself can now start the same model for `judgment` that the terminal does.
+
+**`resolve-tier --launch-model <rung>`** (The-AIOS/aios-app#230). The plain `resolve-tier judgment` answers empty, which means "pass no `--model`". That is the same as the rung only where the `spawn` wrapper then fills the gap with its pinned id (`MODEL-ROUTING.md`: a pin, not an inherit). A surface that starts `claude` itself has no wrapper in the path, so the same request started the operator's saved model there and the pinned one in a terminal. The new form never answers empty: `judgment` prints the id the wrappers pin, every other rung prints the id it already had, an unknown rung exits 2 with the list. The plain form is unchanged, so a surface that predates this behaves as before. `tests/resolve-tier.test.sh` reads the pin out of both wrappers and fails if the script names another model.
+
+This changes no session by itself: a surface has to ask. No installer runs.
+
+**Action required** — none.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)

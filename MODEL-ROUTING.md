@@ -49,6 +49,14 @@ Anthropic ships a new Opus, that literal moves in the same PR as this row — `t
 fails the build if the table and the two wrappers stop naming the same model. (It went stale once:
 Opus 5.5 shipped while every AIOS session was still launched on Opus 5, and nothing reported it.)
 
+**A surface that starts `claude` itself asks for the pin by name.** The empty answer means "no
+`--model`" only where the wrapper then fills the gap. A surface with no wrapper in the path would
+inherit the operator's saved model for the same request, so it asks
+`hooks/pipeline/resolve-tier --launch-model <rung>`, which never answers empty: `judgment` prints
+the wrappers' pinned id, every other rung prints its usual id. The surface still owes the
+wrapper's other half: `$CLAUDE_MODEL`, when the operator set it, wins. `tests/resolve-tier.test.sh`
+fails if that answer and the two wrappers stop naming the same model.
+
 **`--tier mechanical` still works and still resolves to Claude Sonnet 4.6.** It predates this
 ladder and is kept byte-identical, because changing what an existing flag resolves to would change
 the cost and behaviour of work already running in operators' routines. Treat `scale` as its
