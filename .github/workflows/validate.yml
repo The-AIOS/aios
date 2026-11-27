@@ -2353,6 +2353,8 @@ jobs:
         run: /bin/bash tests/aios-health.test.sh
       - name: whoami under bash 3.2
         run: /bin/bash tests/whoami.test.sh
+      - name: one session name for every reader under bash 3.2 (BSD grep and sed)
+        run: /bin/bash tests/session-name.test.sh
       - name: transcript inventory under bash 3.2
         run: /bin/bash tests/transcript-inventory.test.sh
       - name: release new-command check under bash 3.2

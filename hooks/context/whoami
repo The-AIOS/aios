@@ -10,8 +10,13 @@
 #
 # A record is a line that BEGINS `{"type":"agent-name"`, as the harness writes it; a tool result
 # that quotes one is not. The whole file is read, because the end of a long transcript may hold no
-# record (measured: 0.14 s at 30 MB, 0.46 s at 210 MB). hooks/context/session_name.py is the same
-# rule for the Python hooks, and tests/session-name.test.sh holds the two to the same answers.
+# record (measured: 0.14 s at 30 MB, 0.46 s at 210 MB), and as text (`grep -a`): one stray NUL from
+# a crash would otherwise make grep call the file binary and print nothing.
+# hooks/context/session_name.py is the same rule for the Python hooks, and
+# tests/session-name.test.sh holds the two to the same answers.
+#
+# The name is printed as the transcript has it. A session renamed to free text answers to that
+# text, as it does in the registry and on the surfaces, and then matches no agent file by name.
 #
 # It exists so the startup check is one command with no `$` in it. Claude Code cannot check a
 # command whose variables it would have to expand first, so the old inline transcript grep asked
@@ -24,7 +29,7 @@ if [ -n "$sid" ]; then
   base="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects"
   for f in "$base"/*/"$sid".jsonl; do
     [ -f "$f" ] || continue
-    name=$(LC_ALL=C grep '^{"type":"agent-name"' "$f" 2>/dev/null \
+    name=$(LC_ALL=C grep -a '^{"type":"agent-name"' "$f" 2>/dev/null \
            | LC_ALL=C sed -n 's/.*"agentName":"\([^"][^"]*\)".*/\1/p' | tail -1)
     [ -n "$name" ] && break
   done

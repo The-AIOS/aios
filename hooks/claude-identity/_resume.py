@@ -296,6 +296,7 @@ def auto_name(session_id: str) -> str:
     return f"{adj}-{ani}"
 
 
+_READER_WARNED = False
 _PLAIN_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 
 
@@ -304,10 +305,17 @@ def _transcript_name(session_id) -> str:
     hook shares (hooks/context/session_name.py). '' when there is none, when it is not a plain
     session name, or when the reader is missing."""
     try:
-        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "context"))
+        # realpath, not abspath: reached through a symlink, abspath points beside the link.
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "context"))
         from session_name import session_name
         name = session_name(session_id)
-    except Exception:
+    except Exception as e:
+        # Said, not swallowed: without the reader every session falls back to its launch name,
+        # which is the behaviour this reader replaced, and nothing else would show it.
+        global _READER_WARNED
+        if not _READER_WARNED:
+            _READER_WARNED = True
+            print(f"resume: cannot read session names from transcripts ({e}); using launch names", file=sys.stderr)
         return ""
     # This name ends up in file names and in a command typed into a terminal, and a transcript
     # holds whatever a session wrote. Anything that is not a plain session name is not used.

@@ -49,6 +49,8 @@ filler(){ printf '{"parentUuid":null,"type":"user","message":{"content":"hello"}
 # A last name that is not a plain session name: whoami prints what the transcript says, the swap
 # resume (which puts the name in file names and in a typed command) does not use it.
 { rec born; rec 'x; touch pwned'; } > "$P/unsafe-name.jsonl"
+# A stray NUL (a crash mid-write) must not make grep call the file binary and find nothing.
+{ rec born; printf '{"type":"user","x":"\000"}\n'; rec after-nul; } > "$P/nul-byte.jsonl"
 # No newline after the last record.
 { rec born; filler; printf '{"type":"agent-name","agentName":"no-newline","sessionId":"x"}'; } > "$P/no-final-newline.jsonl"
 # Windows line ends.
@@ -56,7 +58,7 @@ printf '{"type":"agent-name","agentName":"born","sessionId":"x"}\r\n{"type":"age
 
 want_of(){ case "$1" in
   one-name) echo born ;; renamed|renamed-then-quiet) echo renamed ;; no-record|empty) echo "" ;;
-  quoted-in-a-result|nested) echo real ;; empty-name-last) echo kept ;; unsafe-name) echo "x; touch pwned" ;; no-final-newline) echo no-newline ;; crlf) echo crlf ;;
+  quoted-in-a-result|nested) echo real ;; empty-name-last) echo kept ;; unsafe-name) echo "x; touch pwned" ;; nul-byte) echo after-nul ;; no-final-newline) echo no-newline ;; crlf) echo crlf ;;
 esac; }
 
 whoami_of(){ env -u CLAUDE_AGENT_NAME CLAUDE_CONFIG_DIR="$T" CLAUDE_CODE_SESSION_ID="$1" bash "$W"; }
@@ -64,18 +66,18 @@ whoami_of(){ env -u CLAUDE_AGENT_NAME CLAUDE_CONFIG_DIR="$T" CLAUDE_CODE_SESSION
 echo "── 1. the module and whoami give the same name for the same transcript ──"
 for f in "$P"/*.jsonl; do
   id=$(basename "$f" .jsonl); want=$(want_of "$id")
-  py=$($PYBIN "$M" "$f"); sh=$(whoami_of "$id")
+  py=$($PYBIN "$M" "$f" | tr -d '\r'); sh=$(whoami_of "$id" | tr -d '\r')
   [ "$py" = "$want" ] && ok "module: $id → '${want}'" || no "module: $id" "got '$py', want '$want'"
   [ "$sh" = "$py" ] && ok "whoami agrees: $id" || no "whoami disagrees with the module: $id" "whoami '$sh', module '$py'"
 done
 by_id=$($PYBIN -c 'import sys; sys.path.insert(0, "hooks/context"); import session_name as s
-print(s.session_name("renamed", sys.argv[1]), "|", s.session_name("no-such", sys.argv[1]), "|", s.session_name("*", sys.argv[1]), "|", s.session_name("../x", sys.argv[1]))' "$T")
+print(s.session_name("renamed", sys.argv[1]), "|", s.session_name("no-such", sys.argv[1]), "|", s.session_name("*", sys.argv[1]), "|", s.session_name("../x", sys.argv[1]))' "$T" | tr -d '\r')
 [ "$by_id" = "renamed |  |  | " ] && ok "by session id: the last name; an unknown id and an id that is a glob or a path find nothing" || no "session_name(id) wrong" "$by_id"
 
 echo "── 2. the context-load audit names a session by its last record ──"
 got=$($PYBIN -c 'import importlib.util, sys
 s = importlib.util.spec_from_file_location("a", "hooks/context/context-load-audit.py"); m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
-print(m.agent_name(sys.argv[1]), m.agent_name(sys.argv[2]))' "$P/renamed-then-quiet.jsonl" "$P/no-record.jsonl" 2>&1)
+print(m.agent_name(sys.argv[1]), m.agent_name(sys.argv[2]))' "$P/renamed-then-quiet.jsonl" "$P/no-record.jsonl" 2>&1 | tr -d '\r')
 [ "$got" = "renamed None" ] && ok "audit: last record, and None without one" || no "audit reads another record" "$got"
 
 echo "── 3. the account-swap resume: last record for the session, the launch name for its loop ──"
@@ -146,11 +148,21 @@ PY
   fi
 fi
 
+# The reader is found through a symlink too (abspath would look beside the link and the resume
+# would silently go back to launch names).
+if [ -n "$PYR" ] && ln -s "$PWD/hooks/claude-identity/_resume.py" "$T/linked_resume.py" 2>/dev/null; then
+  got=$(CLAUDE_CONFIG_DIR="$T" "$PYR" -c 'import importlib.util, sys
+s = importlib.util.spec_from_file_location("r", sys.argv[1]); m = importlib.util.module_from_spec(s); s.loader.exec_module(m)
+print(m._transcript_name("renamed"))' "$T/linked_resume.py" 2>&1 | tr -d '\r')
+  [ "$got" = renamed ] && ok "the swap resume finds the shared reader when run through a symlink" || no "reader not found through a symlink" "$got"
+fi
+
 echo "── 4. no other hook reads the record by itself ──"
 # whoami (bash, held to the module by section 1) and transcript-inventory.py (first records only,
 # by design: it asks whether a transcript is named, over thousands of files) are the two exceptions.
-own=$(grep -rlE 'agentName' hooks --include='*.py' --include='*.sh' --include='*.ps1' 2>/dev/null; grep -lE 'agentName' hooks/context/whoami hooks/claude-identity/rc-reconnect 2>/dev/null)
-bad=$(printf '%s\n' "$own" | sort -u | grep -vE '^(hooks/context/session_name\.py|hooks/context/whoami|hooks/security/transcript-inventory\.py)$' | tr '\n' ' ')
+# Every file under hooks/ that names the record's field, whatever its extension (docs aside).
+bad=$(grep -rlE 'agentName' hooks 2>/dev/null | grep -vE '\.md$|__pycache__' | sort -u \
+  | grep -vE '^(hooks/context/session_name\.py|hooks/context/whoami|hooks/security/transcript-inventory\.py)$' | tr '\n' ' ')
 [ -z "$bad" ] && ok "only the shared module, whoami and the inventory parse agentName" || no "a hook parses the record itself" "$bad"
 grep -q 'session_name' hooks/security/transcript-inventory.py && ok "the inventory says why it is not on the shared reader" || no "transcript-inventory.py does not say why it reads on its own"
 for u in hooks/context/context-load-audit.py hooks/claude-identity/_resume.py hooks/agents/session-names.py; do

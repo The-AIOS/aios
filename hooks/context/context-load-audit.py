@@ -45,7 +45,7 @@ import os
 import re
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))   # realpath: also when run through a symlink
 from session_name import last_agent_name  # noqa: E402
 
 # Windows consoles are cp1252: a print() carrying an em dash raises UnicodeEncodeError

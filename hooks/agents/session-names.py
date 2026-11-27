@@ -28,7 +28,7 @@ import re
 import sys
 import time
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "context"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "context"))
 from session_name import name_in_record  # noqa: E402  (the one reader of the agent-name record)
 
 if sys.platform == "win32":
@@ -61,8 +61,9 @@ def scan(path):
     name, prompt = None, None
     with open(path, encoding="utf-8", errors="replace") as fh:
         for line in fh:
-            if line.startswith('{"type":"agent-name"'):
-                name = name_in_record(line) or name
+            found = name_in_record(line)
+            if found:
+                name = found
             elif prompt is None and '"type":"user"' in line.replace(" ", ""):
                 try:
                     rec = json.loads(line)
