@@ -59,6 +59,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-27 — An open note linked by its path stops being reported as having no task
+
+`hash: ` · [#406](https://github.com/The-AIOS/aios/issues/406)
+
+> **What you can now do.** Link an open note from a task by its path (`[[reflections/books/one/_index|…]]`) and `/close-day` and `/today` see the task.
+
+**A task that links a note by its path now counts** (#406). The unfinished-work check counted a link only when it named the note by its file name, so a task linking a folder note such as `_index.md` by its path (which Obsidian writes when two notes share a name) went unseen, and `/close-day` offered every evening to add a task that already existed. Any trailing part of the note's path now counts, matching whole folder names only.
+
+**Action required:** nothing. The check runs from the vault, so the next `/close-day` uses it.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
