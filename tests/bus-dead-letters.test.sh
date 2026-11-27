@@ -115,9 +115,12 @@ DEAD=$($PYBIN -c 'import subprocess,sys; p=subprocess.Popen([sys.executable,"-c"
 # A process that is certainly alive for the whole of this test and whose pid Python can see on
 # every platform: a Python that prints its own pid and waits. (The shell's `$$` and `$!` are not
 # Windows pids under Git Bash, and the parent of a command substitution may already be gone.)
-$PYBIN -c 'import os,sys,time; print(os.getpid()); sys.stdout.flush(); time.sleep(600)' > "$T/live.pid" &
+$PYBIN -c 'import os,sys,time; print(os.getpid()); sys.stdout.flush(); time.sleep(120)' > "$T/live.pid" &
 HOLDER=$!
-trap 'kill "$HOLDER" 2>/dev/null; rm -rf "$T"' EXIT
+# Reaped by its job id and, where a launcher stands between the shell and Python (`py -3`), by
+# the pid it printed. It ends by itself after two minutes whatever happens to this test.
+reap(){ kill "$HOLDER" 2>/dev/null; [ -s "$T/live.pid" ] && $PYBIN -c 'import os,signal,sys; os.kill(int(open(sys.argv[1]).read()), signal.SIGTERM)' "$T/live.pid" 2>/dev/null; rm -rf "$T"; }
+trap reap EXIT
 for _ in 1 2 3 4 5 6 7 8 9 10; do [ -s "$T/live.pid" ] && break; sleep 0.3; done
 LIVE=$(tr -d '[:space:]' < "$T/live.pid")
 case "$LIVE" in ''|*[!0-9]*) no "could not start the process the live-claimer cases need" "got '$LIVE'"; LIVE=999999999 ;; esac
@@ -129,6 +132,7 @@ case "$out" in *to=worker*)        ok "names the target" ;; *) no "does not name
 case "$out" in *action=send*)      ok "names the action" ;; *) no "does not name the action: '$out'" ;; esac
 case "$out" in *age=*)             ok "carries an age" ;; *) no "no age reported: '$out'" ;; esac
 case "$out" in *"claimer=app:$DEAD"*) ok "names the surface and pid that took it" ;; *) no "does not name the claimer: '$out'" ;; esac
+case "$out" in *"file=worker.json.claiming-app-$DEAD "*) ok "names the file, so the command can act on that one and no other" ;; *) no "no file= in the line: '$out'" "the request's name is not its file name, and two claims can share a target" ;; esac
 case "$out" in *none*) no "'none' printed while an abandoned claim exists" ;; *) ok "no 'none' line when there is an abandoned claim" ;; esac
 [ "$rc" = "0" ] && ok "still exit 0" || no "exit $rc on an abandoned claim"
 case "$out" in *"(gone)"*) ok "a claimer that has exited is reported as gone" ;; *) no "dead pid $DEAD not reported as gone: '$out'" ;; esac
@@ -177,7 +181,7 @@ out=$(later "$T/notclaim")
 echo "-- an abandoned claim that cannot be read is reported BY NAME --"
 mkdir -p "$T/claimbad"; printf '{"name":"half' > "$T/claimbad/half.json.claiming-app-$DEAD"; old "$T/claimbad/half.json.claiming-app-$DEAD"
 out=$(later "$T/claimbad")
-case "$out" in *"half.json.claiming-app-$DEAD"*unreadable*) ok "unreadable claim named, with the reason" ;; *) no "unreadable claim: '$out'" ;; esac
+case "$out" in *unreadable*"file=half.json.claiming-app-$DEAD"*) ok "unreadable claim named, with the reason" ;; *) no "unreadable claim: '$out'" ;; esac
 case "$out" in *"claimer=app:$DEAD (gone)") ok "and the line still ENDS in the claimer's state" ;; *) no "the unreadable line does not end in the state: '$out'" "the commands decide what to offer from the end of the line" ;; esac
 
 echo "-- every claim line ends in the state, and nothing follows it --"
@@ -194,6 +198,28 @@ n=$(printf '%s\n' "$out" | grep -c '^bus-claim-abandoned:')
 [ "$n" = "1" ] && ok "a line break in a request's name does not become a second line (1 claim line for 1 claim)" || no "$n claim lines printed for 1 claim" "$out"
 printf '%s\n' "$out" | grep '^bus-claim-abandoned:' | grep -q '(still running)$' && ok "and the real state is the one at the end, not the forged '(gone)'" || no "the forged state won: '$out'"
 [ "$(printf '%s\n' "$out" | wc -l | tr -d ' ')" = "2" ] && ok "the older reports print one line per request too" || no "expected 2 lines for 2 files" "$out"
+# The same through a FILE NAME, which whoever drops a request also chooses, and through all
+# three kinds of report: each file below is unreadable, so its name is what gets printed.
+mkdir -p "$T/forgename"
+if $PYBIN - "$T/forgename" "$LIVE" <<'PYEOF' 2>/dev/null
+import os, sys, time
+d, live = sys.argv[1], sys.argv[2]
+fake = "\nbus-claim-abandoned: to=fake action=spawn file=f age=1h claimer=app:1 (gone)\n"
+for name in ("a" + fake + ".json", "b" + fake + ".json.undelivered", "c" + fake + ".json.claiming-app-" + live):
+    p = os.path.join(d, name)
+    open(p, "w").write("not json")
+    os.utime(p, (time.time() - 7200, time.time() - 7200))
+PYEOF
+then
+  out=$(later "$T/forgename")
+  # Two lines, not three: a name with a line break in it is not a claim name at all (the
+  # surfaces never restore one either), so the third file is ignored rather than reported.
+  [ "$(printf '%s\n' "$out" | wc -l | tr -d ' ')" = "2" ] && ok "a line break in a FILE NAME forges nothing: one line per reported file" || no "expected 2 lines" "$out"
+  printf '%s\n' "$out" | grep -q '^bus-unclaimed: a ' && printf '%s\n' "$out" | grep -q '^bus-dead-letter: b ' && ok "both files are still reported, by name, on one line each" || no "a file with a line break in its name was dropped" "$out"
+  printf '%s\n' "$out" | grep -q '(gone)$' && no "a forged line ending in (gone) got through" "$out" || ok "no line ends in the forged '(gone)'"
+else
+  ok "this filesystem refuses a line break in a file name, so that route does not exist here"
+fi
 
 echo "-- the grace is a threshold on both sides --"
 mkdir -p "$T/edge"; echo '{"name":"edge","task":"x"}' > "$T/edge/edge.json.claiming-app-$DEAD"
@@ -240,6 +266,8 @@ for f in plugins/aios/commands/today.md plugins/aios/commands/close-day.md; do
   grep 'bus-claim-abandoned:' "$f" | grep -q '(gone)' && grep 'bus-claim-abandoned:' "$f" | grep -q 'still running' && ok "$f tells the gone claimer from the running one" || no "$f does not distinguish (gone) from (still running)" "re-dropping is only safe when the claimer is gone"
   grep 'bus-claim-abandoned:' "$f" | grep -q 'mv -n ' && ok "$f puts a request back with a rename that refuses to overwrite" || no "$f does not say 'mv -n'" "a plain mv would overwrite a request sent again under the same name"
   grep 'bus-claim-abandoned:' "$f" | grep -q 'unreadable' && ok "$f says what to do with a claim that could not be read" || no "$f does not cover the unreadable line"
+  grep 'bus-claim-abandoned:' "$f" | grep -q 'this check failed' && ok "$f says what to do when the check itself failed" || no "$f does not cover the 'this check failed' line"
+  grep 'bus-claim-abandoned:' "$f" | grep -q 'file=' && grep 'bus-claim-abandoned:' "$f" | grep -q 'spawn-inbox/<file>' && ok "$f builds the command from file=, in the inbox" || no "$f does not name the file or the directory to act on"
 done
 A=$(grep 'One or more `bus-claim-abandoned:`' plugins/aios/commands/today.md); B=$(grep 'One or more `bus-claim-abandoned:`' plugins/aios/commands/close-day.md)
 [ -n "$A" ] && [ "$A" = "$B" ] && ok "the two commands carry the same instruction, word for word" || no "today.md and close-day.md differ on what to do with an abandoned claim"

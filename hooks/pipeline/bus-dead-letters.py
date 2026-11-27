@@ -71,11 +71,14 @@ CONTRACT (relied on by the commands that call it)
   * nothing wrong        -> print exactly `bus-dead-letters: none`
   * each dead letter     -> one line with to / action / reason / at
   * each unclaimed req   -> one `bus-unclaimed:` line with to / action / age
-  * each abandoned claim -> one `bus-claim-abandoned:` line with to / action / age,
-                            ENDING in `claimer=<surface>:<pid> (<state>)`, where
+  * each abandoned claim -> one `bus-claim-abandoned:` line with to / action / file /
+                            age, ENDING in `claimer=<surface>:<pid> (<state>)`, where
                             state is `gone`, `still running` or `not checked`
-  * a field read from a request is printed on one line: control characters and line
-    breaks in it become a space, so a request cannot forge a report line
+  * if that check itself fails -> one `bus-claim-abandoned: (this check failed: …)`
+                            line, with no claimer; the other two reports still print
+  * anything printed from a request (a field, its file name, the error from reading
+    it) stays on one line: control characters and line breaks become a space, so a
+    request cannot forge a report line
   * unreadable file      -> still reported BY NAME, with the reason why
   * exit code            -> always 0; finding nothing is not a failure
 
@@ -127,10 +130,11 @@ CLAIMING_NAME = re.compile(r"(.+\.json)\.claiming-([a-z0-9]+)-([0-9]+)")
 
 
 def _clean(value):
-    """One printable token per field. A request's `name` or `action` is text an agent
-    wrote; printed raw, a newline in it would forge a second report line, and the
-    commands act on what a line says."""
-    return re.sub(r"[\x00-\x1f\x7f\u2028\u2029]+", " ", str(value)).strip() or "?"
+    """One line per field. A request's `name` and `action`, its FILE NAME, and the text of
+    an error raised while reading it are all chosen by whoever wrote the request; printed
+    raw, a line break in any of them would forge a second report line, and the commands
+    act on what a line says."""
+    return re.sub(r"[\x00-\x1f\x7f-\x9f\u2028\u2029]+", " ", str(value)).strip() or "?"
 
 
 def _now():
@@ -210,7 +214,10 @@ def abandoned_claims(inbox):
         secs = _taken_age(path)
         if secs is None or not secs >= CLAIMING_AFTER_S:
             continue
-        tail = "age=%s claimer=%s:%s (%s)" % (_fmt_age(secs), m.group(2), m.group(3), _pid_state(m.group(3)))
+        # `file=` is what the commands need to act on the right file: the request's own
+        # `name` can differ from its file name, and two claims can share a target.
+        tail = "file=%s age=%s claimer=%s:%s (%s)" % (
+            _clean(name), _fmt_age(secs), m.group(2), m.group(3), _pid_state(m.group(3)))
         try:
             with open(path, encoding="utf-8") as fh:
                 doc = json.load(fh)
@@ -221,7 +228,7 @@ def abandoned_claims(inbox):
                 % (_clean(doc.get("name", "?")), _clean(doc.get("action", "spawn")), tail)
             )
         except Exception as exc:
-            out.append("bus-claim-abandoned: %s (unreadable: %s) %s" % (_clean(name), _clean(exc), tail))
+            out.append("bus-claim-abandoned: (unreadable: %s) %s" % (_clean(exc), tail))
     return out
 
 
@@ -263,7 +270,7 @@ def unclaimed(inbox):
                 )
             )
         except Exception as exc:
-            out.append("bus-unclaimed: %s (unreadable: %s)" % (name, exc))
+            out.append("bus-unclaimed: %s (unreadable: %s)" % (_clean(name), _clean(exc)))
     return out
 
 
@@ -305,7 +312,7 @@ def main(argv):
             # Report it, never skip it — an unreadable dead letter is still a task
             # owed, and carrying the reason is what makes the cause visible in one
             # run instead of needing a debugger.
-            print("bus-dead-letter: %s (unreadable: %s)" % (name, exc))
+            print("bus-dead-letter: %s (unreadable: %s)" % (_clean(name), _clean(exc)))
 
     return 0
 
