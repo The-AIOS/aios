@@ -246,7 +246,7 @@ If `quota-watch.log` still says `no cache yet — skip (is the Stop hook install
 | `claude-switch {email\|alias}` | Jump to a specific account |
 | `claude-switch --capture` | Save current identity |
 | `claude-switch --list` | Show all accounts, saved state and refresh-token expiry (the active account's is read from the live credential) |
-| `claude-switch --availability` | Who can take you and why not, as JSON, for a surface or a script. It does not touch the credential store, and reads only the dates |
+| `claude-switch --availability` | Who can take you and why not, as JSON, for a surface or a script. It does not touch the credential store, and reads only the dates. Every row also carries `rotate_at` (the watcher's thresholds), `swap_offer_at` (where the App and Glass offer the swap button: each threshold minus `SWAP_OFFER_MARGIN_PCT` in `_watch.py`, 3) and `rotation_paused_until` (your pause, or `null`), so the surfaces hold no number of their own |
 | `claude-switch --order "a,b,c"` | Reorder the rotation, showing where you would fall before and after |
 | `claude-switch --enable {account}` / `--disable {account} [--reason why]` | Put an account in or out of rotation, keeping its identity |
 | `claude-switch --add {email} [--alias a] [--plan p] [--disabled] [--reason why]` | Add an account |

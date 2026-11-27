@@ -72,6 +72,11 @@ SEAT_BUSY = 75  # claude-identity.sh: another switch holds the seat lock, or the
 # nothing and got no error. Two declarations of one value is one too many; the
 # one the consumer reads is the only one that exists now.
 DEFAULT_THRESHOLD_PCT = 98
+# The surfaces (App, Glass) offer a one-click account swap this many points BEFORE the rotation
+# threshold, in each window: a heads-up while the operator can still choose, not a second rotator.
+# They read the result from `availability()` (`swap_offer_at`) and hold no number of their own, so
+# the threshold and the margin each live here once.
+SWAP_OFFER_MARGIN_PCT = 3
 
 
 def _threshold(name: str) -> tuple:
@@ -97,6 +102,11 @@ def _threshold(name: str) -> tuple:
 def thresholds() -> tuple:
     """(5h, 7d) rotation thresholds actually in force."""
     return _threshold("CLAUDE_QUOTA_5H")[0], _threshold("CLAUDE_QUOTA_7D")[0]
+
+
+def swap_offer_at(t5: int, t7: int) -> tuple:
+    """(5h, 7d) usage at which a surface offers the swap button: each threshold minus the margin, never below 1."""
+    return max(1, t5 - SWAP_OFFER_MARGIN_PCT), max(1, t7 - SWAP_OFFER_MARGIN_PCT)
 
 
 def _swap_log_tail(limit: int = 40) -> list:
@@ -479,6 +489,12 @@ def availability(current: str) -> list:
     the usage is, so it wins over a cap. Dates come from the stored state, then from
     the last reading, so an account unused for weeks is still read correctly."""
     t5, t7 = thresholds()
+    o5, o7 = swap_offer_at(t5, t7)
+    # The pause is global, like the thresholds; repeated on every row because the answer is a list and the
+    # surfaces' parser refuses any other shape. A pause still being written (an empty marker seconds old) is
+    # not reported as one: it would only make a button flicker.
+    paused = paused_until()
+    paused = None if (not paused or PAUSE_WRITING) else int(paused)
     stored = _accounts.stored_state()
     now = time.time()
     rows = []
@@ -534,6 +550,9 @@ def availability(current: str) -> list:
             "weekly_renews_at": renews, "weekly_renewed_since_reading": renewed,
             "refresh_expires_at": expires, "refresh_expires_source": source,
             "reading_recorded_at": reading.get("recorded_at"),
+            "rotate_at": {"five_hour": t5, "seven_day": t7},
+            "swap_offer_at": {"five_hour": o5, "seven_day": o7},
+            "rotation_paused_until": paused,
         })
     return rows
 
