@@ -61,13 +61,13 @@ maps=$($PYBIN - "$SH" "$PS" <<'PY'
 import re, sys
 sh, ps = open(sys.argv[1], encoding='utf-8').read(), open(sys.argv[2], encoding='utf-8').read()
 
-# bash:  frontier)    spawn_model='claude-fable-5-1' ;;
+# bash:  frontier)    spawn_model='claude-fable-5-2' ;;
 shmap = dict(re.findall(r"^\s*(frontier|scale|fast|mechanical)\)\s*spawn_model='([^']+)'", sh, re.M))
 # judgment maps to the empty override (the frontier default) in both.
 if re.search(r"^\s*judgment\|\"\"\)\s*spawn_model=\"\"", sh, re.M):
     shmap['judgment'] = '<default>'
 
-# powershell:  'frontier'   { 'claude-fable-5-1' }
+# powershell:  'frontier'   { 'claude-fable-5-2' }
 psmap = dict(re.findall(r"^\s*'(frontier|scale|fast|mechanical)'\s*\{\s*'([^']+)'\s*\}", ps, re.M))
 if re.search(r"^\s*default\s*\{\s*\$null\s*\}", ps, re.M):
     psmap['judgment'] = '<default>'
@@ -217,6 +217,33 @@ CTL=$(printf '%s' 'claude-opus-5[1m]' | sed -nE 's/^claude-opus-([0-9]+(-[0-9]+)
 [ "$CTL" = "5" ] && [ "$CTL" != "5.5" ] \
   && ok "control: a stale pin (claude-opus-5[1m]) parses as 5 and would NOT match a 5.5 row" \
   || no "control: the version parser cannot tell 5 from 5.5" "got '$CTL' — the doc/pin comparison is vacuous"
+
+echo "── the frontier rung: the doc row names the model the wrappers start ──"
+# The same half-update, one rung up. `frontier` is a literal in each wrapper (the tier table AND the
+# --advisor table) and in resolve-tier; tests/resolve-tier.test.sh and the map comparison above hold
+# the code copies together, but nothing held MODEL-ROUTING.md's row to them, so the doc could name a
+# model no `--tier frontier` starts. The ids are read from the wrapper, never restated here.
+FR_SH=$(sed -nE "s/^[[:space:]]*frontier\)[[:space:]]*spawn_model='([^']+)'.*/\1/p" "$SH" | head -1)
+FR_ADV=$(sed -nE "s/^[[:space:]]*frontier\)[[:space:]]*spawn_advisor='([^']+)'.*/\1/p" "$SH" | head -1)
+FR_DOC=$(sed -nE 's/^\| `frontier`[^|]*\| Claude Fable ([0-9.]+) \|.*/\1/p' "$DOC" | head -1)
+FR_VER=$(printf '%s' "$FR_SH" | sed -nE 's/^claude-fable-([0-9]+(-[0-9]+)?).*/\1/p' | tr '-' '.')
+if [ -z "$FR_SH" ] || [ -z "$FR_ADV" ] || [ -z "$FR_DOC" ] || [ -z "$FR_VER" ]; then
+  no "could not read the frontier model from the wrapper or the doc row" "tier='$FR_SH' advisor='$FR_ADV' doc='$FR_DOC' — this check proves nothing until it can"
+else
+  [ "$FR_DOC" = "$FR_VER" ] && ok "MODEL-ROUTING.md's frontier row names the model --tier frontier starts (Fable $FR_DOC)" \
+    || no "MODEL-ROUTING.md says Fable $FR_DOC, --tier frontier starts Fable $FR_VER" "a reader choosing the top rung is told about a model nothing starts"
+  [ "$FR_ADV" = "$FR_SH" ] && ok "--advisor frontier and --tier frontier name the same model ($FR_SH)" \
+    || no "--advisor frontier is $FR_ADV, --tier frontier is $FR_SH" "one table was bumped and the other was not"
+  # The doc's own examples of pinning this model must not lag the rung they describe.
+  STALE=$(grep -oE 'claude-fable-[0-9]+(-[0-9]+)?' "$DOC" | sort -u | grep -vx "$FR_SH" | tr '\n' ' ')
+  [ -z "$STALE" ] && ok "every Fable id MODEL-ROUTING.md writes is the frontier rung's ($FR_SH)" \
+    || no "MODEL-ROUTING.md still writes: $STALE" "the rung is $FR_SH"
+fi
+# CONTROL: the parser must tell two adjacent versions apart, or the comparison above is decoration.
+CTL=$(printf '%s' 'claude-fable-5-1' | sed -nE 's/^claude-fable-([0-9]+(-[0-9]+)?).*/\1/p' | tr '-' '.')
+[ "$CTL" = "5.1" ] && [ "$CTL" != "5.2" ] \
+  && ok "control: claude-fable-5-1 parses as 5.1 and would NOT match a 5.2 row" \
+  || no "control: the version parser cannot tell 5.1 from 5.2" "got '$CTL'"
 
 echo
 echo "── $PASS passed, $FAIL failed ──"

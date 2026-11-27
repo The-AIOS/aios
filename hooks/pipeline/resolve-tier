@@ -33,7 +33,7 @@ set -uo pipefail
 # tests/resolve-tier.test.sh, so the two cannot drift apart unnoticed.
 rung_model() {
   case "$1" in
-    frontier)   printf 'claude-fable-5-1' ;;
+    frontier)   printf 'claude-fable-5-2' ;;
     judgment)   printf '' ;;                            # inherit the binary's default
     scale)      printf 'claude-sonnet-5-5' ;;
     fast)       printf 'claude-haiku-5-5' ;;

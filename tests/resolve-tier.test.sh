@@ -32,7 +32,7 @@ W=hooks/claude-identity/install-wrappers.sh
 
 echo "-- 1. resolve-tier agrees with the wrapper, rung for rung --"
 # Pull the wrapper's table out of the installer: lines like
-#   frontier)    spawn_model='claude-fable-5-1' ;;
+#   frontier)    spawn_model='claude-fable-5-2' ;;
 WT=$(grep -oE "^[[:space:]]*[a-z]+\)[[:space:]]*spawn_model='[^']*'" "$W" \
      | sed -E "s/^[[:space:]]*([a-z]+)\)[[:space:]]*spawn_model='([^']*)'.*/\1 \2/")
 [ -n "$WT" ] || no "could not extract the wrapper's table from $W" "the grep shape changed — fix this test, do not delete it"
