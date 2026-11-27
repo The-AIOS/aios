@@ -45,6 +45,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))   # realpath: also when run through a symlink
+from session_name import last_agent_name  # noqa: E402
+
 # Windows consoles are cp1252: a print() carrying an em dash raises UnicodeEncodeError
 # and the hook does NOT RUN -- the failure is absence, not a mangled glyph.
 if sys.platform == "win32":
@@ -275,13 +278,9 @@ def audit(path, cap):
 
 
 def agent_name(path):
-    with open(path, encoding="utf-8", errors="ignore") as fh:
-        for line in fh:
-            if '"agent-name"' in line:
-                m = re.search(r'"agentName":"([^"]*)"', line)
-                if m:
-                    return m.group(1)
-    return None
+    """The name the session answers to: its LAST agent-name record (a session can rename itself).
+    The shared reader, so this audit names a session as the surfaces and `whoami` do."""
+    return last_agent_name(path) or None
 
 
 def main():

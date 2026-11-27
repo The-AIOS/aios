@@ -16,7 +16,7 @@ Start with § Mandatory First Action, then § Identity & Greeting.
 
 ## Mandatory First Action
 
-> **Before anything else, run** `~/aios/hooks/context/whoami`. It prints your identity: `$CLAUDE_AGENT_NAME`, or, when that is empty, the session's `agentName` from its transcript (routines, scheduled runs and bridge sessions are named by the harness without setting the env var). Treat it like a session name: match against USER.md primaries, then agents. Empty output → plain CLI session. Then check `USER.md` (if present) for identity mappings — which names are primary sessions and how to greet. If no `USER.md`: any non-empty name = spawned worker; empty = plain CLI session.
+> **Before anything else, run** `~/aios/hooks/context/whoami`. It prints your identity: the last `agentName` in the session's transcript (a session that renamed itself answers to its last name; routines and bridge sessions have no env var), or, with none, `$CLAUDE_AGENT_NAME`. Treat it like a session name: match against USER.md primaries, then agents. Empty output → plain CLI session. Then check `USER.md` (if present) for identity mappings — which names are primary sessions and how to greet. If no `USER.md`: any non-empty name = spawned worker; empty = plain CLI session.
 
 ---
 

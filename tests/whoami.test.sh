@@ -5,6 +5,7 @@
 # inline, with `$CLAUDE_CODE_SESSION_ID` in the command, and Claude Code asks permission for any
 # command whose variables it must expand first: every session start prompted, even allowlisted.
 # The helper must resolve the same name, and CLAUDE.md must prescribe no `$` in that check.
+# Which record and which source win, and that the Python hooks agree: tests/session-name.test.sh.
 set -u
 cd "$(dirname "$0")/.." || exit 1
 PASS=0; FAIL=0
@@ -18,11 +19,16 @@ TR="$T/projects/-some-project/abc-123.jsonl"
 printf '{"type":"user"}\n{"type":"agent-name","agentName":"first-name","sessionId":"abc-123"}\n{"type":"agent-name","agentName":"renamed","sessionId":"abc-123"}\n' > "$TR"
 run(){ env -u CLAUDE_AGENT_NAME -u CLAUDE_CODE_SESSION_ID CLAUDE_CONFIG_DIR="$T" "$@" bash "$W"; }
 
-echo "── the name comes from the env var when it is set ──"
-[ "$(run CLAUDE_AGENT_NAME=lawyer CLAUDE_CODE_SESSION_ID=abc-123)" = lawyer ] && ok "CLAUDE_AGENT_NAME wins" || no "env var ignored"
-
-echo "── with no env var, from the transcript: the LAST agent-name record ──"
+echo "── the name is the LAST agent-name record of the transcript, also when the env var is set ──"
 [ "$(run CLAUDE_CODE_SESSION_ID=abc-123)" = renamed ] && ok "a renamed session is known by its last name" || no "wrong transcript name" "$(run CLAUDE_CODE_SESSION_ID=abc-123)"
+[ "$(run CLAUDE_AGENT_NAME=first-name CLAUDE_CODE_SESSION_ID=abc-123)" = renamed ] && ok "the transcript wins over a launch-time env var the rename left behind" || no "the stale env var won" "$(run CLAUDE_AGENT_NAME=first-name CLAUDE_CODE_SESSION_ID=abc-123)"
+
+echo "── the env var is the fallback: no session id, no transcript, or no record in it ──"
+[ "$(run CLAUDE_AGENT_NAME=lawyer)" = lawyer ] && ok "no session id → the env var" || no "env var ignored without a session id"
+[ "$(run CLAUDE_AGENT_NAME=lawyer CLAUDE_CODE_SESSION_ID=zzz-999)" = lawyer ] && ok "no transcript yet → the env var" || no "env var ignored without a transcript"
+printf '{"type":"user"}\n' > "$T/projects/-some-project/norec-1.jsonl"
+[ "$(run CLAUDE_AGENT_NAME=lawyer CLAUDE_CODE_SESSION_ID=norec-1)" = lawyer ] && ok "a transcript with no record → the env var" || no "env var ignored when the transcript has no record"
+[ "$(run CLAUDE_AGENT_NAME=lawyer 'CLAUDE_CODE_SESSION_ID=*')" = lawyer ] && ok "a glob in the session id reads no transcript → the env var" || no "a glob id read a transcript"
 
 echo "── nothing to find is a plain CLI session: empty output, exit 0 ──"
 out=$(run CLAUDE_CODE_SESSION_ID=zzz-999); rc=$?

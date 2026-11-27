@@ -47,7 +47,11 @@ def config_dir():
 
 
 def classify(path, max_lines=400):
-    """-> (class, name). Reads only the first records; a transcript states its shape early."""
+    """-> (class, name). Reads only the first records; a transcript states its shape early.
+
+    Not on the shared reader (hooks/context/session_name.py) on purpose: that one reads the whole
+    file for the LAST name, and this only asks whether a transcript is named at all, over thousands
+    of files. The name it returns is the one in those first records, not the session's current one."""
     name, entry, cwd = "", "", ""
     try:
         with open(path, encoding="utf-8", errors="replace") as fh:
