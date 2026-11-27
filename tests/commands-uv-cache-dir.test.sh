@@ -20,8 +20,9 @@
 #      stripped back off, or check 1 passes vacuously.
 #   3. RUN — the route-insight line close-day prescribes is extracted and run
 #      against a HOME whose cache cannot be written, with a CONTROL that strips
-#      UV_CACHE_DIR and must produce nothing. Same mechanism and caveats as
-#      context-floor-invocation (env -u, XDG_CACHE_HOME cleared).
+#      UV_CACHE_DIR and must produce nothing, fail naming the default cache
+#      folder, and run once ~/.cache is made writable. Same mechanism
+#      and caveats as context-floor-invocation (env -u, XDG_CACHE_HOME cleared).
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -120,13 +121,19 @@ env -u UV_CACHE_DIR -u XDG_CACHE_HOME AIOS_REPO="$REPO" HOME="$FAKE" TMPDIR="$TM
 rc_ctl=$?
 # Empty stdout alone is not the condition: a mangled path or a missing script is empty too, and
 # so is any error whose text merely contains a path with "cache" in it. The control counts only
-# when uv exits non-zero with its own diagnostic for a cache it could not set up.
-cache_failure(){ grep -q 'Failed to initialize cache' "$1"; }
+# when uv exits non-zero and its error names the exact default cache folder it was refused.
+# The path, not a sentence: uv's wording for this changes between releases ("failed to create
+# directory …" up to 0.9.x, "Failed to initialize cache at …" from 0.10), and both name the
+# folder. A check for the newer sentence failed on every run on a machine with an older uv (#424).
+DEFAULT_CACHE="$FAKE/.cache/uv"
+cache_failure(){ grep -qF "$DEFAULT_CACHE" "$1"; }
+ctl_held=0
 if [ -s "$out_ctl" ]; then
   no "CONTROL: bare 'uv run' should fail against an unwritable cache" \
      "it produced output — this environment does not reproduce the condition"
 elif [ "$rc_ctl" -ne 0 ] && cache_failure "$TMP/ctl.err"; then
-  ok "CONTROL: bare 'uv run' fails on the unwritable cache (exit $rc_ctl), and uv says so"
+  ok "CONTROL: bare 'uv run' fails on the unwritable cache (exit $rc_ctl), and uv names it"
+  ctl_held=1
 else
   no "CONTROL: bare 'uv run' failed for another reason" "exit $rc_ctl: $(head -2 "$TMP/ctl.err")"
 fi
@@ -135,6 +142,14 @@ printf "error: Failed to spawn: \`/tmp/cache-checkout/hooks/vault/route-insight.
 cache_failure "$TMP/decoy.err" \
   && no "CONTROL predicate accepts a missing-file error whose path says 'cache'" \
   || ok "CONTROL predicate rejects a missing-file error whose path says 'cache'"
+# …and must keep accepting both wordings uv has used for this same refusal (a guard against the
+# predicate narrowing back to one sentence; the real proof is the CONTROL against the installed uv).
+printf 'error: failed to create directory `%s`: Permission denied (os error 13)\n' "$DEFAULT_CACHE" > "$TMP/older.err"
+printf 'error: Failed to initialize cache at `%s`\n  Caused by: failed to create directory `%s`: Permission denied (os error 13)\n' \
+  "$DEFAULT_CACHE" "$DEFAULT_CACHE" > "$TMP/newer.err"
+cache_failure "$TMP/older.err" && cache_failure "$TMP/newer.err" \
+  && ok "CONTROL predicate accepts both of uv's wordings for an unwritable cache" \
+  || no "CONTROL predicate rejects one of uv's wordings for an unwritable cache"
 
 out_fix="$TMP/fix.out"
 env -u UV_CACHE_DIR -u XDG_CACHE_HOME AIOS_REPO="$REPO" HOME="$FAKE" TMPDIR="$TMP" sh -c "$inv --help" >"$out_fix" 2>"$TMP/fix.err"
@@ -142,6 +157,24 @@ if grep -q 'usage: route-insight' "$out_fix"; then
   ok "the prescribed line runs against an unwritable cache"
 else
   no "the prescribed line does not run against an unwritable cache" "$(head -2 "$TMP/fix.err")"
+fi
+
+# The control's cause, measured rather than read: the same bare line, same HOME and variables,
+# with $FAKE/.cache made writable, must run. If it still fails, the control's failure was not the
+# cache's doing, whatever uv printed — a predicate that reads a path can be fooled; this measures.
+# Runs last because it leaves a writable cache in $FAKE, and only when the control held: with no
+# failure to explain there is no cause to measure.
+if [ "$ctl_held" -eq 1 ]; then
+  chmod 700 "$FAKE/.cache"
+  env -u UV_CACHE_DIR -u XDG_CACHE_HOME AIOS_REPO="$REPO" HOME="$FAKE" TMPDIR="$TMP" sh -c "$bare --help" >"$TMP/diff.out" 2>"$TMP/diff.err"
+  if grep -q 'usage: route-insight' "$TMP/diff.out"; then
+    ok "CONTROL cause: the same bare line runs once the cache folder is made writable"
+  else
+    no "CONTROL cause: the bare line still fails with a writable cache — the control did not isolate the cache" \
+       "$(head -2 "$TMP/diff.err")"
+  fi
+else
+  sk "CONTROL cause: not measured — the control itself did not hold"
 fi
 
 printf '\n  %d passed, %d failed, %d skipped\n' "$PASS" "$FAIL" "$SKIP"
