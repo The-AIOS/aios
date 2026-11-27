@@ -102,7 +102,7 @@ A brief is all the context a member has. If you cannot write it clearly, the tas
 - A design that does not converge after several reviews is stopped and reshaped, not patched.
 
 ### When the repository belongs to someone else
-The COS does not merge: the maintainers do. Open the request from the operator's fork, take it to green, follow the review. Search that organization for an open or recently closed match before opening an issue or a request, and comment there if one exists. Follow its contributing rules; they win over this file.
+In that case the COS never merges, whatever `INTENT.md` allows: the maintainers do. Open the request from the operator's fork, take it to green, follow the review. Search that organization for an open or recently closed match before opening an issue or a request, and comment there if one exists. Follow its contributing rules; they win over this file.
 
 ## Output format
 - The team log and the common rules, kept current, linked from the project note.
