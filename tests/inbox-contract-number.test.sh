@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────────────────
-# The CURRENT spawn-inbox contract is declared once, and both documents repeat it
+# The spawn-inbox contract numbers are declared once, and both documents repeat them
 #
 # An agent is told to read the stamp in ~/.aios/spawn-inbox/README.md before it
 # relies on a verb or a field. To use that number it has to know two others: the
@@ -8,10 +8,11 @@
 # state only the first, so a session reading CLAUDE.md could not tell that a
 # contract with newer optional fields existed (#409).
 #
-# The current number lives in ONE file, skills/aios/orchestration-ladder/
-# inbox-contract.json. CLAUDE.md and the orchestration-ladder skill each repeat
-# it in a sentence, because they are read at different moments; this suite fails
-# when either sentence disagrees with the file.
+# Both numbers live in ONE file, skills/aios/orchestration-ladder/
+# inbox-contract.json: "current", and "verbs" (the contract the verb set arrived
+# in). CLAUDE.md and the orchestration-ladder skill each repeat them in a
+# sentence, because they are read at different moments; this suite fails when
+# either sentence disagrees with the file.
 #
 # No network, no other repo: this is the check that blocks. Whether the declared
 # number matches what the surfaces really stamp is a separate question, asked by
@@ -30,21 +31,30 @@ CM="CLAUDE.md"
 OL="skills/aios/orchestration-ladder/SKILL.md"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
-# The declared number: the integer after "current" in the one file that owns it.
-declared(){ [ -f "$1" ] && grep -oE '"current" *: *[0-9]+' "$1" | grep -oE '[0-9]+$' | sort -u | tr '\n' ' ' | sed 's/ $//'; }
+nums(){ grep -oE '[0-9]+' | sort -u | tr '\n' ' ' | sed 's/ $//'; }
+# A document as one line, so a sentence wrapped across two lines is still found.
+flat(){ tr '\n' ' ' < "$1" | tr -s ' '; }
+# A declared number: the integer after "<key>" in the one file that owns it.
+declared(){ [ -f "$1" ] && grep -oE "\"$2\" *: *[0-9]+" "$1" | grep -oE '[0-9]+$' | nums; }
 # What a document says is current: every number in a "current contract is **N**" sentence.
-doc_current(){ grep -oE 'current contract is \*\*[0-9]+\*\*' "$1" | grep -oE '[0-9]+' | sort -u | tr '\n' ' ' | sed 's/ $//'; }
-# The contract a document says the verb set arrived in.
-doc_verbs(){ grep -oE 'contract \*\*[0-9]+\*\*|\*\*[0-9]+\*\* for this verb set' "$1" | grep -oE '[0-9]+' | sort -u | tr '\n' ' ' | sed 's/ $//'; }
+doc_current(){ flat "$1" | grep -oE 'current contract is \*\*[0-9]+\*\*' | nums; }
+# The contract a document says the verb set arrived in. Two exact phrasings, one per
+# document, so a later mention of another contract in bold is not mistaken for this one.
+doc_verbs(){ flat "$1" | grep -oE 'verb set above is contract \*\*[0-9]+\*\*|\*\*[0-9]+\*\* for this verb set' | nums; }
+one(){ case "$1" in ''|*' '*) return 1 ;; esac; return 0; }
 
-echo "── 1. one file declares the current contract ──"
-CUR="$(declared "$DECL")"
-case "$CUR" in
-  '')    no "$DECL does not declare a current contract" \
-            'expected one line of JSON: {"current": N}' ;;
-  *' '*) no "$DECL declares more than one current contract: $CUR" ;;
-  *)     ok "declared current contract: $CUR" ;;
-esac
+echo "── 1. one file declares both numbers ──"
+CUR="$(declared "$DECL" current)"; VER="$(declared "$DECL" verbs)"
+one "$CUR" && ok "declared current contract: $CUR" \
+  || no "$DECL does not declare exactly one current contract (read: '$CUR')" \
+        'expected JSON: {"current": N, "verbs": M}'
+one "$VER" && ok "declared contract of the verb set: $VER" \
+  || no "$DECL does not declare exactly one contract for the verb set (read: '$VER')" \
+        'expected JSON: {"current": N, "verbs": M}'
+if one "$CUR" && one "$VER"; then
+  [ "$VER" -le "$CUR" ] && ok "the verb set's contract ($VER) is not newer than the current one ($CUR)" \
+    || no "$DECL says the verbs arrived in contract $VER, newer than the current $CUR"
+fi
 
 echo "── 2. both documents state that number as current ──"
 for pair in "$CM:CLAUDE.md" "$OL:the skill"; do
@@ -62,35 +72,42 @@ for pair in "$CM:CLAUDE.md" "$OL:the skill"; do
   fi
 done
 
-echo "── 3. the verb set's contract is not newer than the current one ──"
+echo "── 3. both documents state the declared contract of the verb set ──"
 for pair in "$CM:CLAUDE.md" "$OL:the skill"; do
   f="${pair%%:*}"; label="${pair#*:}"
   [ -f "$f" ] || continue
   V="$(doc_verbs "$f")"
-  case "$V" in
-    '')    no "$label does not say which contract introduced the verb set" ;;
-    *' '*) no "$label names more than one contract for the verb set: $V" ;;
-    *)     if [ -n "$CUR" ] && [ "${CUR#* }" = "$CUR" ] && [ "$V" -le "$CUR" ]; then
-             ok "$label: verbs arrived in contract $V, current is $CUR"
-           else
-             no "$label: verbs arrived in contract $V, which is newer than the declared current '${CUR:-nothing}'"
-           fi ;;
-  esac
+  if [ -z "$V" ]; then
+    no "$label does not say which contract introduced the verb set" \
+       "looked for 'the verb set above is contract **N**' or '**N** for this verb set'"
+  elif [ -n "$VER" ] && [ "$V" = "$VER" ]; then
+    ok "$label says the verb set arrived in contract $V"
+  else
+    no "$label says the verb set arrived in contract '$V', $DECL declares '${VER:-nothing}'"
+  fi
 done
 
 echo "── 4. CONTROL — a document or a declaration that moves alone must be seen ──"
 # Without this the suite could pass by extracting nothing from every file.
-if [ -n "$CUR" ] && [ "${CUR#* }" = "$CUR" ]; then
-  NEXT=$((CUR+1))
-  sed "s/current contract is \*\*$CUR\*\*/current contract is **$NEXT**/" "$CM" > "$TMP/CLAUDE.md"
-  [ "$(doc_current "$TMP/CLAUDE.md")" = "$NEXT" ] \
-    && ok "control: a CLAUDE.md that says $NEXT is read as $NEXT, not as $CUR" \
-    || no "control: the mutated CLAUDE.md still reads as '$(doc_current "$TMP/CLAUDE.md")'" \
-          "the extractor cannot see the sentence it exists to compare"
-  printf '{"current": %s}\n' "$NEXT" > "$TMP/decl.json"
-  [ "$(declared "$TMP/decl.json")" = "$NEXT" ] \
-    && ok "control: a declaration of $NEXT is read as $NEXT" \
-    || no "control: the mutated declaration reads as '$(declared "$TMP/decl.json")'"
+if one "$CUR" && one "$VER"; then
+  NEXT=$((CUR+1)); i=0
+  for pair in "$CM:CLAUDE.md" "$OL:the skill"; do
+    f="${pair%%:*}"; label="${pair#*:}"; i=$((i+1))
+    sed "s/current contract is \*\*$CUR\*\*/current contract is **$NEXT**/" "$f" > "$TMP/cur$i"
+    [ "$(doc_current "$TMP/cur$i")" = "$NEXT" ] \
+      && ok "control: $label changed to say current $NEXT is read as $NEXT, not as $CUR" \
+      || no "control: $label changed to current $NEXT still reads as '$(doc_current "$TMP/cur$i")'" \
+            "the extractor cannot see the sentence it exists to compare"
+    sed -e "s/verb set above is contract \*\*$VER\*\*/verb set above is contract **$NEXT**/" \
+        -e "s/\*\*$VER\*\* for this verb set/**$NEXT** for this verb set/" "$f" > "$TMP/ver$i"
+    [ "$(doc_verbs "$TMP/ver$i")" = "$NEXT" ] \
+      && ok "control: $label changed to say the verbs arrived in $NEXT is read as $NEXT, not as $VER" \
+      || no "control: $label changed to verbs $NEXT still reads as '$(doc_verbs "$TMP/ver$i")'"
+  done
+  printf '{"current": %s, "verbs": %s}\n' "$NEXT" "$NEXT" > "$TMP/decl.json"
+  [ "$(declared "$TMP/decl.json" current) $(declared "$TMP/decl.json" verbs)" = "$NEXT $NEXT" ] \
+    && ok "control: a declaration of $NEXT / $NEXT is read as such" \
+    || no "control: the mutated declaration reads as '$(declared "$TMP/decl.json" current)' / '$(declared "$TMP/decl.json" verbs)'"
 else
   no "control: nothing declared, so the control has nothing to mutate"
 fi

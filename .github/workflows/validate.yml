@@ -1880,10 +1880,10 @@ jobs:
         # never a verb list of its own, which would be the third copy.
         run: bash tests/bus-verb-parity.test.sh
 
-      - name: the current inbox contract is declared once, and both documents repeat it
+      - name: the inbox contract numbers are declared once, and both documents repeat them
         # The stamp an agent reads in ~/.aios/spawn-inbox/README.md is only useful beside two
         # numbers: the contract the verbs arrived in and the one in force. inbox-contract.json
-        # declares the second; CLAUDE.md and the orchestration-ladder skill each repeat it. No
+        # declares both; CLAUDE.md and the orchestration-ladder skill each repeat them. No
         # network and no other repo -- this is the check that blocks (#409).
         run: bash tests/inbox-contract-number.test.sh
 

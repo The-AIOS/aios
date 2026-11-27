@@ -10,10 +10,10 @@
 #
 # The stamp is written by the surfaces, and their source is not in this repo. So
 # this suite READS it: `export const INBOX_CONTRACT = N;` in src/core/sendQueue.ts
-# on the default branch of The-AIOS/aios-app and The-AIOS/aios-glass. The README
-# on a machine is written by whichever surface carries the newer contract, so the
-# number an agent finds there is the HIGHER of the two — that is what the
-# declaration must equal.
+# on the default branch of The-AIOS/aios-app and The-AIOS/aios-glass. A surface
+# never overwrites a README stamped with a higher contract than its own, so the
+# number an agent finds on a machine running both is the HIGHER of the two — that
+# is what the declaration must equal.
 #
 # Three outcomes, and they are kept apart on purpose:
 #   exit 0   both surfaces were read and the declaration matches
@@ -43,7 +43,7 @@ REL="src/core/sendQueue.ts"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
 CUR="$([ -f "$DECL" ] && grep -oE '"current" *: *[0-9]+' "$DECL" | grep -oE '[0-9]+$' | sort -u | tr '\n' ' ' | sed 's/ $//')"
-stamp_in(){ grep -oE 'export const INBOX_CONTRACT *= *[0-9]+' "$1" | grep -oE '[0-9]+$' | sort -u | tr '\n' ' ' | sed 's/ $//'; }
+stamp_in(){ grep -oE '^export const INBOX_CONTRACT *= *[0-9]+' "$1" | grep -oE '[0-9]+$' | sort -u | tr '\n' ' ' | sed 's/ $//'; }
 
 # read_surface <repo> <local-dir-or-empty>  → sets GOT to a number, or to '' with WHY set
 # to "unreachable" (no verdict) or "broken" (read, and the stamp is not there).
