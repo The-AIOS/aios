@@ -93,13 +93,13 @@ if one "$CUR" && one "$VER"; then
   NEXT=$((CUR+1)); i=0
   for pair in "$CM:CLAUDE.md" "$OL:the skill"; do
     f="${pair%%:*}"; label="${pair#*:}"; i=$((i+1))
-    sed "s/current contract is \*\*$CUR\*\*/current contract is **$NEXT**/" "$f" > "$TMP/cur$i"
+    flat "$f" | sed "s/current contract is \*\*$CUR\*\*/current contract is **$NEXT**/" > "$TMP/cur$i"
     [ "$(doc_current "$TMP/cur$i")" = "$NEXT" ] \
       && ok "control: $label changed to say current $NEXT is read as $NEXT, not as $CUR" \
       || no "control: $label changed to current $NEXT still reads as '$(doc_current "$TMP/cur$i")'" \
             "the extractor cannot see the sentence it exists to compare"
-    sed -e "s/verb set above is contract \*\*$VER\*\*/verb set above is contract **$NEXT**/" \
-        -e "s/\*\*$VER\*\* for this verb set/**$NEXT** for this verb set/" "$f" > "$TMP/ver$i"
+    flat "$f" | sed -e "s/verb set above is contract \*\*$VER\*\*/verb set above is contract **$NEXT**/" \
+        -e "s/\*\*$VER\*\* for this verb set/**$NEXT** for this verb set/" > "$TMP/ver$i"
     [ "$(doc_verbs "$TMP/ver$i")" = "$NEXT" ] \
       && ok "control: $label changed to say the verbs arrived in $NEXT is read as $NEXT, not as $VER" \
       || no "control: $label changed to verbs $NEXT still reads as '$(doc_verbs "$TMP/ver$i")'"
