@@ -11,7 +11,7 @@
 # bind from them. This suite checks the file against this repo's half:
 #   - the reference reading (tests/fixtures/agents-can-handle-ref.py) passes every case;
 #   - the reading both surfaces had before (kept in the reference as parse_old) fails the cases,
-#     on both defects (the control);
+#     on the three defects (the control);
 #   - the template lines of today.md and CLAUDE.md are listed in the file VERBATIM, each one is
 #     filled in by at least one case, and every case that names a template still has that
 #     line's shape, so a template edit cannot leave the file behind;
@@ -33,7 +33,7 @@ export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
 
 # Moves ONLY together with the copies: aios-app src/test/fixtures/agents-can-handle.cases.json
 # and its pin in src/test/agentCases.test.ts.
-PIN="7d7f8d7dd5bd307cbb850dfa717260bfc511ea43931a66aadaf0e23bd53148d9"
+PIN="1fab9364afa50166a71f4d2eb5d5c98acde903970fcbc8576e55eecbf3b8cbf0"
 
 PASS=0; FAIL=0
 ok(){ PASS=$((PASS+1)); printf '  ok   %s\n' "$1"; }
@@ -56,6 +56,9 @@ printf '%s' "$out" | grep -F 'MISS a project wikilink before the agent' >/dev/nu
   && ok "a project note dispatched as the agent is caught" || no "the project-wikilink case passes under the old reading"
 printf '%s' "$out" | grep -F 'MISS the template line, with its canonical task checked in another section' >/dev/null \
   && ok "a template line that outlives its checked task is caught" || no "the checked-twin case passes under the old reading"
+# the one case the old reading misses for the strike alone: it skips any line that opens struck
+printf '%s' "$out" | grep -F 'MISS a rescheduled mirror line' >/dev/null \
+  && ok "a reschedule read as done is caught" || no "the rescheduled-mirror-line case passes under the old reading"
 
 echo "-- 3. the templates are in the file, and the file follows the templates --"
 # The checker goes to a file: bash 3.2 cannot parse every quoted heredoc inside $( ).
@@ -80,9 +83,11 @@ def shape(t):
 broken = [c.get("case") for c in cases if not {"case", "note", "expect"} <= set(c)
           or c["expect"].get("count") != len(c["expect"].get("suggestions", [None]))]
 say(not broken, "every case has case, note, expect, and a count equal to its suggestions" + (": %s" % broken if broken else ""))
-# Undecided, so the cases must not take a side: no note line may carry a strike without the done mark.
-bare = [c["case"] for c in cases for l in c["note"] if re.search(r"~~[^~]+~~", l) and "\u2705" not in l]
-say(bool(doc.get("undecided")) and not bare, "no case rules on a strike with no done mark (undecided)" + (": %s" % bare if bare else ""))
+# The strike rule is settled, so the cases must take both sides of it: with no done mark, a strike
+# beside live text leaves its task listed, and a line struck whole closes it.
+bare = [c for c in cases for l in c["note"] if re.search(r"~~[^~]+~~", l) and "\u2705" not in l]
+say("undecided" not in doc and any(c["expect"]["count"] >= 1 for c in bare) and any(c["expect"]["count"] == 0 for c in bare),
+    "cases with a strike and no done mark cover both the edit (still open) and the whole strike (done): %d cases" % len(bare))
 names = [c["case"] for c in cases]
 say(len(names) == len(set(names)), "case names are unique")
 for src, path in (("plugins/aios/commands/today.md", today), ("CLAUDE.md", claude)):

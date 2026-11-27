@@ -13,8 +13,14 @@ The rule, in the order it is applied to each line of the section (from the
 
  1. Only list items (`- ` or `* `) are tasks. The count header and the footer
     are prose, whatever they mention.
- 2. A checked item (`[x]`), a struck title (`- 🤖 ~~...`) and a line stamped
-    🚀 (already handed to an agent) are skipped.
+ 2. A done line and a line stamped 🚀 (already handed to an agent) are
+    skipped. A line is DONE when it is checked (`[x]`), or it carries a strike
+    and either the done mark ✅ is on the line or no live text is left beside
+    the strike. Live text is any letter or digit that remains once the bullet,
+    the checkbox, emojis, time slots, the struck spans and the `_(…)_`
+    annotations (the route is one) are taken away. A strike with live text
+    beside it and no ✅ is an edit or a reschedule (`~~Call Bob Tue~~ → Thu`):
+    the line is still open and is read like any other, strike marks and all.
  3. The ROUTE is what follows the first ` _(→` on the line, to its end (so a
     second `_(…)_` note after the route does not hide it). When the line has
     one, the agent and the command are read from the route and nowhere else,
@@ -28,8 +34,8 @@ The rule, in the order it is applied to each line of the section (from the
  7. The task is the text before the route, without the bullet and the 🤖
     (with no route: the whole item). If it OPENS with a **bold** span, the
     task is that span (older notes); bold further in is part of the text.
- 8. A task is skipped when a line marked done anywhere in the note (`[x]`, or
-    struck) is that task: the same identity, or one that contains it as whole
+ 8. A task is skipped when a line that is done (rule 2) anywhere in the note
+    is that task: the same identity, or one that contains it as whole
     words (`Draft the deck` is done by `[x] Draft the deck for Ana`; `Review
     PR` is not done by `[x] Review PRD` nor by `[x] Preview PR`). A task whose
     identity is under 6 characters is never matched: too little to tell two
@@ -37,9 +43,9 @@ The rule, in the order it is applied to each line of the section (from the
  9. A command's argument is what follows it inside the backticks; failing
     that, a URL on the line (a markdown link's target first).
 
-Not settled, and so not pinned by any case: whether a strike with no ✅ is
-done. today.md says it is an edit or a reschedule; close-day.md and both
-surfaces count any strike. This reference follows the surfaces (rules 2, 8).
+Not covered, and not pinned by any case: a done sub-item whose text contains
+its parent's title closes the parent too (rule 8 does not know which line is a
+sub-item of which).
 
 Usage:  agents-can-handle-ref.py <cases.json>        run every case, exit 1 on a miss
         agents-can-handle-ref.py --old <cases.json>  the same through parse_old, the
@@ -56,6 +62,9 @@ ROBOT, ROCKET = "\U0001F916", "\U0001F680"
 WIKI = re.compile(r"\[\[([^\]|]+?)(?:\|[^\]]+)?\]\]")
 CMD = re.compile(r"`(/[a-z][\w:-]*)(?:[ \t]+([^`]*?))?[ \t]*`", re.I | A)
 ROUTE = " _(→"
+STRIKE = re.compile(r"~~[^~]+~~")
+NOTE = re.compile(r"_\(.*?\)_", re.S)
+DONE_MARK = "\u2705"
 EMOJI = re.compile("[\U0001F000-\U0001FAFF☀-➿←-⇿⬀-⯿️]")
 
 
@@ -83,10 +92,19 @@ def covers(done, tid):
     return False
 
 
-def done_identities(lines):
+def struck_done(line):
+    """A strike makes a line done when ✅ is on it, or when nothing live is left beside the strike."""
+    if not STRIKE.search(line):
+        return False
+    if DONE_MARK in line:
+        return True
+    return not any(ch.isalnum() for ch in identity(NOTE.sub("", STRIKE.sub("", line))))
+
+
+def done_identities(lines, any_strike=False):
     out = []
     for line in lines:
-        if re.match(r"^\s*[-*]\s*\[[xX]\]", line) or re.search(r"~~[^~]+~~", line):
+        if re.match(r"^\s*[-*]\s*\[[xX]\]", line) or (STRIKE.search(line) if any_strike else struck_done(line)):
             i = identity(line)
             if len(i) >= 4:
                 out.append(i)
@@ -95,10 +113,10 @@ def done_identities(lines):
 
 def parse_old(md):
     """The reading the surfaces had: any wikilink on the line is an agent, the first
-    backticked /command anywhere is the command, and with no bold span the task is
-    the whole line. Kept only as the control for the cases file."""
+    backticked /command anywhere is the command, with no bold span the task is the
+    whole line, and a strike anywhere on a line makes it done, live text or not. Kept only as the control for the cases file."""
     lines = re.split(r"\r?\n", md)
-    done = done_identities(lines)
+    done = done_identities(lines, any_strike=True)
     out, inside = [], False
     for line in lines:
         if re.match(r"^##\s+.*Agents can handle", line, re.I):
@@ -147,7 +165,7 @@ def parse(md):
             continue
         if re.match(r"^\s*[-*]\s*\[[xX]\]", line):
             continue
-        if re.match(r"^\s*[-*]\s*(?:%s\s*)*~~" % ROBOT, line):
+        if struck_done(line):
             continue
         if ROCKET in line:
             continue

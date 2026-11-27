@@ -2,7 +2,6 @@
   "what": "Shared cases for the daily note's `## Agents can handle` section: what `/today` writes, and what a surface must bind from it.",
   "how_to_run": "For each case, join `note` with newlines, give it to the surface's section parser, and compare with `expect`. `suggestions` is the ordered list of live, bindable lines: `task` is the label, `agents` the agents named after `agent:` (the first one is dispatched), `command` and `arg` are present only on a command-routed line. `count` is the badge. A case with `template` is that template line filled in.",
   "rule": "tests/fixtures/agents-can-handle-ref.py states the rule and is the reference reading.",
-  "undecided": ["A struck line with no ✅. today.md reads it as an edit or a reschedule, never as done; close-day.md and both surfaces read any strike as done. No case here contains one, on purpose: the cases say nothing either way until that is decided."],
   "templates": {
     "note": "The lines the writer is told to write, verbatim from each file. The framework's test fails when a file and this list disagree, and every case with `template` must still have that line's shape.",
     "plugins/aios/commands/today.md": ["- 🤖 {task} _(→ agent: [[agent-name]])_", "- 🤖 {task} _(→ command: `/aios:{command-name}`)_"],
@@ -323,6 +322,85 @@
         "- 🤖 ~~Draft the post~~ ✅ _(→ agent: [[content-writer]])_"
       ],
       "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a struck mirror line with the done mark after its route is done",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 ~~Draft the post~~ _(→ agent: [[content-writer]])_ ✅"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a mirror line struck whole is done without the done mark: its route is not live text",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 ~~Draft the post~~ _(→ agent: [[content-writer]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a rescheduled mirror line (a strike, live text beside it, no done mark) is still open",
+      "note": [
+        "## Agents can handle",
+        "- 🤖 ~~Call Bob Tuesday~~ Call Bob Thursday _(→ agent: [[meeting-prepper]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "~~Call Bob Tuesday~~ Call Bob Thursday", "agents": ["meeting-prepper"]}]}
+    },
+    {
+      "case": "a canonical task struck whole is done without the done mark",
+      "note": [
+        "## Rhythm",
+        "- ~~Draft the deck~~",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a canonical task struck whole beside a time slot and an annotation is done",
+      "note": [
+        "## Rhythm",
+        "- 09:30 ~~Draft the deck~~ _(carry ×3)_",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a canonical task struck, with a result note and the done mark, is done",
+      "note": [
+        "## Rhythm",
+        "- ~~Draft the deck~~ sent to Ana ✅",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 0, "suggestions": []}
+    },
+    {
+      "case": "a rescheduled canonical task (a strike, live text after it, no done mark) is an edit and closes nothing",
+      "note": [
+        "## Rhythm",
+        "- ~~Draft the deck~~ → Thursday",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft the deck", "agents": ["deck-builder"]}]}
+    },
+    {
+      "case": "a canonical task with one word struck and no done mark is an edit and closes nothing",
+      "note": [
+        "## Rhythm",
+        "- [ ] Draft the deck ~~Tuesday~~ Thursday",
+        "",
+        "## Agents can handle",
+        "- 🤖 Draft the deck _(→ agent: [[deck-builder]])_"
+      ],
+      "expect": {"count": 1, "suggestions": [{"task": "Draft the deck", "agents": ["deck-builder"]}]}
     },
     {
       "case": "a checked line is done",
