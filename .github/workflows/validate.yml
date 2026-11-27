@@ -1542,6 +1542,12 @@ jobs:
         # its parsing, so the checks cannot pass while the real function drifts.
         run: bash tests/quota-watch-pause.test.sh
 
+      - name: --availability says the watcher's thresholds and the pause, and nothing else new
+        # The App and Glass offer the account swap where these fields say, with no number of their
+        # own: rotate_at, swap_offer_at (threshold minus the margin, floor 1), rotation_paused_until.
+        # Also pins the shape the surfaces parse (a list) and that a non-finite pause is malformed.
+        run: bash tests/availability-thresholds.test.sh
+
       - name: a paused quota watcher logs PAUSED once per pause, not once per tick
         # A long pause wrote the same line every few minutes (thousands in two weeks) and buried the
         # rest of the log. Runs the shipped _watch.py against a fabricated HOME, with a CONTROL that
