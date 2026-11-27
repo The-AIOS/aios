@@ -75,7 +75,9 @@ and it quotes only the path as written, never a resolved one. Checks 1 to 8 make
    **20** or more in the last **60 seconds**, from any sessions [`flood`]. This check needs no field, so a stream of
    malformed requests is a flood too. A surface may drop `flood` requests without a dead letter for each,
    writing instead one dead letter a minute that says how many were dropped, so a flood cannot bury the dead
-   letters that matter.
+   letters that matter. That notice is a file of its own (the surfaces name it
+   `open-flood-<time>-<pid>.json.undelivered`), never a request's: a session may reuse its file name, and a
+   request held for a minute would collide with the next one written under it.
 3. **`name`** is missing, is not a string, or once sanitized is empty or longer than 64 characters
    [`bad-name`]. Sanitized as the surfaces sanitize every session name: trimmed, lower case, white space to
    dashes, every character other than `a`–`z`, `0`–`9` and `-` dropped, and leading and trailing dashes
