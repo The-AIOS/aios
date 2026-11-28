@@ -1,0 +1,261 @@
+{
+  "company": {
+    "name": "Ruta Datos",
+    "description": "Negocio imaginario de prueba. Escuela en Bogotá que enseña análisis de datos a personas que quieren cambiar de carrera: un curso en vivo de 12 semanas que se paga completo al inscribirse, una comunidad de exalumnos por suscripción mensual y programas de capacitación para empresas que traen consultoras de RRHH aliadas. Arranca en marzo de 2027 sin alumnos. Las dos fundadoras tienen hoy el 100% entre ambas.",
+    "currency": "COP",
+    "start_month": "2027-03",
+    "starting_cash": 400000000
+  },
+  "segments": [
+    {
+      "key": "personas",
+      "name": "Personas (curso y comunidad)",
+      "unit": "alumno",
+      "starting_customers": 0,
+      "monthly_churn": 0.06,
+      "channels": [
+        {
+          "key": "pauta",
+          "name": "Anuncios en Meta y Google",
+          "type": "paid",
+          "spend_by_year": [
+            8000000,
+            8000000,
+            8000000,
+            8000000,
+            8000000
+          ],
+          "cost_per_click": 1800,
+          "conversion": 0.004
+        },
+        {
+          "key": "webinars",
+          "name": "Webinars gratuitos",
+          "type": "activity",
+          "unit_label": "webinars",
+          "unit_singular": "webinar",
+          "is_headcount": false,
+          "count_by_year": [
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "yield_per_unit": 4.5,
+          "cost_per_unit": 600000,
+          "count_help": "Webinars gratuitos que se hacen cada mes, por año (hoy cuatro; supuesto: se mantienen cuatro los cinco años).",
+          "yield_help": "Alumnos nuevos que deja cada webinar: unas 150 personas asisten × 3% se inscribe = 4,5.",
+          "cost_help": "Costo total de un webinar: pauta para promoverlo + la persona que lo da."
+        },
+        {
+          "key": "organico",
+          "name": "Blog y YouTube (orgánico)",
+          "type": "organic",
+          "start_visits": 6000,
+          "monthly_growth": 0.05,
+          "conversion": 0.002
+        }
+      ],
+      "revenue_lines": [
+        {
+          "key": "curso",
+          "name": "Curso en vivo de 12 semanas",
+          "basis": "new",
+          "qty": 1,
+          "qty_label": "cursos por alumno nuevo (se paga completo al inscribirse)",
+          "qty_unit": "por alumno nuevo",
+          "price": 3600000,
+          "margin": 0.55
+        },
+        {
+          "key": "comunidad",
+          "name": "Comunidad de exalumnos",
+          "basis": "active",
+          "qty": 0.4,
+          "qty_label": "suscripciones por alumno activo (40% de cada grupo se queda en la comunidad)",
+          "qty_unit": "por alumno por mes",
+          "price": 90000,
+          "margin": 0.8
+        }
+      ],
+      "seasonality": [
+        1.5,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1.5,
+        1,
+        1,
+        1,
+        1,
+        0.4
+      ],
+      "seasonality_applies_to": "new"
+    },
+    {
+      "key": "empresas",
+      "name": "Empresas (capacitación corporativa)",
+      "unit": "empresa",
+      "starting_customers": 0,
+      "monthly_churn": 1.0,
+      "channels": [
+        {
+          "key": "aliados",
+          "name": "Consultoras de RRHH aliadas",
+          "type": "activity",
+          "unit_label": "aliados",
+          "unit_singular": "aliado",
+          "is_headcount": false,
+          "count_by_year": [
+            2,
+            5,
+            8,
+            10,
+            10
+          ],
+          "yield_per_unit": 0.5,
+          "cost_per_unit": 0,
+          "count_help": "Consultoras de RRHH que nos traen empresas, por año: 2 hoy, 5 el año 2, 8 el año 3 y 10 después.",
+          "yield_help": "Empresas que trae cada aliado al mes: una cada dos meses = 0,5.",
+          "cost_help": "Los aliados no cobran fijo: ganan 15% de cada programa que venden (ver la comisión en costos directos)."
+        }
+      ],
+      "revenue_lines": [
+        {
+          "key": "programa",
+          "name": "Programa de capacitación para empresas",
+          "basis": "new",
+          "qty": 1,
+          "qty_label": "programas por empresa nueva (compra única)",
+          "qty_unit": "por empresa nueva",
+          "price": 45000000,
+          "margin": 0.5
+        }
+      ],
+      "variable_costs": [
+        {
+          "key": "comision",
+          "name": "Comisión del aliado",
+          "pct_of_revenue": 0.15
+        }
+      ]
+    }
+  ],
+  "team": {
+    "benefits_load": 0.52,
+    "roles": [
+      {
+        "key": "ceo",
+        "name": "CEO (cofundadora)",
+        "monthly_salary": 14000000,
+        "count_by_year": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "key": "academica",
+        "name": "Directora académica",
+        "monthly_salary": 11000000,
+        "count_by_year": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "key": "ingenieros",
+        "name": "Ingenieros",
+        "monthly_salary": 12000000,
+        "count_by_year": [
+          1,
+          2,
+          2,
+          2,
+          2
+        ]
+      },
+      {
+        "key": "mercadeo",
+        "name": "Mercadeo",
+        "monthly_salary": 8000000,
+        "count_by_year": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "key": "ventas",
+        "name": "Ventas empresariales",
+        "monthly_salary": 10000000,
+        "count_by_year": [
+          0,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    ],
+    "customer_driven_roles": [
+      {
+        "key": "soporte",
+        "name": "Soporte a la comunidad (1 por cada 300 miembros = 750 alumnos activos × 40%)",
+        "segment": "personas",
+        "monthly_salary": 4000000,
+        "customers_per_person": 750
+      }
+    ],
+    "per_employee_monthly": {},
+    "fixed_monthly": {
+      "Oficina en coworking": 3000000,
+      "Software": 2000000,
+      "Contador": 1500000
+    }
+  },
+  "working_capital": {
+    "ar_days": 16,
+    "ap_days": 0,
+    "inventory_days": 0
+  },
+  "tax": {
+    "rate": 0.35
+  },
+  "funding": {
+    "founders_initial_share": 1.0,
+    "valuation_multiple": 2,
+    "rounds": [
+      {
+        "name": "SAFE",
+        "type": "safe",
+        "month": 1,
+        "amount": 2000000000,
+        "cap": 16000000000
+      },
+      {
+        "name": "Ronda semilla con precio",
+        "type": "priced",
+        "month": 18,
+        "amount": 8000000000,
+        "pre_money": 32000000000,
+        "option_pool": 0.1
+      }
+    ]
+  },
+  "key_assumptions": [
+    "personas.pauta.conv",
+    "personas.curso.price",
+    "empresas.aliados.yield"
+  ]
+}

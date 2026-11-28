@@ -69,6 +69,7 @@ Say `spawn {name}` to launch a named tab dedicated to that role, or `/agent {nam
 | `content-scheduler` | Plan and queue content calendar from vault insights | communication |
 | `content-writer` | Draft posts for LinkedIn, X, Substack in your voice | communication |
 | `crm-updater` | Sync deal updates into the pipeline USER.md names | sales |
+| `financial-modeler` | Co-build a bottom-up financial model from an interview (Google Sheet or Excel), test-drive it, run the monthly update | finance-legal |
 | `kdp-publisher` | Take a finished book to live Amazon KDP listings: pre-flight the files, fill the answer sheet, name the irreversible decisions; a dry run uploads nothing | communication |
 | `explainer` | Build the cheapest thing that makes you understand a mechanism — usually one interactive HTML walk, anchored to source | communication |
 | `crisis-mode` | Emergency / incident-response framing — calm, structured, actionable | personal |
@@ -141,6 +142,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `slack-gif-creator` | `skills/anthropic/` | "Make an animated GIF for Slack" |
 | `theme-factory` | `skills/anthropic/` | "Apply a theme to this artifact / slide deck / doc" |
 | `data-presentation` | `skills/aios/` | "How should I present this data?" — chart selection, table layout |
+| `financial-modeling` | `skills/aios/` | "Build / update my financial model" — interview → spec → live-formula workbook (Google Sheet or .xlsx), checks, test drive, monthly update, waterfalls |
 | `infographic-builder` | `skills/aios/` | "Make an infographic / one-pager / visualize this note or report" — themed self-contained HTML |
 | `voice-gate` | `skills/aios/` | "Does this sound AI-written?" / "Check this before I publish it" — grades tells by density, bursts and position against your own baseline; reports, never rewrites |
 | `motion-lab` | `skills/aios/` | "Make a loop / a logo sting / a launch film" — motion as code, every frame a function of t, reviewed by measurement (contract, seam, pops, determinism, audio), exported to MP4/GIF |
@@ -184,7 +186,7 @@ Skills auto-load — you don't invoke them by name. Describe what you want and C
 | `pci-compliance` | `skills/aios/` | "Audit this for PCI compliance" |
 | `security-audit` | `skills/cloudflare/` | "Security-review this codebase" (guidance); "Run a full security audit" (full run, fans out subagents) |
 
-**Source folders:** `skills/aios/` (AIOS-built — 34 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/cloudflare/` (vendored from `cloudflare/security-audit-skill` — 1 skill) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 60. Browse `skills/_index.md` for the full registry.
+**Source folders:** `skills/aios/` (AIOS-built — 35 skills) · `skills/anthropic/` (vendored from `anthropics/skills` — 11 skills) · `skills/superpowers/` (vendored from `obra/superpowers` — 14 skills) · `skills/cloudflare/` (vendored from `cloudflare/security-audit-skill` — 1 skill) · `skills/custom/` (your own — survives `/aios:update`). Total bundled: 61. Browse `skills/_index.md` for the full registry.
 
 **Marketplace skills** (NOT in `skills/`, install via `/plugin install`): `canvas-design`/`docx`/`pdf`/`pptx`/`xlsx` (via `document-skills` plugin) · `code-review-excellence` (via `code-review@claude-plugins-official`) · `defuddle` (via Anthropic skills marketplace) · `superpowers` full marketplace (`obra/superpowers-marketplace`).
 

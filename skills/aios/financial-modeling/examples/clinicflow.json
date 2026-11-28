@@ -1,0 +1,242 @@
+{
+  "company": {
+    "name": "Clinicflow",
+    "description": "Imaginary demo business. Scheduling and billing software for independent physiotherapy clinics in the US, sold as a monthly subscription per clinic. Customers come from Google search ads, a small team of sales reps, and referrals between clinics.",
+    "currency": "USD",
+    "start_month": "2027-01",
+    "starting_cash": 50000
+  },
+  "segments": [
+    {
+      "key": "clinics",
+      "name": "Clinics",
+      "unit": "clinic",
+      "starting_customers": 0,
+      "monthly_churn": 0.015,
+      "channels": [
+        {
+          "key": "google",
+          "name": "Google search ads",
+          "type": "paid",
+          "spend_by_year": [
+            6000,
+            12000,
+            20000,
+            30000,
+            40000
+          ],
+          "cost_per_click": 7.5,
+          "conversion": 0.008
+        },
+        {
+          "key": "reps",
+          "name": "Sales reps",
+          "type": "activity",
+          "unit_label": "reps",
+          "unit_singular": "rep",
+          "is_headcount": true,
+          "count_by_year": [
+            1,
+            2,
+            4,
+            6,
+            8
+          ],
+          "yield_per_unit": 3.5,
+          "cost_per_unit": 8125,
+          "yield_help": "Clinics each rep closes per month (the result, not the calls behind it).",
+          "cost_help": "Loaded monthly cost of one rep: $6,500 salary + 25% taxes and benefits (commission left out for parsimony)."
+        },
+        {
+          "key": "referrals",
+          "name": "Referrals and organic search",
+          "type": "organic",
+          "start_visits": 400,
+          "monthly_growth": 0.04,
+          "conversion": 0.006
+        }
+      ],
+      "revenue_lines": [
+        {
+          "key": "sub",
+          "name": "Subscription",
+          "basis": "active",
+          "qty": 1,
+          "qty_label": "subscriptions per clinic",
+          "price": 299,
+          "margin": 0.85
+        },
+        {
+          "key": "onboard",
+          "name": "Onboarding fee",
+          "basis": "new",
+          "qty": 1,
+          "qty_label": "onboardings per new clinic",
+          "price": 1200,
+          "margin": 0.5
+        },
+        {
+          "key": "pay",
+          "name": "Payments add-on",
+          "basis": "active",
+          "qty": 0.35,
+          "qty_label": "share of clinics that add payments",
+          "price": 99,
+          "margin": 0.3
+        }
+      ],
+      "variable_costs": [
+        {
+          "key": "hosting",
+          "name": "Hosting and SMS",
+          "per_active_customer": 9
+        }
+      ]
+    }
+  ],
+  "team": {
+    "benefits_load": 0.25,
+    "roles": [
+      {
+        "key": "ceo",
+        "name": "CEO",
+        "monthly_salary": 11000,
+        "count_by_year": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "key": "cto",
+        "name": "CTO",
+        "monthly_salary": 12000,
+        "count_by_year": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "key": "eng",
+        "name": "Engineers",
+        "monthly_salary": 10000,
+        "count_by_year": [
+          2,
+          3,
+          5,
+          7,
+          9
+        ]
+      },
+      {
+        "key": "mkt",
+        "name": "Marketing lead",
+        "monthly_salary": 8000,
+        "count_by_year": [
+          0,
+          1,
+          1,
+          1,
+          2
+        ]
+      },
+      {
+        "key": "ops",
+        "name": "Finance and operations",
+        "monthly_salary": 7000,
+        "count_by_year": [
+          0,
+          0,
+          1,
+          1,
+          2
+        ]
+      }
+    ],
+    "customer_driven_roles": [
+      {
+        "key": "support",
+        "name": "Customer support and success",
+        "segment": "clinics",
+        "monthly_salary": 4800,
+        "customers_per_person": 120
+      }
+    ],
+    "per_employee_monthly": {
+      "Rent and coworking": 500,
+      "Software and equipment": 300,
+      "Travel": 200
+    },
+    "fixed_monthly": {
+      "Legal and accounting": 2000,
+      "Insurance": 600
+    }
+  },
+  "working_capital": {
+    "ar_days": 15,
+    "ap_days": 30,
+    "inventory_days": 0
+  },
+  "tax": {
+    "rate": 0.25
+  },
+  "funding": {
+    "founders_initial_share": 1.0,
+    "valuation_multiple": 6,
+    "rounds": [
+      {
+        "name": "Pre-seed SAFE",
+        "type": "safe",
+        "month": 1,
+        "amount": 800000,
+        "cap": 8000000
+      },
+      {
+        "name": "Seed",
+        "type": "priced",
+        "month": 15,
+        "amount": 3000000,
+        "pre_money": 12000000,
+        "option_pool": 0.1
+      }
+    ]
+  },
+  "key_assumptions": [
+    "clinics.churn",
+    "clinics.reps.yield",
+    "clinics.google.conv"
+  ],
+  "input_status": {
+    "clinics.google.cpc": [
+      "benchmark",
+      "Keyword planner, physiotherapy software terms"
+    ],
+    "clinics.google.conv": [
+      "assumption",
+      "No campaign run yet"
+    ],
+    "clinics.churn": [
+      "benchmark",
+      "SMB vertical SaaS range"
+    ],
+    "clinics.sub.price": [
+      "decided",
+      "Pricing page"
+    ],
+    "starting_cash": [
+      "measured",
+      "Bank balance"
+    ]
+  },
+  "scenarios": {
+    "clinics.churn": [
+      0.025,
+      0.01
+    ]
+  }
+}

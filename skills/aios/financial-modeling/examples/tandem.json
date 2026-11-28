@@ -1,0 +1,313 @@
+{
+  "company": {
+    "name": "Tandem",
+    "description": "Imaginary dry-run business. A Texas marketplace that matches families with vetted home-care aides: families book hours (about 60 a month at $32 an hour) and Tandem keeps 18% of every booking as its revenue; aides get the rest. Families come from Google ads and hospital discharge planners; employers buy a care benefit at $6 per employee per month. Starts January 2027 with no customers; the founders own 100% before the SAFE.",
+    "currency": "USD",
+    "start_month": "2027-01",
+    "starting_cash": 350000
+  },
+  "segments": [
+    {
+      "key": "families",
+      "name": "Families",
+      "unit": "family",
+      "starting_customers": 0,
+      "monthly_churn": 0.08,
+      "channels": [
+        {
+          "key": "google",
+          "name": "Google search ads",
+          "type": "paid",
+          "spend_by_year": [
+            12000,
+            18000,
+            24000,
+            30000,
+            36000
+          ],
+          "cost_per_click": 9,
+          "conversion": 0.015
+        },
+        {
+          "key": "hospitals",
+          "name": "Hospital discharge planners",
+          "type": "activity",
+          "unit_label": "hospital partners",
+          "unit_singular": "hospital partner",
+          "is_headcount": false,
+          "count_by_year": [
+            6,
+            6,
+            6,
+            6,
+            6
+          ],
+          "yield_per_unit": 3,
+          "cost_per_unit": 500,
+          "count_help": "Hospital partners whose discharge planners refer families, live in a month, by year (6 today; held flat until you decide to add partners).",
+          "yield_help": "New families each hospital partner refers per month (about 3 today)."
+        }
+      ],
+      "revenue_lines": [
+        {
+          "key": "booking",
+          "name": "Our 18% of care bookings",
+          "basis": "active",
+          "qty": 60,
+          "qty_label": "care hours booked per active family per month",
+          "qty_unit": "hours per family per month",
+          "price": 5.76,
+          "margin": 1.0
+        }
+      ],
+      "variable_costs": [
+        {
+          "key": "processing",
+          "name": "Payment processing (3% of the booking = 16.7% of our 18% cut)",
+          "pct_of_revenue": 0.166667
+        },
+        {
+          "key": "checks",
+          "name": "Aide background checks (one new aide per two new families \u00d7 $45)",
+          "per_new_customer": 22.5
+        }
+      ]
+    },
+    {
+      "key": "employers",
+      "name": "Employers (care benefit)",
+      "unit": "employer",
+      "starting_customers": 0,
+      "monthly_churn": 0.015,
+      "channels": [
+        {
+          "key": "sales",
+          "name": "Employer sales people",
+          "type": "activity",
+          "unit_label": "sales people",
+          "unit_singular": "sales person",
+          "is_headcount": true,
+          "count_by_year": [
+            2,
+            2,
+            2,
+            2,
+            2
+          ],
+          "yield_per_unit": 1,
+          "cost_per_unit": 9000,
+          "yield_help": "Employers each sales person closes per month (about 1 today).",
+          "cost_help": "Loaded monthly cost of one sales person ($9,000 including taxes and benefits)."
+        }
+      ],
+      "revenue_lines": [
+        {
+          "key": "access",
+          "name": "Care benefit access fee",
+          "basis": "active",
+          "qty": 400,
+          "qty_label": "covered employees per employer",
+          "qty_unit": "employees per employer",
+          "price": 6,
+          "margin": 0.85
+        }
+      ]
+    }
+  ],
+  "team": {
+    "benefits_load": 0.22,
+    "annual_raise": 0.03,
+    "roles": [
+      {
+        "key": "ceo",
+        "name": "CEO (founder)",
+        "monthly_salary": 10000,
+        "count_by_year": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "key": "cto",
+        "name": "CTO",
+        "monthly_salary": 11000,
+        "count_by_year": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "key": "ops",
+        "name": "Operations lead",
+        "monthly_salary": 7000,
+        "count_by_year": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "key": "growth",
+        "name": "Head of growth",
+        "monthly_salary": 12000,
+        "start_month": 8,
+        "count": 1
+      },
+      {
+        "key": "eng2",
+        "name": "Second engineer",
+        "monthly_salary": 10000,
+        "start_month": 14,
+        "count": 1
+      }
+    ],
+    "customer_driven_roles": [
+      {
+        "key": "coord",
+        "name": "Care coordinators",
+        "segment": "families",
+        "monthly_salary": 5000,
+        "customers_per_person": 150
+      }
+    ],
+    "per_employee_monthly": {},
+    "fixed_monthly": {
+      "Rent": 4000,
+      "Insurance": 3000,
+      "Software": 2000
+    }
+  },
+  "working_capital": {
+    "ar_days": 15,
+    "ap_days": 0,
+    "inventory_days": 0
+  },
+  "tax": {
+    "rate": 0.21
+  },
+  "funding": {
+    "founders_initial_share": 1.0,
+    "valuation_multiple": 8,
+    "minimum_cash": 150000,
+    "rounds": [
+      {
+        "name": "SAFE",
+        "type": "safe",
+        "month": 2,
+        "amount": 1500000,
+        "cap": 12000000,
+        "use_of_funds": {
+          "sm": 0.5,
+          "team": 0.35,
+          "direct": 0,
+          "other": 0.15
+        }
+      },
+      {
+        "name": "Seed",
+        "type": "priced",
+        "month": 20,
+        "amount": 6000000,
+        "pre_money": 0,
+        "option_pool": 0.1
+      }
+    ]
+  },
+  "key_assumptions": [
+    "families.churn",
+    "families.google.conv",
+    "families.booking.qty"
+  ],
+  "scenarios": {
+    "families.churn": [
+      0.12,
+      0.05
+    ]
+  },
+  "input_status": {
+    "families.churn": [
+      "assumption",
+      "Founder's guess; no cohort yet. Replace with the first 3 months of real churn"
+    ],
+    "families.google.cpc": [
+      "measured",
+      "Two-week Google Ads test: $9.00 a click, plus $0.34 background-check share ($22.50 per new family x 1.5% conversion)"
+    ],
+    "families.google.conv": [
+      "measured",
+      "Two-week Google Ads test (small sample)"
+    ],
+    "families.google.spend": [
+      "decided",
+      "$12k a month today; years 2-5 ramp is the modeler's default: confirm"
+    ],
+    "families.booking.qty": [
+      "measured",
+      "40 pilot families"
+    ],
+    "families.booking.price": [
+      "decided",
+      "$32 an hour x 18% take rate = $5.76 an hour of revenue"
+    ],
+    "families.booking.margin": [
+      "decided",
+      "100% of the take: direct costs are processing (below) and care coordinators (Team)"
+    ],
+    "families.vc.processing": [
+      "quoted",
+      "Processor: 3% of the booking, paid out of our 18%"
+    ],
+    "families.hospitals.yield": [
+      "estimate",
+      "6 partners today, about 3 families each a month"
+    ],
+    "families.hospitals.cost": [
+      "estimate",
+      "$500 lunches and materials + $67.50 background checks"
+    ],
+    "employers.churn": [
+      "estimate",
+      "Founder's estimate: 1.5% a month"
+    ],
+    "employers.sales.yield": [
+      "estimate",
+      "About 1 employer per sales person a month"
+    ],
+    "employers.sales.cost": [
+      "measured",
+      "Payroll, loaded"
+    ],
+    "employers.access.price": [
+      "decided",
+      "$6 per employee per month"
+    ],
+    "employers.access.qty": [
+      "estimate",
+      "Average employer size"
+    ],
+    "employers.access.margin": [
+      "estimate",
+      "Founder's estimate"
+    ],
+    "starting_cash": [
+      "measured",
+      "Bank balance"
+    ],
+    "min_cash": [
+      "decided",
+      "Founder's floor"
+    ],
+    "tax": [
+      "decided",
+      "US federal corporate rate; Texas has no state income tax (franchise tax not modeled)"
+    ]
+  }
+}
