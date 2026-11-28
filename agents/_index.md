@@ -20,14 +20,14 @@ Organized into **7 bundles by purpose**. Install only the bundles you need.
 |---|---|---|
 | **`aios/sales/`** | Lead generation, proposals, CRM, brand monitoring | 4 |
 | **`aios/strategy/`** | Market research, advisory, company analysis, open-source governance, quarterly objectives | 5 |
-| **`aios/finance-legal/`** | Accounting, legal review, invoicing, compliance | 4 |
+| **`aios/finance-legal/`** | Accounting, financial models, legal review, invoicing, compliance | 5 |
 | **`aios/engineering/`** | Code review, documentation, bug triage, security, building, growth, refactoring | 8 |
 | **`aios/communication/`** | Content, brochures, decks, emails, meeting prep, reports, design systems, animation, explainers, book publishing | 11 |
 | **`aios/personal/`** | Study, journaling, growth and mentoring, decision-making, onboarding, crisis, upstream feedback | 7 |
 | **`aios/commerce/`** | Customer-facing shopping + merchant agents | 1 |
 | **`custom/`** | Your own agents (operator-specific extensions, never synced) | — |
 
-**Total bundled agents: 40.** Each bundle has a `README.md` describing its scope; this file is the master registry.
+**Total bundled agents: 41.** Each bundle has a `README.md` describing its scope; this file is the master registry.
 
 > **Standard:** all agents follow the [Agent Skills open standard](https://github.com/anthropics/skills) (138K⭐ — Anthropic's public canonical repo). Cross-platform compatible with Claude Code, Codex, Gemini CLI, Cursor, Antigravity.
 
@@ -109,6 +109,7 @@ The session says which hat it chose and why, so the operator can correct it, and
 | [[lawyer]] | Legal review, contract analysis, risk assessment | legal, contract, NDA, terms, liability, IP, trademark | on-demand |
 | [[invoice-tracker]] | Track pending invoices, flag overdue, draft follow-ups | invoice, payment, overdue, billing, factura, cobro | on-demand |
 | [[compliance-checker]] | Review documents against legal/regulatory requirements | compliance, contract review, NDA, regulatory | on-demand |
+| [[financial-modeler]] | Co-build a founder's bottom-up five-year model from an interview, test-drive it, run the monthly update against actuals | financial model, projections, forecast, unit economics, LTV, CAC, runway, how much to raise, dilution, update the model | on-demand; monthly when the books close |
 
 ### aios/engineering/ — Code, build, ship
 

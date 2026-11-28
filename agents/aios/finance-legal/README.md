@@ -12,6 +12,7 @@ Install this bundle if you run a business, handle invoicing, deal with contracts
 | [[lawyer]] | Legal review of contracts, NDAs, terms of service. Risk assessment, IP/trademark analysis, dispute framing |
 | [[invoice-tracker]] | Track pending invoices, flag overdue, draft follow-up emails. Useful for solo operators and small teams without dedicated AR |
 | [[compliance-checker]] | Review documents against legal/regulatory requirements (GDPR, SOC2, contract clauses) before publication |
+| [[financial-modeler]] | Co-builds a founder's bottom-up financial model (five years, monthly, three statements, unit economics per channel, funding and founders' value) from an interview, as a Google Sheet or Excel file; test-drives it and runs the monthly update against actuals. Uses the `financial-modeling` skill |
 
 ## When to install
 
@@ -24,6 +25,7 @@ Install this bundle if you run a business, handle invoicing, deal with contracts
 - **Google Workspace MCP** — for sheets, docs, sometimes Gmail (invoice follow-ups)
 - **Obsidian MCP** — to read finance project notes
 - **PDF Generator** — to export polished reports
+- **`uv`** (already required by the framework) — `financial-modeler` builds workbooks with `uv run --with openpyxl`
 
 ## Important note
 

@@ -59,6 +59,22 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-28 — A financial modeler agent: a founder's model, built with them, kept alive every month
+
+`hash: `
+
+> **What you can now do.** Say "build me a financial model" and get one built with you from how your business actually works: five years by month, the three statements, unit economics per channel, funding and what each round buys, as a Google Sheet when Google Workspace is connected, else an Excel file. Then, each month, hand it last month's numbers and watch the forecast correct itself.
+
+**The `financial-modeler` agent and the `financial-modeling` skill** (finance-legal bundle). The agent interviews the founder in plain language (who the customers are, how each group arrives, what each one pays, how long they stay, the team, the money) and turns the answers into a short business spec. The skill's generator writes the workbook from it: every input on one Assumptions tab with a name, a status (measured, quoted, estimate...) and the tabs it moves; every other cell a formula; a scenario switch for the decisive inputs; a one-page dashboard; a Funding tab that shows who owns what after each round and what each round buys; a test drive that shows which levers move cash and which to say no to; and live checks that must all pass. It covers subscriptions, repeat orders, one-time fees, sales reps and events, inventory, loans, SAFEs and priced rounds, in any currency.
+
+**The monthly update.** When the books close, the agent puts the actuals next to the forecast, fixes the assumptions that were wrong (never the outputs), types the closed month in as history, and adds a row to the waterfalls so you can see how the forecast moved. On a Google Sheet it replaces the file in place, so the link and version history stay.
+
+**Calculated tabs in Google Sheets.** Google drops Excel's sheet protection on import, so each build also writes a short Apps Script you paste once; its "Model" menu locks the calculated tabs (warning only) after every upload.
+
+The method follows Troy Henikoff's financial-modeling class for Techstars founders: revenue first, levers instead of growth rates, the founder builds it and knows it.
+
+**Action required:** none. Nothing runs on your machine during the update. The first model you build fetches one Python library (`openpyxl`) through `uv`.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)

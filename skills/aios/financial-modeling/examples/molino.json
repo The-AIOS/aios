@@ -1,0 +1,290 @@
+{
+  "company": {
+    "name": "Molino Café",
+    "description": "Imaginary demo business. A specialty coffee roaster in Monterrey selling roasted bags online to consumers (repeat orders, about every six weeks) and wholesale to cafés and offices (a monthly purchase per account). Consumers arrive through Instagram and Facebook ads and weekend-market pop-up tastings; accounts come from the partners' and sales hires' visits. Already operating: 250 online customers and 9 accounts on day one.",
+    "currency": "MXN",
+    "start_month": "2027-02",
+    "starting_cash": 900000,
+    "opening_balances": {
+      "receivables": 160000,
+      "inventory": 200000,
+      "payables": 150000
+    }
+  },
+  "segments": [
+    {
+      "key": "online",
+      "name": "Online customers",
+      "unit": "customer",
+      "starting_customers": 250,
+      "monthly_churn": 0.109,
+      "channels": [
+        {
+          "key": "ads",
+          "name": "Instagram and Facebook ads",
+          "type": "paid",
+          "spend_by_year": [
+            15000,
+            30000,
+            50000,
+            70000,
+            90000
+          ],
+          "cost_per_click": 6,
+          "conversion": 0.015
+        },
+        {
+          "key": "popups",
+          "name": "Weekend-market pop-up tastings",
+          "type": "activity",
+          "unit_label": "pop-ups",
+          "unit_singular": "pop-up",
+          "is_headcount": false,
+          "count_by_year": [
+            2,
+            4,
+            6,
+            8,
+            8
+          ],
+          "yield_per_unit": 8,
+          "cost_per_unit": 4000,
+          "count_help": "Pop-up tastings held each month, by year.",
+          "yield_help": "New online customers each pop-up produces: about 80 people taste × 1 in 10 becomes an online customer.",
+          "cost_help": "All-in cost of one pop-up (stand fee, samples, staff time, transport)."
+        }
+      ],
+      "revenue_lines": [
+        {
+          "key": "bags",
+          "name": "Coffee bag orders",
+          "basis": "active",
+          "qty": 0.72,
+          "qty_label": "orders per active customer per month (one every six weeks)",
+          "price": 520,
+          "margin": 0.6,
+          "qty_unit": "per customer per month"
+        }
+      ],
+      "variable_costs": [
+        {
+          "key": "shipping",
+          "name": "Shipping (90 per order × 0.72 orders, not charged to the customer)",
+          "per_active_customer": 65
+        },
+        {
+          "key": "payfees",
+          "name": "Card and payment fees (about 4% of 375 a month)",
+          "per_active_customer": 15
+        }
+      ],
+      "seasonality": [
+        0.7,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2.0
+      ],
+      "seasonality_applies_to": "new_and_orders"
+    },
+    {
+      "key": "wholesale",
+      "name": "Cafés and offices (wholesale)",
+      "unit": "account",
+      "starting_customers": 9,
+      "monthly_churn": 0.0333,
+      "channels": [
+        {
+          "key": "partner",
+          "name": "Co-founder's sales visits",
+          "type": "activity",
+          "unit_label": "co-founders selling",
+          "unit_singular": "co-founder",
+          "is_headcount": true,
+          "count_by_year": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "yield_per_unit": 2,
+          "cost_per_unit": 52000,
+          "count_help": "The partner who visits cafés and offices (one person, all five years).",
+          "yield_help": "New accounts she lands per month (the result, not the visits behind it).",
+          "cost_help": "Her loaded monthly cost: 40,000 salary + 30% taxes and benefits."
+        },
+        {
+          "key": "reps",
+          "name": "Sales hires' visits",
+          "type": "activity",
+          "unit_label": "sales hires",
+          "unit_singular": "sales hire",
+          "is_headcount": true,
+          "count_by_year": [
+            0,
+            1,
+            2,
+            2,
+            2
+          ],
+          "yield_per_unit": 2,
+          "cost_per_unit": 35000,
+          "count_help": "Salespeople hired to visit cafés and offices: one more in year 2, another in year 3.",
+          "yield_help": "New accounts each hire lands per month; assumed equal to the partner's two.",
+          "cost_help": "Loaded monthly cost of one sales hire, as the founder gave it (already includes taxes and benefits)."
+        }
+      ],
+      "revenue_lines": [
+        {
+          "key": "monthly",
+          "name": "Wholesale coffee purchases",
+          "basis": "active",
+          "qty": 1,
+          "qty_label": "monthly purchases per account",
+          "price": 18000,
+          "margin": 0.35,
+          "qty_unit": "per customer per month"
+        }
+      ]
+    }
+  ],
+  "team": {
+    "benefits_load": 0.3,
+    "roles": [
+      {
+        "key": "founder",
+        "name": "Founder",
+        "monthly_salary": 45000,
+        "count_by_year": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "key": "roaster",
+        "name": "Roaster",
+        "monthly_salary": 18000,
+        "count_by_year": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "key": "trainer",
+        "name": "Barista-trainer for café accounts",
+        "monthly_salary": 22000,
+        "count_by_year": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "key": "marketing",
+        "name": "Marketing",
+        "monthly_salary": 30000,
+        "start_month": 13,
+        "count": 1
+      }
+    ],
+    "customer_driven_roles": [
+      {
+        "key": "packer",
+        "name": "Packers",
+        "segment": "online",
+        "monthly_salary": 12000,
+        "customers_per_person": 600
+      }
+    ],
+    "per_employee_monthly": {
+      "Phone, software and supplies": 1000
+    },
+    "fixed_monthly": {
+      "Roastery rent": 35000,
+      "Utilities": 8000,
+      "Accounting and legal": 6000,
+      "Website and online store software": 3000
+    },
+    "annual_raise": 0.04
+  },
+  "working_capital": {
+    "ar_days": 21,
+    "ap_days": 20,
+    "inventory_days": 42
+  },
+  "tax": {
+    "rate": 0.3
+  },
+  "funding": {
+    "founders_initial_share": 1.0,
+    "valuation_multiple": 1.5,
+    "rounds": [
+      {
+        "name": "Angel round",
+        "type": "priced",
+        "month": 6,
+        "amount": 4000000,
+        "pre_money": 16000000,
+        "option_pool": 0.1,
+        "use_of_funds": {
+          "sm": 0.35,
+          "team": 0.35,
+          "direct": 0.1,
+          "other": 0.2
+        }
+      }
+    ],
+    "loans": [
+      {
+        "name": "Family loan (founder's uncle)",
+        "month_in": 0,
+        "amount": 300000,
+        "month_repaid": 23,
+        "annual_rate": 0
+      }
+    ]
+  },
+  "key_assumptions": [
+    "online.churn",
+    "online.ads.conv",
+    "wholesale.partner.yield"
+  ],
+  "input_status": {
+    "online.churn": [
+      "estimate",
+      "Founder: 'half gone after six months', converted"
+    ],
+    "online.ads.cpc": [
+      "measured",
+      "Meta Ads Manager, last 3 months"
+    ],
+    "online.ads.conv": [
+      "estimate",
+      "Founder's read of store analytics"
+    ],
+    "wholesale.partner.yield": [
+      "measured",
+      "Accounts landed in the last 6 months"
+    ],
+    "starting_cash": [
+      "measured",
+      "Bank balance"
+    ]
+  }
+}
