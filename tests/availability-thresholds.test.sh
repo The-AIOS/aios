@@ -71,7 +71,7 @@ check 'all(r["rotation_paused_until"] is None for r in rows)' "$J" "no pause: nu
 echo "== 2. the shape the surfaces parse, and nothing else new =="
 OLD='["email","alias","plan","rotation","reason","state","detail","capped_until","five_hour_pct","seven_day_pct","seven_day_pct_read","weekly_renews_at","weekly_renewed_since_reading","refresh_expires_at","refresh_expires_source","reading_recorded_at"]'
 check 'isinstance(rows,list) and all(isinstance(r,dict) and isinstance(r.get("email"),str) and isinstance(r.get("state"),str) for r in rows)' "$J" "still a list of objects with email and state (the surfaces' parseAvailability)"
-check "all(set(r)==set($OLD)|{'rotate_at','swap_offer_at','rotation_paused_until'} for r in rows)" "$J" "every row carries exactly the keys it had before plus the three new ones"
+check "all(set(r)==set($OLD)|{'rotate_at','swap_offer_at','rotation_paused_until','rotation_setting'} for r in rows)" "$J" "every row carries exactly the keys it had before plus the new ones (rotation_setting: #430)"
 case "$J" in *"$SECRET"*) no "prints no token" "$J" ;; *) ok "prints no token" ;; esac
 
 echo "== 3. an override is the watcher's own, read the same way =="

@@ -1548,6 +1548,12 @@ jobs:
         # Also pins the shape the surfaces parse (a list) and that a non-finite pause is malformed.
         run: bash tests/availability-thresholds.test.sh
 
+      - name: the rotation threshold and the on/off switch are a stored setting, with the environment still winning
+        # #430: `claude-identity.sh rotation [--set]` is the one writer of quota-rotation.json; the watcher,
+        # --threshold and --availability read it. A bad stored value is ignored and reported, never honoured,
+        # and only a literal false turns rotation off. Includes a watcher tick with rotation off and on.
+        run: bash tests/quota-rotation-setting.test.sh
+
       - name: a paused quota watcher logs PAUSED once per pause, not once per tick
         # A long pause wrote the same line every few minutes (thousands in two weeks) and buried the
         # rest of the log. Runs the shipped _watch.py against a fabricated HOME, with a CONTROL that
