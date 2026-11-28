@@ -18,8 +18,13 @@ CAL="$VAULT/01 - calendar"
 OPEN="${AIOS_OPEN_STATUSES:-proposal|proposed|draft|in progress|in-progress|wip|open|pending|partial}"
 [ -d "$NOTES" ] || { echo "unfinished-work: none (no notes folder at $NOTES)"; exit 0; }
 
-# Open tasks that can link a document: project notes + the newest daily note.
-newest=$(find "$CAL" -type f -name '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].md' 2>/dev/null | sort | tail -1)
+# Open tasks that can link a document: project notes + the newest daily note up to today.
+# A note dated later is not today's: /7plan writes skeletons for the days ahead, and the
+# newest file would then be a day that has not come. The names are ISO dates, so a
+# string comparison with today's is a date comparison.
+today=$(date +%F)
+newest=$(find "$CAL" -type f -name '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].md' 2>/dev/null \
+  | awk -F/ -v t="$today.md" '$NF <= t' | sort | tail -1)
 open_tasks=$( { cat "$NOTES/projects/"*.md 2>/dev/null; [ -n "$newest" ] && cat "$newest"; } | grep -E '^[[:space:]]*- \[ \]' )
 
 found=0
