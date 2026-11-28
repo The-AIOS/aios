@@ -2,9 +2,11 @@
 
 > **Status: canonical half shipped in v0.8.9** — this spec, its conformance fixture
 > (`inbox-contract-4.conformance.json`, checked by `tests/inbox-contract-4.test.sh`), and the
-> `--effort` / `--advisor` flags on both spawn wrappers. Contract 3 stays in force until a surface
-> implements the fields and stamps `aios-spawn-inbox: contract 4` in `~/.aios/spawn-inbox/README.md`;
-> until then a session must not rely on any field below. The verbs are unchanged.
+> `--effort` / `--advisor` flags on both spawn wrappers. **In force:** the App and Glass both implement
+> the fields and stamp `aios-spawn-inbox: contract 4` in `~/.aios/spawn-inbox/README.md`
+> (`inbox-contract.json` declares the current number; `tests/inbox-contract-stamp.test.sh` reads the
+> surfaces). A machine whose stamp still reads 3 runs an older surface: there a session must not rely
+> on any field below. The verbs are unchanged.
 
 ## What changes
 
