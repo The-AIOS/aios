@@ -67,7 +67,7 @@
 
 **Everything under `hooks/claude-identity/` follows `CLAUDE_CONFIG_DIR` together** (#432, part of The-AIOS/aios-app#226). Most of it already did. The status line read the account from `~/.claude.json` and kept its cost tracker in `~/.claude`, the watcher wrote the "account swapped" marker to `~/.claude`, and the opt-in restart after a swap (`CLAUDE_AUTOSWAP_RESPAWN=1`) looked for sessions in `~/.claude/sessions`, whatever the variable said. With the variable set, the bar named the default login's account while the session ran on another. Where Claude Code keeps its files is now decided in one place, `hooks/claude-identity/_fs.py`, and every script asks it.
 
-**What changes for you.** Nothing, unless you set `CLAUDE_CONFIG_DIR`: every path is the same file it was. With it set, the swap marker and the cost tracker live in that folder. The banner also reads the old `~/.claude` spot and shows the newer of the two, so a manual swap from an AIOS Glass that still writes it there keeps its banner.
+**What changes for you.** Nothing, unless you set `CLAUDE_CONFIG_DIR`: every path is the same file it was. One exception: if an earlier run with `CLAUDE_CONFIG_DIR=~/.claude` left a `~/.claude/.claude.json`, account switches used to write that file, which Claude Code does not read with the variable unset; they now write `~/.claude.json`, the one it does. With it set, the swap marker and the cost tracker live in that folder. The banner also reads the old `~/.claude` spot and shows the newer of the two, so a manual swap from an AIOS Glass that still writes it there keeps its banner.
 
 **Action required** — none.
 

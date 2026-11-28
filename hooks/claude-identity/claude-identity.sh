@@ -172,11 +172,13 @@ set -euo pipefail
 # are never touched and no logout fires (see the /login revoke note below).
 CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 # .claude.json sits BESIDE the config dir in the default layout but INSIDE it
-# when relocated. Try the relocated position first, then fall back. The Python
-# side states this rule once, in _fs.claude_json_path(); this copy stays in shell
-# because the native Windows Python cannot test a Git Bash path, and
-# tests/quota-config-dir.test.sh fails if the two ever answer differently.
-if [ -f "$CONFIG_DIR/.claude.json" ]; then
+# when relocated. With the variable set, try the relocated position first, then
+# fall back. Unset, it is ~/.claude.json, the file Claude Code reads: a stray
+# ~/.claude/.claude.json (left by a run with CLAUDE_CONFIG_DIR=~/.claude) is not it.
+# The Python side states this rule once, in _fs.claude_json_path(); this copy
+# stays in shell because the native Windows Python cannot test a Git Bash path,
+# and tests/quota-config-dir.test.sh fails if the two ever answer differently.
+if [ -n "${CLAUDE_CONFIG_DIR:-}" ] && [ -f "$CONFIG_DIR/.claude.json" ]; then
   CLAUDE_JSON="$CONFIG_DIR/.claude.json"
 else
   CLAUDE_JSON="$HOME/.claude.json"

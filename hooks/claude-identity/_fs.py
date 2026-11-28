@@ -89,8 +89,10 @@ def config_dir() -> str:
 
 def claude_json_path() -> str:
     """Claude Code's global config. It sits BESIDE the config dir in the default layout
-    (~/.claude.json) and INSIDE it when relocated, so the relocated position wins when
-    the file is there and ~/.claude.json is the fallback otherwise."""
+    (~/.claude.json) and INSIDE it when relocated, so with CLAUDE_CONFIG_DIR set the
+    relocated position wins when the file is there and ~/.claude.json is the fallback.
+    Unset, it is always ~/.claude.json, the file Claude Code reads, even when a stray
+    ~/.claude/.claude.json exists."""
     cfg = os.environ.get("CLAUDE_CONFIG_DIR")
     if cfg and os.path.exists(os.path.join(cfg, ".claude.json")):
         return os.path.join(cfg, ".claude.json")

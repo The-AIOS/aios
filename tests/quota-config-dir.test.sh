@@ -171,11 +171,14 @@ sh_json() {  # the shell's answer for the same case, with the same fake HOME
 }
 printf '{}' > "$ALT/.claude.json"; s1="$(sh_json "$ALT")"; rm -f "$ALT/.claude.json"
 s2="$(sh_json "$ALT")"; s3="$(sh_json "")"
-if [ "$s1" = "$a" ] && [ "$s2" = "$b" ] && [ "$s3" = "$c" ]; then
-  ok "claude-identity.sh resolves .claude.json exactly as _fs.py does, in all three cases"
+# Unset, with a stray ~/.claude/.claude.json (left by a run with CLAUDE_CONFIG_DIR=~/.claude):
+# Claude Code reads ~/.claude.json, so both sides must too.
+printf '{}' > "$FH/.claude/.claude.json"; s4="$(sh_json "")"; d="$(probe "")"; rm -f "$FH/.claude/.claude.json"
+if [ "$s1" = "$a" ] && [ "$s2" = "$b" ] && [ "$s3" = "$c" ] && [ "$s4" = "$FH/.claude.json" ] && [ "$d" = "$FH/.claude.json" ]; then
+  ok "claude-identity.sh resolves .claude.json exactly as _fs.py does, in all four cases"
 else
-  no "claude-identity.sh resolves .claude.json exactly as _fs.py does, in all three cases" \
-     "shell: $s1 | $s2 | $s3 — python: $a | $b | $c"; fi
+  no "claude-identity.sh resolves .claude.json exactly as _fs.py does, in all four cases" \
+     "shell: $s1 | $s2 | $s3 | $s4 — python: $a | $b | $c | $d"; fi
 
 # 8. No Python module in claude-identity/ (nor the trust check) builds the path to
 #    .claude.json, the config dir or the swap marker itself: the rule lives in _fs.py.
@@ -186,8 +189,12 @@ escaped="$(cd "$ROOT/hooks" && for f in claude-identity/*.py install/run-trust-c
   $PYBIN - "$f" <<'PYEOF'
 import io, sys, tokenize
 src = open(sys.argv[1], encoding="utf-8").read()
+kinds = {tokenize.STRING} | ({tokenize.FSTRING_MIDDLE} if hasattr(tokenize, "FSTRING_MIDDLE") else set())
 for tok in tokenize.generate_tokens(io.StringIO(src).readline):
-    if tok.type != tokenize.STRING or tok.string.startswith(('"""', "'''")):
+    if tok.type not in kinds or tok.string.startswith(('"""', "'''")):
+        continue
+    if tok.string.strip("'\"") == ".claude":
+        print(f"{sys.argv[1]}:{tok.start[0]}: {tok.string}")
         continue
     if any(c.isspace() for c in tok.string):
         continue   # a message that names a file is not a path being built
@@ -205,13 +212,13 @@ printf '{"oauthAccount":{"emailAddress":"relocated@example.com"}}' > "$ALT/.clau
 PROBE='print(cm.COST_TRACKER_FILE); print(cm.get_account_display())'
 out="$(probe "$ALT")"
 if [ "$(printf '%s\n' "$out" | head -1)" = "$ALT/monthly-cost-tracker.json" ] \
-   && printf '%s' "$out" | grep -q "relocated" && ! printf '%s' "$out" | grep -q "home"; then
+   && printf '%s' "$out" | grep "relocated" >/dev/null && ! printf '%s' "$out" | grep "home" >/dev/null; then
   ok "context-monitor names the relocated account and keeps its cost tracker in the relocated dir"
 else
   no "context-monitor names the relocated account and keeps its cost tracker in the relocated dir" "got: $out"; fi
 rm -f "$ALT/.claude.json"
 out="$(probe "")"
-if [ "$(printf '%s\n' "$out" | head -1)" = "$FH/.claude/monthly-cost-tracker.json" ] && printf '%s' "$out" | grep -q "home"; then
+if [ "$(printf '%s\n' "$out" | head -1)" = "$FH/.claude/monthly-cost-tracker.json" ] && printf '%s' "$out" | grep "home" >/dev/null; then
   ok "unset: context-monitor keeps ~/.claude and ~/.claude.json"
 else
   no "unset: context-monitor keeps ~/.claude and ~/.claude.json" "got: $out"; fi
@@ -244,17 +251,23 @@ o4="$(probe "")"
 marker "$ALT/swap-notification.json" g@x h@x "$now"
 marker "$FH/.claude/swap-notification.json" c@x d@x "$((now - 60))"
 o5="$(probe "$ALT")"
+marker "$ALT/swap-notification.json" i@x j@x "$((now + 3600))"
+marker "$FH/.claude/swap-notification.json" c@x d@x "$now"
+o6="$(probe "$ALT")"
 rm -f "$ALT/swap-notification.json" "$FH/.claude/swap-notification.json"
-if printf '%s' "$o1" | grep -q 'a→b'; then
+if printf '%s' "$o1" | grep 'a→b' >/dev/null; then
   ok "the banner reads a marker the watcher wrote in the relocated dir"
 else no "the banner reads a marker the watcher wrote in the relocated dir" "got: $o1"; fi
-if printf '%s' "$o2" | grep -q 'c→d'; then
+if printf '%s' "$o2" | grep 'c→d' >/dev/null; then
   ok "the banner still reads a marker left in ~/.claude (installed Glass, older framework)"
 else no "the banner still reads a marker left in ~/.claude (installed Glass, older framework)" "got: $o2"; fi
-if printf '%s' "$o3" | grep -q 'c→d' && printf '%s' "$o5" | grep -q 'g→h'; then
+if printf '%s' "$o3" | grep 'c→d' >/dev/null && printf '%s' "$o5" | grep 'g→h' >/dev/null; then
   ok "with a marker in both places, the newer one wins, whichever place it is in"
 else no "with a marker in both places, the newer one wins, whichever place it is in" "older in config dir: $o3 | older in ~/.claude: $o5"; fi
-if printf '%s' "$o4" | grep -q 'c→d'; then
+if printf '%s' "$o6" | grep 'c→d' >/dev/null; then
+  ok "a marker dated in the future does not hide a valid one"
+else no "a marker dated in the future does not hide a valid one" "got: $o6"; fi
+if printf '%s' "$o4" | grep 'c→d' >/dev/null; then
   ok "unset: the banner reads ~/.claude as before"
 else no "unset: the banner reads ~/.claude as before" "got: $o4"; fi
 
@@ -266,8 +279,8 @@ printf 'def write_json_atomic(*a, **k):\n    pass\n' > "$WORK/old_fs.py"
 r1="$(printf '{"model":{"display_name":"Opus"}}' | HOME="$FH" $PYBIN "$LONE/context-monitor.py" 2>&1)"; c1=$?
 cp "$WORK/old_fs.py" "$LONE/_fs.py"
 r2="$(printf '{"model":{"display_name":"Opus"}}' | HOME="$FH" $PYBIN "$LONE/context-monitor.py" 2>&1)"; c2=$?
-if [ $c1 -eq 0 ] && [ $c2 -eq 0 ] && printf '%s' "$r1" | grep -q Opus && printf '%s' "$r2" | grep -q Opus \
-   && ! printf '%s%s' "$r1" "$r2" | grep -q Traceback; then
+if [ $c1 -eq 0 ] && [ $c2 -eq 0 ] && printf '%s' "$r1" | grep Opus >/dev/null && printf '%s' "$r2" | grep Opus >/dev/null \
+   && ! printf '%s%s' "$r1" "$r2" | grep Traceback >/dev/null; then
   ok "context-monitor still draws the bar alone, or beside an older _fs.py"
 else
   no "context-monitor still draws the bar alone, or beside an older _fs.py" "alone rc=$c1: $r1 | old _fs rc=$c2: $r2"; fi

@@ -600,8 +600,9 @@ def get_swap_banner():
         # The marker follows the config dir. The old ~/.claude spot is read too:
         # an installed Glass (manual swap) and a framework from before this
         # change write it there whatever CLAUDE_CONFIG_DIR says. The newer wins.
-        # With the variable unset both names are the same file.
-        m, ts = None, 0
+        # With the variable unset both names are the same file. A marker dated in
+        # the future (another clock) is skipped, so it cannot hide the other one.
+        m, ts, now = None, 0, time.time()
         for p in dict.fromkeys((swap_marker_path(), legacy_swap_marker_path())):
             try:
                 with open(p, encoding="utf-8") as f:
@@ -609,11 +610,11 @@ def get_swap_banner():
                 cts = cand.get("ts", 0) if isinstance(cand, dict) else 0
             except (OSError, ValueError):
                 continue
-            if isinstance(cts, (int, float)) and cts > ts:
+            if isinstance(cts, (int, float)) and ts < cts <= now:
                 m, ts = cand, cts
         if not ts:
             return ""
-        age = int(time.time() - ts)
+        age = int(now - ts)
         if age < 0 or age > SWAP_BANNER_TTL_SECS:
             return ""
         from_local = _account_label(m.get("from"))
