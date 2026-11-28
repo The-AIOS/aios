@@ -144,8 +144,13 @@
 #                           Stop payloads don't include rate_limits)
 #   watch                  read cache, swap if above thresholds
 #                          (launchd entrypoint)
+#   rotation               the stored rotation setting in force, as JSON
+#   rotation --set 5h=N 7d=N on|off
+#                          change it (N from 50 to 98); the App and Glass use this
 #
-# Environment overrides for the watcher thresholds:
+# The rotation setting lives in $CONFIG_DIR/quota-rotation.json, written only by
+# `rotation --set` (default: rotate at 98 in both windows, automatic rotation on).
+# Environment overrides for the watcher thresholds, which win over that file:
 #   CLAUDE_QUOTA_5H=98      rotate when 5h pct >= this
 #   CLAUDE_QUOTA_7D=98      rotate when 7d pct >= this
 #
@@ -154,8 +159,8 @@
 # that copy was never read by anything: nothing in this file consumed it, it was
 # never exported, and the hot path (statusLine -> _cache.py -> _watch.py) never
 # runs this script at all. An operator who edited it got silence, not an effect.
-# One value, one owner. Export the env vars to change it; `watch --threshold`
-# prints what is actually in force.
+# One value, one owner. Change it with `rotation --set` (or export the env vars);
+# `watch --threshold` prints what is actually in force and where it came from.
 #
 # Note (2026-04-23): come-home semantics removed for topology-independence.
 # The watcher now does pure rotate-only: when current account hits its cap,
@@ -933,6 +938,11 @@ case "${1:-}" in
   switch)  shift; cmd_switch "$@" ;;
   cache)   shift; cmd_cache "$@" ;;
   watch)   shift; cmd_watch "$@" ;;
+  # The stored rotation setting (#430). A subcommand of its own, not a `switch` flag: an older
+  # script given an unknown `switch --flag` reads it as an account name and enters the swap path,
+  # while an unknown SUBCOMMAND is refused below. The App and Glass also only send it once
+  # `--availability` carries `rotation_setting`. _watch.py reads and writes; nothing here does.
+  rotation) shift; exec $PY "$SELF_DIR/_watch.py" --rotation "$@" ;;
   ""|-h|--help)
     # Print the INSTALL + SUBCOMMANDS block from this file
     awk '/^# ============================/{if (++n==2 || n==4 || n==6) print; next} n>=1 && n<=6 {print}' "$0" | sed 's/^# \{0,1\}//'

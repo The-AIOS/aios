@@ -246,22 +246,41 @@ If `quota-watch.log` still says `no cache yet — skip (is the Stop hook install
 | `claude-switch {email\|alias}` | Jump to a specific account |
 | `claude-switch --capture` | Save current identity |
 | `claude-switch --list` | Show all accounts, saved state and refresh-token expiry (the active account's is read from the live credential) |
-| `claude-switch --availability` | Who can take you and why not, as JSON, for a surface or a script. It does not touch the credential store, and reads only the dates. Every row also carries `rotate_at` (the watcher's thresholds), `swap_offer_at` (where the App and Glass offer the swap button: each threshold minus `SWAP_OFFER_MARGIN_PCT` in `_watch.py`, 3) and `rotation_paused_until` (your pause, or `null`), so the surfaces hold no number of their own |
+| `claude-switch --availability` | Who can take you and why not, as JSON, for a surface or a script. It does not touch the credential store, and reads only the dates. Every row also carries `rotate_at` (the watcher's thresholds), `swap_offer_at` (where the App and Glass offer the swap button: each threshold minus `SWAP_OFFER_MARGIN_PCT` in `_watch.py`, 3) `rotation_paused_until` (your pause, or `null`) and `rotation_setting` (the stored setting below, with where each value comes from), so the surfaces hold no number of their own |
 | `claude-switch --order "a,b,c"` | Reorder the rotation, showing where you would fall before and after |
 | `claude-switch --enable {account}` / `--disable {account} [--reason why]` | Put an account in or out of rotation, keeping its identity |
 | `claude-switch --add {email} [--alias a] [--plan p] [--disabled] [--reason why]` | Add an account |
 | `claude-switch --help` | Swap-specific usage |
 | `claude-identity.sh cache` | Stop-hook entrypoint (reads stdin) |
 | `claude-identity.sh watch` | Launchd entrypoint (decides + swaps) |
+| `claude-identity.sh watch --threshold` | The thresholds and the on/off switch in force, where each comes from, and any value ignored |
+| `claude-identity.sh rotation` / `rotation --set 5h=N 7d=N on\|off` | Read (JSON) or change the stored rotation setting — see § Threshold tuning. The App and Glass edit it through this |
 
 ## Threshold tuning
 
-Defaults trigger a swap at **98%** on either the 5h or 7d window. We use 98 (not 99 or 100) because the comparison is `>=` and Claude Code's reported usage tends to plateau at exactly 100 once you hit the limit — at which point the swap is too late, the session is already throttled. 98 swaps just before saturation. If you want earlier safety (shared machines, teammates still learning), drop to 85-95 via env vars. Override via the plist (add a `<key>EnvironmentVariables</key>` block) or your shell for manual testing:
+Defaults trigger a swap at **98%** on either the 5h or 7d window. We use 98 (not 99 or 100) because the comparison is `>=` and Claude Code's reported usage tends to plateau at exactly 100 once you hit the limit — at which point the swap is too late, the session is already throttled. 98 swaps just before saturation. If you want earlier safety (many parallel sessions moving usage several points per reading, shared machines, teammates still learning), lower it.
+
+**The stored setting (#430).** The thresholds and automatic rotation on or off live in `$CLAUDE_CONFIG_DIR/quota-rotation.json` (`~/.claude/quota-rotation.json` unless you set `CLAUDE_CONFIG_DIR`). The App and Glass show and edit it from their settings; from a terminal:
+
+```bash
+claude-identity.sh rotation                     # what is in force, as JSON, and where each value comes from
+claude-identity.sh rotation --set 5h=90 7d=95   # rotate earlier
+claude-identity.sh rotation --set off           # stop rotating automatically, until --set on
+```
+
+- **Range 50 to 98.** Above 98 the swap comes too late; below 50 a busy day burns through every account. `--set` refuses anything else and writes nothing.
+- **One writer.** Only `rotation --set` writes the file (atomically, keeping the fields it was not asked to change). The App and Glass call it; neither keeps a number of its own.
+- **A bad value is ignored, never honoured.** A value in the file that is not a whole number from 50 to 98 (a string, `Infinity`, `120`, `true`), or a file that is not valid JSON, is ignored field by field: that window falls back to the default, and `watch --threshold`, `rotation` and `--availability` list it under `ignored`. Only a literal JSON `false` turns rotation off; `"false"`, `0` or `null` leave it on. A typo can make rotation late, never absent.
+- **Off is not the pause.** Off lasts until you turn it back on; the pause (below) carries an end date and lapses on its own. Off stops only the decision to rotate: the reading is still recorded (the App and Glass still offer the swap button from it), Remote Control is still re-attached, and a failed adoption after a manual swap is still caught. Both can be set at once; either one stops the automatic swap, and `--availability` reports them separately (`rotation_setting.enabled`, `rotation_paused_until`).
+
+**The environment still wins.** `CLAUDE_QUOTA_5H` / `CLAUDE_QUOTA_7D`, if set and valid (1-100, their old range), override the file per window, so a machine that already set them behaves as before. Set them in the plist (an `<key>EnvironmentVariables</key>` block) or your shell for manual testing:
 
 ```bash
 export CLAUDE_QUOTA_5H=98       # rotate when 5h pct >= this
 export CLAUDE_QUOTA_7D=98       # rotate when 7d pct >= this
 ```
+
+The source a reader reports for an environment value is the reader's own environment. A variable set only in the launchd plist is in force for the launchd tick but invisible to `rotation` run from a terminal or from the App, which then reports the file's value. Prefer the stored setting: it is the one place every runner reads.
 
 **One reading does not rotate.** The watcher needs the same account over a threshold on two different samples, at least 30 seconds apart. A session that predates a swap can report the previous account's numbers under the new account's name for a while, and one such reading used to be enough to rotate. A lone spike is dropped after 2 minutes of normal readings. If high and low readings keep alternating, because two sessions disagree, it rotates after 5 minutes: the stale one may be either, and a needless swap costs less than riding a real cap. Highs more than 2 minutes apart, with lows between them, cannot be told from repeated spikes and do not rotate. A launchd or systemd tick alone cannot confirm: it runs every 30 minutes, past the 5 minutes an arming stays valid. That is fine, because usage only grows while a session runs, and a running session evaluates far more often.
 
@@ -348,6 +367,7 @@ Several things can ask for a swap at once: every open session's statusLine kicks
 | `~/.claude/quota-watch.log` | Watcher's per-tick decision log | 644 |
 | `~/.claude/swap-log.jsonl` | Append-only log of every swap, automatic or manual | 644 |
 | `.switch-*.{lock,gen,pending}` (in `~/.claude/` on macOS, `$CLAUDE_CONFIG_DIR/.switch.*` elsewhere) | Switch lock, seat generation, interrupted-swap marker | 644 |
+| `~/.claude/quota-rotation.json` | The stored rotation setting: thresholds and on/off. Written only by `claude-identity.sh rotation --set` | 600 |
 | `~/.claude/quota-watch.paused` | **Operator-written** — future expiry that suspends rotation; ignored once past, never deleted by the watcher | 644 |
 | `~/.claude.json.bak-claude-switch` | Rollback snapshot of last swap | 644 |
 

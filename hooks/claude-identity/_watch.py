@@ -13,7 +13,9 @@ account in the list. Round-robin alternation. No "primary" / "come-home"
 semantics — those assumed a specific user topology (≥2 accounts + a
 preferred "home" account) that doesn't generalize across teammates.
 
-Thresholds (override via env):
+Thresholds and automatic rotation on/off: the stored setting in
+CONFIG_DIR/quota-rotation.json (`claude-identity.sh rotation [--set]`), overridden
+per window by the environment:
   CLAUDE_QUOTA_5H          rotate when 5h pct >= this (default 98)
   CLAUDE_QUOTA_7D          rotate when 7d pct >= this (default 98)
 
@@ -99,9 +101,131 @@ def _threshold(name: str) -> tuple:
     return v, "environment"
 
 
+# ── the stored rotation setting (#430) ───────────────────────────────────────
+# The operator's own numbers and the on/off switch, in one file the App and Glass edit through
+# `claude-identity.sh rotation --set` (this module is the only writer and the only reader). A FILE,
+# for the reason the pause is one: the statusLine, launchd, systemd and the Windows Scheduled Task
+# each run with their own environment, and a file under CONFIG_DIR is what all four see.
+#
+# Precedence, per field: a valid CLAUDE_QUOTA_5H / CLAUDE_QUOTA_7D, then the file, then the default.
+# The environment keeps its old range (1-100) and keeps winning, so a machine that set it behaves as
+# before whatever the file says. The file's range is narrower on purpose:
+#   - at most 98: at 100 the session is already throttled, and the swap comes too late;
+#   - at least 50: below that a busy day burns through every account before lunch. A floor, not a
+#     recommendation; the environment still reaches lower for whoever really means it.
+# A bad value (not a whole number, infinite, out of range, a broken file) is IGNORED field by field
+# and reported, never honoured: honouring it is how a typo turns rotation off for good.
+ROTATION_FILE = os.path.join(CONFIG_DIR, "quota-rotation.json")
+ROTATION_MIN_PCT = 50
+ROTATION_MAX_PCT = 98
+_ROTATION_FIELDS = (("five_hour", "CLAUDE_QUOTA_5H"), ("seven_day", "CLAUDE_QUOTA_7D"))
+
+
+def _read_rotation_file() -> tuple:
+    """(fields, problems). No file is no problem: ({}, [])."""
+    try:
+        with open(ROTATION_FILE, encoding="utf-8") as f:
+            raw = f.read()
+    except FileNotFoundError:
+        return {}, []
+    except Exception as e:
+        return {}, [f"{os.path.basename(ROTATION_FILE)} unreadable ({type(e).__name__}) — ignored"]
+    try:
+        # parse_constant: json.loads accepts the bare words Infinity and NaN, which are not numbers here.
+        data = json.loads(raw, parse_constant=lambda c: (_ for _ in ()).throw(ValueError(c)))
+    except ValueError:
+        return {}, [f"{os.path.basename(ROTATION_FILE)} is not valid JSON — ignored"]
+    if not isinstance(data, dict):
+        return {}, [f"{os.path.basename(ROTATION_FILE)} is not a JSON object — ignored"]
+    return data, []
+
+
+def _valid_file_pct(raw) -> bool:
+    # bool is an int in Python: `true` must not read as 1 %.
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        return False
+    if isinstance(raw, float) and (not math.isfinite(raw) or raw != int(raw)):
+        return False
+    return ROTATION_MIN_PCT <= int(raw) <= ROTATION_MAX_PCT
+
+
+def rotation_setting() -> dict:
+    """The rotation setting in force, and where each value comes from ("default", "file",
+    "environment"). `ignored` lists every value that was set and refused, in plain words."""
+    data, ignored = _read_rotation_file()
+    out = {}
+    for key, env in _ROTATION_FIELDS:
+        v, src = _threshold(env)
+        if src == "environment":
+            out[key] = {"value": v, "source": "environment"}
+            continue
+        if src != "built-in default":  # set and rejected: say so, then fall through to the file
+            ignored.append(src.split("(", 1)[-1].rstrip(")") + " — ignored")
+        if key in data:
+            if _valid_file_pct(data[key]):
+                out[key] = {"value": int(data[key]), "source": "file"}
+                continue
+            ignored.append(f"{key}={json.dumps(data[key])} in {os.path.basename(ROTATION_FILE)} is not a whole number "
+                           f"from {ROTATION_MIN_PCT} to {ROTATION_MAX_PCT} — ignored")
+        out[key] = {"value": DEFAULT_THRESHOLD_PCT, "source": "default"}
+    # Only a literal JSON false turns rotation off. "false", 0 or null is a typo, and a typo must never
+    # leave the autopilot off: it is reported and rotation stays on.
+    enabled, esrc = True, "default"
+    if "enabled" in data:
+        if isinstance(data["enabled"], bool):
+            enabled, esrc = data["enabled"], "file"
+        else:
+            ignored.append(f"enabled={json.dumps(data['enabled'])} in {os.path.basename(ROTATION_FILE)} is not true or false — ignored")
+    out["enabled"] = {"value": enabled, "source": esrc}
+    out["min"], out["max"] = ROTATION_MIN_PCT, ROTATION_MAX_PCT
+    out["ignored"] = ignored
+    return out
+
+
 def thresholds() -> tuple:
     """(5h, 7d) rotation thresholds actually in force."""
-    return _threshold("CLAUDE_QUOTA_5H")[0], _threshold("CLAUDE_QUOTA_7D")[0]
+    s = rotation_setting()
+    return s["five_hour"]["value"], s["seven_day"]["value"]
+
+
+def rotation_set(args: list) -> int:
+    """`claude-identity.sh rotation --set 5h=N 7d=N on|off`: the one writer of ROTATION_FILE.
+    Validates everything before writing anything, keeps the fields it was not asked to change
+    (valid ones only), and publishes the file atomically. Prints the setting now in force."""
+    want = {}
+    for a in args:
+        k, _, v = a.partition("=")
+        k = k.strip().lower()
+        if a.strip().lower() in ("on", "off"):
+            want["enabled"] = a.strip().lower() == "on"
+            continue
+        key = {"5h": "five_hour", "7d": "seven_day"}.get(k)
+        if not key or not re.fullmatch(r"\d{1,3}", v.strip()) or not ROTATION_MIN_PCT <= int(v) <= ROTATION_MAX_PCT:
+            sys.stderr.write(f"rotation --set: {a!r} is not 5h=N, 7d=N (N from {ROTATION_MIN_PCT} to {ROTATION_MAX_PCT}), on or off. Nothing written.\n")
+            return 2
+        want[key] = int(v)
+    if not want:
+        sys.stderr.write("rotation --set: nothing to set. Use 5h=N, 7d=N, on or off.\n")
+        return 2
+    data, _ = _read_rotation_file()
+    keep = {}
+    for key, _env in _ROTATION_FIELDS:
+        if key in data and _valid_file_pct(data[key]):
+            keep[key] = int(data[key])
+    if isinstance(data.get("enabled"), bool):
+        keep["enabled"] = data["enabled"]
+    keep.update(want)
+    try:
+        write_json_atomic(ROTATION_FILE, keep)
+    except OSError as e:
+        sys.stderr.write(f"rotation --set: could not write {ROTATION_FILE}: {e}\n")
+        return 1
+    s = rotation_setting()
+    for key, env in _ROTATION_FIELDS:
+        if key in want and s[key]["source"] == "environment":
+            sys.stderr.write(f"note: {env} is set in this environment and wins over the stored {want[key]}.\n")
+    print(json.dumps(s))
+    return 0
 
 
 def swap_offer_at(t5: int, t7: int) -> tuple:
@@ -488,7 +612,8 @@ def availability(current: str) -> list:
     0%. Then the order of the checks: an expired login ends at a login screen whatever
     the usage is, so it wins over a cap. Dates come from the stored state, then from
     the last reading, so an account unused for weeks is still read correctly."""
-    t5, t7 = thresholds()
+    setting = rotation_setting()
+    t5, t7 = setting["five_hour"]["value"], setting["seven_day"]["value"]
     o5, o7 = swap_offer_at(t5, t7)
     # The pause is global, like the thresholds; repeated on every row because the answer is a list and the
     # surfaces' parser refuses any other shape. A pause still being written (an empty marker seconds old) is
@@ -553,6 +678,10 @@ def availability(current: str) -> list:
             "rotate_at": {"five_hour": t5, "seven_day": t7},
             "swap_offer_at": {"five_hour": o5, "seven_day": o7},
             "rotation_paused_until": paused,
+            # The stored setting, with where each value comes from, for the surfaces' settings screen.
+            # Its presence is also how a surface knows this framework has `claude-identity.sh rotation`:
+            # it offers the editor only then, and never sends an older framework a command it lacks.
+            "rotation_setting": setting,
         })
     return rows
 
@@ -1061,7 +1190,8 @@ def reconnect_if_account_changed(self_path: str, switched_to: str = "") -> None:
 
 def main(self_path: str) -> None:
     try:
-        t5, t7 = thresholds()
+        setting = rotation_setting()
+        t5, t7 = setting["five_hour"]["value"], setting["seven_day"]["value"]
 
         # Remote Control reconnection runs BEFORE the pause gate, deliberately.
         # The operator pauses ROTATION; they never asked to become unreachable.
@@ -1164,6 +1294,15 @@ def main(self_path: str) -> None:
         if not action:
             low_reading(cache.get("captured_at") or 0)
             log(f"ok — {email} at 5h:{round(pct5)}% 7d:{round(pct7)}% (no swap)")
+            return
+
+        # Automatic rotation turned off in the stored setting (#430). Not the pause: a pause carries an
+        # end date and lapses on its own; this lasts until the operator turns it back on. Checked only
+        # here, at the decision, so everything above still runs while it is off: the reading is recorded
+        # (the App and Glass offer the manual swap from it), Remote Control is re-attached, and a failed
+        # adoption after a manual swap is still caught. Both can be set at once; either stops the swap.
+        if not setting["enabled"]["value"]:
+            log(f"OFF — {reason}, but automatic rotation is turned off in {os.path.basename(ROTATION_FILE)}; no swap")
             return
 
         # One reading over threshold is not evidence — see ARMED_FILE above.
@@ -1394,10 +1533,21 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1] == "--threshold":
         # Report the value THIS process would enforce. The point is that it is
         # answered by the consumer, so it cannot drift from what actually runs.
-        t5, s5 = _threshold("CLAUDE_QUOTA_5H")
-        t7, s7 = _threshold("CLAUDE_QUOTA_7D")
-        print(f"5h: {t5}%  ({s5})")
-        print(f"7d: {t7}%  ({s7})")
+        s = rotation_setting()
+        print(f"5h: {s['five_hour']['value']}%  ({s['five_hour']['source']})")
+        print(f"7d: {s['seven_day']['value']}%  ({s['seven_day']['source']})")
+        print(f"automatic rotation: {'on' if s['enabled']['value'] else 'off'}  ({s['enabled']['source']})")
+        for line in s["ignored"]:
+            print(f"ignored: {line}")
+        sys.exit(0)
+    if len(sys.argv) >= 2 and sys.argv[1] == "--rotation":
+        # `claude-identity.sh rotation [--set 5h=N 7d=N on|off]`: read (JSON) or write the stored setting.
+        if len(sys.argv) >= 3 and sys.argv[2] == "--set":
+            sys.exit(rotation_set(sys.argv[3:]))
+        if len(sys.argv) > 2:
+            sys.stderr.write("usage: claude-identity.sh rotation [--set 5h=N 7d=N on|off]\n")
+            sys.exit(2)
+        print(json.dumps(rotation_setting()))
         sys.exit(0)
     if len(sys.argv) >= 4 and sys.argv[1] == "--rc-after-switch":
         # claude-identity.sh switch calls this the moment a swap lands, so Remote Control
