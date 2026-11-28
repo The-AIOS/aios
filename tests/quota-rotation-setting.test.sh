@@ -71,13 +71,13 @@ check() {
 echo "== 1. no file: the defaults, and where they come from =="
 J="$(rot)"
 check 's["five_hour"]=={"value":98,"source":"default"} and s["seven_day"]=={"value":98,"source":"default"}' "$J" "98 / 98, from the default"
-check 's["enabled"]=={"value":True,"source":"default"} and s["ignored"]==[] and (s["min"],s["max"])==(50,98)' "$J" "automatic rotation on, nothing ignored, range 50-98"
+check 's["enabled"]=={"value":True,"source":"default"} and s["ignored"]==[] and s["environment_ignored"]==[] and (s["min"],s["max"])==(50,98)' "$J" "automatic rotation on, nothing ignored, range 50-98"
 [ ! -e "$F" ] && ok "reading does not create the file" || no "reading created $F"
 
 echo "== 2. the writer, and every reader agreeing with it =="
 J="$(rot --set 5h=90 7d=95)"
 check 's["five_hour"]=={"value":90,"source":"file"} and s["seven_day"]=={"value":95,"source":"file"}' "$J" "--set 5h=90 7d=95 answers the new setting, from the file"
-check '{"five_hour":90,"seven_day":95}.items() <= s.items()' "$(cat "$F" 2>/dev/null || echo '{}')" "the file holds exactly what was set"
+check 's=={"five_hour":90,"seven_day":95}' "$(cat "$F" 2>/dev/null || echo '{}')" "the file holds exactly what was set"
 J="$(avail)"
 check 'len(s)==2 and all(r["rotate_at"]=={"five_hour":90,"seven_day":95} and r["swap_offer_at"]=={"five_hour":87,"seven_day":92} for r in s)' "$J" "--availability rotates at 90/95 and offers the button at 87/92"
 check 'all(r["rotation_setting"]["five_hour"]["source"]=="file" and r["rotation_setting"]["enabled"]["value"] is True for r in s)' "$J" "and carries the setting with its sources on every row"
@@ -94,7 +94,7 @@ check 's["five_hour"]=={"value":80,"source":"environment"} and s["seven_day"]["s
 J="$(CLAUDE_QUOTA_5H=20 rot)"
 check 's["five_hour"]=={"value":20,"source":"environment"}' "$J" "the environment keeps its old 1-100 range (a machine that set 20 behaves as before)"
 J="$(CLAUDE_QUOTA_5H=abc rot)"
-check 's["five_hour"]=={"value":90,"source":"file"} and any("CLAUDE_QUOTA_5H" in i for i in s["ignored"])' "$J" "an invalid override falls back to the file, and is reported"
+check 's["five_hour"]=={"value":90,"source":"file"} and any("CLAUDE_QUOTA_5H" in i for i in s["environment_ignored"]) and s["ignored"]==[]' "$J" "an invalid override falls back to the file, and is reported apart from the stored values (a settings screen cannot fix it)"
 
 echo "== 4. the writer refuses, and writes nothing =="
 before="$(cat "$F")"
@@ -105,6 +105,10 @@ done
 env_run bash "$SH" rotation --set 5h=90 5h=200 >/dev/null 2>&1; rc=$?
 [ "$rc" -ne 0 ] && [ "$(cat "$F")" = "$before" ] && ok "one bad value refuses the whole call" || no "a partial write happened" "$(cat "$F")"
 env_run bash "$SH" rotation --set >/dev/null 2>&1 && no "--set with nothing was accepted" || ok "--set with nothing is refused"
+for dup in "on off" "5h=60 5h=90" "7d=90 7d=90"; do
+  env_run bash "$SH" rotation --set $dup >/dev/null 2>&1; rc=$?
+  [ "$rc" -ne 0 ] && [ "$(cat "$F")" = "$before" ] && ok "--set $dup (given twice) is refused, file unchanged" || no "--set $dup was accepted" "rc=$rc"
+done
 env_run bash "$SH" rotation --bogus >/dev/null 2>&1 && no "an unknown rotation flag was accepted" || ok "an unknown rotation flag is refused"
 
 echo "== 5. a bad value in the file is ignored and reported, never honoured =="
@@ -118,6 +122,14 @@ for body in 'not json' '[90,95]' '' '{"five_hour":'; do
   J="$(bad_file "$body")"
   check 's["five_hour"]["value"]==98 and s["seven_day"]["value"]==98 and s["enabled"]["value"] is True' "$J" "a file reading '$body' → defaults, rotation on"
 done
+J="$(bad_file '{"five_hour":NaN,"seven_day":91,"enabled":false}')"
+check 's["five_hour"]["source"]=="default" and s["seven_day"]=={"value":91,"source":"file"} and s["enabled"]["value"] is False' "$J" "a NaN window is refused alone: the other window and the off switch still hold"
+J="$(printf '%5000s' '' | tr ' ' '[' > "$F"; rot)"
+check 's["five_hour"]["value"]==98 and s["enabled"]["value"] is True and s["ignored"]' "$J" "a file nested thousands deep is refused, not a crash"
+A2="$(env_run bash "$SH" switch --availability 2>/dev/null)"
+check 'len(s)==2' "$A2" "and --availability still answers (the App keeps its account list)"
+J="$(printf '{"five_hour":120}' > "$F"; CLAUDE_QUOTA_5H=80 rot)"
+check 's["five_hour"]=={"value":80,"source":"environment"} and any("five_hour=120" in i for i in s["ignored"])' "$J" "a bad stored window is reported even while the environment wins it"
 J="$(bad_file '{"five_hour":200,"seven_day":91}')"
 check 's["five_hour"]["source"]=="default" and s["seven_day"]=={"value":91,"source":"file"}' "$J" "one bad window does not drag the other"
 J="$(env_run bash "$SH" switch --availability 2>/dev/null)"
@@ -140,6 +152,10 @@ printf '%s\n' "$FUT" > "$H/.claude/quota-watch.paused"; touch -t 200001010000 "$
 J="$(avail)"
 check "all(r['rotation_paused_until']==$FUT and r['rotation_setting']['enabled']['value'] is False for r in s)" "$J" "off and paused are reported separately, side by side"
 rm -f "$H/.claude/quota-watch.paused"
+J="$(rot --set 5h=80)"
+check 's["enabled"]["value"] is False and s["five_hour"]["value"]==80' "$J" "changing a window while off keeps it off"
+printf '{"enabled":false,"future_key":"x"}' > "$F"; rot --set 7d=90 >/dev/null
+check 's.get("future_key")=="x" and s.get("enabled") is False and s.get("seven_day")==90' "$(cat "$F")" "the writer keeps a key it does not know (a newer version's)"
 J="$(rot --set on)"
 check 's["enabled"]=={"value":True,"source":"file"}' "$J" "--set on turns it back on"
 
@@ -175,9 +191,8 @@ r="$(tick off)"
 r="$(tick on)"
 [ "$r" = "1 1 0" ] && ok "CONTROL: on, the same tick reaches the rotation gate" || no "on → '$r' (want '1 1 0')"
 
-echo "== 8. an older framework refuses the subcommand rather than switching =="
-grep -qE '^\s*\*\)\s*$' "$SH" && grep -q 'unknown subcommand' "$SH" && ok "unknown subcommands are refused by the dispatcher (what an older script does with 'rotation')" || no "the dispatcher no longer refuses unknown subcommands"
-grep -q '"rotation_setting"' "$W" && ok "--availability names the field the surfaces gate the editor on" || no "rotation_setting missing from availability()"
+echo "== 8. an unknown subcommand is refused, never read as something else =="
+env_run bash "$SH" no-such-subcommand >/dev/null 2>&1 && no "the dispatcher accepts an unknown subcommand" || ok "the dispatcher refuses an unknown subcommand, the path an older script takes for 'rotation' (the surfaces also only send it when --availability carries rotation_setting)"
 
 echo
 echo "quota-rotation-setting: $PASS passed, $FAIL failed"

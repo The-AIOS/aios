@@ -129,14 +129,15 @@ def _read_rotation_file() -> tuple:
     except FileNotFoundError:
         return {}, []
     except Exception as e:
-        return {}, [f"{os.path.basename(ROTATION_FILE)} unreadable ({type(e).__name__}) — ignored"]
+        return {}, [f"{os.path.basename(ROTATION_FILE)} unreadable ({type(e).__name__})"]
     try:
-        # parse_constant: json.loads accepts the bare words Infinity and NaN, which are not numbers here.
-        data = json.loads(raw, parse_constant=lambda c: (_ for _ in ()).throw(ValueError(c)))
-    except ValueError:
-        return {}, [f"{os.path.basename(ROTATION_FILE)} is not valid JSON — ignored"]
+        # json.loads reads the bare words Infinity and NaN as floats; _valid_file_pct refuses them field by field.
+        # Exception, not ValueError: a deeply nested file raises RecursionError, and nothing here may crash a tick.
+        data = json.loads(raw)
+    except Exception:
+        return {}, [f"{os.path.basename(ROTATION_FILE)} is not valid JSON"]
     if not isinstance(data, dict):
-        return {}, [f"{os.path.basename(ROTATION_FILE)} is not a JSON object — ignored"]
+        return {}, [f"{os.path.basename(ROTATION_FILE)} is not a JSON object"]
     return data, []
 
 
@@ -151,23 +152,28 @@ def _valid_file_pct(raw) -> bool:
 
 def rotation_setting() -> dict:
     """The rotation setting in force, and where each value comes from ("default", "file",
-    "environment"). `ignored` lists every value that was set and refused, in plain words."""
+    "environment"). `ignored` lists the stored values refused, `environment_ignored` the refused
+    overrides, in plain words."""
     data, ignored = _read_rotation_file()
+    env_ignored = []
     out = {}
     for key, env in _ROTATION_FIELDS:
+        # The stored value is judged even when the environment wins, so a bad one is said now and not
+        # discovered the day the variable is removed.
+        stored = None
+        if key in data:
+            if _valid_file_pct(data[key]):
+                stored = int(data[key])
+            else:
+                ignored.append(f"{key}={json.dumps(data[key])} in {os.path.basename(ROTATION_FILE)} is not a whole number "
+                               f"from {ROTATION_MIN_PCT} to {ROTATION_MAX_PCT}")
         v, src = _threshold(env)
         if src == "environment":
             out[key] = {"value": v, "source": "environment"}
-            continue
-        if src != "built-in default":  # set and rejected: say so, then fall through to the file
-            ignored.append(src.split("(", 1)[-1].rstrip(")") + " — ignored")
-        if key in data:
-            if _valid_file_pct(data[key]):
-                out[key] = {"value": int(data[key]), "source": "file"}
-                continue
-            ignored.append(f"{key}={json.dumps(data[key])} in {os.path.basename(ROTATION_FILE)} is not a whole number "
-                           f"from {ROTATION_MIN_PCT} to {ROTATION_MAX_PCT} — ignored")
-        out[key] = {"value": DEFAULT_THRESHOLD_PCT, "source": "default"}
+        else:
+            if src != "built-in default":  # set and rejected: say so, then fall back to the file
+                env_ignored.append(src.split("(", 1)[-1].rstrip(")"))
+            out[key] = {"value": stored, "source": "file"} if stored is not None else {"value": DEFAULT_THRESHOLD_PCT, "source": "default"}
     # Only a literal JSON false turns rotation off. "false", 0 or null is a typo, and a typo must never
     # leave the autopilot off: it is reported and rotation stays on.
     enabled, esrc = True, "default"
@@ -175,10 +181,13 @@ def rotation_setting() -> dict:
         if isinstance(data["enabled"], bool):
             enabled, esrc = data["enabled"], "file"
         else:
-            ignored.append(f"enabled={json.dumps(data['enabled'])} in {os.path.basename(ROTATION_FILE)} is not true or false — ignored")
+            ignored.append(f"enabled={json.dumps(data['enabled'])} in {os.path.basename(ROTATION_FILE)} is not true or false")
     out["enabled"] = {"value": enabled, "source": esrc}
     out["min"], out["max"] = ROTATION_MIN_PCT, ROTATION_MAX_PCT
+    # Two lists, because only one can be fixed from a settings screen: `ignored` is what the stored file holds and
+    # `rotation --set` replaces; `environment_ignored` is a rejected CLAUDE_QUOTA_* override, which only its owner can fix.
     out["ignored"] = ignored
+    out["environment_ignored"] = env_ignored
     return out
 
 
@@ -197,18 +206,26 @@ def rotation_set(args: list) -> int:
         k, _, v = a.partition("=")
         k = k.strip().lower()
         if a.strip().lower() in ("on", "off"):
+            if "enabled" in want:
+                sys.stderr.write("rotation --set: on/off given twice. Nothing written.\n")
+                return 2
             want["enabled"] = a.strip().lower() == "on"
             continue
         key = {"5h": "five_hour", "7d": "seven_day"}.get(k)
         if not key or not re.fullmatch(r"\d{1,3}", v.strip()) or not ROTATION_MIN_PCT <= int(v) <= ROTATION_MAX_PCT:
             sys.stderr.write(f"rotation --set: {a!r} is not 5h=N, 7d=N (N from {ROTATION_MIN_PCT} to {ROTATION_MAX_PCT}), on or off. Nothing written.\n")
             return 2
+        if key in want:
+            sys.stderr.write(f"rotation --set: {k} given twice. Nothing written.\n")
+            return 2
         want[key] = int(v)
     if not want:
         sys.stderr.write("rotation --set: nothing to set. Use 5h=N, 7d=N, on or off.\n")
         return 2
     data, _ = _read_rotation_file()
-    keep = {}
+    # Keys this version does not know are kept as they are, so a newer field is not wiped by an older writer.
+    known = {k for k, _e in _ROTATION_FIELDS} | {"enabled"}
+    keep = {k: v for k, v in data.items() if k not in known}
     for key, _env in _ROTATION_FIELDS:
         if key in data and _valid_file_pct(data[key]):
             keep[key] = int(data[key])
@@ -1537,7 +1554,7 @@ if __name__ == "__main__":
         print(f"5h: {s['five_hour']['value']}%  ({s['five_hour']['source']})")
         print(f"7d: {s['seven_day']['value']}%  ({s['seven_day']['source']})")
         print(f"automatic rotation: {'on' if s['enabled']['value'] else 'off'}  ({s['enabled']['source']})")
-        for line in s["ignored"]:
+        for line in s["ignored"] + s["environment_ignored"]:
             print(f"ignored: {line}")
         sys.exit(0)
     if len(sys.argv) >= 2 and sys.argv[1] == "--rotation":
@@ -1556,7 +1573,7 @@ if __name__ == "__main__":
         reconnect_if_account_changed(sys.argv[3], switched_to=sys.argv[2])
         sys.exit(0)
     if len(sys.argv) < 2:
-        sys.stderr.write("_watch.py: usage: _watch.py <self_path> | --threshold | --rc-after-switch <to> <self_path>\n")
+        sys.stderr.write("_watch.py: usage: _watch.py <self_path> | --threshold | --rotation [--set 5h=N 7d=N on|off] | --rc-after-switch <to> <self_path>\n")
         sys.exit(2)
     main(sys.argv[1])
     record_health()
