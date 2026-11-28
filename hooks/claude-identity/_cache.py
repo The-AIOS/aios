@@ -50,10 +50,12 @@ WATCH_TICK_SECS_HOT = 3     # near the cap — every second counts
 HOT_ZONE_PCT = 85           # above this, tick fast
 
 
-def config_dir(home: str) -> str:
-    """Claude Code's config root. Honouring CLAUDE_CONFIG_DIR is what makes the
-    isolated-config account capture possible — see the note in _watch.py."""
-    return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(home, ".claude")
+def config_dir() -> str:
+    """Claude Code's config root. The rule lives in _fs.config_dir(); honouring
+    CLAUDE_CONFIG_DIR is what makes the isolated-config account capture possible."""
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from _fs import config_dir as _config_dir
+    return _config_dir()
 
 
 def current_gen():
@@ -80,13 +82,11 @@ def update(payload: str, gen=None) -> None:
     context-monitor.py calls this in its own process, so the status line is one program (#292).
     Callers pass the generation they read BEFORE reading the payload."""
     home = os.path.expanduser("~")
-    cfg = config_dir(home)
+    cfg = config_dir()
     cache_path = os.path.join(cfg, "rate-limit-cache.json")
-    # .claude.json sits BESIDE the config dir in the default layout but INSIDE
-    # it when relocated, so try the relocated position first and fall back.
-    claude_json = os.path.join(cfg, ".claude.json")
-    if not os.path.exists(claude_json):
-        claude_json = os.path.join(home, ".claude.json")
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from _fs import claude_json_path
+    claude_json = claude_json_path()
 
     # The seat generation BEFORE the payload is read: if a swap lands while
     # this process holds a payload, the sample carries the older generation and
@@ -197,12 +197,12 @@ def kick_watcher(home: str, worst_pct: float = 0) -> None:
     """Spawn _watch.py in the background if enough time has elapsed since the
     last kick. Touches a tick marker so subsequent statusLine renders don't pile
     up subprocesses. The interval tightens as usage approaches the cap."""
-    tick_path = os.path.join(config_dir(home), "watch-tick")
+    tick_path = os.path.join(config_dir(), "watch-tick")
     interval = tick_interval(worst_pct)
     # While a rotation awaits confirmation, a low reading has to reach the gate too. Without
     # this it waits out the slow interval, and a high render refreshes the marker first, so
     # the watcher only ever sees the highs.
-    if os.path.exists(os.path.join(config_dir(home), "quota-watch.armed.json")):
+    if os.path.exists(os.path.join(config_dir(), "quota-watch.armed.json")):
         interval = WATCH_TICK_SECS_HOT
     now = time.time()
     if os.path.exists(tick_path):

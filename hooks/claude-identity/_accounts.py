@@ -101,8 +101,9 @@ def log_file() -> str:
 
 
 def identities_dir() -> str:
-    cfg = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
-    return os.path.join(cfg, "identities")
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from _fs import config_dir
+    return os.path.join(config_dir(), "identities")
 
 
 def _legacy_user_md() -> str:

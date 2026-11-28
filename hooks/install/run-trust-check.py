@@ -27,12 +27,11 @@ def run_dir() -> str:
 
 
 def claude_json_path() -> str:
-    # Same rule as hooks/claude-identity/_cache.py: inside a relocated config dir first, else beside home.
-    home = os.path.expanduser("~")
-    cfg = os.environ.get("CLAUDE_CONFIG_DIR")
-    if cfg and os.path.exists(os.path.join(cfg, ".claude.json")):
-        return os.path.join(cfg, ".claude.json")
-    return os.path.join(home, ".claude.json")
+    # The rule lives in hooks/claude-identity/_fs.py: inside a relocated config dir first, else
+    # beside home. realpath, not abspath: reached through a symlink, abspath points beside the link.
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "claude-identity"))
+    from _fs import claude_json_path as rule
+    return rule()
 
 
 def _norm(p: str) -> str:
@@ -59,7 +58,11 @@ def main() -> int:
     folder = run_dir()
     if not os.path.isdir(folder):
         return 0  # nothing has been spawned on this machine yet: nothing to ask about
-    if trusted(folder, claude_json_path()):
+    try:
+        claude_json = claude_json_path()
+    except Exception:
+        return 0  # the shared rule could not be loaded: say nothing rather than guess (advice, never a gate)
+    if trusted(folder, claude_json):
         return 0
     if os.name == "nt":
         how = f'cd "{folder}"; claude'

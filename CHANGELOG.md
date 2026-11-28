@@ -59,6 +59,18 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-28 — With CLAUDE_CONFIG_DIR set, the status line names the right account and the swap banner shows
+
+`hash: ` · [#432](https://github.com/The-AIOS/aios/issues/432)
+
+> **What you can now do.** Run Claude Code with `CLAUDE_CONFIG_DIR` set (a second account logged into its own folder) and have the status line name that account, show the swap banner after a rotation, and have the opt-in restart find the session.
+
+**Everything under `hooks/claude-identity/` follows `CLAUDE_CONFIG_DIR` together** (#432, part of The-AIOS/aios-app#226). Most of it already did. The status line read the account from `~/.claude.json` and kept its cost tracker in `~/.claude`, the watcher wrote the "account swapped" marker to `~/.claude`, and the opt-in restart after a swap (`CLAUDE_AUTOSWAP_RESPAWN=1`) looked for sessions in `~/.claude/sessions`, whatever the variable said. With the variable set, the bar named the default login's account while the session ran on another. Where Claude Code keeps its files is now decided in one place, `hooks/claude-identity/_fs.py`, and every script asks it.
+
+**What changes for you.** Nothing, unless you set `CLAUDE_CONFIG_DIR`: every path is the same file it was. One exception: if an earlier run with `CLAUDE_CONFIG_DIR=~/.claude` left a `~/.claude/.claude.json`, account switches used to write that file, which Claude Code does not read with the variable unset; they now write `~/.claude.json`, the one it does. With it set, the swap marker and the cost tracker live in that folder. The banner also reads the old `~/.claude` spot and shows the newer of the two, so a manual swap from an AIOS Glass that still writes it there keeps its banner.
+
+**Action required** — none.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)

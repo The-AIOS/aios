@@ -72,6 +72,46 @@ def keychain_service() -> str:
     return base + "-" + h
 
 
+# ── where Claude Code keeps its files ───────────────────────────────────────
+# The one Python statement of the rule. Every module in this folder (and the
+# trust check in hooks/install/) asks these instead of building the path, and
+# tests/quota-config-dir.test.sh fails if one builds it again. claude-identity.sh
+# keeps a shell copy of the .claude.json rule, because the native Windows Python
+# it would have to ask cannot test a Git Bash path; the same test pins the two to
+# the same answers.
+
+def config_dir() -> str:
+    """Claude Code's config root: $CLAUDE_CONFIG_DIR when set and non-empty, else ~/.claude.
+    Claude Code relocates its whole tree there, and the isolated-config account capture
+    depends on every component following it together (see the note in _watch.py)."""
+    return os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+
+
+def claude_json_path() -> str:
+    """Claude Code's global config. It sits BESIDE the config dir in the default layout
+    (~/.claude.json) and INSIDE it when relocated, so with CLAUDE_CONFIG_DIR set the
+    relocated position wins when the file is there and ~/.claude.json is the fallback.
+    Unset, it is always ~/.claude.json, the file Claude Code reads, even when a stray
+    ~/.claude/.claude.json exists."""
+    cfg = os.environ.get("CLAUDE_CONFIG_DIR")
+    if cfg and os.path.exists(os.path.join(cfg, ".claude.json")):
+        return os.path.join(cfg, ".claude.json")
+    return os.path.join(os.path.expanduser("~"), ".claude.json")
+
+
+def swap_marker_path() -> str:
+    """Where the watcher leaves the "account swapped" marker for the status line banner."""
+    return os.path.join(config_dir(), "swap-notification.json")
+
+
+def legacy_swap_marker_path() -> str:
+    """Where the marker was written before it followed the config dir, and where a surface
+    that has not caught up still writes it (AIOS Glass's manual swap, until its
+    CLAUDE_CONFIG_DIR change ships). The banner reads both, so neither side loses it.
+    The same path as swap_marker_path() when the variable is not set."""
+    return os.path.join(os.path.expanduser("~"), ".claude", "swap-notification.json")
+
+
 def seat_state_base() -> str:
     """Base path of the seat's lock, generation and pending marker -- the same
     path claude-identity.sh computes. On macOS the state is per Keychain item
@@ -80,8 +120,7 @@ def seat_state_base() -> str:
     home = os.path.expanduser("~")
     if sys.platform == "darwin":
         return os.path.join(home, ".claude", ".switch-" + keychain_service())
-    cfg = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(home, ".claude")
-    return os.path.join(cfg, ".switch")
+    return os.path.join(config_dir(), ".switch")
 
 
 def seat_generation() -> int:

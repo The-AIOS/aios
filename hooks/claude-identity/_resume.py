@@ -93,7 +93,12 @@ import time
 from glob import glob
 
 
-SESSIONS_DIR = os.path.expanduser("~/.claude/sessions")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _fs import config_dir  # noqa: E402
+
+# Claude Code writes its session registry inside the config dir, so a session
+# started with CLAUDE_CONFIG_DIR set is registered there and nowhere else.
+SESSIONS_DIR = os.path.join(config_dir(), "sessions")
 
 # Prompt tuning note (2026-04-22):
 # The first version said "Continue your previous work." That reads as a

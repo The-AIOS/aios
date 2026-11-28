@@ -66,8 +66,8 @@ import importlib.util, sys, os
 spec = importlib.util.spec_from_file_location("c", sys.argv[1])
 c = importlib.util.module_from_spec(spec); spec.loader.exec_module(c)
 home = sys.argv[2]
-print(c.config_dir(home))
-print(os.path.join(c.config_dir(home), "watch-tick"))
+print(c.config_dir())
+print(os.path.join(c.config_dir(), "watch-tick"))
 PYEOF
 )"
 if [ "$(printf '%s' "$out" | grep -cv "^$ALT")" -eq 0 ] && [ -n "$out" ]; then
@@ -124,6 +124,166 @@ if [ "$out" = "$HOME/.claude.json" ]; then
   ok "falls back to \$HOME/.claude.json when the relocated one is absent"
 else
   no "falls back to \$HOME/.claude.json when the relocated one is absent" "got: $out"; fi
+
+# ── The statusline and the swap marker (The-AIOS/aios-app#226) ───────────────
+# context-monitor.py is the renderer every session runs, and it read three paths
+# from a fixed ~/.claude: the account (.claude.json), the cost tracker and the
+# swap marker the watcher writes. With the variable set, the bar named the
+# default seat's account while the session ran on another. A fake HOME keeps the
+# machine's real files out of every case below.
+FH="$WORK/home"; mkdir -p "$FH/.claude"
+printf '{"oauthAccount":{"emailAddress":"home@example.com"}}' > "$FH/.claude.json"
+
+# Runs $PROBE against context-monitor.py (cm) and _fs.py (fs) with HOME=$FH.
+# $1 = CLAUDE_CONFIG_DIR, or "" for unset.
+probe() {
+  local cfg="$1"
+  if [ -n "$cfg" ]; then set -- env HOME="$FH" CLAUDE_CONFIG_DIR="$cfg"
+  else set -- env -u CLAUDE_CONFIG_DIR HOME="$FH"; fi
+  "$@" $PYBIN - "$D" <<PYEOF 2>&1
+import importlib.util, os, sys
+sys.path.insert(0, sys.argv[1])
+spec = importlib.util.spec_from_file_location("cm", os.path.join(sys.argv[1], "context-monitor.py"))
+cm = importlib.util.module_from_spec(spec); spec.loader.exec_module(cm)
+import _fs as fs
+$PROBE
+PYEOF
+}
+
+# 7. One rule for .claude.json in Python, and the shell gives the same answers.
+printf '{"oauthAccount":{"emailAddress":"relocated@example.com"}}' > "$ALT/.claude.json"
+PROBE='print(fs.claude_json_path())'
+a="$(probe "$ALT")"
+rm -f "$ALT/.claude.json"
+b="$(probe "$ALT")"
+c="$(probe "")"
+if [ "$a" = "$ALT/.claude.json" ] && [ "$b" = "$FH/.claude.json" ] && [ "$c" = "$FH/.claude.json" ]; then
+  ok "_fs.claude_json_path: inside the relocated dir when present, else beside home"
+else
+  no "_fs.claude_json_path: inside the relocated dir when present, else beside home" "present=$a absent=$b unset=$c"; fi
+
+sh_json() {  # the shell's answer for the same case, with the same fake HOME
+  HOME="$FH" CFG="$1" SRC="$D/claude-identity.sh" bash -c '
+    set -uo pipefail
+    if [ -n "$CFG" ]; then export CLAUDE_CONFIG_DIR="$CFG"; else unset CLAUDE_CONFIG_DIR; fi
+    eval "$(sed -n "/^CONFIG_DIR=/,/^IDENTITIES_DIR=/p" "$SRC")"
+    echo "$CLAUDE_JSON"'
+}
+printf '{}' > "$ALT/.claude.json"; s1="$(sh_json "$ALT")"; rm -f "$ALT/.claude.json"
+s2="$(sh_json "$ALT")"; s3="$(sh_json "")"
+# Unset, with a stray ~/.claude/.claude.json (left by a run with CLAUDE_CONFIG_DIR=~/.claude):
+# Claude Code reads ~/.claude.json, so both sides must too.
+printf '{}' > "$FH/.claude/.claude.json"; s4="$(sh_json "")"; d="$(probe "")"; rm -f "$FH/.claude/.claude.json"
+if [ "$s1" = "$a" ] && [ "$s2" = "$b" ] && [ "$s3" = "$c" ] && [ "$s4" = "$FH/.claude.json" ] && [ "$d" = "$FH/.claude.json" ]; then
+  ok "claude-identity.sh resolves .claude.json exactly as _fs.py does, in all four cases"
+else
+  no "claude-identity.sh resolves .claude.json exactly as _fs.py does, in all four cases" \
+     "shell: $s1 | $s2 | $s3 | $s4 — python: $a | $b | $c | $d"; fi
+
+# 8. No Python module in claude-identity/ (nor the trust check) builds the path to
+#    .claude.json, the config dir or the swap marker itself: the rule lives in _fs.py.
+#    Only path-like string literals count: docstrings and messages (anything with a
+#    space) are skipped, and comments are not strings.
+escaped="$(cd "$ROOT/hooks" && for f in claude-identity/*.py install/run-trust-check.py; do
+  [ "$f" = "claude-identity/_fs.py" ] && continue
+  $PYBIN - "$f" <<'PYEOF'
+import io, sys, tokenize
+src = open(sys.argv[1], encoding="utf-8").read()
+kinds = {tokenize.STRING} | ({tokenize.FSTRING_MIDDLE} if hasattr(tokenize, "FSTRING_MIDDLE") else set())
+for tok in tokenize.generate_tokens(io.StringIO(src).readline):
+    if tok.type not in kinds or tok.string.startswith(('"""', "'''")):
+        continue
+    if tok.string.strip("'\"") == ".claude":
+        print(f"{sys.argv[1]}:{tok.start[0]}: {tok.string}")
+        continue
+    if any(c.isspace() for c in tok.string):
+        continue   # a message that names a file is not a path being built
+    if any(k in tok.string for k in (".claude.json", "CLAUDE_CONFIG_DIR", "swap-notification.json", "~/.claude")):
+        print(f"{sys.argv[1]}:{tok.start[0]}: {tok.string}")
+PYEOF
+done)"
+if [ -z "$escaped" ]; then
+  ok "no module outside _fs.py builds .claude.json, the config dir or the swap marker path"
+else
+  no "no module outside _fs.py builds .claude.json, the config dir or the swap marker path" "$escaped"; fi
+
+# 9. The statusline's own files follow the variable: the account it names, the cost tracker.
+printf '{"oauthAccount":{"emailAddress":"relocated@example.com"}}' > "$ALT/.claude.json"
+PROBE='print(cm.COST_TRACKER_FILE); print(cm.get_account_display())'
+out="$(probe "$ALT")"
+if [ "$(printf '%s\n' "$out" | head -1)" = "$ALT/monthly-cost-tracker.json" ] \
+   && printf '%s' "$out" | grep "relocated" >/dev/null && ! printf '%s' "$out" | grep "home" >/dev/null; then
+  ok "context-monitor names the relocated account and keeps its cost tracker in the relocated dir"
+else
+  no "context-monitor names the relocated account and keeps its cost tracker in the relocated dir" "got: $out"; fi
+rm -f "$ALT/.claude.json"
+out="$(probe "")"
+if [ "$(printf '%s\n' "$out" | head -1)" = "$FH/.claude/monthly-cost-tracker.json" ] && printf '%s' "$out" | grep "home" >/dev/null; then
+  ok "unset: context-monitor keeps ~/.claude and ~/.claude.json"
+else
+  no "unset: context-monitor keeps ~/.claude and ~/.claude.json" "got: $out"; fi
+
+# 10. The swap marker: the watcher writes it in the config dir, the banner reads it
+#     there, and still reads the old ~/.claude spot — that is where an installed Glass
+#     (and any framework before this change) writes it, whatever the variable says.
+PROBE='print(fs.swap_marker_path())'
+out="$(probe "$ALT")"; out2="$(probe "")"
+if [ "$out" = "$ALT/swap-notification.json" ] && [ "$out2" = "$FH/.claude/swap-notification.json" ]; then
+  ok "the swap marker lives in the config dir (\$CLAUDE_CONFIG_DIR, else ~/.claude)"
+else
+  no "the swap marker lives in the config dir (\$CLAUDE_CONFIG_DIR, else ~/.claude)" "set=$out unset=$out2"; fi
+
+if grep -q 'write_json_atomic(swap_marker_path()' "$D/_watch.py"; then
+  ok "_watch.py writes the marker through _fs.swap_marker_path()"
+else no "_watch.py writes the marker through _fs.swap_marker_path()" "no such call in _watch.py"; fi
+
+marker() { printf '{"from":"%s","to":"%s","ts":%s,"reason":"t"}' "$2" "$3" "$4" > "$1"; }
+now=$(date +%s)
+rm -f "$ALT/swap-notification.json" "$FH/.claude/swap-notification.json"
+PROBE='print(cm.get_swap_banner())'
+marker "$ALT/swap-notification.json" a@x b@x "$now"
+o1="$(probe "$ALT")"; rm -f "$ALT/swap-notification.json"
+marker "$FH/.claude/swap-notification.json" c@x d@x "$now"
+o2="$(probe "$ALT")"
+marker "$ALT/swap-notification.json" e@x f@x "$((now - 60))"
+o3="$(probe "$ALT")"
+o4="$(probe "")"
+marker "$ALT/swap-notification.json" g@x h@x "$now"
+marker "$FH/.claude/swap-notification.json" c@x d@x "$((now - 60))"
+o5="$(probe "$ALT")"
+marker "$ALT/swap-notification.json" i@x j@x "$((now + 3600))"
+marker "$FH/.claude/swap-notification.json" c@x d@x "$now"
+o6="$(probe "$ALT")"
+rm -f "$ALT/swap-notification.json" "$FH/.claude/swap-notification.json"
+if printf '%s' "$o1" | grep 'a→b' >/dev/null; then
+  ok "the banner reads a marker the watcher wrote in the relocated dir"
+else no "the banner reads a marker the watcher wrote in the relocated dir" "got: $o1"; fi
+if printf '%s' "$o2" | grep 'c→d' >/dev/null; then
+  ok "the banner still reads a marker left in ~/.claude (installed Glass, older framework)"
+else no "the banner still reads a marker left in ~/.claude (installed Glass, older framework)" "got: $o2"; fi
+if printf '%s' "$o3" | grep 'c→d' >/dev/null && printf '%s' "$o5" | grep 'g→h' >/dev/null; then
+  ok "with a marker in both places, the newer one wins, whichever place it is in"
+else no "with a marker in both places, the newer one wins, whichever place it is in" "older in config dir: $o3 | older in ~/.claude: $o5"; fi
+if printf '%s' "$o6" | grep 'c→d' >/dev/null; then
+  ok "a marker dated in the future does not hide a valid one"
+else no "a marker dated in the future does not hide a valid one" "got: $o6"; fi
+if printf '%s' "$o4" | grep 'c→d' >/dev/null; then
+  ok "unset: the banner reads ~/.claude as before"
+else no "unset: the banner reads ~/.claude as before" "got: $o4"; fi
+
+# 11. The renderer must never go blank because its helper is missing or older: a
+#     copy run on its own (the README allows one), or an _fs.py from before these
+#     helpers, still draws the bar.
+LONE="$WORK/lone"; mkdir -p "$LONE"; cp "$D/context-monitor.py" "$LONE/"
+printf 'def write_json_atomic(*a, **k):\n    pass\n' > "$WORK/old_fs.py"
+r1="$(printf '{"model":{"display_name":"Opus"}}' | HOME="$FH" $PYBIN "$LONE/context-monitor.py" 2>&1)"; c1=$?
+cp "$WORK/old_fs.py" "$LONE/_fs.py"
+r2="$(printf '{"model":{"display_name":"Opus"}}' | HOME="$FH" $PYBIN "$LONE/context-monitor.py" 2>&1)"; c2=$?
+if [ $c1 -eq 0 ] && [ $c2 -eq 0 ] && printf '%s' "$r1" | grep Opus >/dev/null && printf '%s' "$r2" | grep Opus >/dev/null \
+   && ! printf '%s%s' "$r1" "$r2" | grep Traceback >/dev/null; then
+  ok "context-monitor still draws the bar alone, or beside an older _fs.py"
+else
+  no "context-monitor still draws the bar alone, or beside an older _fs.py" "alone rc=$c1: $r1 | old _fs rc=$c2: $r2"; fi
 
 printf '\n  %d passed, %d failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

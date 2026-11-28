@@ -13,10 +13,20 @@ import subprocess
 import time
 from datetime import datetime
 
+# Where Claude Code keeps its files is decided in _fs.py, beside this file. A copy of
+# this script run on its own, or beside an _fs.py from before these helpers, still
+# renders the bar: the account, the swap banner and the cost tracker are left out
+# (each reader below catches the failure), rather than the whole line going blank.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from _fs import claude_json_path, config_dir, legacy_swap_marker_path, swap_marker_path  # noqa: E402
+except Exception:
+    claude_json_path = config_dir = legacy_swap_marker_path = swap_marker_path = None
+
 
 # === CONFIGURATION ===
 MONTHLY_PLAN_COST = 200       # Your subscription cost in USD
-COST_TRACKER_FILE = os.path.expanduser("~/.claude/monthly-cost-tracker.json")
+COST_TRACKER_FILE = os.path.join(config_dir(), "monthly-cost-tracker.json") if config_dir else ""
 
 # People-equivalent baselines: how many actions/hour a human does per role
 # Conservative estimates — a focused human doing ONLY that role
@@ -545,7 +555,7 @@ def get_account_display():
     """Show the active Anthropic account so you can tell at a glance which
     one you're on after an auto-swap. Uses the operator's alias
     when declared (two accounts can share a local-part), else the local-part.
-    Cheap — reads ~/.claude.json once per statusline refresh; the account
+    Cheap — reads .claude.json once per statusline refresh; the account
     list once per process."""
     try:
         # A token-launched session (CLAUDE_CODE_OAUTH_TOKEN) is not on the seat
@@ -557,7 +567,7 @@ def get_account_display():
             if not email:
                 return " \033[90m|\033[0m \033[33m👤 token?\033[0m"
         else:
-            with open(os.path.expanduser("~/.claude.json"), encoding="utf-8") as f:
+            with open(claude_json_path(), encoding="utf-8") as f:
                 d = json.load(f)
             email = d.get("oauthAccount", {}).get("emailAddress", "")
         if not email:
@@ -587,15 +597,24 @@ def get_swap_banner():
     if os.environ.get("CLAUDE_CODE_OAUTH_TOKEN"):
         return ""
     try:
-        p = os.path.expanduser("~/.claude/swap-notification.json")
-        if not os.path.exists(p):
-            return ""
-        with open(p, encoding="utf-8") as f:
-            m = json.load(f)
-        ts = m.get("ts", 0)
+        # The marker follows the config dir. The old ~/.claude spot is read too:
+        # an installed Glass (manual swap) and a framework from before this
+        # change write it there whatever CLAUDE_CONFIG_DIR says. The newer wins.
+        # With the variable unset both names are the same file. A marker dated in
+        # the future (another clock) is skipped, so it cannot hide the other one.
+        m, ts, now = None, 0, time.time()
+        for p in dict.fromkeys((swap_marker_path(), legacy_swap_marker_path())):
+            try:
+                with open(p, encoding="utf-8") as f:
+                    cand = json.load(f)
+                cts = cand.get("ts", 0) if isinstance(cand, dict) else 0
+            except (OSError, ValueError):
+                continue
+            if isinstance(cts, (int, float)) and ts < cts <= now:
+                m, ts = cand, cts
         if not ts:
             return ""
-        age = int(time.time() - ts)
+        age = int(now - ts)
         if age < 0 or age > SWAP_BANNER_TTL_SECS:
             return ""
         from_local = _account_label(m.get("from"))
