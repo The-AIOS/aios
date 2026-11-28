@@ -50,6 +50,17 @@ printf -- '- [ ] keep going [[phase plan|the plan]]\n' > "$T/daily/01 - calendar
 out=$(run daily)
 [ "$out" = "unfinished-work: none" ] && ok "daily-note task → silent" || no "flagged despite a daily task: '$out'"
 
+echo "-- a daily note dated in the future is not today's: /7plan writes skeletons ahead --"
+mkdir -p "$T/daily/01 - calendar/2999-01"
+printf -- '- [ ] a planned day, nothing about the plan\n' > "$T/daily/01 - calendar/2999-01/2999-01-04.md"
+out=$(run daily)
+[ "$out" = "unfinished-work: none" ] && ok "a future note does not replace the newest note up to today" \
+  || no "read a future daily note instead of today's: '$out'" "/7plan's skeletons hide every task the real newest note holds"
+today=$(date +%F); mkdir -p "$T/daily/01 - calendar/${today%-*}"
+printf -- '- [ ] today, nothing about the plan\n' > "$T/daily/01 - calendar/${today%-*}/$today.md"
+out=$(run daily)
+case "$out" in *"reflections/phase plan.md"*) ok "CONTROL: today's own note counts as the newest" ;; *) no "today's note was not read: '$out'" ;; esac
+
 echo "-- CONTROL: closed statuses, quoted values and no frontmatter are ignored --"
 mk closed; note closed a merged; note closed b '"done"'; printf 'no frontmatter\nstatus: draft\n' > "$T/closed/00 - notes/reflections/c.md"
 out=$(run closed)

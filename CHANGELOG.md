@@ -59,6 +59,16 @@
 >
 > Three version numbers exist and are **not** the same: the framework (`plugins/aios/.claude-plugin/plugin.json`), **AIOS Glass** and the **AIOS App**, each versioned independently. Where an entry says "Glass" or "App" it means that surface. Their current numbers are deliberately not written here — read each from its own manifest, because a version in prose goes stale silently.
 
+## 2026-11-28 — A planned day ahead no longer hides today's tasks from the unfinished-work check
+
+`hash: ` · [#434](https://github.com/The-AIOS/aios/issues/434)
+
+> **What you can now do.** Plan the coming days with `/7plan` and still have `/close-day` see the tasks in today's note.
+
+**The unfinished-work check reads today's note, not a future one** (#434). `hooks/vault/unfinished-work.sh` looked for open tasks in the newest daily note by name, and `/7plan` writes notes for the days ahead, so it read a day that had not come. A note linked only from today's tasks was then reported as having none, and `/close-day` added a second task for it. It now reads the newest note dated up to today.
+
+**Action required** — none.
+
 ## 2026-11-23 — Security: the Playwright cookie import kept other sites' sessions
 
 `hash: e6a1d67` · [GHSA-9w4x-x588-8mmx](https://github.com/The-AIOS/aios/security/advisories/GHSA-9w4x-x588-8mmx)
