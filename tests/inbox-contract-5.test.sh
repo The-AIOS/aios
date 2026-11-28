@@ -43,13 +43,14 @@ k(){ $PYBIN -c "import json,sys; print(json.load(open(sys.argv[1]))['constants']
 [ "$(k max_line)" = "10000000" ] && grep -q '1 to 10,000,000' "$S" && ok "the line bound, in both" || no "the line bound differs"
 [ "$(k max_name)" = "64" ] && grep -q 'longer than 64' "$S" && ok "the name bound, in both" || no "the name bound differs"
 
-echo "── the spec says it is not in force yet, and the declared contract is not moved here ──"
-grep -q 'Status: specified, not in force' "$S" && ok "the spec is marked as not in force" || no "the spec does not say it is not in force" "a session reading it would send a verb no surface implements"
-if [ -f "$D/inbox-contract.json" ]; then
-  grep -qE '"current" *: *5' "$D/inbox-contract.json" && no "inbox-contract.json declares 5 before any surface stamps it" || ok "the declared current contract is not 5 yet"
-else
-  ok "no declaration file on this branch (it arrives with the contract-number check)"
-fi
+echo "── the spec says it is in force, and the declared contract agrees ──"
+# The spec and the declaration move together: an "in force" spec beside a declaration of 4 would tell a
+# session to send a verb the docs say no surface takes, and the reverse would hide a verb that works.
+IN=0; grep -q 'Status: in force' "$S" && IN=1
+DECL5=0; grep -qE '"current" *: *5' "$D/inbox-contract.json" 2>/dev/null && DECL5=1
+[ "$IN" = 1 ] && [ "$DECL5" = 1 ] && ok "the spec is in force and inbox-contract.json declares 5" \
+  || no "the spec's status and the declared contract disagree (spec in force: $IN, declared 5: $DECL5)" \
+        "they change in one commit, after both surfaces stamp contract 5"
 
 echo "── CONTROL — a wrong expectation is caught ──"
 $PYBIN - "$F" "$T/bad.json" <<'PY'
