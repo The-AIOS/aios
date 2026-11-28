@@ -1,10 +1,9 @@
 # Spawn-inbox contract 5: the `open` verb
 
-> **Status: specified, not in force.** This spec and its conformance fixture
-> (`inbox-contract-5.conformance.json`, checked by `tests/inbox-contract-5.test.sh`) ship first. Contract 4
-> stays in force until both surfaces implement the verb and stamp `aios-spawn-inbox: contract 5` in
-> `~/.aios/spawn-inbox/README.md`. Until then a session must not send `open`: a fulfiller on contract 4
-> dead-letters it as an unknown action.
+> **Status: in force.** Both surfaces implement the verb and stamp `aios-spawn-inbox: contract 5` in
+> `~/.aios/spawn-inbox/README.md`. Read that stamp before sending `open`: a fulfiller still on contract 4
+> dead-letters it as an unknown action. The conformance fixture (`inbox-contract-5.conformance.json`) is
+> checked by `tests/inbox-contract-5.test.sh` here and run by both surfaces.
 
 ## What changes
 
