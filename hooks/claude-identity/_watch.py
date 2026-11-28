@@ -35,7 +35,8 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import _accounts  # noqa: E402
-from _fs import blob_token_state, pid_alive as _pid_alive, seat_generation, write_json_atomic  # noqa: E402
+from _fs import (blob_token_state, claude_json_path, config_dir, pid_alive as _pid_alive,  # noqa: E402
+                 seat_generation, swap_marker_path, write_json_atomic)
 
 # Text read from files (vault headings, request payloads, names) carries "→", "—" and
 # accents. On a Windows console stdout/stderr default to cp1252, so print() raises
@@ -48,14 +49,13 @@ for _stream in (sys.stdout, sys.stderr):
             pass  # a wrapped or redirected stream that cannot be reconfigured
 
 
-HOME = os.path.expanduser("~")
 # Claude Code relocates its whole config tree when CLAUDE_CONFIG_DIR is set, and
 # the documented safe way to add a second account depends on that: log the new
 # account into an ISOLATED config dir and capture from there, so the live
 # credentials are never touched and no logout fires. Hard-coding ~/.claude here
 # would make the watcher read one account's state while the operator works in
 # another — silently, since every path would still resolve.
-CONFIG_DIR = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(HOME, ".claude")
+CONFIG_DIR = config_dir()   # the rule lives in _fs.py, shared with the status line
 CACHE = os.path.join(CONFIG_DIR, "rate-limit-cache.json")
 LOG = os.path.join(CONFIG_DIR, "quota-watch.log")
 SWAP_LOG = os.path.join(CONFIG_DIR, "swap-log.jsonl")
@@ -201,20 +201,16 @@ def notify(msg: str) -> None:
 
 
 def _read_active_email() -> str:
-    """Read the post-swap active Anthropic account email from ~/.claude.json.
+    """Read the post-swap active Anthropic account email from .claude.json.
     Used to fill the swap-notification marker's `to` field — the cache still
     has the OLD email at this point (it was the trigger). Empty string on any
     error so the marker write doesn't crash the watch tick."""
-    # Same beside-or-inside rule as the other components: .claude.json sits next
-    # to the config dir normally and inside it when relocated.
-    for p in (os.path.join(CONFIG_DIR, ".claude.json"),
-              os.path.join(HOME, ".claude.json")):
-        try:
-            with open(p, encoding="utf-8") as f:
-                return json.load(f).get("oauthAccount", {}).get("emailAddress", "")
-        except Exception:
-            continue
-    return ""
+    # The same beside-or-inside rule as every other component (_fs.claude_json_path).
+    try:
+        with open(claude_json_path(), encoding="utf-8") as f:
+            return json.load(f).get("oauthAccount", {}).get("emailAddress", "")
+    except Exception:
+        return ""
 
 
 # ── did the live session actually adopt the swap? ───────────────────────────
@@ -1251,8 +1247,9 @@ def main(self_path: str) -> None:
         notify(f"swapped from {email}: {reason}")
 
         try:
-            marker = os.path.join(HOME, ".claude", "swap-notification.json")
-            write_json_atomic(marker, {
+            # In the config dir, like every other file this watcher writes. The
+            # banner also reads the old ~/.claude spot (see _fs.legacy_swap_marker_path).
+            write_json_atomic(swap_marker_path(), {
                 "from": email,
                 "to": _read_active_email(),
                 "ts": int(time.time()),
